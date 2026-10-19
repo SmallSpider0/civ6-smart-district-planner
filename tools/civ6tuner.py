@@ -38,7 +38,9 @@ import threading
 import time
 
 GAME_HOST = "127.0.0.1"
-GAME_PORTS = (4318, 4319)  # 4319 handshakes but exposes no Lua states
+# 4319 also accepts connections but does not answer requests (observed on
+# macOS 1.0.12.54); probing it only leaves dead sockets, so use 4318 only.
+GAME_PORTS = (4318,)
 CONTROL_PORT = 43180       # local daemon control port (JSON lines)
 
 TAG_COMMAND = 3
@@ -376,7 +378,7 @@ EXIT_CODES = {None: 0, "lua": 1, "connection": 2, "timeout": 3}
 
 def main(argv=None):
     ap = argparse.ArgumentParser(description="Civilization VI FireTuner client")
-    ap.add_argument("--port", type=int, help="game tuner port (default: try 4318, 4319)")
+    ap.add_argument("--port", type=int, help="game tuner port (default 4318)")
     sub = ap.add_subparsers(dest="cmd", required=True)
     sp = sub.add_parser("serve", help="own the connection, log output, accept exec requests")
     sp.add_argument("--log", default=DEFAULT_LOG)
