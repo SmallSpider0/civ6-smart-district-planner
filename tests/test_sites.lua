@@ -1,7 +1,8 @@
 -- @state SDP_Panel
 -- @timeout 600
 -- Site selection with the real map and DMT (docs/multicity-design.md 3).
--- Needs a city: run tests/fixtures/found_capital.lua first.
+-- Needs a city: run tests/fixtures/found_capital.lua first;
+-- game.py newgame --capital --reveal also reveals the land around it.
 local test, T = ...
 
 local pid = Game.GetLocalPlayer()
@@ -19,7 +20,7 @@ end)
 test("candidates follow the rules on the real map", function()
   if Players[pid]:GetCities():GetCapitalCity() == nil then T.skip("no capital") end
   local list, centers = SDP_Sites.Candidates(pid, { K = 2, D = 8 })
-  T.ok(#list > 0, "no candidate")
+  if #list == 0 then T.skip("no candidate: explore first (game.py newgame --capital --reveal)") end
   local minRange = SDP_Sites.MinRange()
   for _, c in ipairs(list) do
     local plot = Map.GetPlotByIndex(c.Index)

@@ -257,11 +257,10 @@ function P.Render()
       .. Locale.Lookup("LOC_SDP_SITES_MODEL_NOTE"))
     for n, s in ipairs(result.Solutions) do
       local inst = m_solutionIM:GetInstance()
-      inst.Name:SetText(Locale.Lookup("LOC_SDP_SOLUTION_N", n, SDP_UI.Number(math.floor(s.Value * 10 + 0.5) / 10)))
       local where = {}
       for _, site in ipairs(s.Sites) do where[#where + 1] = SDP_UI.Where(site.X, site.Y) end
-      inst.Detail:SetText(table.concat(where, " "))
-      inst.Selected:SetHide(n ~= m_solution)
+      SDP_UI.SolutionRow(inst, Locale.Lookup("LOC_SDP_SOLUTION_N", n, SDP_UI.Number(math.floor(s.Value * 10 + 0.5) / 10)),
+        table.concat(where, " "), n == m_solution)
       inst.Root:RegisterCallback(Mouse.eLClick, function() P.SelectSolution(n) end)
       m_view.Solutions[n] = { Value = s.Value, Selected = n == m_solution }
     end

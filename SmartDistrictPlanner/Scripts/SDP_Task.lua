@@ -25,10 +25,13 @@ SDP_Task.TARGET_FRAME = 1 / 30   -- seconds per frame we aim to keep
 SDP_Task.MIN_QUOTA = 4
 SDP_Task.MAX_QUOTA = 2000
 SDP_Task.START_QUOTA = 40
--- Units per second of waiting, before this game has measured its own: about
--- 0.07 ms per unit (SDP_Tiers) at about 60% of each frame. Refined by every
--- finished task.
-SDP_Task.DEFAULT_SPEED = 8000
+-- Units per second of waiting, before this game has measured its own.
+-- Measured in the game (2026-10-20): about 20000 units per second at once
+-- (SDP_Tiers); a sliced task, at TARGET_FRAME, does 7400-9900 per second of
+-- waiting for one city and about 15000 for several (lighter units); the game
+-- draws the rest of each ~30 ms frame. Refined by every finished task.
+SDP_Task.DEFAULT_SPEED = 11000
+SDP_Task.AT_ONCE_SPEED = 20000
 
 local m_job = nil         -- the running job
 local m_inWorker = false  -- our coroutine is running (Tick may yield)
@@ -186,7 +189,9 @@ function SDP_Task.Speed()
   return m_speed or SDP_Task.DEFAULT_SPEED
 end
 
--- Expected seconds of waiting for `units` of work.
-function SDP_Task.EstimateSeconds(units)
+-- Expected seconds of waiting for `units` of work: as a task over several
+-- frames, or (`atOnce`) in one go.
+function SDP_Task.EstimateSeconds(units, atOnce)
+  if atOnce then return units / SDP_Task.AT_ONCE_SPEED end
   return units / SDP_Task.Speed()
 end

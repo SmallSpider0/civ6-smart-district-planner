@@ -160,3 +160,28 @@ test("the combination search finds the best pair among the refined sites", funct
     T.ok(entry.Value <= sum + 1e-9, "value above the sum of the site scores")
   end
 end)
+
+test("refinement takes the sites that link back, even when far ones score higher", function()
+  NewWorld()
+  -- A short relay distance and a small refine budget: several of the best
+  -- coarse sites are out of reach, and the refined ones must still connect
+  -- (found in the game: an explored map gave 20 far sites and no solution).
+  local request = { PlayerID = 0, K = 2, D = 4, Districts = PLAN, Tier = "FAST", Params = { Refined = 4 } }
+  local result = SDP_SiteSolver.Solve(request)
+  T.ok(result.Ok, tostring(result.Error))
+  local session = result.Session
+  -- Some site ranks above a refined one by coarse score but was passed over.
+  local last = 0
+  for n, site in ipairs(session.Sites) do
+    if site.Refined then last = n end
+  end
+  local skipped = 0
+  for n = 1, last do
+    if not session.Sites[n].Refined then skipped = skipped + 1 end
+  end
+  T.ok(skipped > 0, "the test needs a better site out of reach")
+  for _, site in ipairs(session.Order) do
+    T.ok(site.Hops ~= nil and site.Hops <= request.K, "refined a site that cannot link back")
+  end
+  for _, solution in ipairs(result.Solutions) do T.eq(#solution.Sites, 2, "K sites") end
+end)

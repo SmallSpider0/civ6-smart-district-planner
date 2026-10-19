@@ -1,7 +1,10 @@
 -- SDP_SiteSolver: picks K new city sites (docs/multicity-design.md 3.5).
 --
 --   1. Candidates and coarse scores for all (SDP_Sites); fine scores, with
---      the planned districts placed by DMT, for the best M.
+--      the planned districts placed by DMT, for the best M that can link
+--      back: within D of one of the player's cities or city-center pins, or
+--      of a site refined before them (at most K - 1 relays). Without that
+--      rule an explored map gives a top M of far sites that never connect.
 --   2. Combinations of K refined sites: farther apart than CITY_MIN_RANGE;
 --      every site linked back to one of the player's cities or city-center
 --      pins through steps of at most D plots (other new sites may relay).
@@ -54,24 +57,59 @@ function SDP_SiteSolver.NewSession(request)
     return a.Index < b.Index
   end)
   self.Sites = sites
+  -- Hops: relays a site needs to link back (1 = within D of an anchor).
+  local anchors = {}
+  for _, c in ipairs(centers) do
+    if c.Own then anchors[#anchors + 1] = c end
+  end
+  for _, site in ipairs(sites) do
+    if #anchors == 0 then site.Hops = 1 end
+    for _, a in ipairs(anchors) do
+      if Map.GetPlotDistance(site.X, site.Y, a.X, a.Y) <= self.D then
+        site.Hops = 1
+        break
+      end
+    end
+  end
+  self.Order = {} -- refined sites, in the order they were refined
   self.Refined = 0
   return self
 end
 
--- Fine scores for the next sites in coarse order, up to `count` refined.
+-- The best site by coarse score not refined yet that links back.
+function Session:NextSite()
+  for _, site in ipairs(self.Sites) do
+    if site.Hops ~= nil and not site.Refined then return site end
+  end
+  return nil
+end
+
+-- Fine scores for the next linkable sites in coarse order, until `count` are refined.
 function Session:Refine(count)
-  local ctx, params = self.Ctx, self.Params
-  local upto = math.min(count, #self.Sites)
-  if self.Refined >= upto then return end
-  local batch = {}
-  for r = self.Refined + 1, upto do batch[#batch + 1] = self.Sites[r] end
+  local ctx = self.Ctx
+  if self.Refined >= count or self:NextSite() == nil then return end
   if ctx.Board == nil then
     SDP_Sites.Board(ctx, self.Sites) -- fixed subjects near every candidate
   end
-  local siteParams = SDP_Tiers.Params(SDP_Tiers.Single, "FAST", params.Site)
-  for _, site in ipairs(batch) do SDP_Sites.Fine(ctx, site, siteParams) end
-  self.Refined = upto
-  self.Stats.Refined = upto
+  local siteParams = SDP_Tiers.Params(SDP_Tiers.Single, "FAST", self.Params.Site)
+  while self.Refined < count do
+    local site = self:NextSite()
+    if site == nil then break end
+    SDP_Sites.Fine(ctx, site, siteParams)
+    site.Refined = true
+    self.Refined = self.Refined + 1
+    self.Order[self.Refined] = site
+    -- A usable site relays for the sites within D of it.
+    if site.CenterLegal and site.Fine ~= nil and site.Hops < self.K then
+      for _, other in ipairs(self.Sites) do
+        if (other.Hops == nil or other.Hops > site.Hops + 1)
+            and Map.GetPlotDistance(site.X, site.Y, other.X, other.Y) <= self.D then
+          other.Hops = site.Hops + 1
+        end
+      end
+    end
+  end
+  self.Stats.Refined = self.Refined
 end
 
 -- Value of a combination of refined sites (array of indices into
@@ -194,8 +232,7 @@ end
 function Session:Combine()
   local params, stats = self.Params, self.Stats
   local pool = {}
-  for r = 1, self.Refined do
-    local site = self.Sites[r]
+  for _, site in ipairs(self.Order) do
     if site.CenterLegal and site.Fine ~= nil then pool[#pool + 1] = site end
   end
   table.sort(pool, function(a, b)
@@ -222,6 +259,7 @@ function Session:Combine()
   local stopped = false
   local function Leaf()
     stats.Combinations = stats.Combinations + 1
+    if SDP_Task ~= nil then SDP_Task.Tick(1) end -- a combination's value: about a unit
     if not self:Connected(chosen) then return end
     local value, details, resources, conflict = self:Value(chosen)
     local entry = { Value = value, Chosen = { unpack(chosen) }, Details = details, Resources = resources, Conflict = conflict }
@@ -274,7 +312,7 @@ function Session:Run()
 end
 
 function Session:CanContinue()
-  return self.Refined < #self.Sites
+  return self:NextSite() ~= nil
 end
 
 -- Continue (design 7.3): refine ContinueSites more sites, combine again.
@@ -346,9 +384,14 @@ end
 -- `continue`: only the sites one "continue" refines.
 function SDP_SiteSolver.EstimateUnits(districts, k, params, continue)
   local sites = continue and (params.ContinueSites or 20) or params.Refined
-  local site = params.Site or {}
-  local perSite = 30 * math.max(1, districts) * 2 + math.min(site.TryLimit or 2000, 300 * math.max(1, districts))
-  return 400 + sites * perSite + params.ComboNodes / SDP_Tiers.NODES_PER_UNIT * math.min(1, k / 3)
+  local perSite = (params.Site and params.Site.Work or 100) * math.max(1, districts)
+  -- Combinations reach about a quarter of C(refined, k) (spacing and the
+  -- bound prune the rest); each costs about a unit.
+  local refined = continue and (params.Refined + sites) or sites
+  local combos = 1
+  for i = 1, k do combos = combos * math.max(0, refined - i + 1) / i end
+  combos = math.min(params.ComboNodes, combos / 4)
+  return 400 + sites * perSite + combos
 end
 
 -- The solve itself; the overlay must be installed (SDP_Task jobs, tests).

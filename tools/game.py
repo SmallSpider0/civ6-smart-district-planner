@@ -4,14 +4,19 @@
   game.py quit       quit the running game through the tuner, wait for exit
   game.py menu       leave the current game for the main menu (reloads the
                      mod's Lua and UI XML on the next game; not the modinfo)
-  game.py popups     list the Lua contexts queued as popups; --close dequeues
+  game.py popups     list the Lua contexts queued as popups; --close closes
                      them all except SDP_Panel (e.g. historic moments that
-                     keep the planner panel hidden behind them)
+                     keep the planner panel hidden behind them) through the
+                     popup's own Close/OnClose: popups such as natural wonders
+                     hold the engine's event queue until they release it, and
+                     a plain dequeue leaves the UI's copy of the game stale
   game.py launch     open the game through Steam (the Aspyr launcher's
                      "开始" button then needs a click: computer-use AXPress)
   game.py newgame    wait for the main menu, quick-start a game, wait until
                      in-game Lua answers; --capital also founds the capital
-                     (tests/fixtures/found_capital.lua). The leader and the
+                     (tests/fixtures/found_capital.lua); --reveal then
+                     reveals the land around it (tests/fixtures/reveal_area.lua)
+                     and closes the popups that follows. The leader and the
                      map/game seeds are fixed (--leader, --seed) so every test
                      game is the same map; --random keeps Play Now's choices;
                      --ruleset picks the base game, Rise and Fall or GS.
@@ -31,6 +36,7 @@ import civ6tuner  # noqa: E402
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 STEAM_URL = "steam://rungameid/289070"
 FOUND_CAPITAL = os.path.join(ROOT, "tests", "fixtures", "found_capital.lua")
+REVEAL_AREA = os.path.join(ROOT, "tests", "fixtures", "reveal_area.lua")
 DEFAULT_LEADER = "LEADER_TRAJAN"  # Rome: starts on land, every ruleset has it
 DEFAULT_SEED = 20261019
 
@@ -92,20 +98,54 @@ def cmd_menu(_args):
     return 0 if wait_for("main menu", gone, 120) else 2
 
 
-def cmd_popups(args):
+CHECK_QUEUED = "if ContextPtr and UIManager:IsInPopupQueue(ContextPtr) then print('QUEUED') end"
+# Close a popup the way its own close button does, so it also releases the
+# engine event it holds (PopupManager:Unlock); dequeue only as a fallback.
+CLOSE_POPUP = """
+if ContextPtr and UIManager:IsInPopupQueue(ContextPtr) then
+  local close = (type(OnClose) == "function" and OnClose) or (type(Close) == "function" and Close) or nil
+  if close then pcall(close) end
+  if UIManager:IsInPopupQueue(ContextPtr) then UIManager:DequeuePopup(ContextPtr) end
+end
+"""
+
+
+def queued_popups():
     resp = civ6tuner.request({"op": "states"})
     if not resp.get("ok"):
-        print(resp.get("error"))
+        return None
+    return [name for _idx, name in resp["states"]
+            if name != "SDP_Panel" and "QUEUED" in (exec_lua(name, CHECK_QUEUED, timeout=3).get("output") or [])]
+
+
+def close_popups(rounds=20):
+    """Close queued popups until none comes back for two checks in a row."""
+    quiet = 0
+    for _ in range(rounds):
+        names = queued_popups()
+        if names is None:
+            return False
+        if not names:
+            quiet += 1
+            if quiet >= 2:
+                return True
+        else:
+            quiet = 0
+            for name in names:
+                exec_lua(name, CLOSE_POPUP, timeout=3)
+                print("closed", name, flush=True)
+        time.sleep(1.5)  # the next queued popup shows a frame later
+    return False
+
+
+def cmd_popups(args):
+    if args.close:
+        return 0 if close_popups() else 2
+    names = queued_popups()
+    if names is None:
         return 2
-    check = "if ContextPtr and UIManager:IsInPopupQueue(ContextPtr) then print('QUEUED') end"
-    close = "if ContextPtr and UIManager:IsInPopupQueue(ContextPtr) then UIManager:DequeuePopup(ContextPtr) end"
-    for _idx, name in resp["states"]:
-        if "QUEUED" in (exec_lua(name, check, timeout=3).get("output") or []):
-            if args.close and name != "SDP_Panel":
-                exec_lua(name, close, timeout=3)
-                print("closed", name)
-            else:
-                print("queued", name)
+    for name in names:
+        print("queued", name)
     return 0
 
 
@@ -137,6 +177,11 @@ def cmd_newgame(args):
         ).get("output") or [])
         if not wait_for("capital", has_capital, 30, 1):
             return 2
+    if args.reveal:
+        with open(REVEAL_AREA, encoding="utf-8") as fh:
+            resp = exec_lua("GameCore_Tuner", fh.read())
+        print("\n".join(resp.get("output") or []) or resp.get("error"))
+        close_popups()
     return 0
 
 
@@ -146,11 +191,12 @@ def main(argv=None):
     sub.add_parser("quit", help="quit the running game")
     sub.add_parser("menu", help="leave the current game for the main menu")
     pp = sub.add_parser("popups", help="list (or close) queued popups")
-    pp.add_argument("--close", action="store_true", help="dequeue every popup except SDP_Panel")
+    pp.add_argument("--close", action="store_true", help="close every popup except SDP_Panel")
     sub.add_parser("launch", help="open the game through Steam")
     np = sub.add_parser("newgame", help="quick-start a game from the main menu")
     np.add_argument("--state", default="InGame", help="Lua state to wait for (default InGame)")
     np.add_argument("--capital", action="store_true", help="also found the capital")
+    np.add_argument("--reveal", action="store_true", help="with --capital: reveal the land around it")
     np.add_argument("--leader", default=DEFAULT_LEADER, help="local player's leader (default %s)" % DEFAULT_LEADER)
     np.add_argument("--seed", type=int, default=DEFAULT_SEED, help="map and game seed (default %d)" % DEFAULT_SEED)
     np.add_argument("--random", action="store_true", help="keep Play Now's random leader and map")

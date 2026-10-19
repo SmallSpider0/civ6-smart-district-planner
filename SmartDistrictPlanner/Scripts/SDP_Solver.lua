@@ -177,9 +177,13 @@ function SDP_Solver.EstimateUnits(n, k, params)
     if layouts > params.ExactLimit then break end
   end
   if layouts <= params.ExactLimit then return singles + layouts * SDP_Tiers.UNITS_PER_TRY end
-  local tries = math.min(params.TryLimit, (params.Starts + (params.Kicks or 0)) * 4 * (n * k + k * k))
-  local calls = math.min(params.CallLimit, singles + tries * 0.2)
-  return calls + params.NodeLimit / SDP_Tiers.NODES_PER_UNIT + (params.Shortlist + tries) * SDP_Tiers.UNITS_PER_TRY
+  -- The search usually stops long before its budgets: the measured work
+  -- (SDP_Tiers Work), capped by what the budgets allow.
+  local work = params.Work or { 10, 2 }
+  local typical = n * (work[1] * k + work[2] * k * k)
+  local cap = params.CallLimit + params.NodeLimit / SDP_Tiers.NODES_PER_UNIT
+    + (params.Shortlist + params.TryLimit) * SDP_Tiers.UNITS_PER_TRY
+  return math.min(typical, cap)
 end
 
 -- ===========================================================================

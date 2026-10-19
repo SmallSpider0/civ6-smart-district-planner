@@ -56,3 +56,28 @@ test("the panel runs the fine tier as a task and can cancel it", function()
   T.eq(result.Stats.Tier, "FINE", "tier")
   SDP_Panel.SetTier("STANDARD")
 end)
+
+-- A hidden context gets no SetUpdate calls, so a closed panel keeps its
+-- context shown with the window hidden while the task runs. That frames then
+-- advance was checked by hand (2026-10-20: 12937 units in 40 frames after
+-- closing); one test call cannot wait for frames.
+test("closing the panel keeps the context shown until the task ends", function()
+  local city = City()
+  SDP_Panel.Open()
+  SDP_Panel.SelectCity(city:GetID())
+  for _, d in ipairs(SDP_Rules.PlannableDistricts(pid)) do SDP_Panel.SetSelected(d.Type, false) end
+  for _, d in ipairs(Districts(4)) do SDP_Panel.SetSelected(d, true) end
+  SDP_Panel.SetTier("FINE")
+  SDP_Panel.Solve()
+  T.ok(SDP_Panel.State().Running, "running")
+  SDP_Panel.Close()
+  T.ok(SDP_Panel.RunsHidden(), "context shown, window hidden")
+  local result = SDP_Panel.RunTask(1000)
+  T.ok(result ~= nil and result.Ok, "result after the task")
+  T.ok(ContextPtr:IsHidden(), "context hidden after the task")
+  T.ok(not Controls.DropShadow:IsHidden(), "window restored for the next open")
+  T.ok(SDP_Panel.State().LaunchMark, "launch button marked")
+  SDP_Panel.Open()
+  SDP_Panel.Close()
+  SDP_Panel.SetTier("STANDARD")
+end)

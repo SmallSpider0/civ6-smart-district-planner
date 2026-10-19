@@ -1,6 +1,7 @@
 -- Offline benchmark of the multi-city solver (SDP_Multi): quality against a
--- reference and expected time in the game, per tier, on deterministic
--- random maps with the capital and three city-center pins.
+-- reference and expected time in the game (run at once, as bench_single.lua),
+-- per tier, on deterministic random maps with the capital and three
+-- city-center pins. A task over several frames takes about 2.5 times as long.
 --   node tools/offline_tests.mjs -v tests/offline/bench_multi.lua [-k land]
 -- Environment: SDP_BENCH_REFS (reference cache file), SDP_BENCH_TIERS,
 -- SDP_BENCH_PARAMS (as bench_single.lua), SDP_BENCH_SEEDS ("1,2,3").
@@ -149,7 +150,9 @@ local function Run(name, land)
         ref = result.Gain
       end
       local ratio = ref > 0 and result.Gain / ref or 1
-      local ms = result.Stats.Nodes * 0.002 + result.Stats.Evaluations * 0.07 + result.Stats.Calls * 0.07
+      -- SDP_Tiers units at about 0.05 ms each when run at once (measured in the game)
+      local ms = (result.Stats.Calls + result.Stats.Evaluations * SDP_Tiers.UNITS_PER_TRY
+        + result.Stats.Nodes / SDP_Tiers.NODES_PER_UNIT) * 0.05
       local s = sums[tier] or { ratio = 0, worst = 1, n = 0, ms = 0, calls = 0, evals = 0, seconds = 0, first = 0 }
       s.ratio, s.n, s.ms = s.ratio + ratio, s.n + 1, s.ms + ms
       s.worst = math.min(s.worst, ratio)

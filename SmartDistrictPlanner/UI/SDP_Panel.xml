@@ -15,19 +15,22 @@
       </Container>
       <Button ID="CloseButton" Anchor="R,T" Style="CloseButtonSmall"/>
 
-      <!-- Tabs (as in TradeOverview.xml) -->
+      <!-- Tabs (as in TradeOverview.xml: a second label for the selected look) -->
       <Stack ID="TabStack" Anchor="C,T" Offset="0,46" StackGrowth="Right" StackPadding="6">
         <GridButton ID="SingleTab" Size="170,34" Style="TabButton">
           <GridButton ID="SingleTabSelected" Size="parent,parent" Style="TabButtonSelected" ConsumeMouseButton="0" ConsumeMouseOver="1"/>
-          <Label Anchor="C,C" Offset="0,1" Style="TabFont" String="LOC_SDP_TAB_SINGLE"/>
+          <Label ID="SingleTabLabel" Anchor="C,C" Offset="0,1" Style="TabFont" String="LOC_SDP_TAB_SINGLE"/>
+          <Label ID="SingleTabSelectedLabel" Anchor="C,C" Offset="0,1" Style="TabSelectedFont" String="LOC_SDP_TAB_SINGLE" Hidden="1"/>
         </GridButton>
         <GridButton ID="SitesTab" Size="170,34" Style="TabButton">
           <GridButton ID="SitesTabSelected" Size="parent,parent" Style="TabButtonSelected" ConsumeMouseButton="0" ConsumeMouseOver="1"/>
-          <Label Anchor="C,C" Offset="0,1" Style="TabFont" String="LOC_SDP_TAB_SITES"/>
+          <Label ID="SitesTabLabel" Anchor="C,C" Offset="0,1" Style="TabFont" String="LOC_SDP_TAB_SITES"/>
+          <Label ID="SitesTabSelectedLabel" Anchor="C,C" Offset="0,1" Style="TabSelectedFont" String="LOC_SDP_TAB_SITES" Hidden="1"/>
         </GridButton>
         <GridButton ID="MultiTab" Size="170,34" Style="TabButton">
           <GridButton ID="MultiTabSelected" Size="parent,parent" Style="TabButtonSelected" ConsumeMouseButton="0" ConsumeMouseOver="1"/>
-          <Label Anchor="C,C" Offset="0,1" Style="TabFont" String="LOC_SDP_TAB_MULTI"/>
+          <Label ID="MultiTabLabel" Anchor="C,C" Offset="0,1" Style="TabFont" String="LOC_SDP_TAB_MULTI"/>
+          <Label ID="MultiTabSelectedLabel" Anchor="C,C" Offset="0,1" Style="TabSelectedFont" String="LOC_SDP_TAB_MULTI" Hidden="1"/>
         </GridButton>
       </Stack>
 
@@ -242,8 +245,12 @@
   <Instance Name="SolutionRow">
     <GridButton ID="Root" Size="500,30" Style="ButtonControl">
       <GridButton ID="Selected" Size="parent,parent" Style="TabButtonSelected" ConsumeMouseButton="0" ConsumeMouseOver="1" Hidden="1"/>
-      <Label ID="Name" Anchor="L,C" Offset="10,0" Style="BodyTextDark16"/>
-      <Label ID="Detail" Anchor="R,C" Offset="10,0" Style="BodyTextDark14"/>
+      <!-- Light text on the dark button; dark text on the light selected look
+           (SDP_UI.SolutionRow shows one pair). -->
+      <Label ID="Name" Anchor="L,C" Offset="10,0" Style="FontNormal16"/>
+      <Label ID="Detail" Anchor="R,C" Offset="10,0" Style="FontNormal14"/>
+      <Label ID="NameDark" Anchor="L,C" Offset="10,0" Style="BodyTextDark16" Hidden="1"/>
+      <Label ID="DetailDark" Anchor="R,C" Offset="10,0" Style="BodyTextDark14" Hidden="1"/>
     </GridButton>
   </Instance>
 

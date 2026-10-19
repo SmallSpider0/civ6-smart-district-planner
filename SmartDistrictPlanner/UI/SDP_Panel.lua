@@ -133,10 +133,26 @@ end
 
 local SelectTab -- defined below (tabs)
 
+-- A hidden context gets no SetUpdate calls (checked in the game,
+-- 2026-10-20), so a running task would stop when the panel closes. While one
+-- runs, a closed panel keeps its context shown with the window hidden
+-- (design 6): nothing of it is visible or takes the mouse, and input passes
+-- through (OnInput only acts while the panel is open).
+local function KeepRunningHidden(on)
+  if on then
+    Controls.DropShadow:SetHide(true)
+    ContextPtr:SetHide(false)
+  else
+    if not IsOpen() then ContextPtr:SetHide(true) end
+    Controls.DropShadow:SetHide(false)
+  end
+end
+
 local function Open()
   if IsOpen() then return end
   if m_launchDone then SetLaunchMark(false) end
   SelectTab(m_tab)
+  Controls.DropShadow:SetHide(false)
   UIManager:QueuePopup(ContextPtr, PopupPriority.Low)
   UI.PlaySound("UI_Screen_Open")
 end
@@ -145,6 +161,7 @@ local function Close()
   if not IsOpen() then return end
   SDP_Preview.Clear()
   UIManager:DequeuePopup(ContextPtr)
+  if SDP_Task.IsRunning() then KeepRunningHidden(true) end
   UI.PlaySound("UI_Screen_Close")
 end
 
@@ -459,6 +476,20 @@ function SDP_UI.PopulateTierPull(pull, current, onSelect)
 end
 
 -- "About X s" for `units` of work.
+-- A SolutionRow instance: texts and the selected look (light text on the
+-- dark button, dark text on the light selected look).
+function SDP_UI.SolutionRow(inst, name, detail, selected)
+  inst.Name:SetText(name)
+  inst.NameDark:SetText(name)
+  inst.Detail:SetText(detail)
+  inst.DetailDark:SetText(detail)
+  inst.Selected:SetHide(not selected)
+  inst.Name:SetHide(selected)
+  inst.Detail:SetHide(selected)
+  inst.NameDark:SetHide(not selected)
+  inst.DetailDark:SetHide(not selected)
+end
+
 function SDP_UI.EstimateText(units)
   if units <= 0 then return "" end
   local seconds = SDP_Task.EstimateSeconds(units)
@@ -526,8 +557,9 @@ UpdateEstimate = function()
     Controls.Estimate:SetText("")
     return
   end
-  local units = SDP_Solver.EstimateUnits(#m_scan.Candidates, k, SDP_Tiers.Params(SDP_Tiers.Single, m_tier))
-  local seconds = SDP_Task.EstimateSeconds(units)
+  local params = SDP_Tiers.Params(SDP_Tiers.Single, m_tier)
+  local units = SDP_Solver.EstimateUnits(#m_scan.Candidates, k, params)
+  local seconds = SDP_Task.EstimateSeconds(units, not params.Sliced)
   if seconds < 1 then
     Controls.Estimate:SetText(Locale.Lookup("LOC_SDP_ESTIMATE_UNDER_ONE"))
   else
@@ -589,6 +621,10 @@ local function TaskFinished()
   if m_taskPage ~= nil then m_taskPage.Render() end
   UpdateAllButtons()
   if not IsOpen() then
+    -- Render shows the new result's preview; not on the map of a closed
+    -- panel (found in the game, 2026-10-20). Opening the tab shows it again.
+    SDP_Preview.Clear()
+    KeepRunningHidden(false)
     UI.PlaySound("Confirm_Bed_Positive")
     SetLaunchMark(true)
   end
@@ -665,8 +701,11 @@ local function Continue()
   if SDP_Task.IsRunning() or not CanContinue() then return nil end
   local session = m_result.Session
   if session.Params.Sliced then
-    local estimate = SDP_Tiers.SINGLE_CONTINUE_STARTS * session.Params.TryLimit / math.max(1, session.Params.Starts)
-      * SDP_Tiers.UNITS_PER_TRY
+    -- A continue runs SINGLE_CONTINUE_STARTS local searches; the first run
+    -- had Starts + Kicks of them.
+    local params = session.Params
+    local estimate = SDP_Solver.EstimateUnits(m_scan and #m_scan.Candidates or 30, #(session.Request.Districts or {}), params)
+      * SDP_Tiers.SINGLE_CONTINUE_STARTS / math.max(1, params.Starts + (params.Kicks or 0))
     StartTask(function()
       session:Continue()
       return session:Result()
@@ -719,9 +758,12 @@ m_pages.SITES = SDP_PageSites
 m_pages.MULTI = SDP_PageMulti
 
 local TABS = {
-  { Name = "SINGLE", Button = Controls.SingleTab, Selected = Controls.SingleTabSelected, Page = Controls.SinglePage },
-  { Name = "SITES", Button = Controls.SitesTab, Selected = Controls.SitesTabSelected, Page = Controls.SitesPage },
-  { Name = "MULTI", Button = Controls.MultiTab, Selected = Controls.MultiTabSelected, Page = Controls.MultiPage },
+  { Name = "SINGLE", Button = Controls.SingleTab, Selected = Controls.SingleTabSelected, Page = Controls.SinglePage,
+    Label = Controls.SingleTabLabel, SelectedLabel = Controls.SingleTabSelectedLabel },
+  { Name = "SITES", Button = Controls.SitesTab, Selected = Controls.SitesTabSelected, Page = Controls.SitesPage,
+    Label = Controls.SitesTabLabel, SelectedLabel = Controls.SitesTabSelectedLabel },
+  { Name = "MULTI", Button = Controls.MultiTab, Selected = Controls.MultiTabSelected, Page = Controls.MultiPage,
+    Label = Controls.MultiTabLabel, SelectedLabel = Controls.MultiTabSelectedLabel },
 }
 SelectTab = function(name)
   if m_tab ~= name then SDP_Preview.Clear() end
@@ -729,6 +771,8 @@ SelectTab = function(name)
   for _, tab in ipairs(TABS) do
     local on = tab.Name == name
     tab.Selected:SetHide(not on)
+    tab.Label:SetHide(on)
+    tab.SelectedLabel:SetHide(not on)
     tab.Page:SetHide(not on)
   end
   if name == "SINGLE" then
@@ -850,6 +894,8 @@ SDP_Panel = {
   UndoPins = UndoPins,
   SelectTab = function(name) SelectTab(name) end,
   Tab = function() return m_tab end,
+  -- The context shown with the window hidden: a task runs on after Close.
+  RunsHidden = function() return not ContextPtr:IsHidden() and Controls.DropShadow:IsHidden() end,
   Sites = SDP_PageSites,
   Multi = SDP_PageMulti,
   State = function()

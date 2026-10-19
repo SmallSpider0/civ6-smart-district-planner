@@ -2,7 +2,8 @@
 -- @timeout 600
 -- Multi-city planning with the real DMT (docs/multicity-design.md 4):
 -- a city-center pin near the capital, the capital and the new city planned
--- together. Needs a city: run tests/fixtures/found_capital.lua first.
+-- together. Needs a city: run tests/fixtures/found_capital.lua first;
+-- game.py newgame --capital --reveal also reveals the land around it.
 local test, T = ...
 
 local pid = Game.GetLocalPlayer()

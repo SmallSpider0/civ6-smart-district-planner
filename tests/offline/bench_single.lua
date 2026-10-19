@@ -1,8 +1,8 @@
 -- Offline benchmark of the single-city solver: quality against a reference
 -- and cost, per tier, on deterministic random maps. "est" is the expected
--- time in the game: 2 us per model search node (measured on macOS), and
--- about 70 us per DMT call and per evaluated layout (estimates from the
--- measured joint evaluation and this VM's cost of a layout evaluation).
+-- time in the game, run at once: SDP_Tiers work units at about 0.05 ms each
+-- (measured in the game on macOS, 2026-10-20: a DMT call 0.042 ms, a layout
+-- evaluation about 0.01 ms, a model search node 0.002-0.005 ms).
 --   node tools/offline_tests.mjs -v tests/offline/bench_single.lua [-k k4]
 -- Reference: exhaustive search (k <= 3 and k = 4 when affordable) or the best
 -- of a long simulated annealing run and the FINE tier with every continue.
@@ -202,7 +202,9 @@ local function Run(name, setName, land)
       s.calls, s.tries, s.nodes = s.calls + result.Stats.Calls, s.tries + result.Stats.Tries, s.nodes + result.Stats.Nodes
       if result.Gain >= ref - 1e-9 then s.opt = s.opt + 1 end
       sums[tier] = s
-      local ms = result.Stats.Nodes * 0.002 + result.Stats.Evaluations * 0.07 + result.Stats.Calls * 0.07
+      -- SDP_Tiers units at about 0.05 ms each when run at once (measured in the game)
+      local ms = (result.Stats.Calls + result.Stats.Evaluations * SDP_Tiers.UNITS_PER_TRY
+        + result.Stats.Nodes / SDP_Tiers.NODES_PER_UNIT) * 0.05
       s.ms = (s.ms or 0) + ms
       line = line .. string.format("  %s %6.2f %4.0f%% %5.0fms", tier:sub(1, 4), result.Gain, ratio * 100, ms)
     end

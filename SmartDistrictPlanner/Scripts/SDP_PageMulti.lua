@@ -301,13 +301,12 @@ function P.Render()
     -- Solutions.
     for n, s in ipairs(result.Solutions) do
       local inst = m_solutionIM:GetInstance()
-      inst.Name:SetText(Locale.Lookup("LOC_SDP_SOLUTION_N", n, SDP_UI.Signed(s.Gain)))
       local wonders = 0
       for _, p in ipairs(s.Plan) do
         if p.Kind == "WONDER" then wonders = wonders + 1 end
       end
-      inst.Detail:SetText(Locale.Lookup("LOC_SDP_MULTI_SOLUTION_DETAIL", #s.Cities, #s.Plan - wonders, wonders))
-      inst.Selected:SetHide(n ~= m_solution)
+      SDP_UI.SolutionRow(inst, Locale.Lookup("LOC_SDP_SOLUTION_N", n, SDP_UI.Signed(s.Gain)),
+        Locale.Lookup("LOC_SDP_MULTI_SOLUTION_DETAIL", #s.Cities, #s.Plan - wonders, wonders), n == m_solution)
       inst.Root:RegisterCallback(Mouse.eLClick, function() P.SelectSolution(n) end)
       m_view.Solutions[n] = { Gain = s.Gain, Selected = n == m_solution }
     end

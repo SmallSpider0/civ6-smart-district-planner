@@ -104,7 +104,12 @@ python3 -I tools/game.py launch                        # open steam://rungameid/
 # 然后用 computer-use 对启动器（com.aspyr.civ6.steam）的"开始"按钮做 AXPress
 python3 -I tools/game.py newgame --state SDP_Panel --capital   # 等主菜单→快速开始→等指定 Lua 状态可用→用开局开拓者建首都
 python3 -I tools/game.py popups --close                # 关掉排队中的游戏弹窗（历史时刻等），规划面板才会显示
+python3 -I tools/game.py newgame --state SDP_Panel --capital --reveal   # 另外揭示首都周围 12 格（城址、多城测试需要）
 ```
+
+`popups --close` 调用每个弹窗自己的 `OnClose`/`Close`（与点它的关闭按钮相同），找不到才直接出队；反复检查直到连续两次没有弹窗。原因：自然奇观等弹窗打开时占住游戏的事件队列，只出队不释放，UI 里的游戏数据（如揭示状态）就停止更新（AGENTS 坑 24）。
+
+`--reveal`（与 `--capital` 一起用）：建城后在 `GameCore_Tuner` 执行 `tests/fixtures/reveal_area.lua`，揭示首都周围 12 格，再关掉随之出现的自然奇观弹窗。第 1 回合只揭示了城市附近，城址候选要求三环内多半已揭示，不揭示时城址和多城测试会跳过。
 
 `--ruleset RULESET_STANDARD | RULESET_EXPANSION_1 | RULESET_EXPANSION_2` 指定规则集（默认为"快速开始"的选择，即已安装的最新资料片）。
 

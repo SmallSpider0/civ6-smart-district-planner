@@ -496,11 +496,40 @@ function Session:RunStart(s)
 end
 
 -- First run: Params.Starts starts, then the kicks.
+-- The starts of a lighter tier (Params.Prelude), with that tier's search
+-- parameters, before a tier's own: a start depends only on the input and its
+-- parameters, so the tier then ends at least as high as the lighter tier's
+-- starts. Without it the different search paths let FAST beat STANDARD on a
+-- map (offline benchmark, 2026-10-20). The board's memo keeps them cheap in
+-- DMT calls. They have budgets of their own: the tier's starts still get all
+-- of the tier's budget after them.
+local PRELUDE_KEYS = { "ExactLimit", "Beam", "BeamOrder", "Shortlist", "MaxPasses", "Rounds", "Swap", "Pair" }
+
+function Session:RunPrelude(tier)
+  local inner = SDP_Tiers.Multi[tier]
+  if inner == nil then return end
+  if inner.Prelude ~= nil then self:RunPrelude(inner.Prelude) end
+  local params, saved = self.Params, {}
+  for _, key in ipairs(PRELUDE_KEYS) do
+    saved[key] = params[key]
+    params[key] = inner[key]
+  end
+  for s = 1, inner.Starts do
+    if self.Search:OverBudget() then break end
+    self:RunStart(s)
+  end
+  for _, key in ipairs(PRELUDE_KEYS) do params[key] = saved[key] end
+end
+
 function Session:Run()
   local search, params = self.Search, self.Params
   search:SetBudgets()
   if search.K == 0 then return end
   search.Stats.Method = "multi"
+  if params.Prelude ~= nil then
+    self:RunPrelude(params.Prelude)
+    search:SetBudgets() -- the tier's own starts get its whole budget
+  end
   for _ = 1, params.Starts do
     if search:OverBudget() then break end
     self:RunStart(self.NextStartIndex)
@@ -676,12 +705,12 @@ end
 function SDP_Multi.EstimateUnits(cities, districts, wonders, params)
   local slots = cities * districts + wonders
   if slots == 0 then return 0 end
-  local n = 30
-  local singles = 3 * slots * n
-  local block = params.Beam * n * math.max(1, districts) / SDP_Tiers.NODES_PER_UNIT + params.Shortlist + 4 * districts * n
-  local perStart = (cities + 1) * block * (1 + params.Rounds) + 4 * slots * n
-  local tries = math.min(params.TryLimit, params.Starts * perStart + (params.Kicks or 0) * 8 * n)
-  return singles + tries * SDP_Tiers.UNITS_PER_TRY
+  local n = 30 -- plots a city can use, typically
+  local growth = (math.max(2, cities) / 2) ^ SDP_Tiers.MULTI_GROWTH
+  local units = (params.Work or 100) * n * slots * growth
+  local prelude = params.Prelude and SDP_Tiers.Multi[params.Prelude]
+  if prelude ~= nil then units = units + SDP_Multi.EstimateUnits(cities, districts, wonders, prelude) end
+  return units
 end
 
 -- ===========================================================================

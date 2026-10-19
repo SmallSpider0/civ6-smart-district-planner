@@ -91,6 +91,7 @@ function UI_Mock.Install()
   })
   local queue = {}
   local context = NewControl("ContextPtr")
+  context._hidden = true
   function context:LookUpControl(path) return NewControl(path) end
   function context:BuildInstanceForControl(_, instance)
     setmetatable(instance, getmetatable(Instance()))
@@ -110,8 +111,9 @@ function UI_Mock.Install()
     InstanceManager = InstanceManager,
     UIManager = {
       IsInPopupQueue = function(_, ctx) return queue[ctx] == true end,
-      QueuePopup = function(_, ctx) queue[ctx] = true end,
-      DequeuePopup = function(_, ctx) queue[ctx] = nil end,
+      -- As in the game: a queued popup is shown, a dequeued one hidden.
+      QueuePopup = function(_, ctx) queue[ctx] = true; ctx:SetHide(false) end,
+      DequeuePopup = function(_, ctx) queue[ctx] = nil; ctx:SetHide(true) end,
     },
     PopupPriority = { Low = 1 },
     Mouse = { eLClick = 1, eMouseEnter = 2 },
