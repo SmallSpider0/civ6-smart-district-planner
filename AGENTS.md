@@ -39,8 +39,9 @@ civ6mod/
 │   ├── Text/                         # 本地化（数据库格式 XML）
 │   ├── UI/                           # InGame 上下文：同名 .xml + .lua
 │   └── Scripts/                      # 纯逻辑模块（求解器、相邻表、overlay），经 ImportFiles 导入后 include
-├── tools/                            # 校验/部署脚本（XML 校验、luaparse 语法检查、复制到 Mods）
-└── reference/                        # 本地参考源码（DMT/AMT/Base UI 副本），已 gitignore，不随 mod 发布
+├── tools/                            # civ6tuner.py（Lua 执行/输出）；计划中：校验、部署脚本
+├── logs/                             # civ6tuner 输出日志，已 gitignore
+└── reference/                        # 指向本机 DMT/AMT/Base UI/DLC 源码的符号链接，已 gitignore
 ```
 
 命名约定：
@@ -52,7 +53,7 @@ civ6mod/
 
 **DMT 接入**
 ```lua
-include("MapTacks");                  -- MapTacks.PlayerTraits / PlayerDistricts
+include("MapTacks");                  -- 游戏本体文件；MapTacks.PlayerTraits / PlayerDistricts
 include("dmt_mappinsubjectmanager");
 include("dmt_yieldcalculator");       -- 尾部会执行 DMT_Initialize()，见坑 7
 ```
@@ -103,18 +104,43 @@ include("dmt_yieldcalculator");       -- 尾部会执行 DMT_Initialize()，见�
 
 ## 6. 开发环境与工作流
 
-**环境现状**（2026-10-19 初始化时检查）：
-- 本机为 macOS，工作目录在 iCloud Drive；**本机未安装文明6/Steam**，DMT/AMT 源码与 `Base/Assets/UI/` 不在本机。需求文档中的路径均为 Windows。
-- 可用工具：`node`（v26）、`xmllint`、`python3`、`git`；`luaparse` 尚未安装（`npm i -D luaparse` 于 `tools/` 下）。
-- 参考源码请复制到 `reference/`（建议子目录 `reference/dmt/`、`reference/amt/`、`reference/base-ui/`），供代理读取先例。**写任何 UI/引擎调用前先在这些源码中找先例**。
+**环境现状**（2026-10-19 检查）：
+- 开发与测试都在 macOS 本机进行；工作目录在 iCloud Drive。可用工具：`node`（v26）、`xmllint`、`sqlite3`、`python3`、`git`；`luaparse` 尚未安装（计划 `npm i -D luaparse` 于 `tools/` 下）。
+- 文明6 Mac 版（Aspyr）：版本 **1.0.12.54 (951533)**，universal 二进制（原生 arm64），**Expansion1（R&F）、Expansion2（GS）及全部 DLC 已安装**。显示语言 `zh_Hans_CN`，窗口模式（`FullScreen 0`）。
+- DMT（2428969051，2024-01-17 版）与 AMT r49（3771382002，2026-09-19 版）已通过创意工坊同步到本机。
+- `include("MapTacks")` 来自**游戏本体** `Base/Assets/UI/MapTacks.lua`，不是 DMT。
+
+**Mac 关键路径**（`~/Library/Application Support/` 下）
+
+| 用途 | 路径 |
+|------|------|
+| 游戏本体 UI 源码 | `Steam/steamapps/common/Sid Meier's Civilization VI/Civ6.app/Contents/Assets/Base/Assets/UI/` |
+| DLC / 资料片 | `…/Civ6.app/Contents/Assets/DLC/{Expansion1,Expansion2,…}/` |
+| 创意工坊 | `Steam/steamapps/workshop/content/289070/<id>/` |
+| 本地 Mods（部署目标） | `Sid Meier's Civilization VI/Sid Meier's Civilization VI/Mods/` |
+| 日志 | `Sid Meier's Civilization VI/Firaxis Games/Sid Meier's Civilization VI/Logs/` |
+| 配置 | 同上目录下 `AppOptions.txt`、`Mods.sqlite`（mod 启用状态：`ModGroupItems.Disabled`） |
+
+Windows 对应路径：Mods 在 `文档\My Games\Sid Meier's Civilization VI\Mods\`，日志在 `%LOCALAPPDATA%\Firaxis Games\Sid Meier's Civilization VI\Logs\`。
+
+**参考源码**：`reference/` 下放指向上述位置的符号链接（`dmt`、`amt`、`base-ui`、`dlc`），已 gitignore。**写任何 UI/引擎调用前先在这些源码中找先例**。
+
+**已知环境问题**
+- **Lua 日志 → 用 FireTuner 代替**：Mac 版不生成 `Lua.log`（`EnableTuner 1` 也不会）。2026-10-19 已实现 [tools/civ6tuner.py](tools/civ6tuner.py)（用法见 [tools/README.md](tools/README.md)）：`serve` 常驻收集全部 Lua 输出到 `logs/tuner-lua.log`，`exec -s <状态> <代码>` 在游戏内执行 Lua 并返回输出与错误。已在主菜单实测通过，并用它在游戏内确认了"SDP 测试"组生效。游戏 Lua 为 HavokScript（`_VERSION` = `2013.2.0 r13768`）：有 `loadstring`、无 `load`。`AppOptions.txt` 为 CRLF 换行，编辑时需保留 `\r`。**副作用：Tuner 开启时游戏不解锁 Steam 成就**；Tuner 端口只监听 127.0.0.1。
+- **每次启动的日志会被清空重写**（Logs 目录在启动时重建）。
+- **启动流程**：`open steam://rungameid/289070` → Aspyr 启动器窗口（bundle `com.aspyr.civ6.steam`，"开始"按钮可通过辅助功能 AXPress 点击）→ 同一进程切换为 `Civ6_Exe_Child` → 开场动画（可点击跳过，或 `AppOptions.txt` 设 `PlayIntroVideo 0`）→ 主菜单。
+- **computer-use 限制**：游戏本体窗口（Metal，标题 `Civilization VI (1920x1080 @ 174%)`）不向辅助功能暴露窗口，截图可用但**点击被工具安全校验拒绝**（"Could not verify which document this window is editing"）。需要操作游戏时优先用 civ6tuner 在对应 Lua 状态里直接调用（如 `Mods` 状态的 `Modding.*`）；只有 Lua 做不到的才请用户手动点击。
+- **测试用 mod 组**：本机共启用 165/166 个 mod，其中 AMT（hook `GetMapPinSubject`）、Empire Planner（会自建/删除地图钉）及多个改相邻/区域规则的 mod 会干扰测试。2026-10-19 已在 `Mods.sqlite` 新建并选中 **"SDP 测试"** 组（`ModGroupRowId=2`，经 `Modding.log` 验证已生效）：官方内容沿用默认组状态（39 启用、Tutorial 禁用），创意工坊仅启用 DMT。默认组（`ModGroupRowId=1`）未改动，可在游戏"附加内容"界面切回。**本 mod 首次部署、被游戏扫描后，需在该组内勾选启用**（新 mod 在组内的默认状态待验证）。
+- **回滚**：同目录下 `AppOptions.txt.bak-20261019`、`Mods.sqlite.bak-20261019` 为修改前备份；修改这两个文件时游戏必须处于关闭状态。
+- `Logs/LoadGameViewState.log` 已达约 700MB（反复写 `GAMECORE_LOAD_SAVEFILE_PENDING`），疑似读档卡住时刷出，与本项目无关但占空间。
 
 **每轮改动流程**
 1. 校验：全部 XML 过 `xmllint --noout`；全部 Lua 过 luaparse 语法检查（需求文档指定 `luaVersion: 5.3`；但游戏运行时是 Lua 5.1 系的 HavokScript，代码应只用 5.1 子集——不用 `goto`、`//`、位运算符、`utf8` 库）；
-2. 部署：整目录 `SmartDistrictPlanner/` 复制到游戏 Mods 目录（Windows：`文档\My Games\Sid Meier's Civilization VI\Mods\`）；
+2. 部署：整目录 `SmartDistrictPlanner/` 复制到上表的本地 Mods 目录；
 3. 验证：回主菜单重读档即可重载 UI 上下文；改 modinfo/文本需重启游戏；
-4. 排错：查 Lua.log 的 `Runtime Error`；控件不显示且无日志 → 怀疑 XML 非法属性。
+4. 排错：保持 `civ6tuner.py serve` 运行，查 `logs/tuner-lua.log`（Windows 上则查 Lua.log 的 `Runtime Error`）；控件不显示且无日志 → 怀疑 XML 非法属性。
 
-代理无法在本机运行游戏：所有游戏内验证项需交由用户执行，交付时明确列出"已静态校验"与"待游戏内验证"的部分，不得声称未经验证的行为已通过。
+**自动化测试分层**：① 部署 + 监控 `logs/tuner-lua.log`（全自动）；② 独立测试 mod `SDP_Tests` 或直接用 `civ6tuner.py exec` 在 `InGame` 状态跑断言（全自动）；③ computer-use 截图/点击做 UI 验收（半自动，需用户授权）。交付时明确区分"已自动验证"与"需用户确认"的部分，不得声称未经验证的行为已通过。跨平台：mod 无平台相关代码，Windows 上只需按验收清单冒烟测试（重点：性能与界面布局）。
 
 ## 7. 验收清单（需求文档第五节）
 
