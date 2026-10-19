@@ -7,6 +7,7 @@ include("MapTacks")   -- game file: the player's district list
 include("SDP_Rules")
 include("SDP_City")
 include("SDP_Overlay") -- includes DMT's yield calculator into this state
+include("SDP_Solver")
 
 local LAUNCH_BAR_STACK = "/InGame/LaunchBar/ButtonStack"
 

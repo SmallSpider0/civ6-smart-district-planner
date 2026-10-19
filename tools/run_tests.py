@@ -5,6 +5,7 @@ A test file (tests/test_*.lua) is a chunk that receives `test` and `T`:
 
     -- @state dmt_yieldcalculator     Lua state to run in (default InGame)
     -- @timeout 30                    seconds for the whole file (default 30)
+    -- @max_seconds 2.5               fail when the file takes longer (wall time)
     local test, T = ...
 
     test("campus next to a mountain gets science", function()
@@ -153,7 +154,11 @@ def run_file(path, name_filter, verbose):
                               "timeout": float(opts.get("timeout", 30))})
     # Wall time of the whole file, tuner round trip included (~0.02 s). The
     # game's own timers (os.clock, Automation.GetTime) tick in whole seconds.
-    print("%s  [%s]  %.2fs" % (rel, state, time.monotonic() - started))
+    elapsed = time.monotonic() - started
+    print("%s  [%s]  %.2fs" % (rel, state, elapsed))
+    if "max_seconds" in opts and elapsed > float(opts["max_seconds"]) and resp.get("ok"):
+        counts["FAIL"] += 1
+        print("  FAIL   (time limit)\n         took %.2fs, limit %ss" % (elapsed, opts["max_seconds"]))
     if resp.get("kind") in ("connection", "timeout"):
         print("  ERROR  %s: %s" % (resp["kind"], resp.get("error")))
         counts["ERROR"] += 1

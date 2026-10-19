@@ -52,6 +52,7 @@
       <File>Scripts/SDP_City.lua</File>
       <File>Scripts/SDP_Overlay.lua</File>
       <File>Scripts/SDP_Rules.lua</File>
+      <File>Scripts/SDP_Solver.lua</File>
     </ImportFiles>
     <AddUserInterfaces id="sdp_panel">
       <Properties>
@@ -66,6 +67,7 @@
     <File>Scripts/SDP_City.lua</File>
     <File>Scripts/SDP_Overlay.lua</File>
     <File>Scripts/SDP_Rules.lua</File>
+    <File>Scripts/SDP_Solver.lua</File>
     <File>Text/SDP_Text_en_US.xml</File>
     <File>Text/SDP_Text_zh_Hans_CN.xml</File>
     <File>UI/SDP_Panel.xml</File>

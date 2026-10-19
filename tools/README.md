@@ -62,6 +62,7 @@ python3 -I tools/run_tests.py -k campus -v tests/test_dmt.lua
 ```lua
 -- @state dmt_yieldcalculator      -- 在哪个 Lua 状态执行（默认 InGame）
 -- @timeout 30                     -- 整个文件的超时秒数（默认 30）
+-- @max_seconds 2.5                -- 可选：整个文件的墙钟时间超过即判失败（性能验收用）
 local test, T = ...
 
 test("名称", function()
