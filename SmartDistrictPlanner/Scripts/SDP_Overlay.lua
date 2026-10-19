@@ -62,15 +62,9 @@ function SDP_Overlay.IsInstalled()
   return m_state ~= nil
 end
 
-function SDP_Overlay.Install(playerID)
-  if m_state ~= nil then error("SDP_Overlay is already installed", 2) end
-  local state = {
-    PlayerID = playerID,
-    RealGet = GetMapPinSubject,
-    RealUpdate = UpdateMapPinSubject,
-    Snapshot = LoadMapPinSubjectTable(playerID, DMT_SUBJECTS_KEY) or {},
-    Layer = {},
-  }
+-- Put the overlay's replacements in place for `state`.
+local function Activate(state)
+  state.RealGet, state.RealUpdate = GetMapPinSubject, UpdateMapPinSubject
   m_state = state
   GetMapPinSubject = function(pid, x, y) -- lint: allow global-assign
     if pid ~= state.PlayerID then return state.RealGet(pid, x, y) end
@@ -81,7 +75,18 @@ function SDP_Overlay.Install(playerID)
   UpdateMapPinSubject = function(pid, x, y, subject) -- lint: allow global-assign
     if pid == state.PlayerID then state.Layer[Key(x, y)] = subject or false end
   end
-  ClearDMTCache(playerID)
+  ClearDMTCache(state.PlayerID)
+end
+
+-- Install for the player. `snapshot` (optional) is the real pin data to use
+-- instead of loading it again (see Suspend / Resume).
+function SDP_Overlay.Install(playerID, snapshot)
+  if m_state ~= nil then error("SDP_Overlay is already installed", 2) end
+  Activate({
+    PlayerID = playerID,
+    Snapshot = snapshot or LoadMapPinSubjectTable(playerID, DMT_SUBJECTS_KEY) or {},
+    Layer = {},
+  })
 end
 
 function SDP_Overlay.Uninstall()
@@ -90,6 +95,22 @@ function SDP_Overlay.Uninstall()
   GetMapPinSubject, UpdateMapPinSubject = state.RealGet, state.RealUpdate -- lint: allow global-assign
   m_state = nil
   ClearDMTCache(state.PlayerID)
+end
+
+-- Take the overlay out between two frames of a sliced computation (SDP_Task)
+-- and put it back later with the same snapshot and layer, so the real pin
+-- data is loaded once and nothing outside the computation ever sees the
+-- layer. Returns the state to pass to Resume.
+function SDP_Overlay.Suspend()
+  local state = m_state
+  if state == nil then error("SDP_Overlay is not installed", 2) end
+  SDP_Overlay.Uninstall()
+  return state
+end
+
+function SDP_Overlay.Resume(state)
+  if m_state ~= nil then error("SDP_Overlay is already installed", 2) end
+  Activate(state)
 end
 
 -- Run fn(...) with the overlay installed. The overlay is removed on every
@@ -110,6 +131,35 @@ function SDP_Overlay.Set(x, y, subject)
   m_state.Layer[Key(x, y)] = subject
   ClearDMTCache(m_state.PlayerID)
   return previous
+end
+
+-- Like Set, but DMT's plot cache is left alone: the caller (SDP_Board)
+-- batches changes and calls ClearCache before its next DMT call.
+function SDP_Overlay.Put(x, y, subject)
+  if m_state == nil then error("SDP_Overlay is not installed", 2) end
+  m_state.Layer[Key(x, y)] = subject
+end
+
+function SDP_Overlay.ClearCache()
+  if m_state == nil then error("SDP_Overlay is not installed", 2) end
+  ClearDMTCache(m_state.PlayerID)
+end
+
+-- One subject's weighted DMT score with the layer as it is. Returns the
+-- score and true, or 0 and false when DMT raised an error (as in Evaluate,
+-- such a placement counts as not placeable).
+function SDP_Overlay.ScoreOf(subject, weights)
+  if m_state == nil then error("SDP_Overlay is not installed", 2) end
+  local ok, yields = pcall(GetBonusYields, m_state.PlayerID, subject)
+  if not ok then return 0, false end
+  return SDP_Overlay.Score(yields, weights), true
+end
+
+-- DMT's CanPlacePin with the layer as it is; an error counts as false.
+function SDP_Overlay.CanPlace(subject)
+  if m_state == nil then error("SDP_Overlay is not installed", 2) end
+  local ok, canPlace = pcall(CanPlacePin, m_state.PlayerID, subject)
+  return ok and canPlace == true
 end
 
 -- Weighted score of a yields table (requirement constraint 3).

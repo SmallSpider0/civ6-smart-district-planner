@@ -58,6 +58,8 @@ end
 -- model. For each district type D:
 --   table[D].Any[yield]     gained from each adjacent district of any type
 --   table[D].From[X][yield] gained from each adjacent district of type X
+--   table[D].Rows           the rows themselves: { Any (bool), District (X or
+--                           nil), YieldType, YieldChange, TilesRequired }
 -- A row giving YieldChange per TilesRequired neighbours counts as
 -- YieldChange / TilesRequired per neighbour. That overestimates a little when
 -- the neighbour count is not a multiple of TilesRequired (pitfall 16); it is
@@ -78,9 +80,13 @@ function SDP_Rules.AdjacencyTable(playerID)
         and RowApplies(row, player, traits, excluded) then
       local entry = result[link.DistrictType]
       if entry == nil then
-        entry = { Any = {}, From = {} }
+        entry = { Any = {}, From = {}, Rows = {} }
         result[link.DistrictType] = entry
       end
+      entry.Rows[#entry.Rows + 1] = {
+        Any = row.OtherDistrictAdjacent == true, District = (not row.OtherDistrictAdjacent) and row.AdjacentDistrict or nil,
+        YieldType = row.YieldType, YieldChange = row.YieldChange, TilesRequired = row.TilesRequired,
+      }
       local perNeighbour = row.YieldChange / row.TilesRequired
       if row.OtherDistrictAdjacent then
         Add(entry.Any, row.YieldType, perNeighbour)

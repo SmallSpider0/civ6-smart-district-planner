@@ -55,7 +55,7 @@
       <Text>加权相邻加成提升：{1_Gain}</Text>
     </Replace>
     <Replace Tag="LOC_SDP_RESULT_STATS" Language="zh_Hans_CN">
-      <Text>方法：{1_Method}；DMT 评估 {2_Evaluations} 次；搜索节点 {3_Nodes} 个</Text>
+      <Text>档位：{1_Tier}；方法：{2_Method}；DMT 调用 {3_Calls} 次；尝试布局 {4_Tries} 个；搜索节点 {5_Nodes} 个；继续优化 {6_Continues} 次</Text>
     </Replace>
     <Replace Tag="LOC_SDP_RESULT_TRUNCATED" Language="zh_Hans_CN">
       <Text>已达搜索预算上限，方案可能不是最优。</Text>
@@ -110,6 +110,86 @@
     </Replace>
     <Replace Tag="LOC_SDP_UNDO_PINS" Language="zh_Hans_CN">
       <Text>撤销</Text>
+    </Replace>
+
+    <!-- 档位、地块产出、质量、后台计算 -->
+    <Replace Tag="LOC_SDP_LAND" Language="zh_Hans_CN">
+      <Text>计入占用地块的产出损失（食物、地貌权重用于这一项）</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_WEIGHT_FEATURE_SHORT" Language="zh_Hans_CN">
+      <Text>地貌</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_WEIGHT_FEATURE" Language="zh_Hans_CN">
+      <Text>砍伐树林、雨林、沼泽和收获加成资源的一次性产出</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_TIER" Language="zh_Hans_CN">
+      <Text>求解档位</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_TIER_FAST" Language="zh_Hans_CN">
+      <Text>快速</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_TIER_STANDARD" Language="zh_Hans_CN">
+      <Text>标准</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_TIER_FINE" Language="zh_Hans_CN">
+      <Text>精细</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_TIER_FAST_TOOLTIP" Language="zh_Hans_CN">
+      <Text>计算量最少，结果可能稍差。</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_TIER_STANDARD_TOOLTIP" Language="zh_Hans_CN">
+      <Text>默认，兼顾耗时与质量。</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_TIER_FINE_TOOLTIP" Language="zh_Hans_CN">
+      <Text>计算量最多，分帧进行；计算期间可以继续操作或关闭面板。</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_ESTIMATE" Language="zh_Hans_CN">
+      <Text>预计约 {1_Seconds} 秒</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_ESTIMATE_UNDER_ONE" Language="zh_Hans_CN">
+      <Text>预计不到 1 秒</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_CONTINUE" Language="zh_Hans_CN">
+      <Text>继续优化</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_CANCEL" Language="zh_Hans_CN">
+      <Text>取消</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_QUALITY_EXHAUSTIVE" Language="zh_Hans_CN">
+      <Text>已穷举，结果最优。</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_QUALITY_GAP" Language="zh_Hans_CN">
+      <Text>距估计上界不超过 {1_Percent}%</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_QUALITY_CONVERGED" Language="zh_Hans_CN">
+      <Text>最近一轮没有找到更好的方案</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_QUALITY_MAYBE" Language="zh_Hans_CN">
+      <Text>可能还有提升，可点“继续优化”</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_LIST_SEPARATOR" Language="zh_Hans_CN">
+      <Text>；</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_SUMMARY_LAND" Language="zh_Hans_CN">
+      <Text>加权提升：{1_Gain}（相邻 {2_Adjacency}，地块 {3_Land}）</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RUNNING" Language="zh_Hans_CN">
+      <Text>计算中…… {1_Percent}%</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_LAUNCHBAR_RUNNING" Language="zh_Hans_CN">
+      <Text>智能区域规划器：计算中（{1_Percent}%）</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_LAUNCHBAR_DONE" Language="zh_Hans_CN">
+      <Text>智能区域规划器：规划已完成，点击查看</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_STALE" Language="zh_Hans_CN">
+      <Text>计算期间局面发生了变化（新回合或地图钉增删），请重新求解。</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_NO_LEGAL_LAYOUT" Language="zh_Hans_CN">
+      <Text>这些区域找不到合法的摆放。</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_NO_CITY" Language="zh_Hans_CN">
+      <Text>城市已不存在。</Text>
     </Replace>
   </LocalizedText>
 </GameData>

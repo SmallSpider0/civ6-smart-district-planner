@@ -23,7 +23,7 @@ test("solve 4 districts", function()
   local result = SDP_Solver.Solve({ PlayerID = pid, CityID = city:GetID(), Districts = districts })
   T.ok(result.Ok, "solve failed: " .. tostring(result.Error))
   T.eq(#result.Plan, 4, "plan size")
-  print(string.format("gain %s via %s: %d layouts counted, %d nodes, %d DMT evaluations, truncated %s",
+  print(string.format("gain %s via %s: %d layouts counted, %d nodes, %d DMT calls, truncated %s",
     tostring(result.Gain), result.Stats.Method, result.Stats.Layouts, result.Stats.Nodes,
-    result.Stats.Evaluations, tostring(result.Stats.Truncated)))
+    result.Stats.Calls, tostring(result.Stats.Truncated)))
 end)

@@ -59,8 +59,8 @@ test("campus + holy site: exhaustive, legal and optimal", function()
   T.eq(result.Stats.Method, "exhaustive", "method")
   T.eq(#result.Plan, 2, "plan size")
   T.eq(result.Gain, BruteForceTwo(city, campus, holy, ONES), "gain vs brute force")
-  print(string.format("campus+holy site: gain %s, %d layouts, %d DMT evaluations",
-    tostring(result.Gain), result.Stats.Layouts, result.Stats.Evaluations))
+  print(string.format("campus+holy site: gain %s, %d layouts, %d DMT calls",
+    tostring(result.Gain), result.Stats.Layouts, result.Stats.Calls))
   for _, p in ipairs(result.Plan) do print(string.format("  %s at %d,%d score %s", p.Type, p.X, p.Y, tostring(p.Score))) end
 end)
 
@@ -68,11 +68,7 @@ test("the shortlist path finds the same optimum", function()
   local city = City()
   local campus, holy = Resolve("DISTRICT_CAMPUS"), Resolve("DISTRICT_HOLY_SITE")
   local exhaustive = Solve(city, { campus, holy }, ONES)
-  local limit = SDP_Solver.EXACT_LIMIT
-  SDP_Solver.EXACT_LIMIT = 0
-  local ok, shortlisted = pcall(Solve, city, { campus, holy }, ONES)
-  SDP_Solver.EXACT_LIMIT = limit
-  if not ok then error(shortlisted, 0) end
+  local shortlisted = Solve(city, { campus, holy }, ONES, { Params = { ExactLimit = 0 } })
   T.eq(shortlisted.Stats.Method, "shortlist", "method")
   T.eq(shortlisted.Gain, exhaustive.Gain, "gain")
 end)

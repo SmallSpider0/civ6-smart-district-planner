@@ -21,6 +21,7 @@
 |------|------|
 | [docs/install-and-test.md](docs/install-and-test.md) | 安装、使用、验收测试步骤、排错、已知限制 |
 | [docs/design.md](docs/design.md) | 求解算法、目标函数、与 DMT 的接缝、模块结构 |
+| [docs/multicity-design.md](docs/multicity-design.md) | 多城规划设计（选城址、多城区域、奇观）、求解档位、阶段 8 起的新算法与离线基准 |
 | [docs/self-test-report.md](docs/self-test-report.md) | 自测报告：验收清单逐项证据、测试结果、截图 |
 | [AGENTS.md](AGENTS.md) | 开发约定、环境、模组开发的坑 |
 | [tools/README.md](tools/README.md) | 校验、部署、游戏内测试工具 |

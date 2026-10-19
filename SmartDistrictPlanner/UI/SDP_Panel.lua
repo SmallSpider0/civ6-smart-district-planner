@@ -8,6 +8,11 @@ include("MapTacks")    -- game file: the player's district list
 include("SDP_Rules")
 include("SDP_City")
 include("SDP_Overlay") -- includes DMT's yield calculator into this state
+include("SDP_Tiers")
+include("SDP_Task")
+include("SDP_Board")
+include("SDP_Land")
+include("SDP_Search")
 include("SDP_Solver")
 include("SDP_Pins")
 
@@ -18,12 +23,17 @@ local MAX_WEIGHT = 3
 -- ICON_YIELD_*_1..5, 64 px, which shrink to dots here; requirements pitfalls
 -- 13 and 14), so the five city-state envoy bonus icons stand in: one family,
 -- all five yields, drawn at their native 26 px.
-local YIELD_ICONS = {
-  YIELD_SCIENCE = "ICON_ENVOY_BONUS_SCIENCE",
-  YIELD_CULTURE = "ICON_ENVOY_BONUS_CULTURE",
-  YIELD_FAITH = "ICON_ENVOY_BONUS_FAITH",
-  YIELD_GOLD = "ICON_ENVOY_BONUS_GOLD",
-  YIELD_PRODUCTION = "ICON_ENVOY_BONUS_PRODUCTION",
+-- Food and FEATURE (one-time yields of clearing and harvesting) only weigh
+-- the land part (SDP_Land); they have no envoy icon and show a font icon or
+-- a short word instead.
+local WEIGHT_COLUMNS = {
+  { Key = "YIELD_SCIENCE", Icon = "ICON_ENVOY_BONUS_SCIENCE" },
+  { Key = "YIELD_CULTURE", Icon = "ICON_ENVOY_BONUS_CULTURE" },
+  { Key = "YIELD_FAITH", Icon = "ICON_ENVOY_BONUS_FAITH" },
+  { Key = "YIELD_GOLD", Icon = "ICON_ENVOY_BONUS_GOLD" },
+  { Key = "YIELD_PRODUCTION", Icon = "ICON_ENVOY_BONUS_PRODUCTION" },
+  { Key = "YIELD_FOOD", Glyph = "[ICON_Food]", Land = true },
+  { Key = "FEATURE", Glyph = "LOC_SDP_WEIGHT_FEATURE_SHORT", ToolTip = "LOC_SDP_WEIGHT_FEATURE", Land = true },
 }
 
 local m_launchItem = {}     -- SDP_LaunchBarItem instance in the game's launch bar
@@ -36,9 +46,12 @@ local m_resultIM = InstanceManager:new("ResultRow", "Root", Controls.ResultStack
 -- Panel state, kept while the game runs.
 local m_cityID = nil
 local m_selected = {}         -- [DistrictType] = true
-local m_weights = {}          -- [YieldType] = 0..MAX_WEIGHT
-for _, yieldType in ipairs(SDP_Rules.YIELDS) do m_weights[yieldType] = 1 end
+local m_weights = {}          -- [YieldType or FEATURE] = 0..MAX_WEIGHT
+for _, column in ipairs(WEIGHT_COLUMNS) do m_weights[column.Key] = 1 end
 local m_allowFeatureRemoval = true
+local m_land = true           -- count the land part (design 4.2)
+local m_tier = SDP_Tiers.DEFAULT
+local m_launchDone = false    -- a background solve finished while the panel was closed
 local m_scan = nil            -- the selected city (district status, specialty slots)
 local m_districts = {}        -- SDP_Rules.PlannableDistricts, sorted by type
 local m_status = {}           -- SDP_City.DistrictStatus for the selected city
@@ -86,6 +99,21 @@ end
 -- Open / close
 -- ===========================================================================
 local Refresh -- defined below
+local UpdateEstimate -- defined below
+
+-- The launch bar button's tooltip (progress of a background computation)
+-- and the mark that a result is ready.
+local function LaunchToolTip(text)
+  if m_launchItem.LaunchItemButton ~= nil then
+    m_launchItem.LaunchItemButton:SetToolTipString(text or Locale.Lookup("LOC_SDP_LAUNCHBAR_TOOLTIP"))
+  end
+end
+
+local function SetLaunchMark(on)
+  m_launchDone = on
+  if m_launchItem.LaunchItemAlert ~= nil then m_launchItem.LaunchItemAlert:SetHide(not on) end
+  LaunchToolTip(on and Locale.Lookup("LOC_SDP_LAUNCHBAR_DONE") or nil)
+end
 
 local function IsOpen()
   return UIManager:IsInPopupQueue(ContextPtr)
@@ -93,6 +121,7 @@ end
 
 local function Open()
   if IsOpen() then return end
+  if m_launchDone then SetLaunchMark(false) end
   Refresh()
   UIManager:QueuePopup(ContextPtr, PopupPriority.Low)
   UI.PlaySound("UI_Screen_Open")
@@ -111,11 +140,35 @@ end
 -- ===========================================================================
 -- Results
 -- ===========================================================================
+local function CanContinue()
+  return m_result ~= nil and m_result.Ok and m_result.Quality ~= nil and m_result.Quality.CanContinue
+    and not m_result.Placed
+end
+
 local function UpdateButtons()
   local plan = m_result and m_result.Ok and m_result.Plan or {}
-  Controls.SolveButton:SetDisabled(m_cityID == nil)
-  Controls.PlaceButton:SetDisabled(#plan == 0 or m_result.Placed == true)
-  Controls.UndoButton:SetDisabled(not SDP_Pins.CanUndo())
+  local running = SDP_Task.IsRunning()
+  Controls.SolveButton:SetDisabled(m_cityID == nil or running)
+  Controls.ContinueButton:SetDisabled(running or not CanContinue())
+  Controls.CancelButton:SetHide(not running)
+  Controls.PlaceButton:SetDisabled(running or #plan == 0 or m_result.Placed == true)
+  Controls.UndoButton:SetDisabled(running or not SDP_Pins.CanUndo())
+end
+
+-- One line on how good the result is (design 7.4).
+local function QualityText(result)
+  local q = result.Quality
+  if q == nil then return "" end
+  if q.Exhaustive then return Locale.Lookup("LOC_SDP_QUALITY_EXHAUSTIVE") end
+  local parts = {}
+  if q.Gap ~= nil then parts[#parts + 1] = Locale.Lookup("LOC_SDP_QUALITY_GAP", Number(math.floor(q.Gap * 100 + 0.5))) end
+  if q.Converged then
+    parts[#parts + 1] = Locale.Lookup("LOC_SDP_QUALITY_CONVERGED")
+  elseif q.CanContinue then
+    parts[#parts + 1] = Locale.Lookup("LOC_SDP_QUALITY_MAYBE")
+  end
+  if q.Truncated then parts[#parts + 1] = Locale.Lookup("LOC_SDP_RESULT_TRUNCATED") end
+  return table.concat(parts, Locale.Lookup("LOC_SDP_LIST_SEPARATOR"))
 end
 
 local function AddResultRow(icon, name, detail, toolTip)
@@ -131,18 +184,28 @@ local function ShowResult()
   m_resultIM:ResetInstances()
   m_resultRows = {}
   local result = m_result
+  Controls.Quality:SetText("")
   if result == nil then
     Controls.Summary:SetText(Locale.Lookup("LOC_SDP_RESULT_NONE"))
     Controls.Summary:SetToolTipString("")
   elseif not result.Ok then
-    Controls.Summary:SetText(Locale.Lookup("LOC_SDP_RESULT_ERROR", tostring(result.Error)))
+    local key = "LOC_SDP_RESULT_" .. tostring(result.Error)
+    local text = Locale.Lookup(key)
+    if text == key then text = Locale.Lookup("LOC_SDP_RESULT_ERROR", tostring(result.Error)) end
+    Controls.Summary:SetText(text)
     Controls.Summary:SetToolTipString("")
   else
-    local summary = Locale.Lookup("LOC_SDP_RESULT_SUMMARY", Signed(result.Gain))
-    if result.Stats.Truncated then summary = summary .. "[NEWLINE]" .. Locale.Lookup("LOC_SDP_RESULT_TRUNCATED") end
+    local summary
+    if result.Session ~= nil and result.Session.Land ~= nil then
+      summary = Locale.Lookup("LOC_SDP_RESULT_SUMMARY_LAND", Signed(result.Gain), Signed(result.Adjacency), Signed(result.LandDelta))
+    else
+      summary = Locale.Lookup("LOC_SDP_RESULT_SUMMARY", Signed(result.Gain))
+    end
     Controls.Summary:SetText(summary)
-    Controls.Summary:SetToolTipString(Locale.Lookup("LOC_SDP_RESULT_STATS", result.Stats.Method,
-      result.Stats.Evaluations, result.Stats.Nodes))
+    local stats = result.Stats
+    Controls.Summary:SetToolTipString(Locale.Lookup("LOC_SDP_RESULT_STATS",
+      Locale.Lookup("LOC_SDP_TIER_" .. stats.Tier), stats.Method, stats.Calls, stats.Tries, stats.Nodes, stats.Continues))
+    Controls.Quality:SetText(QualityText(result))
     -- Each planned district: where, its yields, and DMT's own breakdown on hover.
     for _, p in ipairs(result.Plan) do
       local toolTip = (p.ToolTip ~= nil and p.ToolTip ~= "") and p.ToolTip or Locale.Lookup("LOC_SDP_NO_ADJACENCY")
@@ -166,6 +229,8 @@ local function ShowResult()
 end
 
 local function ClearResult()
+  -- Inputs changed: a computation for the old inputs is of no use any more.
+  if SDP_Task.IsRunning() then SDP_Task.Cancel() end
   if m_result ~= nil then
     m_result = nil
     ShowResult()
@@ -200,6 +265,7 @@ local function SetSelected(districtType, selected)
     if row.Type == districtType and row.Check:IsChecked() ~= (selected == true) then row.Check:SetCheck(selected == true) end
   end
   UpdateSpecialtyNote()
+  UpdateEstimate()
 end
 
 local function RefreshDistricts()
@@ -237,6 +303,7 @@ local function RefreshDistricts()
   Controls.DistrictStack:CalculateSize()
   Controls.DistrictScroll:CalculateSize()
   UpdateSpecialtyNote()
+  UpdateEstimate()
 end
 
 local function PlayerCities(playerID)
@@ -298,18 +365,28 @@ end
 
 local function BuildWeights()
   m_weightIM:ResetInstances()
-  for _, yieldType in ipairs(SDP_Rules.YIELDS) do
+  for _, column in ipairs(WEIGHT_COLUMNS) do
+    local key = column.Key
     local inst = m_weightIM:GetInstance()
     local function Show()
-      inst.Value:SetText(tostring(m_weights[yieldType]))
-      inst.Less:SetDisabled(m_weights[yieldType] <= 0)
-      inst.More:SetDisabled(m_weights[yieldType] >= MAX_WEIGHT)
+      local off = column.Land and not m_land -- weighs the land part only
+      inst.Value:SetText(tostring(m_weights[key]))
+      inst.Less:SetDisabled(off or m_weights[key] <= 0)
+      inst.More:SetDisabled(off or m_weights[key] >= MAX_WEIGHT)
+      inst.Root:SetAlpha(off and 0.5 or 1)
     end
-    inst.Icon:SetIcon(YIELD_ICONS[yieldType])
-    inst.Root:SetToolTipString(Locale.Lookup(GameInfo.Yields[yieldType].Name))
-    inst.Less:RegisterCallback(Mouse.eLClick, function() SetWeight(yieldType, m_weights[yieldType] - 1) end)
-    inst.More:RegisterCallback(Mouse.eLClick, function() SetWeight(yieldType, m_weights[yieldType] + 1) end)
-    m_weightViews[yieldType] = Show
+    if column.Icon then
+      inst.Icon:SetIcon(column.Icon)
+      inst.Glyph:SetText("")
+    else
+      inst.Icon:SetHide(true)
+      inst.Glyph:SetText(Locale.Lookup(column.Glyph))
+    end
+    local row = GameInfo.Yields[key]
+    inst.Root:SetToolTipString(Locale.Lookup(column.ToolTip or (row and row.Name) or key))
+    inst.Less:RegisterCallback(Mouse.eLClick, function() SetWeight(key, m_weights[key] - 1) end)
+    inst.More:RegisterCallback(Mouse.eLClick, function() SetWeight(key, m_weights[key] + 1) end)
+    m_weightViews[key] = Show
     Show()
   end
   Controls.WeightStack:CalculateSize()
@@ -323,38 +400,204 @@ local function SetAllowFeatureRemoval(allow)
   end
 end
 
+local function SetLand(on)
+  Controls.LandCheck:SetCheck(on)
+  if m_land ~= on then
+    m_land = on
+    ClearResult()
+  end
+  for _, column in ipairs(WEIGHT_COLUMNS) do
+    if column.Land and m_weightViews[column.Key] then m_weightViews[column.Key]() end
+  end
+end
+
+local function SetTier(tier)
+  if SDP_Tiers.Single[tier] == nil then return end
+  if m_tier ~= tier then
+    m_tier = tier
+    ClearResult()
+  end
+  Controls.TierPull:GetButton():SetText(Locale.Lookup("LOC_SDP_TIER_" .. tier))
+  UpdateEstimate()
+end
+
+local function PopulateTiers()
+  local pull = Controls.TierPull
+  pull:ClearEntries()
+  for _, tier in ipairs(SDP_Tiers.ORDER) do
+    local entry = {}
+    pull:BuildEntry("InstanceOne", entry)
+    entry.Button:SetText(Locale.Lookup("LOC_SDP_TIER_" .. tier))
+    entry.Button:SetToolTipString(Locale.Lookup("LOC_SDP_TIER_" .. tier .. "_TOOLTIP"))
+    entry.Button:RegisterCallback(Mouse.eLClick, function() SetTier(tier) end)
+  end
+  pull:CalculateInternals()
+  pull:GetButton():SetText(Locale.Lookup("LOC_SDP_TIER_" .. m_tier))
+end
+
+-- The districts the solver gets: selected and plannable, in type order, so
+-- the plan never depends on the order of clicks.
+local function SelectedDistricts()
+  local districts = {}
+  for _, d in ipairs(m_districts) do
+    if m_selected[d.Type] and m_status[d.Type] == nil then districts[#districts + 1] = d.Type end
+  end
+  return districts
+end
+
+-- "About X s" for the selected tier and districts (design 7.5).
+UpdateEstimate = function()
+  local k = #SelectedDistricts()
+  if m_scan == nil or k == 0 then
+    Controls.Estimate:SetText("")
+    return
+  end
+  local units = SDP_Solver.EstimateUnits(#m_scan.Candidates, k, SDP_Tiers.Params(SDP_Tiers.Single, m_tier))
+  local seconds = SDP_Task.EstimateSeconds(units)
+  if seconds < 1 then
+    Controls.Estimate:SetText(Locale.Lookup("LOC_SDP_ESTIMATE_UNDER_ONE"))
+  else
+    Controls.Estimate:SetText(Locale.Lookup("LOC_SDP_ESTIMATE", Number(math.floor(seconds + 0.5))))
+  end
+end
+
 Refresh = function()
   PopulateCities()
   RefreshDistricts()
   BuildWeights()
+  PopulateTiers()
   Controls.FeatureCheck:SetCheck(m_allowFeatureRemoval)
+  Controls.LandCheck:SetCheck(m_land)
+  UpdateEstimate()
   ShowResult()
 end
 
 -- ===========================================================================
 -- Actions
 -- ===========================================================================
+-- ---------------------------------------------------------------------------
+-- Computations over several frames (SDP_Task): the fine tier and its continues.
+-- Closing the panel does not stop them (design 6); the launch bar button's
+-- tooltip shows progress and a mark appears when the result is ready.
+-- ---------------------------------------------------------------------------
+-- Changes whenever the player's map pins change.
+local function PinSignature(playerID)
+  local count, sum = 0, 0
+  for _, pin in pairs(PlayerConfigurations[playerID]:GetMapPins()) do
+    count = count + 1
+    sum = sum + pin:GetID() * 7 + pin:GetHexX() * 131 + pin:GetHexY() * 3
+  end
+  return count .. ":" .. sum
+end
+
+local function ProgressPercent()
+  local progress = SDP_Task.Progress()
+  if progress == nil or progress.Estimate == nil or progress.Estimate <= 0 then return 0 end
+  return math.min(99, math.floor(100 * progress.Units / progress.Estimate))
+end
+
+local function ShowProgress()
+  local text = Locale.Lookup("LOC_SDP_RUNNING", ProgressPercent())
+  Controls.Summary:SetText(text)
+  Controls.Quality:SetText("")
+  LaunchToolTip(Locale.Lookup("LOC_SDP_LAUNCHBAR_RUNNING", ProgressPercent()))
+end
+
+local function TaskFinished()
+  ContextPtr:ClearUpdate()
+  LaunchToolTip(nil)
+  ShowResult()
+  if not IsOpen() then
+    UI.PlaySound("Confirm_Bed_Positive")
+    SetLaunchMark(true)
+  end
+end
+
+local function OnUpdate()
+  if SDP_Task.Step() == "running" then ShowProgress() end
+end
+
+-- Run `run` (returns a result) over several frames; `onDone(result)` keeps it.
+local function StartTask(run, estimate, onDone)
+  local playerID = Game.GetLocalPlayer()
+  local turn, pins = Game.GetCurrentGameTurn(), PinSignature(playerID)
+  local started = SDP_Task.Start({
+    Name = "single", PlayerID = playerID, Run = run, Estimate = estimate,
+    IsStale = function() return Game.GetCurrentGameTurn() ~= turn or PinSignature(playerID) ~= pins end,
+    OnDone = function(result)
+      onDone(result)
+      TaskFinished()
+    end,
+    OnError = function(message)
+      m_result = { Ok = false, Error = message }
+      TaskFinished()
+    end,
+    OnCancel = function() TaskFinished() end,
+  })
+  if started then
+    ContextPtr:SetUpdate(OnUpdate)
+    ShowProgress()
+    UpdateButtons()
+  end
+  return started
+end
+
+local function Request()
+  local districts = SelectedDistricts()
+  if m_cityID == nil or #districts == 0 then return nil end
+  local weights = {}
+  for key, value in pairs(m_weights) do weights[key] = value end
+  return {
+    PlayerID = Game.GetLocalPlayer(), CityID = m_cityID, Districts = districts, Weights = weights,
+    AllowFeatureRemoval = m_allowFeatureRemoval, Land = m_land, Tier = m_tier,
+  }
+end
+
+-- Solve now (fast and standard tiers: returns the result) or start a sliced
+-- computation (fine tier: returns nil, the result shows when it is done).
 local function Solve()
-  local districts = {}
-  for _, d in ipairs(m_districts) do
-    if m_selected[d.Type] and m_status[d.Type] == nil then districts[#districts + 1] = d.Type end
+  if SDP_Task.IsRunning() then return nil end
+  local request = Request()
+  local params = SDP_Tiers.Params(SDP_Tiers.Single, m_tier)
+  if request ~= nil and params.Sliced then
+    local scan = SDP_City.Scan(request.PlayerID, request.CityID, { allowFeatureRemoval = request.AllowFeatureRemoval })
+    if scan ~= nil then
+      m_result = nil
+      local estimate = SDP_Solver.EstimateUnits(#scan.Candidates, #request.Districts, params)
+      StartTask(function() return SDP_Solver.SolveScan(request, scan) end, estimate,
+        function(result) m_result = result end)
+      return nil
+    end
   end
-  if m_cityID == nil or #districts == 0 then
-    m_result = nil
-  else
-    local weights = {}
-    for yieldType, value in pairs(m_weights) do weights[yieldType] = value end
-    m_result = SDP_Solver.Solve({
-      PlayerID = Game.GetLocalPlayer(), CityID = m_cityID, Districts = districts,
-      Weights = weights, AllowFeatureRemoval = m_allowFeatureRemoval,
-    })
-  end
+  m_result = request and SDP_Solver.Solve(request) or nil
   ShowResult()
   return m_result
 end
 
+-- One more batch of local searches on the shown result (design 7.3).
+local function Continue()
+  if SDP_Task.IsRunning() or not CanContinue() then return nil end
+  local session = m_result.Session
+  if session.Params.Sliced then
+    local estimate = SDP_Tiers.SINGLE_CONTINUE_STARTS * session.Params.TryLimit / math.max(1, session.Params.Starts)
+      * SDP_Tiers.UNITS_PER_TRY
+    StartTask(function()
+      session:Continue()
+      return session:Result()
+    end, estimate, function(result) m_result = result end)
+    return nil
+  end
+  m_result = SDP_Solver.Continue(m_result)
+  ShowResult()
+  return m_result
+end
+
+local function Cancel()
+  return SDP_Task.Cancel()
+end
+
 local function PlacePins()
-  if m_result == nil or not m_result.Ok or m_result.Placed then return 0 end
+  if SDP_Task.IsRunning() or m_result == nil or not m_result.Ok or m_result.Placed then return 0 end
   local placed = SDP_Pins.Place(Game.GetLocalPlayer(), m_result.Plan)
   m_result.Placed = true
   UpdateButtons()
@@ -434,6 +677,8 @@ local function OnInit(isReload)
 end
 
 local function OnShutdown()
+  if SDP_Task.IsRunning() then SDP_Task.Cancel() end
+  ContextPtr:ClearUpdate()
   Events.LoadScreenClose.Remove(OnLoadScreenClose)
   LuaEvents.SDP_OpenPanel.Remove(Open)
   LuaEvents.SDP_ClosePanel.Remove(Close)
@@ -452,14 +697,25 @@ SDP_Panel = {
   SetSelected = SetSelected,
   SetWeight = SetWeight,
   SetAllowFeatureRemoval = SetAllowFeatureRemoval,
+  SetLand = SetLand,
+  SetTier = SetTier,
   Solve = Solve,
+  Continue = Continue,
+  Cancel = Cancel,
+  -- Drive a sliced computation to its end now (tests cannot wait for frames).
+  RunTask = function(quota)
+    while SDP_Task.IsRunning() do SDP_Task.Step(quota) end
+    return m_result
+  end,
   PlacePins = PlacePins,
   UndoPins = UndoPins,
   State = function()
     return {
       CityID = m_cityID, Result = m_result, DistrictRows = m_districtRows, ResultRows = m_resultRows,
-      Weights = m_weights, AllowFeatureRemoval = m_allowFeatureRemoval,
+      Weights = m_weights, AllowFeatureRemoval = m_allowFeatureRemoval, Land = m_land, Tier = m_tier,
+      Running = SDP_Task.IsRunning(), QualityText = Controls.Quality:GetText(), EstimateText = Controls.Estimate:GetText(),
       PlaceDisabled = Controls.PlaceButton:IsDisabled(), UndoDisabled = Controls.UndoButton:IsDisabled(),
+      ContinueDisabled = Controls.ContinueButton:IsDisabled(), LaunchMark = m_launchDone,
     }
   end,
 }
@@ -471,7 +727,12 @@ end)
 Controls.FeatureCheck:RegisterCheckHandler(function()
   SetAllowFeatureRemoval(Controls.FeatureCheck:IsChecked())
 end)
+Controls.LandCheck:RegisterCheckHandler(function()
+  SetLand(Controls.LandCheck:IsChecked())
+end)
 Controls.SolveButton:RegisterCallback(Mouse.eLClick, function() Solve() end)
+Controls.ContinueButton:RegisterCallback(Mouse.eLClick, function() Continue() end)
+Controls.CancelButton:RegisterCallback(Mouse.eLClick, function() Cancel() end)
 Controls.PlaceButton:RegisterCallback(Mouse.eLClick, function() PlacePins() end)
 Controls.UndoButton:RegisterCallback(Mouse.eLClick, function() UndoPins() end)
 ContextPtr:SetInputHandler(OnInput, true)

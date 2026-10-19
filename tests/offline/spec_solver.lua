@@ -1,0 +1,185 @@
+-- Offline: SDP_Solver on the fake world against brute force.
+local test, T = ...
+
+include("SDP_Rules")
+include("SDP_City")
+include("SDP_Overlay")
+include("SDP_Tiers")
+include("SDP_Task")
+include("SDP_Board")
+include("SDP_Land")
+include("SDP_Search")
+include("SDP_Solver")
+
+local MAP = {
+  "~~~~~~~~~~~~",
+  "~..f.M..h..~",
+  "~.fMj..p.d.~",
+  "~h..f.j..M.~",
+  "~.pM...f.h.~",
+  "~..j.p..q..~",
+  "~f..h.M.j..~",
+  "~.s..f..p.~~",
+  "~..p...h...~",
+  "~~~~~~~~~~~~",
+}
+
+local function NewWorld(extra)
+  local spec = { rows = MAP, rivers = { "6,4", "7,4", "7,5", "6,6" }, cities = { { id = 1, x = 5, y = 4, population = 7, capital = true } } }
+  for k, v in pairs(extra or {}) do spec[k] = v end
+  return World.New(spec)
+end
+
+local ONES = { YIELD_SCIENCE = 1, YIELD_CULTURE = 1, YIELD_FAITH = 1, YIELD_GOLD = 1, YIELD_PRODUCTION = 1 }
+
+-- Best legal gain over every placement of the districts, with the fake DMT.
+local function BruteForce(districts, weights)
+  local scan = SDP_City.Scan(0, 1)
+  return SDP_Overlay.With(0, function()
+    local fixed = SDP_Overlay.FixedSubjects(scan)
+    local baseline = SDP_Overlay.Evaluate({}, fixed, weights).Total
+    local best = nil
+    local used, layout = {}, {}
+    local function Walk(m)
+      if m > #districts then
+        local subjects = {}
+        for i, c in ipairs(layout) do subjects[i] = SDP_Overlay.Subject(districts[i], c.X, c.Y) end
+        local res = SDP_Overlay.Evaluate(subjects, fixed, weights)
+        if res.Legal and (best == nil or res.Total - baseline > best) then best = res.Total - baseline end
+        return
+      end
+      for _, c in ipairs(scan.Candidates) do
+        if not used[c.Index] then
+          used[c.Index], layout[m] = true, c
+          Walk(m + 1)
+          used[c.Index], layout[m] = nil, nil
+        end
+      end
+    end
+    Walk(1)
+    return best
+  end)
+end
+
+test("campus + holy site: exhaustive and optimal", function()
+  NewWorld()
+  local districts = { "DISTRICT_CAMPUS", "DISTRICT_HOLY_SITE" }
+  local result = SDP_Solver.Solve({ PlayerID = 0, CityID = 1, Districts = districts, Weights = ONES })
+  T.ok(result.Ok, tostring(result.Error))
+  T.eq(result.Stats.Method, "exhaustive", "method")
+  T.eq(result.Gain, BruteForce(districts, ONES), "gain vs brute force")
+end)
+
+test("the shortlist path finds the same optimum", function()
+  NewWorld()
+  local districts = { "DISTRICT_CAMPUS", "DISTRICT_HOLY_SITE" }
+  local result = SDP_Solver.Solve({ PlayerID = 0, CityID = 1, Districts = districts, Weights = ONES, Params = { ExactLimit = 0 } })
+  T.eq(result.Stats.Method, "shortlist", "method")
+  T.eq(result.Gain, BruteForce(districts, ONES), "gain vs brute force")
+end)
+
+-- Best gain over every placement including the land part.
+local function BruteForceLand(districts, weights)
+  local scan = SDP_City.Scan(0, 1)
+  return SDP_Overlay.With(0, function()
+    local fixed = SDP_Overlay.FixedSubjects(scan)
+    local baseline = SDP_Overlay.Evaluate({}, fixed, weights).Total
+    local specialty = #districts
+    local land = SDP_Land.ForScan(scan, fixed, weights, math.max(scan.Population, SDP_Land.RequiredPopulation(specialty)))
+    local best = nil
+    for _, p in ipairs(scan.Candidates) do
+      for _, q in ipairs(scan.Candidates) do
+        if p.Index ~= q.Index then
+          local res = SDP_Overlay.Evaluate({ SDP_Overlay.Subject(districts[1], p.X, p.Y), SDP_Overlay.Subject(districts[2], q.X, q.Y) },
+            fixed, weights)
+          local gain = res.Total - baseline + SDP_Land.Score(land, { [p.Index] = true, [q.Index] = true }) - land.Base
+          if res.Legal and (best == nil or gain > best) then best = gain end
+        end
+      end
+    end
+    return best
+  end)
+end
+
+test("with the land part: exhaustive equals brute force", function()
+  NewWorld()
+  local districts = { "DISTRICT_CAMPUS", "DISTRICT_HOLY_SITE" }
+  local weights = { YIELD_SCIENCE = 1, YIELD_CULTURE = 1, YIELD_FAITH = 1, YIELD_GOLD = 1, YIELD_PRODUCTION = 1, YIELD_FOOD = 2, FEATURE = 2 }
+  local result = SDP_Solver.Solve({ PlayerID = 0, CityID = 1, Districts = districts, Weights = weights, Land = true })
+  T.eq(result.Stats.Method, "exhaustive", "method")
+  T.ok(result.Quality.Exhaustive, "exhaustive quality flag")
+  T.ok(not result.Quality.CanContinue, "nothing to continue")
+  T.ok(result.LandDelta <= 0, "the land part is a loss")
+  T.near(result.Gain, BruteForceLand(districts, weights), 1e-9, "gain vs brute force")
+  T.near(result.Gain, result.Adjacency + result.LandDelta, 1e-9, "gain = adjacency + land")
+  local off = SDP_Solver.Solve({ PlayerID = 0, CityID = 1, Districts = districts, Weights = weights })
+  T.eq(off.LandDelta, 0, "land part off")
+  T.ok(off.Adjacency >= result.Adjacency, "without land losses adjacency can only be higher")
+end)
+
+local SIX = { "DISTRICT_CAMPUS", "DISTRICT_HOLY_SITE", "DISTRICT_THEATER", "DISTRICT_COMMERCIAL_HUB",
+  "DISTRICT_INDUSTRIAL_ZONE", "DISTRICT_ENTERTAINMENT_COMPLEX" }
+
+test("every tier is deterministic", function()
+  NewWorld()
+  for _, tier in ipairs(SDP_Tiers.ORDER) do
+    local request = { PlayerID = 0, CityID = 1, Districts = SIX, Tier = tier, Land = true }
+    local first, second = SDP_Solver.Solve(request), SDP_Solver.Solve(request)
+    T.ok(first.Ok, tostring(first.Error))
+    T.ok(not first.Stats.Mismatch, tier .. ": incremental and full evaluation agree")
+    T.same(second.Plan, first.Plan, tier .. " plan")
+    T.same(second.Stats, first.Stats, tier .. " stats")
+    T.eq(first.Stats.Tier, tier, "tier recorded")
+  end
+end)
+
+test("continue never gets worse and is reproducible", function()
+  NewWorld()
+  local request = { PlayerID = 0, CityID = 1, Districts = SIX, Tier = "FAST", Land = true }
+  local a = SDP_Solver.Solve(request)
+  local b = SDP_Solver.Solve(request)
+  T.ok(a.Quality.CanContinue, "can continue")
+  local previous = a.Gain
+  for n = 1, 3 do
+    if not a.Quality.CanContinue then break end
+    a = SDP_Solver.Continue(a)
+    b = SDP_Solver.Continue(b)
+    T.ok(a.Gain >= previous, "continue " .. n .. " is not worse")
+    T.eq(a.Stats.Continues, n, "continue count")
+    T.same(b.Plan, a.Plan, "same plan after " .. n .. " continues")
+    T.ok(a.Quality.Converged ~= nil, "convergence known after a continue")
+    previous = a.Gain
+  end
+end)
+
+test("unavailable, duplicate and unplaceable districts are reported", function()
+  NewWorld()
+  local result = SDP_Solver.Solve({ PlayerID = 0, CityID = 1, Weights = ONES,
+    Districts = { "DISTRICT_CAMPUS", "DISTRICT_CAMPUS", "DISTRICT_ACROPOLIS", "DISTRICT_NOPE" } })
+  T.eq(#result.Plan, 1, "plan size")
+  T.eq(result.Plan[1].Type, "DISTRICT_CAMPUS", "placed")
+  T.same(result.Unplaced, { { Type = "DISTRICT_ACROPOLIS", Reason = "NOT_AVAILABLE" }, { Type = "DISTRICT_NOPE", Reason = "NOT_AVAILABLE" } },
+    "unplaced")
+end)
+
+test("feature removal off keeps woods, rainforest and marsh", function()
+  NewWorld()
+  local result = SDP_Solver.Solve({ PlayerID = 0, CityID = 1, Districts = SIX, AllowFeatureRemoval = false, Land = true })
+  for _, p in ipairs(result.Plan) do
+    local feature = Map.GetPlot(p.X, p.Y):GetFeatureType()
+    T.ok(feature == -1 or not GameInfo.Features[feature].Removable, p.Type .. " clears a removable feature")
+  end
+end)
+
+test("locked pins are never built over and count as neighbours", function()
+  local w = NewWorld()
+  w:AddPin(4, 4, "ICON_DISTRICT_GOVERNMENT", "plaza")
+  local result = SDP_Solver.Solve({ PlayerID = 0, CityID = 1, Districts = SIX, Land = true })
+  local plaza = Map.GetPlotIndex(4, 4)
+  local next = false
+  for _, p in ipairs(result.Plan) do
+    T.ok(p.Index ~= plaza, p.Type .. " on the pinned plot")
+    if Map.GetPlotDistance(p.X, p.Y, 4, 4) == 1 then next = true end
+  end
+  T.ok(next, "the plan uses the plaza's bonus")
+end)

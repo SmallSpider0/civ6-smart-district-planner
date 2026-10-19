@@ -40,6 +40,8 @@ civ6mod/
 │   ├── UI/                           # InGame 上下文：同名 .xml + .lua
 │   └── Scripts/                      # 纯逻辑模块（求解器、相邻表、overlay），经 ImportFiles 导入后 include
 ├── tests/                            # 游戏内 Lua 测试（test_*.lua），由 tools/run_tests.py 经 Tuner 执行；不随 mod 发布
+│   ├── offline/                      # 离线测试（spec_*.lua）与基准（bench_*.lua），tools/offline_tests.mjs 在 fengari 里跑，用假世界 world.lua
+│   └── bench/                        # 游戏内基准与单价校准（不以 test_ 开头，单独运行）
 ├── tools/                            # civ6tuner.py、validate.py、luacheck.mjs、deploy.py、run_tests.py、game.py，见 tools/README.md
 ├── logs/                             # civ6tuner 输出日志，已 gitignore
 └── reference/                        # 指向本机 DMT/AMT/Base UI/DLC 源码的符号链接，已 gitignore
@@ -75,6 +77,7 @@ include("dmt_yieldcalculator");       -- 尾部会执行 DMT_Initialize()，见�
 - 阶段 2：仅对 top ~100 做 DMT 精确评估；
 - 阶段 3：逐区域局部搜索（其他固定、试全部合法格、迭代到无改进）兜底短名单截断。
 - 可替换为等效方案，但不得假死、结果不劣于此。
+- 阶段 8 起已替换：`SDP_Search`（模型集束搜索 → 精评 → 局部搜索 → 扰动重建）+ `SDP_Board`（增量 + 记忆的 DMT 评估）。离线基准上质量和耗时都优于上面三段式，见 [docs/multicity-design.md](docs/multicity-design.md) 第 15 节。
 
 **确定性（约束 6 的落地规则）**
 - 禁止 `math.random`、依赖时间的逻辑；
@@ -147,12 +150,13 @@ Windows 对应路径：Mods 在 `文档\My Games\Sid Meier's Civilization VI\Mod
 - `Logs/LoadGameViewState.log` 已达约 700MB（反复写 `GAMECORE_LOAD_SAVEFILE_PENDING`），疑似读档卡住时刷出，与本项目无关但占空间。
 
 **每轮改动流程**（命令细节见 [tools/README.md](tools/README.md)）
+0. 离线：`node tools/offline_tests.mjs` 跑 `tests/offline/spec_*.lua`（不开游戏，几秒到十几秒）。改求解算法时再跑 `tests/offline/bench_single.lua` 对比质量与预计耗时；
 1. 校验：`python3 -I tools/validate.py`。检查 XML 格式、modinfo 与磁盘文件一致、双语文本键一致、`LOC_SDP_*` 引用都有定义、UI XML 只用游戏本体出现过的控件和属性（坑 8）、Lua 语法（luaparse 5.3 模式解析，再禁掉 5.1 没有的写法）与禁用全局、确定性（禁 `math.random`/`os.time`）；
 2. 部署：`python3 -I tools/deploy.py`。先校验，再把 `SmartDistrictPlanner/` 同步到上表的本地 Mods 目录（增量复制，并删除已不存在的文件）；
 3. 验证：改 Lua/UI XML 后回主菜单重新进入对局；改 modinfo/文本需重启游戏（deploy 会提示是哪种；重启用 `tools/game.py quit/launch/newgame`）；然后 `python3 -I tools/run_tests.py` 跑 `tests/` 下的游戏内测试；
 4. 排错：保持 `civ6tuner.py serve` 运行，查 `logs/tuner-lua.log`（Windows 上则查 Lua.log 的 `Runtime Error`）；控件不显示且无日志 → 怀疑 XML 非法属性。
 
-**自动化测试分层**：① validate + deploy + 监控 `logs/tuner-lua.log`（全自动）；② `tests/test_*.lua` 经 `run_tests.py` 在指定 Lua 状态里跑断言（全自动；本 mod 面板的 Lua 状态名为 `SDP_Panel`，测试钩子是其中的全局表 `SDP_Panel`；需要改游戏状态的用例用 `@setup`/`@teardown` 在 `GameCore_Tuner` 状态执行 `tests/fixtures/` 脚本；`game.py newgame --ruleset` 可切换三种规则集）；③ computer-use 截图/点击做 UI 验收（半自动，需用户授权）。交付时明确区分"已自动验证"与"需用户确认"的部分，不得声称未经验证的行为已通过。跨平台：mod 无平台相关代码，Windows 上只需按验收清单冒烟测试（重点：性能与界面布局）。
+**自动化测试分层**：⓪ 离线逻辑测试与基准（`tools/offline_tests.mjs`，fengari 里跑 Lua，DMT 和游戏接口由 `tests/offline/world.lua` 模拟；只证明搜索与记账正确，数值仍以游戏内为准。注意 fengari 的整数是 32 位，游戏里是双精度）；① validate + deploy + 监控 `logs/tuner-lua.log`（全自动）；② `tests/test_*.lua` 经 `run_tests.py` 在指定 Lua 状态里跑断言（全自动；本 mod 面板的 Lua 状态名为 `SDP_Panel`，测试钩子是其中的全局表 `SDP_Panel`；需要改游戏状态的用例用 `@setup`/`@teardown` 在 `GameCore_Tuner` 状态执行 `tests/fixtures/` 脚本；`game.py newgame --ruleset` 可切换三种规则集）；③ computer-use 截图/点击做 UI 验收（半自动，需用户授权）。交付时明确区分"已自动验证"与"需用户确认"的部分，不得声称未经验证的行为已通过。跨平台：mod 无平台相关代码，Windows 上只需按验收清单冒烟测试（重点：性能与界面布局）。
 
 ## 7. 验收清单（需求文档第五节）
 

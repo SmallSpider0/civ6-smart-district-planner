@@ -23,7 +23,11 @@ local function Reset()
   SDP_Panel.SelectCity(city:GetID())
   for _, d in ipairs(SDP_Rules.PlannableDistricts(pid)) do SDP_Panel.SetSelected(d.Type, false) end
   for _, y in ipairs(SDP_Rules.YIELDS) do SDP_Panel.SetWeight(y, 1) end
+  SDP_Panel.SetWeight("YIELD_FOOD", 1)
+  SDP_Panel.SetWeight("FEATURE", 1)
   SDP_Panel.SetAllowFeatureRemoval(true)
+  SDP_Panel.SetLand(true)
+  SDP_Panel.SetTier("STANDARD")
   SDP_Panel.Refresh()
   return city
 end
@@ -67,8 +71,8 @@ test("the panel solves exactly what the solver does, whatever the click order", 
   local fromPanel = SDP_Panel.Solve()
   local ordered = { a, b }
   table.sort(ordered)
-  local direct = SDP_Solver.Solve({ PlayerID = pid, CityID = city:GetID(), Districts = ordered,
-    Weights = { YIELD_SCIENCE = 1, YIELD_CULTURE = 3, YIELD_FAITH = 1, YIELD_GOLD = 1, YIELD_PRODUCTION = 1 } })
+  local direct = SDP_Solver.Solve({ PlayerID = pid, CityID = city:GetID(), Districts = ordered, Land = true, Tier = "STANDARD",
+    Weights = { YIELD_SCIENCE = 1, YIELD_CULTURE = 3, YIELD_FAITH = 1, YIELD_GOLD = 1, YIELD_PRODUCTION = 1, YIELD_FOOD = 1, FEATURE = 1 } })
   T.same(fromPanel.Plan, direct.Plan, "plan")
   T.eq(fromPanel.Gain, direct.Gain, "gain")
 end)
@@ -111,4 +115,24 @@ test("too many specialty districts only warn", function()
   local result = SDP_Panel.Solve()
   T.ok(result.Ok, "solve refused")
   Reset()
+end)
+
+test("tier, land switch and continue update the panel", function()
+  Reset()
+  SDP_Panel.SetSelected(Resolve("DISTRICT_CAMPUS"), true)
+  SDP_Panel.SetSelected(Resolve("DISTRICT_HOLY_SITE"), true)
+  T.ok(SDP_Panel.State().EstimateText ~= "", "no time estimate")
+  local result = SDP_Panel.Solve()
+  T.ok(result ~= nil and result.Ok, "solve failed")
+  T.ok(SDP_Panel.State().QualityText ~= "", "no quality line")
+  T.eq(SDP_Panel.State().ContinueDisabled, not result.Quality.CanContinue, "continue button state")
+  SDP_Panel.SetLand(false)
+  T.eq(SDP_Panel.State().Result, nil, "switching the land part clears the result")
+  local off = SDP_Panel.Solve()
+  T.eq(off.LandDelta, 0, "land part off")
+  SDP_Panel.SetTier("FAST")
+  T.eq(SDP_Panel.State().Result, nil, "changing the tier clears the result")
+  T.eq(SDP_Panel.Solve().Stats.Tier, "FAST", "tier used")
+  SDP_Panel.SetTier("STANDARD")
+  SDP_Panel.SetLand(true)
 end)

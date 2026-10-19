@@ -6,6 +6,7 @@
   "license": "UNLICENSED",
   "type": "module",
   "devDependencies": {
+    "fengari": "0.1.5",
     "luaparse": "^0.3.1"
   }
 }

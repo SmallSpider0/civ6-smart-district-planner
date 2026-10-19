@@ -55,7 +55,7 @@
       <Text>Weighted adjacency gain: {1_Gain}</Text>
     </Replace>
     <Replace Tag="LOC_SDP_RESULT_STATS" Language="en_US">
-      <Text>Method: {1_Method}; DMT evaluations: {2_Evaluations}; search nodes: {3_Nodes}</Text>
+      <Text>Effort: {1_Tier}; method: {2_Method}; DMT calls: {3_Calls}; layouts tried: {4_Tries}; search nodes: {5_Nodes}; improved {6_Continues} times</Text>
     </Replace>
     <Replace Tag="LOC_SDP_RESULT_TRUNCATED" Language="en_US">
       <Text>The search budget ran out; this plan may not be the best one.</Text>
@@ -110,6 +110,86 @@
     </Replace>
     <Replace Tag="LOC_SDP_UNDO_PINS" Language="en_US">
       <Text>Undo tacks</Text>
+    </Replace>
+
+    <!-- Tiers, land part, quality, background computation -->
+    <Replace Tag="LOC_SDP_LAND" Language="en_US">
+      <Text>Count what the taken plots would yield (food and one-time yields weigh this too)</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_WEIGHT_FEATURE_SHORT" Language="en_US">
+      <Text>Clear</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_WEIGHT_FEATURE" Language="en_US">
+      <Text>One-time yields of clearing woods, rainforest and marsh and harvesting bonus resources</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_TIER" Language="en_US">
+      <Text>Effort</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_TIER_FAST" Language="en_US">
+      <Text>Fast</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_TIER_STANDARD" Language="en_US">
+      <Text>Standard</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_TIER_FINE" Language="en_US">
+      <Text>Thorough</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_TIER_FAST_TOOLTIP" Language="en_US">
+      <Text>Least work; the result may be a little worse.</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_TIER_STANDARD_TOOLTIP" Language="en_US">
+      <Text>The default balance of time and quality.</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_TIER_FINE_TOOLTIP" Language="en_US">
+      <Text>Most work, computed over several frames; you can keep playing or close the panel meanwhile.</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_ESTIMATE" Language="en_US">
+      <Text>About {1_Seconds} s</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_ESTIMATE_UNDER_ONE" Language="en_US">
+      <Text>Under 1 s</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_CONTINUE" Language="en_US">
+      <Text>Keep improving</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_CANCEL" Language="en_US">
+      <Text>Cancel</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_QUALITY_EXHAUSTIVE" Language="en_US">
+      <Text>Every placement checked: this is the best plan.</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_QUALITY_GAP" Language="en_US">
+      <Text>At most {1_Percent}% below the estimated bound</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_QUALITY_CONVERGED" Language="en_US">
+      <Text>the last round found nothing better</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_QUALITY_MAYBE" Language="en_US">
+      <Text>it may still improve: press Keep improving</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_LIST_SEPARATOR" Language="en_US">
+      <Text>; </Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_SUMMARY_LAND" Language="en_US">
+      <Text>Weighted gain: {1_Gain} (adjacency {2_Adjacency}, plots taken {3_Land})</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RUNNING" Language="en_US">
+      <Text>Computing... {1_Percent}%</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_LAUNCHBAR_RUNNING" Language="en_US">
+      <Text>Smart District Planner: computing ({1_Percent}%)</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_LAUNCHBAR_DONE" Language="en_US">
+      <Text>Smart District Planner: the plan is ready</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_STALE" Language="en_US">
+      <Text>The map changed during the computation (new turn or map tacks). Solve again.</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_NO_LEGAL_LAYOUT" Language="en_US">
+      <Text>No legal placement was found for these districts.</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_NO_CITY" Language="en_US">
+      <Text>The city no longer exists.</Text>
     </Replace>
   </LocalizedText>
 </GameData>
