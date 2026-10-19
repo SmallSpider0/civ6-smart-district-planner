@@ -44,6 +44,14 @@
       <File>Text/SDP_Text_en_US.xml</File>
       <File>Text/SDP_Text_zh_Hans_CN.xml</File>
     </UpdateText>
+    <!-- Logic modules, made includable from the panel context. -->
+    <ImportFiles id="sdp_scripts">
+      <Properties>
+        <LoadOrder>14000</LoadOrder>
+      </Properties>
+      <File>Scripts/SDP_City.lua</File>
+      <File>Scripts/SDP_Rules.lua</File>
+    </ImportFiles>
     <AddUserInterfaces id="sdp_panel">
       <Properties>
         <Context>InGame</Context>
@@ -54,6 +62,8 @@
   </InGameActions>
 
   <Files>
+    <File>Scripts/SDP_City.lua</File>
+    <File>Scripts/SDP_Rules.lua</File>
     <File>Text/SDP_Text_en_US.xml</File>
     <File>Text/SDP_Text_zh_Hans_CN.xml</File>
     <File>UI/SDP_Panel.xml</File>

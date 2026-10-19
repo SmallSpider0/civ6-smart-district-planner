@@ -22,7 +22,9 @@ test("open and close through the popup queue", function()
   T.ok(ContextPtr:IsHidden(), "closed panel should be hidden")
   SDP_Panel.Open()
   T.ok(SDP_Panel.IsOpen(), "not queued after Open")
-  T.ok(not ContextPtr:IsHidden(), "queued but still hidden")
+  -- Not asserting visibility here: a higher-priority popup (e.g. a historic
+  -- moment after founding a city) keeps a Low-priority popup hidden until it
+  -- is dismissed.
   SDP_Panel.Open() -- second Open must not queue twice
   SDP_Panel.Close()
   T.ok(not SDP_Panel.IsOpen(), "still queued after one Close")

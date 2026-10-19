@@ -8,6 +8,7 @@
 | `luacheck.mjs` | Lua 语法与陷阱检查（validate 会调用它） | 0 无错误；1 有错误 |
 | `deploy.py` | 校验后把 mod 同步到游戏 Mods 目录 | 0 成功；1 校验失败；2 找不到 Mods 目录 |
 | `run_tests.py` | 经 Tuner 在游戏内跑 `tests/test_*.lua` | 0 全过；1 有失败；2 连接问题；3 超时 |
+| `game.py` | 退出游戏、经 Steam 启动、从主菜单快速开局（可选建首都） | 0 成功；2 超时 |
 | `civ6tuner.py` | FireTuner 客户端：收集 Lua 输出、远程执行 Lua | 见下文 |
 
 ## validate.py — 静态校验
@@ -64,14 +65,27 @@ python3 -I tools/run_tests.py -k campus -v tests/test_dmt.lua
 local test, T = ...
 
 test("名称", function()
-  T.eq(实际值, 期望值, "说明")      -- 还有 T.ok(cond, msg)、T.near(a, b, eps, msg)、T.skip(原因)
+  T.eq(实际值, 期望值, "说明")      -- 还有 T.ok(cond, msg)、T.near(a, b, eps, msg)、T.same(a, b, msg)（深比较）、T.skip(原因)
 end)
 ```
 
+- `tests/fixtures/` 下是测试前置脚本（不以 `test_` 开头，不会被当成测试跑），如 `found_capital.lua`：新开局还没有城市时用开拓者建首都，`game.py newgame --capital` 会调用它。
+- `T.dump(v)` 把值序列化为按键排序的文本，`T.same` 用它比较，适合检查"同输入同输出"。
 - 文件内容经 `loadstring` 以文件名作 chunk 名加载，错误信息带 `tests/xxx.lua:行号`，并去掉 harness 自身的调用栈帧。
 - 失败或 `-v` 时显示该文件的 `print()` 输出。
 - 计时为单文件墙钟时间（含约 0.02 秒 Tuner 往返）。游戏内 `os.clock` 等计时器只有秒级，不能在 Lua 里测耗时。
 - 已验证：通过/失败/跳过/语法错误/加载期错误、72 KB 的测试文件、内容含 `]]`、测试名含 `|` 和中文、状态名写错（只记该文件出错，其余继续）。
+
+## game.py — 启动与进入对局
+
+```bash
+python3 -I tools/game.py quit                          # 经 Tuner 退出游戏并等待进程结束
+python3 -I tools/game.py launch                        # open steam://rungameid/289070，等启动器出现（Steam 有时要 1 分钟以上）
+# 然后用 computer-use 对启动器（com.aspyr.civ6.steam）的"开始"按钮做 AXPress
+python3 -I tools/game.py newgame --state SDP_Panel --capital   # 等主菜单→快速开始→等指定 Lua 状态可用→用开局开拓者建首都
+```
+
+改 modinfo 或文本后的完整循环：`deploy.py` → `game.py quit` → `game.py launch` → 点"开始" → `game.py newgame --state SDP_Panel --capital` → `run_tests.py`。
 
 ## civ6tuner.py — FireTuner 客户端（Lua 输出 + 远程执行 Lua）
 

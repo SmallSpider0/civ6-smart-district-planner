@@ -40,7 +40,7 @@ civ6mod/
 │   ├── UI/                           # InGame 上下文：同名 .xml + .lua
 │   └── Scripts/                      # 纯逻辑模块（求解器、相邻表、overlay），经 ImportFiles 导入后 include
 ├── tests/                            # 游戏内 Lua 测试（test_*.lua），由 tools/run_tests.py 经 Tuner 执行；不随 mod 发布
-├── tools/                            # civ6tuner.py、validate.py、luacheck.mjs、deploy.py、run_tests.py，见 tools/README.md
+├── tools/                            # civ6tuner.py、validate.py、luacheck.mjs、deploy.py、run_tests.py、game.py，见 tools/README.md
 ├── logs/                             # civ6tuner 输出日志，已 gitignore
 └── reference/                        # 指向本机 DMT/AMT/Base UI/DLC 源码的符号链接，已 gitignore
 ```
@@ -146,7 +146,7 @@ Windows 对应路径：Mods 在 `文档\My Games\Sid Meier's Civilization VI\Mod
 **每轮改动流程**（命令细节见 [tools/README.md](tools/README.md)）
 1. 校验：`python3 -I tools/validate.py`。检查 XML 格式、modinfo 与磁盘文件一致、双语文本键一致、`LOC_SDP_*` 引用都有定义、UI XML 只用游戏本体出现过的控件和属性（坑 8）、Lua 语法（luaparse 5.3 模式解析，再禁掉 5.1 没有的写法）与禁用全局、确定性（禁 `math.random`/`os.time`）；
 2. 部署：`python3 -I tools/deploy.py`。先校验，再把 `SmartDistrictPlanner/` 同步到上表的本地 Mods 目录（增量复制，并删除已不存在的文件）；
-3. 验证：改 Lua/UI XML 后回主菜单重新进入对局；改 modinfo/文本需重启游戏（deploy 会提示是哪种）；然后 `python3 -I tools/run_tests.py` 跑 `tests/` 下的游戏内测试；
+3. 验证：改 Lua/UI XML 后回主菜单重新进入对局；改 modinfo/文本需重启游戏（deploy 会提示是哪种；重启用 `tools/game.py quit/launch/newgame`）；然后 `python3 -I tools/run_tests.py` 跑 `tests/` 下的游戏内测试；
 4. 排错：保持 `civ6tuner.py serve` 运行，查 `logs/tuner-lua.log`（Windows 上则查 Lua.log 的 `Runtime Error`）；控件不显示且无日志 → 怀疑 XML 非法属性。
 
 **自动化测试分层**：① validate + deploy + 监控 `logs/tuner-lua.log`（全自动）；② `tests/test_*.lua` 经 `run_tests.py` 在指定 Lua 状态里跑断言（全自动；本 mod 面板的 Lua 状态名为 `SDP_Panel`，测试钩子是其中的全局表 `SDP_Panel`）；③ computer-use 截图/点击做 UI 验收（半自动，需用户授权）。交付时明确区分"已自动验证"与"需用户确认"的部分，不得声称未经验证的行为已通过。跨平台：mod 无平台相关代码，Windows 上只需按验收清单冒烟测试（重点：性能与界面布局）。

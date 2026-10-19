@@ -12,7 +12,8 @@ A test file (tests/test_*.lua) is a chunk that receives `test` and `T`:
     end)
 
 Assertions: T.ok(cond, msg), T.eq(actual, expected, msg),
-T.near(actual, expected, eps, msg), T.skip(reason). A test fails on any error;
+T.near(actual, expected, eps, msg), T.same(actual, expected, msg) (deep
+equality via T.dump, a sorted-key serialization), T.skip(reason). A test fails on any error;
 messages carry the file and line (the chunk is named after the file).
 
 Usage: run_tests.py [-k SUBSTRING] [-v] [FILE...]
@@ -65,6 +66,25 @@ function T.near(actual, expected, eps, msg)
   end
 end
 function T.skip(reason) error({{ sdp_skip = reason or "skipped" }}, 0) end
+-- Deterministic text form of a value: table keys sorted by type then value.
+function T.dump(v)
+  if type(v) ~= "table" then return show(v) end
+  local keys = {{}}
+  for k in pairs(v) do keys[#keys + 1] = k end
+  table.sort(keys, function(a, b)
+    if type(a) ~= type(b) then return type(a) < type(b) end
+    return a < b
+  end)
+  local parts = {{}}
+  for _, k in ipairs(keys) do parts[#parts + 1] = "[" .. show(k) .. "]=" .. T.dump(v[k]) end
+  return "{{" .. table.concat(parts, ",") .. "}}"
+end
+function T.same(actual, expected, msg)
+  local a, e = T.dump(actual), T.dump(expected)
+  if a ~= e then
+    error((msg and msg .. ": " or "") .. "expected " .. e:sub(1, 300) .. ", got " .. a:sub(1, 300), 2)
+  end
+end
 
 local __ok, __e = pcall(__chunk, test, T)
 if not __ok then print("SDP_TEST" .. S .. "ERROR" .. S .. "(file)" .. S .. tostring(__e)) return end

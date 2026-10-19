@@ -3,6 +3,10 @@
 -- at the bottom of the render stack, so SetHide(false) alone shows nothing
 -- (requirements pitfall 11).
 
+include("MapTacks")   -- game file: the player's district list
+include("SDP_Rules")
+include("SDP_City")
+
 local LAUNCH_BAR_STACK = "/InGame/LaunchBar/ButtonStack"
 
 local m_launchItem = {}     -- SDP_LaunchBarItem instance in the game's launch bar
