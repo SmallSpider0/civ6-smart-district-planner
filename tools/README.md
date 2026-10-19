@@ -85,7 +85,10 @@ python3 -I tools/game.py menu                          # 退回主菜单（只�
 python3 -I tools/game.py launch                        # open steam://rungameid/289070，等启动器出现（Steam 有时要 1 分钟以上）
 # 然后用 computer-use 对启动器（com.aspyr.civ6.steam）的"开始"按钮做 AXPress
 python3 -I tools/game.py newgame --state SDP_Panel --capital   # 等主菜单→快速开始→等指定 Lua 状态可用→用开局开拓者建首都
+python3 -I tools/game.py popups --close                # 关掉排队中的游戏弹窗（历史时刻等），规划面板才会显示
 ```
+
+`newgame` 默认固定领袖（`--leader LEADER_TRAJAN`）和地图/游戏种子（`--seed 20261019`），做法是包装主菜单状态里的全局 `GameSetup_RefreshParameters`："快速开始"重置配置后会调用它。所以每次都是同一张地图；`--random` 恢复随机。
 
 只改了 Lua 或 UI XML：`deploy.py` → `game.py menu` → `game.py newgame --state SDP_Panel --capital` → `run_tests.py`（约 30 秒）。
 

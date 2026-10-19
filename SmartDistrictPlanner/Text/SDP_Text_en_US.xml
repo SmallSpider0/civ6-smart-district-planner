@@ -19,8 +19,97 @@
     <Replace Tag="LOC_SDP_PANEL_TITLE" Language="en_US">
       <Text>Smart District Planner</Text>
     </Replace>
-    <Replace Tag="LOC_SDP_PANEL_PLACEHOLDER" Language="en_US">
-      <Text>Planning controls are under construction.</Text>
+
+    <!-- Planner controls and results -->
+    <Replace Tag="LOC_SDP_CITY" Language="en_US">
+      <Text>City</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_DISTRICTS" Language="en_US">
+      <Text>Districts to plan</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_STATUS_BUILT" Language="en_US">
+      <Text>Built</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_STATUS_MAX_PER_PLAYER" Language="en_US">
+      <Text>Empire limit reached</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SPECIALTY_NOTE" Language="en_US">
+      <Text>Specialty districts: {1_Built} built, {2_Selected} selected; the current population allows {3_Capacity}.</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SPECIALTY_OVER" Language="en_US">
+      <Text>Over the current limit: the plan is for later population growth.</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_WEIGHTS" Language="en_US">
+      <Text>Yield weights (0-3)</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_ALLOW_FEATURE_REMOVAL" Language="en_US">
+      <Text>Allow clearing woods, rainforest and marsh</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SOLVE" Language="en_US">
+      <Text>Solve</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_NONE" Language="en_US">
+      <Text>Tick the districts to plan, then press Solve.</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_SUMMARY" Language="en_US">
+      <Text>Weighted adjacency gain: {1_Gain}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_STATS" Language="en_US">
+      <Text>Method: {1_Method}; DMT evaluations: {2_Evaluations}; search nodes: {3_Nodes}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_TRUNCATED" Language="en_US">
+      <Text>The search budget ran out; this plan may not be the best one.</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_NEIGHBOUR" Language="en_US">
+      <Text>Existing {1_Name} {2_Where}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_NEIGHBOUR_DETAIL" Language="en_US">
+      <Text>Weighted score {1_Before} → {2_After}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_UNPLACED" Language="en_US">
+      <Text>Not placed: {1_Name}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_REASON_NO_LEGAL_PLOT" Language="en_US">
+      <Text>no legal plot in range</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_REASON_BUILT" Language="en_US">
+      <Text>already built in this city</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_REASON_MAX_PER_PLAYER" Language="en_US">
+      <Text>empire limit reached</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_REASON_NOT_AVAILABLE" Language="en_US">
+      <Text>not available to this civilization</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_ERROR" Language="en_US">
+      <Text>Solve failed: {1_Error}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_NO_ADJACENCY" Language="en_US">
+      <Text>No adjacency bonus</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_NO_YIELDS" Language="en_US">
+      <Text>no adjacency bonus</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_YIELD_SHORT_YIELD_SCIENCE" Language="en_US">
+      <Text>Sci</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_YIELD_SHORT_YIELD_CULTURE" Language="en_US">
+      <Text>Cul</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_YIELD_SHORT_YIELD_FAITH" Language="en_US">
+      <Text>Fth</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_YIELD_SHORT_YIELD_GOLD" Language="en_US">
+      <Text>Gold</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_YIELD_SHORT_YIELD_PRODUCTION" Language="en_US">
+      <Text>Prod</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_PLACE_PINS" Language="en_US">
+      <Text>Place tacks</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_UNDO_PINS" Language="en_US">
+      <Text>Undo tacks</Text>
     </Replace>
   </LocalizedText>
 </GameData>

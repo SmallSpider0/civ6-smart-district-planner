@@ -48,8 +48,7 @@ test("LuaEvents.SDP_OpenPanel and SDP_ClosePanel work", function()
 end)
 
 test("panel text is localized", function()
-  for _, key in ipairs({ "LOC_SDP_PANEL_TITLE", "LOC_SDP_PANEL_PLACEHOLDER", "LOC_SDP_LAUNCHBAR_TOOLTIP" }) do
+  for _, key in ipairs({ "LOC_SDP_PANEL_TITLE", "LOC_SDP_SOLVE", "LOC_SDP_LAUNCHBAR_TOOLTIP" }) do
     T.ok(Locale.Lookup(key) ~= key, key .. " has no text in game")
   end
-  T.eq(Controls.Placeholder:GetText(), Locale.Lookup("LOC_SDP_PANEL_PLACEHOLDER"), "placeholder label")
 end)

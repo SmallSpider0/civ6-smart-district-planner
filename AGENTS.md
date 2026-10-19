@@ -102,6 +102,8 @@ include("dmt_yieldcalculator");       -- 尾部会执行 DMT_Initialize()，见�
 | 18 | 特色区域名额（GS）：`1 + floor((人口-1)/3)` |
 | 19 | 删钉：`LuaEvents.DMT_MapPinRemoved(pin); cfg:DeleteMapPin(pin:GetID()); Network.BroadcastPlayerInfo(); UI.PlaySound("Map_Pin_Remove")` |
 | 20 | 与 AMT 等规划 mod 同开会互相污染（都 hook `GetMapPinSubject`）——文档必须注明一局只开一个规划器 |
+| 21 | （2026-10-19 实测）新建地图钉后，之前拿到的钉对象可能失效，再调用其方法会让游戏直接崩溃（SIGSEGV）。只保存钉 ID，每次用 `cfg:GetMapPinID(id)` 重新取（DMT 弹窗的 `GetEditPinConfig` 也是这样做的） |
+| 22 | `PlayerConfiguration:GetMapPin(x, y)` 在没有钉的格子上会**新建**一个钉；只想查找时遍历 `GetMapPins()` |
 
 ## 6. 开发环境与工作流
 
@@ -135,6 +137,7 @@ Windows 对应路径：Mods 在 `文档\My Games\Sid Meier's Civilization VI\Mod
   - **计时器只有秒级**：`os.clock`、`Automation.GetTime` 按整秒跳，`UI.GetElapsedTime` 按帧更新，一次调用内都不变，无法在 Lua 内测耗时。性能（停顿 ≤ ~2 秒）用 `run_tests.py` 报告的单文件墙钟时间测量（Tuner 往返约 0.02 秒）。
   - 执行很快：3000 万次简单循环约 0.1 秒。
   - **游戏窗口仍不接受合成点击**（2026-10-19 复测，computer-use 报 "Could not verify which document this window is editing"），截图正常（需先 `app_release` 释放后台锁）。按钮点击、键盘 Esc 等只能请用户手动验收；逻辑本身用测试钩子覆盖。
+- **测试对局固定**：`tools/game.py newgame` 默认把本地玩家设为图拉真（罗马，陆地开局）、地图与游戏种子设为 20261019，每次都是同一张图，测试结果可复现。随机开局里可能出现毛利这类海上开局的文明，开拓者第 1 回合无法建城，导致测试前置失败。新建城市后会弹出"历史时刻"等弹窗，低优先级的规划面板会排在它们后面；截图核对前用 `game.py popups --close` 关掉。
 - **启动与进入对局（已全自动化）**：`open steam://rungameid/289070` → Aspyr 启动器（bundle `com.aspyr.civ6.steam`，"开始"按钮用 computer-use AXPress 点击）→ 主菜单（开场动画已于 2026-10-19 通过 `PlayIntroVideo 0` 关闭）→ Tuner 在 `MainMenu` 状态执行 `Automation.SetAutoStartEnabled(true); OnPlayCiv6()` → 约 25 秒进入地图。退出用 `Events.UserConfirmedClose()`。详见 [tools/README.md](tools/README.md)。
 - **computer-use 限制**：游戏本体窗口（Metal，标题 `Civilization VI (1920x1080 @ 174%)`）不向辅助功能暴露窗口，截图可用但**点击被工具安全校验拒绝**（"Could not verify which document this window is editing"）。需要操作游戏时优先用 civ6tuner 在对应 Lua 状态里直接调用（如 `Mods` 状态的 `Modding.*`）；只有 Lua 做不到的才请用户手动点击。
 - **测试用 mod 组**：本机共启用 165/166 个 mod，其中 AMT（hook `GetMapPinSubject`）、Empire Planner（会自建/删除地图钉）及多个改相邻/区域规则的 mod 会干扰测试。2026-10-19 已在 `Mods.sqlite` 新建并选中 **"SDP 测试"** 组（`ModGroupRowId=2`，经 `Modding.log` 验证已生效）：官方内容沿用默认组状态（39 启用、Tutorial 禁用），创意工坊仅启用 DMT。默认组（`ModGroupRowId=1`）未手动改动，可在游戏"附加内容"界面切回。

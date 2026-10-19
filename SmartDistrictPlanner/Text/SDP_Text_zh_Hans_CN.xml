@@ -19,8 +19,97 @@
     <Replace Tag="LOC_SDP_PANEL_TITLE" Language="zh_Hans_CN">
       <Text>智能区域规划器</Text>
     </Replace>
-    <Replace Tag="LOC_SDP_PANEL_PLACEHOLDER" Language="zh_Hans_CN">
-      <Text>规划功能开发中。</Text>
+
+    <!-- 规划控件与结果 -->
+    <Replace Tag="LOC_SDP_CITY" Language="zh_Hans_CN">
+      <Text>城市</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_DISTRICTS" Language="zh_Hans_CN">
+      <Text>要规划的区域</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_STATUS_BUILT" Language="zh_Hans_CN">
+      <Text>已建</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_STATUS_MAX_PER_PLAYER" Language="zh_Hans_CN">
+      <Text>已达帝国上限</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SPECIALTY_NOTE" Language="zh_Hans_CN">
+      <Text>特色区域：已建 {1_Built} 个，本次选择 {2_Selected} 个；当前人口上限 {3_Capacity} 个。</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SPECIALTY_OVER" Language="zh_Hans_CN">
+      <Text>超出当前上限：方案供人口增长后建造（仅提示）。</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_WEIGHTS" Language="zh_Hans_CN">
+      <Text>产出权重（0–3）</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_ALLOW_FEATURE_REMOVAL" Language="zh_Hans_CN">
+      <Text>允许砍伐树林、雨林、沼泽</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SOLVE" Language="zh_Hans_CN">
+      <Text>求解</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_NONE" Language="zh_Hans_CN">
+      <Text>勾选要规划的区域后点击“求解”。</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_SUMMARY" Language="zh_Hans_CN">
+      <Text>加权相邻加成提升：{1_Gain}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_STATS" Language="zh_Hans_CN">
+      <Text>方法：{1_Method}；DMT 评估 {2_Evaluations} 次；搜索节点 {3_Nodes} 个</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_TRUNCATED" Language="zh_Hans_CN">
+      <Text>已达搜索预算上限，方案可能不是最优。</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_NEIGHBOUR" Language="zh_Hans_CN">
+      <Text>已有 {1_Name} {2_Where}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_NEIGHBOUR_DETAIL" Language="zh_Hans_CN">
+      <Text>加权分 {1_Before} → {2_After}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_UNPLACED" Language="zh_Hans_CN">
+      <Text>未放置：{1_Name}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_REASON_NO_LEGAL_PLOT" Language="zh_Hans_CN">
+      <Text>范围内没有合法位置</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_REASON_BUILT" Language="zh_Hans_CN">
+      <Text>本城已建</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_REASON_MAX_PER_PLAYER" Language="zh_Hans_CN">
+      <Text>已达帝国上限</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_REASON_NOT_AVAILABLE" Language="zh_Hans_CN">
+      <Text>本文明不可建</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_ERROR" Language="zh_Hans_CN">
+      <Text>求解失败：{1_Error}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_NO_ADJACENCY" Language="zh_Hans_CN">
+      <Text>无相邻加成</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_NO_YIELDS" Language="zh_Hans_CN">
+      <Text>无相邻加成</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_YIELD_SHORT_YIELD_SCIENCE" Language="zh_Hans_CN">
+      <Text>科</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_YIELD_SHORT_YIELD_CULTURE" Language="zh_Hans_CN">
+      <Text>文</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_YIELD_SHORT_YIELD_FAITH" Language="zh_Hans_CN">
+      <Text>信</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_YIELD_SHORT_YIELD_GOLD" Language="zh_Hans_CN">
+      <Text>金</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_YIELD_SHORT_YIELD_PRODUCTION" Language="zh_Hans_CN">
+      <Text>产</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_PLACE_PINS" Language="zh_Hans_CN">
+      <Text>打钉</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_UNDO_PINS" Language="zh_Hans_CN">
+      <Text>撤销</Text>
     </Replace>
   </LocalizedText>
 </GameData>

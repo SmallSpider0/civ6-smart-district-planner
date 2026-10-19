@@ -1,17 +1,85 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Planner panel (opened through the popup queue, pitfall 11) and the
-     launch bar button that SDP_Panel.lua injects into /InGame/LaunchBar. -->
+     launch bar button that SDP_Panel.lua injects into /InGame/LaunchBar.
+     Every control and attribute follows a precedent in Base/Assets/UI
+     (pitfall 8; tools/validate.py checks it). -->
 <Context ColorSet="Beige_Black" FontStyle="Shadow">
 
-  <Grid ID="DropShadow" Size="auto,auto" Anchor="C,C" Style="DropShadow2" Color="255,255,255,200" AutoSizePadding="25,25" ConsumeMouse="1">
-    <Grid ID="Window" Size="480,320" Anchor="C,C" Style="WindowFrameTitle">
+  <Grid ID="DropShadow" Size="auto,auto" Anchor="L,T" Offset="10,70" Style="DropShadow2" Color="255,255,255,200" AutoSizePadding="25,25" ConsumeMouse="1">
+    <Grid ID="Window" Size="520,820" Anchor="C,C" Style="WindowFrameTitle">
       <Container Size="parent,38" Offset="0,4">
         <Label ID="Title" Style="WindowHeader" Anchor="C,C" String="{LOC_SDP_PANEL_TITLE:upper}"/>
       </Container>
       <Button ID="CloseButton" Anchor="R,T" Style="CloseButtonSmall"/>
-      <Label ID="Placeholder" Anchor="C,C" Style="BodyTextDark18" Align="Center" WrapWidth="400" String="LOC_SDP_PANEL_PLACEHOLDER"/>
+
+      <Stack ID="Body" Anchor="C,T" Offset="0,50" StackGrowth="Bottom" StackPadding="6">
+        <!-- City -->
+        <Container Size="480,28">
+          <Label Anchor="L,C" Style="BodyTextDark18" String="LOC_SDP_CITY"/>
+          <PullDown ID="CityPull" Anchor="R,C" Style="PullDownBlue" Size="380,24"/>
+        </Container>
+
+        <!-- Districts -->
+        <Label Style="BodyTextDark18" String="LOC_SDP_DISTRICTS"/>
+        <ScrollPanel ID="DistrictScroll" Size="480,230" Vertical="1">
+          <ScrollBar Anchor="R,C" AnchorSide="I,I" Style="Slider_Blue"/>
+          <Stack ID="DistrictStack" StackGrowth="Bottom" StackPadding="2"/>
+        </ScrollPanel>
+        <Label ID="SpecialtyNote" Style="BodyTextDark14" WrapWidth="480"/>
+
+        <!-- Weights -->
+        <Label Style="BodyTextDark18" String="LOC_SDP_WEIGHTS"/>
+        <Stack ID="WeightStack" Anchor="C,T" StackGrowth="Right" StackPadding="4"/>
+        <Container Size="480,26">
+          <CheckBox ID="FeatureCheck" Anchor="L,C" Style="MainCheckBox"/>
+          <Label Anchor="L,C" Offset="26,0" Style="BodyTextDark16" String="LOC_SDP_ALLOW_FEATURE_REMOVAL"/>
+        </Container>
+
+        <!-- Solve -->
+        <GridButton ID="SolveButton" Anchor="C,T" Size="200,41" Style="MainButton" String="LOC_SDP_SOLVE"/>
+
+        <!-- Results -->
+        <Label ID="Summary" Style="BodyTextDark16" WrapWidth="480"/>
+        <ScrollPanel ID="ResultScroll" Size="480,200" Vertical="1">
+          <ScrollBar Anchor="R,C" AnchorSide="I,I" Style="Slider_Blue"/>
+          <Stack ID="ResultStack" StackGrowth="Bottom" StackPadding="2"/>
+        </ScrollPanel>
+
+        <!-- Map tacks -->
+        <Stack Anchor="C,T" StackGrowth="Right" StackPadding="12">
+          <GridButton ID="PlaceButton" Size="200,41" Style="MainButton" String="LOC_SDP_PLACE_PINS"/>
+          <GridButton ID="UndoButton" Size="200,41" Style="MainButton" String="LOC_SDP_UNDO_PINS"/>
+        </Stack>
+      </Stack>
     </Grid>
   </Grid>
+
+  <Instance Name="DistrictRow">
+    <Container ID="Root" Size="460,34">
+      <CheckBox ID="Check" Anchor="L,C" Style="MainCheckBox"/>
+      <Image ID="Icon" Anchor="L,C" Offset="26,0" Size="32,32"/>
+      <Label ID="Name" Anchor="L,C" Offset="64,0" Style="BodyTextDark16"/>
+      <Label ID="Status" Anchor="R,C" Offset="16,0" Style="BodyTextDark14"/>
+    </Container>
+  </Instance>
+
+  <Instance Name="WeightColumn">
+    <Container ID="Root" Size="90,60" ConsumeMouseOver="1">
+      <!-- The envoy icons are white; tint them to read on the light window. -->
+      <Image ID="Icon" Anchor="C,T" Size="26,26" Color="40,70,105,255"/>
+      <Button ID="Less" Anchor="L,B" Offset="12,4" Style="ArrowButtonLeft"/>
+      <Label ID="Value" Anchor="C,B" Offset="0,6" Style="BodyTextDark18"/>
+      <Button ID="More" Anchor="R,B" Offset="12,4" Style="ArrowButtonRight"/>
+    </Container>
+  </Instance>
+
+  <Instance Name="ResultRow">
+    <Container ID="Root" Size="460,40" ConsumeMouseOver="1">
+      <Image ID="Icon" Anchor="L,C" Size="32,32"/>
+      <Label ID="Name" Anchor="L,T" Offset="40,2" Style="BodyTextDark16"/>
+      <Label ID="Detail" Anchor="L,T" Offset="40,21" Style="BodyTextDark14"/>
+    </Container>
+  </Instance>
 
   <!-- Same shape as the game's LaunchBarItem / LaunchBarPinInstance (LaunchBar.xml). -->
   <Instance Name="SDP_LaunchBarItem">
