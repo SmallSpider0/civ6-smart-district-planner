@@ -134,9 +134,12 @@ Windows 对应路径：Mods 在 `文档\My Games\Sid Meier's Civilization VI\Mod
   - 游戏本体和 DMT 源码里有 HavokScript 扩展语法（类型标注 `function f(x:number)`、`hstructure`），我们的代码**不用**，保持纯 Lua 5.1。
   - **计时器只有秒级**：`os.clock`、`Automation.GetTime` 按整秒跳，`UI.GetElapsedTime` 按帧更新，一次调用内都不变，无法在 Lua 内测耗时。性能（停顿 ≤ ~2 秒）用 `run_tests.py` 报告的单文件墙钟时间测量（Tuner 往返约 0.02 秒）。
   - 执行很快：3000 万次简单循环约 0.1 秒。
+  - **游戏窗口仍不接受合成点击**（2026-10-19 复测，computer-use 报 "Could not verify which document this window is editing"），截图正常（需先 `app_release` 释放后台锁）。按钮点击、键盘 Esc 等只能请用户手动验收；逻辑本身用测试钩子覆盖。
 - **启动与进入对局（已全自动化）**：`open steam://rungameid/289070` → Aspyr 启动器（bundle `com.aspyr.civ6.steam`，"开始"按钮用 computer-use AXPress 点击）→ 主菜单（开场动画已于 2026-10-19 通过 `PlayIntroVideo 0` 关闭）→ Tuner 在 `MainMenu` 状态执行 `Automation.SetAutoStartEnabled(true); OnPlayCiv6()` → 约 25 秒进入地图。退出用 `Events.UserConfirmedClose()`。详见 [tools/README.md](tools/README.md)。
 - **computer-use 限制**：游戏本体窗口（Metal，标题 `Civilization VI (1920x1080 @ 174%)`）不向辅助功能暴露窗口，截图可用但**点击被工具安全校验拒绝**（"Could not verify which document this window is editing"）。需要操作游戏时优先用 civ6tuner 在对应 Lua 状态里直接调用（如 `Mods` 状态的 `Modding.*`）；只有 Lua 做不到的才请用户手动点击。
-- **测试用 mod 组**：本机共启用 165/166 个 mod，其中 AMT（hook `GetMapPinSubject`）、Empire Planner（会自建/删除地图钉）及多个改相邻/区域规则的 mod 会干扰测试。2026-10-19 已在 `Mods.sqlite` 新建并选中 **"SDP 测试"** 组（`ModGroupRowId=2`，经 `Modding.log` 验证已生效）：官方内容沿用默认组状态（39 启用、Tutorial 禁用），创意工坊仅启用 DMT。默认组（`ModGroupRowId=1`）未改动，可在游戏"附加内容"界面切回。**本 mod 首次部署、被游戏扫描后，需在该组内勾选启用**（新 mod 在组内的默认状态待验证）。
+- **测试用 mod 组**：本机共启用 165/166 个 mod，其中 AMT（hook `GetMapPinSubject`）、Empire Planner（会自建/删除地图钉）及多个改相邻/区域规则的 mod 会干扰测试。2026-10-19 已在 `Mods.sqlite` 新建并选中 **"SDP 测试"** 组（`ModGroupRowId=2`，经 `Modding.log` 验证已生效）：官方内容沿用默认组状态（39 启用、Tutorial 禁用），创意工坊仅启用 DMT。默认组（`ModGroupRowId=1`）未手动改动，可在游戏"附加内容"界面切回。
+  - 2026-10-19 首次部署后实测：新 mod 在"SDP 测试"组里**默认禁用**，已在主菜单用 `Modding.EnableMod(handle, true)` 启用（游戏自己的启用逻辑，见 Base `FrontEnd/Mods.lua`）。此后查 `Mods.sqlite`，本 mod 在默认组里也是启用状态；默认组同时启用了 AMT，切回默认组就会两个规划器同开（坑 20）。
+  - **mod 列表的名称**：mod 未启用时，`FrontEndActions` 的文本不加载，列表显示 `LOC_SDP_MOD_NAME` 原文；列表和详情（`Modding.GetModText`）读的是 modinfo 内嵌的 `<LocalizedText>`。所以名称、简介、描述在 modinfo 里也写一份，validate.py 检查两份一致。
 - **回滚**：同目录下 `AppOptions.txt.bak-20261019`、`Mods.sqlite.bak-20261019` 为修改前备份；修改这两个文件时游戏必须处于关闭状态。
 - `Logs/LoadGameViewState.log` 已达约 700MB（反复写 `GAMECORE_LOAD_SAVEFILE_PENDING`），疑似读档卡住时刷出，与本项目无关但占空间。
 
@@ -146,7 +149,7 @@ Windows 对应路径：Mods 在 `文档\My Games\Sid Meier's Civilization VI\Mod
 3. 验证：改 Lua/UI XML 后回主菜单重新进入对局；改 modinfo/文本需重启游戏（deploy 会提示是哪种）；然后 `python3 -I tools/run_tests.py` 跑 `tests/` 下的游戏内测试；
 4. 排错：保持 `civ6tuner.py serve` 运行，查 `logs/tuner-lua.log`（Windows 上则查 Lua.log 的 `Runtime Error`）；控件不显示且无日志 → 怀疑 XML 非法属性。
 
-**自动化测试分层**：① validate + deploy + 监控 `logs/tuner-lua.log`（全自动）；② `tests/test_*.lua` 经 `run_tests.py` 在指定 Lua 状态里跑断言（全自动；mod 自己的上下文状态名在阶段 1 确认）；③ computer-use 截图/点击做 UI 验收（半自动，需用户授权）。交付时明确区分"已自动验证"与"需用户确认"的部分，不得声称未经验证的行为已通过。跨平台：mod 无平台相关代码，Windows 上只需按验收清单冒烟测试（重点：性能与界面布局）。
+**自动化测试分层**：① validate + deploy + 监控 `logs/tuner-lua.log`（全自动）；② `tests/test_*.lua` 经 `run_tests.py` 在指定 Lua 状态里跑断言（全自动；本 mod 面板的 Lua 状态名为 `SDP_Panel`，测试钩子是其中的全局表 `SDP_Panel`）；③ computer-use 截图/点击做 UI 验收（半自动，需用户授权）。交付时明确区分"已自动验证"与"需用户确认"的部分，不得声称未经验证的行为已通过。跨平台：mod 无平台相关代码，Windows 上只需按验收清单冒烟测试（重点：性能与界面布局）。
 
 ## 7. 验收清单（需求文档第五节）
 

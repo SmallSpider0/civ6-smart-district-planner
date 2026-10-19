@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<GameData>
+  <LocalizedText>
+    <!-- Mod list -->
+    <Replace Tag="LOC_SDP_MOD_NAME" Language="en_US">
+      <Text>Smart District Planner</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_MOD_TEASER" Language="en_US">
+      <Text>Finds the district placement with the highest weighted adjacency bonus and marks it with map tacks.</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_MOD_DESCRIPTION" Language="en_US">
+      <Text>Pick a city, the districts you want and how much each yield matters; the planner searches every legal placement within three rings and pins the best plan on the map. Existing map tacks are never moved. Requires Detailed Map Tacks. Do not enable together with another district planner such as Auto Map Tacks Planner.</Text>
+    </Replace>
+
+    <!-- Launch bar and panel -->
+    <Replace Tag="LOC_SDP_LAUNCHBAR_TOOLTIP" Language="en_US">
+      <Text>Smart District Planner</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_PANEL_TITLE" Language="en_US">
+      <Text>Smart District Planner</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_PANEL_PLACEHOLDER" Language="en_US">
+      <Text>Planning controls are under construction.</Text>
+    </Replace>
+  </LocalizedText>
+</GameData>

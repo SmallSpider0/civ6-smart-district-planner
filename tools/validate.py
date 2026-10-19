@@ -7,7 +7,8 @@ restart (AGENTS.md section 5):
   modinfo    mod id, DMT dependency, <Files> matches disk (exact case),
              every action file is listed, AddUserInterfaces has a Context
   text       text files use <LocalizedText><Replace Tag Language> (pitfall 2),
-             en_US and zh_Hans_CN define the same keys
+             en_US and zh_Hans_CN define the same keys, modinfo <LocalizedText>
+             matches Text/*.xml
   loc        every LOC_SDP_* key used in Lua/UI XML exists in both languages;
              modinfo Name/Teaser/Description keys load in the front end (pitfall 1)
   ui         UI XML only uses controls and attributes that appear in the game's
@@ -144,7 +145,7 @@ def check_xml(report, paths):
 
 # -- text ------------------------------------------------------------------
 def text_entries(report, path, root):
-    """{(language, tag): line} from a database text file."""
+    """{(language, tag): text} from a database text file."""
     entries = {}
     if root.tag != "GameData":
         report.error(path, root.line, "text", "text file root must be <GameData>, found <%s>" % root.tag)
@@ -164,11 +165,12 @@ def text_entries(report, path, root):
             if not tag or not lang:
                 report.error(path, row.line, "text", "<%s> needs Tag and Language attributes" % row.tag)
                 continue
-            if row.find("Text") is None and "Text" not in row.attrib:
+            text = row.find("Text")
+            if text is None and "Text" not in row.attrib:
                 report.error(path, row.line, "text", "%s (%s) has no <Text>" % (tag, lang))
             if (lang, tag) in entries:
                 report.warning(path, row.line, "text", "%s (%s) defined twice in this file" % (tag, lang))
-            entries[(lang, tag)] = row.line
+            entries[(lang, tag)] = (text.text if text is not None else row.attrib.get("Text", "")).strip()
     return entries
 
 
@@ -183,12 +185,13 @@ def compare_languages(report, label, entries, where):
 
 
 def modinfo_text(root):
-    """{(language, tag)} from <LocalizedText><Text id><en_US>... in the modinfo."""
-    entries = set()
+    """{(language, tag): (line, text)} from <LocalizedText><Text id><en_US>...
+    in the modinfo."""
+    entries = {}
     loc = root.find("LocalizedText")
     for text in loc.findall("Text") if loc is not None else []:
         for child in text.children:
-            entries.add((child.tag, text.attrib.get("id", "")))
+            entries[(child.tag, text.attrib.get("id", ""))] = (child.line, child.text.strip())
     return entries
 
 
@@ -254,11 +257,20 @@ def check_mod(report, mod_dir, trees):
             full = os.path.join(mod_dir, path)
             if full in trees:
                 merged.update(text_entries(report, full, trees[full]))
-        stage_entries[group] = set(merged)
+        stage_entries[group] = merged
         compare_languages(report, group, merged, mpath)
 
+    # The modinfo copy (mod list, disabled mod) must match the Text/ copy.
+    in_modinfo = modinfo_text(root)
+    for (lang, tag), (line, text) in sorted(in_modinfo.items()):
+        for group in ("FrontEndActions", "InGameActions"):
+            other = stage_entries[group].get((lang, tag))
+            if other is not None and other != text:
+                report.error(mpath, line, "text", "%s (%s) in <LocalizedText> differs from the %s text file"
+                             % (tag, lang, group))
+
     # Mod name/description: shown in the front end (pitfall 1).
-    fe_keys = stage_entries["FrontEndActions"] | modinfo_text(root)
+    fe_keys = set(stage_entries["FrontEndActions"]) | set(in_modinfo)
     props = root.find("Properties")
     for child in props.children if props is not None else []:
         for key in LOC_REF.findall(child.text):
@@ -270,7 +282,7 @@ def check_mod(report, mod_dir, trees):
                                  % (child.tag, key, lang))
 
     # LOC keys referenced from Lua and UI XML must load in game.
-    ig_keys = stage_entries["InGameActions"]
+    ig_keys = set(stage_entries["InGameActions"])
     text_files = {os.path.join(mod_dir, p) for ps in text_sources.values() for p in ps}
     for f in files_on_disk:
         full = os.path.join(mod_dir, f)
