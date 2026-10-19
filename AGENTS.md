@@ -152,18 +152,21 @@ Windows 对应路径：Mods 在 `文档\My Games\Sid Meier's Civilization VI\Mod
 3. 验证：改 Lua/UI XML 后回主菜单重新进入对局；改 modinfo/文本需重启游戏（deploy 会提示是哪种；重启用 `tools/game.py quit/launch/newgame`）；然后 `python3 -I tools/run_tests.py` 跑 `tests/` 下的游戏内测试；
 4. 排错：保持 `civ6tuner.py serve` 运行，查 `logs/tuner-lua.log`（Windows 上则查 Lua.log 的 `Runtime Error`）；控件不显示且无日志 → 怀疑 XML 非法属性。
 
-**自动化测试分层**：① validate + deploy + 监控 `logs/tuner-lua.log`（全自动）；② `tests/test_*.lua` 经 `run_tests.py` 在指定 Lua 状态里跑断言（全自动；本 mod 面板的 Lua 状态名为 `SDP_Panel`，测试钩子是其中的全局表 `SDP_Panel`）；③ computer-use 截图/点击做 UI 验收（半自动，需用户授权）。交付时明确区分"已自动验证"与"需用户确认"的部分，不得声称未经验证的行为已通过。跨平台：mod 无平台相关代码，Windows 上只需按验收清单冒烟测试（重点：性能与界面布局）。
+**自动化测试分层**：① validate + deploy + 监控 `logs/tuner-lua.log`（全自动）；② `tests/test_*.lua` 经 `run_tests.py` 在指定 Lua 状态里跑断言（全自动；本 mod 面板的 Lua 状态名为 `SDP_Panel`，测试钩子是其中的全局表 `SDP_Panel`；需要改游戏状态的用例用 `@setup`/`@teardown` 在 `GameCore_Tuner` 状态执行 `tests/fixtures/` 脚本；`game.py newgame --ruleset` 可切换三种规则集）；③ computer-use 截图/点击做 UI 验收（半自动，需用户授权）。交付时明确区分"已自动验证"与"需用户确认"的部分，不得声称未经验证的行为已通过。跨平台：mod 无平台相关代码，Windows 上只需按验收清单冒烟测试（重点：性能与界面布局）。
 
 ## 7. 验收清单（需求文档第五节）
 
-- [ ] 模组列表正确显示中文名与描述
-- [ ] 启动栏出现图标按钮，点击弹出面板
-- [ ] 学院+圣地求解秒级出结果；存在相邻互惠更优解时必须给出该解
-- [ ] 结果行显示坐标与加成明细；悬停逐项来源与 DMT 图钉数值一致
-- [ ] 打钉生成带区域图标的钉；撤销后新钉被真删除
-- [ ] 已建区域置灰不可勾选
-- [ ] 同一状态求解两次结果一致
-- [ ] 勾 3–4 个区域不卡死（停顿 ≤ ~2 秒）
+2026-10-19 在 macOS 上完成自测，逐项证据见 [docs/self-test-report.md](docs/self-test-report.md)。标 ◐ 的项逻辑已自动验证，但真实鼠标点击或画面需用户确认。
+
+- [◐] 模组列表正确显示中文名与描述（Lua 已验证，附加内容界面画面未截到）
+- [◐] 启动栏出现图标按钮，点击弹出面板（按钮截图 + 回调测试；游戏窗口拒绝合成点击）
+- [x] 学院+圣地求解秒级出结果；存在相邻互惠更优解时必须给出该解（与暴力枚举最优一致）
+- [x] 结果行显示坐标与加成明细；悬停逐项来源与 DMT 图钉数值一致（悬停截图 + DMT 存储比对）
+- [x] 打钉生成带区域图标的钉；撤销后新钉被真删除
+- [x] 已建区域置灰不可勾选
+- [x] 同一状态求解两次结果一致
+- [x] 勾 3–4 个区域不卡死（停顿 ≤ ~2 秒；实测 ≤ 0.2 秒）
+- [ ] Windows 冒烟测试（需用户）
 
 ## 8. 代理行为约定
 

@@ -6,6 +6,10 @@ A test file (tests/test_*.lua) is a chunk that receives `test` and `T`:
     -- @state dmt_yieldcalculator     Lua state to run in (default InGame)
     -- @timeout 30                    seconds for the whole file (default 30)
     -- @max_seconds 2.5               fail when the file takes longer (wall time)
+    -- @setup GameCore_Tuner tests/fixtures/build_campus.lua
+    -- @teardown GameCore_Tuner tests/fixtures/destroy_campus.lua
+                                      run a Lua file in a state before / after
+                                      the tests (teardown always runs)
     local test, T = ...
 
     test("campus next to a mountain gets science", function()
@@ -135,10 +139,23 @@ def headers(body):
     for line in body.splitlines():
         if not line.startswith("--"):
             break
-        m = re.match(r"--\s*@(\w+)\s+(\S+)", line)
+        m = re.match(r"--\s*@(\w+)\s+(.+?)\s*$", line)
         if m:
             found[m.group(1)] = m.group(2)
     return found
+
+
+def run_fixture(spec, label):
+    """Run `STATE FILE` from a @setup/@teardown header; returns an error or None."""
+    parts = spec.split(None, 1)
+    if len(parts) != 2:
+        return "%s needs a state and a file" % label
+    state, rel = parts
+    with open(os.path.join(ROOT, rel), encoding="utf-8-sig") as fh:
+        resp = civ6tuner.request({"op": "exec", "state": state, "code": fh.read(), "timeout": 10})
+    for line in resp.get("output") or []:
+        print("    %s | %s" % (label, line))
+    return None if resp.get("ok") else "%s %s: %s" % (label, rel, resp.get("error"))
 
 
 def run_file(path, name_filter, verbose):
@@ -149,9 +166,22 @@ def run_file(path, name_filter, verbose):
         body = fh.read()
     opts = headers(body)
     state = opts.get("state", "InGame")
+    if "setup" in opts:
+        problem = run_fixture(opts["setup"], "setup")
+        if problem:
+            print("%s  [%s]\n  ERROR  %s" % (rel, state, problem))
+            counts["ERROR"] += 1
+            if "teardown" in opts:
+                run_fixture(opts["teardown"], "teardown")
+            return counts, None
     started = time.monotonic()
     resp = civ6tuner.request({"op": "exec", "state": state, "code": build(path, body, name_filter),
                               "timeout": float(opts.get("timeout", 30))})
+    if "teardown" in opts:
+        problem = run_fixture(opts["teardown"], "teardown")
+        if problem:
+            print("  ERROR  %s" % problem)
+            counts["ERROR"] += 1
     # Wall time of the whole file, tuner round trip included (~0.02 s). The
     # game's own timers (os.clock, Automation.GetTime) tick in whole seconds.
     elapsed = time.monotonic() - started

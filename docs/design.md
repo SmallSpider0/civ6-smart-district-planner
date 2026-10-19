@@ -2,6 +2,21 @@
 
 交付物 3：算法结构、目标函数、与 DMT 的接缝。
 
+## 模块结构
+
+```
+SDP_Panel (UI/SDP_Panel.lua，InGame 上下文，Lua 状态名 SDP_Panel)
+ ├─ 启动栏按钮注入、弹窗队列、面板控件、测试钩子
+ ├─ SDP_Solver   求解：单项精评 → 穷举 / 线性短名单 → 联合精评 → 局部搜索
+ │   ├─ SDP_Overlay  假想摆放层：替换 DMT 的钉读写，调用 DMT 的 CanPlacePin / GetBonusYields
+ │   │   └─ DMT（include dmt_yieldcalculator，移除其事件订阅）
+ │   ├─ SDP_City     城市扫描：候选格、排除原因、已建区域、锁定钉
+ │   └─ SDP_Rules    规则集、可规划区域、区域互惠表（全部读 GameInfo）
+ └─ SDP_Pins     打钉与撤销（走 DMT 自己的加钉 / 删钉流程）
+```
+
+所有逻辑都在面板这一个 Lua 状态里运行；DMT 在自己的上下文里照常工作，两边只通过地图钉数据和 `LuaEvents.DMT_MapPinAdded/Removed` 交互。
+
 ## 目标函数定义
 
 - 单项得分 = Σ 权重[y] × 产出[y]，y 取科学、文化、信仰、金币、生产力五项（`SDP_Rules.YIELDS`），权重 0–3，默认全 1（约束 3）。产出是 DMT `GetBonusYields` 给出的相邻加成，不含政策卡翻倍（约束 4，DMT 本身不算）。
@@ -76,15 +91,6 @@
 
 **未揭示格**：DMT 在未揭示的格子上读不到地形，对部分区域（如需要海岸的）`CanPlacePin` 会报错。城市扫描把未揭示格排除（`UNREVEALED`）。
 
-## 界面骨架（阶段 1）
-
-- 一个 InGame 上下文 `UI/SDP_Panel.xml/.lua`（AddUserInterfaces，LoadOrder 14000，依赖 DMT）同时负责启动栏按钮和面板。
-- **启动栏按钮**：`Events.LoadScreenClose` 时向 `/InGame/LaunchBar/ButtonStack` 注入 `SDP_LaunchBarItem`（与游戏 `LaunchBarItem` 同形，图标 `ICON_MAP_PIN_DISTRICT`）和一个分隔点，并按游戏 `RealizeBacking()` 的做法调整启动栏底板宽度。热重载（`isReload`）时立即注入；上下文关闭时把这两个控件从启动栏删掉，避免留下失效的重复按钮。
-- **面板**：`UIManager:QueuePopup(ContextPtr, PopupPriority.Low)` 打开、`DequeuePopup` 关闭，先查 `IsInPopupQueue`（坑 11）。外框沿用游戏弹窗写法（`DropShadow2` 包 `WindowFrameTitle`，标题 `WindowHeader`，右上角 `CloseButtonSmall`）。Esc 在面板打开时关闭面板，关闭时不拦截。
-- **对外接口**：`LuaEvents.SDP_OpenPanel()` / `LuaEvents.SDP_ClosePanel()`。
-- **测试钩子**：面板上下文里的全局表 `SDP_Panel`（`Open`/`Close`/`IsOpen`/`HandleInput`/`LaunchButton`），供 `tests/test_panel.lua` 在 `SDP_Panel` Lua 状态里调用。
-- **mod 列表文本**：名称、简介、描述同时写在 modinfo `<LocalizedText>`（未启用时也能显示）和 `Text/*.xml`（FrontEndActions，坑 1）。
-
 ## 数据层（阶段 2）
 
 两个纯逻辑模块，经 modinfo `ImportFiles` 导入，由 `SDP_Panel.lua` 先 `include("MapTacks")`（游戏本体文件）再 include。所有返回的列表都已排序，不依赖 `pairs()` 顺序。
@@ -105,6 +111,15 @@
   - "可移除地貌"取自 `GameInfo.Features.Removable`，本机 GS 数据为树林、雨林、沼泽，正好对应约束 5。
 - `SpecialtyCapacity(pop)` = `1 + floor((pop-1)/3)`（坑 18）；扫描结果附带已用名额 `SpecialtyBuilt`。
 - `DistrictStatus(scan, districts)`：`BUILT`（本城已建且每城限一个，面板置灰）或 `MAX_PER_PLAYER`（全帝国数量已达上限，如政府广场），用来避免 AMT 那样乱放全局唯一区域。尚未计入别城地图钉上规划的全局唯一区域，这一点在阶段 3 能读到钉的区域类型后补上。
+
+## 界面骨架（阶段 1）
+
+- 一个 InGame 上下文 `UI/SDP_Panel.xml/.lua`（AddUserInterfaces，LoadOrder 14000，依赖 DMT）同时负责启动栏按钮和面板。
+- **启动栏按钮**：`Events.LoadScreenClose` 时向 `/InGame/LaunchBar/ButtonStack` 注入 `SDP_LaunchBarItem`（与游戏 `LaunchBarItem` 同形，图标 `ICON_MAP_PIN_DISTRICT`）和一个分隔点，并按游戏 `RealizeBacking()` 的做法调整启动栏底板宽度。热重载（`isReload`）时立即注入；上下文关闭时把这两个控件从启动栏删掉，避免留下失效的重复按钮。
+- **面板**：`UIManager:QueuePopup(ContextPtr, PopupPriority.Low)` 打开、`DequeuePopup` 关闭，先查 `IsInPopupQueue`（坑 11）。外框沿用游戏弹窗写法（`DropShadow2` 包 `WindowFrameTitle`，标题 `WindowHeader`，右上角 `CloseButtonSmall`）。Esc 在面板打开时关闭面板，关闭时不拦截。
+- **对外接口**：`LuaEvents.SDP_OpenPanel()` / `LuaEvents.SDP_ClosePanel()`。
+- **测试钩子**：面板上下文里的全局表 `SDP_Panel`（`Open`/`Close`/`IsOpen`/`HandleInput`/`LaunchButton`），供 `tests/test_panel.lua` 在 `SDP_Panel` Lua 状态里调用。
+- **mod 列表文本**：名称、简介、描述同时写在 modinfo `<LocalizedText>`（未启用时也能显示）和 `Text/*.xml`（FrontEndActions，坑 1）。
 
 ## 面板（阶段 5，`UI/SDP_Panel.xml/.lua`）
 
@@ -147,4 +162,10 @@
 - 撤销后四个钉全部消失，地图钉数归零。
 
 ## 后续扩展预留
-<!-- 多城联合、奇观求解 -->
+
+- **多城联合规划**：
+  - `SDP_City.Scan` 和 `SDP_Overlay` 都以玩家与城市为参数，没有"只有一个城市"的假设。
+  - 联合规划可以合并多座城市的候选格（同一格只能归一座城市），把各城的已建区域与锁定钉合并成一份固定 subject，再用同一个 `Evaluate` 计算联合总分。
+  - 求解器的布局表示（区域 → 候选格下标）可以扩展为（城市, 区域）→ 格。
+- **奇观规划**：DMT 已支持 `Type = "WONDER"` 的 subject 及其合法性（`CanPlaceWonderCheckHelper`）。需要做的是把奇观加入可规划列表，并在相邻表里加入 `AdjacentWonder` 一类行（如剧院广场 +2 文化/奇观）。
+- **同类区域多个**：如社区。目前请求里同一类型只放一个；放多个需要在求解器里允许重复类型，并在同分比较中对同类区域做对称性去重。

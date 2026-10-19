@@ -13,7 +13,8 @@
                      in-game Lua answers; --capital also founds the capital
                      (tests/fixtures/found_capital.lua). The leader and the
                      map/game seeds are fixed (--leader, --seed) so every test
-                     game is the same map; --random keeps Play Now's choices.
+                     game is the same map; --random keeps Play Now's choices;
+                     --ruleset picks the base game, Rise and Fall or GS.
 
 Exit codes: 0 done, 2 the game did not reach the expected state in time.
 """
@@ -39,6 +40,7 @@ DEFAULT_SEED = 20261019
 FIXED_SETUP = """
 SDP_TestSetupOriginal = SDP_TestSetupOriginal or GameSetup_RefreshParameters
 GameSetup_RefreshParameters = function(...)
+  %(ruleset)s
   SDP_TestSetupOriginal(...)
   PlayerConfigurations[0]:SetLeaderTypeName("%(leader)s")
   GameConfiguration.SetValue("GAME_SYNC_RANDOM_SEED", %(seed)d)
@@ -117,7 +119,8 @@ def cmd_launch(_args):
 def cmd_newgame(args):
     if not wait_for("main menu", lambda: has_state("MainMenu"), args.timeout):
         return 2
-    setup = RANDOM_SETUP if args.random else FIXED_SETUP % {"leader": args.leader, "seed": args.seed}
+    ruleset = 'GameConfiguration.SetValue("RULESET", "%s")' % args.ruleset if args.ruleset else ""
+    setup = RANDOM_SETUP if args.random else FIXED_SETUP % {"leader": args.leader, "seed": args.seed, "ruleset": ruleset}
     resp = exec_lua("MainMenu", setup + "Automation.SetAutoStartEnabled(true); OnPlayCiv6()")
     if not resp.get("ok"):
         print("could not start a game: %s" % resp.get("error"))
@@ -151,6 +154,8 @@ def main(argv=None):
     np.add_argument("--leader", default=DEFAULT_LEADER, help="local player's leader (default %s)" % DEFAULT_LEADER)
     np.add_argument("--seed", type=int, default=DEFAULT_SEED, help="map and game seed (default %d)" % DEFAULT_SEED)
     np.add_argument("--random", action="store_true", help="keep Play Now's random leader and map")
+    np.add_argument("--ruleset", help="RULESET_STANDARD, RULESET_EXPANSION_1 or RULESET_EXPANSION_2 "
+                    "(default: Play Now's choice, the newest installed)")
     np.add_argument("--timeout", type=float, default=300)
     args = ap.parse_args(argv)
     commands = {"quit": cmd_quit, "menu": cmd_menu, "popups": cmd_popups, "launch": cmd_launch, "newgame": cmd_newgame}
