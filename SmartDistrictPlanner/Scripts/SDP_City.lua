@@ -10,6 +10,7 @@ SDP_City.RADIUS = 3  -- districts go within three rings of the city center
 
 -- Why a plot within range cannot take a new district.
 SDP_City.EXCLUDED = {
+  UNREVEALED = "UNREVEALED",         -- not revealed to the player: DMT knows nothing there
   CITY_CENTER = "CITY_CENTER",       -- any city's center
   DISTRICT = "DISTRICT",             -- a district is already there
   WONDER = "WONDER",                 -- a wonder is built or placed there
@@ -70,6 +71,8 @@ end
 -- Why `plot` cannot take a new district for this city, or nil.
 local function ExclusionReason(plot, playerID, cityID, pinned, allowFeatureRemoval)
   local E = SDP_City.EXCLUDED
+  -- DMT reads no terrain for unrevealed plots and CanPlacePin then fails.
+  if not PlayersVisibility[playerID]:IsRevealed(plot:GetIndex()) then return E.UNREVEALED end
   if plot:IsCity() then return E.CITY_CENTER end
   if plot:GetDistrictType() ~= -1 then return E.DISTRICT end
   if plot:GetWonderType() ~= -1 then return E.WONDER end

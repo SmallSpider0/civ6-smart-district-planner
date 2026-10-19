@@ -80,10 +80,13 @@ end)
 
 ```bash
 python3 -I tools/game.py quit                          # 经 Tuner 退出游戏并等待进程结束
+python3 -I tools/game.py menu                          # 退回主菜单（只改了 Lua/UI XML 时用它重载，不必重启）
 python3 -I tools/game.py launch                        # open steam://rungameid/289070，等启动器出现（Steam 有时要 1 分钟以上）
 # 然后用 computer-use 对启动器（com.aspyr.civ6.steam）的"开始"按钮做 AXPress
 python3 -I tools/game.py newgame --state SDP_Panel --capital   # 等主菜单→快速开始→等指定 Lua 状态可用→用开局开拓者建首都
 ```
+
+只改了 Lua 或 UI XML：`deploy.py` → `game.py menu` → `game.py newgame --state SDP_Panel --capital` → `run_tests.py`（约 30 秒）。
 
 改 modinfo 或文本后的完整循环：`deploy.py` → `game.py quit` → `game.py launch` → 点"开始" → `game.py newgame --state SDP_Panel --capital` → `run_tests.py`。
 

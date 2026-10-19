@@ -2,6 +2,8 @@
 """game - start, enter and quit Civilization VI for testing (macOS).
 
   game.py quit       quit the running game through the tuner, wait for exit
+  game.py menu       leave the current game for the main menu (reloads the
+                     mod's Lua and UI XML on the next game; not the modinfo)
   game.py launch     open the game through Steam (the Aspyr launcher's
                      "开始" button then needs a click: computer-use AXPress)
   game.py newgame    wait for the main menu, quick-start a game with default
@@ -59,6 +61,12 @@ def cmd_quit(_args):
     return 0 if wait_for("game exit", lambda: not game_running(), 60, 2) else 2
 
 
+def cmd_menu(_args):
+    exec_lua("InGame", "Events.ExitToMainMenu()", raw=True)
+    gone = lambda: not has_state("InGame") and has_state("MainMenu")  # noqa: E731
+    return 0 if wait_for("main menu", gone, 120) else 2
+
+
 def cmd_launch(_args):
     subprocess.run(["open", STEAM_URL], check=True)
     ok = wait_for("launcher", game_running, 180, 2)  # Steam can take over a minute
@@ -89,13 +97,14 @@ def main(argv=None):
     ap = argparse.ArgumentParser(description="Start, enter and quit the game for testing")
     sub = ap.add_subparsers(dest="cmd", required=True)
     sub.add_parser("quit", help="quit the running game")
+    sub.add_parser("menu", help="leave the current game for the main menu")
     sub.add_parser("launch", help="open the game through Steam")
     np = sub.add_parser("newgame", help="quick-start a game from the main menu")
     np.add_argument("--state", default="InGame", help="Lua state to wait for (default InGame)")
     np.add_argument("--capital", action="store_true", help="also found the capital")
     np.add_argument("--timeout", type=float, default=300)
     args = ap.parse_args(argv)
-    return {"quit": cmd_quit, "launch": cmd_launch, "newgame": cmd_newgame}[args.cmd](args)
+    return {"quit": cmd_quit, "menu": cmd_menu, "launch": cmd_launch, "newgame": cmd_newgame}[args.cmd](args)
 
 
 if __name__ == "__main__":

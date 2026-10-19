@@ -45,6 +45,9 @@ test("scan splits the range into candidates and excluded plots", function()
     T.ok(seen[p.Index] or scan.Excluded[p.Index], "plot " .. p.Index .. " neither candidate nor excluded")
   end
   T.ok(#scan.Candidates > 0, "no candidates")
+  for _, c in ipairs(scan.Candidates) do
+    T.ok(PlayersVisibility[pid]:IsRevealed(c.Index), "unrevealed candidate " .. c.Index)
+  end
   T.eq(scan.SpecialtyCapacity, SDP_City.SpecialtyCapacity(city:GetPopulation()), "capacity")
 end)
 

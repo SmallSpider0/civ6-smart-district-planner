@@ -8,8 +8,35 @@
 ## 目标函数定义
 <!-- 分类型加权和、联合总分与锁定钉基线 -->
 
-## 与 DMT 的接缝
-<!-- include 列表、overlay 安装/恢复、缓存清理、事件订阅移除 -->
+## 与 DMT 的接缝（阶段 3，`Scripts/SDP_Overlay.lua`）
+
+**include 与事件**：`SDP_Overlay.lua` 顶部 `include("dmt_yieldcalculator")`（它再 include `civ6common`、`dmt_modifiercalculator`、`dmt_mappinsubjectmanager`），文件末尾的 `DMT_Initialize()` 会在我们的 Lua 状态里再订阅一遍 DMT 的处理函数。紧接着逐个 `Remove`：本机 DMT（2024-01-17 版）实际是 3 个 LuaEvents + 11 个 Events（需求文档写的是 3 + 10），以 `DMT_Initialize` 源码为准。`InitializeCache()` 等初始化保留。
+
+**假想摆放层**：
+- DMT 只通过全局 `GetMapPinSubject` / `UpdateMapPinSubject` 读写地图钉。`Install(pid)` 时替换这两个全局：
+  - 读：先查层，再查真实钉快照；快照用 DMT 的 `LoadMapPinSubjectTable` 一次性反序列化，因为原版每次调用都要反序列化整张表。
+  - 写：只写进层，写入值为 `subject or false`，读到 `false` 当作 nil。
+  - 其他玩家的读写交回原函数。
+- `Uninstall()` 恢复原函数；`With(pid, fn, ...)` 用 `pcall` 包住 `fn`，任何路径都会卸载，然后重新抛出错误。
+- `Set(x, y, subject|false|nil)` 用来手动放置或隐藏真实钉。
+
+**缓存**：DMT 的 `GetRealizedPlotFeatures` 按坐标缓存地块特征，缓存键不含 subject。所以一个格子是"候选区域本身"还是"别人的邻居"，结果取决于谁先算。为此安装、卸载、每次改层以及每次评估前后都执行 `pcall(UpdatePinYields, pid, {})`。传空列表时它只清缓存，`BroadcastMapPinSubjects` 也不会发网络消息，因为本状态没有未广播的改动。
+
+**评估**：`Evaluate(placements, fixed, weights)`。
+- 把 placements 放上层，清缓存。
+- 对每个 placement 依次调 `GetBonusYields` 和 `CanPlacePin`，对每个 fixed subject 调 `GetBonusYields`。
+- 结束后把层恢复成评估前的样子，再清一次缓存。
+- 返回 `Legal`（全部可放）、`Total`（所有项的加权分之和，即联合总分）以及逐项的产出、DMT tooltip、得分、可放性与原因。
+- DMT 抛错时只标记该项（`Error`，并视为不可放），不中断整次评估。
+
+**固定 subject**（`FixedSubjects(scan)`）：城市四环内本玩家的已建区域（含市中心，不含奇观）和非普通地图钉（锁定钉）。它们的产出会因新区域相邻而变化，计入联合总分。提升 = 方案总分 − 不放新区域时的基线总分。
+
+**实测**（2026-10-19，GS）：
+- 6 种区域 × 6 个候选格共 36 个假想 subject，与 DMT 对真实钉计算并保存的结果逐项一致：产出 tooltip、产出、可放性、不可放原因。其中 26 个可放，10 个不可放。
+- 锁定学院钉旁边规划两个区域后，学院的 tooltip 与产出和放真实钉时完全一致，科技 +1。
+- 单次评估（2 个区域加固定邻居）约 0.45 毫秒，2 秒预算内大约能做 4000 次精确评估。
+
+**未揭示格**：DMT 在未揭示的格子上读不到地形，对部分区域（如需要海岸的）`CanPlacePin` 会报错。城市扫描把未揭示格排除（`UNREVEALED`）。
 
 ## 界面骨架（阶段 1）
 
