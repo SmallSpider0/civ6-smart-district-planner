@@ -1,5 +1,78 @@
 # tools/
 
+开发循环：`validate.py` → `deploy.py` → 进入对局 → `run_tests.py`。Python 脚本只用标准库，统一用 `python3 -I` 运行；`luacheck.mjs` 依赖 luaparse（新环境先 `cd tools && npm install`）。
+
+| 脚本 | 作用 | 退出码 |
+|------|------|--------|
+| `validate.py` | 静态校验 mod 与测试文件 | 0 通过；1 有错误；2 缺工具 |
+| `luacheck.mjs` | Lua 语法与陷阱检查（validate 会调用它） | 0 无错误；1 有错误 |
+| `deploy.py` | 校验后把 mod 同步到游戏 Mods 目录 | 0 成功；1 校验失败；2 找不到 Mods 目录 |
+| `run_tests.py` | 经 Tuner 在游戏内跑 `tests/test_*.lua` | 0 全过；1 有失败；2 连接问题；3 超时 |
+| `civ6tuner.py` | FireTuner 客户端：收集 Lua 输出、远程执行 Lua | 见下文 |
+
+## validate.py — 静态校验
+
+```bash
+python3 -I tools/validate.py            # 校验 SmartDistrictPlanner/ 与 tests/
+python3 -I tools/validate.py --strict   # 警告也算失败
+```
+
+| 规则 | 检查内容 |
+|------|----------|
+| `xml` | 所有 `.xml`/`.modinfo` 过 `xmllint --noout` |
+| `modinfo` | mod id 固定；`<Dependencies>` 含 DMT；`<Files>` 与磁盘一致（大小写精确）；动作引用的文件都在 `<Files>`；`AddUserInterfaces` 有 `<Context>`（坑 3）；没被任何动作加载的 XML 给警告 |
+| `text` | 文本文件根为 `<GameData>`，禁止外部文件用 `<Text id><en_US>` 格式（坑 2）；同一加载阶段 en_US 与 zh_Hans_CN 的 `LOC_SDP_*` 键一致 |
+| `loc` | Lua/UI XML 引用的 `LOC_SDP_*` 在对局文本里两种语言都有（以 `_` 结尾的视为运行时拼接前缀，跳过）；modinfo 的名称/描述键在前端阶段能加载（坑 1） |
+| `ui` | UI XML（根为 `<Context>`）只用游戏本体与 DLC UI XML 出现过的控件与属性（坑 8）；游戏源码里的拼写错误（`Achnor`、`StachGrowth` 等）单独报错；只出现过一次的属性给警告。需要 `reference/` 符号链接 |
+| `lua` | 调用 `luacheck.mjs`，见下 |
+
+## luacheck.mjs — Lua 检查
+
+```bash
+node tools/luacheck.mjs [--json] FILE...
+```
+
+- 用 luaparse 的 5.3 模式解析（需求文档指定；5.1 模式会误报合法的 `break;`），再按规则禁掉 Lua 5.1 没有的写法：`goto`/标签、位运算、`//`、块中间的 `break`。
+- `banned-global` / `banned-call`：游戏里为 nil 的全局（`_G`、`require`、`setfenv`、`debug`、`table.unpack` 等，2026-10-19 实测）；破坏确定性的 `math.random`、`os.time`、`os.date`。
+- `global-assign`（警告）：写入不带 `SDP_`/`sdp_` 前缀的全局，通常是漏了 `local`。
+- 单行豁免：行尾加 `-- lint: allow <规则名>`（如替换 DMT 的 `GetMapPinSubject` 时用 `global-assign`）。
+- 游戏本体与 DMT 源码用了 HavokScript 扩展语法（类型标注），本检查不接受；我们的代码保持纯 Lua。
+
+## deploy.py — 部署
+
+```bash
+python3 -I tools/deploy.py --dry-run    # 只显示会改什么
+python3 -I tools/deploy.py              # 校验通过后同步
+```
+
+- 目标：Mac `~/Library/Application Support/Sid Meier's Civilization VI/Sid Meier's Civilization VI/Mods/SmartDistrictPlanner/`，Windows `文档/My Games/Sid Meier's Civilization VI/Mods/SmartDistrictPlanner/`；`--mods-dir` 可改。
+- 增量复制，并删除部署目录里源目录已没有的文件；只动 `Mods/SmartDistrictPlanner/` 内部。
+- 结尾提示重载方式：改了 modinfo 或 `Text/` 要重启游戏，否则回主菜单重新进入对局即可。
+
+## run_tests.py — 游戏内测试
+
+```bash
+python3 -I tools/run_tests.py                     # 跑 tests/**/test_*.lua
+python3 -I tools/run_tests.py -k campus -v tests/test_dmt.lua
+```
+
+测试文件格式：
+
+```lua
+-- @state dmt_yieldcalculator      -- 在哪个 Lua 状态执行（默认 InGame）
+-- @timeout 30                     -- 整个文件的超时秒数（默认 30）
+local test, T = ...
+
+test("名称", function()
+  T.eq(实际值, 期望值, "说明")      -- 还有 T.ok(cond, msg)、T.near(a, b, eps, msg)、T.skip(原因)
+end)
+```
+
+- 文件内容经 `loadstring` 以文件名作 chunk 名加载，错误信息带 `tests/xxx.lua:行号`，并去掉 harness 自身的调用栈帧。
+- 失败或 `-v` 时显示该文件的 `print()` 输出。
+- 计时为单文件墙钟时间（含约 0.02 秒 Tuner 往返）。游戏内 `os.clock` 等计时器只有秒级，不能在 Lua 里测耗时。
+- 已验证：通过/失败/跳过/语法错误/加载期错误、72 KB 的测试文件、内容含 `]]`、测试名含 `|` 和中文、状态名写错（只记该文件出错，其余继续）。
+
 ## civ6tuner.py — FireTuner 客户端（Lua 输出 + 远程执行 Lua）
 
 Mac 版文明6不写 `Lua.log`，本工具通过游戏的 FireTuner 调试端口（127.0.0.1:4318）代替它：收集所有 Lua `print()` 输出，并在任意 Lua 状态中执行代码。纯 Python 标准库，无依赖。
@@ -17,7 +90,7 @@ python3 -I tools/civ6tuner.py states
 python3 -I tools/civ6tuner.py exec -s MainMenu 'print(_VERSION)'
 ```
 
-- `exec`/`states` 优先走 `serve` 守护进程（控制端口 127.0.0.1:43180），没有守护进程时直接连游戏。
+- `exec`/`states` 优先走 `serve` 守护进程（控制端口 127.0.0.1:43180），没有守护进程时直接连游戏。其他脚本通过 `civ6tuner.request()` 复用同一逻辑。
 - 代码经 `loadstring` + `pcall` 包装：语法错误和运行时错误（含 traceback）都会返回。
 - 退出码：0 成功；1 Lua 错误；2 连接/协议问题（含状态名不存在）；3 超时。
 - `--json` 输出完整结果；`--raw` 不做包装直接发送（无错误捕获）。

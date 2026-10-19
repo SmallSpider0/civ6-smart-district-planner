@@ -1,0 +1,403 @@
+#!/usr/bin/env python3
+"""validate - static checks for the SmartDistrictPlanner mod and Lua tests.
+
+Catches the Civ6 failures that are silent or only show up after a game
+restart (AGENTS.md section 5):
+  xml        every .xml/.modinfo is well formed (xmllint --noout)
+  modinfo    mod id, DMT dependency, <Files> matches disk (exact case),
+             every action file is listed, AddUserInterfaces has a Context
+  text       text files use <LocalizedText><Replace Tag Language> (pitfall 2),
+             en_US and zh_Hans_CN define the same keys
+  loc        every LOC_SDP_* key used in Lua/UI XML exists in both languages;
+             modinfo Name/Teaser/Description keys load in the front end (pitfall 1)
+  ui         UI XML only uses controls and attributes that appear in the game's
+             own UI XML (pitfall 8: an invalid attribute fails silently)
+  lua        tools/luacheck.mjs: Lua 5.1 syntax, banned globals, determinism
+
+Usage: validate.py [--strict] [--mod DIR] [--tests DIR]
+Exit codes: 0 clean, 1 errors (or warnings with --strict), 2 tool missing.
+"""
+
+import argparse
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+from xml.parsers import expat
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+TOOLS = os.path.join(ROOT, "tools")
+MOD_DIR = os.path.join(ROOT, "SmartDistrictPlanner")
+TESTS_DIR = os.path.join(ROOT, "tests")
+REFERENCE = os.path.join(ROOT, "reference")
+
+MOD_ID = "d2b8b724-4174-42cb-943c-8036778c68ba"
+DMT_ID = "4ecfcc62-5471-4435-b295-590df213e8d8"
+LANGUAGES = ("en_US", "zh_Hans_CN")
+LOC_REF = re.compile(r"\bLOC_SDP_[A-Z0-9_]+")
+
+# Attributes the game accepts but its own UI XML never uses. Add an entry only
+# after confirming in game that the control renders; note where it was checked.
+UI_ATTRIBUTE_ALLOWLIST = {}
+# Misspellings that occur in the game's own UI XML and so look like precedents.
+UI_ATTRIBUTE_TYPOS = {"Achnor": "Anchor", "StachGrowth": "StackGrowth",
+                      "AutoScollbar": "AutoScrollBar", "size": "Size", "Hide": "Hidden"}
+
+
+class Node:
+    __slots__ = ("tag", "attrib", "children", "text", "line")
+
+    def __init__(self, tag, attrib, line):
+        self.tag, self.attrib, self.line = tag, attrib, line
+        self.children, self.text = [], ""
+
+    def find(self, tag):
+        return next((c for c in self.children if c.tag == tag), None)
+
+    def findall(self, tag):
+        return [c for c in self.children if c.tag == tag]
+
+    def iter(self):
+        yield self
+        for c in self.children:
+            yield from c.iter()
+
+
+def parse_xml(path):
+    """Parse into Node trees keeping line numbers (ElementTree drops them)."""
+    parser = expat.ParserCreate()
+    stack, root = [], []
+
+    def start(tag, attrib):
+        node = Node(tag, attrib, parser.CurrentLineNumber)
+        (stack[-1].children if stack else root).append(node)
+        stack.append(node)
+
+    def end(_tag):
+        stack.pop()
+
+    def chars(data):
+        if stack:
+            stack[-1].text += data
+
+    parser.StartElementHandler, parser.EndElementHandler = start, end
+    parser.CharacterDataHandler = chars
+    with open(path, "rb") as fh:
+        parser.ParseFile(fh)
+    return root[0]
+
+
+class Report:
+    def __init__(self):
+        self.items = []
+
+    def add(self, severity, path, line, rule, message):
+        rel = os.path.relpath(path, ROOT) if os.path.isabs(path) else path
+        self.items.append((severity, rel, line or 0, rule, message))
+
+    def error(self, path, line, rule, message):
+        self.add("error", path, line, rule, message)
+
+    def warning(self, path, line, rule, message):
+        self.add("warning", path, line, rule, message)
+
+    def count(self, severity):
+        return sum(1 for i in self.items if i[0] == severity)
+
+
+def list_files(directory):
+    """Relative POSIX paths of all files, skipping dotfiles (.gitkeep etc.)."""
+    out = []
+    for dirpath, dirnames, filenames in os.walk(directory):
+        dirnames[:] = sorted(d for d in dirnames if not d.startswith("."))
+        for name in sorted(filenames):
+            if not name.startswith("."):
+                out.append(os.path.relpath(os.path.join(dirpath, name), directory).replace(os.sep, "/"))
+    return out
+
+
+# -- xml -------------------------------------------------------------------
+def check_xml(report, paths):
+    """Well-formedness via xmllint (as AGENTS.md specifies), expat as fallback.
+    Returns {path: Node} for the files that parsed."""
+    bad = set()
+    if paths and shutil.which("xmllint"):
+        proc = subprocess.run(["xmllint", "--noout"] + paths, capture_output=True, text=True)
+        for line in proc.stderr.splitlines():
+            m = re.match(r"(.+?):(\d+): (.*)", line)
+            if m and m.group(1) in paths:
+                report.error(m.group(1), int(m.group(2)), "xml", m.group(3).strip())
+                bad.add(m.group(1))
+    elif paths:
+        report.warning("xmllint", 0, "xml", "xmllint not found; using the built-in parser only")
+    trees = {}
+    for path in paths:
+        try:
+            trees[path] = parse_xml(path)
+        except expat.ExpatError as e:
+            if path not in bad:
+                report.error(path, e.lineno, "xml", str(e))
+    return trees
+
+
+# -- text ------------------------------------------------------------------
+def text_entries(report, path, root):
+    """{(language, tag): line} from a database text file."""
+    entries = {}
+    if root.tag != "GameData":
+        report.error(path, root.line, "text", "text file root must be <GameData>, found <%s>" % root.tag)
+    for node in root.iter():
+        if node.tag == "Text" and "id" in node.attrib:
+            report.error(path, node.line, "text",
+                         "<Text id=...> with language children only works inside the modinfo; "
+                         "use <LocalizedText><Replace Tag=\"...\" Language=\"...\"> (pitfall 2)")
+    for container in root.children:
+        if container.tag not in ("LocalizedText", "EnglishText"):
+            continue
+        for row in container.children:
+            if row.tag not in ("Replace", "Row"):
+                continue
+            tag = row.attrib.get("Tag")
+            lang = row.attrib.get("Language") or ("en_US" if container.tag == "EnglishText" else None)
+            if not tag or not lang:
+                report.error(path, row.line, "text", "<%s> needs Tag and Language attributes" % row.tag)
+                continue
+            if row.find("Text") is None and "Text" not in row.attrib:
+                report.error(path, row.line, "text", "%s (%s) has no <Text>" % (tag, lang))
+            if (lang, tag) in entries:
+                report.warning(path, row.line, "text", "%s (%s) defined twice in this file" % (tag, lang))
+            entries[(lang, tag)] = row.line
+    return entries
+
+
+def compare_languages(report, label, entries, where):
+    """Both languages must define the same SDP keys."""
+    keys = {lang: {t for (l, t) in entries if l == lang} for lang in LANGUAGES}
+    for lang in LANGUAGES:
+        for other in LANGUAGES:
+            for tag in sorted(keys[other] - keys[lang]):
+                if tag.startswith("LOC_SDP_"):
+                    report.error(where, 0, "text", "%s: %s has %s but %s lacks it" % (label, other, tag, lang))
+
+
+def modinfo_text(root):
+    """{(language, tag)} from <LocalizedText><Text id><en_US>... in the modinfo."""
+    entries = set()
+    loc = root.find("LocalizedText")
+    for text in loc.findall("Text") if loc is not None else []:
+        for child in text.children:
+            entries.add((child.tag, text.attrib.get("id", "")))
+    return entries
+
+
+# -- modinfo ---------------------------------------------------------------
+def check_mod(report, mod_dir, trees):
+    files_on_disk = list_files(mod_dir)
+    modinfos = [f for f in files_on_disk if f.endswith(".modinfo") and "/" not in f]
+    if len(modinfos) != 1:
+        report.error(mod_dir, 0, "modinfo", "expected exactly one .modinfo at the mod root, found %d" % len(modinfos))
+        return
+    mpath = os.path.join(mod_dir, modinfos[0])
+    root = trees.get(mpath)
+    if root is None:
+        return
+    if root.tag != "Mod" or root.attrib.get("id") != MOD_ID:
+        report.error(mpath, root.line, "modinfo", "root must be <Mod id=\"%s\">" % MOD_ID)
+
+    deps = root.find("Dependencies")
+    if deps is None or DMT_ID not in [m.attrib.get("id") for m in deps.findall("Mod")]:
+        report.error(mpath, root.line, "modinfo", "Detailed Map Tacks (%s) must be listed in <Dependencies>" % DMT_ID)
+
+    files_node = root.find("Files")
+    listed = [f.text.strip().replace("\\", "/") for f in files_node.findall("File")] if files_node is not None else []
+    disk_exact, disk_lower = set(files_on_disk), {f.lower(): f for f in files_on_disk}
+    for f in listed:
+        if f not in disk_exact:
+            hint = " (on disk as %s)" % disk_lower[f.lower()] if f.lower() in disk_lower else ""
+            report.error(mpath, 0, "modinfo", "<Files> lists %s but it does not exist%s" % (f, hint))
+    for f in files_on_disk:
+        if f not in listed and f != modinfos[0]:
+            report.error(mpath, 0, "modinfo", "%s is in the mod folder but not listed in <Files>" % f)
+
+    text_sources = {"FrontEndActions": [], "InGameActions": []}
+    used = set()
+    for group in ("FrontEndActions", "InGameActions"):
+        actions = root.find(group)
+        for action in actions.children if actions is not None else []:
+            if action.tag == "Properties":
+                continue
+            for f in action.findall("File"):
+                path = f.text.strip().replace("\\", "/")
+                used.add(path)
+                if path not in listed:
+                    report.error(mpath, f.line, "modinfo", "%s/%s uses %s which is not in <Files>" % (group, action.tag, path))
+                if action.tag == "UpdateText":
+                    text_sources[group].append(path)
+            if action.tag == "AddUserInterfaces":
+                props = action.find("Properties")
+                if props is None or props.find("Context") is None:
+                    report.error(mpath, action.line, "modinfo",
+                                 "AddUserInterfaces needs <Properties><Context>InGame</Context> (pitfall 3)")
+
+    for f in files_on_disk:
+        tree = trees.get(os.path.join(mod_dir, f))
+        if tree is not None and tree.tag in ("GameData", "Context") and f not in used:
+            report.warning(mpath, 0, "modinfo", "%s is never loaded: no action in the modinfo uses it" % f)
+
+    # Text: per load stage, both languages must agree.
+    stage_entries = {}
+    for group, paths in text_sources.items():
+        merged = {}
+        for path in paths:
+            full = os.path.join(mod_dir, path)
+            if full in trees:
+                merged.update(text_entries(report, full, trees[full]))
+        stage_entries[group] = set(merged)
+        compare_languages(report, group, merged, mpath)
+
+    # Mod name/description: shown in the front end (pitfall 1).
+    fe_keys = stage_entries["FrontEndActions"] | modinfo_text(root)
+    props = root.find("Properties")
+    for child in props.children if props is not None else []:
+        for key in LOC_REF.findall(child.text):
+            for lang in LANGUAGES:
+                if (lang, key) not in fe_keys:
+                    report.error(mpath, child.line, "loc",
+                                 "%s uses %s but no %s text for it loads in the front end "
+                                 "(FrontEndActions/UpdateText or modinfo <LocalizedText>; pitfall 1)"
+                                 % (child.tag, key, lang))
+
+    # LOC keys referenced from Lua and UI XML must load in game.
+    ig_keys = stage_entries["InGameActions"]
+    text_files = {os.path.join(mod_dir, p) for ps in text_sources.values() for p in ps}
+    for f in files_on_disk:
+        full = os.path.join(mod_dir, f)
+        if not f.endswith((".lua", ".xml")) or full in text_files:
+            continue
+        with open(full, encoding="utf-8-sig", errors="replace") as fh:
+            for lineno, line in enumerate(fh, 1):
+                for key in LOC_REF.findall(line):
+                    if key.endswith("_"):
+                        continue  # prefix of a key built at runtime
+                    for lang in LANGUAGES:
+                        if (lang, key) not in ig_keys:
+                            report.error(full, lineno, "loc", "%s has no %s text in InGameActions/UpdateText" % (key, lang))
+
+
+# -- ui precedent ------------------------------------------------------------
+def ui_precedents():
+    """{control tag: {attribute: [count, example file]}} from the game's own
+    UI XML, or None when reference/ is not set up."""
+    roots = [os.path.join(REFERENCE, "base-ui"), os.path.join(REFERENCE, "dlc")]
+    if not all(os.path.isdir(r) for r in roots):
+        return None
+    table = {}
+    for base in roots:
+        for dirpath, _dirs, files in os.walk(base, followlinks=True):
+            if base.endswith("dlc") and "/UI" not in dirpath.replace(os.sep, "/"):
+                continue
+            for name in files:
+                if not name.lower().endswith(".xml"):
+                    continue
+                try:
+                    root = parse_xml(os.path.join(dirpath, name))
+                except (expat.ExpatError, OSError):
+                    continue
+                if root.tag != "Context":
+                    continue
+                for node in root.iter():
+                    attrs = table.setdefault(node.tag, {})
+                    for attr in node.attrib:
+                        attrs.setdefault(attr, [0, name])[0] += 1
+    return table
+
+
+def check_ui(report, trees, precedents):
+    for path, root in sorted(trees.items()):
+        if root.tag != "Context":
+            continue
+        if precedents is None:
+            report.warning(path, 0, "ui", "reference/base-ui or reference/dlc missing; UI precedent check skipped")
+            return
+        for node in root.iter():
+            known = precedents.get(node.tag)
+            if known is None:
+                report.error(path, node.line, "ui", "<%s> never appears in the game's UI XML (typo?)" % node.tag)
+                continue
+            for attr in node.attrib:
+                if attr in UI_ATTRIBUTE_ALLOWLIST.get(node.tag, ()):
+                    continue
+                if attr in UI_ATTRIBUTE_TYPOS:
+                    report.error(path, node.line, "ui", "<%s %s=...> is a misspelling of %s"
+                                 % (node.tag, attr, UI_ATTRIBUTE_TYPOS[attr]))
+                elif attr not in known:
+                    report.error(path, node.line, "ui",
+                                 "<%s %s=...> has no precedent in the game's UI XML; an invalid "
+                                 "attribute makes the control fail silently (pitfall 8)" % (node.tag, attr))
+                elif known[attr][0] == 1:
+                    report.warning(path, node.line, "ui", "<%s %s=...> appears only once in the game's "
+                                   "UI XML (%s); check that it works" % (node.tag, attr, known[attr][1]))
+
+
+# -- lua -------------------------------------------------------------------
+def check_lua(report, paths):
+    if not paths:
+        return True
+    if not shutil.which("node"):
+        report.error("node", 0, "lua", "node not found; Lua files were not checked")
+        return False
+    if not os.path.isdir(os.path.join(TOOLS, "node_modules", "luaparse")):
+        report.error("tools/node_modules", 0, "lua", "luaparse missing; run: cd tools && npm install")
+        return False
+    proc = subprocess.run(["node", os.path.join(TOOLS, "luacheck.mjs"), "--json"] + paths,
+                          capture_output=True, text=True)
+    try:
+        diags = json.loads(proc.stdout)
+    except ValueError:
+        report.error("tools/luacheck.mjs", 0, "lua", "checker failed: %s" % (proc.stderr.strip() or proc.stdout.strip()))
+        return False
+    for d in diags:
+        report.add(d["severity"], d["file"], d["line"], d["rule"], d["message"])
+    return True
+
+
+def run(mod_dir=MOD_DIR, tests_dir=TESTS_DIR, strict=False, quiet=False):
+    """Run all checks; returns (exit code, Report)."""
+    report = Report()
+    mod_files = [os.path.join(mod_dir, f) for f in list_files(mod_dir)] if os.path.isdir(mod_dir) else []
+    if not os.path.isdir(mod_dir):
+        report.error(mod_dir, 0, "modinfo", "mod folder not found")
+    test_files = [os.path.join(tests_dir, f) for f in list_files(tests_dir)] if os.path.isdir(tests_dir) else []
+
+    xml_paths = [p for p in mod_files if p.endswith((".xml", ".modinfo"))]
+    trees = check_xml(report, xml_paths)
+    if os.path.isdir(mod_dir):
+        check_mod(report, mod_dir, trees)
+    if any(root.tag == "Context" for root in trees.values()):
+        check_ui(report, trees, ui_precedents())
+    tool_ok = check_lua(report, [p for p in mod_files + test_files if p.endswith(".lua")])
+
+    if not quiet:
+        for severity, path, line, rule, message in sorted(report.items, key=lambda i: (i[1], i[2], i[3])):
+            print("%s %s:%d [%s] %s" % (severity.upper(), path, line, rule, message))
+        print("validate: %d file(s), %d error(s), %d warning(s)"
+              % (len(mod_files) + len(test_files), report.count("error"), report.count("warning")))
+    if not tool_ok:
+        return 2, report
+    failed = report.count("error") or (strict and report.count("warning"))
+    return (1 if failed else 0), report
+
+
+def main(argv=None):
+    ap = argparse.ArgumentParser(description="Static checks for the SmartDistrictPlanner mod")
+    ap.add_argument("--strict", action="store_true", help="treat warnings as errors")
+    ap.add_argument("--mod", default=MOD_DIR, help="mod folder (default SmartDistrictPlanner/)")
+    ap.add_argument("--tests", default=TESTS_DIR, help="Lua test folder (default tests/)")
+    args = ap.parse_args(argv)
+    return run(os.path.abspath(args.mod), os.path.abspath(args.tests), args.strict)[0]
+
+
+if __name__ == "__main__":
+    sys.exit(main())

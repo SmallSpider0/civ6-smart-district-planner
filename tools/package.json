@@ -1,0 +1,11 @@
+{
+  "name": "sdp-tools",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Dev tooling for Smart District Planner (Lua syntax/lint checks via luaparse).",
+  "license": "UNLICENSED",
+  "type": "module",
+  "devDependencies": {
+    "luaparse": "^0.3.1"
+  }
+}

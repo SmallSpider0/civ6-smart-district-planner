@@ -373,6 +373,13 @@ def direct_request(req, port):
         conn.close()
 
 
+def request(req, port=None):
+    """Run one states/exec request through the daemon when it is up, else
+    over a direct connection. Returns the JSON-able result dict."""
+    resp = daemon_request(req, float(req.get("timeout", 10.0)))
+    return resp if resp is not None else direct_request(req, port)
+
+
 EXIT_CODES = {None: 0, "lua": 1, "connection": 2, "timeout": 3}
 
 
@@ -409,9 +416,7 @@ def main(argv=None):
         req = {"op": "exec", "state": args.state, "code": code,
                "timeout": args.timeout, "raw": args.raw}
 
-    resp = daemon_request(req, getattr(args, "timeout", 10.0))
-    if resp is None:
-        resp = direct_request(req, args.port)
+    resp = request(req, args.port)
 
     if getattr(args, "json", False):
         print(json.dumps(resp, ensure_ascii=False, indent=2))
