@@ -191,5 +191,166 @@
     <Replace Tag="LOC_SDP_RESULT_NO_CITY" Language="en_US">
       <Text>The city no longer exists.</Text>
     </Replace>
+
+    <!-- Tabs, city sites, several cities, wonders -->
+    <Replace Tag="LOC_SDP_TAB_SINGLE" Language="en_US">
+      <Text>One city</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_TAB_SITES" Language="en_US">
+      <Text>City sites</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_TAB_MULTI" Language="en_US">
+      <Text>Several cities</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SOLUTION_N" Language="en_US">
+      <Text>Plan {1_N}: {2_Value}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITE_N" Language="en_US">
+      <Text>Site {1_N}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_PIN_IN_CITY" Language="en_US">
+      <Text>{1_Name} ({2_City})</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_REASON_PINNED" Language="en_US">
+      <Text>already pinned</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_REASON_NEEDS_DISTRICT" Language="en_US">
+      <Text>needs a district next to it that no city plans</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_REASON_NO_FREE_PLOT" Language="en_US">
+      <Text>no free plot left for it</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_NO_SITE" Language="en_US">
+      <Text>No combination of sites fits (spacing, distance or too few candidates).</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_WONDER_BUILT" Language="en_US">
+      <Text>Built</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_WONDER_PINNED" Language="en_US">
+      <Text>Pinned</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_MULTI_CITIES" Language="en_US">
+      <Text>Cities (city-center map tacks and the cities near them)</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_MULTI_PLAN" Language="en_US">
+      <Text>Districts for each city</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_MULTI_WONDERS" Language="en_US">
+      <Text>Wonders</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_MULTI_SITE_PIN" Language="en_US">
+      <Text>map tack {1_Where}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_MULTI_DISTANCE" Language="en_US">
+      <Text>{1_Distance} plots from a new city</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_MULTI_CAP" Language="en_US">
+      <Text>(beyond the {1_Max} cities planned at once)</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_MULTI_NEIGHBOUR_ONLY" Language="en_US">
+      <Text>neighbour only</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_MULTI_EMPIRE_LIMIT" Language="en_US">
+      <Text>{1_Max} per empire</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_MULTI_NONE" Language="en_US">
+      <Text>Put city-center map tacks where new cities go (or use City sites), tick the districts and wonders, then press Solve.</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_MULTI_SOLUTION_DETAIL" Language="en_US">
+      <Text>{1_Cities} cities, {2_Districts} districts, {3_Wonders} wonders</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_MULTI_CITY_GAIN" Language="en_US">
+      <Text>weighted adjacency of its new districts {1_Gain}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_MULTI_STATS" Language="en_US">
+      <Text>Effort: {1_Tier}; {2_Cities} cities; DMT calls: {3_Calls}; layouts tried: {4_Tries}; improved {5_Continues} times; planning the cities one after another gave {6_First}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_COUNT" Language="en_US">
+      <Text>New cities</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_DISTANCE" Language="en_US">
+      <Text>Max distance</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_PRESET" Language="en_US">
+      <Text>Weights</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_PRESET_BALANCED" Language="en_US">
+      <Text>Balanced</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_PRESET_GROWTH" Language="en_US">
+      <Text>Growth first</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_PRESET_DISTRICTS" Language="en_US">
+      <Text>Districts first</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_WEIGHT_AMENITY" Language="en_US">
+      <Text>Amenities from luxury resources</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_WEIGHT_STRATEGIC_SHORT" Language="en_US">
+      <Text>Strat.</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_WEIGHT_STRATEGIC" Language="en_US">
+      <Text>Strategic resources</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_WEIGHT_APPEAL_SHORT" Language="en_US">
+      <Text>Appeal</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_WEIGHT_APPEAL" Language="en_US">
+      <Text>Appeal of the plots districts can take (off by default)</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_PLAN" Language="en_US">
+      <Text>Districts each site is scored with</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_NOT_PER_SITE" Language="en_US">
+      <Text>not per site</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_NONE" Language="en_US">
+      <Text>Choose how many new cities, how far they may go and the districts, then press Solve.</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_SUMMARY" Language="en_US">
+      <Text>Best total {1_Value} ({2_Candidates} candidate sites, {3_Refined} scored with districts)</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_MODEL_NOTE" Language="en_US">
+      <Text>site scores are estimates; step 2 plans the districts exactly</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_PARTS" Language="en_US">
+      <Text>districts {1_District}, plots {2_Land}, water {3_Water}, luxuries {4_Luxury}, strategic {5_Strategic}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_PLACE" Language="en_US">
+      <Text>Place site tacks</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_WATER_FRESH" Language="en_US">
+      <Text>Fresh water</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_WATER_COAST" Language="en_US">
+      <Text>Coast, no fresh water</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_WATER_NONE" Language="en_US">
+      <Text>No water</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_OWN_DISTANCE" Language="en_US">
+      <Text>{1_Distance} plots from our nearest city or site tack</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_UNREVEALED" Language="en_US">
+      <Text>{1_Count} plots of its rings unrevealed</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_LOYALTY_MEDIUM" Language="en_US">
+      <Text>Loyalty risk: medium (foreign cities nearby)</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_LOYALTY_HIGH" Language="en_US">
+      <Text>Loyalty risk: high (foreign cities nearby)</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_DISASTER" Language="en_US">
+      <Text>Floodplains or volcanic soil nearby: disaster risk</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_UNKNOWN_STRATEGIC" Language="en_US">
+      <Text>Some strategic resources are not visible yet</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_FEATURES" Language="en_US">
+      <Text>Features: {1_List}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_DISTRICTS" Language="en_US">
+      <Text>Districts: {1_List}</Text>
+    </Replace>
   </LocalizedText>
 </GameData>

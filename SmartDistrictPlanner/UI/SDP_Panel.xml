@@ -5,14 +5,35 @@
      (pitfall 8; tools/validate.py checks it). -->
 <Context ColorSet="Beige_Black" FontStyle="Shadow">
 
-  <Grid ID="DropShadow" Size="auto,auto" Anchor="L,T" Offset="10,70" Style="DropShadow2" Color="255,255,255,200" AutoSizePadding="25,25" ConsumeMouse="1">
-    <Grid ID="Window" Size="520,880" Anchor="C,C" Style="WindowFrameTitle">
+  <!-- World icons of the map preview (SDP_Preview): outside the window. -->
+  <Container ID="PreviewWorldIcons"/>
+
+  <Grid ID="DropShadow" Size="auto,auto" Anchor="L,T" Offset="10,60" Style="DropShadow2" Color="255,255,255,200" AutoSizePadding="25,25" ConsumeMouse="1">
+    <Grid ID="Window" Size="560,920" Anchor="C,C" Style="WindowFrameTitle">
       <Container Size="parent,38" Offset="0,4">
         <Label ID="Title" Style="WindowHeader" Anchor="C,C" String="{LOC_SDP_PANEL_TITLE:upper}"/>
       </Container>
       <Button ID="CloseButton" Anchor="R,T" Style="CloseButtonSmall"/>
 
-      <Stack ID="Body" Anchor="C,T" Offset="0,50" StackGrowth="Bottom" StackPadding="6">
+      <!-- Tabs (as in TradeOverview.xml) -->
+      <Stack ID="TabStack" Anchor="C,T" Offset="0,46" StackGrowth="Right" StackPadding="6">
+        <GridButton ID="SingleTab" Size="170,34" Style="TabButton">
+          <GridButton ID="SingleTabSelected" Size="parent,parent" Style="TabButtonSelected" ConsumeMouseButton="0" ConsumeMouseOver="1"/>
+          <Label Anchor="C,C" Offset="0,1" Style="TabFont" String="LOC_SDP_TAB_SINGLE"/>
+        </GridButton>
+        <GridButton ID="SitesTab" Size="170,34" Style="TabButton">
+          <GridButton ID="SitesTabSelected" Size="parent,parent" Style="TabButtonSelected" ConsumeMouseButton="0" ConsumeMouseOver="1"/>
+          <Label Anchor="C,C" Offset="0,1" Style="TabFont" String="LOC_SDP_TAB_SITES"/>
+        </GridButton>
+        <GridButton ID="MultiTab" Size="170,34" Style="TabButton">
+          <GridButton ID="MultiTabSelected" Size="parent,parent" Style="TabButtonSelected" ConsumeMouseButton="0" ConsumeMouseOver="1"/>
+          <Label Anchor="C,C" Offset="0,1" Style="TabFont" String="LOC_SDP_TAB_MULTI"/>
+        </GridButton>
+      </Stack>
+
+      <!-- ============ Single city ============ -->
+      <Container ID="SinglePage" Anchor="C,T" Offset="0,88" Size="520,820">
+      <Stack ID="Body" Anchor="C,T" StackGrowth="Bottom" StackPadding="6">
         <!-- City -->
         <Container Size="480,28">
           <Label Anchor="L,C" Style="BodyTextDark18" String="LOC_SDP_CITY"/>
@@ -21,7 +42,7 @@
 
         <!-- Districts -->
         <Label Style="BodyTextDark18" String="LOC_SDP_DISTRICTS"/>
-        <ScrollPanel ID="DistrictScroll" Size="480,200" Vertical="1">
+        <ScrollPanel ID="DistrictScroll" Size="480,180" Vertical="1">
           <ScrollBar Anchor="R,C" AnchorSide="I,I" Style="Slider_Blue"/>
           <Stack ID="DistrictStack" StackGrowth="Bottom" StackPadding="2"/>
         </ScrollPanel>
@@ -56,7 +77,7 @@
         <!-- Results -->
         <Label ID="Summary" Style="BodyTextDark16" WrapWidth="480"/>
         <Label ID="Quality" Style="BodyTextDark14" WrapWidth="480"/>
-        <ScrollPanel ID="ResultScroll" Size="480,170" Vertical="1">
+        <ScrollPanel ID="ResultScroll" Size="480,160" Vertical="1">
           <ScrollBar Anchor="R,C" AnchorSide="I,I" Style="Slider_Blue"/>
           <Stack ID="ResultStack" StackGrowth="Bottom" StackPadding="2"/>
         </ScrollPanel>
@@ -67,6 +88,104 @@
           <GridButton ID="UndoButton" Size="200,41" Style="MainButton" String="LOC_SDP_UNDO_PINS"/>
         </Stack>
       </Stack>
+      </Container>
+
+      <!-- ============ City sites (step 1) ============ -->
+      <Container ID="SitesPage" Anchor="C,T" Offset="0,88" Size="520,820" Hidden="1">
+      <Stack ID="SitesBody" Anchor="C,T" StackGrowth="Bottom" StackPadding="6">
+        <Container Size="500,30">
+          <Label Anchor="L,C" Style="BodyTextDark16" String="LOC_SDP_SITES_COUNT"/>
+          <Button ID="SitesCountLess" Anchor="L,C" Offset="110,0" Style="ArrowButtonLeft"/>
+          <Label ID="SitesCount" Anchor="L,C" Offset="140,0" Style="BodyTextDark18"/>
+          <Button ID="SitesCountMore" Anchor="L,C" Offset="160,0" Style="ArrowButtonRight"/>
+          <Label Anchor="L,C" Offset="230,0" Style="BodyTextDark16" String="LOC_SDP_SITES_DISTANCE"/>
+          <Button ID="SitesDistanceLess" Anchor="L,C" Offset="360,0" Style="ArrowButtonLeft"/>
+          <Label ID="SitesDistance" Anchor="L,C" Offset="390,0" Style="BodyTextDark18"/>
+          <Button ID="SitesDistanceMore" Anchor="L,C" Offset="414,0" Style="ArrowButtonRight"/>
+        </Container>
+        <Container Size="500,28">
+          <Label Anchor="L,C" Style="BodyTextDark16" String="LOC_SDP_SITES_PRESET"/>
+          <PullDown ID="SitesPresetPull" Anchor="L,C" Offset="110,0" Style="PullDownBlue" Size="180,24"/>
+        </Container>
+        <Stack ID="SitesWeightStack" Anchor="C,T" StackGrowth="Right" StackPadding="2"/>
+        <Stack ID="SitesWeightStack2" Anchor="C,T" StackGrowth="Right" StackPadding="2"/>
+        <Label Style="BodyTextDark16" String="LOC_SDP_SITES_PLAN"/>
+        <ScrollPanel ID="SitesDistrictScroll" Size="500,120" Vertical="1">
+          <ScrollBar Anchor="R,C" AnchorSide="I,I" Style="Slider_Blue"/>
+          <Stack ID="SitesDistrictStack" StackGrowth="Bottom" StackPadding="2"/>
+        </ScrollPanel>
+        <Container Size="500,28">
+          <Label Anchor="L,C" Style="BodyTextDark18" String="LOC_SDP_TIER"/>
+          <PullDown ID="SitesTierPull" Anchor="L,C" Offset="110,0" Style="PullDownBlue" Size="150,24"/>
+          <Label ID="SitesEstimate" Anchor="R,C" Style="BodyTextDark14"/>
+        </Container>
+        <Stack Anchor="C,T" StackGrowth="Right" StackPadding="8">
+          <GridButton ID="SitesSolveButton" Size="150,41" Style="MainButton" String="LOC_SDP_SOLVE"/>
+          <GridButton ID="SitesContinueButton" Size="150,41" Style="MainButton" String="LOC_SDP_CONTINUE"/>
+          <GridButton ID="SitesCancelButton" Size="150,41" Style="MainButton" String="LOC_SDP_CANCEL"/>
+        </Stack>
+        <Label ID="SitesSummary" Style="BodyTextDark16" WrapWidth="500"/>
+        <Label ID="SitesQuality" Style="BodyTextDark14" WrapWidth="500"/>
+        <Stack ID="SitesSolutionStack" StackGrowth="Bottom" StackPadding="2"/>
+        <ScrollPanel ID="SitesResultScroll" Size="500,160" Vertical="1">
+          <ScrollBar Anchor="R,C" AnchorSide="I,I" Style="Slider_Blue"/>
+          <Stack ID="SitesResultStack" StackGrowth="Bottom" StackPadding="2"/>
+        </ScrollPanel>
+        <Stack Anchor="C,T" StackGrowth="Right" StackPadding="12">
+          <GridButton ID="SitesPlaceButton" Size="200,41" Style="MainButton" String="LOC_SDP_SITES_PLACE"/>
+          <GridButton ID="SitesUndoButton" Size="200,41" Style="MainButton" String="LOC_SDP_UNDO_PINS"/>
+        </Stack>
+      </Stack>
+      </Container>
+
+      <!-- ============ Several cities (step 2) ============ -->
+      <Container ID="MultiPage" Anchor="C,T" Offset="0,88" Size="520,820" Hidden="1">
+      <Stack ID="MultiBody" Anchor="C,T" StackGrowth="Bottom" StackPadding="6">
+        <Label Style="BodyTextDark16" String="LOC_SDP_MULTI_CITIES"/>
+        <ScrollPanel ID="MultiCityScroll" Size="500,96" Vertical="1">
+          <ScrollBar Anchor="R,C" AnchorSide="I,I" Style="Slider_Blue"/>
+          <Stack ID="MultiCityStack" StackGrowth="Bottom" StackPadding="2"/>
+        </ScrollPanel>
+        <Container Size="500,170">
+          <Label Anchor="L,T" Style="BodyTextDark16" String="LOC_SDP_MULTI_PLAN"/>
+          <ScrollPanel ID="MultiDistrictScroll" Anchor="L,T" Offset="0,22" Size="245,148" Vertical="1">
+            <ScrollBar Anchor="R,C" AnchorSide="I,I" Style="Slider_Blue"/>
+            <Stack ID="MultiDistrictStack" StackGrowth="Bottom" StackPadding="2"/>
+          </ScrollPanel>
+          <Label Anchor="R,T" Offset="155,0" Style="BodyTextDark16" String="LOC_SDP_MULTI_WONDERS"/>
+          <ScrollPanel ID="WonderScroll" Anchor="R,T" Offset="0,22" Size="245,148" Vertical="1">
+            <ScrollBar Anchor="R,C" AnchorSide="I,I" Style="Slider_Blue"/>
+            <Stack ID="WonderStack" StackGrowth="Bottom" StackPadding="2"/>
+          </ScrollPanel>
+        </Container>
+        <Stack ID="MultiWeightStack" Anchor="C,T" StackGrowth="Right" StackPadding="2"/>
+        <Container Size="500,26">
+          <CheckBox ID="MultiLandCheck" Anchor="L,C" Style="MainCheckBox"/>
+          <Label Anchor="L,C" Offset="26,0" Style="BodyTextDark16" String="LOC_SDP_LAND"/>
+        </Container>
+        <Container Size="500,28">
+          <Label Anchor="L,C" Style="BodyTextDark18" String="LOC_SDP_TIER"/>
+          <PullDown ID="MultiTierPull" Anchor="L,C" Offset="110,0" Style="PullDownBlue" Size="150,24"/>
+          <Label ID="MultiEstimate" Anchor="R,C" Style="BodyTextDark14"/>
+        </Container>
+        <Stack Anchor="C,T" StackGrowth="Right" StackPadding="8">
+          <GridButton ID="MultiSolveButton" Size="150,41" Style="MainButton" String="LOC_SDP_SOLVE"/>
+          <GridButton ID="MultiContinueButton" Size="150,41" Style="MainButton" String="LOC_SDP_CONTINUE"/>
+          <GridButton ID="MultiCancelButton" Size="150,41" Style="MainButton" String="LOC_SDP_CANCEL"/>
+        </Stack>
+        <Label ID="MultiSummary" Style="BodyTextDark16" WrapWidth="500"/>
+        <Label ID="MultiQuality" Style="BodyTextDark14" WrapWidth="500"/>
+        <Stack ID="MultiSolutionStack" StackGrowth="Bottom" StackPadding="2"/>
+        <ScrollPanel ID="MultiResultScroll" Size="500,130" Vertical="1">
+          <ScrollBar Anchor="R,C" AnchorSide="I,I" Style="Slider_Blue"/>
+          <Stack ID="MultiResultStack" StackGrowth="Bottom" StackPadding="2"/>
+        </ScrollPanel>
+        <Stack Anchor="C,T" StackGrowth="Right" StackPadding="12">
+          <GridButton ID="MultiPlaceButton" Size="200,41" Style="MainButton" String="LOC_SDP_PLACE_PINS"/>
+          <GridButton ID="MultiUndoButton" Size="200,41" Style="MainButton" String="LOC_SDP_UNDO_PINS"/>
+        </Stack>
+      </Stack>
+      </Container>
     </Grid>
   </Grid>
 
@@ -98,6 +217,48 @@
       <Label ID="Name" Anchor="L,T" Offset="40,2" Style="BodyTextDark16"/>
       <Label ID="Detail" Anchor="L,T" Offset="40,21" Style="BodyTextDark14"/>
     </Container>
+  </Instance>
+
+  <!-- A district, wonder or participant row in the narrower lists. -->
+  <Instance Name="CheckRow">
+    <Container ID="Root" Size="230,30">
+      <CheckBox ID="Check" Anchor="L,C" Style="MainCheckBox"/>
+      <Image ID="Icon" Anchor="L,C" Offset="24,0" Size="26,26"/>
+      <Label ID="Name" Anchor="L,C" Offset="54,0" Style="BodyTextDark14"/>
+      <Label ID="Status" Anchor="R,C" Offset="12,0" Style="BodyTextDark14"/>
+    </Container>
+  </Instance>
+
+  <Instance Name="CityRow">
+    <Container ID="Root" Size="480,28">
+      <CheckBox ID="Check" Anchor="L,C" Style="MainCheckBox"/>
+      <Image ID="Icon" Anchor="L,C" Offset="24,0" Size="26,26"/>
+      <Label ID="Name" Anchor="L,C" Offset="54,0" Style="BodyTextDark16"/>
+      <Label ID="Detail" Anchor="R,C" Offset="12,0" Style="BodyTextDark14"/>
+    </Container>
+  </Instance>
+
+  <!-- One solution: a selectable row; selecting it previews it on the map. -->
+  <Instance Name="SolutionRow">
+    <GridButton ID="Root" Size="500,30" Style="ButtonControl">
+      <GridButton ID="Selected" Size="parent,parent" Style="TabButtonSelected" ConsumeMouseButton="0" ConsumeMouseOver="1" Hidden="1"/>
+      <Label ID="Name" Anchor="L,C" Offset="10,0" Style="BodyTextDark16"/>
+      <Label ID="Detail" Anchor="R,C" Offset="10,0" Style="BodyTextDark14"/>
+    </GridButton>
+  </Instance>
+
+  <!-- Map preview icon (as AMT's PreviewMapIcon and MapPinManager.xml). -->
+  <Instance Name="SDP_PreviewIcon">
+    <WorldAnchor ID="Anchor">
+      <Container Anchor="C,B" Size="48,48">
+        <Image Size="59,79" Texture="MapPin" Anchor="C,T" Offset="1,-16"/>
+        <Image Size="50,50" TextureOffset="0,0" Texture="MapPinFlag" Anchor="C,T"/>
+        <Image ID="Icon" Anchor="C,T" Offset="0,9" Size="32,32"/>
+        <Grid ID="TextBacking" Style="YieldBacking" Size="auto,24" Anchor="C,B" Color="0,0,0,180" Offset="1,-17">
+          <Label ID="Text" Anchor="C,C" Style="YieldBonusText"/>
+        </Grid>
+      </Container>
+    </WorldAnchor>
   </Instance>
 
   <!-- Same shape as the game's LaunchBarItem / LaunchBarPinInstance (LaunchBar.xml). -->

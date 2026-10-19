@@ -249,8 +249,11 @@ function SDP_Overlay.FixedSubjects(scan)
       indices[#indices + 1] = index
     end
   end
+  -- The city center (a planned city's center is its pin, added below).
   local center = Map.GetPlot(scan.X, scan.Y)
-  Add(center:GetIndex(), SDP_Overlay.Subject(GameInfo.Districts[center:GetDistrictType()].DistrictType, scan.X, scan.Y))
+  if center:GetDistrictType() ~= -1 then
+    Add(center:GetIndex(), SDP_Overlay.Subject(GameInfo.Districts[center:GetDistrictType()].DistrictType, scan.X, scan.Y))
+  end
   for _, entry in ipairs(SDP_City.PlotsInRange(scan.X, scan.Y, SDP_City.RADIUS + 1)) do
     local plot = Map.GetPlotByIndex(entry.Index)
     local district = plot:GetDistrictType()

@@ -27,7 +27,9 @@ local function Table(rows, key)
   local t = {}
   for i, row in ipairs(rows) do
     row.Index = i - 1
+    row.Hash = 100000 + i -- the game's hashes are large numbers; never a valid index here
     t[i - 1] = row
+    t[row.Hash] = row
     if key ~= nil then t[row[key]] = row end
   end
   return setmetatable(t, {
@@ -102,6 +104,7 @@ local function BuildGameInfo()
   }, "ResourceType")
 
   gi.Technologies = Table({ { TechnologyType = "TECH_BRONZE_WORKING", Name = "LOC_TECH_BRONZE_WORKING" } }, "TechnologyType")
+  gi.Improvements = Table({ { ImprovementType = "IMPROVEMENT_FARM", Name = "LOC_IMPROVEMENT_FARM_NAME" } }, "ImprovementType")
   gi.Civics = Table({}, "CivicType")
 
   local function District(t, extra)
@@ -370,6 +373,10 @@ function World.New(spec)
   function City:GetName() return self.name end
   function City:GetPopulation() return self.population end
   function City:IsCapital() return self.capital == true end
+  function City:GetBuildings()
+    local built = self.buildings
+    return { HasBuilding = function(_, index) return built[index] == true end }
+  end
   function City:GetDistricts()
     local list = self.districts
     return { Members = function() return ipairs(list) end }
@@ -399,7 +406,7 @@ function World.New(spec)
     local owner = c.owner or 0
     local city = setmetatable({
       id = c.id, owner = owner, x = c.x, y = c.y, name = c.name or ("CITY_" .. c.id),
-      population = c.population or 1, capital = c.capital, districts = {},
+      population = c.population or 1, capital = c.capital, districts = {}, buildings = {},
     }, City)
     cities[owner .. ":" .. c.id] = city
     cityList[#cityList + 1] = city
@@ -424,6 +431,9 @@ function World.New(spec)
     GetPlot(b[1], b[2]).wonder = gi.Buildings[b[3]].Index
   end
   function w:City(id, owner) return cities[(owner or 0) .. ":" .. id] end
+  function w:AddBuilding(cityID, buildingType, owner)
+    cities[(owner or 0) .. ":" .. cityID].buildings[gi.Buildings[buildingType].Index] = true
+  end
   function w:AddDistrict(cityID, districtType, x, y, complete, owner)
     return AddDistrict(cities[(owner or 0) .. ":" .. cityID], districtType, x, y, complete)
   end

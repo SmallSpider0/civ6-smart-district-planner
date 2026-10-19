@@ -191,5 +191,166 @@
     <Replace Tag="LOC_SDP_RESULT_NO_CITY" Language="zh_Hans_CN">
       <Text>城市已不存在。</Text>
     </Replace>
+
+    <!-- 页签、选城址、多城、奇观 -->
+    <Replace Tag="LOC_SDP_TAB_SINGLE" Language="zh_Hans_CN">
+      <Text>单城</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_TAB_SITES" Language="zh_Hans_CN">
+      <Text>选城址</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_TAB_MULTI" Language="zh_Hans_CN">
+      <Text>多城</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SOLUTION_N" Language="zh_Hans_CN">
+      <Text>方案 {1_N}：{2_Value}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITE_N" Language="zh_Hans_CN">
+      <Text>城址 {1_N}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_PIN_IN_CITY" Language="zh_Hans_CN">
+      <Text>{1_Name}（{2_City}）</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_REASON_PINNED" Language="zh_Hans_CN">
+      <Text>已有地图钉</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_REASON_NEEDS_DISTRICT" Language="zh_Hans_CN">
+      <Text>需要相邻某个区域，但没有城市规划它</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_REASON_NO_FREE_PLOT" Language="zh_Hans_CN">
+      <Text>没有剩余的空位</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_NO_SITE" Language="zh_Hans_CN">
+      <Text>找不到满足间距和距离要求的城址组合，或候选太少。</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_WONDER_BUILT" Language="zh_Hans_CN">
+      <Text>已建成</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_WONDER_PINNED" Language="zh_Hans_CN">
+      <Text>已有钉</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_MULTI_CITIES" Language="zh_Hans_CN">
+      <Text>参与城市（市中心地图钉和附近的城市）</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_MULTI_PLAN" Language="zh_Hans_CN">
+      <Text>每座城的区域</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_MULTI_WONDERS" Language="zh_Hans_CN">
+      <Text>奇观</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_MULTI_SITE_PIN" Language="zh_Hans_CN">
+      <Text>地图钉 {1_Where}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_MULTI_DISTANCE" Language="zh_Hans_CN">
+      <Text>离新城 {1_Distance} 格</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_MULTI_CAP" Language="zh_Hans_CN">
+      <Text>（超出一次最多 {1_Max} 座）</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_MULTI_NEIGHBOUR_ONLY" Language="zh_Hans_CN">
+      <Text>只作邻居</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_MULTI_EMPIRE_LIMIT" Language="zh_Hans_CN">
+      <Text>全帝国限 {1_Max}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_MULTI_NONE" Language="zh_Hans_CN">
+      <Text>在新城位置放市中心地图钉（或用“选城址”），勾选区域和奇观后点击“求解”。</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_MULTI_SOLUTION_DETAIL" Language="zh_Hans_CN">
+      <Text>{1_Cities} 座城、{2_Districts} 个区域、{3_Wonders} 个奇观</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_MULTI_CITY_GAIN" Language="zh_Hans_CN">
+      <Text>新区域加权相邻 {1_Gain}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_MULTI_STATS" Language="zh_Hans_CN">
+      <Text>档位：{1_Tier}；{2_Cities} 座城；DMT 调用 {3_Calls} 次；尝试布局 {4_Tries} 个；继续优化 {5_Continues} 次；逐城依次规划为 {6_First}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_COUNT" Language="zh_Hans_CN">
+      <Text>新城数量</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_DISTANCE" Language="zh_Hans_CN">
+      <Text>最远距离</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_PRESET" Language="zh_Hans_CN">
+      <Text>权重预设</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_PRESET_BALANCED" Language="zh_Hans_CN">
+      <Text>均衡</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_PRESET_GROWTH" Language="zh_Hans_CN">
+      <Text>成长优先</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_PRESET_DISTRICTS" Language="zh_Hans_CN">
+      <Text>区域优先</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_WEIGHT_AMENITY" Language="zh_Hans_CN">
+      <Text>奢侈资源带来的宜居度</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_WEIGHT_STRATEGIC_SHORT" Language="zh_Hans_CN">
+      <Text>战略</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_WEIGHT_STRATEGIC" Language="zh_Hans_CN">
+      <Text>战略资源</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_WEIGHT_APPEAL_SHORT" Language="zh_Hans_CN">
+      <Text>魅力</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_WEIGHT_APPEAL" Language="zh_Hans_CN">
+      <Text>可建区域格的魅力（默认不计）</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_PLAN" Language="zh_Hans_CN">
+      <Text>用于给城址估算区域分的区域</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_NOT_PER_SITE" Language="zh_Hans_CN">
+      <Text>不按城址计</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_NONE" Language="zh_Hans_CN">
+      <Text>选择新城数量、最远距离和区域后点击“求解”。</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_SUMMARY" Language="zh_Hans_CN">
+      <Text>最高总分 {1_Value}（候选城址 {2_Candidates} 个，其中 {3_Refined} 个估算了区域）</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_MODEL_NOTE" Language="zh_Hans_CN">
+      <Text>城址分是估计值，区域在第 2 步精确规划</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_PARTS" Language="zh_Hans_CN">
+      <Text>区域 {1_District} 地块 {2_Land} 水源 {3_Water} 奢侈 {4_Luxury} 战略 {5_Strategic}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_PLACE" Language="zh_Hans_CN">
+      <Text>打城址钉</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_WATER_FRESH" Language="zh_Hans_CN">
+      <Text>有淡水</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_WATER_COAST" Language="zh_Hans_CN">
+      <Text>沿海，无淡水</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_WATER_NONE" Language="zh_Hans_CN">
+      <Text>无水源</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_OWN_DISTANCE" Language="zh_Hans_CN">
+      <Text>离我方最近的城市或城址钉 {1_Distance} 格</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_UNREVEALED" Language="zh_Hans_CN">
+      <Text>三环内有 {1_Count} 格未揭示</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_LOYALTY_MEDIUM" Language="zh_Hans_CN">
+      <Text>忠诚度风险：中（附近有外国城市）</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_LOYALTY_HIGH" Language="zh_Hans_CN">
+      <Text>忠诚度风险：高（附近有外国城市）</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_DISASTER" Language="zh_Hans_CN">
+      <Text>附近有泛滥平原或火山土：有灾害风险</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_UNKNOWN_STRATEGIC" Language="zh_Hans_CN">
+      <Text>部分战略资源尚未可见</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_FEATURES" Language="zh_Hans_CN">
+      <Text>地貌：{1_List}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_DISTRICTS" Language="zh_Hans_CN">
+      <Text>区域：{1_List}</Text>
+    </Replace>
   </LocalizedText>
 </GameData>

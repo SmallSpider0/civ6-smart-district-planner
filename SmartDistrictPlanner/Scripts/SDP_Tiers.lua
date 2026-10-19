@@ -39,6 +39,53 @@ SDP_Tiers.Single = {
   },
 }
 
+-- Multi-city solver (SDP_Multi, design 4.5), always over several frames.
+-- The same parameters as Single, per city block (ExactLimit, Beam,
+-- Shortlist, NodeLimit) or for the whole run (CallLimit, TryLimit), plus
+--   Starts   starts tried (SDP_Multi Session:StartPlan): city by city, joint,
+--            narrow-beam city by city, reversed, ...
+--   Rounds   block rounds per start: each city re-solved with the others fixed
+--   Solutions  distinct plans to offer (design 4.5)
+-- Tuned with tests/offline/bench_multi.lua.
+SDP_Tiers.Multi = {
+  FAST = {
+    ExactLimit = 500, Beam = 100, BeamOrder = "pairs", Shortlist = 20, NodeLimit = 100000,
+    CallLimit = 8000, TryLimit = 8000, MaxPasses = 10, Starts = 3, Rounds = 1, Kicks = 0, Solutions = 3,
+    Swap = false, Pair = false, Sliced = true,
+  },
+  STANDARD = {
+    ExactLimit = 2000, Beam = 300, BeamOrder = "pairs", Shortlist = 50, NodeLimit = 300000,
+    CallLimit = 30000, TryLimit = 40000, MaxPasses = 20, Starts = 5, Rounds = 2, Kicks = 24, Solutions = 3,
+    Swap = true, Pair = false, Sliced = true,
+  },
+  FINE = {
+    ExactLimit = 8000, Beam = 600, BeamOrder = "pairs", Shortlist = 100, NodeLimit = 1000000,
+    CallLimit = 120000, TryLimit = 150000, MaxPasses = 30, Starts = 6, Rounds = 3, Kicks = 64, Solutions = 3,
+    Swap = true, Pair = false, Sliced = true,
+  },
+}
+
+-- Site selection (SDP_SiteSolver, design 3.4-3.5), over several frames.
+--   Refined        best coarse sites scored with their districts (M)
+--   Site           single-city search parameters for those districts (over FAST)
+--   ComboNodes     branch-and-bound nodes over combinations
+--   Keep           best combinations kept to pick the distinct solutions from
+--   ContinueSites  sites refined by each "continue"
+SDP_Tiers.Sites = {
+  FAST = {
+    Refined = 20, ComboNodes = 100000, Keep = 30, Solutions = 3, ContinueSites = 20, Sliced = true,
+    Site = { Beam = 60, Shortlist = 8, Starts = 1, Kicks = 0, Swap = false, TryLimit = 1500, CallLimit = 100000 },
+  },
+  STANDARD = {
+    Refined = 40, ComboNodes = 500000, Keep = 40, Solutions = 3, ContinueSites = 20, Sliced = true,
+    Site = { Beam = 120, Shortlist = 15, Starts = 1, Kicks = 0, Swap = true, TryLimit = 3000, CallLimit = 100000 },
+  },
+  FINE = {
+    Refined = 80, ComboNodes = 2000000, Keep = 60, Solutions = 3, ContinueSites = 20, Sliced = true,
+    Site = { Beam = 250, Shortlist = 30, Starts = 2, Kicks = 2, Swap = true, TryLimit = 6000, CallLimit = 100000 },
+  },
+}
+
 -- Each "continue" runs this many more local searches (single city).
 SDP_Tiers.SINGLE_CONTINUE_STARTS = 5
 

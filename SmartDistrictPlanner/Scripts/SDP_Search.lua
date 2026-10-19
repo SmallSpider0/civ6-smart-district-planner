@@ -50,7 +50,8 @@ SDP_Search.Better = Better
 -- spec = {
 --   PlayerID, Board (SDP_Board with the fixed subjects), Weights, Params
 --   Candidates  { Index, X, Y } sorted by plot index
---   Slots       { Key, Type ("DISTRICT" | "WONDER"), Group, Allowed = { [position] = true } or nil (all) }
+--   Slots       { Key, Type ("DISTRICT" | "WONDER"), Group, Allowed = { [position] = true } or nil (all),
+--                 Requires = district type a wonder must be next to (GameInfo.Buildings.AdjacentDistrict) }
 --   Lands       SDP_Land models whose part counts (each only sees its own plots)
 -- }
 function SDP_Search.New(spec)
@@ -85,8 +86,12 @@ end
 -- are dropped; returns the list of their indices into spec.Slots. Afterwards
 -- K, Types, Kinds, Groups, Single, Legal and SlotIndex (into spec.Slots)
 -- describe the placeable slots.
+-- A wonder that must be next to a district is never legal alone: it counts
+-- as possible on a plot when the district on some adjacent candidate makes
+-- it legal; the search then only accepts layouts where DMT allows it.
 function Search:Singles()
   local board, n = self.Board, self.N
+  local adjacent = self:Touching()
   local types, kinds, groups, single, legal, subjects, index, dropped = {}, {}, {}, {}, {}, {}, {}, {}
   for s, slot in ipairs(self.SlotSpecs) do
     local gains, ok, row, any = {}, {}, {}, false
@@ -96,6 +101,20 @@ function Search:Singles()
         row[i] = { Key = slot.Key, Type = slot.Type or "DISTRICT", X = c.X, Y = c.Y }
         board:Put(1, row[i])
         local gain, isLegal = board:Total()
+        if not isLegal and slot.Requires ~= nil then
+          for _, j in ipairs(adjacent[i]) do
+            local cj = self.Candidates[j]
+            board:Put(2, { Key = slot.Requires, Type = "DISTRICT", X = cj.X, Y = cj.Y })
+            board:Total()
+            local wonderLegal = board.slots[1].Legal
+            board:Put(2, nil)
+            board:Total()
+            if wonderLegal then
+              isLegal = true
+              break
+            end
+          end
+        end
         gains[i], ok[i] = gain, isLegal
         any = any or isLegal
       else
@@ -176,9 +195,24 @@ function Search:OverBudget()
   return false
 end
 
+local function Placed(layout)
+  local count = 0
+  for m = 1, #layout do
+    if layout[m] ~= 0 then count = count + 1 end
+  end
+  return count
+end
+SDP_Search.Placed = Placed
+
+-- Keep the best legal layout seen. More placed slots always win (a slot
+-- may find no free plot while other cities' slots are placed first), then
+-- the higher value, then the smaller positions.
 function Search:Consider(gain, legal, layout)
-  if legal and (self.BestLayout == nil or Better(gain, layout, self.BestGain, self.BestLayout)) then
-    self.BestLayout, self.BestGain = Copy(layout), gain
+  if not legal then return false end
+  local placed = Placed(layout)
+  local best = self.BestLayout
+  if best == nil or placed > self.BestPlaced or (placed == self.BestPlaced and Better(gain, layout, self.BestGain, best)) then
+    self.BestLayout, self.BestGain, self.BestPlaced = Copy(layout), gain, placed
     return true
   end
   return false
@@ -238,17 +272,22 @@ function Search:CountLayouts(order, used, limit)
 end
 
 -- Every legal layout of the active slots (`order`), the others staying as
--- in `base`.
+-- in `base`. Returns whether it went through all of them, and the best one
+-- (layout, value) or nil.
 function Search:Exhaustive(order, base)
   local active = {}
   for _, m in ipairs(order) do active[m] = true end
   local used = UsedBy(base, active)
   local layout = Copy(base)
   local legal, n, stopped = self.Legal, self.N, false
+  local bestLayout, bestGain = nil, nil
   local function Walk(d)
     if d > #order then
       local gain, isLegal = self:Evaluate(layout)
       self:Consider(gain, isLegal, layout)
+      if isLegal and (bestLayout == nil or Better(gain, layout, bestGain, bestLayout)) then
+        bestLayout, bestGain = Copy(layout), gain
+      end
       Tick(SDP_Tiers.UNITS_PER_TRY)
       if self:OverBudget() then stopped = true end
       return
@@ -264,7 +303,7 @@ function Search:Exhaustive(order, base)
     end
   end
   Walk(1)
-  return not stopped
+  return not stopped, bestLayout, bestGain
 end
 
 -- Model scores (see the header): ModelSingle[m][i] and Pair[a][b].
@@ -637,17 +676,22 @@ local function Components(layout, touching)
   return groups
 end
 
--- Local search from `layout` (every slot placed). Moves: one slot to a free
--- plot; two slots trade plots (Swap); a group of touching slots, or all of
--- them, shifted one plot in any direction; two adjacent slots to another
--- adjacent pair of plots (Pair). Params.Improve = "first" takes the first
--- improving move of a pass instead of the best. Returns the local optimum.
-function Search:LocalSearch(layout, gain)
+-- Local search from `layout`. Moves: one slot to a free plot; two slots
+-- trade plots (Swap); a group of touching slots, or all of them, shifted one
+-- plot in any direction; two adjacent slots to another adjacent pair of
+-- plots (Pair). Only slots in `active` (a set; default all) move, and only
+-- placed ones. Params.Improve = "first" takes the first improving move of a
+-- pass instead of the best. Returns the local optimum and its value.
+function Search:LocalSearch(layout, gain, active)
   local k, n, legal, params, stats = self.K, self.N, self.Legal, self.Params, self.Stats
   local adjacent, touching = self:Touching()
   local candidates, at, board = self.Candidates, self.CandidateAt, self.Board
   local first = params.Improve == "first"
   local cur = Copy(layout)
+  local movable = {}
+  for m = 1, k do
+    if (active == nil or active[m]) and cur[m] ~= 0 then movable[#movable + 1] = m end
+  end
   for _ = 1, params.MaxPasses do
     local bestTrial, bestGain = nil, nil
     local function Try()
@@ -660,9 +704,11 @@ function Search:LocalSearch(layout, gain)
       end
     end
     local inUse = {}
-    for m = 1, k do inUse[cur[m]] = m end
-    -- One slot to a free plot.
     for m = 1, k do
+      if cur[m] ~= 0 then inUse[cur[m]] = m end
+    end
+    -- One slot to a free plot.
+    for _, m in ipairs(movable) do
       local keep = cur[m]
       for i = 1, n do
         if legal[m][i] and not inUse[i] then
@@ -676,8 +722,9 @@ function Search:LocalSearch(layout, gain)
     end
     -- Two slots trade plots.
     if params.Swap and not self:OverBudget() then
-      for a = 1, k - 1 do
-        for b = a + 1, k do
+      for x = 1, #movable - 1 do
+        for y = x + 1, #movable do
+          local a, b = movable[x], movable[y]
           if legal[a][cur[b]] and legal[b][cur[a]] and not self:OverBudget() then
             cur[a], cur[b] = cur[b], cur[a]
             Try()
@@ -688,12 +735,11 @@ function Search:LocalSearch(layout, gain)
     end
     -- A group of touching slots (or all of them) one plot over.
     if not self:OverBudget() then
-      local groups = Components(cur, touching)
-      if #groups > 1 then
-        local all = {}
-        for m = 1, k do all[m] = m end
-        groups[#groups + 1] = all
-      end
+      local only = {}
+      for m = 1, k do only[m] = 0 end
+      for _, m in ipairs(movable) do only[m] = cur[m] end
+      local groups = Components(only, touching)
+      if #groups > 1 then groups[#groups + 1] = Copy(movable) end
       for _, group in ipairs(groups) do
         local inGroup = {}
         for _, m in ipairs(group) do inGroup[m] = true end
@@ -719,9 +765,10 @@ function Search:LocalSearch(layout, gain)
     end
     -- Two adjacent slots move together to another adjacent pair of plots.
     if params.Pair and not self:OverBudget() then
-      for a = 1, k - 1 do
-        for b = a + 1, k do
-          if cur[a] ~= 0 and cur[b] ~= 0 and touching[cur[a]][cur[b]] then
+      for x = 1, #movable - 1 do
+        for y = x + 1, #movable do
+          local a, b = movable[x], movable[y]
+          if touching[cur[a]][cur[b]] then
             local keepA, keepB = cur[a], cur[b]
             for i = 1, n do
               local freeI = not inUse[i] or inUse[i] == a or inUse[i] == b
@@ -825,6 +872,27 @@ function Search:Kicks(count)
     end
     if self.BestGain > before then self.KicksWithout = 0 else self.KicksWithout = self.KicksWithout + 1 end
   end
+end
+
+-- Best placement of the slots in `order` with the others as in `base`
+-- (SDP_Multi: one city at a time). Exhaustive when small, else the model
+-- shortlist; then local search moving these slots only. Returns the layout
+-- and its value, or nil when the slots fit nowhere.
+function Search:SolveBlock(order, base)
+  local active = {}
+  for _, m in ipairs(order) do active[m] = true end
+  local count = self:CountLayouts(order, UsedBy(base, active), self.Params.ExactLimit)
+  local best, gain
+  if count == 0 then return nil end
+  if count <= self.Params.ExactLimit then
+    local _, layout, value = self:Exhaustive(order, base)
+    best, gain = layout, value
+  else
+    local ranked = self:Shortlist(order, base)
+    if ranked[1] then best, gain = ranked[1].Layout, ranked[1].Gain end
+  end
+  if best == nil then return nil end
+  return self:LocalSearch(best, gain, active)
 end
 
 -- ===========================================================================

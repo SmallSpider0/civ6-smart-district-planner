@@ -58,6 +58,7 @@ end
 -- model. For each district type D:
 --   table[D].Any[yield]     gained from each adjacent district of any type
 --   table[D].From[X][yield] gained from each adjacent district of type X
+--   table[D].Wonder[yield]  gained from each adjacent wonder
 --   table[D].Rows           the rows themselves: { Any (bool), District (X or
 --                           nil), YieldType, YieldChange, TilesRequired }
 -- A row giving YieldChange per TilesRequired neighbours counts as
@@ -76,11 +77,11 @@ function SDP_Rules.AdjacencyTable(playerID)
   local result = {}
   for link in GameInfo.District_Adjacencies() do
     local row = GameInfo.Adjacency_YieldChanges[link.YieldChangeId]
-    if row ~= nil and (row.OtherDistrictAdjacent or row.AdjacentDistrict)
+    if row ~= nil and (row.OtherDistrictAdjacent or row.AdjacentDistrict or row.AdjacentWonder)
         and RowApplies(row, player, traits, excluded) then
       local entry = result[link.DistrictType]
       if entry == nil then
-        entry = { Any = {}, From = {}, Rows = {} }
+        entry = { Any = {}, From = {}, Rows = {}, Wonder = {} }
         result[link.DistrictType] = entry
       end
       entry.Rows[#entry.Rows + 1] = {
@@ -88,7 +89,9 @@ function SDP_Rules.AdjacencyTable(playerID)
         YieldType = row.YieldType, YieldChange = row.YieldChange, TilesRequired = row.TilesRequired,
       }
       local perNeighbour = row.YieldChange / row.TilesRequired
-      if row.OtherDistrictAdjacent then
+      if row.AdjacentWonder then
+        Add(entry.Wonder, row.YieldType, perNeighbour)
+      elseif row.OtherDistrictAdjacent then
         Add(entry.Any, row.YieldType, perNeighbour)
       else
         entry.From[row.AdjacentDistrict] = entry.From[row.AdjacentDistrict] or {}
@@ -99,14 +102,21 @@ function SDP_Rules.AdjacencyTable(playerID)
   return result
 end
 
--- Yields a district of type `district` gains from one adjacent district of
--- type `neighbour`, from an AdjacencyTable. Returns a new table.
+-- Yields a district of type `district` gains from one adjacent `neighbour`
+-- (a district type, or a wonder: a building type), from an AdjacencyTable.
+-- Returns a new table.
 function SDP_Rules.NeighbourGain(adjacency, district, neighbour)
   local gain = {}
   local entry = adjacency[district]
   if entry == nil then return gain end
+  local isWonder = GameInfo.Buildings[neighbour] ~= nil
   for _, yieldType in ipairs(SDP_Rules.YIELDS) do
-    local amount = (entry.Any[yieldType] or 0) + ((entry.From[neighbour] or {})[yieldType] or 0)
+    local amount
+    if isWonder then
+      amount = (entry.Wonder or {})[yieldType] or 0
+    else
+      amount = (entry.Any[yieldType] or 0) + ((entry.From[neighbour] or {})[yieldType] or 0)
+    end
     if amount ~= 0 then gain[yieldType] = amount end
   end
   return gain

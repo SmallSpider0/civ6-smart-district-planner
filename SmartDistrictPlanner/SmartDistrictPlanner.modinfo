@@ -52,13 +52,20 @@
       <File>Scripts/SDP_Board.lua</File>
       <File>Scripts/SDP_City.lua</File>
       <File>Scripts/SDP_Land.lua</File>
+      <File>Scripts/SDP_Multi.lua</File>
       <File>Scripts/SDP_Overlay.lua</File>
+      <File>Scripts/SDP_PageMulti.lua</File>
+      <File>Scripts/SDP_PageSites.lua</File>
       <File>Scripts/SDP_Pins.lua</File>
+      <File>Scripts/SDP_Preview.lua</File>
       <File>Scripts/SDP_Rules.lua</File>
       <File>Scripts/SDP_Search.lua</File>
+      <File>Scripts/SDP_SiteSolver.lua</File>
+      <File>Scripts/SDP_Sites.lua</File>
       <File>Scripts/SDP_Solver.lua</File>
       <File>Scripts/SDP_Task.lua</File>
       <File>Scripts/SDP_Tiers.lua</File>
+      <File>Scripts/SDP_Wonders.lua</File>
     </ImportFiles>
     <AddUserInterfaces id="sdp_panel">
       <Properties>
@@ -73,13 +80,20 @@
     <File>Scripts/SDP_Board.lua</File>
     <File>Scripts/SDP_City.lua</File>
     <File>Scripts/SDP_Land.lua</File>
+    <File>Scripts/SDP_Multi.lua</File>
     <File>Scripts/SDP_Overlay.lua</File>
+    <File>Scripts/SDP_PageMulti.lua</File>
+    <File>Scripts/SDP_PageSites.lua</File>
     <File>Scripts/SDP_Pins.lua</File>
+    <File>Scripts/SDP_Preview.lua</File>
     <File>Scripts/SDP_Rules.lua</File>
     <File>Scripts/SDP_Search.lua</File>
+    <File>Scripts/SDP_SiteSolver.lua</File>
+    <File>Scripts/SDP_Sites.lua</File>
     <File>Scripts/SDP_Solver.lua</File>
     <File>Scripts/SDP_Task.lua</File>
     <File>Scripts/SDP_Tiers.lua</File>
+    <File>Scripts/SDP_Wonders.lua</File>
     <File>Text/SDP_Text_en_US.xml</File>
     <File>Text/SDP_Text_zh_Hans_CN.xml</File>
     <File>UI/SDP_Panel.xml</File>

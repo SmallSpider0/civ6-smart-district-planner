@@ -14,7 +14,12 @@ include("SDP_Board")
 include("SDP_Land")
 include("SDP_Search")
 include("SDP_Solver")
+include("SDP_Wonders")
+include("SDP_Multi")
+include("SDP_Sites")
+include("SDP_SiteSolver")
 include("SDP_Pins")
+include("SDP_Preview")
 
 local LAUNCH_BAR_STACK = "/InGame/LaunchBar/ButtonStack"
 local MAX_WEIGHT = 3
@@ -59,6 +64,7 @@ local m_result = nil          -- last solve; cleared whenever an input changes
 local m_districtRows = {}     -- what the district list shows, for tests
 local m_resultRows = {}       -- what the result list shows, for tests
 local m_weightViews = {}      -- [YieldType] = function that redraws that weight
+local m_tab = "SINGLE"        -- the open tab: SINGLE, SITES or MULTI
 
 -- ===========================================================================
 -- Formatting
@@ -95,6 +101,12 @@ local function TypeName(typeName)
   return row and Locale.Lookup(row.Name) or typeName
 end
 
+-- Helpers shared with the other tabs (SDP_PageSites, SDP_PageMulti).
+SDP_UI = {
+  MAX_WEIGHT = MAX_WEIGHT, WEIGHT_COLUMNS = WEIGHT_COLUMNS,
+  Number = Number, Signed = Signed, Where = Where, YieldText = YieldText, TypeName = TypeName,
+}
+
 -- ===========================================================================
 -- Open / close
 -- ===========================================================================
@@ -119,16 +131,19 @@ local function IsOpen()
   return UIManager:IsInPopupQueue(ContextPtr)
 end
 
+local SelectTab -- defined below (tabs)
+
 local function Open()
   if IsOpen() then return end
   if m_launchDone then SetLaunchMark(false) end
-  Refresh()
+  SelectTab(m_tab)
   UIManager:QueuePopup(ContextPtr, PopupPriority.Low)
   UI.PlaySound("UI_Screen_Open")
 end
 
 local function Close()
   if not IsOpen() then return end
+  SDP_Preview.Clear()
   UIManager:DequeuePopup(ContextPtr)
   UI.PlaySound("UI_Screen_Close")
 end
@@ -170,6 +185,7 @@ local function QualityText(result)
   if q.Truncated then parts[#parts + 1] = Locale.Lookup("LOC_SDP_RESULT_TRUNCATED") end
   return table.concat(parts, Locale.Lookup("LOC_SDP_LIST_SEPARATOR"))
 end
+SDP_UI.QualityText = QualityText
 
 local function AddResultRow(icon, name, detail, toolTip)
   local inst = m_resultIM:GetInstance()
@@ -230,7 +246,8 @@ end
 
 local function ClearResult()
   -- Inputs changed: a computation for the old inputs is of no use any more.
-  if SDP_Task.IsRunning() then SDP_Task.Cancel() end
+  local job = SDP_Task.Current()
+  if job ~= nil and job.Page == "SINGLE" then SDP_Task.Cancel() end
   if m_result ~= nil then
     m_result = nil
     ShowResult()
@@ -392,6 +409,63 @@ local function BuildWeights()
   Controls.WeightStack:CalculateSize()
 end
 
+-- Weight columns for a tab: `columns` like WEIGHT_COLUMNS, `weights` the
+-- tab's table, isOff(column) greys a column out, onChange(key, value).
+-- Returns { [key] = redraw function }.
+function SDP_UI.BuildWeights(im, stack, columns, weights, isOff, onChange)
+  im:ResetInstances()
+  local views = {}
+  for _, column in ipairs(columns) do
+    local key = column.Key
+    local inst = im:GetInstance()
+    local function Show()
+      local off = isOff and isOff(column) or false
+      inst.Value:SetText(tostring(weights[key]))
+      inst.Less:SetDisabled(off or weights[key] <= 0)
+      inst.More:SetDisabled(off or weights[key] >= MAX_WEIGHT)
+      inst.Root:SetAlpha(off and 0.5 or 1)
+    end
+    if column.Icon then
+      inst.Icon:SetHide(false)
+      inst.Icon:SetIcon(column.Icon)
+      inst.Glyph:SetText("")
+    else
+      inst.Icon:SetHide(true)
+      inst.Glyph:SetText(Locale.Lookup(column.Glyph))
+    end
+    local row = GameInfo.Yields[key]
+    inst.Root:SetToolTipString(Locale.Lookup(column.ToolTip or (row and row.Name) or key))
+    inst.Less:RegisterCallback(Mouse.eLClick, function() onChange(key, math.max(0, weights[key] - 1)) end)
+    inst.More:RegisterCallback(Mouse.eLClick, function() onChange(key, math.min(MAX_WEIGHT, weights[key] + 1)) end)
+    views[key] = Show
+    Show()
+  end
+  stack:CalculateSize()
+  return views
+end
+
+-- A tier pulldown: entries for the three tiers, onSelect(tier).
+function SDP_UI.PopulateTierPull(pull, current, onSelect)
+  pull:ClearEntries()
+  for _, tier in ipairs(SDP_Tiers.ORDER) do
+    local entry = {}
+    pull:BuildEntry("InstanceOne", entry)
+    entry.Button:SetText(Locale.Lookup("LOC_SDP_TIER_" .. tier))
+    entry.Button:SetToolTipString(Locale.Lookup("LOC_SDP_TIER_" .. tier .. "_TOOLTIP"))
+    entry.Button:RegisterCallback(Mouse.eLClick, function() onSelect(tier) end)
+  end
+  pull:CalculateInternals()
+  pull:GetButton():SetText(Locale.Lookup("LOC_SDP_TIER_" .. current))
+end
+
+-- "About X s" for `units` of work.
+function SDP_UI.EstimateText(units)
+  if units <= 0 then return "" end
+  local seconds = SDP_Task.EstimateSeconds(units)
+  if seconds < 1 then return Locale.Lookup("LOC_SDP_ESTIMATE_UNDER_ONE") end
+  return Locale.Lookup("LOC_SDP_ESTIMATE", Number(math.floor(seconds + 0.5)))
+end
+
 local function SetAllowFeatureRemoval(allow)
   Controls.FeatureCheck:SetCheck(allow)
   if m_allowFeatureRemoval ~= allow then
@@ -496,17 +570,24 @@ local function ProgressPercent()
   return math.min(99, math.floor(100 * progress.Units / progress.Estimate))
 end
 
+-- The tabs (filled in below): each { Render, ShowProgress(text), UpdateButtons, OnError(message) }.
+local m_pages = {}
+local m_taskPage = nil -- the tab whose computation is running
+
+local function UpdateAllButtons()
+  for _, page in pairs(m_pages) do page.UpdateButtons() end
+end
+
 local function ShowProgress()
-  local text = Locale.Lookup("LOC_SDP_RUNNING", ProgressPercent())
-  Controls.Summary:SetText(text)
-  Controls.Quality:SetText("")
+  if m_taskPage ~= nil then m_taskPage.ShowProgress(Locale.Lookup("LOC_SDP_RUNNING", ProgressPercent())) end
   LaunchToolTip(Locale.Lookup("LOC_SDP_LAUNCHBAR_RUNNING", ProgressPercent()))
 end
 
 local function TaskFinished()
   ContextPtr:ClearUpdate()
   LaunchToolTip(nil)
-  ShowResult()
+  if m_taskPage ~= nil then m_taskPage.Render() end
+  UpdateAllButtons()
   if not IsOpen() then
     UI.PlaySound("Confirm_Bed_Positive")
     SetLaunchMark(true)
@@ -517,30 +598,35 @@ local function OnUpdate()
   if SDP_Task.Step() == "running" then ShowProgress() end
 end
 
--- Run `run` (returns a result) over several frames; `onDone(result)` keeps it.
-local function StartTask(run, estimate, onDone)
+-- Run `run` (returns a result) over several frames for `page` (default the
+-- single-city tab); `onDone(result)` keeps the result. One at a time.
+local function StartTask(run, estimate, onDone, page)
+  page = page or m_pages.SINGLE
   local playerID = Game.GetLocalPlayer()
   local turn, pins = Game.GetCurrentGameTurn(), PinSignature(playerID)
   local started = SDP_Task.Start({
-    Name = "single", PlayerID = playerID, Run = run, Estimate = estimate,
+    Name = "planner", Page = page.Name, PlayerID = playerID, Run = run, Estimate = estimate,
     IsStale = function() return Game.GetCurrentGameTurn() ~= turn or PinSignature(playerID) ~= pins end,
     OnDone = function(result)
       onDone(result)
       TaskFinished()
     end,
     OnError = function(message)
-      m_result = { Ok = false, Error = message }
+      page.OnError(message)
       TaskFinished()
     end,
     OnCancel = function() TaskFinished() end,
   })
   if started then
+    m_taskPage = page
     ContextPtr:SetUpdate(OnUpdate)
     ShowProgress()
-    UpdateButtons()
+    UpdateAllButtons()
   end
   return started
 end
+SDP_UI.StartTask = StartTask
+SDP_UI.UpdateAllButtons = function() UpdateAllButtons() end
 
 local function Request()
   local districts = SelectedDistricts()
@@ -613,6 +699,57 @@ local function UndoPins()
 end
 
 -- ===========================================================================
+-- Tabs
+-- ===========================================================================
+m_pages.SINGLE = {
+  Name = "SINGLE",
+  Render = function() ShowResult() end,
+  ShowProgress = function(text)
+    Controls.Summary:SetText(text)
+    Controls.Quality:SetText("")
+  end,
+  UpdateButtons = function() UpdateButtons() end,
+  OnError = function(message) m_result = { Ok = false, Error = message } end,
+}
+
+SDP_Preview.Init(Controls.PreviewWorldIcons, "SDP_PreviewIcon")
+include("SDP_PageSites")
+include("SDP_PageMulti")
+m_pages.SITES = SDP_PageSites
+m_pages.MULTI = SDP_PageMulti
+
+local TABS = {
+  { Name = "SINGLE", Button = Controls.SingleTab, Selected = Controls.SingleTabSelected, Page = Controls.SinglePage },
+  { Name = "SITES", Button = Controls.SitesTab, Selected = Controls.SitesTabSelected, Page = Controls.SitesPage },
+  { Name = "MULTI", Button = Controls.MultiTab, Selected = Controls.MultiTabSelected, Page = Controls.MultiPage },
+}
+SelectTab = function(name)
+  if m_tab ~= name then SDP_Preview.Clear() end
+  m_tab = name
+  for _, tab in ipairs(TABS) do
+    local on = tab.Name == name
+    tab.Selected:SetHide(not on)
+    tab.Page:SetHide(not on)
+  end
+  if name == "SINGLE" then
+    Refresh()
+  else
+    m_pages[name].Refresh()
+  end
+end
+
+for _, tab in ipairs(TABS) do
+  local name = tab.Name
+  tab.Button:RegisterCallback(Mouse.eLClick, function() SelectTab(name) end)
+  tab.Button:RegisterCallback(Mouse.eMouseEnter, function() UI.PlaySound("Main_Menu_Mouse_Over") end)
+end
+
+-- The game's own placement modes use the preview's lens layer (risk 10).
+local function OnInterfaceModeChanged()
+  if SDP_Preview.IsShown() then SDP_Preview.Clear() end
+end
+
+-- ===========================================================================
 -- Launch bar
 -- ===========================================================================
 -- Mirrors RealizeBacking() in the game's LaunchBar.lua, which lives in
@@ -679,7 +816,9 @@ end
 local function OnShutdown()
   if SDP_Task.IsRunning() then SDP_Task.Cancel() end
   ContextPtr:ClearUpdate()
+  SDP_Preview.Clear()
   Events.LoadScreenClose.Remove(OnLoadScreenClose)
+  Events.InterfaceModeChanged.Remove(OnInterfaceModeChanged)
   LuaEvents.SDP_OpenPanel.Remove(Open)
   LuaEvents.SDP_ClosePanel.Remove(Close)
   RemoveLaunchButton()
@@ -709,6 +848,10 @@ SDP_Panel = {
   end,
   PlacePins = PlacePins,
   UndoPins = UndoPins,
+  SelectTab = function(name) SelectTab(name) end,
+  Tab = function() return m_tab end,
+  Sites = SDP_PageSites,
+  Multi = SDP_PageMulti,
   State = function()
     return {
       CityID = m_cityID, Result = m_result, DistrictRows = m_districtRows, ResultRows = m_resultRows,
@@ -739,5 +882,6 @@ ContextPtr:SetInputHandler(OnInput, true)
 ContextPtr:SetInitHandler(OnInit)
 ContextPtr:SetShutdown(OnShutdown)
 Events.LoadScreenClose.Add(OnLoadScreenClose)
+Events.InterfaceModeChanged.Add(OnInterfaceModeChanged)
 LuaEvents.SDP_OpenPanel.Add(Open)
 LuaEvents.SDP_ClosePanel.Add(Close)

@@ -141,6 +141,36 @@ function SDP_City.Scan(playerID, cityID, options)
   return scan
 end
 
+-- Scan a planned city: a city-center map pin at (x, y) that is not a city
+-- yet (docs/multicity-design.md 4.1). Same shape as Scan, without CityID.
+-- A new city cannot use plots that already belong to one of the player's
+-- cities (ExclusionReason with no city: OTHER_CITY). options:
+--   allowFeatureRemoval  as for Scan
+--   population           the population to plan for (default 1)
+--   name                 shown in results (default "")
+function SDP_City.ScanSite(playerID, x, y, options)
+  options = options or {}
+  local allowFeatureRemoval = options.allowFeatureRemoval ~= false
+  local scan = {
+    PlayerID = playerID, CityID = nil, Site = true, Name = options.name or "", X = x, Y = y,
+    Population = options.population or 1, SpecialtyBuilt = 0,
+    Candidates = {}, Excluded = {}, Built = {},
+    Pins = SDP_City.PinsInRange(playerID, x, y, SDP_City.RADIUS + 1),
+  }
+  scan.SpecialtyCapacity = SDP_City.SpecialtyCapacity(scan.Population)
+  local pinned = {}
+  for _, pin in ipairs(scan.Pins) do pinned[pin.Index] = true end
+  for _, entry in ipairs(SDP_City.PlotsInRange(x, y, SDP_City.RADIUS)) do
+    local reason = ExclusionReason(Map.GetPlotByIndex(entry.Index), playerID, nil, pinned, allowFeatureRemoval)
+    if reason then
+      scan.Excluded[entry.Index] = reason
+    else
+      scan.Candidates[#scan.Candidates + 1] = entry
+    end
+  end
+  return scan
+end
+
 -- Why each plannable district cannot be planned for this city, or nil when
 -- it can: { [DistrictType] = "BUILT" | "MAX_PER_PLAYER" }. BUILT: already in
 -- this city (shown greyed out). MAX_PER_PLAYER: the player has reached the

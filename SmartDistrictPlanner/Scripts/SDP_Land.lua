@@ -149,11 +149,24 @@ function SDP_Land.Score(model, taken)
   return worked + once
 end
 
+-- Plot indices a city scan can work (see ForScan), sorted.
+function SDP_Land.Workable(scan)
+  local list = {}
+  for _, c in ipairs(scan.Candidates) do list[#list + 1] = c.Index end
+  for index, reason in pairs(scan.Excluded) do
+    if WORKABLE_EXCLUSIONS[reason] then list[#list + 1] = index end
+  end
+  table.sort(list)
+  return list
+end
+
 -- Land model for a single-city scan. Workable: free candidates plus plots
 -- excluded only for reasons that do not stop working them (a feature the
 -- player keeps, a natural wonder, a pin that is not a district or wonder).
--- `fixed` are SDP_Overlay.FixedSubjects (their plots are taken).
-function SDP_Land.ForScan(scan, fixed, weights, population)
+-- `fixed` are SDP_Overlay.FixedSubjects (their plots are taken). `keep`
+-- (optional) says which plots this city works when several cities could:
+-- keep(plot index) -> bool.
+function SDP_Land.ForScan(scan, fixed, weights, population, keep)
   local w = SDP_Land.Weights(weights)
   local oneTime = SDP_Land.OneTimeYields()
   local taken = {}
@@ -162,7 +175,7 @@ function SDP_Land.ForScan(scan, fixed, weights, population)
   end
   local plots = {}
   local function Add(index)
-    if not taken[index] then
+    if not taken[index] and (keep == nil or keep(index)) then
       local tile, once = SDP_Land.PlotValues(Map.GetPlotByIndex(index), w, oneTime)
       plots[#plots + 1] = { Index = index, Tile = tile, Once = once }
     end

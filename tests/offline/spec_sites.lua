@@ -1,0 +1,162 @@
+-- Offline: SDP_Sites and SDP_SiteSolver, choosing new city sites.
+local test, T = ...
+
+include("SDP_Rules")
+include("SDP_City")
+include("SDP_Overlay")
+include("SDP_Tiers")
+include("SDP_Task")
+include("SDP_Board")
+include("SDP_Land")
+include("SDP_Search")
+include("SDP_Solver")
+include("SDP_Wonders")
+include("SDP_Multi")
+include("SDP_Sites")
+include("SDP_SiteSolver")
+
+local PLAN = { "DISTRICT_CAMPUS", "DISTRICT_HOLY_SITE", "DISTRICT_COMMERCIAL_HUB" }
+
+-- A random 24 x 16 map; our capital at (4, 8), a foreign city at (20, 8),
+-- a city-center pin at (9, 4); the far right columns unrevealed.
+local function NewWorld(seed, extra)
+  local spec = World.RandomSpec(seed or 7, 24, 16)
+  local function Land(x, y)
+    local row = spec.rows[y + 1]
+    spec.rows[y + 1] = row:sub(1, x) .. "." .. row:sub(x + 2)
+  end
+  Land(4, 8)
+  Land(20, 8)
+  Land(9, 4)
+  spec.cities = {
+    { id = 1, x = 4, y = 8, population = 6, capital = true, radius = 1 },
+    { id = 1, owner = 1, x = 20, y = 8, population = 5, radius = 2 },
+  }
+  spec.pins = { { 9, 4, "ICON_DISTRICT_CITY_CENTER", "planned" } }
+  spec.unrevealed = {}
+  for y = 0, 15 do
+    for x = 22, 23 do spec.unrevealed[#spec.unrevealed + 1] = x .. "," .. y end
+  end
+  for k, v in pairs(extra or {}) do spec[k] = v end
+  return World.New(spec)
+end
+
+test("candidates follow the exclusion rules", function()
+  NewWorld()
+  local K, D = 2, 6
+  local list, centers = SDP_Sites.Candidates(0, { K = K, D = D })
+  T.ok(#list > 10, "some candidates")
+  local minRange = SDP_Sites.MinRange()
+  for _, c in ipairs(list) do
+    local plot = Map.GetPlotByIndex(c.Index)
+    T.ok(not plot:IsWater() and not plot:IsMountain() and not plot:IsImpassable(), "terrain " .. c.X .. "," .. c.Y)
+    local feature = plot:GetFeatureType()
+    T.ok(feature == -1 or GameInfo.Features[feature].Settlement ~= false, "feature")
+    T.ok(plot:GetOwner() == -1 or plot:GetOwner() == 0, "foreign plot")
+    local nearOwn = math.huge
+    for _, center in ipairs(centers) do
+      T.ok(Map.GetPlotDistance(c.X, c.Y, center.X, center.Y) > minRange, "too close to a city or pin")
+      if center.Own then nearOwn = math.min(nearOwn, Map.GetPlotDistance(c.X, c.Y, center.X, center.Y)) end
+    end
+    T.ok(nearOwn <= K * D, "beyond K * D")
+    T.ok(c.Unrevealed * 2 <= c.Rings, "too much unrevealed")
+  end
+end)
+
+test("the minimum city distance comes from the game data", function()
+  NewWorld(7, { cityMinRange = 4 })
+  local list, centers = SDP_Sites.Candidates(0, { K = 3, D = 8 })
+  for _, c in ipairs(list) do
+    for _, center in ipairs(centers) do
+      T.ok(Map.GetPlotDistance(c.X, c.Y, center.X, center.Y) > 4, "CITY_MIN_RANGE 4")
+    end
+  end
+end)
+
+test("site factors: water, luxuries, strategic resources", function()
+  local w = World.New({
+    rows = {
+      "............",
+      "............",
+      ".....~~.....",
+      "............",
+      "............",
+      "............",
+      "............",
+    },
+    rivers = { "2,3" },
+    cities = { { id = 1, x = 9, y = 5, population = 3, capital = true } },
+    resources = { { 3, 3, "RESOURCE_WINE", 1 }, { 1, 3, "RESOURCE_WINE", 1 }, { 2, 4, "RESOURCE_HORSES", 1 },
+      { 3, 4, "RESOURCE_IRON", 1 } },
+  })
+  local _ = w
+  local ctx = SDP_Sites.Context(0, { Districts = PLAN })
+  local centers = SDP_Sites.Centers(0)
+  local river = SDP_Sites.Coarse(ctx, { X = 2, Y = 3, Index = Map.GetPlotIndex(2, 3), Unrevealed = 0 }, centers)
+  T.eq(river.Info.WaterKind, "FRESH", "river")
+  T.eq(river.Parts.Water, (5 - 2) * 1, "fresh water housing")
+  local coast = SDP_Sites.Coarse(ctx, { X = 6, Y = 3, Index = Map.GetPlotIndex(6, 3), Unrevealed = 0 }, centers)
+  T.eq(coast.Info.WaterKind, "COAST", "coast")
+  T.eq(river.Luxury.RESOURCE_WINE, 2, "two wine copies")
+  T.eq(river.Parts.Luxury, 4 + 1, "a new kind: Happiness 4, the second copy 1")
+  T.eq(river.Strategic.RESOURCE_HORSES, 2, "Gathering Storm extraction rate")
+  T.eq(river.Strategic.RESOURCE_IRON, nil, "iron is not visible without its tech")
+  T.ok(river.Info.UnknownStrategic, "unknown strategic resources hinted")
+  T.eq(river.Parts.Strategic, 2 + 2, "amount plus a new kind")
+end)
+
+test("combinations: spacing, relay, distinct solutions; deterministic", function()
+  NewWorld()
+  local request = { PlayerID = 0, K = 2, D = 6, Districts = PLAN, Tier = "FAST" }
+  local result = SDP_SiteSolver.Solve(request)
+  T.ok(result.Ok, tostring(result.Error))
+  T.ok(#result.Solutions >= 2, "several solutions")
+  local minRange = SDP_Sites.MinRange()
+  local centers = SDP_Sites.Centers(0)
+  for n, solution in ipairs(result.Solutions) do
+    T.eq(#solution.Sites, 2, "K sites")
+    local a, b = solution.Sites[1], solution.Sites[2]
+    T.ok(Map.GetPlotDistance(a.X, a.Y, b.X, b.Y) > minRange, "spacing")
+    -- Relay: each site within D of our city, our pin or the other site that is.
+    local function NearOwn(site)
+      for _, c in ipairs(centers) do
+        if c.Own and Map.GetPlotDistance(site.X, site.Y, c.X, c.Y) <= 6 then return true end
+      end
+      return false
+    end
+    local linked = (NearOwn(a) or (NearOwn(b) and Map.GetPlotDistance(a.X, a.Y, b.X, b.Y) <= 6))
+      and (NearOwn(b) or (NearOwn(a) and Map.GetPlotDistance(a.X, a.Y, b.X, b.Y) <= 6))
+    T.ok(linked, "solution " .. n .. " not linked back")
+    if n > 1 then T.ok(solution.Value <= result.Solutions[n - 1].Value + 1e-9, "best first") end
+  end
+  local again = SDP_SiteSolver.Solve(request)
+  T.eq(again.Solutions[1].Value, result.Solutions[1].Value, "same value")
+  T.eq(again.Solutions[1].Sites[1].Index, result.Solutions[1].Sites[1].Index, "same sites")
+end)
+
+test("the combination search finds the best pair among the refined sites", function()
+  NewWorld()
+  local session = SDP_Overlay.With(0, function()
+    local s = SDP_SiteSolver.NewSession({ PlayerID = 0, K = 2, D = 6, Districts = PLAN, Tier = "FAST", Params = { Refined = 12 } })
+    s:Run()
+    return s
+  end)
+  local best = nil
+  local minRange = SDP_Sites.MinRange()
+  for i = 1, #session.Pool do
+    for j = i + 1, #session.Pool do
+      local a, b = session.Pool[i], session.Pool[j]
+      if Map.GetPlotDistance(a.X, a.Y, b.X, b.Y) > minRange and session:Connected({ i, j }) then
+        local v = session:Value({ i, j })
+        if best == nil or v > best then best = v end
+      end
+    end
+  end
+  T.near(session.Kept[1].Value, best, 1e-9, "branch and bound vs every pair")
+  -- The correction never adds: a combination is worth at most its sites' scores.
+  for _, entry in ipairs(session.Kept) do
+    local sum = 0
+    for _, s in ipairs(entry.Chosen) do sum = sum + session.Pool[s].Fine end
+    T.ok(entry.Value <= sum + 1e-9, "value above the sum of the site scores")
+  end
+end)

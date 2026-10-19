@@ -51,6 +51,8 @@ node tools/offline_tests.mjs -v -k k6 tests/offline/bench_single.lua   # 单城�
 - `tests/offline/world.lua` 是一个小的假游戏：六边形地图（文字描述或按种子随机生成）、城市、区域、地图钉、`GameInfo` 的相关表，以及**简化的 DMT**（`CanPlacePin`、`GetBonusYields`、钉子数据）。规则照游戏数据缩减，只用来测求解器的搜索和记账；游戏里的真实数值一律来自真正的 DMT，所以离线通过之后仍要在游戏里跑 `tests/test_*.lua`。
 - 测试文件写法与游戏内测试相同（`local test, T = ...`）；文件名用 `spec_` 前缀（`test_` 开头的会被 `run_tests.py` 当成游戏内测试）。基准文件用 `bench_` 前缀，只在点名时运行。
 - 假 DMT 统计调用次数（`World.Calls`）。基准用"调用次数 + 布局评估次数 + 搜索节点数"按游戏内单价折算预计耗时，不依赖本虚拟机的速度。
+- `tests/offline/ui.lua` 提供面板用到的 UI 对象替身（`Controls`、`ContextPtr`、`UIManager`、`InstanceManager`、透镜），`spec_panel.lua` 用它加载整个面板跑三个页签。布局和真实点击仍要在游戏里看。
+- 基准：`bench_single.lua`（单城）、`bench_multi.lua`（多城，`SDP_BENCH_SEEDS` 可选种子）。
 - `bench_single.lua` 的环境变量：`SDP_BENCH_REFS=文件` 缓存参照解（算参照解很慢）；`SDP_BENCH_TIERS=FAST,STANDARD` 只跑部分档位；`SDP_BENCH_PARAMS="STANDARD.NodeLimit=60000,FAST.Kicks=2"` 临时覆盖档位参数，用来比较方案。
 - **fengari 的整数是 32 位**（游戏里的 Lua 数字是双精度）：超过 2^31 的整数运算会回绕。需要大数的地方写成浮点（如 `1.0`），见 `SDP_Board` 的邻居编码。
 
