@@ -19,22 +19,23 @@ local m_weightIM2 = InstanceManager:new("WeightColumn", "Root", Controls.SitesWe
 local m_solutionIM = InstanceManager:new("SolutionRow", "Root", Controls.SitesSolutionStack)
 local m_resultIM = InstanceManager:new("ResultRow", "Root", Controls.SitesResultStack)
 
--- The ten site weights (design 3.3) and the distance cost, in two rows, all
--- with the game's font icons (feedback item 3).
+-- The ten site weights (design 3.3) and the distance cost, in two rows: the
+-- yields with the game's font icons, the others with a short word (feedback
+-- item 3, as on the single-city tab).
 local COLUMNS_A = {
   { Key = "YIELD_SCIENCE", Glyph = "[ICON_Science]" },
   { Key = "YIELD_CULTURE", Glyph = "[ICON_Culture]" },
   { Key = "YIELD_FAITH", Glyph = "[ICON_Faith]" },
   { Key = "YIELD_GOLD", Glyph = "[ICON_Gold]" },
   { Key = "YIELD_PRODUCTION", Glyph = "[ICON_Production]" },
-  { Key = "DISTANCE", Glyph = "[ICON_Movement]", ToolTip = "LOC_SDP_WEIGHT_DISTANCE", Step = 0.5 },
+  { Key = "DISTANCE", Glyph = "LOC_SDP_WEIGHT_DISTANCE_SHORT", ToolTip = "LOC_SDP_WEIGHT_DISTANCE", Step = 0.5 },
 }
 local COLUMNS_B = {
   { Key = "YIELD_FOOD", Glyph = "[ICON_Food]" },
-  { Key = "AMENITY", Glyph = "[ICON_Amenities]", ToolTip = "LOC_SDP_WEIGHT_AMENITY" },
-  { Key = "STRATEGIC", Glyph = "[ICON_RESOURCE_IRON]", ToolTip = "LOC_SDP_WEIGHT_STRATEGIC" },
-  { Key = "FEATURE", Glyph = "[ICON_Terrain]", ToolTip = "LOC_SDP_WEIGHT_FEATURE" },
-  { Key = "APPEAL", Glyph = "[ICON_GreatWork_Landscape]", ToolTip = "LOC_SDP_WEIGHT_APPEAL" },
+  { Key = "AMENITY", Glyph = "LOC_SDP_WEIGHT_AMENITY_SHORT", ToolTip = "LOC_SDP_WEIGHT_AMENITY" },
+  { Key = "STRATEGIC", Glyph = "LOC_SDP_WEIGHT_STRATEGIC_SHORT", ToolTip = "LOC_SDP_WEIGHT_STRATEGIC" },
+  { Key = "FEATURE", Glyph = "LOC_SDP_WEIGHT_FEATURE_SHORT", ToolTip = "LOC_SDP_WEIGHT_FEATURE" },
+  { Key = "APPEAL", Glyph = "LOC_SDP_WEIGHT_APPEAL_SHORT", ToolTip = "LOC_SDP_WEIGHT_APPEAL" },
 }
 
 local m_k, m_d = 3, 8
@@ -183,7 +184,15 @@ function P.Refresh()
   -- Districts the sites are scored with (an empire-limited one would count once per site).
   m_districtIM:ResetInstances()
   m_view.Districts = {}
-  for _, d in ipairs(SDP_Rules.PlannableDistricts(Game.GetLocalPlayer())) do
+  -- In name order, like the district grids of the other tabs.
+  local districts = SDP_Rules.PlannableDistricts(Game.GetLocalPlayer())
+  local names = {}
+  for _, d in ipairs(districts) do names[d.Type] = Locale.Lookup(d.Name) end
+  table.sort(districts, function(a, b)
+    if names[a.Type] ~= names[b.Type] then return Locale.Compare(names[a.Type], names[b.Type]) == -1 end
+    return a.Type < b.Type
+  end)
+  for _, d in ipairs(districts) do
     local inst = m_districtIM:GetInstance()
     local districtType = d.Type
     local limited = d.MaxPerPlayer and d.MaxPerPlayer > 0
@@ -197,7 +206,6 @@ function P.Refresh()
     m_view.Districts[#m_view.Districts + 1] = { Type = districtType, Check = inst.Check }
   end
   Controls.SitesDistrictStack:CalculateSize()
-  Controls.SitesDistrictScroll:CalculateSize()
   SDP_UI.PopulateTierPull(Controls.SitesTierPull, m_tier, P.SetTier)
   UpdateEstimate()
   P.Render()

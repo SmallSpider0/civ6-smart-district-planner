@@ -572,5 +572,14 @@
     <Replace Tag="LOC_SDP_SITES_PLAN_COUNT_TOOLTIP" Language="zh_Hans_CN">
       <Text>每个城址按几个占人口名额的区域估算区域分。勾选的多于这个数时，每个城址各自挑区域分最高的几个；不多于时全部计入。</Text>
     </Replace>
+    <Replace Tag="LOC_SDP_WEIGHT_DISTANCE_SHORT" Language="zh_Hans_CN">
+      <Text>距离</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_WEIGHT_AMENITY_SHORT" Language="zh_Hans_CN">
+      <Text>宜居</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_TIER_SHORT" Language="zh_Hans_CN">
+      <Text>档位</Text>
+    </Replace>
   </LocalizedText>
 </GameData>

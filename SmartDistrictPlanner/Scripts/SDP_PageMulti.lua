@@ -41,7 +41,7 @@ local m_sites = {}     -- [site Key] = false: city-center pins switched off
 -- The panel's weight columns plus the coverage part, narrower so that nine fit.
 local COLUMNS, COLUMN_WIDTH = {}, 53
 for _, column in ipairs(SDP_UI.WEIGHT_COLUMNS) do COLUMNS[#COLUMNS + 1] = column end
-COLUMNS[#COLUMNS + 1] = { Key = "COVERAGE", Glyph = "[ICON_Range]", ToolTip = "LOC_SDP_WEIGHT_COVERAGE", Default = 0 }
+COLUMNS[#COLUMNS + 1] = { Key = "COVERAGE", Glyph = "LOC_SDP_WEIGHT_COVERAGE_SHORT", ToolTip = "LOC_SDP_WEIGHT_COVERAGE", Default = 0 }
 local m_weights = {}
 for _, column in ipairs(COLUMNS) do m_weights[column.Key] = column.Default or 1 end
 local m_weightViews = {}

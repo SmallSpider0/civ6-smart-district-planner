@@ -572,5 +572,14 @@
     <Replace Tag="LOC_SDP_SITES_PLAN_COUNT_TOOLTIP" Language="en_US">
       <Text>How many districts that need population each site is scored with. With more ticked, each site picks its best ones; otherwise all of them count.</Text>
     </Replace>
+    <Replace Tag="LOC_SDP_WEIGHT_DISTANCE_SHORT" Language="en_US">
+      <Text>Dist.</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_WEIGHT_AMENITY_SHORT" Language="en_US">
+      <Text>Amen.</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_TIER_SHORT" Language="en_US">
+      <Text>Tier</Text>
+    </Replace>
   </LocalizedText>
 </GameData>

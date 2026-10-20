@@ -96,7 +96,7 @@
 
         <!-- Tier, estimate, solve / continue (cancel while running) -->
         <Container Size="480,42">
-          <Label Anchor="L,C" Style="BodyTextDark16" String="LOC_SDP_TIER"/>
+          <Label Anchor="L,C" Style="BodyTextDark16" String="LOC_SDP_TIER_SHORT"/>
           <PullDown ID="TierPull" Anchor="L,C" Offset="44,0" Style="PullDownBlue" Size="100,24"/>
           <Label ID="Estimate" Anchor="L,C" Offset="150,0" Style="BodyTextDark14" WrapWidth="84"/>
           <Stack Anchor="R,C" StackGrowth="Right" StackPadding="4">
@@ -154,7 +154,7 @@
         </Container>
         <Stack ID="SitesDistrictStack" StackGrowth="Right" WrapWidth="480" WrapGrowth="Bottom" StackPadding="4"/>
         <Container Size="480,42">
-          <Label Anchor="L,C" Style="BodyTextDark16" String="LOC_SDP_TIER"/>
+          <Label Anchor="L,C" Style="BodyTextDark16" String="LOC_SDP_TIER_SHORT"/>
           <PullDown ID="SitesTierPull" Anchor="L,C" Offset="44,0" Style="PullDownBlue" Size="100,24"/>
           <Label ID="SitesEstimate" Anchor="L,C" Offset="150,0" Style="BodyTextDark14" WrapWidth="84"/>
           <Stack Anchor="R,C" StackGrowth="Right" StackPadding="4">
@@ -226,7 +226,7 @@
           </Container>
         </Container>
         <Container Size="480,42">
-          <Label Anchor="L,C" Style="BodyTextDark16" String="LOC_SDP_TIER"/>
+          <Label Anchor="L,C" Style="BodyTextDark16" String="LOC_SDP_TIER_SHORT"/>
           <PullDown ID="MultiTierPull" Anchor="L,C" Offset="44,0" Style="PullDownBlue" Size="100,24"/>
           <Label ID="MultiEstimate" Anchor="L,C" Offset="150,0" Style="BodyTextDark14" WrapWidth="84"/>
           <Stack Anchor="R,C" StackGrowth="Right" StackPadding="4">
@@ -260,8 +260,8 @@
       <Image ID="Icon" Anchor="L,C" Offset="2,0" Size="26,26"/>
       <Label ID="Name" Anchor="L,C" Offset="30,0" Style="FontNormal14" TruncateWidth="88" TruncatedTooltip="1"/>
       <Label ID="NameDark" Anchor="L,C" Offset="30,0" Style="BodyTextDark14" TruncateWidth="88" TruncatedTooltip="1" Hidden="1"/>
-      <Label ID="State" Anchor="R,C" Offset="5,0" Style="FontNormal14"/>
-      <Label ID="StateDark" Anchor="R,C" Offset="5,0" Style="BodyTextDark14" Hidden="1"/>
+      <Label ID="State" Anchor="R,C" Offset="9,0" Style="FontNormal14"/>
+      <Label ID="StateDark" Anchor="R,C" Offset="9,0" Style="BodyTextDark14" Hidden="1"/>
     </GridButton>
   </Instance>
 
@@ -286,7 +286,7 @@
       <!-- The game's font icons: one family for every column (feedback 3). -->
       <Label ID="Glyph" Anchor="C,T" Offset="0,2" Style="BodyTextDark18"/>
       <Button ID="Less" Anchor="L,B" Offset="2,2" Style="ArrowButtonLeft"/>
-      <Label ID="Value" Anchor="C,B" Offset="0,5" Style="BodyTextDark16"/>
+      <Label ID="Value" Anchor="C,B" Offset="0,6" Style="BodyTextDark14"/>
       <Button ID="More" Anchor="R,B" Offset="2,2" Style="ArrowButtonRight"/>
     </Container>
   </Instance>

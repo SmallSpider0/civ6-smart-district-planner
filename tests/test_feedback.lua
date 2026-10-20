@@ -159,7 +159,25 @@ test("automatic districts: an aqueduct (or the civ's own) joins only a city with
   -- The dam: Gathering Storm data only.
   if GameInfo.Districts_XP2 ~= nil and GameInfo.Districts["DISTRICT_DAM"] ~= nil then
     T.eq(SDP_Rules.AutoKind("DISTRICT_DAM"), "FLOOD", "the dam prevents floods")
-    print("  dam needed: " .. tostring(SDP_City.NeedsAuto(scan, "DISTRICT_DAM")))
+    local needed = SDP_City.NeedsAuto(scan, "DISTRICT_DAM")
+    print("  dam needed: " .. tostring(needed))
+    local dam = SDP_Solver.Solve({ PlayerID = pid, CityID = city:GetID(), Districts = { Resolve("DISTRICT_INDUSTRIAL_ZONE") },
+      Auto = { DISTRICT_DAM = true }, Weights = ONES })
+    T.ok(dam.Ok, tostring(dam.Error))
+    local placed, reported = nil, nil
+    for _, p in ipairs(dam.Plan) do
+      if p.Type == "DISTRICT_DAM" then placed = p end
+    end
+    for _, u in ipairs(dam.Unplaced) do
+      if u.Type == "DISTRICT_DAM" then reported = u end
+    end
+    if needed then
+      T.ok((placed ~= nil and placed.Auto) or (reported ~= nil and reported.Auto), "the dam added, or reported as not fitting")
+      if placed ~= nil then print(string.format("  dam at %d,%d (industrial zone %s)", placed.X, placed.Y,
+        SDP_UI.YieldText(dam.Plan[1].Yields))) end
+    else
+      T.ok(placed == nil, "no dam without floodplains")
+    end
   end
 end)
 

@@ -26,9 +26,11 @@ include("SDP_Preview")
 local LAUNCH_BAR_STACK = "/InGame/LaunchBar/ButtonStack"
 local MAX_WEIGHT = 3
 
--- The weight row: one family of icons, the game's font icons (feedback
--- item 3; the texture icons cover only some yields: requirements pitfalls
--- 13 and 14). Food and FEATURE (one-time yields of clearing and harvesting)
+-- The weight row (feedback item 3): the six yields with the game's font
+-- icons, one family (the texture icons cover only some yields: requirements
+-- pitfalls 13 and 14); the other weights with a short word, since the font
+-- icons that would fit them (terrain, movement, range) are drawn in another
+-- style, dark squares. Food and FEATURE (one-time yields of clearing and harvesting)
 -- only weigh the land part (SDP_Land). DISTANCE is the distance cost weight
 -- (feedback item 9), in steps of 0.5, 0 (off) by default.
 local WEIGHT_COLUMNS = {
@@ -38,8 +40,8 @@ local WEIGHT_COLUMNS = {
   { Key = "YIELD_GOLD", Glyph = "[ICON_Gold]" },
   { Key = "YIELD_PRODUCTION", Glyph = "[ICON_Production]" },
   { Key = "YIELD_FOOD", Glyph = "[ICON_Food]", Land = true },
-  { Key = "FEATURE", Glyph = "[ICON_Terrain]", ToolTip = "LOC_SDP_WEIGHT_FEATURE", Land = true },
-  { Key = "DISTANCE", Glyph = "[ICON_Movement]", ToolTip = "LOC_SDP_WEIGHT_DISTANCE", Step = 0.5, Default = 0 },
+  { Key = "FEATURE", Glyph = "LOC_SDP_WEIGHT_FEATURE_SHORT", ToolTip = "LOC_SDP_WEIGHT_FEATURE", Land = true },
+  { Key = "DISTANCE", Glyph = "LOC_SDP_WEIGHT_DISTANCE_SHORT", ToolTip = "LOC_SDP_WEIGHT_DISTANCE", Step = 0.5, Default = 0 },
 }
 
 local m_launchItem = {}     -- SDP_LaunchBarItem instance in the game's launch bar

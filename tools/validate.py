@@ -354,6 +354,29 @@ def check_ui(report, trees, precedents):
 
 
 # -- lua -------------------------------------------------------------------
+def check_controls(report, mod_dir, trees):
+    """Every Controls.<ID> a mod script uses names a control of the UI XML.
+
+    The game hands a script nil for an unknown ID; calling a method on it
+    fails only when that line runs (2026-10-20: a scroll panel removed from
+    the XML still had a CalculateSize call, found by the in-game tests)."""
+    ids = set()
+    for root in trees.values():
+        if root.tag == "Context":
+            for node in root.iter():
+                if node.attrib.get("ID"):
+                    ids.add(node.attrib.get("ID"))
+    for rel in list_files(mod_dir):
+        if not rel.endswith(".lua"):
+            continue
+        path = os.path.join(mod_dir, rel)
+        with open(path, encoding="utf-8") as f:
+            for lineno, line in enumerate(f, 1):
+                for name in re.findall(r"\bControls\.([A-Za-z0-9_]+)", line):
+                    if name not in ids:
+                        report.error(path, lineno, "ui", "Controls.%s is not an ID in the UI XML" % name)
+
+
 def check_lua(report, paths):
     if not paths:
         return True
@@ -392,6 +415,7 @@ def run(mod_dir=MOD_DIR, tests_dir=TESTS_DIR, strict=False, quiet=False):
         check_mod(report, mod_dir, trees)
     if any(root.tag == "Context" for root in trees.values()):
         check_ui(report, trees, ui_precedents())
+        check_controls(report, mod_dir, trees)
     tool_ok = check_lua(report, [p for p in mod_files + test_files if p.endswith(".lua")])
 
     if not quiet:
