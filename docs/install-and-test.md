@@ -148,6 +148,7 @@ python3 -I tools/deploy.py                                      # 部署
 node tools/offline_tests.mjs                                    # 离线测试（不开游戏）
 python3 -I tools/game.py newgame --state SDP_Panel --capital --reveal   # 进入固定种子的测试对局并揭示首都周围
 python3 -I tools/run_tests.py                                   # 游戏内测试
+python3 -I tools/package.py                                     # 打出给合作者的测试包（dist/，含 tester-guide.md）
 ```
 
 工具说明见 [tools/README.md](../tools/README.md)。

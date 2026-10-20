@@ -10,6 +10,9 @@ node_modules/
 
 # 运行日志
 logs/
+
+# 测试包（tools/package.py 的输出）
+dist/
 __pycache__/
 
 # 离线对比用的游戏规则导出（Firaxis 数据，不入库）

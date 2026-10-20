@@ -8,6 +8,7 @@
 | `luacheck.mjs` | Lua 语法与陷阱检查（validate 会调用它） | 0 无错误；1 有错误 |
 | `offline_tests.mjs` | 不开游戏跑求解逻辑测试与基准（`tests/offline/`） | 0 全过；1 有失败；2 用法错误 |
 | `deploy.py` | 校验后把 mod 同步到游戏 Mods 目录 | 0 成功；1 校验失败；2 找不到 Mods 目录 |
+| `package.py` | 从最近一次提交打出给合作者的测试包（zip，含测试说明） | 0 成功；1 校验失败；2 有未提交的改动 |
 | `run_tests.py` | 经 Tuner 在游戏内跑 `tests/test_*.lua` | 0 全过；1 有失败；2 连接问题；3 超时 |
 | `game.py` | 退出游戏、经 Steam 启动、从主菜单快速开局（可选建首都） | 0 成功；2 超时 |
 | `civ6tuner.py` | FireTuner 客户端：收集 Lua 输出、远程执行 Lua | 见下文 |
@@ -98,6 +99,16 @@ python3 -I tools/deploy.py              # 校验通过后同步
 - 目标：Mac `~/Library/Application Support/Sid Meier's Civilization VI/Sid Meier's Civilization VI/Mods/SmartDistrictPlanner/`，Windows `文档/My Games/Sid Meier's Civilization VI/Mods/SmartDistrictPlanner/`；`--mods-dir` 可改。
 - 增量复制，并删除部署目录里源目录已没有的文件；只动 `Mods/SmartDistrictPlanner/` 内部。
 - 结尾提示重载方式：改了 modinfo 或 `Text/` 要重启游戏，否则回主菜单重新进入对局即可。
+
+## package.py — 给合作者的测试包
+
+```bash
+python3 -I tools/package.py             # 输出 dist/SmartDistrictPlanner-<提交号>.zip
+```
+
+- 内容：`SmartDistrictPlanner/`（模组本体）、`TEST_GUIDE.md`（`docs/tester-guide.md`，填好版本号和日期）、`INSTALL_AND_USE.md`（`docs/install-and-test.md`，指向其他文档的链接改成纯文本）。
+- 从最近一次提交打包，不读工作区：先校验；模组或这两份文档有未提交的改动时拒绝打包。文件名里的提交号就是版本号，合作者反馈时报这个号。
+- 压缩包里的文件名都是 ASCII，Windows 自带的解压工具不会显示乱码；条目时间取提交时间，同一次提交打出的包相同。`dist/` 不入库。
 
 ## run_tests.py — 游戏内测试
 

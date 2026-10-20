@@ -33,7 +33,8 @@ civ6mod/
 ├── civ6-mod-from-scratch-prompt.md   # 需求文档（锁定，勿改）
 ├── docs/
 │   ├── design.md                     # 交付物 3：算法结构 / 目标函数 / DMT 接缝
-│   └── install-and-test.md           # 交付物 2：安装与测试（含"勿与 AMT 同开"）
+│   ├── install-and-test.md           # 交付物 2：安装与测试（含"勿与 AMT 同开"）
+│   └── tester-guide.md               # 给 Windows 合作者的测试说明，tools/package.py 打进测试包
 ├── SmartDistrictPlanner/             # 交付物 1：mod 本体，整目录复制到游戏 Mods 目录
 │   ├── SmartDistrictPlanner.modinfo
 │   ├── Text/                         # 本地化（数据库格式 XML）
@@ -43,7 +44,7 @@ civ6mod/
 │   ├── offline/                      # 离线测试（spec_*.lua）与基准（bench_*.lua），tools/offline_tests.mjs 在 fengari 里跑，用假世界 world.lua
 │   ├── compare/                      # 与 AMT、Empire Planner 的离线对比：真实规则库 + 真实 DMT/AMT/EP 代码 + 模拟引擎，tools/compare.mjs 运行
 │   └── bench/                        # 游戏内基准与单价校准（不以 test_ 开头，单独运行）
-├── tools/                            # civ6tuner.py、validate.py、luacheck.mjs、deploy.py、run_tests.py、game.py，见 tools/README.md
+├── tools/                            # civ6tuner.py、validate.py、luacheck.mjs、deploy.py、package.py、run_tests.py、game.py，见 tools/README.md
 ├── logs/                             # civ6tuner 输出日志，已 gitignore
 └── reference/                        # 指向本机 DMT/AMT/Base UI/DLC 源码的符号链接，已 gitignore
 ```
