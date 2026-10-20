@@ -106,8 +106,9 @@ test("single districts match real DMT pins", function()
         T.ok(stored ~= nil, where .. ": DMT stored nothing")
         T.eq(item.ToolTip, stored.YieldToolTip, where .. " tooltip")
         T.same(YieldParts(ConvertToYieldString(item.Yields)), YieldParts(stored.YieldString), where .. " yields")
-        T.eq(item.CanPlace, stored.CanPlace, where .. " can place")
-        T.eq(item.Reason, stored.CanPlaceToolTip, where .. " reason")
+        -- SDP may refuse more than DMT: plots the game itself refuses (SDP_City.EngineRefused).
+        T.eq(item.CanPlace or item.EngineRefused == true, stored.CanPlace, where .. " can place")
+        if not item.EngineRefused then T.eq(item.Reason, stored.CanPlaceToolTip, where .. " reason") end
       end)
       compared = compared + 1
       if item.CanPlace then placeable = placeable + 1 end

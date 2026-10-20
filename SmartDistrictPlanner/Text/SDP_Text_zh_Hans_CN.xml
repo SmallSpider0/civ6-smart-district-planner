@@ -352,5 +352,68 @@
     <Replace Tag="LOC_SDP_SITES_DISTRICTS" Language="zh_Hans_CN">
       <Text>区域：{1_List}</Text>
     </Replace>
+    <Replace Tag="LOC_SDP_MULTI_PLAN_FOR" Language="zh_Hans_CN">
+      <Text>区域清单：</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_MULTI_PLAN_ALL" Language="zh_Hans_CN">
+      <Text>所有城市（共用清单）</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_MULTI_OWN_PLAN" Language="zh_Hans_CN">
+      <Text>（自定清单）</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_TEMPLATE" Language="zh_Hans_CN">
+      <Text>套用模板</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_TEMPLATE_YIELD" Language="zh_Hans_CN">
+      <Text>{1_Yield}城</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_TEMPLATE_CLEAR" Language="zh_Hans_CN">
+      <Text>清空清单</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_TEMPLATE_SHARED" Language="zh_Hans_CN">
+      <Text>改回共用清单</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_MULTI_LIMITED_ONE" Language="zh_Hans_CN">
+      <Text>· 只放在 {1_City}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_MULTI_LIMITED_AUTO" Language="zh_Hans_CN">
+      <Text>· {1_N} 座城中自动选</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_REASON_ENGINE" Language="zh_Hans_CN">
+      <Text>游戏不允许在此建造该区域</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_REPLACE_OWN" Language="zh_Hans_CN">
+      <Text>替换本模组之前打的钉（{1_N} 个）</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_REPLACE_OWN_TOOLTIP" Language="zh_Hans_CN">
+      <Text>规划时把本模组之前为这座城打的钉（你没改过的）当作不存在，打新钉时删掉它们；撤销会把它们放回。你自己打的钉永远不动。</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_REPLACE_OWN_MULTI_TOOLTIP" Language="zh_Hans_CN">
+      <Text>规划时把本模组之前为参与城市打的钉（你没改过的）当作不存在，打新钉时删掉它们；撤销会把它们放回。你自己打的钉永远不动。</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SINGLE_WONDERS" Language="zh_Hans_CN">
+      <Text>奇观</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_WONDERS_NONE" Language="zh_Hans_CN">
+      <Text>不放</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_WONDER_CHOSEN" Language="zh_Hans_CN">
+      <Text>{1_Name}（已选）</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_HEATMAP" Language="zh_Hans_CN">
+      <Text>好位置</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_HEATMAP_TOOLTIP" Language="zh_Hans_CN">
+      <Text>在地图上显示某个区域放在哪里好：所有能放的格按单独放下时的加成从高到低分档着色，并标出数值。</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_HEAT_OFF" Language="zh_Hans_CN">
+      <Text>不显示</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_HOTKEY_CATEGORY" Language="zh_Hans_CN">
+      <Text>智能区域规划器</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_HOTKEY_OPEN" Language="zh_Hans_CN">
+      <Text>打开或关闭规划面板</Text>
+    </Replace>
   </LocalizedText>
 </GameData>

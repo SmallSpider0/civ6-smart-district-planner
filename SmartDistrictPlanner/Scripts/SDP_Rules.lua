@@ -102,6 +102,40 @@ function SDP_Rules.AdjacencyTable(playerID)
   return result
 end
 
+-- Role templates for the multi-city tab ("science city", ...): for each of
+-- the five yields, the plannable districts with an adjacency rule giving
+-- that yield to this player (District_Adjacencies + Adjacency_YieldChanges,
+-- any kind of neighbour). Derived from GameInfo, so unique districts and
+-- rule changes come along. Returns { { Yield, Districts = { types in
+-- PlannableDistricts order } } } in YIELDS order, yields without districts
+-- left out.
+function SDP_Rules.Templates(playerID)
+  local player = Players[playerID]
+  local traits = MapTacks.PlayerTraits(playerID)
+  local excluded = {}
+  for row in GameInfo.ExcludedAdjacencies() do
+    excluded[row.YieldChangeId] = excluded[row.YieldChangeId] or {}
+    table.insert(excluded[row.YieldChangeId], row.TraitType)
+  end
+  local gives = {} -- [district][yield] = true
+  for link in GameInfo.District_Adjacencies() do
+    local row = GameInfo.Adjacency_YieldChanges[link.YieldChangeId]
+    if row ~= nil and row.YieldChange > 0 and RowApplies(row, player, traits, excluded) then
+      gives[link.DistrictType] = gives[link.DistrictType] or {}
+      gives[link.DistrictType][row.YieldType] = true
+    end
+  end
+  local out = {}
+  for _, yieldType in ipairs(SDP_Rules.YIELDS) do
+    local districts = {}
+    for _, d in ipairs(SDP_Rules.PlannableDistricts(playerID)) do
+      if gives[d.Type] and gives[d.Type][yieldType] then districts[#districts + 1] = d.Type end
+    end
+    if #districts > 0 then out[#out + 1] = { Yield = yieldType, Districts = districts } end
+  end
+  return out
+end
+
 -- Yields a district of type `district` gains from one adjacent `neighbour`
 -- (a district type, or a wonder: a building type), from an AdjacencyTable.
 -- Returns a new table.

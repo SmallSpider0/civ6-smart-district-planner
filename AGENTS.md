@@ -112,7 +112,7 @@ include("dmt_yieldcalculator");       -- 尾部会执行 DMT_Initialize()，见�
 | 24 | （2026-10-20 实测）自然奇观、历史时刻等弹窗打开时会**占住游戏的事件队列**（`PopupManager:Lock` → `UI.ReferenceCurrentEvent`），UI 状态里的游戏数据（如 `PlayersVisibility`）停止更新，直到弹窗自己的 `Close` 调用 `Unlock` 释放。只 `DequeuePopup` 不会释放。测试工具关弹窗要调用该弹窗自己的 `OnClose`/`Close`（`tools/game.py popups --close` 已这样做） |
 | 25 | （2026-10-20 离线对比发现）DMT 的**修正缓存**（文明/领袖特性、信仰里的相邻规则与放置规则：日本区域互邻、巴西雨林、荷兰河流、高卢"特色区域不挨市中心"、越南"特色区域只建在地貌上"）只由它的 `LoadGameViewStateDone` / `LocalPlayerTurnBegin` 处理函数建立（`InitializeModifierCalculator` + `CacheEffectiveModifiers`）。按坑 7 移除这两个处理函数的上下文必须自己建：`SDP_Overlay.RefreshModifiers`（`InitializeModifierCalculator` 只能调一次，它往表里追加） |
 | 26 | （2026-10-20 离线对比发现）DMT 的 `CanPlacePin` 对区域钉**不拦奢侈、战略资源**：`GetRealizedPlotFeatures` 在评估区域钉时先把格上的资源去掉，"不能采收的资源"检查永远不触发。游戏不允许区域压在不能移除的资源上，所以候选格要自己排除（`SDP_City` 的 `RESOURCE`：可见、且 `Resource_Harvests` 里没有的资源） |
-| 27 | （2026-10-20 游戏内引擎复核发现）DMT 的 `CanPlacePin` **不检查运河是否连通水域**：首都旁 13 格 DMT 判运河可放，游戏引擎（`CityManager.GetOperationTargets`）不允许。运河的合法性在引擎 C++ 里，GameInfo 读不到；在引擎复核（multicity-design.md 第 18 节第 3 项）上线前，运河方案以游戏的放置提示为准。其余区域在罗马、日本、高卢三局复核中与引擎完全一致（`tests/bench/probe_engine.lua`）。引擎只对已解锁的区域、城市已拥有的格给出可建格 |
+| 27 | （2026-10-20 游戏内引擎复核发现）DMT 的 `CanPlacePin` **不检查运河是否连通水域**：首都旁 13 格 DMT 判运河可放，游戏引擎（`CityManager.GetOperationTargets`）不允许。运河的合法性在引擎 C++ 里，GameInfo 读不到。已加引擎复核（`SDP_City.EngineRefused`，经 `SDP_Overlay.CanPlace` 生效），城市已拥有的格子上以引擎为准；离线对比框架的模拟引擎不给可建格，复核在那里不生效。其余区域在罗马、日本、高卢三局复核中与引擎完全一致（`tests/bench/probe_engine.lua`）。引擎只对已解锁的区域、城市已拥有的格给出可建格 |
 
 ## 6. 开发环境与工作流
 

@@ -62,11 +62,13 @@ end
 -- The player's map pins within `radius` rings of (x, y), sorted by plot index.
 -- Reads GetMapPins() only: PlayerConfiguration:GetMapPin(x, y) would create a
 -- pin where there is none.
-function SDP_City.PinsInRange(playerID, x, y, radius)
+-- `ignore` (optional): { [pin ID] = true } pins to leave out (this mod's own
+-- pins being replaced, see SDP_Pins.Own).
+function SDP_City.PinsInRange(playerID, x, y, radius, ignore)
   local list = {}
   for _, pin in pairs(PlayerConfigurations[playerID]:GetMapPins()) do
     local px, py = pin:GetHexX(), pin:GetHexY()
-    if Map.GetPlotDistance(x, y, px, py) <= radius then
+    if Map.GetPlotDistance(x, y, px, py) <= radius and not (ignore and ignore[pin:GetID()]) then
       list[#list + 1] = {
         ID = pin:GetID(), X = px, Y = py, Index = Map.GetPlotIndex(px, py),
         Icon = pin:GetIconName(), Name = pin:GetName(),
@@ -150,9 +152,21 @@ local function ExclusionReason(plot, playerID, cityID, pinned, allowFeatureRemov
   return nil
 end
 
+-- Scan options for a solver request: AllowFeatureRemoval, and IgnorePins
+-- (this mod's earlier pins being replaced: { { ID, X, Y } }).
+function SDP_City.ScanOptions(request)
+  local ignore = nil
+  for _, pin in ipairs(request.IgnorePins or {}) do
+    ignore = ignore or {}
+    ignore[pin.ID] = true
+  end
+  return { allowFeatureRemoval = request.AllowFeatureRemoval, ignorePins = ignore }
+end
+
 -- Scan one city. options.allowFeatureRemoval (default true): when false,
 -- plots with a feature a district would clear (GameInfo.Features.Removable:
 -- woods, rainforest, marsh) are excluded (requirement constraint 5).
+-- options.ignorePins: { [pin ID] = true } pins treated as absent.
 -- Returns nil when the city does not exist, else:
 --   PlayerID, CityID, Name, X, Y, Population, SpecialtyCapacity, SpecialtyBuilt
 --   Candidates  plots a new district may go on: { Index, X, Y, Ring }
@@ -170,7 +184,8 @@ function SDP_City.Scan(playerID, cityID, options)
     PlayerID = playerID, CityID = cityID, Name = city:GetName(), X = cx, Y = cy,
     Population = city:GetPopulation(),
     Candidates = {}, Excluded = {}, Built = {},
-    Pins = SDP_City.PinsInRange(playerID, cx, cy, SDP_City.RADIUS + 1),
+    Pins = SDP_City.PinsInRange(playerID, cx, cy, SDP_City.RADIUS + 1, options and options.ignorePins),
+    Ignored = options and options.ignorePins,
   }
   scan.SpecialtyCapacity = SDP_City.SpecialtyCapacity(scan.Population)
 
@@ -214,7 +229,8 @@ function SDP_City.ScanSite(playerID, x, y, options)
     PlayerID = playerID, CityID = nil, Site = true, Name = options.name or "", X = x, Y = y,
     Population = options.population or 1, SpecialtyBuilt = 0,
     Candidates = {}, Excluded = {}, Built = {},
-    Pins = SDP_City.PinsInRange(playerID, x, y, SDP_City.RADIUS + 1),
+    Pins = SDP_City.PinsInRange(playerID, x, y, SDP_City.RADIUS + 1, options.ignorePins),
+    Ignored = options.ignorePins,
   }
   scan.SpecialtyCapacity = SDP_City.SpecialtyCapacity(scan.Population)
   local pinned = {}
@@ -228,6 +244,44 @@ function SDP_City.ScanSite(playerID, x, y, options)
     end
   end
   return scan
+end
+
+-- Plots the game itself refuses for a district in a city, on top of DMT's
+-- rules (docs/multicity-design.md section 18, item 3; AGENTS pitfall 27:
+-- DMT does not check that a canal connects water): the city's own plots
+-- within RADIUS left out of the engine's build targets for the district
+-- (CityManager.GetOperationTargets, what the game's placement lens shows).
+-- Returns a set of plot indices, or nil when the engine gives no list (API
+-- missing, district locked, no free slot, ...): then DMT decides alone.
+-- Plots the city does not own yet are never in it (the engine only offers
+-- owned plots).
+function SDP_City.EngineRefused(playerID, cityID, districtType)
+  if CityManager == nil or CityManager.GetOperationTargets == nil or CityOperationTypes == nil
+      or CityOperationResults == nil then
+    return nil
+  end
+  local city = CityManager.GetCity(playerID, cityID)
+  local row = GameInfo.Districts[districtType]
+  if city == nil or row == nil then return nil end
+  local params = {}
+  params[CityOperationTypes.PARAM_DISTRICT_TYPE] = row.Hash
+  local ok, results = pcall(CityManager.GetOperationTargets, city, CityOperationTypes.BUILD, params)
+  local plots = ok and type(results) == "table" and results[CityOperationResults.PLOTS] or nil
+  if type(plots) ~= "table" then return nil end
+  local allowed, any = {}, false
+  for _, index in ipairs(plots) do
+    allowed[index], any = true, true
+  end
+  if not any then return nil end
+  local refused = {}
+  for _, p in ipairs(SDP_City.PlotsInRange(city:GetX(), city:GetY(), SDP_City.RADIUS)) do
+    if not allowed[p.Index] then
+      local plot = Map.GetPlotByIndex(p.Index)
+      local owner = plot:GetOwner() == playerID and Cities.GetPlotPurchaseCity(plot) or nil
+      if owner ~= nil and owner:GetID() == cityID then refused[p.Index] = true end
+    end
+  end
+  return refused
 end
 
 -- Why each plannable district cannot be planned for this city, or nil when
@@ -247,8 +301,10 @@ function SDP_City.DistrictStatus(scan, districts)
     local key = (pin:GetIconName() or ""):gsub("^ICON_", "")
     local plot = Map.GetPlot(pin:GetHexX(), pin:GetHexY())
     local row = GameInfo.Districts[key]
-    -- A pin on the district it planned (built since) is counted once.
-    if row ~= nil and not (plot ~= nil and plot:GetDistrictType() == row.Index) then
+    -- A pin on the district it planned (built since) is counted once; a pin
+    -- being replaced (scan.Ignored) not at all.
+    if row ~= nil and not (plot ~= nil and plot:GetDistrictType() == row.Index)
+        and not (scan.Ignored and scan.Ignored[pin:GetID()]) then
       builtByPlayer[key] = (builtByPlayer[key] or 0) + 1
     end
   end

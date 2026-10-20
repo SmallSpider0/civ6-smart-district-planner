@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The key that opens the planner (design 18, item 8), listed in the game's
+     options under its own category so the player can change it. Same form as
+     Detailed Map Tacks' config/dmt_config.xml (front-end database). Default
+     Shift+L: Shift+A/D/S are DMT's, Shift+P is Auto Map Tacks Planner's. -->
+<GameInfo>
+  <InputCategories>
+    <InsertOrIgnore CategoryId="SDP" Name="LOC_SDP_HOTKEY_CATEGORY" Visible="1" SortIndex="0"/>
+  </InputCategories>
+  <InputActions>
+    <InsertOrIgnore ActionId="SDP_OpenPlanner" Name="LOC_SDP_HOTKEY_OPEN" Description="LOC_SDP_HOTKEY_OPEN" CategoryId="SDP" ContextId="World"/>
+  </InputActions>
+  <InputActionDefaultGestures>
+    <InsertOrIgnore ActionId="SDP_OpenPlanner" Index="0" GestureType="KBMouse" GestureData="LOC_OPTIONS_KEY_SHIFT+LOC_OPTIONS_KEY_L"/>
+  </InputActionDefaultGestures>
+</GameInfo>

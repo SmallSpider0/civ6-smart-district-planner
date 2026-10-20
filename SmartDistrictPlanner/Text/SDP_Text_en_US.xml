@@ -352,5 +352,68 @@
     <Replace Tag="LOC_SDP_SITES_DISTRICTS" Language="en_US">
       <Text>Districts: {1_List}</Text>
     </Replace>
+    <Replace Tag="LOC_SDP_MULTI_PLAN_FOR" Language="en_US">
+      <Text>Districts for:</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_MULTI_PLAN_ALL" Language="en_US">
+      <Text>Every city (shared list)</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_MULTI_OWN_PLAN" Language="en_US">
+      <Text>(own list)</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_TEMPLATE" Language="en_US">
+      <Text>Apply a template</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_TEMPLATE_YIELD" Language="en_US">
+      <Text>{1_Yield} city</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_TEMPLATE_CLEAR" Language="en_US">
+      <Text>Clear the list</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_TEMPLATE_SHARED" Language="en_US">
+      <Text>Use the shared list again</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_MULTI_LIMITED_ONE" Language="en_US">
+      <Text>· only in {1_City}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_MULTI_LIMITED_AUTO" Language="en_US">
+      <Text>· best of {1_N} cities</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_REASON_ENGINE" Language="en_US">
+      <Text>The game does not allow this district here</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_REPLACE_OWN" Language="en_US">
+      <Text>Replace this mod's earlier tacks ({1_N})</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_REPLACE_OWN_TOOLTIP" Language="en_US">
+      <Text>Plan as if this mod's earlier tacks for this city were gone (only the ones you have not edited), and remove them when placing the new plan; undo puts them back. Tacks you placed yourself are never touched.</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_REPLACE_OWN_MULTI_TOOLTIP" Language="en_US">
+      <Text>Plan as if this mod's earlier tacks for the cities taking part were gone (only the ones you have not edited), and remove them when placing the new plan; undo puts them back. Tacks you placed yourself are never touched.</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SINGLE_WONDERS" Language="en_US">
+      <Text>Wonders</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_WONDERS_NONE" Language="en_US">
+      <Text>None</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_WONDER_CHOSEN" Language="en_US">
+      <Text>{1_Name} (chosen)</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_HEATMAP" Language="en_US">
+      <Text>Good places</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_HEATMAP_TOOLTIP" Language="en_US">
+      <Text>Shows on the map where one district is good: every plot where it can go, shaded from the best down, with the bonus of placing it there alone.</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_HEAT_OFF" Language="en_US">
+      <Text>Off</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_HOTKEY_CATEGORY" Language="en_US">
+      <Text>Smart District Planner</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_HOTKEY_OPEN" Language="en_US">
+      <Text>Open or close the planner</Text>
+    </Replace>
   </LocalizedText>
 </GameData>

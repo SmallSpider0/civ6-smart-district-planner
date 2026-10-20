@@ -204,3 +204,30 @@ test("luxury and strategic resources block districts, bonus resources do not", f
   T.eq(scan.Excluded[Map.GetPlotIndex(4, 5)], "RESOURCE", "iron")
   T.eq(scan.Excluded[Map.GetPlotIndex(6, 3)], nil, "wheat can be harvested")
 end)
+
+test("plots the game refuses are left out; districts the engine says nothing about are not", function()
+  -- The engine only speaks for plots the city owns: give it all three rings.
+  local OWNS_ALL = { { id = 1, x = 5, y = 4, population = 7, capital = true, radius = 3 } }
+  NewWorld({ cities = OWNS_ALL })
+  SDP_Overlay.ResetEngine()
+  local first = SDP_Solver.Solve({ PlayerID = 0, CityID = 1, Weights = ONES, Districts = { "DISTRICT_CAMPUS" } })
+  local best = first.Plan[1]
+  T.ok(best ~= nil, "a campus plan")
+  -- The engine lists every plot in range but that one (as for a canal that
+  -- would join no water: DMT allows it, the game does not).
+  local allowed = {}
+  for _, p in ipairs(SDP_City.PlotsInRange(5, 4, 3)) do
+    if p.Index ~= best.Index then allowed[#allowed + 1] = p.X .. "," .. p.Y end
+  end
+  NewWorld({ cities = OWNS_ALL, engine = { DISTRICT_CAMPUS = allowed } })
+  SDP_Overlay.ResetEngine()
+  local second = SDP_Solver.Solve({ PlayerID = 0, CityID = 1, Weights = ONES, Districts = { "DISTRICT_CAMPUS" } })
+  T.ok(second.Plan[1] ~= nil and second.Plan[1].Index ~= best.Index, "the refused plot is not planned")
+  local item = SDP_Overlay.With(0, SDP_Overlay.Evaluate, { SDP_Overlay.Subject("DISTRICT_CAMPUS", best.X, best.Y) }, {}, ONES).Placements[1]
+  T.eq(item.CanPlace, false, "not placeable")
+  T.eq(item.EngineRefused, true, "because of the engine")
+  -- No list for the holy site: DMT alone decides, the plot stays open.
+  local holy = SDP_Overlay.With(0, SDP_Overlay.Evaluate, { SDP_Overlay.Subject("DISTRICT_HOLY_SITE", best.X, best.Y) }, {}, ONES).Placements[1]
+  T.eq(holy.EngineRefused, nil, "no engine list, no refusal")
+  SDP_Overlay.ResetEngine()
+end)

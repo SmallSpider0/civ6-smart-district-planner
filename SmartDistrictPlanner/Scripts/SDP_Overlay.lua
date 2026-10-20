@@ -158,6 +158,17 @@ function SDP_Overlay.Set(x, y, subject)
   return previous
 end
 
+-- Take real pins out of the overlay's copy of the pin data, so DMT sees
+-- them as gone for this computation (this mod's earlier pins being
+-- replaced). `pins` = { { X, Y } }. The real data is not touched; call again
+-- after every Install (Resume keeps it).
+function SDP_Overlay.HidePins(pins)
+  if m_state == nil then error("SDP_Overlay is not installed", 2) end
+  if pins == nil or #pins == 0 then return end
+  for _, pin in ipairs(pins) do m_state.Snapshot[Key(pin.X, pin.Y)] = nil end
+  ClearDMTCache(m_state.PlayerID)
+end
+
 -- Like Set, but DMT's plot cache is left alone: the caller (SDP_Board)
 -- batches changes and calls ClearCache before its next DMT call.
 function SDP_Overlay.Put(x, y, subject)
@@ -180,11 +191,41 @@ function SDP_Overlay.ScoreOf(subject, weights)
   return SDP_Overlay.Score(yields, weights), true
 end
 
--- DMT's CanPlacePin with the layer as it is; an error counts as false.
+-- The game's own placement rules on top of DMT's (SDP_City.EngineRefused),
+-- asked once per (city, district) and remembered for the turn: what the
+-- engine allows changes with techs, civics and population, which change
+-- between turns. A plot bought later in the turn is not in the remembered
+-- set, so DMT decides it alone.
+local m_engine = { Turn = nil, Refused = {} }
+
+function SDP_Overlay.ResetEngine()
+  m_engine = { Turn = nil, Refused = {} }
+end
+
+-- Whether the game refuses `subject` (a district) where it stands.
+function SDP_Overlay.EngineRefuses(playerID, subject)
+  if subject.Type ~= "DISTRICT" or subject.Key == "DISTRICT_CITY_CENTER" then return false end
+  local plot = Map.GetPlot(subject.X, subject.Y)
+  if plot == nil or plot:GetOwner() ~= playerID then return false end
+  local city = Cities.GetPlotPurchaseCity(plot)
+  if city == nil then return false end
+  local turn = Game.GetCurrentGameTurn()
+  if m_engine.Turn ~= turn then m_engine = { Turn = turn, Refused = {} } end
+  local key = playerID .. ":" .. city:GetID() .. ":" .. subject.Key
+  local refused = m_engine.Refused[key]
+  if refused == nil then
+    refused = SDP_City.EngineRefused(playerID, city:GetID(), subject.Key) or false
+    m_engine.Refused[key] = refused
+  end
+  return refused ~= false and refused[plot:GetIndex()] == true
+end
+
+-- DMT's CanPlacePin with the layer as it is, and the game agrees; a DMT
+-- error counts as false.
 function SDP_Overlay.CanPlace(subject)
   if m_state == nil then error("SDP_Overlay is not installed", 2) end
   local ok, canPlace = pcall(CanPlacePin, m_state.PlayerID, subject)
-  return ok and canPlace == true
+  return ok and canPlace == true and not SDP_Overlay.EngineRefuses(m_state.PlayerID, subject)
 end
 
 -- Weighted score of a yields table (requirement constraint 3).
@@ -210,6 +251,10 @@ local function Item(playerID, subject, weights, checkPlacement)
     local placeOk, canPlace, reason = pcall(CanPlacePin, playerID, subject)
     if placeOk and ok then
       item.CanPlace, item.Reason = canPlace, reason
+      if canPlace and SDP_Overlay.EngineRefuses(playerID, subject) then
+        -- DMT allows it, the game does not (e.g. a canal joining no water).
+        item.CanPlace, item.Reason, item.EngineRefused = false, Locale.Lookup("LOC_SDP_REASON_ENGINE"), true
+      end
     else
       item.Error = item.Error or canPlace
       item.CanPlace, item.Reason = false, tostring(item.Error)
@@ -224,7 +269,7 @@ end
 --               whose yields count towards the total
 -- Returns { Legal, Total, Placements = {item}, Fixed = {item} } with
 -- item = { Subject, Yields, ToolTip, Score, CanPlace and Reason (placements),
--- Error (DMT raised one) }.
+-- EngineRefused (DMT allows it, the game does not), Error (DMT raised one) }.
 -- Legal: DMT allows every placement. Total sums every item's score.
 function SDP_Overlay.Evaluate(placements, fixed, weights)
   local state = m_state

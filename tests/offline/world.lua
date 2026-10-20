@@ -485,6 +485,12 @@ function World.New(spec)
     self.pins[#self.pins + 1] = pin
     return pin
   end
+  -- Values saved with the game (SDP_Pins keeps its record here).
+  function Config:GetValue(key) return self.values and self.values[key] end
+  function Config:SetValue(key, value)
+    self.values = self.values or {}
+    self.values[key] = value
+  end
   function Config:DeleteMapPin(id)
     for i, pin in ipairs(self.pins) do
       if pin.id == id then
@@ -711,7 +717,25 @@ function World.New(spec)
       [0] = { IsRevealed = function(_, i) return byIndex[i] ~= nil and byIndex[i].revealed end },
       [1] = { IsRevealed = function() return true end },
     },
-    CityManager = { GetCity = function(pid, id) return cities[pid .. ":" .. id] end },
+    CityManager = {
+      GetCity = function(pid, id) return cities[pid .. ":" .. id] end,
+      -- The game's build targets: spec.engine = { [DistrictType] = { "x,y", ... } }
+      -- (plots the engine allows); other districts give an empty result, as
+      -- a locked district does in the game.
+      GetOperationTargets = function(city, _, params)
+        local row = gi.Districts[params[CityOperationTypes.PARAM_DISTRICT_TYPE]]
+        local allowed = row and spec.engine and spec.engine[row.DistrictType]
+        if allowed == nil then return {} end
+        local plots = {}
+        for _, key in ipairs(allowed) do
+          local x, y = key:match("^(%d+),(%d+)$")
+          plots[#plots + 1] = Map.GetPlotIndex(tonumber(x), tonumber(y))
+        end
+        return { [CityOperationResults.PLOTS] = plots }
+      end,
+    },
+    CityOperationTypes = { BUILD = "BUILD", PARAM_DISTRICT_TYPE = "PARAM_DISTRICT_TYPE" },
+    CityOperationResults = { PLOTS = "PLOTS" },
     Cities = {
       GetPlotPurchaseCity = function(plot) return plot.city end,
       GetCityInPlot = function(x, y)

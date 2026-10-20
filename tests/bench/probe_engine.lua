@@ -5,6 +5,8 @@
 -- plots the engine lets a city build each district on (what the game's
 -- placement lens shows: CityManager.GetOperationTargets, as in Base
 -- AdjacencyBonusSupport.lua) agree with SDP's candidates + DMT's CanPlace?
+-- And with SDP's own engine check (SDP_City.EngineRefused) on top, SDP must
+-- never allow a plot the engine refuses.
 -- Not a regular test (no test_ prefix): the setup gives the player every
 -- technology, so run it alone on a throwaway game:
 --   python3 -I tools/run_tests.py tests/bench/probe_engine.lua
@@ -49,7 +51,8 @@ test("engine placement targets vs SDP candidates and DMT", function()
     local owner = Cities.GetPlotPurchaseCity(plot)
     if plot:GetOwner() == pid and owner ~= nil and owner:GetID() == city:GetID() then owned[#owned + 1] = p end
   end
-  local tally = { districts = 0, locked = 0, plots = 0, agree = 0, sdpOnly = 0, engineOnly = 0, outside = 0 }
+  SDP_Overlay.ResetEngine()
+  local tally = { districts = 0, locked = 0, plots = 0, agree = 0, sdpOnly = 0, engineOnly = 0, outside = 0, vetoed = 0, sdpWrong = 0 }
   for _, d in ipairs(SDP_Rules.PlannableDistricts(pid)) do
     local targets, n = EngineTargets(city, GameInfo.Districts[d.Type].Hash)
     if n == 0 then
@@ -63,7 +66,11 @@ test("engine placement targets vs SDP candidates and DMT", function()
       for _, p in ipairs(owned) do
         local plot = Map.GetPlotByIndex(p.Index)
         local item = SDP_Overlay.With(pid, SDP_Overlay.Evaluate, { SDP_Overlay.Subject(d.Type, p.X, p.Y) }, {}, WEIGHTS).Placements[1]
-        local sdp = candidate[p.Index] == true and item.CanPlace == true
+        -- DMT's own verdict (SDP adds the engine's on top: EngineRefused).
+        local dmt = item.CanPlace == true or item.EngineRefused == true
+        if item.EngineRefused then tally.vetoed = tally.vetoed + 1 end
+        if candidate[p.Index] == true and item.CanPlace == true and targets[p.Index] ~= true then tally.sdpWrong = tally.sdpWrong + 1 end
+        local sdp = candidate[p.Index] == true and dmt
         local engine = targets[p.Index] == true
         tally.plots = tally.plots + 1
         if sdp == engine then
@@ -83,5 +90,9 @@ test("engine placement targets vs SDP candidates and DMT", function()
   end
   print(string.format("districts compared %d (no targets %d), owned plots %d, district x plot %d: agree %d, SDP-only %d, engine-only %d; engine targets outside 3 rings %d",
     tally.districts, tally.locked, #owned, tally.plots, tally.agree, tally.sdpOnly, tally.engineOnly, tally.outside))
+  -- The comparison above is DMT's verdict (with SDP's candidates); with the
+  -- engine check SDP itself must never allow what the engine refuses.
+  print(string.format("SDP's engine check refused %d; SDP allows what the engine refuses: %d", tally.vetoed, tally.sdpWrong))
+  T.eq(tally.sdpWrong, 0, "SDP allows plots the engine refuses")
   T.ok(tally.districts > 0, "the engine listed no targets for any district")
 end)

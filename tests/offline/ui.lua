@@ -116,6 +116,8 @@ function UI_Mock.Install()
       DequeuePopup = function(_, ctx) queue[ctx] = nil; ctx:SetHide(true) end,
     },
     PopupPriority = { Low = 1 },
+    -- Input actions (key bindings from the configuration database): ids are names here.
+    Input = { GetActionId = function(name) return "action:" .. name end },
     Mouse = { eLClick = 1, eMouseEnter = 2 },
     KeyEvents = { KeyUp = 1 },
     Keys = { VK_ESCAPE = 27 },

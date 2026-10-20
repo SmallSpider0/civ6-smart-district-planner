@@ -55,6 +55,10 @@ local m_weights = {}          -- [YieldType or FEATURE] = 0..MAX_WEIGHT
 for _, column in ipairs(WEIGHT_COLUMNS) do m_weights[column.Key] = 1 end
 local m_allowFeatureRemoval = true
 local m_land = true           -- count the land part (design 4.2)
+local m_replace = false       -- plan over this mod's earlier pins for the city and replace them
+local m_wonders = {}          -- [BuildingType] = true: wonders to place too (then solved by SDP_Multi, one city)
+local m_heat = nil            -- the district whose good places the map shows
+local m_heatSpots = nil       -- SDP_Solver.Heat of m_heat (tests)
 local m_tier = SDP_Tiers.DEFAULT
 local m_launchDone = false    -- a background solve finished while the panel was closed
 local m_scan = nil            -- the selected city (district status, specialty slots)
@@ -111,6 +115,8 @@ SDP_UI = {
 -- Open / close
 -- ===========================================================================
 local Refresh -- defined below
+local UpdateReplaceLabel -- defined below
+local SetWonder, ShowHeat, PopulateHeat -- defined below
 local UpdateEstimate -- defined below
 
 -- The launch bar button's tooltip (progress of a background computation)
@@ -229,7 +235,8 @@ local function ShowResult()
     Controls.Summary:SetToolTipString("")
   else
     local summary
-    if result.Session ~= nil and result.Session.Land ~= nil then
+    local session = result.Session
+    if session ~= nil and session.Request ~= nil and session.Request.Land then
       summary = Locale.Lookup("LOC_SDP_RESULT_SUMMARY_LAND", Signed(result.Gain), Signed(result.Adjacency), Signed(result.LandDelta))
     else
       summary = Locale.Lookup("LOC_SDP_RESULT_SUMMARY", Signed(result.Gain))
@@ -237,7 +244,8 @@ local function ShowResult()
     Controls.Summary:SetText(summary)
     local stats = result.Stats
     Controls.Summary:SetToolTipString(Locale.Lookup("LOC_SDP_RESULT_STATS",
-      Locale.Lookup("LOC_SDP_TIER_" .. stats.Tier), stats.Method, stats.Calls, stats.Tries, stats.Nodes, stats.Continues))
+      Locale.Lookup("LOC_SDP_TIER_" .. stats.Tier), stats.Method or "multi", stats.Calls or 0, stats.Tries or 0,
+      stats.Nodes or 0, stats.Continues or 0))
     Controls.Quality:SetText(QualityText(result))
     -- Each planned district: where, its yields, and DMT's own breakdown on hover.
     for _, p in ipairs(result.Plan) do
@@ -265,6 +273,7 @@ local function ClearResult()
   -- Inputs changed: a computation for the old inputs is of no use any more.
   local job = SDP_Task.Current()
   if job ~= nil and job.Page == "SINGLE" then SDP_Task.Cancel() end
+  if m_heat ~= nil then ShowHeat(nil) end -- drawn for the old inputs
   if m_result ~= nil then
     m_result = nil
     ShowResult()
@@ -309,6 +318,8 @@ local function RefreshDistricts()
   m_districts = SDP_Rules.PlannableDistricts(playerID)
   m_scan = m_cityID and SDP_City.Scan(playerID, m_cityID) or nil
   m_status = m_scan and SDP_City.DistrictStatus(m_scan, m_districts) or {}
+  UpdateReplaceLabel()
+  PopulateHeat()
 
   -- Shown in name order; the solver always gets them in type order, so the
   -- plan never depends on the order of clicks.
@@ -384,6 +395,7 @@ SelectCity = function(cityID)
   if cityID ~= m_cityID then
     m_cityID = cityID
     ClearResult()
+    if m_heat ~= nil then ShowHeat(nil) end
   end
   PopulateCities()
   RefreshDistricts()
@@ -507,6 +519,119 @@ local function SetAllowFeatureRemoval(allow)
   end
 end
 
+-- This mod's earlier pins for the selected city (the ones "replace" removes).
+local function OwnPins()
+  if m_cityID == nil then return {} end
+  local playerID = Game.GetLocalPlayer()
+  return SDP_Pins.Own(playerID, { SDP_City.CityNumbers(playerID)[m_cityID] })
+end
+
+UpdateReplaceLabel = function()
+  Controls.ReplaceLabel:SetText(Locale.Lookup("LOC_SDP_REPLACE_OWN", #OwnPins()))
+end
+
+local function SetReplace(on)
+  Controls.ReplaceCheck:SetCheck(on)
+  if m_replace ~= on then
+    m_replace = on
+    ClearResult()
+  end
+end
+
+-- Wonders to place with the districts (design 18, item 5): selectable ones,
+-- in type order.
+local function SelectedWonders()
+  local list = {}
+  for _, w in ipairs(SDP_Wonders.List(Game.GetLocalPlayer())) do
+    if m_wonders[w.Type] and w.Status == nil then list[#list + 1] = w.Type end
+  end
+  return list
+end
+
+-- The wonder pulldown: each wonder not built or pinned yet; a click toggles it.
+local function PopulateWonders()
+  local pull = Controls.WonderPull
+  pull:ClearEntries()
+  local chosen = {}
+  for _, w in ipairs(SDP_Wonders.List(Game.GetLocalPlayer())) do
+    if w.Status == nil then
+      local entry = {}
+      pull:BuildEntry("InstanceOne", entry)
+      local name = Locale.Lookup(w.Name)
+      local wonderType = w.Type
+      local on = m_wonders[wonderType] == true
+      entry.Button:SetText(on and Locale.Lookup("LOC_SDP_WONDER_CHOSEN", name) or name)
+      entry.Button:RegisterCallback(Mouse.eLClick, function() SetWonder(wonderType, not m_wonders[wonderType]) end)
+      if on then chosen[#chosen + 1] = name end
+    end
+  end
+  pull:CalculateInternals()
+  pull:GetButton():SetText(#chosen == 0 and Locale.Lookup("LOC_SDP_WONDERS_NONE")
+    or table.concat(chosen, Locale.Lookup("LOC_SDP_LIST_SEPARATOR")))
+end
+
+SetWonder = function(wonderType, on)
+  if (m_wonders[wonderType] == true) ~= (on == true) then
+    m_wonders[wonderType] = on or nil
+    ClearResult()
+  end
+  PopulateWonders()
+  UpdateEstimate()
+end
+
+-- Where one district is good (design 18, item 6): its legal plots colored in
+-- four shades from the best gain down, each with its value. nil: off.
+ShowHeat = function(districtType)
+  m_heat = districtType
+  SDP_Preview.Clear()
+  local label = Locale.Lookup("LOC_SDP_HEAT_OFF")
+  if districtType ~= nil and m_cityID ~= nil then
+    local playerID = Game.GetLocalPlayer()
+    local weights = {}
+    for key, value in pairs(m_weights) do weights[key] = value end
+    local spots = SDP_Solver.Heat({ PlayerID = playerID, CityID = m_cityID, District = districtType, Weights = weights,
+      AllowFeatureRemoval = m_allowFeatureRemoval, IgnorePins = m_replace and OwnPins() or nil }) or {}
+    local best = spots[1] and spots[1].Gain or 0
+    local worst = spots[#spots] and spots[#spots].Gain or 0
+    local areas, icons = {}, {}
+    for shade = 1, 4 do areas[shade] = { Plots = {}, Color = shade } end
+    for _, spot in ipairs(spots) do
+      local shade = 1
+      if best > worst then shade = math.min(4, 1 + math.floor(3 * (best - spot.Gain) / (best - worst) + 1e-9)) end
+      local plots = areas[shade].Plots
+      plots[#plots + 1] = spot.Index
+      icons[#icons + 1] = { X = spot.X, Y = spot.Y, Icon = "ICON_" .. districtType, Text = Signed(spot.Gain) }
+    end
+    SDP_Preview.Show(playerID, areas, icons)
+    m_heatSpots = spots
+    label = TypeName(districtType)
+  else
+    m_heatSpots = nil
+  end
+  Controls.HeatPull:GetButton():SetText(label)
+end
+
+-- The heat map pulldown: off, or a district the city can still plan.
+PopulateHeat = function()
+  local pull = Controls.HeatPull
+  pull:ClearEntries()
+  local entry = {}
+  pull:BuildEntry("InstanceOne", entry)
+  entry.Button:SetText(Locale.Lookup("LOC_SDP_HEAT_OFF"))
+  entry.Button:RegisterCallback(Mouse.eLClick, function() ShowHeat(nil) end)
+  for _, d in ipairs(m_districts) do
+    if m_status[d.Type] == nil then
+      local districtType = d.Type
+      local e = {}
+      pull:BuildEntry("InstanceOne", e)
+      e.Button:SetText(Locale.Lookup(d.Name))
+      e.Button:RegisterCallback(Mouse.eLClick, function() ShowHeat(districtType) end)
+    end
+  end
+  pull:CalculateInternals()
+  pull:GetButton():SetText(m_heat and TypeName(m_heat) or Locale.Lookup("LOC_SDP_HEAT_OFF"))
+end
+
 local function SetLand(on)
   Controls.LandCheck:SetCheck(on)
   if m_land ~= on then
@@ -554,14 +679,19 @@ end
 
 -- "About X s" for the selected tier and districts (design 7.5).
 UpdateEstimate = function()
-  local k = #SelectedDistricts()
-  if m_scan == nil or k == 0 then
+  local k, wonders = #SelectedDistricts(), #SelectedWonders()
+  if m_scan == nil or k + wonders == 0 then
     Controls.Estimate:SetText("")
     return
   end
   local params = SDP_Tiers.Params(SDP_Tiers.Single, m_tier)
   local units = SDP_Solver.EstimateUnits(#m_scan.Candidates, k, params)
-  local seconds = SDP_Task.EstimateSeconds(units, not params.Sliced)
+  local sliced = params.Sliced
+  if wonders > 0 then
+    units = SDP_Multi.EstimateUnits(1, k, wonders, SDP_Tiers.Params(SDP_Tiers.Multi, m_tier))
+    sliced = true
+  end
+  local seconds = SDP_Task.EstimateSeconds(units, not sliced)
   if seconds < 1 then
     Controls.Estimate:SetText(Locale.Lookup("LOC_SDP_ESTIMATE_UNDER_ONE"))
   else
@@ -576,6 +706,11 @@ Refresh = function()
   PopulateTiers()
   Controls.FeatureCheck:SetCheck(m_allowFeatureRemoval)
   Controls.LandCheck:SetCheck(m_land)
+  Controls.ReplaceCheck:SetCheck(m_replace)
+  UpdateReplaceLabel()
+  PopulateWonders()
+  m_heat = nil
+  PopulateHeat()
   UpdateEstimate()
   ShowResult()
 end
@@ -668,12 +803,24 @@ SDP_UI.UpdateAllButtons = function() UpdateAllButtons() end
 
 local function Request()
   local districts = SelectedDistricts()
-  if m_cityID == nil or #districts == 0 then return nil end
+  local wonders = SelectedWonders()
+  if m_cityID == nil or (#districts == 0 and #wonders == 0) then return nil end
   local weights = {}
   for key, value in pairs(m_weights) do weights[key] = value end
   return {
     PlayerID = Game.GetLocalPlayer(), CityID = m_cityID, Districts = districts, Weights = weights,
     AllowFeatureRemoval = m_allowFeatureRemoval, Land = m_land, Tier = m_tier,
+    IgnorePins = m_replace and OwnPins() or nil, Wonders = wonders,
+  }
+end
+
+-- With wonders the city is solved as SDP_Multi with this one city (it places
+-- wonders next to districts, design 4.4); always over several frames.
+local function WonderRequest(request)
+  return {
+    PlayerID = request.PlayerID, Tier = request.Tier, Districts = request.Districts, Wonders = request.Wonders,
+    Only = { [request.CityID] = true }, Weights = request.Weights, Land = request.Land,
+    AllowFeatureRemoval = request.AllowFeatureRemoval, IgnorePins = request.IgnorePins,
   }
 end
 
@@ -682,9 +829,17 @@ end
 local function Solve()
   if SDP_Task.IsRunning() then return nil end
   local request = Request()
+  if m_heat ~= nil then ShowHeat(nil) end
+  if request ~= nil and #request.Wonders > 0 then
+    local multi = WonderRequest(request)
+    local estimate = SDP_Multi.EstimateUnits(1, #request.Districts, #request.Wonders, SDP_Tiers.Params(SDP_Tiers.Multi, m_tier))
+    m_result = nil
+    StartTask(function() return SDP_Multi.SolveNow(multi) end, estimate, function(result) m_result = result end)
+    return nil
+  end
   local params = SDP_Tiers.Params(SDP_Tiers.Single, m_tier)
   if request ~= nil and params.Sliced then
-    local scan = SDP_City.Scan(request.PlayerID, request.CityID, { allowFeatureRemoval = request.AllowFeatureRemoval })
+    local scan = SDP_City.Scan(request.PlayerID, request.CityID, SDP_City.ScanOptions(request))
     if scan ~= nil then
       m_result = nil
       local estimate = SDP_Solver.EstimateUnits(#scan.Candidates, #request.Districts, params)
@@ -729,16 +884,26 @@ local function PlacePins()
   local number = tostring(SDP_City.CityNumbers(playerID)[m_cityID] or "")
   local entries = {}
   for i, p in ipairs(m_result.Plan) do entries[i] = { Type = p.Type, X = p.X, Y = p.Y, Name = number } end
-  local placed = SDP_Pins.Place(playerID, entries)
+  -- The plan was made as if this mod's earlier pins were gone: remove them.
+  local session = m_result.Session
+  local placed = SDP_Pins.Place(playerID, entries, { Replace = session and session.Request.IgnorePins })
   m_result.Placed = true
+  UpdateReplaceLabel()
   UpdateButtons()
   return placed
 end
 
 local function UndoPins()
+  local last = SDP_Pins.LastBatch()
   local removed = SDP_Pins.UndoLast()
-  -- The plots are free again: the shown plan can be placed once more.
-  if m_result ~= nil and m_result.Ok then m_result.Placed = false end
+  if last ~= nil and last.Replaced and #last.Replaced > 0 then
+    -- The replaced pins are back (with new IDs): plan again.
+    ClearResult()
+  elseif m_result ~= nil and m_result.Ok then
+    -- The plots are free again: the shown plan can be placed once more.
+    m_result.Placed = false
+  end
+  UpdateReplaceLabel()
   UpdateButtons()
   return removed
 end
@@ -863,7 +1028,15 @@ local function OnInit(isReload)
   if isReload then InjectLaunchButton() end
 end
 
+-- The "open the planner" key (Config/SDP_Input.xml, default Shift+L; the
+-- player can change it in the game's options).
+local m_openActionId = (Input ~= nil and Input.GetActionId ~= nil) and Input.GetActionId("SDP_OpenPlanner") or nil
+local function OnInputActionTriggered(actionId)
+  if m_openActionId ~= nil and actionId == m_openActionId then Toggle() end
+end
+
 local function OnShutdown()
+  Events.InputActionTriggered.Remove(OnInputActionTriggered)
   if SDP_Task.IsRunning() then SDP_Task.Cancel() end
   ContextPtr:ClearUpdate()
   SDP_Preview.Clear()
@@ -886,6 +1059,10 @@ SDP_Panel = {
   SetSelected = SetSelected,
   SetWeight = SetWeight,
   SetAllowFeatureRemoval = SetAllowFeatureRemoval,
+  SetReplace = SetReplace,
+  SetWonder = SetWonder,
+  ShowHeat = function(districtType) ShowHeat(districtType) end,
+  Heat = function() return m_heatSpots end,
   SetLand = SetLand,
   SetTier = SetTier,
   Solve = Solve,
@@ -907,7 +1084,8 @@ SDP_Panel = {
   State = function()
     return {
       CityID = m_cityID, Result = m_result, DistrictRows = m_districtRows, ResultRows = m_resultRows,
-      Weights = m_weights, AllowFeatureRemoval = m_allowFeatureRemoval, Land = m_land, Tier = m_tier,
+      Weights = m_weights, AllowFeatureRemoval = m_allowFeatureRemoval, Land = m_land, Tier = m_tier, Replace = m_replace,
+      Wonders = SelectedWonders(), HeatDistrict = m_heat,
       Running = SDP_Task.IsRunning(), QualityText = Controls.Quality:GetText(), EstimateText = Controls.Estimate:GetText(),
       PlaceDisabled = Controls.PlaceButton:IsDisabled(), UndoDisabled = Controls.UndoButton:IsDisabled(),
       ContinueDisabled = Controls.ContinueButton:IsDisabled(), LaunchMark = m_launchDone,
@@ -918,6 +1096,9 @@ SDP_Panel = {
 Controls.CloseButton:RegisterCallback(Mouse.eLClick, Close)
 Controls.CloseButton:RegisterCallback(Mouse.eMouseEnter, function()
   UI.PlaySound("Main_Menu_Mouse_Over")
+end)
+Controls.ReplaceCheck:RegisterCheckHandler(function()
+  SetReplace(Controls.ReplaceCheck:IsChecked())
 end)
 Controls.FeatureCheck:RegisterCheckHandler(function()
   SetAllowFeatureRemoval(Controls.FeatureCheck:IsChecked())
@@ -934,6 +1115,7 @@ ContextPtr:SetInputHandler(OnInput, true)
 ContextPtr:SetInitHandler(OnInit)
 ContextPtr:SetShutdown(OnShutdown)
 Events.LoadScreenClose.Add(OnLoadScreenClose)
+Events.InputActionTriggered.Add(OnInputActionTriggered)
 Events.InterfaceModeChanged.Add(OnInterfaceModeChanged)
 LuaEvents.SDP_OpenPanel.Add(Open)
 LuaEvents.SDP_ClosePanel.Add(Close)

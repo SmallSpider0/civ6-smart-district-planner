@@ -58,6 +58,97 @@ test("single-city tab: solve now, solve as a task, continue, place and undo", fu
   T.eq(#w:Pins(), pins, "pins gone")
 end)
 
+test("single-city tab: the record survives a reload; replace plans over this mod's pins and undo brings them back", function()
+  SDP_Panel.SelectTab("SINGLE")
+  SDP_Panel.SelectCity(1)
+  for _, d in ipairs(SINGLE) do SDP_Panel.SetSelected(d, false) end
+  SDP_Panel.SetSelected("DISTRICT_CAMPUS", true)
+  SDP_Panel.SetTier("STANDARD")
+  local first = SDP_Panel.Solve()
+  local campus = first.Plan[1]
+  local pins = #w:Pins()
+  T.eq(SDP_Panel.PlacePins(), 1, "one pin")
+  -- A saved game: the record is in the player's configuration.
+  SDP_Pins.Reset()
+  T.ok(SDP_Pins.CanUndo(), "undo after a reload")
+  T.eq(#SDP_Pins.Own(0, { 1 }), 1, "the campus pin is ours")
+  T.eq(#SDP_Pins.Own(0, { 2 }), 0, "nothing for another city")
+
+  -- Without replace the pin is a fixed plot: the campus goes elsewhere.
+  local locked = SDP_Panel.Solve()
+  T.ok(locked.Plan[1].Index ~= campus.Index, "the pinned plot is taken")
+  -- With replace, the plan is made as if the pin were gone: the same plot again.
+  SDP_Panel.SetReplace(true)
+  local replanned = SDP_Panel.Solve()
+  T.eq(replanned.Plan[1].Index, campus.Index, "planned over this mod's own pin")
+  T.eq(SDP_Panel.PlacePins(), 1, "placed")
+  T.eq(#w:Pins(), pins + 1, "the old pin was replaced, not doubled")
+  -- Undo removes the new pin and puts the old one back.
+  T.eq(SDP_Panel.UndoPins(), 1, "undo")
+  T.eq(#w:Pins(), pins + 1, "the replaced pin is back")
+  T.eq(SDP_Panel.State().Result, nil, "plan again after the replaced pins came back")
+  T.eq(#SDP_Pins.Own(0, { 1 }), 1, "and it is ours again")
+
+  -- A pin the player edits is theirs: never replaced.
+  local own = SDP_Pins.Own(0, { 1 })[1]
+  PlayerConfigurations[0]:GetMapPinID(own.ID):SetName("mine")
+  T.eq(#SDP_Pins.Own(0, { 1 }), 0, "an edited pin is not ours")
+  local after = SDP_Panel.Solve()
+  T.ok(after.Plan[1].Index ~= campus.Index, "the player's pin stays a fixed plot")
+  SDP_Panel.SetReplace(false)
+  while SDP_Pins.CanUndo() do SDP_Pins.UndoLast() end
+  PlayerConfigurations[0]:DeleteMapPin(own.ID)
+  T.eq(#w:Pins(), pins, "clean")
+end)
+
+test("single-city tab: wonders go with the districts; the good-places map; the open key", function()
+  SDP_Panel.SelectTab("SINGLE")
+  SDP_Panel.SelectCity(1)
+  for _, d in ipairs(SINGLE) do SDP_Panel.SetSelected(d, false) end
+  SDP_Panel.SetSelected("DISTRICT_CAMPUS", true)
+  SDP_Panel.SetTier("FAST")
+  SDP_Panel.SetWonder("BUILDING_HANGING_GARDENS", true)
+  T.same(SDP_Panel.State().Wonders, { "BUILDING_HANGING_GARDENS" }, "wonder chosen")
+  T.eq(SDP_Panel.Solve(), nil, "with a wonder the city is solved as a task")
+  local result = SDP_Panel.RunTask(500)
+  T.ok(result and result.Ok, "result: " .. tostring(result and result.Error))
+  local types = {}
+  for _, p in ipairs(result.Plan) do
+    types[p.Type] = true
+    T.eq(p.City, "C1", p.Type .. " in the selected city")
+  end
+  T.ok(types.DISTRICT_CAMPUS and types.BUILDING_HANGING_GARDENS, "the campus and the wonder are planned")
+  local pins = #w:Pins()
+  T.eq(SDP_Panel.PlacePins(), #result.Plan, "pins")
+  local icons = {}
+  for i = pins + 1, #w:Pins() do icons[w:Pins()[i]:GetIconName()] = true end
+  T.ok(icons.ICON_BUILDING_HANGING_GARDENS, "the wonder's pin has its icon")
+  T.eq(SDP_Panel.UndoPins(), #result.Plan, "undo")
+  SDP_Panel.SetWonder("BUILDING_HANGING_GARDENS", false)
+  SDP_Panel.SetTier("STANDARD")
+
+  -- Good places for the campus: legal plots best first, drawn on the map.
+  local before = UI_Mock.Lenses.hexes.Hex_Coloring_Placement or 0
+  SDP_Panel.ShowHeat("DISTRICT_CAMPUS")
+  local spots = SDP_Panel.Heat()
+  T.ok(spots ~= nil and #spots > 3, "spots")
+  for i = 2, #spots do T.ok(spots[i - 1].Gain >= spots[i].Gain, "best first") end
+  T.ok((UI_Mock.Lenses.hexes.Hex_Coloring_Placement or 0) > before, "colored on the map")
+  T.eq(SDP_Panel.State().HeatDistrict, "DISTRICT_CAMPUS", "shown")
+  local solo = SDP_Panel.Solve()
+  T.ok(spots[1].Gain >= solo.Adjacency - 1e-9, "no plot beats the best spot's adjacency")
+  T.eq(SDP_Panel.State().HeatDistrict, nil, "solving takes the map down")
+
+  -- The open key toggles the panel.
+  local open = SDP_Panel.IsOpen()
+  Events.InputActionTriggered("action:SDP_OpenPlanner")
+  T.eq(SDP_Panel.IsOpen(), not open, "toggled")
+  Events.InputActionTriggered("action:SOMETHING_ELSE")
+  T.eq(SDP_Panel.IsOpen(), not open, "other keys ignored")
+  Events.InputActionTriggered("action:SDP_OpenPlanner")
+  T.eq(SDP_Panel.IsOpen(), open, "back")
+end)
+
 test("city sites tab: solve, select, place the site tacks", function()
   SDP_Panel.SelectTab("SITES")
   T.eq(SDP_Panel.Tab(), "SITES", "tab")
@@ -129,6 +220,61 @@ test("several cities tab: the new site tacks take part; solve; solutions; place"
     if c.Kind == "SITE" and c.Name ~= "" then T.eq(tostring(c.Number), c.Name, "a numbered site keeps its number") end
   end
   T.eq(multi.Undo(), placed, "undo")
+end)
+
+test("several cities tab: a city's own list, role templates, an empire-limited district kept in one city", function()
+  SDP_Panel.SelectTab("MULTI")
+  local multi = SDP_Panel.Multi
+  multi.Refresh()
+  multi.SetWonder("BUILDING_HANGING_GARDENS", false)
+  multi.SetPlanFor("ALL")
+  multi.ApplyPlan({ "DISTRICT_CAMPUS", "DISTRICT_HOLY_SITE" })
+  -- Templates come from the adjacency rules.
+  local byYield = {}
+  for _, t in ipairs(SDP_Rules.Templates(0)) do byYield[t.Yield] = t.Districts end
+  T.ok(byYield.YIELD_SCIENCE and byYield.YIELD_SCIENCE[1] == "DISTRICT_CAMPUS", "science template")
+  T.ok(byYield.YIELD_FAITH and byYield.YIELD_FAITH[1] == "DISTRICT_HOLY_SITE", "faith template")
+  T.eq(#multi.State().View.Templates, #SDP_Rules.Templates(0) + 1, "templates and clear on the shared list")
+
+  local capital
+  for _, part in ipairs(SDP_Multi.Participants(0, {})) do
+    if part.Kind == "CITY" then capital = part.Key end
+  end
+  T.ok(capital ~= nil, "the capital takes part")
+  multi.SetPlanFor(capital)
+  T.eq(#multi.State().View.Templates, #SDP_Rules.Templates(0) + 2, "a city's list can go back to the shared one")
+  -- The first change starts the city's own list from the shared one.
+  multi.SetSelected("DISTRICT_GOVERNMENT", true)
+  T.same(multi.State().View.Plans[capital], { "DISTRICT_CAMPUS", "DISTRICT_GOVERNMENT", "DISTRICT_HOLY_SITE" }, "own list")
+  local status
+  for _, d in ipairs(multi.State().View.Districts) do
+    if d.Type == "DISTRICT_GOVERNMENT" then status = d.Status end
+  end
+  T.ok(status and status:find("LIMITED_ONE", 1, true) or (status and #status > 0), "limited district shows where it goes: " .. tostring(status))
+  local request = multi.Request()
+  T.same(request.Districts, { "DISTRICT_CAMPUS", "DISTRICT_HOLY_SITE" }, "shared list")
+  T.same(request.Plans[capital], { "DISTRICT_CAMPUS", "DISTRICT_GOVERNMENT", "DISTRICT_HOLY_SITE" }, "the capital's list is sent")
+
+  multi.SetTier("FAST")
+  T.ok(multi.Solve(), "started")
+  SDP_Panel.RunTask(500)
+  local result = multi.State().Result
+  T.ok(result and result.Ok, "multi result: " .. tostring(result and result.Error))
+  local govs = 0
+  for _, p in ipairs(result.Plan) do
+    if p.Type == "DISTRICT_GOVERNMENT" then
+      govs = govs + 1
+      T.eq(p.City, capital, "the government plaza stays in the city whose list has it")
+    end
+  end
+  T.eq(govs, 1, "one government plaza")
+  -- A template replaces the edited list; "shared" drops the city's own list.
+  multi.ApplyPlan(byYield.YIELD_SCIENCE)
+  T.same(multi.State().View.Plans[capital], byYield.YIELD_SCIENCE, "template applied to the city")
+  T.eq(multi.State().Result, nil, "a list change clears the result")
+  multi.ApplyPlan(nil)
+  T.eq(multi.State().View.Plans[capital], nil, "back to the shared list")
+  multi.SetPlanFor("ALL")
 end)
 
 test("closing the panel clears the preview; a background result marks the launch button", function()

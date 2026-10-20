@@ -3,6 +3,11 @@
 -- into its context: uses its Controls and the SDP_UI helpers.
 --   Cities    new cities (city-center pins) and the existing cities near them,
 --             which can be switched; the plan and the wonders to place
+--   Plans     one district list for every city, or a city's own list (the
+--             "plan for" pulldown; role templates from SDP_Rules.Templates).
+--             A district with an empire limit (government plaza) goes to one
+--             of the cities that plan it: in the shared list, the solver
+--             picks the city; in one city's own list only, it stays there.
 --   Solve     always over several frames (SDP_Task); the result lists up to
 --             three distinct solutions; the selected one is previewed on the
 --             map (SDP_Preview) and can be placed as map tacks.
@@ -18,7 +23,9 @@ local m_weightIM = InstanceManager:new("WeightColumn", "Root", Controls.MultiWei
 local m_solutionIM = InstanceManager:new("SolutionRow", "Root", Controls.MultiSolutionStack)
 local m_resultIM = InstanceManager:new("ResultRow", "Root", Controls.MultiResultStack)
 
-local m_selected = {}  -- [DistrictType] = true: the plan
+local m_selected = {}  -- [DistrictType] = true: the plan of every city without its own
+local m_plans = {}     -- [participant Key] = { [DistrictType] = true }: a city's own plan
+local m_planFor = "ALL" -- the list the district checks edit: "ALL" or a participant Key
 local m_wonders = {}   -- [BuildingType] = true
 local m_existing = {}  -- [cityID] = true | false: switches over the default
 local m_weights = {}
@@ -26,9 +33,10 @@ for _, column in ipairs(SDP_UI.WEIGHT_COLUMNS) do m_weights[column.Key] = 1 end
 local m_weightViews = {}
 local m_tier = SDP_Tiers.DEFAULT
 local m_land = true
+local m_replace = false -- plan over this mod's earlier pins for the cities and replace them
 local m_result = nil
 local m_solution = 1
-local m_view = { Cities = {}, Districts = {}, Wonders = {}, Solutions = {}, Results = {} } -- for tests
+local m_view = { Cities = {}, Districts = {}, Wonders = {}, Solutions = {}, Results = {}, Plans = {}, Templates = {} } -- for tests
 
 -- How a participant is called: its number (the name its pins get, see
 -- SDP_City.CityNumbers) and the city's name, or "Site n" for a planned city.
@@ -50,12 +58,21 @@ end
 -- ===========================================================================
 -- Inputs
 -- ===========================================================================
-local function PlannedTypes()
+-- A district set as a list in PlannableDistricts order.
+local function TypesOf(set)
   local list = {}
   for _, d in ipairs(SDP_Rules.PlannableDistricts(Game.GetLocalPlayer())) do
-    if m_selected[d.Type] then list[#list + 1] = d.Type end
+    if set[d.Type] then list[#list + 1] = d.Type end
   end
   return list
+end
+
+local function PlannedTypes() return TypesOf(m_selected) end
+
+-- The set the district checks show and edit.
+local function EditedSet()
+  if m_planFor ~= "ALL" and m_plans[m_planFor] ~= nil then return m_plans[m_planFor] end
+  return m_selected
 end
 
 local function WonderTypes()
@@ -67,15 +84,60 @@ local function WonderTypes()
 end
 
 function P.Request()
+  local playerID = Game.GetLocalPlayer()
   local districts = PlannedTypes()
-  if #districts == 0 and #WonderTypes() == 0 then return nil end
   local weights, existing = {}, {}
   for key, value in pairs(m_weights) do weights[key] = value end
   for id, on in pairs(m_existing) do existing[id] = on end
+  -- Cities with their own list; lists of cities no longer taking part are kept
+  -- for later but not sent.
+  local plans, anything = nil, #districts > 0
+  for _, part in ipairs(SDP_Multi.Participants(playerID, { Existing = existing })) do
+    if m_plans[part.Key] ~= nil then
+      plans = plans or {}
+      plans[part.Key] = TypesOf(m_plans[part.Key])
+      if #plans[part.Key] > 0 then anything = true end
+    end
+  end
+  local wonders = WonderTypes()
+  if not anything and #wonders == 0 then return nil end
   return {
-    PlayerID = Game.GetLocalPlayer(), Tier = m_tier, Districts = districts, Wonders = WonderTypes(),
+    PlayerID = playerID, Tier = m_tier, Districts = districts, Plans = plans, Wonders = wonders,
     Existing = existing, Weights = weights, Land = m_land,
+    IgnorePins = m_replace and P.OwnPins() or nil,
   }
+end
+
+-- This mod's earlier pins for the taking-part cities (named with their numbers).
+function P.OwnPins()
+  local playerID = Game.GetLocalPlayer()
+  local numbers = {}
+  for _, part in ipairs(SDP_Multi.Participants(playerID, { Existing = m_existing })) do
+    if part.Number ~= nil then numbers[#numbers + 1] = part.Number end
+  end
+  return SDP_Pins.Own(playerID, numbers)
+end
+
+local function UpdateReplaceLabel()
+  Controls.MultiReplaceLabel:SetText(Locale.Lookup("LOC_SDP_REPLACE_OWN", #P.OwnPins()))
+end
+
+function P.SetReplace(on)
+  Controls.MultiReplaceCheck:SetCheck(on)
+  if m_replace ~= on then
+    m_replace = on
+    ClearResult()
+  end
+end
+
+-- Districts per city on average, for the estimate.
+local function PlanSize(request, participants)
+  if #participants == 0 then return #request.Districts end
+  local total = 0
+  for _, part in ipairs(participants) do
+    total = total + #((request.Plans and request.Plans[part.Key]) or request.Districts)
+  end
+  return math.ceil(total / #participants)
 end
 
 local function UpdateEstimate()
@@ -85,16 +147,46 @@ local function UpdateEstimate()
     return
   end
   local participants = SDP_Multi.Participants(request.PlayerID, { Existing = request.Existing })
-  local units = SDP_Multi.EstimateUnits(#participants, #request.Districts, #request.Wonders,
+  local units = SDP_Multi.EstimateUnits(#participants, PlanSize(request, participants), #request.Wonders,
     SDP_Tiers.Params(SDP_Tiers.Multi, m_tier))
   Controls.MultiEstimate:SetText(SDP_UI.EstimateText(units))
 end
 
+-- Check or uncheck a district in the edited list. The first change to a
+-- city's list starts it as a copy of the shared one.
 function P.SetSelected(districtType, on)
-  if (m_selected[districtType] == true) ~= (on == true) then
-    m_selected[districtType] = on or nil
+  if m_planFor ~= "ALL" and m_plans[m_planFor] == nil then
+    local copy = {}
+    for t in pairs(m_selected) do copy[t] = true end
+    m_plans[m_planFor] = copy
+  end
+  local set = EditedSet()
+  if (set[districtType] == true) ~= (on == true) then
+    set[districtType] = on or nil
     ClearResult()
   end
+  P.RefreshLists()
+end
+
+-- Which list the district checks edit: "ALL" (every city without its own)
+-- or a participant Key.
+function P.SetPlanFor(key)
+  m_planFor = key or "ALL"
+  P.RefreshLists()
+end
+
+-- Replace the edited list with `types`; nil on a city: back to the shared list.
+function P.ApplyPlan(types)
+  local set = {}
+  for _, t in ipairs(types or {}) do set[t] = true end
+  if m_planFor == "ALL" then
+    m_selected = set
+  elseif types == nil then
+    m_plans[m_planFor] = nil
+  else
+    m_plans[m_planFor] = set
+  end
+  ClearResult()
   P.RefreshLists()
 end
 
@@ -153,12 +245,21 @@ function P.RefreshLists()
   m_cityIM:ResetInstances()
   m_view.Cities = {}
   local participants, existing = SDP_Multi.Participants(playerID, { Existing = m_existing })
+  local byKey, keyOfCity = {}, {}
+  for _, part in ipairs(participants) do
+    byKey[part.Key] = part
+    if part.CityID ~= nil then keyOfCity[part.CityID] = part.Key end
+  end
+  if m_planFor ~= "ALL" and byKey[m_planFor] == nil then m_planFor = "ALL" end
+  local function OwnPlan(key)
+    return (key and m_plans[key] ~= nil) and (" " .. Locale.Lookup("LOC_SDP_MULTI_OWN_PLAN")) or ""
+  end
   for _, part in ipairs(participants) do
     if part.Kind == "SITE" then
       local inst = m_cityIM:GetInstance()
       inst.Icon:SetIcon("ICON_DISTRICT_CITY_CENTER", 26)
       inst.Name:SetText(P.CityLabel(part))
-      inst.Detail:SetText(Locale.Lookup("LOC_SDP_MULTI_SITE_PIN", SDP_UI.Where(part.X, part.Y)))
+      inst.Detail:SetText(Locale.Lookup("LOC_SDP_MULTI_SITE_PIN", SDP_UI.Where(part.X, part.Y)) .. OwnPlan(part.Key))
       inst.Check:SetCheck(true)
       inst.Check:SetDisabled(true)
       m_view.Cities[#m_view.Cities + 1] = { Key = part.Key, Kind = "SITE", Included = true }
@@ -177,7 +278,7 @@ function P.RefreshLists()
     end
     if e.Reason == "CAP" then detail = detail .. " " .. Locale.Lookup("LOC_SDP_MULTI_CAP", SDP_Multi.MAX_CITIES) end
     if not e.On then detail = detail .. " " .. Locale.Lookup("LOC_SDP_MULTI_NEIGHBOUR_ONLY") end
-    inst.Detail:SetText(detail)
+    inst.Detail:SetText(detail .. OwnPlan(keyOfCity[cityID]))
     inst.Check:SetDisabled(false)
     inst.Check:SetCheck(e.On == true)
     inst.Check:RegisterCheckHandler(function() P.SetExisting(cityID, inst.Check:IsChecked()) end)
@@ -186,7 +287,9 @@ function P.RefreshLists()
   Controls.MultiCityStack:CalculateSize()
   Controls.MultiCityScroll:CalculateSize()
 
-  -- Plan.
+  -- Plan: whose list, templates, the districts.
+  P.PopulatePlanPulls(participants)
+  local edited = EditedSet()
   m_districtIM:ResetInstances()
   m_view.Districts = {}
   for _, d in ipairs(SDP_Rules.PlannableDistricts(playerID)) do
@@ -194,12 +297,27 @@ function P.RefreshLists()
     local districtType = d.Type
     inst.Icon:SetIcon(d.Icon, 26)
     inst.Name:SetText(Locale.Lookup(d.Name))
-    inst.Status:SetText((d.MaxPerPlayer and d.MaxPerPlayer > 0) and Locale.Lookup("LOC_SDP_MULTI_EMPIRE_LIMIT", d.MaxPerPlayer) or "")
+    local status = ""
+    if d.MaxPerPlayer and d.MaxPerPlayer > 0 then
+      -- Where an empire-limited district can go: the cities whose list has it.
+      local planners = {}
+      for _, part in ipairs(participants) do
+        local set = m_plans[part.Key] or m_selected
+        if set[districtType] then planners[#planners + 1] = part end
+      end
+      status = Locale.Lookup("LOC_SDP_MULTI_EMPIRE_LIMIT", d.MaxPerPlayer)
+      if #planners == 1 then
+        status = status .. " " .. Locale.Lookup("LOC_SDP_MULTI_LIMITED_ONE", P.CityLabel(planners[1]))
+      elseif #planners > 1 then
+        status = status .. " " .. Locale.Lookup("LOC_SDP_MULTI_LIMITED_AUTO", #planners)
+      end
+    end
+    inst.Status:SetText(status)
     inst.Check:SetDisabled(false)
-    inst.Check:SetCheck(m_selected[districtType] == true)
+    inst.Check:SetCheck(edited[districtType] == true)
     inst.Root:SetAlpha(1)
     inst.Check:RegisterCheckHandler(function() P.SetSelected(districtType, inst.Check:IsChecked()) end)
-    m_view.Districts[#m_view.Districts + 1] = { Type = districtType, Check = inst.Check }
+    m_view.Districts[#m_view.Districts + 1] = { Type = districtType, Check = inst.Check, Status = status }
   end
   Controls.MultiDistrictStack:CalculateSize()
   Controls.MultiDistrictScroll:CalculateSize()
@@ -221,7 +339,57 @@ function P.RefreshLists()
   end
   Controls.WonderStack:CalculateSize()
   Controls.WonderScroll:CalculateSize()
+  UpdateReplaceLabel()
+  m_view.PlanFor = m_planFor
+  m_view.Plans = {}
+  for key, set in pairs(m_plans) do m_view.Plans[key] = TypesOf(set) end
   UpdateEstimate()
+end
+
+-- The "plan for" pulldown (shared list, or one city's own list) and the
+-- template pulldown (role templates, clear, back to the shared list).
+function P.PopulatePlanPulls(participants)
+  local playerID = Game.GetLocalPlayer()
+  local pull = Controls.MultiPlanPull
+  pull:ClearEntries()
+  local current = Locale.Lookup("LOC_SDP_MULTI_PLAN_ALL")
+  local function AddTarget(label, key)
+    local entry = {}
+    pull:BuildEntry("InstanceOne", entry)
+    entry.Button:SetText(label)
+    entry.Button:RegisterCallback(Mouse.eLClick, function() P.SetPlanFor(key) end)
+    if key == m_planFor then current = label end
+  end
+  AddTarget(current, "ALL")
+  for _, part in ipairs(participants) do
+    local label = P.CityLabel(part)
+    if m_plans[part.Key] ~= nil then label = label .. " " .. Locale.Lookup("LOC_SDP_MULTI_OWN_PLAN") end
+    AddTarget(label, part.Key)
+  end
+  pull:CalculateInternals()
+  pull:GetButton():SetText(current)
+
+  local templates = Controls.MultiTemplatePull
+  templates:ClearEntries()
+  m_view.Templates = {}
+  local function AddTemplate(label, toolTip, types)
+    local entry = {}
+    templates:BuildEntry("InstanceOne", entry)
+    entry.Button:SetText(label)
+    entry.Button:SetToolTipString(toolTip)
+    entry.Button:RegisterCallback(Mouse.eLClick, function() P.ApplyPlan(types) end)
+    m_view.Templates[#m_view.Templates + 1] = { Label = label, Types = types }
+  end
+  for _, t in ipairs(SDP_Rules.Templates(playerID)) do
+    local names = {}
+    for _, districtType in ipairs(t.Districts) do names[#names + 1] = SDP_UI.TypeName(districtType) end
+    AddTemplate(Locale.Lookup("LOC_SDP_TEMPLATE_YIELD", Locale.Lookup(GameInfo.Yields[t.Yield].Name)),
+      table.concat(names, Locale.Lookup("LOC_SDP_LIST_SEPARATOR")), t.Districts)
+  end
+  AddTemplate(Locale.Lookup("LOC_SDP_TEMPLATE_CLEAR"), "", {})
+  if m_planFor ~= "ALL" then AddTemplate(Locale.Lookup("LOC_SDP_TEMPLATE_SHARED"), "", nil) end
+  templates:CalculateInternals()
+  templates:GetButton():SetText(Locale.Lookup("LOC_SDP_TEMPLATE"))
 end
 
 function P.Refresh()
@@ -230,6 +398,7 @@ function P.Refresh()
     function(column) return column.Land and not m_land end, P.SetWeight)
   SDP_UI.PopulateTierPull(Controls.MultiTierPull, m_tier, P.SetTier)
   Controls.MultiLandCheck:SetCheck(m_land)
+  Controls.MultiReplaceCheck:SetCheck(m_replace)
   P.Render()
 end
 
@@ -366,7 +535,7 @@ function P.Solve()
   m_result, m_solution = nil, 1
   SDP_Preview.Clear()
   local participants = SDP_Multi.Participants(request.PlayerID, { Existing = request.Existing })
-  local estimate = SDP_Multi.EstimateUnits(#participants, #request.Districts, #request.Wonders, params)
+  local estimate = SDP_Multi.EstimateUnits(#participants, PlanSize(request, participants), #request.Wonders, params)
   return SDP_UI.StartTask(function() return SDP_Multi.SolveNow(request) end, estimate,
     function(result) m_result, m_solution = result, 1 end, P)
 end
@@ -374,7 +543,7 @@ end
 function P.Continue()
   if SDP_Task.IsRunning() or m_result == nil or not m_result.Ok or not m_result.Quality.CanContinue then return false end
   local session = m_result.Session
-  local estimate = SDP_Multi.EstimateUnits(#session.Participants, #(session.Request.Districts or {}),
+  local estimate = SDP_Multi.EstimateUnits(#session.Participants, PlanSize(session.Request, session.Participants),
     #(session.Request.Wonders or {}), session.Params)
   return SDP_UI.StartTask(function()
     session:Continue()
@@ -391,16 +560,25 @@ function P.Place()
     local city = byKey[p.City]
     entries[#entries + 1] = { Type = p.Type, X = p.X, Y = p.Y, Name = city and tostring(city.Number or "") or "" }
   end
-  local placed = SDP_Pins.Place(Game.GetLocalPlayer(), entries)
+  -- The plan was made as if this mod's earlier pins were gone: remove them.
+  local placed = SDP_Pins.Place(Game.GetLocalPlayer(), entries,
+    { Replace = m_result.Session and m_result.Session.Request.IgnorePins })
   m_result.Placed = true
   SDP_Preview.Clear()
+  UpdateReplaceLabel()
   SDP_UI.UpdateAllButtons()
   return placed
 end
 
 function P.Undo()
+  local last = SDP_Pins.LastBatch()
   local removed = SDP_Pins.UndoLast()
-  if m_result ~= nil and m_result.Ok then m_result.Placed = false end
+  if last ~= nil and last.Replaced and #last.Replaced > 0 then
+    ClearResult() -- the replaced pins are back: plan again
+  elseif m_result ~= nil and m_result.Ok then
+    m_result.Placed = false
+  end
+  UpdateReplaceLabel()
   SDP_UI.UpdateAllButtons()
   return removed
 end
@@ -408,13 +586,14 @@ end
 -- Tests drive the tab through these.
 function P.State()
   return {
-    Result = m_result, Solution = m_solution, Tier = m_tier, Land = m_land, View = m_view,
+    Result = m_result, Solution = m_solution, Tier = m_tier, Land = m_land, Replace = m_replace, View = m_view,
     EstimateText = Controls.MultiEstimate:GetText(), QualityText = Controls.MultiQuality:GetText(),
     PlaceDisabled = Controls.MultiPlaceButton:IsDisabled(), ContinueDisabled = Controls.MultiContinueButton:IsDisabled(),
   }
 end
 
 Controls.MultiLandCheck:RegisterCheckHandler(function() P.SetLand(Controls.MultiLandCheck:IsChecked()) end)
+Controls.MultiReplaceCheck:RegisterCheckHandler(function() P.SetReplace(Controls.MultiReplaceCheck:IsChecked()) end)
 Controls.MultiSolveButton:RegisterCallback(Mouse.eLClick, function() P.Solve() end)
 Controls.MultiContinueButton:RegisterCallback(Mouse.eLClick, function() P.Continue() end)
 Controls.MultiCancelButton:RegisterCallback(Mouse.eLClick, function() SDP_Task.Cancel() end)

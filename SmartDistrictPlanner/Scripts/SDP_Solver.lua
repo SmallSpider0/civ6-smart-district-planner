@@ -33,10 +33,14 @@ Session.__index = Session
 --   Land                 count the land part (default false)
 --   Tier                 "FAST" | "STANDARD" | "FINE" (default STANDARD)
 --   Params               overrides of the tier's parameters (tests)
+--   IgnorePins           this mod's earlier pins being replaced ({ ID, X, Y },
+--                        SDP_Pins.Own): planned as if they were gone; scan
+--                        with SDP_City.ScanOptions(request)
 -- }
 -- The overlay must be installed.
 function SDP_Solver.NewSession(request, scan)
   local self = setmetatable({}, Session)
+  SDP_Overlay.HidePins(request.IgnorePins)
   local params = SDP_Tiers.Params(SDP_Tiers.Single, request.Tier, request.Params)
   local playerID = scan.PlayerID
   self.Request, self.Params, self.Scan, self.PlayerID = request, params, scan, playerID
@@ -102,6 +106,7 @@ end
 
 -- One more batch of local searches. Returns false when there is nothing left.
 function Session:Continue()
+  SDP_Overlay.HidePins(self.Request.IgnorePins) -- a new install has the full pin data
   return self.Search:Continue()
 end
 
@@ -193,7 +198,7 @@ end
 -- Solve at once (the overlay is installed and removed here).
 function SDP_Solver.Solve(request)
   local playerID = request.PlayerID
-  local scan = SDP_City.Scan(playerID, request.CityID, { allowFeatureRemoval = request.AllowFeatureRemoval })
+  local scan = SDP_City.Scan(playerID, request.CityID, SDP_City.ScanOptions(request))
   if scan == nil then return { Ok = false, Error = "NO_CITY" } end
   local ok, result = pcall(SDP_Overlay.With, playerID, SDP_Solver.SolveScan, request, scan)
   if not ok then return { Ok = false, Error = tostring(result) } end
@@ -205,6 +210,34 @@ function SDP_Solver.SolveScan(request, scan)
   local session = SDP_Solver.NewSession(request, scan)
   session:Run()
   return session:Result()
+end
+
+-- Where one district is good (design 18, item 6): every candidate plot of
+-- the city where DMT and the game allow it, with the gain of placing it
+-- alone (its own adjacency plus what it adds to its neighbours, weighted).
+-- request: PlayerID, CityID, District, Weights, AllowFeatureRemoval,
+-- IgnorePins. Returns { { Index, X, Y, Gain } } best first (ties by plot), or
+-- nil when the city does not exist.
+function SDP_Solver.Heat(request)
+  local playerID = request.PlayerID
+  local scan = SDP_City.Scan(playerID, request.CityID, SDP_City.ScanOptions(request))
+  if scan == nil then return nil end
+  local weights = DefaultWeights(request.Weights)
+  return SDP_Overlay.With(playerID, function()
+    SDP_Overlay.HidePins(request.IgnorePins)
+    local fixed = SDP_Overlay.FixedSubjects(scan)
+    local base = SDP_Overlay.Evaluate({}, fixed, weights).Total
+    local out = {}
+    for _, c in ipairs(scan.Candidates) do
+      local result = SDP_Overlay.Evaluate({ SDP_Overlay.Subject(request.District, c.X, c.Y) }, fixed, weights)
+      if result.Legal then out[#out + 1] = { Index = c.Index, X = c.X, Y = c.Y, Gain = result.Total - base } end
+    end
+    table.sort(out, function(a, b)
+      if a.Gain ~= b.Gain then return a.Gain > b.Gain end
+      return a.Index < b.Index
+    end)
+    return out
+  end)
 end
 
 -- One more batch of local searches for a result (its Session), at once.

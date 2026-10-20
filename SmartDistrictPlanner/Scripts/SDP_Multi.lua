@@ -62,14 +62,15 @@ function SDP_Multi.Sites(playerID)
 end
 
 -- Who takes part. options.Existing = { [cityID] = true | false } overrides
--- the default (within NEAR of a new city). Returns the participants (new
+-- the default (within NEAR of a new city). options.Only = { [cityID] = true }:
+-- exactly these cities and no new ones (the single-city tab with wonders). Returns the participants (new
 -- cities by plot index, then existing cities by ID) and every existing city
 -- with { CityID, Name, Distance, Default, On, Included, Reason }:
 -- Reason "CAP" when switched on but beyond MAX_CITIES.
 function SDP_Multi.Participants(playerID, options)
   options = options or {}
   local participants = {}
-  local sites = SDP_Multi.Sites(playerID)
+  local sites = options.Only and {} or SDP_Multi.Sites(playerID)
   local names = {}
   for s, site in ipairs(sites) do names[s] = site.Name end
   local siteNumbers = SDP_City.SiteNumbers(playerID, names)
@@ -92,6 +93,7 @@ function SDP_Multi.Participants(playerID, options)
     local default = distance <= SDP_Multi.NEAR
     local on = options.Existing and options.Existing[city:GetID()]
     if on == nil then on = default end
+    if options.Only then on = options.Only[city:GetID()] == true end
     existing[#existing + 1] = {
       CityID = city:GetID(), Name = city:GetName(), X = city:GetX(), Y = city:GetY(),
       Distance = distance, Default = default, On = on, Included = false,
@@ -147,21 +149,24 @@ end
 --   Plans                { [participant Key] = { district types } } overrides
 --   Wonders              wonder types (building types) to place, in any participating city
 --   Existing             { [cityID] = bool } who else takes part (see Participants)
+--   Only                 { [cityID] = true }: exactly these cities (see Participants)
 --   Weights              as for SDP_Solver (five yields; YIELD_FOOD, FEATURE for land)
 --   Land                 count the land part (default true)
 --   AllowFeatureRemoval  default true
+--   IgnorePins           this mod's earlier pins being replaced (see SDP_Solver)
 -- }
 -- The overlay must be installed.
 function SDP_Multi.NewSession(request)
   local self = setmetatable({}, Session)
+  SDP_Overlay.HidePins(request.IgnorePins)
   local playerID = request.PlayerID
   local params = SDP_Tiers.Params(SDP_Tiers.Multi, request.Tier, request.Params)
   self.Request, self.Params, self.PlayerID = request, params, playerID
   self.Weights = DefaultWeights(request.Weights)
   local land = request.Land ~= false
-  local options = { allowFeatureRemoval = request.AllowFeatureRemoval }
+  local options = SDP_City.ScanOptions(request)
 
-  local participants, existing = SDP_Multi.Participants(playerID, { Existing = request.Existing })
+  local participants, existing = SDP_Multi.Participants(playerID, { Existing = request.Existing, Only = request.Only })
   self.Participants, self.Existing = participants, existing
 
   -- Plans, scans.
@@ -176,7 +181,7 @@ function SDP_Multi.NewSession(request)
     end
     if part.Kind == "SITE" then
       part.Scan = SDP_City.ScanSite(playerID, part.X, part.Y, {
-        allowFeatureRemoval = options.allowFeatureRemoval, name = part.Name,
+        allowFeatureRemoval = options.allowFeatureRemoval, ignorePins = options.ignorePins, name = part.Name,
         population = SDP_Land.RequiredPopulation(specialty),
       })
     else
@@ -276,8 +281,11 @@ function SDP_Multi.NewSession(request)
   end
   local pinnedAnywhere = {}
   for _, pin in pairs(PlayerConfigurations[playerID]:GetMapPins()) do
-    local key = (pin:GetIconName() or ""):gsub("^ICON_", "")
-    pinnedAnywhere[key] = (pinnedAnywhere[key] or 0) + 1
+    -- Pins being replaced (this mod's earlier ones) do not count.
+    if not (options.ignorePins and options.ignorePins[pin:GetID()]) then
+      local key = (pin:GetIconName() or ""):gsub("^ICON_", "")
+      pinnedAnywhere[key] = (pinnedAnywhere[key] or 0) + 1
+    end
   end
   local slots, slotCity, limited, limitedOrder = {}, {}, {}, {}
   for p, part in ipairs(participants) do
@@ -550,6 +558,7 @@ end
 function Session:Continue()
   local search, params = self.Search, self.Params
   if not self:CanContinue() then return false end
+  SDP_Overlay.HidePins(self.Request.IgnorePins) -- a new install has the full pin data
   search:SetBudgets()
   local before = search.BestGain
   search.Stats.Continues = search.Stats.Continues + 1

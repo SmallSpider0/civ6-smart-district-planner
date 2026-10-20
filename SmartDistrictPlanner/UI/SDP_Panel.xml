@@ -45,11 +45,17 @@
 
         <!-- Districts -->
         <Label Style="BodyTextDark18" String="LOC_SDP_DISTRICTS"/>
-        <ScrollPanel ID="DistrictScroll" Size="480,180" Vertical="1">
+        <ScrollPanel ID="DistrictScroll" Size="480,156" Vertical="1">
           <ScrollBar Anchor="R,C" AnchorSide="I,I" Style="Slider_Blue"/>
           <Stack ID="DistrictStack" StackGrowth="Bottom" StackPadding="2"/>
         </ScrollPanel>
         <Label ID="SpecialtyNote" Style="BodyTextDark14" WrapWidth="480"/>
+        <Container Size="480,28">
+          <Label Anchor="L,C" Style="BodyTextDark16" String="LOC_SDP_SINGLE_WONDERS"/>
+          <PullDown ID="WonderPull" Anchor="L,C" Offset="50,0" Style="PullDownBlue" Size="200,24"/>
+          <Label Anchor="L,C" Offset="262,0" Style="BodyTextDark16" String="LOC_SDP_HEATMAP" ToolTip="LOC_SDP_HEATMAP_TOOLTIP"/>
+          <PullDown ID="HeatPull" Anchor="R,C" Style="PullDownBlue" Size="150,24" ToolTip="LOC_SDP_HEATMAP_TOOLTIP"/>
+        </Container>
 
         <!-- Weights -->
         <Label Style="BodyTextDark18" String="LOC_SDP_WEIGHTS"/>
@@ -61,6 +67,10 @@
         <Container Size="480,26">
           <CheckBox ID="FeatureCheck" Anchor="L,C" Style="MainCheckBox"/>
           <Label Anchor="L,C" Offset="26,0" Style="BodyTextDark16" String="LOC_SDP_ALLOW_FEATURE_REMOVAL"/>
+        </Container>
+        <Container Size="480,26" ToolTip="LOC_SDP_REPLACE_OWN_TOOLTIP">
+          <CheckBox ID="ReplaceCheck" Anchor="L,C" Style="MainCheckBox"/>
+          <Label ID="ReplaceLabel" Anchor="L,C" Offset="26,0" Style="BodyTextDark16"/>
         </Container>
 
         <!-- Tier -->
@@ -80,7 +90,7 @@
         <!-- Results -->
         <Label ID="Summary" Style="BodyTextDark16" WrapWidth="480"/>
         <Label ID="Quality" Style="BodyTextDark14" WrapWidth="480"/>
-        <ScrollPanel ID="ResultScroll" Size="480,160" Vertical="1">
+        <ScrollPanel ID="ResultScroll" Size="480,128" Vertical="1">
           <ScrollBar Anchor="R,C" AnchorSide="I,I" Style="Slider_Blue"/>
           <Stack ID="ResultStack" StackGrowth="Bottom" StackPadding="2"/>
         </ScrollPanel>
@@ -149,6 +159,11 @@
           <ScrollBar Anchor="R,C" AnchorSide="I,I" Style="Slider_Blue"/>
           <Stack ID="MultiCityStack" StackGrowth="Bottom" StackPadding="2"/>
         </ScrollPanel>
+        <Container Size="500,28">
+          <Label Anchor="L,C" Style="BodyTextDark16" String="LOC_SDP_MULTI_PLAN_FOR"/>
+          <PullDown ID="MultiPlanPull" Anchor="L,C" Offset="100,0" Style="PullDownBlue" Size="210,24"/>
+          <PullDown ID="MultiTemplatePull" Anchor="R,C" Style="PullDownBlue" Size="170,24"/>
+        </Container>
         <Container Size="500,170">
           <Label Anchor="L,T" Style="BodyTextDark16" String="LOC_SDP_MULTI_PLAN"/>
           <ScrollPanel ID="MultiDistrictScroll" Anchor="L,T" Offset="0,22" Size="245,148" Vertical="1">
@@ -165,6 +180,10 @@
         <Container Size="500,26">
           <CheckBox ID="MultiLandCheck" Anchor="L,C" Style="MainCheckBox"/>
           <Label Anchor="L,C" Offset="26,0" Style="BodyTextDark16" String="LOC_SDP_LAND"/>
+          <Container Anchor="L,C" Offset="230,0" Size="270,26" ToolTip="LOC_SDP_REPLACE_OWN_MULTI_TOOLTIP">
+            <CheckBox ID="MultiReplaceCheck" Anchor="L,C" Style="MainCheckBox"/>
+            <Label ID="MultiReplaceLabel" Anchor="L,C" Offset="26,0" Style="BodyTextDark16"/>
+          </Container>
         </Container>
         <Container Size="500,28">
           <Label Anchor="L,C" Style="BodyTextDark18" String="LOC_SDP_TIER"/>
@@ -179,7 +198,7 @@
         <Label ID="MultiSummary" Style="BodyTextDark16" WrapWidth="500"/>
         <Label ID="MultiQuality" Style="BodyTextDark14" WrapWidth="500"/>
         <Stack ID="MultiSolutionStack" StackGrowth="Bottom" StackPadding="2"/>
-        <ScrollPanel ID="MultiResultScroll" Size="500,130" Vertical="1">
+        <ScrollPanel ID="MultiResultScroll" Size="500,96" Vertical="1">
           <ScrollBar Anchor="R,C" AnchorSide="I,I" Style="Slider_Blue"/>
           <Stack ID="MultiResultStack" StackGrowth="Bottom" StackPadding="2"/>
         </ScrollPanel>

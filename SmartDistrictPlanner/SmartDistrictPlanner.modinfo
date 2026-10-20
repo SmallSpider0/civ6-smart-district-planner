@@ -33,6 +33,10 @@
 
   <!-- Mod name and description for the front end once enabled (pitfall 1). -->
   <FrontEndActions>
+    <!-- The "open the planner" key, in the game's options (design 18, item 8). -->
+    <UpdateDatabase id="sdp_input">
+      <File>Config/SDP_Input.xml</File>
+    </UpdateDatabase>
     <UpdateText id="sdp_frontend_text">
       <File>Text/SDP_Text_en_US.xml</File>
       <File>Text/SDP_Text_zh_Hans_CN.xml</File>
@@ -77,6 +81,7 @@
   </InGameActions>
 
   <Files>
+    <File>Config/SDP_Input.xml</File>
     <File>Scripts/SDP_Board.lua</File>
     <File>Scripts/SDP_City.lua</File>
     <File>Scripts/SDP_Land.lua</File>
