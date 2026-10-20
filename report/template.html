@@ -194,7 +194,7 @@ kbd { font-family: var(--font-mono); font-size: 0.85em; padding: 0 5px; border-r
   <div class="col">
     <p class="eyebrow">交付报告 · 文明6 模组「智能区域规划器」 · 2026-10-20</p>
     <h1>智能区域规划器：交付报告</h1>
-    <p class="lead">本次交付一个纯 Lua 的文明6 界面模组：选一座城、勾上想建的区域，几秒内给出相邻加成最高的摆放，一键打成带区域图标的地图钉；也能让几座城联合规划、给新城选址。合法性与加成全部由 Detailed Map Tacks（DMT）计算，与地图钉上显示的一致。本报告说明为什么要做、交付了什么、怎么做到的、怎样验证的，以及哪些还需要你确认。</p>
+    <p class="lead">本次交付一个纯 Lua 的文明6 界面模组：选一座城、勾上想建的区域（或只给个数，由它从候选里挑），几秒内给出相邻加成最高的摆放，一键打成带区域图标的地图钉；也能让几座城联合规划、给新城选址。合法性与加成全部由 Detailed Map Tacks（DMT）计算，与地图钉上显示的一致。本报告说明为什么要做、交付了什么、怎么做到的、怎样验证的，以及哪些还需要你确认。</p>
   </div>
   <div class="wide">
     <div class="stats" id="hero-stats"></div>
@@ -217,7 +217,8 @@ kbd { font-family: var(--font-mono); font-size: 0.85em; padding: 0 5px; border-r
     <table>
       <tbody>
         <tr><td style="white-space:nowrap">交付范围</td><td>模组「智能区域规划器」：单城、选城址、多城三个页签，全部功能见第 3 节；配套安装说明、设计文档、自测报告、测试与对比框架、开发工具（见第 3 节交付物清单）。依赖 DMT。</td></tr>
-        <tr><td style="white-space:nowrap">结论</td><td>{{SUMMARY_COMPARE}}游戏内 80 项测试 0 失败，覆盖三种规则集，并用日本、高卢验证文明特性规则。用游戏引擎的可建格复核了 1836 组“区域 × 格”判定，只有运河一处不符；加了引擎复核后，在游戏里确认已挡住。裁判（DMT）与引擎的相邻加成逐格对照 306 组，只有“港口挨着沉船”一处已知偏差。</td></tr>
+        <tr><td style="white-space:nowrap">实测反馈</td><td>合作者在 Windows 上实测后提的 11 条意见都已实现：单城给出区域个数后从候选里挑、并列三套区域组合不同的方案且可在地图上预览；奇观多选；权重图标统一；缺淡水自动加水渠、泛滥平原多时自动加水坝；砍掉会损失相邻加成的树林、雨林打提醒钉；界面重排、区域按是否占人口名额分两组；距离成本；选城址每个城址按 3 个区域估分；多城可取消城址钉、每座城设数量和候选。见第 3 节，验证见 5.7、5.9 和第 6 节。</td></tr>
+        <tr><td style="white-space:nowrap">结论</td><td>{{SUMMARY_COMPARE}}游戏内 87 项测试 0 失败，覆盖三种规则集，并用日本、高卢验证文明特性规则。用游戏引擎的可建格复核了 1836 组“区域 × 格”判定，只有运河一处不符；加了引擎复核后，在游戏里确认已挡住。裁判（DMT）与引擎的相邻加成逐格对照 306 组，只有“港口挨着沉船”一处已知偏差。</td></tr>
         <tr><td style="white-space:nowrap">需要你做的</td><td>在游戏里用鼠标点一遍面板；在 Windows 上冒烟测试。详见第 6 节。</td></tr>
       </tbody>
     </table>
@@ -303,16 +304,20 @@ kbd { font-family: var(--font-mono); font-size: 0.85em; padding: 0 5px; border-r
     <div class="io">
       <div><p class="lbl">你设置</p><ul class="tight">
         <li>城市（名字前带编号，与钉名一致）</li>
-        <li>要建的区域：已建的置灰，已达帝国上限、本文明不能建的注明原因；显示特色区域名额（已建、本次选择、当前人口上限），超出时提示“供人口增长后建造”</li>
-        <li>要一起放的奇观 <span class="tag from">AMT</span></li>
-        <li>科、文、信、金、产的权重（0–3，默认 1）</li>
-        <li>开关：禁止砍伐树林、雨林、沼泽；计入区域占掉好地块的产出损失（这时食物、地貌权重也生效）；替换本模组之前给这座城打的钉</li>
+        <li>区域：分两组排成网格，点一下切换状态。占人口名额的区域是“候选 → 必建 → 不建”；不占名额的（水渠、水坝、运河、社区……）是“自动 → 必建 → 不建”。已建的置灰，已达帝国上限、本文明不能建的写明原因</li>
+        <li>区域数量：要规划几个占人口名额的区域（含必建的）。多于必建个数时，多出的由求解器从候选里挑；旁边显示特色区域名额（已建、本次数量、当前人口上限），超出时只提示</li>
+        <li>要一起放的奇观，可以选多个，选中的显示成标签 <span class="tag from">AMT</span></li>
+        <li>权重：科、文、信、金、产（0–3，默认 1），用于占地损失的食物、地貌，以及距离成本（默认 0）</li>
+        <li>开关：计入占地损失；允许砍伐树林、雨林、沼泽；替换本模组之前给这座城打的钉；提醒钉</li>
       </ul></div>
       <div><p class="lbl">得到</p><ul class="tight">
-        <li>加权相邻加成的提升；计入地块时分列相邻与地块两部分</li>
-        <li>每个区域、奇观一行：坐标和加成（如“科+2 文+1”），悬停看 DMT 的逐项来源</li>
+        <li>加权提升，分列相邻、地块、距离三部分</li>
+        <li>从候选里挑时：三套区域组合各不相同的方案，各写明挑出了哪些区域；点一套即在地图上预览图标和加成</li>
+        <li>每个区域、奇观一行：坐标和加成（如“科+2 文+1”），悬停看 DMT 的逐项来源；自动加入、从候选挑出的另有标注</li>
+        <li>缺淡水时自动加水渠，三环内泛滥平原不少于 3 格时自动加水坝（风云变幻），位置照常求解</li>
+        <li>方案靠旁边的树林、雨林拿相邻加成时，列出“勿砍”的格和砍掉会少的产出；打钉时在这些格上一起打提醒钉</li>
         <li>受影响的已有区域：加权分从多少变成多少</li>
-        <li>没放下的区域及原因：范围内没有合法位置、本城已建、已达帝国上限、本文明不能建</li>
+        <li>没放下的区域及原因：范围内没有合法位置、本城已建、已达帝国上限、本文明不能建、候选不够</li>
         <li>“好位置”：选一个区域，地图上把它能放的格按单独放下时的加成分四档着色并标出数值 <span class="tag from">AMT</span></li>
       </ul></div>
     </div>
@@ -321,12 +326,12 @@ kbd { font-family: var(--font-mono); font-size: 0.85em; padding: 0 5px; border-r
     <div class="io">
       <div><p class="lbl">你设置</p><ul class="tight">
         <li>新城数量、最远距离</li>
-        <li>权重预设（均衡、成长优先、区域优先），各项可再调，包括奢侈资源的宜居度、战略资源、可砍伐地貌、魅力（默认不计）</li>
-        <li>用来估算区域潜力的区域（政府广场这类全帝国限量的区域不按城址计）</li>
+        <li>权重预设（均衡、成长优先、区域优先），各项可再调，包括距离成本、奢侈资源的宜居度、战略资源、可砍伐地貌、魅力（默认不计）</li>
+        <li>用来估算区域潜力的区域（政府广场这类全帝国限量的区域不按城址计），以及每个城址按几个区域估分（默认 3）：勾选的多于这个数时，每个城址各自挑区域分最高的几个</li>
       </ul></div>
       <div><p class="lbl">得到</p><ul class="tight">
         <li>三套城址方案，各有总分，并注明候选城址数和其中精评了区域的个数</li>
-        <li>每个城址：分项得分（区域、地块、水源、奢侈、战略），水源类型（淡水 / 沿海 / 无），离本方最近的城市或城址钉几格，地貌与估算用的区域</li>
+        <li>每个城址：分项得分（区域、地块、水源、奢侈、战略），水源类型（淡水 / 沿海 / 无），离本方最近的城市或城址钉几格，地貌与挑中的区域</li>
         <li>风险提示：忠诚度（附近有外国城市）、灾害（泛滥平原、火山土）、三环内未揭示的格数、尚未可见的战略资源</li>
         <li>地图上预览各城址的三环，再打城址钉（编号接在现有城市后面）</li>
       </ul></div>
@@ -335,15 +340,16 @@ kbd { font-family: var(--font-mono); font-size: 0.85em; padding: 0 5px; border-r
     <h4 class="tab">多城</h4>
     <div class="io">
       <div><p class="lbl">你设置</p><ul class="tight">
-        <li>参与城市：全部城址钉，加上离任一新城 7 格内的现有城市（最多 8 座）；现有城市可以取消勾选，只作邻居（不给它规划，但它的区域照样计入相邻）</li>
-        <li>区域清单：所有城市共用一张，或给某座城单独一张；可套用按产出生成的模板（“科技城”“生产力城”……，由本文明的相邻规则推出），也可清空、改回共用 <span class="tag from">AMT</span></li>
+        <li>参与城市：全部城址钉，加上离任一新城 7 格内的现有城市（最多 8 座）。每一项都可以取消勾选：城址钉取消后不参与规划，钉还在，仍作邻居；现有城市取消后只作邻居（不给它规划，但它的区域照样计入相邻）</li>
+        <li>区域清单：所有城市共用一张，或给某座城单独一张；网格与单城相同。每城数量：多于必建个数时，为每座城从候选里挑。可套用按产出生成的模板（“科技城”“生产力城”……，由本文明的相邻规则推出），也可清空、改回共用 <span class="tag from">AMT</span></li>
         <li>全帝国限量的区域（政府广场等）：只写进一座城的清单就只放在那座城，写进几座城就在其中自动选 <span class="tag from">AMT</span></li>
-        <li>奇观、产出权重、计入地块损失、替换本模组之前为参与城市打的钉</li>
+        <li>奇观（标签加下拉框）、产出权重、距离成本；开关：计入占地损失、替换本模组之前为参与城市打的钉、提醒钉</li>
         <li>覆盖范围的权重（0–3，默认 0 不计）：工厂、电厂、动物园、体育场、水族馆和斗兽场等奇观惠及一定距离内的本方城市（规则数据里多为 6 格），规划时把新覆盖的城市也算进去；只决定区域放在哪，不会替城市加区域 <span class="tag from">AMT</span></li>
       </ul></div>
       <div><p class="lbl">得到</p><ul class="tight">
         <li>三套彼此有明显差别的方案，各有总分；每套列出城市、区域、奇观的个数，以及每座城新区域的加权相邻</li>
         <li>跨城的相邻加成、帝国上限都已计入，两城重叠的格只归一城</li>
+        <li>从候选里挑时，每座城的区域行标出“从候选挑出”；某座城放不下足够的候选时注明“候选不够”；自动加入的水渠、水坝同单城</li>
         <li>覆盖权重不为 0 时：总分单列覆盖项，有覆盖范围的区域、奇观写明覆盖几座城，悬停列出城名</li>
         <li>与“用单城页签一座一座规划”的对比（悬停统计）</li>
         <li>地图上预览每个区域的图标和加成，再打钉</li>
@@ -360,9 +366,14 @@ kbd { font-family: var(--font-mono); font-size: 0.85em; padding: 0 5px; border-r
           <tr><td>质量说明</td><td>结果注明“已穷举，结果最优”、“距估计上界不超过 x%”或“可能还有提升”；可“继续优化”，也可取消</td><td><span class="tag goal">G2</span></td><td class="yes">游戏内</td></tr>
           <tr><td>确定性</td><td>无随机数、固定遍历顺序，预算按计数不按时间：同一局面同样输入，在任何机器上结果都相同</td><td><span class="tag goal">G5</span></td><td class="yes">游戏内</td></tr>
           <tr><td>能放就放</td><td>要求的区域、奇观只要有位置就放上：搜索结束后若还有没放上的（如学院四周被别的区域占满，大图书馆无处可放），逐格试放，并把它要挨着的区域和其他奇观重新安排；放上的更多的方案优先</td><td><span class="tag goal">G4</span></td><td class="yes">游戏内</td></tr>
+          <tr><td>从候选里挑</td><td>给出区域个数，多出必建的部分从候选里挑相邻加成最高的组合：单城给三套组合不同的方案，多城每座城各挑，选城址每个城址按 3 个（可调）估分。不同区域之间只按目标函数比较，建筑本身的产出不计</td><td><span class="tag goal">G2</span></td><td class="yes">游戏内</td></tr>
+          <tr><td>距离成本</td><td>每个区域、奇观扣“权重 ×（到最近的本方市中心的格数 − 1）”，默认 0，三个页签都有。游戏里区域造价与距离无关，这一项是偏好，悬停提示里说明</td><td>—</td><td class="yes">游戏内</td></tr>
+          <tr><td>自动水渠、水坝</td><td>缺淡水（游戏算出的水源住房低于河流、湖泊给的 5）时加水渠，三环内泛滥平原不少于 3 格时加水坝；种类从规则数据判断，罗马浴场这类替代区域同样处理。可改成必建或不建</td><td><span class="tag goal">G1</span></td><td class="yes">游戏内</td></tr>
           <tr><td>后台计算</td><td>精细档、多城、选城址分帧计算，游戏照常响应；关掉面板也会算完，启动栏按钮出现标记并有提示音；计算期间进入新回合或地图钉有增删时，提示重新求解</td><td><span class="tag goal">G6</span></td><td class="yes">游戏内</td></tr>
           <tr class="grp"><td colspan="4">地图钉</td></tr>
           <tr><td>区域钉</td><td>每个区域、奇观一个带图标的钉，DMT 照常在钉上显示加成；钉名是所属城市的编号</td><td><span class="tag goal">G1</span></td><td class="yes">游戏内</td></tr>
+          <tr><td>地图预览</td><td>三个页签的方案都能先在地图上看：区域图标和加成（选城址是三环），点另一套方案随之切换；切换页签、关闭面板、进入游戏的区域放置模式时清除</td><td>—</td><td class="yes">游戏内</td></tr>
+          <tr><td>提醒钉</td><td>方案里的区域靠旁边的树林、雨林拿相邻加成时，在这些格上打“移除地貌”图标的钉，钉名写明砍掉会少什么（如“3 勿砍：圣地 信-1”）。判断方法是让 DMT 看不到这格的地貌再算一次，文明、万神殿的地貌修正都计入；撤销时一起删除</td><td><span class="tag goal">G1</span><span class="tag goal">G4</span></td><td class="yes">游戏内</td></tr>
           <tr><td>撤销</td><td>撤销最近一批钉，可以连续撤销；记录随存档保存，读档后仍能撤销 <span class="tag from">AMT</span></td><td><span class="tag goal">G4</span></td><td class="yes">游戏内</td></tr>
           <tr><td>替换旧钉 <span class="tag from">AMT</span></td><td>勾选后，本模组之前打的、你没改过的钉在规划时当作不存在，打新钉时删掉，撤销会放回；你自己打的钉、改过的钉不动</td><td><span class="tag goal">G4</span></td><td class="yes">游戏内</td></tr>
           <tr class="grp"><td colspan="4">规则与合法性</td></tr>
@@ -374,19 +385,22 @@ kbd { font-family: var(--font-mono); font-size: 0.85em; padding: 0 5px; border-r
           <tr><td>不挪不压</td><td>已建区域置灰；玩家的钉不挪不压，作为邻居计分</td><td><span class="tag goal">G4</span></td><td class="yes">游戏内</td></tr>
           <tr class="grp"><td colspan="4">兼容与操作</td></tr>
           <tr><td>规则集与语言</td><td>原版、迭起兴衰、风云变幻（运河、水坝只在风云变幻）；中英双语，跟随游戏语言</td><td>—</td><td class="yes">游戏内</td></tr>
+          <tr><td>界面</td><td>区域按是否占人口名额分两组排成网格，单城页的区域不用滚动；奇观是标签加下拉框；权重的五种产出和食物用游戏的同一套圆形产出图标，其余写短字；开关并成一行，悬停看说明</td><td>—</td><td class="yes">截图</td></tr>
           <tr><td>快捷键 <span class="tag from">AMT</span></td><td><kbd>Shift</kbd>+<kbd>L</kbd> 打开或关闭面板，可在游戏选项里改键</td><td>—</td><td class="yes">游戏内<br><span class="note">按键需你按一下</span></td></tr>
         </tbody>
       </table>
     </div>
   </div>
   <div class="shots">
-    <figure class="tall"><img src="images/v3-panel-single.jpg" alt="单城页签：勾选 5 个区域，奇观选大图书馆，勾选替换本模组之前打的钉，结果列出区域和大图书馆" loading="lazy"><figcaption>单城页签：5 个区域加大图书馆，勾选“替换本模组之前打的钉（4 个）”；结果里大图书馆挨着学院。</figcaption></figure>
-    <figure class="tall"><img src="images/v3-panel-multi.jpg" alt="多城页签：两个城址钉与首都参与，罗马和城址 3 用自定清单，覆盖权重 2" loading="lazy"><figcaption>多城页签：首都和两个城址钉一起规划，罗马、城址 3 用自己的清单；覆盖权重 2，摘要单列覆盖 +10。</figcaption></figure>
-    <figure class="tall"><img src="images/v2-panel-sites.jpg" alt="选城址页签：新城数量 2、最远距离 8，三套方案" loading="lazy"><figcaption>选城址页签：146 个候选里精评 40 个，给出三套方案。</figcaption></figure>
-    <figure class="span2"><img src="images/v3-map-single-tacks.jpg" alt="地图上的区域钉和大图书馆钉，钉名为 1，带 DMT 显示的加成" loading="lazy"><figcaption>单城打钉后的地图：钉名是城市编号“1”，数值由 DMT 显示，与面板一致。</figcaption></figure>
+    <figure class="tall"><img src="images/v4-panel-single.jpg" alt="单城页签：区域分两组排成网格，学院必建，区域数量 3，结果有三套方案" loading="lazy"><figcaption>单城页签：学院必建、区域数量 3，其余占名额的区域是候选，堤坝和浴场（罗马的水渠）为自动。三套方案挑出的区域各不相同；结果里堤坝标“自动加入”，商业中心标“从候选挑出”。</figcaption></figure>
+    <figure class="tall"><img src="images/v4-panel-multi.jpg" alt="多城页签：两个城址钉与首都参与，共用清单，每城数量 3，奇观选了大图书馆" loading="lazy"><figcaption>多城页签：首都和两个城址钉一起规划，共用清单里学院必建、每城数量 3，奇观选了大图书馆；三座城共放 10 个区域。</figcaption></figure>
+    <figure class="tall"><img src="images/v4-panel-sites.jpg" alt="选城址页签：勾了 5 个区域，每个城址按 3 个估分，三套方案" loading="lazy"><figcaption>选城址页签：勾了 5 个区域，每个城址按 3 个估分；92 个候选里精评 40 个，给出三套方案。</figcaption></figure>
+    <figure class="span2"><img src="images/v4-map-single-preview.jpg" alt="单城方案预览：商业中心 +5、港口 +4、学院 +1、水坝 0 的图标" loading="lazy"><figcaption>单城方案预览：点一套方案即在地图上显示区域图标和加成（商业中心 +5、港口 +4、学院 +1、自动加入的水坝 0），不打真实地图钉。</figcaption></figure>
     <figure><img src="images/v3-coverage-tooltip.jpg" alt="悬停工业区一行：DMT 的加成来源和覆盖范围内的城市" loading="lazy"><figcaption>悬停有覆盖范围的区域：DMT 的加成来源，下面列出覆盖范围内的城市。</figcaption></figure>
-    <figure class="span2"><img src="images/v3-map-good-places.jpg" alt="好位置：港口可放的水面格分三种颜色，标出 +3、+1、0" loading="lazy"><figcaption>好位置（港口）：能放的格按单放加成分档着色，+3 绿、+1 灰、0 红。</figcaption></figure>
+    <figure class="span2"><img src="images/v4-map-reminders.jpg" alt="提醒钉：两片树林上各有一个移除地貌图标的钉，钉名 3 勿砍：圣地 信-1" loading="lazy"><figcaption>提醒钉：城址 3 的圣地挨着两片树林，打钉时在两片树林上各打一个“移除地貌”钉，钉名“3 勿砍：圣地 信-1”。</figcaption></figure>
     <figure><img src="images/v3-mods.jpg" alt="附加内容界面：智能区域规划器的中文名称、简介和依赖" loading="lazy"><figcaption>附加内容界面：名称和简介是中文，关联内容列出 Detailed Map Tacks。</figcaption></figure>
+    <figure class="span2"><img src="images/v3-map-good-places.jpg" alt="好位置：港口可放的水面格分三种颜色，标出 +3、+1、0" loading="lazy"><figcaption>好位置（港口）：能放的格按单放加成分档着色，+3 绿、+1 灰、0 红。</figcaption></figure>
+    <figure><img src="images/v3-map-single-tacks.jpg" alt="地图上的区域钉和大图书馆钉，钉名为 1，带 DMT 显示的加成" loading="lazy"><figcaption>单城打钉后：钉名是城市编号“1”，数值由 DMT 显示，与面板一致。</figcaption></figure>
     <figure class="span2"><img src="images/v3-map-multi-preview.jpg" alt="多城方案预览：三座城的三环各一种颜色，区域图标带加成" loading="lazy"><figcaption>多城方案预览：每座城的三环一种颜色，图标和数值是各区域的加成，不打真实地图钉。</figcaption></figure>
     <figure><img src="images/v3-map-multi-tacks.jpg" alt="多城打钉后的地图：钉名分别为 1、2、3" loading="lazy"><figcaption>多城打钉后：钉名是所属城市的编号 1、2、3。</figcaption></figure>
     <figure class="span2"><img src="images/v2-launch-mark.jpg" alt="启动栏：最右的六边形按钮右上角有一个小红点" loading="lazy"><figcaption>面板关闭后后台算完：启动栏按钮右上角出现标记，并播放提示音。</figcaption></figure>
@@ -398,12 +412,12 @@ kbd { font-family: var(--font-mono); font-size: 0.85em; padding: 0 5px; border-r
       <table>
         <thead><tr><th>交付物</th><th>位置</th><th>内容</th></tr></thead>
         <tbody>
-          <tr><td>模组本体</td><td><code>SmartDistrictPlanner/</code></td><td>modinfo、17 个脚本、面板界面、按键配置、中英文本；整个目录复制到游戏的 Mods 目录</td></tr>
+          <tr><td>模组本体</td><td><code>SmartDistrictPlanner/</code></td><td>modinfo、19 个脚本、面板界面、按键配置、中英文本；整个目录复制到游戏的 Mods 目录</td></tr>
           <tr><td>安装与测试说明</td><td><code>docs/install-and-test.md</code></td><td>安装、使用、验收步骤、排错、"不要与其他规划模组同开"</td></tr>
           <tr><td>设计文档</td><td><code>docs/design.md</code>、<code>docs/multicity-design.md</code></td><td>算法、目标函数、与 DMT 的接缝、多城与选城址设计、后续设计选择</td></tr>
           <tr><td>自测报告</td><td><code>docs/self-test-report.md</code></td><td>验收清单逐项证据、截图、耗时</td></tr>
-          <tr><td>游戏内测试</td><td><code>tests/test_*.lua</code></td><td>21 个文件、80 项，经 FireTuner 在游戏的 Lua 状态里断言；另有引擎可建格复核探针与裁判校准（<code>tests/bench/</code>）</td></tr>
-          <tr><td>离线测试与对比</td><td><code>tests/offline/</code>、<code>tests/compare/</code></td><td>58 项离线测试与基准；与 AMT、EP 的对比框架、{{N_ALL}} 个场景和原始结果</td></tr>
+          <tr><td>游戏内测试</td><td><code>tests/test_*.lua</code></td><td>22 个文件、87 项，经 FireTuner 在游戏的 Lua 状态里断言；另有引擎可建格复核探针与裁判校准（<code>tests/bench/</code>）</td></tr>
+          <tr><td>离线测试与对比</td><td><code>tests/offline/</code>、<code>tests/compare/</code></td><td>72 项离线测试与基准；与 AMT、EP 的对比框架、{{N_ALL}} 个场景和原始结果</td></tr>
           <tr><td>开发工具</td><td><code>tools/</code></td><td>校验、部署、启动游戏、跑游戏内测试、离线测试、对比</td></tr>
         </tbody>
       </table>
@@ -417,7 +431,7 @@ kbd { font-family: var(--font-mono); font-size: 0.85em; padding: 0 5px; border-r
 {{ARCH}}
 </div>
 <div class="col">
-  <p>目标函数：所有规划对象（含玩家已有的钉和已建区域）在 DMT 里的加权相邻加成之和，减去它们原来的分数；可选再减去区域占掉好地块的产出损失。权重是科、文、信、金、产各 0–3，默认全 1。</p>
+  <p>目标函数：所有规划对象（含玩家已有的钉和已建区域）在 DMT 里的加权相邻加成之和，减去它们原来的分数；可选再减去区域占掉好地块的产出损失和距离成本，多城另可加上覆盖范围。权重是科、文、信、金、产各 0–3，默认全 1。</p>
 {{ALGO}}
   <div class="algo">
   <h3><span class="sn">4.6</span>合法性：三道关</h3>
@@ -662,9 +676,31 @@ kbd { font-family: var(--font-mono); font-size: 0.85em; padding: 0 5px; border-r
     <details><summary>完整数据：分项平均</summary><div class="tablewrap" id="tb-sites"></div></details>
   </div>
 
-  <!-- 5.7 speed -->
+  <!-- 5.7 pools -->
   <div class="col">
-    <h3 id="e-speed"><span class="sn">5.7</span>速度</h3>
+    <h3 id="e-pools"><span class="sn">5.7</span>从候选里挑</h3>
+    <p>AMT、EP 都没有“给个数、自动挑区域”的功能，这一项只和本模组自己的参照比。参照是把每个组合单独求解（标准档再加 3 次继续优化）后取最好的那个：挑选的结果达到它，就说明既挑对了组合，也把这个组合摆好了。场景是随机地图上一座 10 人口的城，7 种有相邻加成的区域作候选，4 种情形各 4 个种子（<code>tests/offline/bench_pools.lua</code>）。</p>
+  </div>
+  <div class="col tablewrap" style="margin-inline:auto">
+    <table>
+      <thead><tr><th>情形</th><th class="num">快速</th><th class="num">标准</th><th class="num">精细</th></tr></thead>
+      <tbody>
+        <tr><td>7 选 3（35 种组合）</td><td class="num">100%，0.11 秒</td><td class="num">100%，0.38 秒</td><td class="num">100%，2.3 秒</td></tr>
+        <tr><td>学院必建 + 6 选 3（20 种）</td><td class="num">100%，0.14 秒</td><td class="num">100%，0.68 秒</td><td class="num">100%，2.6 秒</td></tr>
+        <tr><td>3 个必建（含水渠）+ 5 选 3（10 种）</td><td class="num">98.3%（最差 93%），0.17 秒</td><td class="num">100%，0.93 秒</td><td class="num">100%，2.8 秒</td></tr>
+        <tr><td>7 选 5（21 种）</td><td class="num">98.2%（最差 93%），0.18 秒</td><td class="num">100%，0.99 秒</td><td class="num">100%，4.6 秒</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <p class="note">百分比是达到参照的平均比例；耗时是按游戏内实测单价折算的一次算完时间，挑选时一律分帧计算，游戏照常响应。精细档最初逐个组合穷举，约 4.6 秒；改成粗解时穷举上限 3000、只对前三名穷举后降到约 2.3 秒，质量不变。</p>
+    <p>{{MULTIPOOLS_TEXT}}</p>
+    <p><b>不挑时结果不变</b>：请求里不带挑选、距离、自动区域这些字段时，求解与以前完全相同。用改动后的代码重跑开发集（本模组全部设置，352 次运行），方案与入库结果逐个相同，所以 5.3–5.6 的对比数据仍然有效。游戏内另有 7 项测试覆盖挑选与三套方案、地图预览、距离成本、自动水渠水坝、提醒钉与 DMT 一致、城址钉取消、选城址按个数估分（5.9）。</p>
+  </div>
+
+  <!-- 5.8 speed -->
+  <div class="col">
+    <h3 id="e-speed"><span class="sn">5.8</span>速度</h3>
     <p>{{SPEED_TEXT}}</p>
     <figure>
       <div class="frame chart" id="ch-time"></div>
@@ -685,17 +721,17 @@ kbd { font-family: var(--font-mono); font-size: 0.85em; padding: 0 5px; border-r
     </details>
   </div>
 
-  <!-- 5.8 own tests -->
+  <!-- 5.9 own tests -->
   <div class="col">
-    <h3 id="e-tests"><span class="sn">5.8</span>本模组自身的测试</h3>
+    <h3 id="e-tests"><span class="sn">5.9</span>本模组自身的测试</h3>
   </div>
   <div class="col tablewrap" style="margin-inline:auto">
     <table>
       <thead><tr><th>测试</th><th>内容</th><th>结果</th></tr></thead>
       <tbody>
-        <tr><td>游戏内（经 FireTuner 在游戏的 Lua 状态里断言）</td><td>80 项。73 项在原版 / 迭起兴衰 / 风云变幻下各跑一遍，另以日本、高卢各跑一遍：与暴力枚举最优一致、假想摆放与真实 DMT 钉逐项一致、确定性、锁定钉、打钉撤销、分帧与关闭面板、多城与选城址合法。另 7 项在风云变幻下运行：单城奇观、补放、好位置、钉的记录与替换、逐城清单与限量区域、覆盖范围、快捷键</td><td>0 失败（条件不满足时跳过 1–3 项，如原版没有政府广场、地图全部已探索）</td></tr>
+        <tr><td>游戏内（经 FireTuner 在游戏的 Lua 状态里断言）</td><td>87 项，在原版 / 迭起兴衰 / 风云变幻下各跑一遍，其中 73 项另以日本、高卢各跑一遍：与暴力枚举最优一致、假想摆放与真实 DMT 钉逐项一致、确定性、锁定钉、打钉撤销、分帧与关闭面板、多城与选城址合法；单城奇观、补放、好位置、钉的记录与替换、逐城清单与限量区域、覆盖范围、快捷键；从候选里挑与三套方案、地图预览、距离成本、自动水渠水坝、提醒钉与 DMT 一致、城址钉取消、选城址按个数估分</td><td>0 失败（该规则集没有的内容或地图条件不满足时跳过 1–4 项，如原版没有政府广场、地图全部已探索）</td></tr>
         <tr><td>增量评估 vs 全量评估</td><td>记忆化的增量评估与真实 DMT 全量评估逐项比对</td><td>300 次，0 不一致</td></tr>
-        <tr><td>离线逻辑测试</td><td>58 项：求解器与暴力枚举、增量记账、分帧、面板流程、规则补充、引擎复核、钉的记录与替换、逐城清单、奇观、补放与好位置、覆盖范围</td><td>全部通过</td></tr>
+        <tr><td>离线逻辑测试</td><td>72 项：求解器与暴力枚举、增量记账、分帧、面板流程、规则补充、引擎复核、钉的记录与替换、逐城清单、奇观、补放与好位置、覆盖范围；从候选里挑（与逐个组合的暴力枚举一致、三套组合不同）、距离成本、自动水渠水坝、提醒钉、选城址按个数估分、多城按城挑选</td><td>全部通过</td></tr>
         <tr><td>离线对比自检</td><td>本模组自己算的加成与裁判独立算的加成</td><td>{{SELF_CHECK}}</td></tr>
         <tr><td>引擎可建格复核（探针）</td><td>给玩家全部科技与市政、首都拥有 3 环后，逐区域逐格比较“本模组候选格 + DMT 可放”与游戏引擎的可建格（<code>CityManager.GetOperationTargets</code>）；罗马、日本、高卢三局</td><td>1836 组中 1797 组一致：日本 576/576、高卢 612/612；罗马 13 组为运河（DMT 漏查），26 组落在测试遗留的两个钉上（本模组按设计不动玩家的钉，留钉的测试已修）。加了引擎复核后在罗马局重跑：本模组放行引擎不允许的格为 0</td></tr>
         <tr><td>裁判校准</td><td>放置透镜（游戏引擎）给出的相邻加成与 DMT 逐格比较；再在首都旁建一组相邻区域，比较实际加成；罗马、日本、高卢三局（<code>tests/bench/calibrate_judge.lua</code>）</td><td>306 组中原因不明的差异 0，1 组是 DMT 的已知偏差（港口挨着沉船，见第 6 节）；已建的 13 个区域逐项相同</td></tr>
@@ -703,13 +739,13 @@ kbd { font-family: var(--font-mono); font-size: 0.85em; padding: 0 5px; border-r
     </table>
   </div>
 
-  <!-- 5.9 limits -->
+  <!-- 5.10 limits -->
   <div class="col">
-    <h3 id="e-limits"><span class="sn">5.9</span>局限</h3>
+    <h3 id="e-limits"><span class="sn">5.10</span>局限</h3>
     <ul class="tight">
       <li><b>引擎是模拟的</b>：地图生成、城市、可见性、修正系统由测试框架实现，与游戏可能有细节差别；规则数据和三个规划器、DMT 的代码都是原样的。三者看到的是同一个模拟世界，差别对三者相同。模拟的引擎不给可建格，所以对比里没有引擎复核。</li>
       <li><b>比较范围</b>：AMT 和 EP 还能规划改良设施，本模组不做，所以不比。</li>
-      <li><b>裁判已在游戏里校准</b>：DMT 与游戏引擎的相邻加成逐格一致（5.8）；唯一的已知偏差（沉船）对三个规划器的影响相同。</li>
+      <li><b>裁判已在游戏里校准</b>：DMT 与游戏引擎的相邻加成逐格一致（5.9）；唯一的已知偏差（沉船）对三个规划器的影响相同。</li>
       <li><b>离线耗时不等于游戏耗时</b>：只看相对快慢。</li>
       <li><b>代码版本</b>：AMT r49（2026-09-19）、Empire Planner 94、DMT 2024-01-17，均为本机创意工坊的版本。</li>
     </ul>
@@ -731,8 +767,9 @@ kbd { font-family: var(--font-mono); font-size: 0.85em; padding: 0 5px; border-r
         
         <tr><td>单城奇观、好位置、逐城清单与模板、限量区域指定城市、能放就放、替换旧钉、撤销随存档、引擎复核、快捷键</td><td class="yes">已验证</td><td>游戏内 <code>tests/test_features.lua</code> 6 项通过，补放、引擎复核另在游戏内复核；画面见第 3 节截图，快捷键需你按一下</td></tr>
         <tr><td>覆盖范围（多城页签）</td><td class="yes">已验证</td><td>离线 6 项测试、{{N_V}} 个对比场景；游戏内：不开覆盖时工业区够不着城址，覆盖权重 3 时挪到够得着的格；权重行 8 列在面板内放得下（读控件尺寸）</td></tr>
-        <tr><td>裁判与游戏引擎一致（引擎校准）</td><td class="yes">已验证</td><td>游戏内三局 306 组逐格对照，除沉船一处已知偏差外一致（5.8）</td></tr>
-        <tr><td>画面截图</td><td class="yes">已完成</td><td>单城奇观、好位置、逐城清单、替换旧钉、覆盖范围、附加内容界面，见第 3 节。截图时发现并修好两处：好位置和地图预览的分档、分城颜色原来都画成同一种绿；多城页签两个勾选框的文字重叠</td></tr>
+        <tr><td>实测反馈的 11 条：从候选里挑与三套方案、单城预览、奇观多选、权重图标、自动水渠水坝、提醒钉、界面重排与两组区域、选城址按个数估分、距离成本、多城取消城址钉与每城挑选</td><td class="yes">已验证</td><td>离线 14 项测试与基准（5.7）；开发集回归 352 个方案不变；游戏内 <code>tests/test_feedback.lua</code> 7 项在三种规则集通过；画面见第 3 节截图</td></tr>
+        <tr><td>裁判与游戏引擎一致（引擎校准）</td><td class="yes">已验证</td><td>游戏内三局 306 组逐格对照，除沉船一处已知偏差外一致（5.9）</td></tr>
+        <tr><td>画面截图</td><td class="yes">已完成</td><td>单城奇观、好位置、逐城清单、替换旧钉、覆盖范围、附加内容界面，见第 3 节。截图时发现并修好两处：好位置和地图预览的分档、分城颜色原来都画成同一种绿；多城页签两个勾选框的文字重叠。第五轮截了三个页签的新布局、单城预览和提醒钉，截图时把地貌、距离两列的黑底字体图标改成短字，“求解档位”标签改为“档位”以免被下拉框挡住</td></tr>
         <tr><td>地图上钉的编号显示</td><td class="yes">已验证</td><td>单城、多城打钉后的截图里，钉名是城市编号 1、2、3（第 3 节）</td></tr>
         <tr><td>启动栏按钮、面板上的鼠标点击</td><td class="part">逻辑已验证，需你点一遍</td><td>游戏窗口不接受合成点击，回调由测试直接调用</td></tr>
         <tr><td>Windows 冒烟测试</td><td class="no">需你测试</td><td>重点看布局与耗时</td></tr>
@@ -750,9 +787,10 @@ kbd { font-family: var(--font-mono); font-size: 0.85em; padding: 0 5px; border-r
   <ul class="tight">
     <li>不规划改良设施（第 7 节第 3 项），所以对比中不比较改良设施。</li>
     <li>覆盖范围只在多城页签计入；单城页签暂不计（单城时只能顺带照顾邻城，以后有需求可以打开）。</li>
-    <li>单城页签的结果不在地图上预览：列表给出每个区域的坐标，打钉后不满意可以撤销。</li>
     <li>多城页签没有“禁止砍伐”开关，始终允许砍伐树林、雨林、沼泽。</li>
     <li>每种区域只规划一个；社区这类可以重复建造的区域要多个时，需分次求解。</li>
+    <li>从候选里挑时只比目标函数（相邻加成，打开时加上地块、覆盖、距离成本），区域里建筑本身的产出不计：军营、航空港这类没有相邻加成的区域放在候选里不会被挑中，需要时设为必建。</li>
+    <li>提醒钉只提醒规划的区域旁边的树林、雨林；已有区域旁边的地貌与这次规划无关，不提醒。</li>
     <li>选城址的分数是估计值：地块、资源和区域潜力按当前已揭示的信息估算，区域在多城一步精确规划。</li>
     <li><b>运河</b>：DMT 不检查运河是否连通水域。城市已拥有的格由引擎复核把关；城市还没拥有的格游戏不给可建格，那里仍按 DMT 判断，可能给出不连通水域的运河。</li>
     <li><b>沉船</b>：DMT 把水面上的沉船也算作海洋资源，港口挨着沉船时显示的加成比游戏实际多 1 金币；本模组的加成由 DMT 计算，同样多算。沉船要到后期才可见，影响很小。</li>
@@ -775,7 +813,7 @@ kbd { font-family: var(--font-mono); font-size: 0.85em; padding: 0 5px; border-r
         <tr><td class="num">5</td><td>地图钉只对自己可见</td><td>EP</td><td>低：多人游戏才有意义（多人尚未测试）</td><td>无冲突</td><td>低</td><td><span class="part">多人测试时再做</span></td></tr>
         <tr><td class="num">6</td><td>不依赖 DMT、自写相邻规则</td><td>EP</td><td>—</td><td>违反需求约束：合法性与相邻必须复用 DMT</td><td>—</td><td><span class="no">不吸收</span></td></tr>
         <tr><td class="num">7</td><td>加成低于阈值的区域不放</td><td>EP</td><td>负面：玩家要的区域被悄悄跳过</td><td>与“要的区域能放就放”冲突</td><td>—</td><td><span class="no">不吸收；可改为在结果里提示“这个区域在哪都低于 2”</span></td></tr>
-        <tr><td class="num">8</td><td>只要合法就在每座城放运河、水坝</td><td>EP</td><td>负面：不是玩家要求的</td><td>—</td><td>—</td><td><span class="no">不吸收；可作为建议提示</span></td></tr>
+        <tr><td class="num">8</td><td>只要合法就在每座城放运河、水坝</td><td>EP</td><td>负面：不是玩家要求的</td><td>—</td><td>—</td><td><span class="part">不照搬：改为按需自动加入，缺淡水才加水渠、三环内泛滥平原不少于 3 格才加水坝，可改为不建（第 3 节）</span></td></tr>
         <tr><td class="num">10</td><td>手写的策略偏好（港口与商业中心同城扣分、自然保护区的魅力估计等）</td><td>AMT</td><td>有争议的策略判断</td><td>违反约束 2：规则全部从 GameInfo 读取，不写死</td><td>—</td><td><span class="no">不吸收</span></td></tr>
         <tr><td class="num">11</td><td>特色区域分数乘 6–10.5 倍、优先级排在分数之前</td><td>AMT</td><td>让方案偏离玩家看到的数</td><td>与目标函数（约束 3：加权相邻加成）冲突</td><td>—</td><td><span class="no">不吸收；产出权重已能表达偏好</span></td></tr>
         <tr><td class="num">12</td><td>按时代限制奇观数量</td><td>EP</td><td>低</td><td>—</td><td>低</td><td><span class="no">不吸收</span></td></tr>
@@ -789,7 +827,7 @@ kbd { font-family: var(--font-mono); font-size: 0.85em; padding: 0 5px; border-r
       <li><b>每项目标自己的指标</b>：如工业区、娱乐中心覆盖的城市数，改良设施的产出；由裁判独立计算，不复用任何规划器的代码。汇总时用帕累托支配计数（所有指标都不差、至少一项更好），不只比一个加权和。</li>
       <li><b>每把尺子都给对手最好的设置</b>：对每个指标，对手用最贴近该指标的设置（计入地块时用它们自己的地块惩罚，只看科研时给它们科研焦点），必要时在它们的参数空间里搜索取最好的一组作为上限；同时保留面板默认设置的结果。</li>
       <li><b>只用开发集调参</b>：调参只用开发集，最终对比用留出集。</li>
-      <li><b>在游戏里校准指标</b>：每个指标都要像相邻加成一样，在游戏里与引擎对照（相邻加成的校准见 5.8）。</li>
+      <li><b>在游戏里校准指标</b>：每个指标都要像相邻加成一样，在游戏里与引擎对照（相邻加成的校准见 5.9）。</li>
     </ol>
     <p class="note">上表第 2 项（改良设施）会改变求解对象，需单独设计，并在离线对比里验证不降低区域规划质量。</p>
   </div>

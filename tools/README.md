@@ -53,8 +53,8 @@ node tools/offline_tests.mjs -v -k k6 tests/offline/bench_single.lua   # 单城�
 - 测试文件写法与游戏内测试相同（`local test, T = ...`）；文件名用 `spec_` 前缀（`test_` 开头的会被 `run_tests.py` 当成游戏内测试）。基准文件用 `bench_` 前缀，只在点名时运行。
 - 假 DMT 统计调用次数（`World.Calls`）。基准用"调用次数 + 布局评估次数 + 搜索节点数"按游戏内单价折算预计耗时，不依赖本虚拟机的速度。
 - `tests/offline/ui.lua` 提供面板用到的 UI 对象替身（`Controls`、`ContextPtr`、`UIManager`、`InstanceManager`、透镜），`spec_panel.lua` 用它加载整个面板跑三个页签。布局和真实点击仍要在游戏里看。
-- 基准：`bench_single.lua`（单城）、`bench_multi.lua`（多城，`SDP_BENCH_SEEDS` 可选种子）。
-- `bench_single.lua` 的环境变量：`SDP_BENCH_REFS=文件` 缓存参照解（算参照解很慢）；`SDP_BENCH_TIERS=FAST,STANDARD` 只跑部分档位；`SDP_BENCH_PARAMS="STANDARD.NodeLimit=60000,FAST.Kicks=2"` 临时覆盖档位参数，用来比较方案。
+- 基准：`bench_single.lua`（单城）、`bench_multi.lua`（多城，`SDP_BENCH_SEEDS` 可选种子）、`bench_pools.lua`（单城从候选里挑区域，参照为逐个组合单独求解的最好结果）、`bench_multipools.lua`（多城每城挑区域，参照为“各城单独挑好再联合求解”和最好已知结果）。
+- `bench_single.lua`（其余基准同理）的环境变量：`SDP_BENCH_REFS=文件` 缓存参照解（算参照解很慢）；`SDP_BENCH_TIERS=FAST,STANDARD` 只跑部分档位；`SDP_BENCH_PARAMS="STANDARD.NodeLimit=60000,FAST.Kicks=2"` 临时覆盖档位参数，用来比较方案。
 - **fengari 的整数是 32 位**（游戏里的 Lua 数字是双精度）：超过 2^31 的整数运算会回绕。需要大数的地方写成浮点（如 `1.0`），见 `SDP_Board` 的邻居编码。
 
 ## compare.mjs — 与其他规划模组的离线对比

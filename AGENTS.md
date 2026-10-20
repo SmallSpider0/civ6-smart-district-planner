@@ -39,7 +39,7 @@ civ6mod/
 │   ├── SmartDistrictPlanner.modinfo
 │   ├── Text/                         # 本地化（数据库格式 XML）
 │   ├── UI/                           # InGame 上下文：同名 .xml + .lua
-│   └── Scripts/                      # 纯逻辑模块（求解器、相邻表、overlay），经 ImportFiles 导入后 include
+│   └── Scripts/                      # 纯逻辑模块（求解器、相邻表、overlay、提醒钉），经 ImportFiles 导入后 include
 ├── tests/                            # 游戏内 Lua 测试（test_*.lua），由 tools/run_tests.py 经 Tuner 执行；不随 mod 发布
 │   ├── offline/                      # 离线测试（spec_*.lua）与基准（bench_*.lua），tools/offline_tests.mjs 在 fengari 里跑，用假世界 world.lua
 │   ├── compare/                      # 与 AMT、Empire Planner 的离线对比：真实规则库 + 真实 DMT/AMT/EP 代码 + 模拟引擎，tools/compare.mjs 运行
@@ -117,6 +117,7 @@ include("dmt_yieldcalculator");       -- 尾部会执行 DMT_Initialize()，见�
 | 27 | （2026-10-20 游戏内引擎复核发现）DMT 的 `CanPlacePin` **不检查运河是否连通水域**：首都旁 13 格 DMT 判运河可放，游戏引擎（`CityManager.GetOperationTargets`）不允许。运河的合法性在引擎 C++ 里，GameInfo 读不到。已加引擎复核（`SDP_City.EngineRefused`，经 `SDP_Overlay.CanPlace` 生效），城市已拥有的格子上以引擎为准；离线对比框架的模拟引擎不给可建格，复核在那里不生效。其余区域在罗马、日本、高卢三局复核中与引擎完全一致（`tests/bench/probe_engine.lua`）。引擎只对已解锁的区域、城市已拥有的格给出可建格 |
 | 28 | （2026-10-20 游戏内裁判校准发现）DMT 把水面上**任何**可见资源都算作海洋资源（`AdjacentSeaResource`），沉船（`RESOURCECLASS_ARTIFACT`）也算，引擎不算：港口挨着沉船时 DMT 比引擎多 1 金币。相邻加成按约定用 DMT，未修，列为已知问题；`tests/bench/calibrate_judge.lua` 把这种差异单独列出。另：引擎对特色区域的可建格受人口名额限制（坑 18），校准前置因此把首都人口设为 25 |
 | 29 | （2026-10-20 截图时发现）透镜图层 `Hex_Coloring_Placement`（游戏放置区域时用的那层）**不管传什么颜色都画成同一种绿**，`SetLayerHexesColoredArea` 的颜色参数无效。要分色用魅力透镜的图层 `Hex_Coloring_Appeal_Level`；但打开它会触发 `Events.LensLayerOn`，小地图（`MinimapPanel.lua` 的 `OnLensLayerOn` → `SetAppealHexes`）随后往同一层填满魅力颜色，所以收到该事件时要清掉重画自己的格（`SDP_Preview`） |
+| 30 | （2026-10-20 游戏内测试发现）脚本里写错或已删掉的 `Controls.<ID>` 在游戏里是 nil，**只有运行到那一行才报错**，离线的控件替身按需造控件，发现不了。`validate.py` 现在检查每个 `Controls.<ID>` 都是 UI XML 里的 ID |
 
 ## 6. 开发环境与工作流
 

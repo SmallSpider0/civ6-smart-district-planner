@@ -69,6 +69,15 @@ def snapshot(sid, make):
     return json.load(open(path, encoding="utf-8"))
 
 
+MULTIPOOLS_TEXT = (
+    "多城另有一组基准（<code>tests/offline/bench_multipools.lua</code>）：首都加 3 个城址钉，每座城学院必建、再从 5 个候选里挑 2 个，3 个种子；"
+    "参照是各档、精细档加两次继续优化、“先逐城挑再联合规划”（每座城单独用单城精细档挑组合，再一起规划）中最好的值。"
+    "精细档 3 个种子都达到参照，按单价折算约 6.5 秒；快速、标准档平均 97.6%（最差 93%），约 0.5 秒、2.5 秒，分帧计算。"
+    "“先逐城挑”为 96%、97%、100%。差的那个种子上，标准档挑的组合与精细档相同（每座城商业中心 + 圣地），"
+    "直接给定这组区域、不挑选时标准档也是同样的分数：差在多城的摆放搜索，与挑选无关。")
+MULTIPOOLS_ROW = ["多城挑选", "3", "精细档 3 个都达到参照；标准档平均 97.6%，差的一个与精细档挑的组合相同，差在摆放"]
+
+
 def build(files=None, make_snapshots=True):
     """Return (page, data): the artifact page (without the document skeleton) and its chart data."""
     rows = summarize.load([os.path.join(REPO, f) for f in (files or RESULTS)])
@@ -441,6 +450,9 @@ def build(files=None, make_snapshots=True):
         texts["SPEED_TEXT"] = (
             "游戏里实测，单城 6–8 个区域标准档不到 0.3 秒；3 城联合 2.7 秒，经面板分帧时游戏照常响应。离线环境里同样的单城规划，"
             "AMT 慢约 %.0f 倍，EP 慢约 %.0f 倍。" % (am["time"] / sd["time"], ep["time"] / sd["time"]))
+    # Picking districts per city on the multi tab: tests/offline/bench_multipools.lua, run by hand
+    # (docs/self-test-report.md, fifth round).
+    texts["MULTIPOOLS_TEXT"] = MULTIPOOLS_TEXT
     hero = []
     if sd and am and ep:
         hero = [
@@ -827,10 +839,13 @@ def build(files=None, make_snapshots=True):
         spr = summarize.paired(csub, "sdp:STANDARD", "ep", "gain")
         srows.append(grp("e-sites", "5.6 选城址"))
         srows.append(tr(["两座新城（只比 EP）", "%d" % spr["n"], "城址总值逐场景：本模组胜 %d、平 %d、负 %d" % (spr["wins"], spr["ties"], spr["losses"])]))
-    srows.append(grp("e-speed", "5.7 速度 · 5.8 本模组自身的测试"))
+    srows.append(grp("e-pools", "5.7 从候选里挑"))
+    srows.append(tr(["单城挑选", "4 种情形 × 4", "标准档 16 个全部挑中最好的组合，约 0.4–1.0 秒；快速档平均 98%"]))
+    srows.append(tr(MULTIPOOLS_ROW))
+    srows.append(grp("e-speed", "5.8 速度 · 5.9 本模组自身的测试"))
     if sd and am and ep:
         srows.append(tr(["速度", "游戏内实测", "单城不到 0.3 秒，3 城联合 2.7 秒；离线比 AMT 快约 %.0f 倍" % (am["time"] / sd["time"])]))
-    srows.append(tr(["自身的测试", "游戏内 80 项、离线 58 项", "全部通过；裁判与游戏引擎逐格一致（沉船一处已知偏差）"]))
+    srows.append(tr(["自身的测试", "游戏内 87 项、离线 72 项", "全部通过；裁判与游戏引擎逐格一致（沉船一处已知偏差）"]))
     texts["EVAL_SUMMARY"] = ('<table><thead><tr><th>实验</th><th>场景</th><th>结论</th></tr></thead><tbody>%s</tbody></table>' % "".join(srows))
 
     texts["N_HS"] = str(len(summarize.subset(scenarios, "heldout", "single")))
