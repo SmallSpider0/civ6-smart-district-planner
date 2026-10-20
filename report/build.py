@@ -72,10 +72,10 @@ def snapshot(sid, make):
 MULTIPOOLS_TEXT = (
     "多城另有一组基准（<code>tests/offline/bench_multipools.lua</code>）：首都加 3 个城址钉，每座城学院必建、再从 5 个候选里挑 2 个，3 个种子；"
     "参照是各档、精细档加两次继续优化、“先逐城挑再联合规划”（每座城单独用单城精细档挑组合，再一起规划）中最好的值。"
-    "精细档 3 个种子都达到参照，按单价折算约 6.5 秒；快速、标准档平均 97.6%（最差 93%），约 0.5 秒、2.5 秒，分帧计算。"
-    "“先逐城挑”为 96%、97%、100%。差的那个种子上，标准档挑的组合与精细档相同（每座城商业中心 + 圣地），"
-    "直接给定这组区域、不挑选时标准档也是同样的分数：差在多城的摆放搜索，与挑选无关。")
-MULTIPOOLS_ROW = ["多城挑选", "3", "精细档 3 个都达到参照；标准档平均 97.6%，差的一个与精细档挑的组合相同，差在摆放"]
+    "标准档、精细档 3 个种子都达到参照，按单价折算约 3.1 秒、7.1 秒，分帧计算；快速档平均 97.6%，约 0.5 秒。"
+    "“先逐城挑”为 96%、97%、100%。标准档起初在一个种子上只有 93%：它挑的组合与精细档相同，差在多城的摆放搜索，"
+    "加了宽束联合起点（4.3）后达到参照。")
+MULTIPOOLS_ROW = ["多城挑选", "3", "标准档、精细档 3 个都达到参照，比“先逐城挑再联合规划”（96%–100%）好"]
 
 
 def build(files=None, make_snapshots=True):
@@ -448,7 +448,7 @@ def build(files=None, make_snapshots=True):
                                          pct(sd["outBest"] or 0) if sd and sd.get("outBest") is not None else "-"))
     if sd and am and ep:
         texts["SPEED_TEXT"] = (
-            "游戏里实测，单城 6–8 个区域标准档不到 0.3 秒；3 城联合 2.7 秒，经面板分帧时游戏照常响应。离线环境里同样的单城规划，"
+            "游戏里实测，单城 6–8 个区域标准档不到 0.3 秒；3 城联合 2.7 秒（之后标准档加了宽束联合起点，按计数折算约 3.2 秒），经面板分帧时游戏照常响应。离线环境里同样的单城规划，"
             "AMT 慢约 %.0f 倍，EP 慢约 %.0f 倍。" % (am["time"] / sd["time"], ep["time"] / sd["time"]))
     # Picking districts per city on the multi tab: tests/offline/bench_multipools.lua, run by hand
     # (docs/self-test-report.md, fifth round).
@@ -844,8 +844,8 @@ def build(files=None, make_snapshots=True):
     srows.append(tr(MULTIPOOLS_ROW))
     srows.append(grp("e-speed", "5.8 速度 · 5.9 本模组自身的测试"))
     if sd and am and ep:
-        srows.append(tr(["速度", "游戏内实测", "单城不到 0.3 秒，3 城联合 2.7 秒；离线比 AMT 快约 %.0f 倍" % (am["time"] / sd["time"])]))
-    srows.append(tr(["自身的测试", "游戏内 87 项、离线 72 项", "全部通过；裁判与游戏引擎逐格一致（沉船一处已知偏差）"]))
+        srows.append(tr(["速度", "游戏内实测", "单城不到 0.3 秒，3 城联合约 3 秒；离线比 AMT 快约 %.0f 倍" % (am["time"] / sd["time"])]))
+    srows.append(tr(["自身的测试", "游戏内 87 项、离线 73 项", "全部通过；裁判与游戏引擎逐格一致（沉船一处已知偏差）"]))
     texts["EVAL_SUMMARY"] = ('<table><thead><tr><th>实验</th><th>场景</th><th>结论</th></tr></thead><tbody>%s</tbody></table>' % "".join(srows))
 
     texts["N_HS"] = str(len(summarize.subset(scenarios, "heldout", "single")))

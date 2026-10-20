@@ -3,6 +3,8 @@
 -- bench_multi.lua, every city required to build a campus and to pick two
 -- more from a pool of five.
 --   node tools/offline_tests.mjs -v tests/offline/bench_multipools.lua
+-- Environment: SDP_BENCH_REFS, SDP_BENCH_TIERS, SDP_BENCH_PARAMS, SDP_BENCH_SEEDS
+-- (as bench_multi.lua).
 -- Two references:
 --   alone   each city's best combination found on its own (the single-city
 --           solver, FINE, with only that city's plots), then those lists
@@ -51,6 +53,12 @@ end
 
 local TIERS = {}
 for tier in (os.getenv("SDP_BENCH_TIERS") or "FAST,STANDARD,FINE"):gmatch("%u+") do TIERS[#TIERS + 1] = tier end
+local OVERRIDES = {}
+for tier, key, value in (os.getenv("SDP_BENCH_PARAMS") or ""):gmatch("(%u+)%.(%w+)=([%w%.]+)") do
+  OVERRIDES[tier] = OVERRIDES[tier] or {}
+  if value == "true" then value = true elseif value == "false" then value = false else value = tonumber(value) or value end
+  OVERRIDES[tier][key] = value
+end
 
 local REFS_FILE = os.getenv("SDP_BENCH_REFS")
 local refs = {}
@@ -70,7 +78,8 @@ local function SaveRefs()
 end
 
 local function Request(tier, extra)
-  local r = { PlayerID = 0, Tier = tier, Weights = ONES, Districts = REQUIRED, Pool = POOL, Count = COUNT, Land = true }
+  local r = { PlayerID = 0, Tier = tier, Weights = ONES, Districts = REQUIRED, Pool = POOL, Count = COUNT, Land = true,
+    Params = OVERRIDES[tier] }
   for k, v in pairs(extra or {}) do r[k] = v end
   return r
 end

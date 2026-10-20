@@ -64,6 +64,10 @@ SDP_Tiers.Single = {
 --            start plans that city (best optimistic value first)
 --   Prelude  a lighter tier whose starts run first, with its parameters
 --            (SDP_Multi Session:RunPrelude): the tier never ends below them
+--   WideJoint, WideRounds  one more joint start after the others, its beam
+--            WideJoint times as wide, with WideRounds block rounds
+--            (Session:RunWideJoint; two cities or more)
+--   WideWork its share of the time estimate (units per slot and plot)
 --   Work     time estimate: units per (district or wonder) slot and plot,
 --            for two cities; times (cities / 2) ^ MULTI_GROWTH (measured in
 --            the game, 2026-10-20), the prelude's own added on top
@@ -78,6 +82,7 @@ SDP_Tiers.Multi = {
     ExactLimit = 2000, Beam = 300, BeamOrder = "pairs", Shortlist = 50, NodeLimit = 300000,
     CallLimit = 30000, TryLimit = 40000, MaxPasses = 20, Starts = 5, Rounds = 2, Kicks = 24, Solutions = 3,
     Swap = true, Pair = false, Sliced = true, Work = 88, Prelude = "FAST", Combos = 3,
+    WideJoint = 2, WideRounds = 0, WideWork = 20,
   },
   FINE = {
     ExactLimit = 8000, Beam = 600, BeamOrder = "pairs", Shortlist = 100, NodeLimit = 1000000,

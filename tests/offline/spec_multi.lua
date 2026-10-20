@@ -132,6 +132,27 @@ test("same request, same plan", function()
   T.same(b.Stats, a.Stats, "stats")
 end)
 
+test("wide joint start: one more start with two cities or more, none for one city", function()
+  NewWorld()
+  -- The mechanism at FAST (STANDARD turns it on in SDP_Tiers).
+  local on = { WideJoint = 2, WideRounds = 0 }
+  local two = { "DISTRICT_CAMPUS", "DISTRICT_HOLY_SITE" }
+  local wide = SDP_Multi.Solve(Request({ Districts = two, Params = on }))
+  local plain = SDP_Multi.Solve(Request({ Districts = two }))
+  T.ok(wide.Ok and plain.Ok, "solved")
+  T.eq(#wide.Session.Starts, #plain.Session.Starts + 1, "the wide joint start runs once, after the others")
+  T.ok(wide.Gain >= plain.Gain - 1e-9, "the starts only grow (FAST has no kicks)")
+  local only = Request({ Districts = two, Only = { [1] = true }, Params = on })
+  local one = SDP_Multi.Solve(only)
+  only.Params = nil
+  T.eq(#one.Session.Starts, #SDP_Multi.Solve(only).Session.Starts, "one city: no wide joint start")
+  -- The time estimate counts it the same way.
+  local params = SDP_Tiers.Params(SDP_Tiers.Multi, "STANDARD")
+  local off = SDP_Tiers.Params(SDP_Tiers.Multi, "STANDARD", { WideJoint = 1 })
+  T.ok(SDP_Multi.EstimateUnits(3, 4, 0, params) > SDP_Multi.EstimateUnits(3, 4, 0, off), "estimate: two cities or more")
+  T.eq(SDP_Multi.EstimateUnits(1, 4, 1, params), SDP_Multi.EstimateUnits(1, 4, 1, off), "estimate: one city")
+end)
+
 test("small problem: equals brute force", function()
   NewWorld()
   local request = Request({ Districts = { "DISTRICT_CAMPUS" }, Existing = { [1] = false, [2] = false }, Land = false,

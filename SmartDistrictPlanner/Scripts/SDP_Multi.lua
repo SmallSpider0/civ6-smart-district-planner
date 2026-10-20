@@ -576,8 +576,9 @@ end
 -- Start 2 is joint: one model beam over every city's districts at once, so
 -- that clusters can merge across cities (districts of two cities next to
 -- each other give each other adjacency), then the wonders. The others go
--- city by city, each with the cities before it fixed.
-function Session:RunStart(s)
+-- city by city, each with the cities before it fixed. `wide` (start 2 only)
+-- multiplies the joint beam's width (Params.WideJoint).
+function Session:RunStart(s, wide)
   local search, params = self.Search, self.Params
   local order, scale = self:StartPlan(s)
   local beam = params.Beam
@@ -596,7 +597,9 @@ function Session:RunStart(s)
       for _, m in ipairs(active[p]) do districts[#districts + 1] = m end
     end
     if #districts > 0 and not search:OverBudget() then
+      params.Beam = math.max(10, math.floor(beam * scale * (wide or 1)))
       local ranked = search:Shortlist(districts, layout)
+      params.Beam = math.max(10, math.floor(beam * scale))
       if ranked[1] ~= nil then layout = Copy(ranked[1].Layout) end
     end
     for _, p in ipairs(order) do
@@ -623,7 +626,7 @@ function Session:RunStart(s)
   if self.First == nil then self.First = { Layout = Copy(layout), Gain = gain } end
   layout, gain = self:Polish(layout, gain)
   local placed = SDP_Search.Placed(layout)
-  for _ = 1, params.Rounds do
+  for _ = 1, (wide and params.WideRounds) or params.Rounds do
     local improved = false
     for _, p in ipairs(order) do
       local block = self:BlockOf(p, layout)
@@ -655,7 +658,8 @@ end
 -- map (offline benchmark, 2026-10-20). The board's memo keeps them cheap in
 -- DMT calls. They have budgets of their own: the tier's starts still get all
 -- of the tier's budget after them.
-local PRELUDE_KEYS = { "ExactLimit", "Beam", "BeamOrder", "Shortlist", "MaxPasses", "Rounds", "Swap", "Pair" }
+local PRELUDE_KEYS = { "ExactLimit", "Beam", "BeamOrder", "Shortlist", "MaxPasses", "Rounds", "Swap", "Pair", "WideJoint",
+  "WideRounds" }
 
 function Session:RunPrelude(tier)
   local inner = SDP_Tiers.Multi[tier]
@@ -670,6 +674,7 @@ function Session:RunPrelude(tier)
     if self.Search:OverBudget() then break end
     self:RunStart(s)
   end
+  self:RunWideJoint()
   for _, key in ipairs(PRELUDE_KEYS) do params[key] = saved[key] end
 end
 
@@ -687,8 +692,20 @@ function Session:Run()
     self:RunStart(self.NextStartIndex)
     self.NextStartIndex = self.NextStartIndex + 1
   end
+  self:RunWideJoint()
   search:Kicks(params.Kicks or 0)
   self:Repair()
+end
+
+-- The joint start once more with a wider beam (Params.WideJoint times the
+-- tier's), on top of the fixed starts: widening start 2 itself is not
+-- monotone (a wider beam's best model layout can polish to less), so the
+-- portfolio only grows. It merges clusters across cities that the narrower
+-- beam misses (offline benchmark, 2026-10-21).
+function Session:RunWideJoint()
+  local wide = self.Params.WideJoint
+  if wide == nil or wide <= 1 or #self.Participants < 2 or self.Search:OverBudget() then return end
+  self:RunStart(2, wide)
 end
 
 -- A requested slot the best layout left off with a legal plot somewhere: a
@@ -970,7 +987,10 @@ function SDP_Multi.EstimateUnits(cities, districts, wonders, params, pick, pool)
   if slots == 0 then return 0 end
   local n = 30 -- plots a city can use, typically
   local growth = (math.max(2, cities) / 2) ^ SDP_Tiers.MULTI_GROWTH
-  local units = (params.Work or 100) * n * slots * growth
+  -- The wide joint start (Session:RunWideJoint) runs with two cities or more.
+  local wide = cities >= 2 and (params.WideJoint or 1) > 1
+  local work = (params.Work or 100) + (wide and (params.WideWork or 0) or 0)
+  local units = work * n * slots * growth
   if pick > 0 and pool > pick then
     -- Each city's block is solved for several combinations, and swaps.
     units = units * (1 + 0.5 * (params.Combos or 3)) + 3 * n * cities * pool
