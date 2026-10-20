@@ -230,7 +230,7 @@ SDP_Panel（面板，三个页签：单城 / 城址 / 多城；每页有档位�
 
 | 手段 | 做法 | 先例 |
 |---|---|---|
-| 格子着色 | 透镜图层 `Hex_Coloring_Placement`，`UILens.SetLayerHexesColoredArea`；每座城的三环用一种颜色 | 游戏 `WorldInput.lua:98`；AMT `amt_autoplanner.lua:6996` |
+| 格子着色 | 魅力透镜的图层 `Hex_Coloring_Appeal_Level`，`UILens.SetLayerHexesColoredArea`；每座城的三环用一种颜色。放置用的 `Hex_Coloring_Placement` 不认颜色，一律画成绿色（AGENTS 坑 29） | 游戏 `MinimapPanel.lua:644`（魅力透镜按档着色） |
 | 地图图标 | `WorldAnchor` 控件 + `UI.GridToWorld` + `SetWorldPositionVal`，在格子上显示市中心、区域、奇观图标和得分 | 游戏 `MapPinManager.xml:7`、`MapPinManager.lua:439`；AMT `amt_autoplanner.xml:389` |
 
 预览在以下情况清除：关闭面板、切换页签或方案、游戏进入区域放置等使用同一透镜图层的模式。
@@ -568,7 +568,7 @@ SDP_Panel（面板，三个页签：单城 / 城址 / 多城；每页有档位�
 | `SDP_Wonders` | 可规划奇观：`MapTacks.PlayerWonders` 去掉通用奇观图标；本方城市里已建的、已揭示格子上看得到的、已有钉的不再规划。 |
 | `SDP_Sites` | 第 1 步的候选与评分（3.2–3.3）。精评用一块共享的 `SDP_Board`：假想市中心放在专用槽位，离市中心较远的区域单项在城址之间共享记忆。每个城址的区域分由单城搜索（快速档参数）求出，区域占掉的格子从耕作分里扣掉。 |
 | `SDP_SiteSolver` | 第 1 步的组合搜索（3.5）：间距、接力连通、组合修正（重叠格归失去它损失最大的城；奢侈、战略的新种类只算一次；两城区域落在同一格扣较小的一方的单项分），分支定界，多套差异方案。 |
-| `SDP_Preview` | 地图预览：`Hex_Coloring_Placement` 图层按城着色（需要时打开，清除时关回），`WorldAnchor` 图标。关面板、切页签、换方案、进入游戏的放置模式（`InterfaceModeChanged`）时清除。 |
+| `SDP_Preview` | 地图预览：`Hex_Coloring_Appeal_Level` 图层按城、按档着色（需要时打开，清除时关回；小地图因打开而填入魅力颜色时清掉重画），`WorldAnchor` 图标。关面板、切页签、换方案、进入游戏的放置模式（`InterfaceModeChanged`）时清除。 |
 | `SDP_PageSites`、`SDP_PageMulti` | 面板的"选城址""多城"两个页签（`SDP_Panel` 改为三个页签，单城页不变）。 |
 
 多套方案（第 2 步）：候选为全局最好方案和每个起点的结果，按价值排序，与前面每一套至少有 max(2, 槽位数 20%) 个对象位置不同才保留。

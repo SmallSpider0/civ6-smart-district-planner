@@ -128,12 +128,20 @@ test("single-city tab: wonders go with the districts; the good-places map; the o
   SDP_Panel.SetTier("STANDARD")
 
   -- Good places for the campus: legal plots best first, drawn on the map.
-  local before = UI_Mock.Lenses.hexes.Hex_Coloring_Placement or 0
+  local before = UI_Mock.Lenses.hexes.Hex_Coloring_Appeal_Level or 0
   SDP_Panel.ShowHeat("DISTRICT_CAMPUS")
   local spots = SDP_Panel.Heat()
   T.ok(spots ~= nil and #spots > 3, "spots")
   for i = 2, #spots do T.ok(spots[i - 1].Gain >= spots[i].Gain, "best first") end
-  T.ok((UI_Mock.Lenses.hexes.Hex_Coloring_Placement or 0) > before, "colored on the map")
+  T.ok((UI_Mock.Lenses.hexes.Hex_Coloring_Appeal_Level or 0) > before, "colored on the map")
+  -- Turning the layer on makes the minimap fill in the appeal colors, by an
+  -- event that comes later; the preview puts its own hexes back.
+  local ours = UI_Mock.Lenses.hexes.Hex_Coloring_Appeal_Level
+  UILens.SetLayerHexesColoredArea("Hex_Coloring_Appeal_Level", 0, { 1, 2, 3 }, 0)
+  w.Events.LensLayerOn("Hex_Coloring_Appeal_Level")
+  T.eq(UI_Mock.Lenses.hexes.Hex_Coloring_Appeal_Level, ours, "the minimap's appeal colors are wiped")
+  w.Events.LensLayerOn("Hex_Coloring_Religion")
+  T.eq(UI_Mock.Lenses.hexes.Hex_Coloring_Appeal_Level, ours, "other layers leave it alone")
   T.eq(SDP_Panel.State().HeatDistrict, "DISTRICT_CAMPUS", "shown")
   local solo = SDP_Panel.Solve()
   T.ok(spots[1].Gain >= solo.Adjacency - 1e-9, "no plot beats the best spot's adjacency")
@@ -163,7 +171,7 @@ test("city sites tab: solve, select, place the site tacks", function()
   local result = sites.State().Result
   T.ok(result and result.Ok, "sites result: " .. tostring(result and result.Error))
   T.ok(#sites.State().View.Solutions >= 1, "solutions listed")
-  T.ok(UI_Mock.Lenses.hexes.Hex_Coloring_Placement > 0, "previewed on the map")
+  T.ok(UI_Mock.Lenses.hexes.Hex_Coloring_Appeal_Level > 0, "previewed on the map")
   if #result.Solutions > 1 then
     sites.SelectSolution(2)
     T.eq(sites.State().Solution, 2, "second solution selected")
@@ -173,7 +181,7 @@ test("city sites tab: solve, select, place the site tacks", function()
   T.eq(#w:Pins(), pins + 2, "on the map")
   -- One city and one city-center pin already: the new sites are 3 and 4.
   T.eq(w:Pins()[pins + 1]:GetName() .. "," .. w:Pins()[pins + 2]:GetName(), "3,4", "site numbers")
-  T.eq(UI_Mock.Lenses.hexes.Hex_Coloring_Placement, 0, "preview cleared after placing")
+  T.eq(UI_Mock.Lenses.hexes.Hex_Coloring_Appeal_Level, 0, "preview cleared after placing")
 end)
 
 test("several cities tab: the new site tacks take part; solve; solutions; place", function()
@@ -282,14 +290,14 @@ test("closing the panel clears the preview; a background result marks the launch
   SDP_Panel.SetTier("FINE")
   SDP_Panel.Solve()
   SDP_Panel.Close()
-  T.eq(UI_Mock.Lenses.hexes.Hex_Coloring_Placement or 0, 0, "no preview while closed")
+  T.eq(UI_Mock.Lenses.hexes.Hex_Coloring_Appeal_Level or 0, 0, "no preview while closed")
   -- A hidden context gets no updates: it stays shown, its window hidden.
   T.ok(SDP_Panel.RunsHidden(), "context shown, window hidden while the task runs")
   SDP_Panel.RunTask(1000)
   T.ok(SDP_Panel.State().LaunchMark, "mark on the launch button")
   T.ok(UI_Mock.Controls.DropShadow ~= nil and ContextPtr:IsHidden() and not UI_Mock.Controls.DropShadow:IsHidden(),
     "hidden again, window restored")
-  T.eq(UI_Mock.Lenses.hexes.Hex_Coloring_Placement or 0, 0, "no preview from the result while closed")
+  T.eq(UI_Mock.Lenses.hexes.Hex_Coloring_Appeal_Level or 0, 0, "no preview from the result while closed")
   SDP_Panel.Open()
   T.ok(not SDP_Panel.State().LaunchMark, "mark gone after opening")
   SDP_Panel.SetTier("STANDARD")
@@ -301,8 +309,8 @@ test("a result that ends while the panel is closed leaves no preview on the map"
   SDP_Panel.Sites.Solve()
   SDP_Panel.Close()
   SDP_Panel.RunTask(1000)
-  T.eq(UI_Mock.Lenses.hexes.Hex_Coloring_Placement or 0, 0, "no preview while closed")
+  T.eq(UI_Mock.Lenses.hexes.Hex_Coloring_Appeal_Level or 0, 0, "no preview while closed")
   SDP_Panel.Open()
-  T.ok((UI_Mock.Lenses.hexes.Hex_Coloring_Placement or 0) > 0, "preview back when the tab opens")
+  T.ok((UI_Mock.Lenses.hexes.Hex_Coloring_Appeal_Level or 0) > 0, "preview back when the tab opens")
   SDP_Panel.Close()
 end)

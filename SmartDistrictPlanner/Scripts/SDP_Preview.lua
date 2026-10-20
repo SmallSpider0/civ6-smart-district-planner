@@ -1,13 +1,20 @@
 -- SDP_Preview: shows a plan on the map without placing map tacks
 -- (docs/multicity-design.md section 5). Placing real tacks would broadcast
 -- over the network and make DMT recompute; a preview only draws.
---   Areas  colored hexes on the lens layer the game uses for placement
---          (WorldInput.lua: g_HexColoringPlacement), one color per city
+--   Areas  colored hexes, one color per city or per shade, on the appeal
+--          lens's layer (MinimapPanel.lua: m_HexColoringAppeal), which draws
+--          each area in its own color. The placement layer the game uses for
+--          districts (WorldInput.lua: g_HexColoringPlacement) draws every
+--          area in its one green whatever color is passed (seen in the game).
+--          Turning the appeal layer on makes the minimap fill in the appeal
+--          colors (MinimapPanel.lua: OnLensLayerOn -> SetAppealHexes, an
+--          event that comes after the call), so the preview redraws its own
+--          hexes when that event arrives (OnLensLayerOn below).
 --   Icons  WorldAnchor instances at plots (as MapPinManager and AMT do):
 --          the district, wonder or city center icon and a short text
 -- The preview must be cleared when the panel closes, the tab or the
--- selected solution changes, or the game enters a placement mode that uses
--- the same layer (Clear, called by the panel).
+-- selected solution changes, or the game enters a placement mode, whose
+-- own highlights would mix with ours (Clear, called by the panel).
 
 SDP_Preview = {}
 
@@ -17,19 +24,42 @@ SDP_Preview.COLORS = {
   "COLOR_BREATHTAKING_APPEAL", "COLOR_CHARMING_APPEAL", "COLOR_AVERAGE_APPEAL", "COLOR_DISGUSTING_APPEAL",
 }
 
+SDP_Preview.LAYER = "Hex_Coloring_Appeal_Level"
+
 local m_layer = nil
 local m_icons = nil       -- InstanceManager of world icons
 local m_layerOn = false   -- we switched the layer on
 local m_shown = false
+local m_drawn = nil       -- { PlayerID, Areas } last shown, for redrawing
+
+local function Draw()
+  UILens.ClearLayerHexes(m_layer)
+  for _, area in ipairs(m_drawn.Areas) do
+    if #area.Plots > 0 then
+      local name = SDP_Preview.COLORS[(area.Color - 1) % #SDP_Preview.COLORS + 1]
+      UILens.SetLayerHexesColoredArea(m_layer, m_drawn.PlayerID, area.Plots, UI.GetColorValue(name))
+    end
+  end
+end
+
+-- The minimap filled the layer with appeal colors: put ours back.
+local function OnLensLayerOn(layerNum)
+  if m_shown and m_layer ~= nil and layerNum == m_layer then Draw() end
+end
 
 -- `container`: a control of the panel's context to hold the world icons;
 -- `instanceName`: the WorldAnchor instance (root ID "Anchor").
 function SDP_Preview.Init(container, instanceName)
   m_icons = InstanceManager:new(instanceName, "Anchor", container)
+  Events.LensLayerOn.Add(OnLensLayerOn)
+end
+
+function SDP_Preview.Shutdown()
+  Events.LensLayerOn.Remove(OnLensLayerOn)
 end
 
 local function Layer()
-  if m_layer == nil then m_layer = UILens.CreateLensLayerHash("Hex_Coloring_Placement") end
+  if m_layer == nil then m_layer = UILens.CreateLensLayerHash(SDP_Preview.LAYER) end
   return m_layer
 end
 
@@ -47,6 +77,7 @@ function SDP_Preview.Clear()
     end
   end
   m_shown = false
+  m_drawn = nil
 end
 
 -- Show areas = { { Plots = { plot index }, Color = n } } (Color: index into
@@ -54,16 +85,13 @@ end
 function SDP_Preview.Show(playerID, areas, icons)
   SDP_Preview.Clear()
   local layer = Layer()
+  m_drawn = { PlayerID = playerID, Areas = areas }
+  m_shown = true
   if not UILens.IsLayerOn(layer) then
     UILens.ToggleLayerOn(layer)
     m_layerOn = true
   end
-  for _, area in ipairs(areas) do
-    if #area.Plots > 0 then
-      local name = SDP_Preview.COLORS[(area.Color - 1) % #SDP_Preview.COLORS + 1]
-      UILens.SetLayerHexesColoredArea(layer, playerID, area.Plots, UI.GetColorValue(name))
-    end
-  end
+  Draw()
   if m_icons ~= nil then
     for _, icon in ipairs(icons) do
       local inst = m_icons:GetInstance()

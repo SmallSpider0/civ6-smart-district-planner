@@ -163,6 +163,14 @@ python3 -I tools/game.py newgame --state SDP_Panel --capital --reveal   # 另外
 
 改 modinfo 或文本后的完整循环：`deploy.py` → `game.py quit` → `game.py launch` → 点"开始" → `game.py newgame --state SDP_Panel --capital` → `run_tests.py`。
 
+**截图**（游戏要在前台，2026-10-20 用过的做法）：
+
+- `game.py launch --stay` 让游戏留在前台；`newgame` 开始时游戏在前台就不会切走。
+- 附加内容界面：在 `MainMenu` 状态执行 `OnMods()`。名为 `Mods` 的 Lua 状态有两个（`ModsMenu`、`ModsContext`），屏幕上的是 `ContextPtr:GetID()` 为 `ModsContext` 的那个，按序号 `exec -s <序号>`，在里面用 `SelectMod(handle)` 选中本模组。
+- 地图镜头：在 `WorldInput` 状态执行 `UI.SetMapZoom(z, 0, 0)` 和 `UI.LookAtPlotScreenPosition(x, y, 横向比例, 纵向比例)`。在面板的状态里调 `SetMapZoom` 不生效。
+- 揭示地图、移动镜头后会弹出与苏格兰的首次相遇外交画面：在 `DiplomacyActionView` 状态执行 `OnForceClose()`，出现回复选项时再执行一次；随后的"尤里卡"用 `popups --close` 关。
+- 用 computer-use 的 `zoom` 只截游戏窗口内的区域，裁掉 macOS 的菜单栏、窗口标题栏和 Dock。结果列表用 `Controls.MultiResultScroll:SetScrollValue(v)` 滚动；悬停提示要用真实的鼠标移动（`mouse_move`），滚动位置可能被重绘复位，移动鼠标后马上截。
+
 ## civ6tuner.py — FireTuner 客户端（Lua 输出 + 远程执行 Lua）
 
 Mac 版文明6不写 `Lua.log`，本工具通过游戏的 FireTuner 调试端口（127.0.0.1:4318）代替它：收集所有 Lua `print()` 输出，并在任意 Lua 状态中执行代码。纯 Python 标准库，无依赖。

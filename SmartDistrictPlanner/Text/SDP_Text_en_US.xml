@@ -116,6 +116,9 @@
     <Replace Tag="LOC_SDP_LAND" Language="en_US">
       <Text>Count what the taken plots would yield (food and one-time yields weigh this too)</Text>
     </Replace>
+    <Replace Tag="LOC_SDP_LAND_SHORT" Language="en_US">
+      <Text>Count taken plots</Text>
+    </Replace>
     <Replace Tag="LOC_SDP_WEIGHT_FEATURE_SHORT" Language="en_US">
       <Text>Clear</Text>
     </Replace>

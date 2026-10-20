@@ -1043,6 +1043,7 @@ local function OnShutdown()
   if SDP_Task.IsRunning() then SDP_Task.Cancel() end
   ContextPtr:ClearUpdate()
   SDP_Preview.Clear()
+  SDP_Preview.Shutdown()
   Events.LoadScreenClose.Remove(OnLoadScreenClose)
   Events.InterfaceModeChanged.Remove(OnInterfaceModeChanged)
   LuaEvents.SDP_OpenPanel.Remove(Open)

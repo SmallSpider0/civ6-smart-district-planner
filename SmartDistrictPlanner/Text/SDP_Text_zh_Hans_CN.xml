@@ -116,6 +116,9 @@
     <Replace Tag="LOC_SDP_LAND" Language="zh_Hans_CN">
       <Text>计入占用地块的产出损失（食物、地貌权重用于这一项）</Text>
     </Replace>
+    <Replace Tag="LOC_SDP_LAND_SHORT" Language="zh_Hans_CN">
+      <Text>计入占地的产出损失</Text>
+    </Replace>
     <Replace Tag="LOC_SDP_WEIGHT_FEATURE_SHORT" Language="zh_Hans_CN">
       <Text>地貌</Text>
     </Replace>

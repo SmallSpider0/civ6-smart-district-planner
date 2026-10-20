@@ -114,6 +114,7 @@ include("dmt_yieldcalculator");       -- 尾部会执行 DMT_Initialize()，见�
 | 26 | （2026-10-20 离线对比发现）DMT 的 `CanPlacePin` 对区域钉**不拦奢侈、战略资源**：`GetRealizedPlotFeatures` 在评估区域钉时先把格上的资源去掉，"不能采收的资源"检查永远不触发。游戏不允许区域压在不能移除的资源上，所以候选格要自己排除（`SDP_City` 的 `RESOURCE`：可见、且 `Resource_Harvests` 里没有的资源） |
 | 27 | （2026-10-20 游戏内引擎复核发现）DMT 的 `CanPlacePin` **不检查运河是否连通水域**：首都旁 13 格 DMT 判运河可放，游戏引擎（`CityManager.GetOperationTargets`）不允许。运河的合法性在引擎 C++ 里，GameInfo 读不到。已加引擎复核（`SDP_City.EngineRefused`，经 `SDP_Overlay.CanPlace` 生效），城市已拥有的格子上以引擎为准；离线对比框架的模拟引擎不给可建格，复核在那里不生效。其余区域在罗马、日本、高卢三局复核中与引擎完全一致（`tests/bench/probe_engine.lua`）。引擎只对已解锁的区域、城市已拥有的格给出可建格 |
 | 28 | （2026-10-20 游戏内裁判校准发现）DMT 把水面上**任何**可见资源都算作海洋资源（`AdjacentSeaResource`），沉船（`RESOURCECLASS_ARTIFACT`）也算，引擎不算：港口挨着沉船时 DMT 比引擎多 1 金币。相邻加成按约定用 DMT，未修，列为已知问题；`tests/bench/calibrate_judge.lua` 把这种差异单独列出。另：引擎对特色区域的可建格受人口名额限制（坑 18），校准前置因此把首都人口设为 25 |
+| 29 | （2026-10-20 截图时发现）透镜图层 `Hex_Coloring_Placement`（游戏放置区域时用的那层）**不管传什么颜色都画成同一种绿**，`SetLayerHexesColoredArea` 的颜色参数无效。要分色用魅力透镜的图层 `Hex_Coloring_Appeal_Level`；但打开它会触发 `Events.LensLayerOn`，小地图（`MinimapPanel.lua` 的 `OnLensLayerOn` → `SetAppealHexes`）随后往同一层填满魅力颜色，所以收到该事件时要清掉重画自己的格（`SDP_Preview`） |
 
 ## 6. 开发环境与工作流
 
@@ -170,7 +171,7 @@ Windows 对应路径：Mods 在 `文档\My Games\Sid Meier's Civilization VI\Mod
 
 2026-10-19 在 macOS 上完成自测，逐项证据见 [docs/self-test-report.md](docs/self-test-report.md)。标 ◐ 的项逻辑已自动验证，但真实鼠标点击或画面需用户确认。
 
-- [◐] 模组列表正确显示中文名与描述（Lua 已验证，附加内容界面画面未截到）
+- [x] 模组列表正确显示中文名与描述（Lua 验证 + 附加内容界面截图）
 - [◐] 启动栏出现图标按钮，点击弹出面板（按钮截图 + 回调测试；游戏窗口拒绝合成点击）
 - [x] 学院+圣地求解秒级出结果；存在相邻互惠更优解时必须给出该解（与暴力枚举最优一致）
 - [x] 结果行显示坐标与加成明细；悬停逐项来源与 DMT 图钉数值一致（悬停截图 + DMT 存储比对）

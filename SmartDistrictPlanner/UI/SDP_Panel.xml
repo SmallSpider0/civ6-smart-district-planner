@@ -178,9 +178,11 @@
         </Container>
         <Stack ID="MultiWeightStack" Anchor="C,T" StackGrowth="Right" StackPadding="2"/>
         <Container Size="500,26">
-          <CheckBox ID="MultiLandCheck" Anchor="L,C" Style="MainCheckBox"/>
-          <Label Anchor="L,C" Offset="26,0" Style="BodyTextDark16" String="LOC_SDP_LAND"/>
-          <Container Anchor="L,C" Offset="230,0" Size="270,26" ToolTip="LOC_SDP_REPLACE_OWN_MULTI_TOOLTIP">
+          <Container Anchor="L,C" Size="190,26" ToolTip="LOC_SDP_LAND">
+            <CheckBox ID="MultiLandCheck" Anchor="L,C" Style="MainCheckBox"/>
+            <Label Anchor="L,C" Offset="26,0" Style="BodyTextDark16" String="LOC_SDP_LAND_SHORT"/>
+          </Container>
+          <Container Anchor="L,C" Offset="200,0" Size="300,26" ToolTip="LOC_SDP_REPLACE_OWN_MULTI_TOOLTIP">
             <CheckBox ID="MultiReplaceCheck" Anchor="L,C" Style="MainCheckBox"/>
             <Label ID="MultiReplaceLabel" Anchor="L,C" Offset="26,0" Style="BodyTextDark16"/>
           </Container>
