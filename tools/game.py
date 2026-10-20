@@ -11,7 +11,10 @@
                      hold the engine's event queue until they release it, and
                      a plain dequeue leaves the UI's copy of the game stale
   game.py launch     open the game through Steam (the Aspyr launcher's
-                     "开始" button then needs a click: computer-use AXPress)
+                     "开始" button then needs a click: computer-use AXPress).
+                     Notes the app in front first; the next newgame gives the
+                     front back to it whenever the game takes it while
+                     loading (--stay: leave the game in front)
   game.py newgame    wait for the main menu, quick-start a game, wait until
                      in-game Lua answers; --capital also founds the capital
                      (tests/fixtures/found_capital.lua); --reveal then
@@ -20,14 +23,18 @@
                      map/game seeds are fixed (--leader, --seed) so every test
                      game is the same map; --random keeps Play Now's choices;
                      --ruleset picks the base game, Rise and Fall or GS.
+                     While it waits, the game is kept out of the front if
+                     another app was in front (see launch).
 
 Exit codes: 0 done, 2 the game did not reach the expected state in time.
 """
 
 import argparse
 import os
+import re
 import subprocess
 import sys
+import threading
 import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # -I drops the script dir
@@ -39,6 +46,9 @@ FOUND_CAPITAL = os.path.join(ROOT, "tests", "fixtures", "found_capital.lua")
 REVEAL_AREA = os.path.join(ROOT, "tests", "fixtures", "reveal_area.lua")
 DEFAULT_LEADER = "LEADER_TRAJAN"  # Rome: starts on land, every ruleset has it
 DEFAULT_SEED = 20261019
+CIV6_BUNDLE = "com.aspyr.civ6.steam"  # the launcher and the game window alike
+FRONT_RECORD = os.path.join(ROOT, "logs", "front-app.txt")  # launch writes it, newgame uses it up
+FRONT_RECORD_TTL = 900  # seconds; older records are from a launch that never got to newgame
 
 # Play Now (MainMenu OnStateTransition) resets the configuration and then
 # calls the global GameSetup_RefreshParameters; wrapping it lets us pin the
@@ -60,6 +70,74 @@ if SDP_TestSetupOriginal then GameSetup_RefreshParameters = SDP_TestSetupOrigina
 
 def game_running():
     return subprocess.run(["pgrep", "-f", "Civ6_Exe"], capture_output=True).returncode == 0
+
+
+def front_app():
+    """Bundle id of the frontmost regular app (one with a Dock icon), else None."""
+    asn = subprocess.run(["lsappinfo", "front"], capture_output=True, text=True).stdout.strip()
+    if not asn:
+        return None
+    info = subprocess.run(["lsappinfo", "info", asn], capture_output=True, text=True).stdout
+    bundle = re.search(r'bundleID="([^"]+)"', info)
+    kind = re.search(r'\btype="([^"]+)"', info)
+    if bundle is None or kind is None or kind.group(1) != "Foreground":
+        return None
+    return bundle.group(1)
+
+
+def app_running(bundle):
+    found = subprocess.run(["lsappinfo", "find", "bundleid=" + bundle], capture_output=True, text=True)
+    return bool(found.stdout.strip())
+
+
+class FrontGuard(threading.Thread):
+    """While the game starts, give the front back to the app the user is in.
+
+    The launcher and the game window bring themselves to the front when they
+    appear (activateIgnoringOtherApps). With the game assigned to its own
+    desktop that also switches the screen there. Each time the game takes the
+    front, this reactivates the last other app that had it, which switches
+    the screen back.
+    """
+
+    def __init__(self, bundle):
+        super().__init__(daemon=True)
+        self.bundle = bundle
+        self.done = threading.Event()
+
+    def run(self):
+        while not self.done.wait(0.5):
+            front = front_app()
+            if front is None:
+                continue
+            if front != CIV6_BUNDLE:
+                self.bundle = front  # the user moved on: follow them
+            elif app_running(self.bundle):
+                subprocess.run(["open", "-b", self.bundle], capture_output=True)
+                print("front given back to %s" % self.bundle, flush=True)
+                self.done.wait(1.5)  # activation takes a moment; don't ask twice
+
+    def stop(self):
+        self.done.set()
+        self.join()
+
+
+def recorded_front():
+    """The app that was in front when launch ran, if that was recent."""
+    try:
+        if time.time() - os.path.getmtime(FRONT_RECORD) > FRONT_RECORD_TTL:
+            return None
+        with open(FRONT_RECORD, encoding="utf-8") as fh:
+            return fh.read().strip() or None
+    except OSError:
+        return None
+
+
+def forget_front():
+    try:
+        os.remove(FRONT_RECORD)
+    except OSError:
+        pass
 
 
 def exec_lua(state, code, timeout=5.0, raw=False):
@@ -149,14 +227,40 @@ def cmd_popups(args):
     return 0
 
 
-def cmd_launch(_args):
-    subprocess.run(["open", STEAM_URL], check=True)
+def cmd_launch(args):
+    front = None if args.stay else front_app()
+    forget_front()
+    if front is not None and front != CIV6_BUNDLE:
+        os.makedirs(os.path.dirname(FRONT_RECORD), exist_ok=True)
+        with open(FRONT_RECORD, "w", encoding="utf-8") as fh:
+            fh.write(front)
+        print("in front: %s (newgame gives the front back to it)" % front, flush=True)
+    subprocess.run(["open", "-g", STEAM_URL], check=True)  # -g: leave Steam itself in the background
     ok = wait_for("launcher", game_running, 180, 2)  # Steam can take over a minute
-    print("next: press the launcher's start button (computer-use, bundle com.aspyr.civ6.steam)")
+    print("next: press the launcher's start button (computer-use, bundle %s), then newgame" % CIV6_BUNDLE)
     return 0 if ok else 2
 
 
 def cmd_newgame(args):
+    # Right after launch the game is in front and the record says where the
+    # user was; otherwise keep them in the app they are in, unless that is
+    # the game itself (they are watching it).
+    back_to = recorded_front()
+    if back_to is None:
+        front = front_app()
+        back_to = front if front != CIV6_BUNDLE else None
+    guard = FrontGuard(back_to) if back_to else None
+    if guard:
+        guard.start()
+    try:
+        return start_game(args)
+    finally:
+        if guard:
+            guard.stop()
+        forget_front()
+
+
+def start_game(args):
     if not wait_for("main menu", lambda: has_state("MainMenu"), args.timeout):
         return 2
     ruleset = 'GameConfiguration.SetValue("RULESET", "%s")' % args.ruleset if args.ruleset else ""
@@ -192,7 +296,8 @@ def main(argv=None):
     sub.add_parser("menu", help="leave the current game for the main menu")
     pp = sub.add_parser("popups", help="list (or close) queued popups")
     pp.add_argument("--close", action="store_true", help="close every popup except SDP_Panel")
-    sub.add_parser("launch", help="open the game through Steam")
+    lp = sub.add_parser("launch", help="open the game through Steam")
+    lp.add_argument("--stay", action="store_true", help="leave the game in front (newgame does not give it back)")
     np = sub.add_parser("newgame", help="quick-start a game from the main menu")
     np.add_argument("--state", default="InGame", help="Lua state to wait for (default InGame)")
     np.add_argument("--capital", action="store_true", help="also found the capital")

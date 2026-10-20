@@ -131,12 +131,21 @@ end)
 ```bash
 python3 -I tools/game.py quit                          # 经 Tuner 退出游戏并等待进程结束
 python3 -I tools/game.py menu                          # 退回主菜单（只改了 Lua/UI XML 时用它重载，不必重启）
-python3 -I tools/game.py launch                        # open steam://rungameid/289070，等启动器出现（Steam 有时要 1 分钟以上）
+python3 -I tools/game.py launch                        # 记下前台应用，open -g steam://rungameid/289070，等启动器出现（Steam 有时要 1 分钟以上）
 # 然后用 computer-use 对启动器（com.aspyr.civ6.steam）的"开始"按钮做 AXPress
 python3 -I tools/game.py newgame --state SDP_Panel --capital   # 等主菜单→快速开始→等指定 Lua 状态可用→用开局开拓者建首都
 python3 -I tools/game.py popups --close                # 关掉排队中的游戏弹窗（历史时刻等），规划面板才会显示
 python3 -I tools/game.py newgame --state SDP_Panel --capital --reveal   # 另外揭示首都周围 12 格（城址、多城测试需要）
 ```
+
+**不占用户的屏幕**：启动器和游戏窗口出现时会把自己切到前台（`activateIgnoringOtherApps`）。
+
+- `launch` 先用 `lsappinfo` 记下前台应用（存在 `logs/front-app.txt`），再用 `open -g` 打开 Steam，Steam 不会被带到前台。`--stay` 不做记录，游戏留在前台。
+- 接下来的 `newgame` 在等待期间每 0.5 秒查一次：游戏一到前台，就用 `open -b` 切回用户最后在用的应用（用户中途换了应用就跟着换）。`newgame` 结束后不再干预，记录随之删除。
+- 没有 `launch` 的记录时，`newgame` 开始时前台若不是游戏，同样替用户守住；用户正在看游戏则不管。
+- 配合的一次性设置（由用户在系统里做）：调度中心新建一个桌面；游戏运行时在那个桌面上右键 Dock 里的文明6图标 → 选项 → 分配给"此桌面"。启动器和游戏窗口共用一个 bundle（`com.aspyr.civ6.steam`），之后都会出现在那个桌面。屏幕只在启动器出现到按下"开始"这段时间停在那里。
+- 游戏不在前台时照常运行：`AppOptions.txt` 里 `ThrottleWhileInactive 0`、`InactiveTickIntervalInMS 32`（每 32 毫秒一帧）；`SoundOpts.txt` 里 `Mute Focus 1`（失去焦点即静音）。
+- 尚未在游戏内实测：窗口在看不见的桌面上时，游戏会不会少走帧（程序监听窗口遮挡状态）；computer-use 能否对另一个桌面上的启动器按钮做 AXPress。
 
 `popups --close` 调用每个弹窗自己的 `OnClose`/`Close`（与点它的关闭按钮相同），找不到才直接出队；反复检查直到连续两次没有弹窗。原因：自然奇观等弹窗打开时占住游戏的事件队列，只出队不释放，UI 里的游戏数据（如揭示状态）就停止更新（AGENTS 坑 24）。
 
