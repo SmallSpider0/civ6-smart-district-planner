@@ -15,6 +15,10 @@ for row in GameInfo.Civics() do
 end
 local city = player:GetCities():GetCapitalCity()
 if city == nil then error("no capital: run found_capital.lua first") end
+-- Population 25 allows 9 specialty districts (1 + floor((25 - 1) / 3)): with
+-- 1 the cluster below uses up the limit and the engine stops offering plots
+-- for every other specialty district, which would leave test A almost empty.
+if city:GetPopulation() < 25 then city:ChangePopulation(25 - city:GetPopulation()) end
 local cx, cy = city:GetX(), city:GetY()
 local plots = {}
 for dx = -3, 3 do

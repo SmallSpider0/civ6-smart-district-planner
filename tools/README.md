@@ -144,8 +144,11 @@ python3 -I tools/game.py newgame --state SDP_Panel --capital --reveal   # 另外
 - 接下来的 `newgame` 在等待期间每 0.5 秒查一次：游戏一到前台，就用 `open -b` 切回用户最后在用的应用（用户中途换了应用就跟着换）。`newgame` 结束后不再干预，记录随之删除。
 - 没有 `launch` 的记录时，`newgame` 开始时前台若不是游戏，同样替用户守住；用户正在看游戏则不管。
 - 配合的一次性设置（由用户在系统里做）：调度中心新建一个桌面；游戏运行时在那个桌面上右键 Dock 里的文明6图标 → 选项 → 分配给"此桌面"。启动器和游戏窗口共用一个 bundle（`com.aspyr.civ6.steam`），之后都会出现在那个桌面。屏幕只在启动器出现到按下"开始"这段时间停在那里。
-- 游戏不在前台时照常运行：`AppOptions.txt` 里 `ThrottleWhileInactive 0`、`InactiveTickIntervalInMS 32`（每 32 毫秒一帧）；`SoundOpts.txt` 里 `Mute Focus 1`（失去焦点即静音）。
-- 尚未在游戏内实测：窗口在看不见的桌面上时，游戏会不会少走帧（程序监听窗口遮挡状态）；computer-use 能否对另一个桌面上的启动器按钮做 AXPress。
+- 游戏不在前台时照常运行（`AppOptions.txt` 里 `ThrottleWhileInactive 0`）。2026-10-20 实测：被别的窗口挡住时每秒约 120 帧，挪到另一个桌面后约 83 帧。
+- 静音：`SoundOpts.txt` 里 `Mute Focus 1`（失去焦点即静音）；`newgame` 另外在主菜单和进对局后把总音量设为 0（`Options.SetAudioOption(..., 0, 0)`，与选项界面拖动滑块时相同，只对本次运行，保存的音量不变）。
+- computer-use 的 `app_click` 对启动器的"开始"做 AXPress 时不需要把启动器拿到前台。
+- 访达不算“用户在用的应用”：游戏窗口切换时系统会把前台交给访达（实测见过一次），跟随它会把用户留在访达里。
+- 接了多台显示器时，Dock 的“分配给”只有“显示器 N 上的桌面”，没有“此桌面”；不分配也行，游戏窗口挪到哪个桌面，这次运行就一直在那里。
 
 `popups --close` 调用每个弹窗自己的 `OnClose`/`Close`（与点它的关闭按钮相同），找不到才直接出队；反复检查直到连续两次没有弹窗。原因：自然奇观等弹窗打开时占住游戏的事件队列，只出队不释放，UI 里的游戏数据（如揭示状态）就停止更新（AGENTS 坑 24）。
 

@@ -95,18 +95,29 @@ test("a wonder that must touch a district is not lost when the districts cluster
       if ok then wanted[#wanted + 1] = d end
     end
     Reset(wanted)
-    local wonder
+    -- Every free wonder that must touch a campus, one at a time: some have no
+    -- legal plot near this capital at all (Amundsen-Scott wants tundra or
+    -- snow), so at least one must actually be placed for the test to count.
+    local tried, placed = 0, 0
     for _, w in ipairs(SDP_Wonders.List(pid)) do
-      if wonder == nil and w.Status == nil and w.AdjacentDistrict == "DISTRICT_CAMPUS" then wonder = w.Type end
+      if w.Status == nil and w.AdjacentDistrict == "DISTRICT_CAMPUS" then
+        tried = tried + 1
+        SDP_Panel.SetWonder(w.Type, true)
+        T.eq(SDP_Panel.Solve(), nil, "solved as a task")
+        local result = SDP_Panel.RunTask(5000)
+        T.ok(result and result.Ok, "result: " .. tostring(result and result.Error))
+        for _, p in ipairs(result.Plan) do
+          if p.Type == w.Type then placed = placed + 1 end
+        end
+        for _, u in ipairs(result.Unplaced) do
+          T.ok(not (u.Type == w.Type and u.Reason == "NO_FREE_PLOT"), w.Type .. " left off although it had a plot")
+        end
+        SDP_Panel.SetWonder(w.Type, false)
+      end
     end
-    if wonder == nil then T.skip("no free wonder next to a campus") end
-    SDP_Panel.SetWonder(wonder, true)
-    T.eq(SDP_Panel.Solve(), nil, "solved as a task")
-    local result = SDP_Panel.RunTask(5000)
-    T.ok(result and result.Ok, "result: " .. tostring(result and result.Error))
-    for _, u in ipairs(result.Unplaced) do
-      T.ok(not (u.Type == wonder and u.Reason == "NO_FREE_PLOT"), "left off although it had a plot")
-    end
+    if tried == 0 then T.skip("no free wonder next to a campus") end
+    if placed == 0 then T.skip("no wonder next to a campus has a legal plot here") end
+    print(("%d of %d wonders next to a campus placed"):format(placed, tried))
   end)
 end)
 

@@ -9,6 +9,9 @@
 --      DMT for a hypothetical district there.
 --   B  the districts the setup built next to each other: their real
 --      adjacency (district:GetAdjacencyYield) against DMT for the same plots.
+-- A known DMT deviation is listed apart, not failed (AGENTS pitfall 28): DMT
+-- counts any visible resource on water as a sea resource, artifacts such as
+-- shipwrecks included, and the engine does not.
 -- Not a regular test (no test_ prefix): the setup unlocks everything and
 -- builds districts, so run it alone on a throwaway game:
 --   python3 -I tools/run_tests.py tests/bench/calibrate_judge.lua
@@ -41,11 +44,30 @@ local function Text(yields)
   return table.concat(parts, ", ")
 end
 
+-- Districts with a sea-resource adjacency, and whether an artifact lies on
+-- a neighbouring water plot: only there can the known deviation apply.
+local seaDistricts = {}
+for row in GameInfo.District_Adjacencies() do
+  local change = GameInfo.Adjacency_YieldChanges[row.YieldChangeId]
+  if change and change.AdjacentSeaResource then seaDistricts[row.DistrictType] = true end
+end
+
+local function ArtifactAtSea(plot)
+  for dir = 0, 5 do
+    local n = Map.GetAdjacentPlot(plot:GetX(), plot:GetY(), dir)
+    if n and n:IsWater() and n:GetResourceType() ~= -1
+        and GameInfo.Resources[n:GetResourceType()].ResourceClassType == "RESOURCECLASS_ARTIFACT" then
+      return true
+    end
+  end
+  return false
+end
+
 test("A: the placement lens's adjacency equals DMT's, plot by plot", function()
   local city = Players[pid]:GetCities():GetCapitalCity()
   if city == nil then T.skip("no capital") end
   pcall(UpdatePinYields, pid, {})
-  local compared, mismatched = 0, 0
+  local compared, mismatched, known = 0, 0, 0
   for _, d in ipairs(SDP_Rules.PlannableDistricts(pid)) do
     local row = GameInfo.Districts[d.Type]
     local params = {}
@@ -62,14 +84,20 @@ test("A: the placement lens's adjacency equals DMT's, plot by plot", function()
       local dmt = DMTYields(d.Type, plot:GetX(), plot:GetY())
       compared = compared + 1
       if not Same(engine, dmt) then
-        mismatched = mismatched + 1
-        if mismatched <= 25 then
-          print(string.format("%s at %d,%d: engine [%s] DMT [%s]", d.Type, plot:GetX(), plot:GetY(), Text(engine), Text(dmt)))
+        local why = ""
+        if seaDistricts[d.Type] and ArtifactAtSea(plot) then
+          known = known + 1
+          why = " (known: artifact at sea)"
+        else
+          mismatched = mismatched + 1
+        end
+        if mismatched + known <= 25 then
+          print(string.format("%s at %d,%d: engine [%s] DMT [%s]%s", d.Type, plot:GetX(), plot:GetY(), Text(engine), Text(dmt), why))
         end
       end
     end
   end
-  print(string.format("A: %d district x plot compared, %d differ", compared, mismatched))
+  print(string.format("A: %d district x plot compared, %d differ, %d more by the known deviation", compared, mismatched, known))
   T.ok(compared > 0, "nothing compared (no engine targets)")
   T.eq(mismatched, 0, "DMT differs from the engine")
 end)

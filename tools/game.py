@@ -24,7 +24,8 @@
                      game is the same map; --random keeps Play Now's choices;
                      --ruleset picks the base game, Rise and Fall or GS.
                      While it waits, the game is kept out of the front if
-                     another app was in front (see launch).
+                     another app was in front (see launch). Mutes the game
+                     for the run (the saved volume is not changed).
 
 Exit codes: 0 done, 2 the game did not reach the expected state in time.
 """
@@ -47,6 +48,10 @@ REVEAL_AREA = os.path.join(ROOT, "tests", "fixtures", "reveal_area.lua")
 DEFAULT_LEADER = "LEADER_TRAJAN"  # Rome: starts on land, every ruleset has it
 DEFAULT_SEED = 20261019
 CIV6_BUNDLE = "com.aspyr.civ6.steam"  # the launcher and the game window alike
+# macOS hands the front to Finder when the game's window goes away while the
+# game is active (seen in the game 2026-10-20 between the main menu and the
+# map): Finder is then not where the user is, so it is never followed.
+FINDER_BUNDLE = "com.apple.finder"
 FRONT_RECORD = os.path.join(ROOT, "logs", "front-app.txt")  # launch writes it, newgame uses it up
 FRONT_RECORD_TTL = 900  # seconds; older records are from a launch that never got to newgame
 
@@ -66,6 +71,10 @@ end
 RANDOM_SETUP = """
 if SDP_TestSetupOriginal then GameSetup_RefreshParameters = SDP_TestSetupOriginal end
 """
+# Master volume 0 for this run only: the last argument 0 is what the options
+# screen's slider uses while dragging (applied, not committed), so
+# SoundOpts.txt and the player's own volume stay as they are.
+MUTE = 'Options.SetAudioOption("Sound", "Master Volume", 0, 0)'
 
 
 def game_running():
@@ -109,6 +118,8 @@ class FrontGuard(threading.Thread):
         while not self.done.wait(0.5):
             front = front_app()
             if front is None:
+                continue
+            if front == FINDER_BUNDLE:
                 continue
             if front != CIV6_BUNDLE:
                 self.bundle = front  # the user moved on: follow them
@@ -265,13 +276,14 @@ def start_game(args):
         return 2
     ruleset = 'GameConfiguration.SetValue("RULESET", "%s")' % args.ruleset if args.ruleset else ""
     setup = RANDOM_SETUP if args.random else FIXED_SETUP % {"leader": args.leader, "seed": args.seed, "ruleset": ruleset}
-    resp = exec_lua("MainMenu", setup + "Automation.SetAutoStartEnabled(true); OnPlayCiv6()")
+    resp = exec_lua("MainMenu", MUTE + "; " + setup + "Automation.SetAutoStartEnabled(true); OnPlayCiv6()")
     if not resp.get("ok"):
         print("could not start a game: %s" % resp.get("error"))
         return 2
     in_game = lambda: exec_lua(args.state, "print(1)").get("ok")  # noqa: E731
     if not wait_for("state %s" % args.state, in_game, args.timeout, 5):
         return 2
+    exec_lua("InGame", MUTE)  # again: loading a game may reapply the saved volume
     if args.capital:
         with open(FOUND_CAPITAL, encoding="utf-8") as fh:
             resp = exec_lua("InGame", fh.read())
