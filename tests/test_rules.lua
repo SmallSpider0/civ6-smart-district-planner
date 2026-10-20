@@ -39,14 +39,24 @@ test("unique districts replace their base and other civs' uniques are absent", f
   end
 end)
 
+-- Adjacency rows this player's traits switch off (Japan, Gaul, ...).
+local function ExcludedForPlayer()
+  local traits, out = MapTacks.PlayerTraits(pid), {}
+  for row in GameInfo.ExcludedAdjacencies() do
+    if traits[row.TraitType] then out[row.YieldChangeId] = true end
+  end
+  return out
+end
+
 test("adjacency table holds every applicable district-to-district row", function()
   local adjacency = SDP_Rules.AdjacencyTable(pid)
+  local excluded = ExcludedForPlayer()
   local checked = 0
   for link in GameInfo.District_Adjacencies() do
     local row = GameInfo.Adjacency_YieldChanges[link.YieldChangeId]
     local unconditional = row.PrereqTech == nil and row.PrereqCivic == nil
       and row.ObsoleteTech == nil and row.ObsoleteCivic == nil
-    if unconditional and (row.OtherDistrictAdjacent or row.AdjacentDistrict) then
+    if unconditional and not excluded[row.ID] and (row.OtherDistrictAdjacent or row.AdjacentDistrict) then
       local entry = adjacency[link.DistrictType]
       T.ok(entry ~= nil, link.DistrictType .. " missing")
       local bucket = row.OtherDistrictAdjacent and entry.Any or entry.From[row.AdjacentDistrict]
@@ -59,6 +69,7 @@ end)
 
 test("known Gathering Storm values", function()
   if SDP_Rules.Ruleset() ~= "RULESET_EXPANSION_2" then T.skip("not Gathering Storm") end
+  if next(ExcludedForPlayer()) ~= nil then T.skip("this civ replaces standard adjacency rows") end
   local adjacency = SDP_Rules.AdjacencyTable(pid)
   -- Campus: +1 science per 2 adjacent districts.
   T.near(adjacency.DISTRICT_CAMPUS.Any.YIELD_SCIENCE, 0.5, 1e-9, "campus per district")

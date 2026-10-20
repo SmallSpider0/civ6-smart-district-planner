@@ -150,7 +150,15 @@ test("planned districts change a locked neighbour exactly like real pins do", fu
     T.eq(together.Fixed[1].ToolTip, stored.YieldToolTip, "locked campus tooltip")
     T.same(YieldParts(ConvertToYieldString(together.Fixed[1].Yields)), YieldParts(stored.YieldString), "locked campus yields")
     local gained = (together.Fixed[1].Yields.YIELD_SCIENCE or 0) - (alone.Fixed[1].Yields.YIELD_SCIENCE or 0)
-    T.eq(gained, 1, "two planned neighbours should add one science to the campus")
+    -- One science per two adjacent districts, unless this civ's trait
+    -- replaces that rule (Japan: more, via a modifier; Gaul: none). The
+    -- comparison with DMT above holds for every civ.
+    local replaced = false
+    local traits = MapTacks.PlayerTraits(pid)
+    for row in GameInfo.ExcludedAdjacencies() do
+      if row.YieldChangeId == "District_Science" and traits[row.TraitType] then replaced = true end
+    end
+    if not replaced then T.eq(gained, 1, "two planned neighbours should add one science to the campus") end
   end)
 end)
 

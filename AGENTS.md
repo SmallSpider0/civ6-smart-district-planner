@@ -41,6 +41,7 @@ civ6mod/
 │   └── Scripts/                      # 纯逻辑模块（求解器、相邻表、overlay），经 ImportFiles 导入后 include
 ├── tests/                            # 游戏内 Lua 测试（test_*.lua），由 tools/run_tests.py 经 Tuner 执行；不随 mod 发布
 │   ├── offline/                      # 离线测试（spec_*.lua）与基准（bench_*.lua），tools/offline_tests.mjs 在 fengari 里跑，用假世界 world.lua
+│   ├── compare/                      # 与 AMT、Empire Planner 的离线对比：真实规则库 + 真实 DMT/AMT/EP 代码 + 模拟引擎，tools/compare.mjs 运行
 │   └── bench/                        # 游戏内基准与单价校准（不以 test_ 开头，单独运行）
 ├── tools/                            # civ6tuner.py、validate.py、luacheck.mjs、deploy.py、run_tests.py、game.py，见 tools/README.md
 ├── logs/                             # civ6tuner 输出日志，已 gitignore
@@ -109,6 +110,9 @@ include("dmt_yieldcalculator");       -- 尾部会执行 DMT_Initialize()，见�
 | 22 | `PlayerConfiguration:GetMapPin(x, y)` 在没有钉的格子上会**新建**一个钉；只想查找时遍历 `GetMapPins()` |
 | 23 | （2026-10-20 实测）上下文隐藏后 `ContextPtr:SetUpdate` **不再被调用**。弹窗出队（`DequeuePopup`）会隐藏上下文，所以关闭面板后分帧计算会停住。做法：计算进行中关闭面板时，保持上下文显示、只隐藏窗口控件（`SDP_Panel.lua` 的 `KeepRunningHidden`），算完再隐藏上下文 |
 | 24 | （2026-10-20 实测）自然奇观、历史时刻等弹窗打开时会**占住游戏的事件队列**（`PopupManager:Lock` → `UI.ReferenceCurrentEvent`），UI 状态里的游戏数据（如 `PlayersVisibility`）停止更新，直到弹窗自己的 `Close` 调用 `Unlock` 释放。只 `DequeuePopup` 不会释放。测试工具关弹窗要调用该弹窗自己的 `OnClose`/`Close`（`tools/game.py popups --close` 已这样做） |
+| 25 | （2026-10-20 离线对比发现）DMT 的**修正缓存**（文明/领袖特性、信仰里的相邻规则与放置规则：日本区域互邻、巴西雨林、荷兰河流、高卢"特色区域不挨市中心"、越南"特色区域只建在地貌上"）只由它的 `LoadGameViewStateDone` / `LocalPlayerTurnBegin` 处理函数建立（`InitializeModifierCalculator` + `CacheEffectiveModifiers`）。按坑 7 移除这两个处理函数的上下文必须自己建：`SDP_Overlay.RefreshModifiers`（`InitializeModifierCalculator` 只能调一次，它往表里追加） |
+| 26 | （2026-10-20 离线对比发现）DMT 的 `CanPlacePin` 对区域钉**不拦奢侈、战略资源**：`GetRealizedPlotFeatures` 在评估区域钉时先把格上的资源去掉，"不能采收的资源"检查永远不触发。游戏不允许区域压在不能移除的资源上，所以候选格要自己排除（`SDP_City` 的 `RESOURCE`：可见、且 `Resource_Harvests` 里没有的资源） |
+| 27 | （2026-10-20 游戏内引擎复核发现）DMT 的 `CanPlacePin` **不检查运河是否连通水域**：首都旁 13 格 DMT 判运河可放，游戏引擎（`CityManager.GetOperationTargets`）不允许。运河的合法性在引擎 C++ 里，GameInfo 读不到；在引擎复核（multicity-design.md 第 18 节第 3 项）上线前，运河方案以游戏的放置提示为准。其余区域在罗马、日本、高卢三局复核中与引擎完全一致（`tests/bench/probe_engine.lua`）。引擎只对已解锁的区域、城市已拥有的格给出可建格 |
 
 ## 6. 开发环境与工作流
 
@@ -159,7 +163,7 @@ Windows 对应路径：Mods 在 `文档\My Games\Sid Meier's Civilization VI\Mod
 3. 验证：改 Lua/UI XML 后回主菜单重新进入对局；改 modinfo/文本需重启游戏（deploy 会提示是哪种；重启用 `tools/game.py quit/launch/newgame`）；然后 `python3 -I tools/run_tests.py` 跑 `tests/` 下的游戏内测试；
 4. 排错：保持 `civ6tuner.py serve` 运行，查 `logs/tuner-lua.log`（Windows 上则查 Lua.log 的 `Runtime Error`）；控件不显示且无日志 → 怀疑 XML 非法属性。
 
-**自动化测试分层**：⓪ 离线逻辑测试与基准（`tools/offline_tests.mjs`，fengari 里跑 Lua，DMT 和游戏接口由 `tests/offline/world.lua` 模拟；只证明搜索与记账正确，数值仍以游戏内为准。注意 fengari 的整数是 32 位，游戏里是双精度）；① validate + deploy + 监控 `logs/tuner-lua.log`（全自动）；② `tests/test_*.lua` 经 `run_tests.py` 在指定 Lua 状态里跑断言（全自动；本 mod 面板的 Lua 状态名为 `SDP_Panel`，测试钩子是其中的全局表 `SDP_Panel`；需要改游戏状态的用例用 `@setup`/`@teardown` 在 `GameCore_Tuner` 状态执行 `tests/fixtures/` 脚本；`game.py newgame --ruleset` 可切换三种规则集）；③ computer-use 截图/点击做 UI 验收（半自动，需用户授权）。交付时明确区分"已自动验证"与"需用户确认"的部分，不得声称未经验证的行为已通过。跨平台：mod 无平台相关代码，Windows 上只需按验收清单冒烟测试（重点：性能与界面布局）。
+**自动化测试分层**：⓪′ 离线对比（`tools/compare.mjs`，见 tools/README.md）：用游戏缓存里导出的真实规则库和原样的 DMT、AMT、EP 代码，在 84 个场景上比较方案，裁判是只加载 DMT 的独立状态；改求解器或合法性规则后跑一遍本 mod（`-p sdp`），看"本 mod 自报的加成 = 裁判的加成"、零违规、漏放的区域都是"no_plot"（裁判判定有位置却没放的记为 "placeable"）；⓪ 离线逻辑测试与基准（`tools/offline_tests.mjs`，fengari 里跑 Lua，DMT 和游戏接口由 `tests/offline/world.lua` 模拟；只证明搜索与记账正确，数值仍以游戏内为准。注意 fengari 的整数是 32 位，游戏里是双精度）；① validate + deploy + 监控 `logs/tuner-lua.log`（全自动）；② `tests/test_*.lua` 经 `run_tests.py` 在指定 Lua 状态里跑断言（全自动；本 mod 面板的 Lua 状态名为 `SDP_Panel`，测试钩子是其中的全局表 `SDP_Panel`；需要改游戏状态的用例用 `@setup`/`@teardown` 在 `GameCore_Tuner` 状态执行 `tests/fixtures/` 脚本；`game.py newgame --ruleset` 可切换三种规则集）；③ computer-use 截图/点击做 UI 验收（半自动，需用户授权）；另有引擎可建格复核探针 `tests/bench/probe_engine.lua`（会给玩家全部科技与市政，只在一次性对局里单独跑）。测试用例不要写死某个文明的规则（如"学院每个相邻区域 +0.5"），按 `ExcludedAdjacencies` 与玩家特性判断；默认测试对局是罗马，换文明（`game.py newgame --leader LEADER_HOJO` 等）能发现这类问题。交付时明确区分"已自动验证"与"需用户确认"的部分，不得声称未经验证的行为已通过。跨平台：mod 无平台相关代码，Windows 上只需按验收清单冒烟测试（重点：性能与界面布局）。
 
 ## 7. 验收清单（需求文档第五节）
 

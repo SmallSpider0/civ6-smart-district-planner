@@ -56,6 +56,27 @@ node tools/offline_tests.mjs -v -k k6 tests/offline/bench_single.lua   # 单城�
 - `bench_single.lua` 的环境变量：`SDP_BENCH_REFS=文件` 缓存参照解（算参照解很慢）；`SDP_BENCH_TIERS=FAST,STANDARD` 只跑部分档位；`SDP_BENCH_PARAMS="STANDARD.NodeLimit=60000,FAST.Kicks=2"` 临时覆盖档位参数，用来比较方案。
 - **fengari 的整数是 32 位**（游戏里的 Lua 数字是双精度）：超过 2^31 的整数运算会回绕。需要大数的地方写成浮点（如 `1.0`），见 `SDP_Board` 的邻居编码。
 
+## compare.mjs — 与其他规划模组的离线对比
+
+```bash
+python3 -I tests/compare/export_gameinfo.py        # 一次：从游戏缓存导出规则数据库（tests/compare/.cache/，不入库）
+node tools/compare.mjs --list                       # 场景列表
+node tools/compare.mjs -s S04-japan -p sdp,amt,ep -j 4 -v   # 某些场景、某些规划器
+node tools/compare.mjs -j 8 --out tests/compare/results/full.jsonl   # 全部（约 1–2 小时）
+node tools/compare.mjs --only sdp:STANDARD_LAND -j 4 --out tests/compare/results/land.jsonl   # 只跑某个规划器的某个设置
+node tools/compare.mjs --rejudge tests/compare/results/full.jsonl -j 4 --out NEW.jsonl   # 方案不变，用当前裁判重新打分（几分钟）
+python3 -I tests/compare/summarize.py tests/compare/results/full_rejudged.jsonl tests/compare/results/land.jsonl   # 汇总（后面的文件覆盖前面的同名运行）
+node tools/compare.mjs --dump S01-rome-temperate-mid       # 场景地图的文字图
+node tools/compare.mjs --snapshot S01-rome-temperate-mid   # 场景地图数据（报告画图用）
+```
+
+- 不开游戏，在 fengari 里比较本 mod、Auto Map Tacks Planner r49（AMT）和 Empire Planner（EP）的区域规划。**规则是真的**：`GameInfo` 来自游戏写在缓存里的规则数据库 `Cache/DebugGameplay.sqlite`（最后一次加载的对局的规则集，目前是风云变幻；导出文件是 Firaxis 的数据，只放在被忽略的 `.cache/`）。**代码是真的**：DMT、AMT、EP 的 Lua 原样从 `reference/` 和本机创意工坊目录加载，不改一行。**引擎是模拟的**：`tests/compare/cmp_game.lua` 实现地图、城市、地图钉、玩家配置、可见性、河流与泛滥平原、修正系统（`GameEffects`，DMT 从它读文明特性的相邻规则）和 UI 替身。
+- 每次运行：一个新 Lua 状态生成场景世界（`cmp_mapgen.lua`，种子固定，同场景同地图）、加载一个规划器（`cmp_sdp.lua` / `cmp_amt.lua` / `cmp_ep.lua`，像玩家一样点它自己的按钮）、输出方案；另一个只加载 DMT 的新状态（`CmpRun.Judge`）把方案打成地图钉，用 DMT 打分，并检查 DMT 没查的游戏规则（不可移除的资源、3 环、领土归属、每城一个、帝国上限、人口槽位、压钉、漏放）。
+- 场景在 `cmp_scenarios.lua`：17 个文明 × 8 种地形 × 前/中/后期的单城场景，加 12 个 3–4 城的多城场景；部分有邻国、城邦、自然奇观、未探索格、玩家手打的钉。对手各跑两种设置：权重全 1（与裁判一致）和它们面板的默认设置。
+- 模拟层缺的接口会记在输出的 `missingApi` 里；HavokScript 的类型标注在加载时去掉。AMT 的多城联合很慢（离线一局 3–30 分钟），全量对比建议在机器空闲时跑。
+- 结果 JSON lines：方案、裁判分（`gain`、`violations`、`items`、城市总产出 `output = gain + worked`、漏放 `missing` 与其中有位置却没放的 `missingPlaceable`）、耗时、DMT 调用次数。`summarize.py` 以每个场景所有合法方案里的最高加成为参照，算质量、达到最高的比例、合法率、漏放、城市总产出、确定性（"#2" 重复运行与原运行比方案）。
+- 入库的结果：`tests/compare/results/full_rejudged.jsonl`（全部 588 次运行，2026-10-20 的裁判）与 `land.jsonl`（本 mod 计入地块的 84 次）。
+
 ## deploy.py — 部署
 
 ```bash

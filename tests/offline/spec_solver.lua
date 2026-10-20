@@ -183,3 +183,24 @@ test("locked pins are never built over and count as neighbours", function()
   end
   T.ok(next, "the plan uses the plaza's bonus")
 end)
+
+test("a Government Plaza pinned for another city counts toward the empire limit", function()
+  local w = NewWorld()
+  -- The plan for another city (outside this city's range) already has it.
+  w:AddPin(10, 8, "ICON_DISTRICT_GOVERNMENT", "plaza elsewhere")
+  local result = SDP_Solver.Solve({ PlayerID = 0, CityID = 1, Weights = ONES,
+    Districts = { "DISTRICT_CAMPUS", "DISTRICT_GOVERNMENT" } })
+  T.eq(#result.Plan, 1, "only the campus")
+  T.same(result.Unplaced, { { Type = "DISTRICT_GOVERNMENT", Reason = "MAX_PER_PLAYER" } }, "unplaced")
+end)
+
+test("luxury and strategic resources block districts, bonus resources do not", function()
+  -- The fake DMT refuses them itself; the scan must exclude them too, since
+  -- the real DMT's CanPlacePin lets a district pin onto them.
+  local w = NewWorld({ resources = { { 6, 5, "RESOURCE_WINE" }, { 4, 5, "RESOURCE_IRON" }, { 6, 3, "RESOURCE_WHEAT" } },
+    techs = { "TECH_BRONZE_WORKING" } })
+  local scan = SDP_City.Scan(0, 1)
+  T.eq(scan.Excluded[Map.GetPlotIndex(6, 5)], "RESOURCE", "wine")
+  T.eq(scan.Excluded[Map.GetPlotIndex(4, 5)], "RESOURCE", "iron")
+  T.eq(scan.Excluded[Map.GetPlotIndex(6, 3)], nil, "wheat can be harvested")
+end)

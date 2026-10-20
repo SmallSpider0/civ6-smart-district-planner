@@ -211,6 +211,19 @@ local function SiteToolTip(site)
   return table.concat(lines, "[NEWLINE]")
 end
 
+-- The numbers the sites of a solution get (their pins' names): the next free
+-- numbers after the player's cities and planned cities (SDP_City.SiteNumbers).
+local function SiteNumbers(solution)
+  local playerID = Game.GetLocalPlayer()
+  local names = {}
+  for _, site in ipairs(SDP_Multi.Sites(playerID)) do names[#names + 1] = site.Name end
+  for _ = 1, #solution.Sites do names[#names + 1] = "" end
+  local numbers = SDP_City.SiteNumbers(playerID, names)
+  local out = {}
+  for s = 1, #solution.Sites do out[s] = numbers[#numbers - #solution.Sites + s] end
+  return out
+end
+
 function P.Preview(n)
   local solution = m_result and m_result.Ok and m_result.Solutions[n]
   if solution == nil then
@@ -218,12 +231,13 @@ function P.Preview(n)
     return
   end
   local areas, icons = {}, {}
+  local numbers = SiteNumbers(solution)
   for s, site in ipairs(solution.Sites) do
     local plots = {}
     for _, entry in ipairs(SDP_City.PlotsInRange(site.X, site.Y, SDP_City.RADIUS)) do plots[#plots + 1] = entry.Index end
     areas[#areas + 1] = { Plots = plots, Color = s }
     icons[#icons + 1] = { X = site.X, Y = site.Y, Icon = "ICON_DISTRICT_CITY_CENTER",
-      Text = Locale.Lookup("LOC_SDP_SITE_N", s) .. " " .. SDP_UI.Number(math.floor(site.Value * 10 + 0.5) / 10) }
+      Text = Locale.Lookup("LOC_SDP_SITE_N", numbers[s]) .. " " .. SDP_UI.Number(math.floor(site.Value * 10 + 0.5) / 10) }
     for _, d in ipairs(site.Districts or {}) do icons[#icons + 1] = { X = d.X, Y = d.Y, Icon = "ICON_" .. d.Type } end
   end
   SDP_Preview.Show(Game.GetLocalPlayer(), areas, icons)
@@ -264,9 +278,10 @@ function P.Render()
       inst.Root:RegisterCallback(Mouse.eLClick, function() P.SelectSolution(n) end)
       m_view.Solutions[n] = { Value = s.Value, Selected = n == m_solution }
     end
+    local numbers = SiteNumbers(solution)
     for s, site in ipairs(solution.Sites) do
       local inst = m_resultIM:GetInstance()
-      local name = Locale.Lookup("LOC_SDP_SITE_N", s) .. "  " .. SDP_UI.Where(site.X, site.Y) .. "  "
+      local name = Locale.Lookup("LOC_SDP_SITE_N", numbers[s]) .. "  " .. SDP_UI.Where(site.X, site.Y) .. "  "
         .. SDP_UI.Number(math.floor(site.Value * 10 + 0.5) / 10)
       local detail = SiteDetail(site)
       local tip = SiteToolTip(site)
@@ -327,14 +342,16 @@ function P.Continue()
     function(result) m_result = result end, P)
 end
 
--- A city-center map tack on every site of the selected solution, named
--- "Site n": step 2 (the several-cities tab) plans them.
+-- A city-center map tack on every site of the selected solution, named with
+-- the site's number: step 2 (the several-cities tab) plans them, and the
+-- district pins it places around a site carry the same number.
 function P.Place()
   if SDP_Task.IsRunning() or m_result == nil or not m_result.Ok or m_result.Placed then return 0 end
   local solution = m_result.Solutions[m_solution]
+  local numbers = SiteNumbers(solution)
   local entries = {}
   for s, site in ipairs(solution.Sites) do
-    entries[s] = { Type = "DISTRICT_CITY_CENTER", X = site.X, Y = site.Y, Name = Locale.Lookup("LOC_SDP_SITE_N", s) }
+    entries[s] = { Type = "DISTRICT_CITY_CENTER", X = site.X, Y = site.Y, Name = tostring(numbers[s]) }
   end
   local placed = SDP_Pins.Place(Game.GetLocalPlayer(), entries)
   m_result.Placed = true

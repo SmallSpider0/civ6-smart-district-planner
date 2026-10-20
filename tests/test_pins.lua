@@ -53,6 +53,8 @@ test("placed tacks carry district icons and DMT shows the planned values", funct
       local pin = PinAt(p.X, p.Y)
       T.ok(pin ~= nil, p.Type .. ": no pin")
       T.eq(pin:GetIconName(), "ICON_" .. p.Type, p.Type .. " icon")
+      -- The icon says which district; the name says which city (its number).
+      T.eq(pin:GetName(), tostring(SDP_City.CityNumbers(pid)[SDP_Panel.State().CityID]), p.Type .. " name")
       local stored = GetMapPinSubject(pid, p.X, p.Y)
       T.ok(stored ~= nil, p.Type .. ": DMT knows nothing of the pin")
       T.eq(stored.Key, p.Type, "DMT subject")

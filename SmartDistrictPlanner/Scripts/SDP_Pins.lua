@@ -18,9 +18,9 @@ local function PinAt(cfg, x, y)
 end
 
 -- One pin per plan entry ({ Type, X, Y, Name }): Type is a district or a
--- wonder (building) type and gives the icon; the pin is named Name, or after
--- the type. Plots that already have a pin are skipped. Returns the number of
--- pins placed; a non-empty batch can be undone.
+-- wonder (building) type and gives the icon; the pin is named Name (callers
+-- pass the city number) or left unnamed. Plots that already have a pin are
+-- skipped. Returns the number of pins placed; a non-empty batch can be undone.
 --
 -- Only pin IDs are kept: creating a pin can invalidate the objects of pins
 -- made before it, and calling a stale one crashed the game (2026-10-19).
@@ -31,8 +31,7 @@ function SDP_Pins.Place(playerID, plan)
   for _, entry in ipairs(plan) do
     if PinAt(cfg, entry.X, entry.Y) == nil then
       local pin = cfg:GetMapPin(entry.X, entry.Y)
-      local row = GameInfo.Districts[entry.Type] or GameInfo.Buildings[entry.Type]
-      pin:SetName(entry.Name or Locale.Lookup(row.Name))
+      pin:SetName(entry.Name or "")
       pin:SetIconName("ICON_" .. entry.Type)
       batch.Pins[#batch.Pins + 1] = { ID = pin:GetID(), X = entry.X, Y = entry.Y }
     end

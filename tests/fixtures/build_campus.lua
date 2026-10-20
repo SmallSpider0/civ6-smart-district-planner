@@ -24,6 +24,10 @@ for _, pass in ipairs({ { 1, false }, { 1, true }, { 2, true } }) do
       local plot = Map.GetPlotXYWithRangeCheck(city:GetX(), city:GetY(), dx, dy, ring)
       if plot ~= nil and Map.GetPlotDistance(city:GetX(), city:GetY(), plot:GetX(), plot:GetY()) == ring
           and Usable(plot, allowFeature) then
+        -- A ring-2 plot may not be the city's yet; a district needs it to be.
+        if plot:GetOwner() == -1 then
+          WorldBuilder.CityManager():SetPlotOwner(plot:GetX(), plot:GetY(), player:GetID(), city:GetID())
+        end
         city:GetBuildQueue():CreateDistrict(campus, plot:GetIndex())
         print("campus built at", plot:GetX(), plot:GetY())
         return

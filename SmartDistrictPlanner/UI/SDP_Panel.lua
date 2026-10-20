@@ -364,18 +364,20 @@ local function PopulateCities()
   if m_cityID == nil or CityManager.GetCity(playerID, m_cityID) == nil then
     m_cityID = DefaultCityID(playerID)
   end
+  local numbers = SDP_City.CityNumbers(playerID)
   local pull = Controls.CityPull
   pull:ClearEntries()
   for _, city in ipairs(PlayerCities(playerID)) do
     local entry = {}
     local cityID = city:GetID()
     pull:BuildEntry("InstanceOne", entry)
-    entry.Button:SetText(Locale.Lookup(city:GetName()))
+    entry.Button:SetText(Locale.Lookup("LOC_SDP_CITY_N", numbers[cityID] or 0, Locale.Lookup(city:GetName())))
     entry.Button:RegisterCallback(Mouse.eLClick, function() SelectCity(cityID) end)
   end
   pull:CalculateInternals()
   local current = m_cityID and CityManager.GetCity(playerID, m_cityID)
-  pull:GetButton():SetText(current and Locale.Lookup(current:GetName()) or "")
+  pull:GetButton():SetText(current and Locale.Lookup("LOC_SDP_CITY_N", numbers[m_cityID] or 0,
+    Locale.Lookup(current:GetName())) or "")
 end
 
 SelectCity = function(cityID)
@@ -723,7 +725,11 @@ end
 
 local function PlacePins()
   if SDP_Task.IsRunning() or m_result == nil or not m_result.Ok or m_result.Placed then return 0 end
-  local placed = SDP_Pins.Place(Game.GetLocalPlayer(), m_result.Plan)
+  local playerID = Game.GetLocalPlayer()
+  local number = tostring(SDP_City.CityNumbers(playerID)[m_cityID] or "")
+  local entries = {}
+  for i, p in ipairs(m_result.Plan) do entries[i] = { Type = p.Type, X = p.X, Y = p.Y, Name = number } end
+  local placed = SDP_Pins.Place(playerID, entries)
   m_result.Placed = true
   UpdateButtons()
   return placed

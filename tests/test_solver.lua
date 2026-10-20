@@ -139,3 +139,39 @@ test("unavailable and duplicate districts are reported, not placed", function()
   T.eq(result.Plan[1].Type, campus, "placed district")
   T.same(result.Unplaced, { { Type = foreign, Reason = "NOT_AVAILABLE" } }, "unplaced")
 end)
+
+test("a Government Plaza pinned elsewhere counts toward the empire limit", function()
+  local city = City()
+  local plannable = {}
+  for _, d in ipairs(SDP_Rules.PlannableDistricts(pid)) do plannable[d.Type] = d end
+  local gov = plannable.DISTRICT_GOVERNMENT
+  if gov == nil or not gov.MaxPerPlayer or gov.MaxPerPlayer < 1 then T.skip("no Government Plaza in this ruleset") end
+  -- A revealed land plot 5 rings out: no city's plan, but the empire's plaza.
+  local spot
+  for dx = -5, 5 do
+    for dy = -5, 5 do
+      local plot = Map.GetPlotXYWithRangeCheck(city:GetX(), city:GetY(), dx, dy, 5)
+      if spot == nil and plot ~= nil and not plot:IsWater()
+          and Map.GetPlotDistance(city:GetX(), city:GetY(), plot:GetX(), plot:GetY()) == 5
+          and PlayersVisibility[pid]:IsRevealed(plot:GetIndex()) then
+        spot = plot
+      end
+    end
+  end
+  if spot == nil then T.skip("no revealed land plot 5 rings out") end
+  local cfg = PlayerConfigurations[pid]
+  local pin = cfg:GetMapPin(spot:GetX(), spot:GetY())
+  pin:SetIconName("ICON_DISTRICT_GOVERNMENT")
+  Network.BroadcastPlayerInfo()
+  LuaEvents.DMT_MapPinAdded(pin)
+  local pinID = pin:GetID()
+  local ok, err = pcall(function()
+    local result = Solve(city, { "DISTRICT_GOVERNMENT", Resolve("DISTRICT_CAMPUS") }, ONES)
+    for _, p in ipairs(result.Plan) do T.ok(p.Type ~= "DISTRICT_GOVERNMENT", "a second Government Plaza was planned") end
+    T.same(result.Unplaced, { { Type = "DISTRICT_GOVERNMENT", Reason = "MAX_PER_PLAYER" } }, "unplaced")
+  end)
+  LuaEvents.DMT_MapPinRemoved(cfg:GetMapPinID(pinID))
+  cfg:DeleteMapPin(pinID)
+  Network.BroadcastPlayerInfo()
+  if not ok then error(err, 0) end
+end)

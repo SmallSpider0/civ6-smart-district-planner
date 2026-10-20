@@ -59,6 +59,7 @@ test("an existing pin locks its plot and is listed", function()
   local pin = cfg:GetMapPin(target.X, target.Y)
   pin:SetName("SDP test pin")
   local pinID = pin:GetID()
+  Network.BroadcastPlayerInfo()
   local ok, err = pcall(function()
     local scan = SDP_City.Scan(pid, city:GetID())
     T.eq(scan.Excluded[target.Index], SDP_City.EXCLUDED.PIN, "pinned plot")
@@ -68,7 +69,9 @@ test("an existing pin locks its plot and is listed", function()
     end
     T.ok(listed, "pin not in scan.Pins")
   end)
+  -- Deleted the way DMT does (pitfall 19): without the broadcast the pin stays.
   cfg:DeleteMapPin(pinID)
+  Network.BroadcastPlayerInfo()
   if not ok then error(err, 0) end
   local after = SDP_City.Scan(pid, city:GetID())
   T.same(after.Candidates, before.Candidates, "candidates after deleting the pin")
@@ -84,7 +87,10 @@ test("turning feature removal off excludes woods, rainforest and marsh", functio
   end
   for index, reason in pairs(strict.Excluded) do
     if reason == SDP_City.EXCLUDED.FEATURE then
-      T.ok(allowed.Excluded[index] == nil, "FEATURE plot " .. index .. " was not a candidate before")
+      -- Unless it also holds a resource no district may cover (woods on
+      -- a luxury): the feature check comes first, so strict calls it FEATURE.
+      T.ok(allowed.Excluded[index] == nil or allowed.Excluded[index] == SDP_City.EXCLUDED.RESOURCE,
+        "FEATURE plot " .. index .. " was not a candidate before")
     end
   end
 end)
@@ -102,4 +108,30 @@ end)
 test("scan is deterministic", function()
   local city = capital()
   T.same(SDP_City.Scan(pid, city:GetID()), SDP_City.Scan(pid, city:GetID()))
+end)
+
+test("visible luxury and strategic resources are excluded, bonus resources are not", function()
+  local city = capital()
+  local scan = SDP_City.Scan(pid, city:GetID())
+  local candidate = {}
+  for _, c in ipairs(scan.Candidates) do candidate[c.Index] = true end
+  local harvest = {}
+  for row in GameInfo.Resource_Harvests() do harvest[row.ResourceType] = true end
+  local seen = { kept = 0, excluded = 0 }
+  for _, p in ipairs(SDP_City.PlotsInRange(city:GetX(), city:GetY(), 3)) do
+    local plot = Map.GetPlotByIndex(p.Index)
+    local resource = plot:GetResourceType()
+    if resource ~= -1 and Players[pid]:GetResources():IsResourceVisible(GameInfo.Resources[resource].Hash) then
+      local row = GameInfo.Resources[resource]
+      local where = row.ResourceType .. " at " .. p.X .. "," .. p.Y
+      if harvest[row.ResourceType] then
+        T.ok(scan.Excluded[p.Index] ~= SDP_City.EXCLUDED.RESOURCE, where .. ": a harvestable resource was excluded")
+        if candidate[p.Index] then seen.kept = seen.kept + 1 end
+      else
+        T.eq(candidate[p.Index], nil, where .. ": a district may not cover it")
+        if scan.Excluded[p.Index] == SDP_City.EXCLUDED.RESOURCE then seen.excluded = seen.excluded + 1 end
+      end
+    end
+  end
+  print(string.format("resources in range: %d harvestable kept, %d excluded", seen.kept, seen.excluded))
 end)

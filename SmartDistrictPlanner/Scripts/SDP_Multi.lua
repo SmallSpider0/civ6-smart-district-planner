@@ -70,10 +70,14 @@ function SDP_Multi.Participants(playerID, options)
   options = options or {}
   local participants = {}
   local sites = SDP_Multi.Sites(playerID)
+  local names = {}
+  for s, site in ipairs(sites) do names[s] = site.Name end
+  local siteNumbers = SDP_City.SiteNumbers(playerID, names)
+  local cityNumbers = SDP_City.CityNumbers(playerID)
   for s, site in ipairs(sites) do
     participants[#participants + 1] = {
       Kind = "SITE", Key = "S" .. site.Index, X = site.X, Y = site.Y, Index = site.Index,
-      Name = site.Name, SiteNumber = s, PinID = site.PinID,
+      Name = site.Name, SiteNumber = s, Number = siteNumbers[s], PinID = site.PinID,
     }
   end
   local cities = {}
@@ -113,7 +117,7 @@ function SDP_Multi.Participants(playerID, options)
     if e.Included then
       participants[#participants + 1] = {
         Kind = "CITY", Key = "C" .. e.CityID, CityID = e.CityID, X = e.X, Y = e.Y, Name = e.Name,
-        Index = Map.GetPlotIndex(e.X, e.Y),
+        Number = cityNumbers[e.CityID], Index = Map.GetPlotIndex(e.X, e.Y),
       }
     end
   end
@@ -617,7 +621,7 @@ function Session:PlanFor(layout)
   for p, part in ipairs(self.Participants) do
     out.Cities[p] = {
       Key = part.Key, Kind = part.Kind, Name = part.Name, X = part.X, Y = part.Y, CityID = part.CityID,
-      SiteNumber = part.SiteNumber, Plan = part.Plan, Gain = 0,
+      SiteNumber = part.SiteNumber, Number = part.Number, Plan = part.Plan, Gain = 0,
     }
   end
   local subjects, slotsPlaced = {}, {}
@@ -665,7 +669,8 @@ end
 --                 Plan     { City (participant Key), Type, Kind, X, Y, Index, Yields, ToolTip, Score }
 --                 Unplaced { City, Type, Reason } (NOT_AVAILABLE, BUILT, PINNED, MAX_PER_PLAYER,
 --                          NEEDS_DISTRICT, NO_LEGAL_PLOT, NO_FREE_PLOT; City "WONDERS" for wonders)
---                 Cities   { Key, Kind, Name, X, Y, CityID, SiteNumber, Plan (types asked), Gain }
+--                 Cities   { Key, Kind, Name, X, Y, CityID, SiteNumber, Number (SDP_City city
+--                          number, the pins' name), Plan (types asked), Gain }
 --   and the best solution's fields copied to the top level (Plan, Gain, ...)
 --   Baseline    joint DMT total without any plan
 --   FirstGain   value of the city-by-city start (the "never worse" reference)

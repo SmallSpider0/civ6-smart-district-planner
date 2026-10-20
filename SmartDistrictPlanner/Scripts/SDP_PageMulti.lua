@@ -30,11 +30,11 @@ local m_result = nil
 local m_solution = 1
 local m_view = { Cities = {}, Districts = {}, Wonders = {}, Solutions = {}, Results = {} } -- for tests
 
--- How a participant is called: a city's name, a pin's name, or "Site n".
+-- How a participant is called: its number (the name its pins get, see
+-- SDP_City.CityNumbers) and the city's name, or "Site n" for a planned city.
 function P.CityLabel(city)
-  if city.Kind == "CITY" then return Locale.Lookup(city.Name) end
-  if city.Name ~= nil and city.Name ~= "" then return city.Name end
-  return Locale.Lookup("LOC_SDP_SITE_N", city.SiteNumber or 0)
+  if city.Kind == "CITY" then return Locale.Lookup("LOC_SDP_CITY_N", city.Number or 0, Locale.Lookup(city.Name)) end
+  return Locale.Lookup("LOC_SDP_SITE_N", city.Number or city.SiteNumber or 0)
 end
 
 local function ClearResult()
@@ -388,8 +388,8 @@ function P.Place()
   local byKey = CityByKey(solution)
   local entries = {}
   for _, p in ipairs(solution.Plan) do
-    entries[#entries + 1] = { Type = p.Type, X = p.X, Y = p.Y,
-      Name = Locale.Lookup("LOC_SDP_PIN_IN_CITY", SDP_UI.TypeName(p.Type), P.CityLabel(byKey[p.City])) }
+    local city = byKey[p.City]
+    entries[#entries + 1] = { Type = p.Type, X = p.X, Y = p.Y, Name = city and tostring(city.Number or "") or "" }
   end
   local placed = SDP_Pins.Place(Game.GetLocalPlayer(), entries)
   m_result.Placed = true

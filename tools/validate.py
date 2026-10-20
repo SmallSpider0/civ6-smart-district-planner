@@ -381,7 +381,10 @@ def run(mod_dir=MOD_DIR, tests_dir=TESTS_DIR, strict=False, quiet=False):
     mod_files = [os.path.join(mod_dir, f) for f in list_files(mod_dir)] if os.path.isdir(mod_dir) else []
     if not os.path.isdir(mod_dir):
         report.error(mod_dir, 0, "modinfo", "mod folder not found")
-    test_files = [os.path.join(tests_dir, f) for f in list_files(tests_dir)] if os.path.isdir(tests_dir) else []
+    # tests/compare/ is the offline comparison harness: it runs in node
+    # (tools/compare.mjs), never in the game, so the game's rules do not apply.
+    test_files = [os.path.join(tests_dir, f) for f in list_files(tests_dir)
+                  if not f.startswith("compare/")] if os.path.isdir(tests_dir) else []
 
     xml_paths = [p for p in mod_files if p.endswith((".xml", ".modinfo"))]
     trees = check_xml(report, xml_paths)

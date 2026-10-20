@@ -36,6 +36,30 @@ Events.LocalPlayerTurnBegin.Remove(OnLocalPlayerTurnBegin)
 
 SDP_Overlay = {}
 
+-- The two load handlers removed last also built this state's copy of DMT's
+-- modifier cache: the player's trait and belief modifiers, which carry the
+-- civilization adjacency rules (Japan, Brazil, the Netherlands, Gaul's mines,
+-- ...) and placement rules (Gaul: no specialty district next to the city
+-- center; Vietnam: specialty districts on woods, rainforest or marsh only).
+-- Without it DMT here ignores them. So this state builds the cache itself:
+-- DMT's requirement tables once (InitializeModifierCalculator appends, it
+-- must not run twice), the player's modifiers on load and at every turn
+-- start like DMT does, and once before the first solve if the context was
+-- loaded after the game (SDP_Overlay.Install).
+local m_modifiersReady = false
+
+function SDP_Overlay.RefreshModifiers()
+  if InitializeModifierCalculator == nil or CacheEffectiveModifiers == nil then return end
+  if not m_modifiersReady then
+    m_modifiersReady = true
+    pcall(InitializeModifierCalculator)
+  end
+  pcall(CacheEffectiveModifiers, Game.GetLocalPlayer())
+end
+
+Events.LoadGameViewStateDone.Add(SDP_Overlay.RefreshModifiers)
+Events.LocalPlayerTurnBegin.Add(SDP_Overlay.RefreshModifiers)
+
 -- The player configuration value DMT keeps its pin subjects in
 -- (MAIN_CACHE_KEY in dmt_mappinsubjectmanager.lua, local there).
 local DMT_SUBJECTS_KEY = "DMT_MapPinSubjects"
@@ -82,6 +106,7 @@ end
 -- instead of loading it again (see Suspend / Resume).
 function SDP_Overlay.Install(playerID, snapshot)
   if m_state ~= nil then error("SDP_Overlay is already installed", 2) end
+  if not m_modifiersReady then SDP_Overlay.RefreshModifiers() end
   Activate({
     PlayerID = playerID,
     Snapshot = snapshot or LoadMapPinSubjectTable(playerID, DMT_SUBJECTS_KEY) or {},

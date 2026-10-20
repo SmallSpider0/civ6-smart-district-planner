@@ -148,7 +148,7 @@ SDP_Panel (UI/SDP_Panel.lua，InGame 上下文，Lua 状态名 SDP_Panel)
 ## 图钉（阶段 6，`Scripts/SDP_Pins.lua`）
 
 - **打钉**：
-  - 方案中每个区域一个钉，名称为区域名，图标为 `ICON_<区域类型>`。DMT 据图标识别出区域 subject（`CreateMapPinSubject`），在钉上显示产出。
+  - 方案中每个区域一个钉，名称为所属城市的编号（`SDP_City.CityNumbers`：按城市 ID 即建城顺序编号，首都通常为 1），图标为 `ICON_<区域类型>`。DMT 据图标识别出区域 subject（`CreateMapPinSubject`），在钉上显示产出。
   - 流程与 DMT 地图钉弹窗的"确定"一致：建钉 → 设名称与图标 → `Network.BroadcastPlayerInfo()` → 逐个 `LuaEvents.DMT_MapPinAdded(钉)` → 播放音效。
   - 已有钉的格子跳过，不覆盖玩家的钉（约束 7）。
 - **只保存钉 ID**：新建钉会让之前取到的钉对象失效，调用失效对象会使游戏崩溃（2026-10-19 实测，AGENTS 坑 21）。所以每次使用都用 `GetMapPinID` 重新取。

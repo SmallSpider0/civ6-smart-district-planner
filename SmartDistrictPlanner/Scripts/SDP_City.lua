@@ -19,7 +19,21 @@ SDP_City.EXCLUDED = {
   FOREIGN = "FOREIGN",               -- owned by another player
   OTHER_CITY = "OTHER_CITY",         -- owned by another of the player's cities
   FEATURE = "FEATURE",               -- clearing its feature is switched off
+  RESOURCE = "RESOURCE",             -- a resource a district cannot remove (luxury, strategic)
 }
+
+-- Resources a district can be built on: the ones the game can harvest
+-- (Resource_Harvests). The others (luxuries, strategics) block districts.
+-- DMT means to check this in CanPlacePin, but for a district pin it drops
+-- the plot's resource before the check, so it never refuses one.
+local m_harvestable = nil
+local function Harvestable(resourceType)
+  if m_harvestable == nil then
+    m_harvestable = {}
+    for row in GameInfo.Resource_Harvests() do m_harvestable[row.ResourceType] = true end
+  end
+  return m_harvestable[resourceType] == true
+end
 
 local function ByIndex(a, b)
   if a.Index ~= b.Index then return a.Index < b.Index end
@@ -63,6 +77,43 @@ function SDP_City.PinsInRange(playerID, x, y, radius)
   return list
 end
 
+-- City numbers, the names our pins carry. The icon already says which
+-- district a pin is, so the name says which city it belongs to: the player's
+-- cities are numbered 1, 2, ... in founding order (city ID; the capital is
+-- usually 1), planned cities (city-center pins) take the numbers after them.
+-- Returns { [cityID] = number } and how many cities there are.
+function SDP_City.CityNumbers(playerID)
+  local ids = {}
+  for _, city in Players[playerID]:GetCities():Members() do ids[#ids + 1] = city:GetID() end
+  table.sort(ids)
+  local numbers = {}
+  for n, id in ipairs(ids) do numbers[id] = n end
+  return numbers, #ids
+end
+
+-- Numbers for planned cities, given their city-center pins' names in a fixed
+-- order: a pin named with a free number above the cities' keeps it (our own
+-- site pins), the others get the lowest free numbers in turn. Returns a list
+-- parallel to `names`.
+function SDP_City.SiteNumbers(playerID, names)
+  local _, count = SDP_City.CityNumbers(playerID)
+  local taken, out = {}, {}
+  for i, name in ipairs(names) do
+    local n = tonumber(name)
+    if n ~= nil and n == math.floor(n) and n > count and not taken[n] then
+      out[i], taken[n] = n, true
+    end
+  end
+  local next = count + 1
+  for i = 1, #names do
+    if out[i] == nil then
+      while taken[next] do next = next + 1 end
+      out[i], taken[next] = next, true
+    end
+  end
+  return out
+end
+
 -- Specialty district slots for a population (pitfall 18).
 function SDP_City.SpecialtyCapacity(population)
   return 1 + math.floor((population - 1) / 3)
@@ -87,6 +138,14 @@ local function ExclusionReason(plot, playerID, cityID, pinned, allowFeatureRemov
   local feature = plot:GetFeatureType()
   if not allowFeatureRemoval and feature ~= -1 and GameInfo.Features[feature].Removable then
     return E.FEATURE
+  end
+  local resource = plot:GetResourceType()
+  if resource ~= -1 then
+    local row = GameInfo.Resources[resource]
+    if row ~= nil and not Harvestable(row.ResourceType)
+        and Players[playerID]:GetResources():IsResourceVisible(row.Hash) then
+      return E.RESOURCE
+    end
   end
   return nil
 end
@@ -174,13 +233,24 @@ end
 -- Why each plannable district cannot be planned for this city, or nil when
 -- it can: { [DistrictType] = "BUILT" | "MAX_PER_PLAYER" }. BUILT: already in
 -- this city (shown greyed out). MAX_PER_PLAYER: the player has reached the
--- district's MaxPerPlayer elsewhere (e.g. one Government Plaza per empire).
+-- district's MaxPerPlayer elsewhere (e.g. one Government Plaza per empire),
+-- counting the player's pins of it too: a pinned Government Plaza in another
+-- city is where the plan already has it (SDP_Multi counts them the same way).
 function SDP_City.DistrictStatus(scan, districts)
   local builtHere, builtByPlayer = {}, {}
   for _, built in ipairs(scan.Built) do builtHere[built.Type] = true end
   for _, district in Players[scan.PlayerID]:GetDistricts():Members() do
     local districtType = GameInfo.Districts[district:GetType()].DistrictType
     builtByPlayer[districtType] = (builtByPlayer[districtType] or 0) + 1
+  end
+  for _, pin in ipairs(PlayerConfigurations[scan.PlayerID]:GetMapPins()) do
+    local key = (pin:GetIconName() or ""):gsub("^ICON_", "")
+    local plot = Map.GetPlot(pin:GetHexX(), pin:GetHexY())
+    local row = GameInfo.Districts[key]
+    -- A pin on the district it planned (built since) is counted once.
+    if row ~= nil and not (plot ~= nil and plot:GetDistrictType() == row.Index) then
+      builtByPlayer[key] = (builtByPlayer[key] or 0) + 1
+    end
   end
   local status = {}
   for _, district in ipairs(districts) do

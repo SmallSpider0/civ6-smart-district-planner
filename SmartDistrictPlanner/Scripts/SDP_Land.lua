@@ -19,7 +19,7 @@ SDP_Land.TILE_YIELDS = { "YIELD_FOOD", "YIELD_PRODUCTION", "YIELD_GOLD", "YIELD_
 SDP_Land.HARVEST_TURNS = 20 -- one-time yields count as this many turns of yield
 
 -- Plots of a city scan (SDP_City.EXCLUDED reasons) that can still be worked.
-local WORKABLE_EXCLUSIONS = { FEATURE = true, NATURAL_WONDER = true, PIN = true }
+local WORKABLE_EXCLUSIONS = { FEATURE = true, NATURAL_WONDER = true, PIN = true, RESOURCE = true }
 
 -- Weights for the land part: the six tile yields (missing ones weigh 1) and
 -- FEATURE, the weight of one-time yields (default 1).

@@ -52,6 +52,8 @@ test("single-city tab: solve now, solve as a task, continue, place and undo", fu
   local pins = #w:Pins()
   T.eq(SDP_Panel.PlacePins(), 3, "three pins")
   T.eq(#w:Pins(), pins + 3, "pins on the map")
+  -- Named with the city's number, not the district (the icon shows that).
+  for i = pins + 1, pins + 3 do T.eq(w:Pins()[i]:GetName(), "1", "pin name") end
   T.eq(SDP_Panel.UndoPins(), 3, "undo")
   T.eq(#w:Pins(), pins, "pins gone")
 end)
@@ -78,6 +80,8 @@ test("city sites tab: solve, select, place the site tacks", function()
   local pins = #w:Pins()
   T.eq(sites.Place(), 2, "two site tacks")
   T.eq(#w:Pins(), pins + 2, "on the map")
+  -- One city and one city-center pin already: the new sites are 3 and 4.
+  T.eq(w:Pins()[pins + 1]:GetName() .. "," .. w:Pins()[pins + 2]:GetName(), "3,4", "site numbers")
   T.eq(UI_Mock.Lenses.hexes.Hex_Coloring_Placement, 0, "preview cleared after placing")
 end)
 
@@ -105,11 +109,25 @@ test("several cities tab: the new site tacks take part; solve; solutions; place"
   local placed = multi.Place()
   T.ok(placed > 0, "placed")
   T.eq(#w:Pins(), pins + placed, "pins on the map")
-  local named = false
-  for _, pin in ipairs(w:Pins()) do
-    if pin:GetName():find("LOC_SDP_PIN_IN_CITY", 1, true) then named = true end
+  -- Every new pin carries its city's number: the site's own number for a
+  -- planned city (its center pin's name), the city's number for a city.
+  local numbers = {}
+  for _, c in ipairs(result.Cities) do numbers[c.Key] = tostring(c.Number) end
+  local byPlot = {}
+  for _, p in ipairs(result.Plan) do byPlot[p.X .. "," .. p.Y] = numbers[p.City] end
+  local named = 0
+  for i = pins + 1, #w:Pins() do
+    local pin = w:Pins()[i]
+    local want = byPlot[pin:GetHexX() .. "," .. pin:GetHexY()]
+    if want ~= nil then
+      T.eq(pin:GetName(), want, "pin at " .. pin:GetHexX() .. "," .. pin:GetHexY())
+      named = named + 1
+    end
   end
-  T.ok(named, "pins named after their city")
+  T.ok(named > 0, "district pins named with city numbers")
+  for _, c in ipairs(result.Cities) do
+    if c.Kind == "SITE" and c.Name ~= "" then T.eq(tostring(c.Number), c.Name, "a numbered site keeps its number") end
+  end
   T.eq(multi.Undo(), placed, "undo")
 end)
 

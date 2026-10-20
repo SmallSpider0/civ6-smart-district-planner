@@ -208,8 +208,8 @@
     <Replace Tag="LOC_SDP_SITE_N" Language="en_US">
       <Text>Site {1_N}</Text>
     </Replace>
-    <Replace Tag="LOC_SDP_PIN_IN_CITY" Language="en_US">
-      <Text>{1_Name} ({2_City})</Text>
+    <Replace Tag="LOC_SDP_CITY_N" Language="en_US">
+      <Text>{1_N} {2_Name}</Text>
     </Replace>
     <Replace Tag="LOC_SDP_REASON_PINNED" Language="en_US">
       <Text>already pinned</Text>

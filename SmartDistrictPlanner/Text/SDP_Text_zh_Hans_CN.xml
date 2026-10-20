@@ -208,8 +208,8 @@
     <Replace Tag="LOC_SDP_SITE_N" Language="zh_Hans_CN">
       <Text>城址 {1_N}</Text>
     </Replace>
-    <Replace Tag="LOC_SDP_PIN_IN_CITY" Language="zh_Hans_CN">
-      <Text>{1_Name}（{2_City}）</Text>
+    <Replace Tag="LOC_SDP_CITY_N" Language="zh_Hans_CN">
+      <Text>{1_N} {2_Name}</Text>
     </Replace>
     <Replace Tag="LOC_SDP_REASON_PINNED" Language="zh_Hans_CN">
       <Text>已有地图钉</Text>
