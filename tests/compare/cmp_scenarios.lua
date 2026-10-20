@@ -9,7 +9,8 @@
 --
 -- kind = "single": one city. kind = "multi": three or four of the player's
 -- cities planned together (every city wants the same list; one-per-empire
--- districts such as the Government Plaza may go to only one of them).
+-- districts such as the Government Plaza may go to only one of them; the
+-- coverage set "V" gives each city its own list, `plans`).
 
 CmpScenarios = {}
 
@@ -230,6 +231,52 @@ for n, entry in ipairs(SITES) do
     districts = { "DISTRICT_CAMPUS", "DISTRICT_HOLY_SITE", "DISTRICT_COMMERCIAL_HUB" }, built = { {} }, population = 10,
     sites = { count = 2, distance = 8 }, set = "C",
     runs = { { planner = "sdp", variant = "STANDARD" }, { planner = "ep", variant = "" } },
+  })
+end
+
+-- Coverage (design 19.5): late game, three or four cities, each with its own
+-- list. Only one or two of them want an industrial zone or an entertainment
+-- complex, so where those go decides how many cities they reach (Factory,
+-- Zoo: Buildings.RegionalRange). Odd n: the capital wants both; even n: the
+-- capital the industrial zone, the second city the entertainment complex.
+-- The other cities want a campus, a commercial hub and a theater square.
+-- Empire Planner cannot take a list per city and does not count district
+-- reach, so it does not take part. "Vnn-civ-biome-Nc".
+local vseed = 60000
+for n, entry in ipairs(MULTI) do
+  local civKey, biome, count = entry[1], entry[2], entry[3]
+  vseed = vseed + 19
+  local civ = CIVS[civKey]
+  local others = { "DISTRICT_CAMPUS", "DISTRICT_COMMERCIAL_HUB", "DISTRICT_THEATER" }
+  local plans = {}
+  if n % 2 == 1 then
+    plans[1] = { "DISTRICT_CAMPUS", "DISTRICT_THEATER", "DISTRICT_COMMERCIAL_HUB", "DISTRICT_INDUSTRIAL_ZONE",
+      "DISTRICT_ENTERTAINMENT_COMPLEX" }
+    for c = 2, count do plans[c] = others end
+  else
+    plans[1] = { "DISTRICT_CAMPUS", "DISTRICT_COMMERCIAL_HUB", "DISTRICT_INDUSTRIAL_ZONE" }
+    plans[2] = { "DISTRICT_THEATER", "DISTRICT_CAMPUS", "DISTRICT_ENTERTAINMENT_COMPLEX" }
+    for c = 3, count do plans[c] = others end
+  end
+  local union, seen = {}, {}
+  for c = 1, count do
+    for _, t in ipairs(plans[c]) do
+      if not seen[t] then
+        seen[t] = true
+        union[#union + 1] = t
+      end
+    end
+  end
+  local built = {}
+  for c = 1, count do built[c] = {} end
+  Add({
+    id = string.format("V%02d-%s-%s-%dc", n, civKey, biome, count), kind = "multi", title = civ[3] .. "; reach",
+    seed = vseed, biome = biome, civKey = civKey, civ = civ[1], leader = civ[2], stage = "late", cities = count,
+    districts = union, plans = plans, built = built, population = 19, samePopulation = true, set = "V",
+    runs = { { planner = "sdp", variant = "STANDARD" }, { planner = "sdp", variant = "STANDARD_COV1" },
+      { planner = "sdp", variant = "STANDARD_COV3" }, { planner = "sdp", variant = "FINE" },
+      { planner = "sdp", variant = "FINE_COV1" }, { planner = "sdp", variant = "FINE_COV3" },
+      { planner = "amt", variant = "" } },
   })
 end
 

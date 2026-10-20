@@ -4,7 +4,8 @@
 -- A problem is a set of slots (a district or wonder to place, belonging to a
 -- group: a city) over one sorted list of candidate plots. A layout gives each
 -- slot a candidate position (0: not placed). Its value is SDP_Board's exact
--- DMT gain plus the land part of every land model (SDP_Land).
+-- DMT gain plus the land part of every land model (SDP_Land) plus, when
+-- given, the coverage part (SDP_Coverage: weight x newly covered cities).
 --
 --   Singles     every slot alone on every allowed plot: legality and value.
 --   Exhaustive  every legal layout of the active slots (small problems).
@@ -53,12 +54,15 @@ SDP_Search.Better = Better
 --   Slots       { Key, Type ("DISTRICT" | "WONDER"), Group, Allowed = { [position] = true } or nil (all),
 --                 Requires = district type a wonder must be next to (GameInfo.Buildings.AdjacentDistrict) }
 --   Lands       SDP_Land models whose part counts (each only sees its own plots)
+--   Coverage    SDP_Coverage model or nil (off)
 -- }
 function SDP_Search.New(spec)
   local self = setmetatable({}, Search)
   self.PlayerID, self.Board, self.Weights, self.Params = spec.PlayerID, spec.Board, spec.Weights, spec.Params
   self.Candidates, self.N = spec.Candidates, #spec.Candidates
   self.Lands = spec.Lands or {}
+  self.Coverage = spec.Coverage
+  self.CoverLists = {} -- scratch for CoverageCount
   self.SlotSpecs = spec.Slots
   self.Moving, self.Taken, self.Mark = {}, {}, {} -- scratch tables for Evaluate
   self.Stats = {
@@ -137,8 +141,9 @@ function Search:Singles()
   return dropped
 end
 
--- Move the board to `layout` and return its value (DMT gain + land parts)
--- and whether DMT allows every placed slot. Position 0 leaves a slot off.
+-- Move the board to `layout` and return its value (DMT gain + land parts +
+-- coverage part) and whether DMT allows every placed slot. Position 0
+-- leaves a slot off.
 function Search:Evaluate(layout)
   local board, candidates, k = self.Board, self.Candidates, self.K
   local moving, count = self.Moving, 0
@@ -168,7 +173,53 @@ function Search:Evaluate(layout)
       gain = gain + SDP_Land.ScoreTaken(land, taken, placed, self.Mark) - land.Base
     end
   end
+  if self.Coverage ~= nil then gain = gain + self.Coverage.Weight * self:CoverageCount(layout) end
   return gain, legal
+end
+
+-- The pairs a placement of slot m on candidate i newly covers on its own
+-- (nil: the slot has no reach).
+function Search:CoverList(m, i)
+  local c = self.Candidates[i]
+  return self.Coverage:List(self.Types[m], c.Index, c.X, c.Y)
+end
+
+-- How many (city, group) pairs a layout newly covers.
+function Search:CoverageCount(layout)
+  local lists, n = self.CoverLists, 0
+  for m = 1, self.K do
+    if layout[m] ~= 0 then
+      local list = self:CoverList(m, layout[m])
+      if list ~= nil then
+        n = n + 1
+        lists[n] = list
+      end
+    end
+  end
+  return self.Coverage:Count(lists, n)
+end
+
+-- The (city, group) pairs a layout newly covers, sorted (for reports).
+function Search:CoveragePairs(layout)
+  local seen, ids = {}, {}
+  for m = 1, self.K do
+    if layout[m] ~= 0 then
+      for _, id in ipairs(self:CoverList(m, layout[m]) or {}) do
+        if not seen[id] then
+          seen[id] = true
+          ids[#ids + 1] = id
+        end
+      end
+    end
+  end
+  table.sort(ids)
+  return ids
+end
+
+-- The coverage part of a layout alone (for reports; 0 when off).
+function Search:CoverageDelta(layout)
+  if self.Coverage == nil then return 0 end
+  return self.Coverage.Weight * self:CoverageCount(layout)
 end
 
 -- The land part of a layout alone (for reports).
@@ -337,6 +388,12 @@ function Search:Model()
     local rows = (adjacency[self.Types[m]] or {}).Rows or {}
     for i = 1, n do
       local value = self.Single[m][i] - loss[i]
+      -- Coverage alone; two slots of one group over the same city both
+      -- count it here, so the model stays optimistic.
+      if self.Coverage ~= nil and self.Legal[m][i] then
+        local list = self:CoverList(m, i)
+        if list ~= nil then value = value + self.Coverage.Weight * #list end
+      end
       for _, row in ipairs(rows) do
         if row.TilesRequired > 1 then
           local count = 0

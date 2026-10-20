@@ -415,5 +415,26 @@
     <Replace Tag="LOC_SDP_HOTKEY_OPEN" Language="en_US">
       <Text>Open or close the planner</Text>
     </Replace>
+    <Replace Tag="LOC_SDP_WEIGHT_COVERAGE_SHORT" Language="en_US">
+      <Text>Reach</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_WEIGHT_COVERAGE" Language="en_US">
+      <Text>Reach: factories, power plants, zoos, stadiums, aquariums and some wonders help every city of yours within a distance (mostly 6 tiles in the rules); the same kind does not stack. The plan counts the cities it newly covers: each one adds this many points, in the same unit as adjacency; 0 leaves it out. It only decides where the chosen districts go and never adds districts to a city. For reference: a factory gives each covered city +3 production, a power plant +3 to +4 more; zoos, stadiums and aquariums +1 amenity each.</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_SUMMARY_COVERAGE" Language="en_US">
+      <Text>Weighted gain: {1_Gain} (adjacency {2_Adjacency}, plots taken {3_Land}, reach {4_Coverage})</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_COVERAGE_GROUP" Language="en_US">
+      <Text>{1_Name}: covers {2_N} more ({3_Names})</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_COVERAGE_NOTHING" Language="en_US">
+      <Text>Reach: this plan covers no new city</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_COVERAGE_ROW" Language="en_US">
+      <Text>reaches {1_N}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_COVERAGE_TIP" Language="en_US">
+      <Text>Cities within reach: {1_Names}</Text>
+    </Replace>
   </LocalizedText>
 </GameData>

@@ -10,6 +10,7 @@
 SDP_Panel (UI/SDP_Panel.lua，InGame 上下文，Lua 状态名 SDP_Panel)
  ├─ 启动栏按钮注入、弹窗队列、面板控件、测试钩子
  ├─ SDP_Solver   求解：单项精评 → 穷举 / 线性短名单 → 联合精评 → 局部搜索
+ ├─ SDP_Multi    多城联合（SDP_Search 的搜索；可选的地块部分 SDP_Land、覆盖项 SDP_Coverage）
  │   ├─ SDP_Overlay  假想摆放层：替换 DMT 的钉读写，调用 DMT 的 CanPlacePin / GetBonusYields
  │   │   └─ DMT（include dmt_yieldcalculator，移除其事件订阅）
  │   ├─ SDP_City     城市扫描：候选格、排除原因、已建区域、锁定钉
@@ -24,6 +25,7 @@ SDP_Panel (UI/SDP_Panel.lua，InGame 上下文，Lua 状态名 SDP_Panel)
 - 单项得分 = Σ 权重[y] × 产出[y]，y 取科学、文化、信仰、金币、生产力五项（`SDP_Rules.YIELDS`），权重 0–3，默认全 1（约束 3）。产出是 DMT `GetBonusYields` 给出的相邻加成，不含政策卡翻倍（约束 4，DMT 本身不算）。
 - **联合总分** = 方案里每个新区域的得分 + 每个固定 subject 的得分。固定 subject 是城市四环内本玩家的已建区域（含市中心）和锁定地图钉（`SDP_Overlay.FixedSubjects`），它们的得分会因为新区域相邻而变化。
 - **提升（Gain）** = 联合总分 − 基线。基线是不放新区域时固定 subject 的总分。求解器最大化提升；结果里的 `Neighbours` 列出得分变化的固定 subject。
+- **可选的两项**：面板打开"计入地块"时加上地块部分（`SDP_Land`，区域占掉的格少耕作的产出）；多城页签的覆盖权重不为 0 时加上覆盖项（`SDP_Coverage`，权重 × 方案新覆盖的（城市, 类别）个数，见 multicity-design.md 第 19 节）。覆盖项默认关，关时目标就是上面的五项加权和。
 
 ## 求解算法结构（阶段 4，`Scripts/SDP_Solver.lua`）
 
@@ -171,6 +173,7 @@ SDP_Panel (UI/SDP_Panel.lua，InGame 上下文，Lua 状态名 SDP_Panel)
 - **单城奇观**（第 5 项）：选了奇观时，单城请求转成只有这一座城的 `SDP_Multi` 请求（`Only = { 城市 }`，不含城址钉），沿用多城的奇观逻辑。
 - **好位置热力图**（第 6 项，`SDP_Solver.Heat`）：对候选格逐个评估该区域单独放下的加权增益（含它给邻居带来的变化），合法的按最高到最低分四档用预览层着色并标数值。
 - **快捷键**（第 8 项，`Config/SDP_Input.xml`）：前端数据库里加输入动作 `SDP_OpenPlanner`，默认 Shift+L，面板监听 `Events.InputActionTriggered`。
+- **覆盖范围**（第 7 项，`SDP_Coverage`，2026-10-20 晚加，离线已验证，待游戏内复测）：覆盖半径从 `GameInfo.Buildings.RegionalRange` 读，按基础区域取最大值（通用建筑和本文明特性的建筑），奇观用自己的半径。被覆盖的对象是玩家的全部城市和本次规划的新城；已建、已打钉的同类区域已覆盖的不再计。`SDP_Search` 的精确评估加上"权重 × 新覆盖的（城市, 类别）个数"，模型的单放值加上单独放下时新覆盖的城数（偏乐观）。只在多城页签，权重 0（默认）时不建模型，结果与没有这项时逐字相同。
 
 ## 后续扩展预留
 

@@ -12,6 +12,7 @@ include("SDP_Tiers")
 include("SDP_Task")
 include("SDP_Board")
 include("SDP_Land")
+include("SDP_Coverage")
 include("SDP_Search")
 include("SDP_Solver")
 include("SDP_Wonders")
@@ -441,14 +442,16 @@ local function BuildWeights()
 end
 
 -- Weight columns for a tab: `columns` like WEIGHT_COLUMNS, `weights` the
--- tab's table, isOff(column) greys a column out, onChange(key, value).
+-- tab's table, isOff(column) greys a column out, onChange(key, value),
+-- width (optional) the column width when more columns must fit.
 -- Returns { [key] = redraw function }.
-function SDP_UI.BuildWeights(im, stack, columns, weights, isOff, onChange)
+function SDP_UI.BuildWeights(im, stack, columns, weights, isOff, onChange, width)
   im:ResetInstances()
   local views = {}
   for _, column in ipairs(columns) do
     local key = column.Key
     local inst = im:GetInstance()
+    if width ~= nil then inst.Root:SetSizeX(width) end
     local function Show()
       local off = isOff and isOff(column) or false
       inst.Value:SetText(tostring(weights[key]))

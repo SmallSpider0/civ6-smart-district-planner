@@ -415,5 +415,26 @@
     <Replace Tag="LOC_SDP_HOTKEY_OPEN" Language="zh_Hans_CN">
       <Text>打开或关闭规划面板</Text>
     </Replace>
+    <Replace Tag="LOC_SDP_WEIGHT_COVERAGE_SHORT" Language="zh_Hans_CN">
+      <Text>覆盖</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_WEIGHT_COVERAGE" Language="zh_Hans_CN">
+      <Text>覆盖范围：工厂、电厂、动物园、体育场、水族馆和部分奇观，能惠及一定距离内（规则数据里多为 6 格）的本方城市，同类不叠加。规划时把新覆盖的城市也算进去：每新覆盖一座城记这么多分，单位与相邻加成相同；0 为不计。只决定已勾选的区域放在哪，不会替城市加区域。参考：工厂给每座被覆盖的城 +3 生产力，电厂再加 +3～+4；动物园、体育场、水族馆各 +1 宜居度。</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_SUMMARY_COVERAGE" Language="zh_Hans_CN">
+      <Text>加权提升：{1_Gain}（相邻 {2_Adjacency}，地块 {3_Land}，覆盖 {4_Coverage}）</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_COVERAGE_GROUP" Language="zh_Hans_CN">
+      <Text>{1_Name}：新覆盖 {2_N} 座城（{3_Names}）</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_COVERAGE_NOTHING" Language="zh_Hans_CN">
+      <Text>覆盖：这套方案没有新覆盖的城市</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_COVERAGE_ROW" Language="zh_Hans_CN">
+      <Text>覆盖 {1_N} 城</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_COVERAGE_TIP" Language="zh_Hans_CN">
+      <Text>覆盖范围内的城市：{1_Names}</Text>
+    </Replace>
   </LocalizedText>
 </GameData>

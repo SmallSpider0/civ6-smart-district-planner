@@ -24,7 +24,7 @@ SITE_FIELDS = ("siteValue", "tileValue", "districtPotential", "freshWater", "coa
 
 
 def group(sid):
-    """(set, kind) of a scenario id: dev / heldout / profile:SCI ... / wonders / sites."""
+    """(set, kind) of a scenario id: dev / heldout / profile:SCI ... / wonders / sites / coverage."""
     if "~" in sid:
         return "profile:" + sid.split("~", 1)[1], "single"
     if sid.startswith("HS"):
@@ -35,6 +35,8 @@ def group(sid):
         return "wonders", "single"
     if sid.startswith("C"):
         return "sites", "sites"
+    if sid.startswith("V"):
+        return "coverage", "multi"
     if sid.startswith("S"):
         return "dev", "single"
     if sid.startswith("M"):
@@ -101,6 +103,24 @@ def paired(scenarios, a, b, field="gain"):
     lo, hi = bootstrap_ci(diffs)
     return {"n": len(diffs), "wins": w, "ties": len(diffs) - w - l, "losses": l,
             "mean": (sum(diffs) / len(diffs)) if diffs else None, "ci": [lo, hi], "p": sign_test(w, l)}
+
+
+def pareto(scenarios, a, b, fields=("gain", "coverage")):
+    """a against b on several measures at once: a better (not worse on any,
+    better on one), b better, the same, or a trade-off (each better on one)."""
+    out = {"n": 0, "better": 0, "worse": 0, "same": 0, "tradeoff": 0}
+    for sid in sorted(scenarios):
+        ra, rb = scenarios[sid]["runs"].get(a), scenarios[sid]["runs"].get(b)
+        if not ra or not rb or ra.get("error") or rb.get("error"):
+            continue
+        if any(ra.get(f) is None or rb.get(f) is None for f in fields):
+            continue
+        diffs = [ra[f] - rb[f] for f in fields]
+        up = any(d > 1e-9 for d in diffs)
+        down = any(d < -1e-9 for d in diffs)
+        out["n"] += 1
+        out["tradeoff" if up and down else "better" if up else "worse" if down else "same"] += 1
+    return out
 
 
 def key(r):
@@ -177,6 +197,8 @@ def summarize(rows):
                     "outputGap": (best_out - s["output"]) if (best_out is not None and s.get("output") is not None) else None,
                     "notes": (r.get("plan") or {}).get("notes"),
                     "wondersPlaced": s.get("wondersPlaced"), "wondersRequested": s.get("wondersRequested"),
+                    # Coverage (design 19.5): (city, kind) pairs newly reached.
+                    "coverage": s.get("coverageGain"),
                 })
                 for f in SITE_FIELDS:
                     if s.get(f) is not None:
@@ -288,6 +310,29 @@ def main():
                     lo, hi = pr["ci"]
                     print("  %-17s vs %-13s %-10s n %3d  W/T/L %d/%d/%d  mean %+.2f  CI [%+.2f, %+.2f]  p %.2g" % (
                         ours, other, field, pr["n"], pr["wins"], pr["ties"], pr["losses"], pr["mean"], lo, hi, pr["p"]))
+    # Coverage (design 19.5): reach and adjacency, each setting against the
+    # same tier without coverage and against AMT.
+    cov = subset(scenarios, "coverage", "multi")
+    if cov:
+        print("== coverage: pairs newly reached, adjacency gain")
+        for a, b in (("sdp:STANDARD_COV1", "sdp:STANDARD"), ("sdp:STANDARD_COV3", "sdp:STANDARD"),
+                     ("sdp:FINE_COV1", "sdp:FINE"), ("sdp:FINE_COV3", "sdp:FINE"),
+                     ("sdp:STANDARD", "amt"), ("sdp:STANDARD_COV1", "amt"), ("sdp:STANDARD_COV3", "amt")):
+            par = pareto(cov, a, b)
+            if not par["n"]:
+                continue
+            line = "  %-17s vs %-13s pareto n %d: better %d, worse %d, same %d, trade-off %d" % (
+                a, b, par["n"], par["better"], par["worse"], par["same"], par["tradeoff"])
+            for field in ("coverage", "gain"):
+                pr = paired(cov, a, b, field)
+                line += "  | %s W/T/L %d/%d/%d mean %+.2f" % (field, pr["wins"], pr["ties"], pr["losses"], pr["mean"])
+            print(line)
+        for k in sorted({k for e in cov.values() for k in e["runs"]}):
+            runs = [e["runs"][k] for e in cov.values() if k in e["runs"] and not e["runs"][k].get("error")]
+            if runs:
+                print("  %-18s coverage mean %.2f  gain mean %.2f  not requested %d  missing %d" % (
+                    k, statistics.mean(r.get("coverage") or 0 for r in runs), statistics.mean(r.get("gain") or 0 for r in runs),
+                    sum((r.get("violations") or {}).get("not_requested", 0) for r in runs), sum(r.get("missing", 0) for r in runs)))
     if det:
         print("== determinism")
         for d in det:

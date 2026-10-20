@@ -335,7 +335,7 @@ if (!isMainThread) {
   }
   // Longest runs first (AMT's multi-city joint solve, then multi-city), so
   // the pool does not end waiting on one slow straggler.
-  const weight = (t) => (/^H?M/.test(t.scenario) ? 2 : 0) + (t.planner === "amt" ? 1 : 0);
+  const weight = (t) => (/^(H?M|V)/.test(t.scenario) ? 2 : 0) + (t.planner === "amt" ? 1 : 0);
   tasks.sort((a, b) => weight(b) - weight(a));
   mkdirSync(dirname(out), { recursive: true });
   writeFileSync(out, "");

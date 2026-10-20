@@ -55,6 +55,7 @@
       </Properties>
       <File>Scripts/SDP_Board.lua</File>
       <File>Scripts/SDP_City.lua</File>
+      <File>Scripts/SDP_Coverage.lua</File>
       <File>Scripts/SDP_Land.lua</File>
       <File>Scripts/SDP_Multi.lua</File>
       <File>Scripts/SDP_Overlay.lua</File>
@@ -84,6 +85,7 @@
     <File>Config/SDP_Input.xml</File>
     <File>Scripts/SDP_Board.lua</File>
     <File>Scripts/SDP_City.lua</File>
+    <File>Scripts/SDP_Coverage.lua</File>
     <File>Scripts/SDP_Land.lua</File>
     <File>Scripts/SDP_Multi.lua</File>
     <File>Scripts/SDP_Overlay.lua</File>

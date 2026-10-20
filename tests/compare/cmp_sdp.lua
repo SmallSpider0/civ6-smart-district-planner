@@ -5,6 +5,8 @@
 --   variant FAST | STANDARD | FINE   the tier
 --   variant STANDARD_LAND (any tier + "_LAND")  with the land part on, as the
 --                                    panel has it by default
+--   variant <TIER>_COV<n>            multi: the coverage part on, weight n
+--                                    (design 19)
 --   variant CITY_BY_CITY             multi only: each city planned alone with
 --                                    STANDARD, in city order, earlier plans
 --                                    pinned (the baseline a player gets by
@@ -15,7 +17,7 @@ CmpAdapters = CmpAdapters or {}
 local function LoadSDP()
   include("MapTacks")
   for _, name in ipairs({ "SDP_Rules", "SDP_City", "SDP_Overlay", "SDP_Tiers", "SDP_Task", "SDP_Board", "SDP_Land",
-    "SDP_Search", "SDP_Solver", "SDP_Wonders", "SDP_Multi", "SDP_Sites", "SDP_SiteSolver" }) do
+    "SDP_Coverage", "SDP_Search", "SDP_Solver", "SDP_Wonders", "SDP_Multi", "SDP_Sites", "SDP_SiteSolver" }) do
     include(name)
   end
 end
@@ -31,6 +33,8 @@ end
 
 function CmpAdapters.sdp(request, variant, w)
   -- "<TIER>_LAND": the land part on (the panel's default), else adjacency only.
+  local coverage = tonumber(variant:match("_COV(%d)$") or "")
+  variant = variant:gsub("_COV%d$", "")
   local land = false
   if variant:match("_LAND$") then
     land = true
@@ -86,10 +90,15 @@ function CmpAdapters.sdp(request, variant, w)
       for _, u in ipairs(r.Unplaced or {}) do out.notes[#out.notes + 1] = "unplaced " .. u.Type .. " " .. tostring(u.Reason) end
     end
   else
-    local existing = {}
+    local existing, plans = {}, nil
     for _, city in ipairs(request.cities) do existing[city:GetID()] = true end
-    local r = SDP_Multi.Solve({ PlayerID = 0, Tier = variant, Districts = request.districts, Existing = existing,
-      Land = land, Weights = request.weights })
+    if request.plans then
+      -- Each city its own list (the tab's "plan for" pulldown).
+      plans = {}
+      for _, city in ipairs(request.cities) do plans["C" .. city:GetID()] = request.plans[city:GetID()] or {} end
+    end
+    local r = SDP_Multi.Solve({ PlayerID = 0, Tier = variant, Districts = plans and {} or request.districts, Plans = plans,
+      Existing = existing, Land = land, Weights = request.weights, Coverage = coverage })
     if not r.Ok then out.notes[#out.notes + 1] = tostring(r.Error) end
     local byKey = {}
     for _, c in ipairs(r.Cities or {}) do byKey[c.Key] = c.CityID end
@@ -99,6 +108,7 @@ function CmpAdapters.sdp(request, variant, w)
       end
     end
     stats.sdpGain = r.Adjacency
+    stats.sdpCovered = r.Covered
     for _, u in ipairs(r.Unplaced or {}) do out.notes[#out.notes + 1] = "unplaced " .. tostring(u.Type) .. " " .. tostring(u.Reason) end
   end
   return out

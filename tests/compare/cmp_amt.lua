@@ -633,9 +633,10 @@ local function ConfirmSinglePreview(out)
 end
 
 -- Multi-city, the player's steps up to the scope page: AMT's joint planner
--- (mode chooser -> multi-city), every city of the request in a slot with the
--- same district list, one-per-empire districts (Government Plaza) set to
--- AUTO, save all (the joint solve starts when the scope is confirmed).
+-- (mode chooser -> multi-city), every city of the request in a slot with its
+-- district list (the same for all, or the city's own in V scenarios),
+-- one-per-empire districts (Government Plaza) set to AUTO, save all (the
+-- joint solve starts when the scope is confirmed).
 local function OpenJointScope(request, notes)
   local cities = request.cities
   UI.GetHeadSelectedCity = function() return cities[1] end
@@ -661,14 +662,25 @@ local function OpenJointScope(request, notes)
       AMT_MC_AssignSlotParticipant(slot, nil)
     end
   end
-  local unique, grid = {}, {}
-  for _, t in ipairs(request.districts) do
-    if AMT_MC_M6U_IsSupported(t) then unique[#unique + 1] = t else grid[#grid + 1] = t end
-  end
+  -- Each city's list: the scenario's own per city (V scenarios), else the
+  -- shared one. One-per-empire districts go in the shared pull-down row.
+  local unique, uniqueSeen = {}, {}
   for slot, city in ipairs(cities) do
+    local list = (request.plans and request.plans[city:GetID()]) or request.districts
+    local grid = {}
+    for _, t in ipairs(list) do
+      if AMT_MC_M6U_IsSupported(t) then
+        if not uniqueSeen[t] then
+          uniqueSeen[t] = true
+          unique[#unique + 1] = t
+        end
+      else
+        grid[#grid + 1] = t
+      end
+    end
     if not Click(Controls["MCCityCard" .. slot]) then AMT_MC_SelectCityCard(slot) end
     if GetSelectedCityLocal() ~= city then error("slot " .. slot .. " is not city " .. city:GetID()) end
-    SetSlotCount(city, request.districts, notes)
+    SetSlotCount(city, list, notes)
     ClickDistricts(city, grid, notes)
   end
   -- The unique-district row's pull-down entry "AUTO" (one shared choice).

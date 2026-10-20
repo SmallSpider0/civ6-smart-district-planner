@@ -183,6 +183,16 @@ function CmpRun.Setup(id)
   for _, base in ipairs(scn.districts) do
     if base ~= "DISTRICT_HARBOR" or SeaInReach(cities[1]) then districts[#districts + 1] = unique[base] or base end
   end
+  -- A list per city (V scenarios): { [city ID] = district types }, by city order.
+  local plans = nil
+  if scn.plans then
+    plans = {}
+    for n, city in ipairs(cities) do
+      local list = {}
+      for _, base in ipairs(scn.plans[n] or {}) do list[#list + 1] = unique[base] or base end
+      plans[city:GetID()] = list
+    end
+  end
   -- Yield weights: 1 each, or the scenario's profile (one yield weighted 3).
   local weights = {}
   for row in gi.Yields() do weights[row.YieldType] = 1 end
@@ -193,7 +203,7 @@ function CmpRun.Setup(id)
     if gi.Buildings[b] ~= nil then wonders[#wonders + 1] = b end
   end
   local request = { playerID = 0, scenario = scn, cities = cities, districts = districts, weights = weights,
-    target = cities[1], wonders = wonders, sites = scn.sites }
+    target = cities[1], wonders = wonders, sites = scn.sites, plans = plans }
   return scn, w, request
 end
 
@@ -617,7 +627,12 @@ function CmpRun.Judge(id, planJson)
       perPlayer[p.type] = (perPlayer[p.type] or 0) + 1
       if row.OnePerCity and perCity[p.city][p.type] > 1 then Violation("twice_in_city", p) end
       if (row.MaxPerPlayer or -1) >= 0 and perPlayer[p.type] > row.MaxPerPlayer then Violation("empire_limit", p) end
-      if not requested[p.type] then Violation("not_requested", p) end
+      local wanted = requested
+      if request.plans then
+        wanted = {}
+        for _, t in ipairs(request.plans[p.city] or {}) do wanted[t] = true end
+      end
+      if not wanted[p.type] then Violation("not_requested", p) end
     end
   end
   -- Wonders: each at most once, only the ones asked for count as placed.
@@ -694,13 +709,22 @@ function CmpRun.Judge(id, planJson)
   for _, c in ipairs(request.cities) do
     if scn.kind == "multi" or c == request.target then scope[#scope + 1] = c end
   end
-  for _, t in ipairs(request.districts) do
-    local row = gi.Districts[t]
-    if (row.MaxPerPlayer or -1) >= 0 then
-      if (perPlayer[t] or 0) == 0 then Missing(t, scope, nil) end
-    else
-      for _, c in ipairs(scope) do
+  if request.plans then
+    -- Each city its own list.
+    for _, c in ipairs(scope) do
+      for _, t in ipairs(request.plans[c:GetID()] or {}) do
         if (perCity[c:GetID()][t] or 0) == 0 then Missing(t, { c }, c:GetID()) end
+      end
+    end
+  else
+    for _, t in ipairs(request.districts) do
+      local row = gi.Districts[t]
+      if (row.MaxPerPlayer or -1) >= 0 then
+        if (perPlayer[t] or 0) == 0 then Missing(t, scope, nil) end
+      else
+        for _, c in ipairs(scope) do
+          if (perCity[c:GetID()][t] or 0) == 0 then Missing(t, { c }, c:GetID()) end
+        end
       end
     end
   end
@@ -737,6 +761,42 @@ function CmpRun.Judge(id, planJson)
   score.missing = missing
   score.missingPlaceable = missingPlaceable
   score.requested = #request.districts
+
+  -- Coverage (design 19.5): the (city, kind) pairs the player's regional
+  -- districts reach, before and with the plan. Worked out here from the
+  -- rules, not with any planner's code: a kind is a base district, its
+  -- range the largest Buildings.RegionalRange of the generic buildings that
+  -- need it; a city counts once per kind.
+  local reach = {}
+  for row in gi.Buildings() do
+    if (row.RegionalRange or 0) > 0 and row.PrereqDistrict ~= nil and row.TraitType == nil then
+      reach[row.PrereqDistrict] = math.max(reach[row.PrereqDistrict] or 0, row.RegionalRange)
+    end
+  end
+  local function Covered(extra)
+    local covered, count = {}, 0
+    local function Add(t, x, y)
+      local replaces = gi.DistrictReplaces[t]
+      local base = replaces and replaces.ReplacesDistrictType or t
+      local range = reach[base]
+      if range == nil then return end
+      for _, city in Players[0]:GetCities():Members() do
+        local key = base .. ":" .. city:GetID()
+        if not covered[key] and Map.GetPlotDistance(x, y, city:GetX(), city:GetY()) <= range then
+          covered[key] = true
+          count = count + 1
+        end
+      end
+    end
+    for _, d in Players[0]:GetDistricts():Members() do Add(gi.Districts[d:GetType()].DistrictType, d:GetX(), d:GetY()) end
+    for _, p in ipairs(extra) do
+      if gi.Districts[p.type] ~= nil then Add(p.type, p.x, p.y) end
+    end
+    return count
+  end
+  score.coverageBefore = Covered({})
+  score.coverage = Covered(placements)
+  score.coverageGain = score.coverage - score.coverageBefore
   cmp_emit("SCORE " .. Json.Encode(score))
 end
 

@@ -181,9 +181,17 @@ local function BuildGameInfo()
     { BuildingType = "BUILDING_GREAT_LIBRARY", Name = "LOC_BUILDING_GREAT_LIBRARY_NAME", IsWonder = true, Cost = 400,
       AdjacentDistrict = "DISTRICT_CAMPUS" },
     { BuildingType = "BUILDING_COLOSSEUM", Name = "LOC_BUILDING_COLOSSEUM_NAME", IsWonder = true, Cost = 400,
-      AdjacentDistrict = "DISTRICT_ENTERTAINMENT_COMPLEX" },
+      AdjacentDistrict = "DISTRICT_ENTERTAINMENT_COMPLEX", RegionalRange = 6 },
     { BuildingType = "BUILDING_STONEHENGE", Name = "LOC_BUILDING_STONEHENGE_NAME", IsWonder = true, Cost = 180, FlatOnly = true },
     { BuildingType = "BUILDING_LIBRARY", Name = "LOC_BUILDING_LIBRARY_NAME", Cost = 90, PrereqDistrict = "DISTRICT_CAMPUS" },
+    -- Regional buildings (Buildings.RegionalRange), as in the base game; the
+    -- last one is a made-up civilization building with a longer reach.
+    { BuildingType = "BUILDING_FACTORY", Name = "LOC_BUILDING_FACTORY_NAME", Cost = 330,
+      PrereqDistrict = "DISTRICT_INDUSTRIAL_ZONE", RegionalRange = 6 },
+    { BuildingType = "BUILDING_ZOO", Name = "LOC_BUILDING_ZOO_NAME", Cost = 445,
+      PrereqDistrict = "DISTRICT_ENTERTAINMENT_COMPLEX", RegionalRange = 6 },
+    { BuildingType = "BUILDING_TEST_LONG_REACH", Name = "LOC_BUILDING_TEST_LONG_REACH_NAME", Cost = 330,
+      PrereqDistrict = "DISTRICT_INDUSTRIAL_ZONE", RegionalRange = 9, TraitType = "TRAIT_CIVILIZATION_DISTRICT_ACROPOLIS" },
   }, "BuildingType")
   return gi
 end

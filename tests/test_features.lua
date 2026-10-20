@@ -200,3 +200,83 @@ test("multi tab: the government plaza stays in the one city whose own list has i
   SDP_Panel.SelectTab("SINGLE")
   if not ok then error(err, 0) end
 end)
+
+-- A city-center pin `distance` plots from the capital on revealed land, as
+-- the DMT popup makes one; returns its ID (pin objects go stale: pitfall 21).
+local function SitePin(city, distance)
+  local cfg = PlayerConfigurations[pid]
+  for index = 0, Map.GetPlotCount() - 1 do
+    local plot = Map.GetPlotByIndex(index)
+    if Map.GetPlotDistance(plot:GetX(), plot:GetY(), city:GetX(), city:GetY()) == distance
+        and PlayersVisibility[pid]:IsRevealed(index) and not plot:IsWater() and not plot:IsMountain()
+        and not plot:IsImpassable() and plot:GetOwner() == -1 then
+      local pin = cfg:GetMapPin(plot:GetX(), plot:GetY())
+      pin:SetIconName("ICON_DISTRICT_CITY_CENTER")
+      pin:SetName("")
+      LuaEvents.DMT_MapPinAdded(pin)
+      Network.BroadcastPlayerInfo()
+      return pin:GetID(), plot:GetX(), plot:GetY()
+    end
+  end
+  T.skip("no free revealed land " .. distance .. " plots from the capital")
+end
+
+local function RemovePin(id)
+  local cfg = PlayerConfigurations[pid]
+  local pin = cfg:GetMapPinID(id)
+  if pin == nil then return end
+  LuaEvents.DMT_MapPinRemoved(pin)
+  cfg:DeleteMapPin(id)
+  Network.BroadcastPlayerInfo()
+end
+
+test("multi tab: with the coverage weight the industrial zone reaches a planned city that has none", function()
+  local city = Capital()
+  local zone = Resolve("DISTRICT_INDUSTRIAL_ZONE")
+  local reach = SDP_Coverage.Reaches(pid)[zone]
+  if reach == nil then T.skip("no regional building for the industrial zone in this ruleset") end
+  local pinID, sx, sy = SitePin(city, reach.Range)
+  local multi = SDP_Panel.Multi
+  local ok, err = pcall(function()
+    SDP_Panel.SelectTab("MULTI")
+    multi.Refresh()
+    multi.SetExisting(city:GetID(), true)
+    multi.SetPlanFor("ALL")
+    multi.ApplyPlan({})
+    multi.SetPlanFor("C" .. city:GetID())
+    multi.ApplyPlan({ zone })
+    multi.SetTier("FAST")
+    multi.SetWeight("COVERAGE", 3)
+    T.ok(multi.Solve(), "started")
+    SDP_Panel.RunTask(5000)
+    local result = multi.State().Result
+    T.ok(result and result.Ok, "result: " .. tostring(result and result.Error))
+    T.ok(not result.Stats.Mismatch, "board and full evaluation agree")
+    T.ok(math.abs(result.Gain - (result.Adjacency + result.LandDelta + result.CoverageDelta)) < 1e-6, "the gain adds up")
+    local placed = nil
+    for _, p in ipairs(result.Plan) do
+      if p.Type == zone then placed = p end
+    end
+    T.ok(placed ~= nil, "the industrial zone is planned")
+    T.ok(Map.GetPlotDistance(placed.X, placed.Y, sx, sy) <= reach.Range,
+      "the zone at " .. placed.X .. "," .. placed.Y .. " reaches the site at " .. sx .. "," .. sy)
+    local site = nil
+    for _, c in ipairs(result.Cities) do
+      if c.Kind == "SITE" and c.X == sx and c.Y == sy then site = c.Key end
+    end
+    local listed = false
+    for _, entry in ipairs(result.CoveredBy) do
+      for _, key in ipairs(entry.Keys) do
+        if key == site then listed = true end
+      end
+    end
+    T.ok(listed, "the site is among the newly covered cities")
+  end)
+  multi.SetWeight("COVERAGE", 0)
+  multi.ApplyPlan(nil)
+  multi.SetPlanFor("ALL")
+  multi.SetExisting(city:GetID(), nil)
+  SDP_Panel.SelectTab("SINGLE")
+  RemovePin(pinID)
+  if not ok then error(err, 0) end
+end)

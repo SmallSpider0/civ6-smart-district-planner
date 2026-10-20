@@ -12,8 +12,9 @@
 --                 empire limit (government plaza) gets the slots the limit
 --                 leaves, each allowed in every city that plans it.
 --   Objective     SDP_Board's exact DMT gain over all fixed subjects of all
---                 participants, plus each city's land part; a plot two
---                 cities could work counts for the nearer one.
+--                 participants, plus each city's land part (a plot two
+--                 cities could work counts for the nearer one), plus, when
+--                 asked for, the coverage part (SDP_Coverage, design 19).
 --   Search        a start plans city by city (SDP_Search.SolveBlock with the
 --                 cities before it fixed), then local search over everything,
 --                 block rounds (each city re-solved with the others fixed)
@@ -152,6 +153,7 @@ end
 --   Only                 { [cityID] = true }: exactly these cities (see Participants)
 --   Weights              as for SDP_Solver (five yields; YIELD_FOOD, FEATURE for land)
 --   Land                 count the land part (default true)
+--   Coverage             weight 0..3 of the coverage part (default 0: off)
 --   AllowFeatureRemoval  default true
 --   IgnorePins           this mod's earlier pins being replaced (see SDP_Solver)
 -- }
@@ -273,6 +275,17 @@ function SDP_Multi.NewSession(request)
     end
   end
 
+  -- Coverage part (design 19): the player's cities and the new ones; off
+  -- (no model at all) unless a weight is given.
+  if (request.Coverage or 0) > 0 then
+    local sites = {}
+    for _, part in ipairs(participants) do
+      if part.Kind == "SITE" then sites[#sites + 1] = { Key = part.Key, X = part.X, Y = part.Y, Name = part.Name } end
+    end
+    self.Coverage = SDP_Coverage.New({ PlayerID = playerID, Weight = request.Coverage, Sites = sites,
+      IgnorePins = options.ignorePins })
+  end
+
   -- Slots. Districts with an empire limit get the slots the limit leaves.
   local builtByPlayer = {}
   for _, district in Players[playerID]:GetDistricts():Members() do
@@ -367,7 +380,7 @@ function SDP_Multi.NewSession(request)
 
   self.Search = SDP_Search.New({
     PlayerID = playerID, Board = self.Board, Weights = self.Weights, Params = params,
-    Candidates = candidates, Slots = slots, Lands = lands,
+    Candidates = candidates, Slots = slots, Lands = lands, Coverage = self.Coverage,
   })
   for _, s in ipairs(self.Search:Singles()) do
     local city = slotCity[s] and participants[slotCity[s]].Key or "WONDERS"
@@ -720,6 +733,7 @@ function Session:PlanFor(layout)
     out.Plan[n] = {
       City = self.Participants[p].Key, Type = search.Types[m], Kind = search.Kinds[m], X = c.X, Y = c.Y, Index = c.Index,
       Yields = item.Yields, ToolTip = item.ToolTip, Score = item.Score,
+      Reach = self.Coverage and self.Coverage:Reach(search.Types[m], c.X, c.Y) or nil,
     }
     out.Cities[p].Gain = out.Cities[p].Gain + item.Score
   end
@@ -732,7 +746,24 @@ function Session:PlanFor(layout)
   end
   out.Adjacency = final.Total - base.Total
   out.LandDelta = search:LandDelta(layout)
-  out.Gain = out.Adjacency + out.LandDelta
+  out.CoverageDelta = search:CoverageDelta(layout)
+  if self.Coverage ~= nil then
+    -- The newly covered cities by group (base district or wonder).
+    local byGroup, order = {}, {}
+    local newly = search:CoveragePairs(layout)
+    for _, id in ipairs(newly) do
+      local target, group = self.Coverage:Pair(id)
+      if byGroup[group] == nil then
+        byGroup[group] = { Group = group, Keys = {} }
+        order[#order + 1] = group
+      end
+      local keys = byGroup[group].Keys
+      keys[#keys + 1] = target.Key
+    end
+    out.Covered, out.CoveredBy = #newly, {}
+    for _, group in ipairs(order) do out.CoveredBy[#out.CoveredBy + 1] = byGroup[group] end
+  end
+  out.Gain = out.Adjacency + out.LandDelta + out.CoverageDelta
   out.Total = final.Total
   out.Legal = final.Legal
   return out
@@ -741,8 +772,12 @@ end
 -- Result: {
 --   Ok, Error, Stats, Session, Quality, Existing (every existing city, see Participants)
 --   Solutions   up to Params.Solutions distinct plans, best first, each
---               { Gain, Adjacency, LandDelta, Total, Plan, Unplaced, Neighbours, Cities }:
---                 Plan     { City (participant Key), Type, Kind, X, Y, Index, Yields, ToolTip, Score }
+--               { Gain, Adjacency, LandDelta, CoverageDelta, Covered, Total, Plan, Unplaced, Neighbours, Cities }:
+--                 Gain = Adjacency + LandDelta + CoverageDelta; Covered: the
+--                          (city, group) pairs newly covered, CoveredBy: { Group,
+--                          Keys (target keys) } by group (both nil when coverage is off)
+--                 Plan     { City (participant Key), Type, Kind, X, Y, Index, Yields, ToolTip, Score,
+--                          Reach (keys of the targets within reach; coverage on, types with a reach) }
 --                 Unplaced { City, Type, Reason } (NOT_AVAILABLE, BUILT, PINNED, MAX_PER_PLAYER,
 --                          NEEDS_DISTRICT, NO_LEGAL_PLOT, NO_FREE_PLOT; City "WONDERS" for wonders)
 --                 Cities   { Key, Kind, Name, X, Y, CityID, SiteNumber, Number (SDP_City city
@@ -757,7 +792,8 @@ function Session:Result()
   local result = {
     Ok = true, Session = self, Existing = self.Existing, Stats = stats, Baseline = self.Base.Total,
     FirstGain = self.First and self.First.Gain or nil, Solutions = {},
-    Plan = {}, Unplaced = {}, Neighbours = {}, Cities = {}, Gain = 0, Adjacency = 0, LandDelta = 0, Total = self.Base.Total,
+    Plan = {}, Unplaced = {}, Neighbours = {}, Cities = {}, Gain = 0, Adjacency = 0, LandDelta = 0, CoverageDelta = 0,
+    Total = self.Base.Total,
   }
   if search.K > 0 and search.BestLayout == nil then result.Ok, result.Error = false, "NO_LEGAL_LAYOUT" end
   for _, entry in ipairs(self:Distinct(self.Params.Solutions or 3)) do
@@ -767,7 +803,8 @@ function Session:Result()
   end
   local best = result.Solutions[1]
   if best ~= nil then
-    for _, key in ipairs({ "Plan", "Unplaced", "Neighbours", "Cities", "Gain", "Adjacency", "LandDelta", "Total" }) do
+    for _, key in ipairs({ "Plan", "Unplaced", "Neighbours", "Cities", "Gain", "Adjacency", "LandDelta", "CoverageDelta",
+      "Covered", "CoveredBy", "Total" }) do
       result[key] = best[key]
     end
     stats.Mismatch = (not best.Legal) or math.abs(best.Gain - search.BestGain) > 1e-6 or nil
