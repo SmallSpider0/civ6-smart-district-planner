@@ -12,9 +12,13 @@
 // Steam workshop folder; nothing of theirs is copied into the repository.
 //
 // Usage:
-//   node tools/compare.mjs [--list] [-s SUBSTRING] [-p sdp,amt,ep] [-j JOBS]
+//   node tools/compare.mjs [--list] [-s SUBSTRING|^REGEX] [-p sdp,amt,ep] [-j JOBS]
 //                          [--only planner:variant,...] [--out FILE] [-v]
 //   node tools/compare.mjs --rejudge RESULTS.jsonl --out NEW.jsonl   (score again)
+//   node tools/compare.mjs --crossscore RESULTS.jsonl [--scorers amt,ep] --out NEW.jsonl
+//       score every plan again with a competitor's own objective
+//       (tests/compare/cmp_cross_<scorer>.lua, CmpCross[scorer]); adds
+//       row.cross[scorer] = { score, baseline, gain, ... } (design 18.1, item 2)
 //   node tools/compare.mjs --dump ID | --snapshot ID
 // Results are JSON lines in --out (default tests/compare/results/latest.jsonl).
 
@@ -97,7 +101,8 @@ function newState(planner, output) {
   const L = lauxlib.luaL_newstate();
   lualib.luaL_openlibs(L);
   const loaded = new Set();
-  const search = SEARCH[planner];
+  // A competitor's cross scorer ("cross_amt") loads that competitor's code.
+  const search = SEARCH[planner] || SEARCH[planner.replace(/^cross_/, "")];
 
   const push = (name, fn) => {
     lua.lua_pushjsfunction(L, fn);
@@ -191,9 +196,26 @@ function rejudge(row) {
   return row;
 }
 
+// Score a plan with each competitor's own objective, each in a fresh state.
+function crossScore(row, scorers) {
+  row.cross = row.cross || {};
+  for (const scorer of scorers) {
+    const out = runLua("cross_" + scorer, `
+      include("cmp_lib")
+      CmpRun.Cross(${luaString(row.scenario)}, ${luaString(JSON.stringify(row.plan))}, ${luaString(scorer)})
+    `, "cross_" + scorer);
+    let value = null;
+    for (const e of out.emits) if (e.startsWith("CROSS ")) value = JSON.parse(e.slice(6));
+    row.cross[scorer] = value || { error: out.error || "no score", log: out.log.slice(-20) };
+    if (out.error && value) row.cross[scorer].error = out.error;
+  }
+  return row;
+}
+
 // One task: plan scenario `id` with `planner` (+ its variant), then judge it.
 function runTask(task) {
   if (task.rejudge) return rejudge(task.rejudge);
+  if (task.cross) return crossScore(task.cross, task.scorers);
   const plan = runLua(task.planner, `
     include("cmp_lib")
     CmpRun.Plan(${luaString(task.scenario)}, ${luaString(task.planner)}, ${luaString(task.variant || "")})
@@ -222,11 +244,17 @@ function runTask(task) {
   return result;
 }
 
+// -s FILTER: a substring of the scenario id, or a regular expression when
+// it starts with "^" (e.g. "^C\\d" for the city-site scenarios only).
+function matches(id, filter) {
+  return filter.startsWith("^") ? new RegExp(filter).test(id) : id.includes(filter);
+}
+
 function listScenarios(filter) {
   const out = runLua("judge", `include("cmp_lib") CmpRun.List()`, "list");
   if (out.error) throw new Error(out.error);
   const ids = out.emits.filter((e) => e.startsWith("SCENARIO ")).map((e) => JSON.parse(e.slice(9)));
-  return filter ? ids.filter((s) => s.id.includes(filter)) : ids;
+  return filter ? ids.filter((s) => matches(s.id, filter)) : ids;
 }
 
 if (!isMainThread) {
@@ -244,6 +272,8 @@ if (!isMainThread) {
   let dump = null;
   let snapshot = null;
   let rejudgeFile = null;
+  let crossFile = null;
+  let scorers = ["amt", "ep"];
   let only = null; // planner:variant keys
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
@@ -257,6 +287,8 @@ if (!isMainThread) {
     else if (a === "--dump") dump = argv[++i];
     else if (a === "--snapshot") snapshot = argv[++i];
     else if (a === "--rejudge") rejudgeFile = resolve(argv[++i]);
+    else if (a === "--crossscore") crossFile = resolve(argv[++i]);
+    else if (a === "--scorers") scorers = argv[++i].split(",");
     else {
       console.error("usage: compare.mjs [--list] [-s SUBSTRING] [-p sdp,amt,ep] [-j JOBS] [--out FILE] [-v]");
       process.exit(2);
@@ -284,14 +316,17 @@ if (!isMainThread) {
     process.exit(0);
   }
   const tasks = [];
-  if (rejudgeFile) {
-    for (const line of readFileSync(rejudgeFile, "utf8").split("\n")) {
+  if (rejudgeFile || crossFile) {
+    for (const line of readFileSync(rejudgeFile || crossFile, "utf8").split("\n")) {
       if (!line.trim()) continue;
       const row = JSON.parse(line);
-      if (row.plan && (!filter || row.scenario.includes(filter))) tasks.push({ scenario: row.scenario, planner: row.planner, variant: row.variant, rejudge: row });
+      if (!row.plan || (filter && !matches(row.scenario, filter))) continue;
+      if (only && !only.includes(row.planner + ":" + (row.variant || ""))) continue;
+      if (rejudgeFile) tasks.push({ scenario: row.scenario, planner: row.planner, variant: row.variant, rejudge: row });
+      else tasks.push({ scenario: row.scenario, planner: row.planner, variant: row.variant, cross: row, scorers });
     }
   }
-  for (const s of rejudgeFile ? [] : scenarios) {
+  for (const s of rejudgeFile || crossFile ? [] : scenarios) {
     for (const run of s.runs) {
       const key = run.planner + ":" + (run.variant || "");
       if (planners.includes(run.planner) && (!only || only.includes(key)))
@@ -300,7 +335,7 @@ if (!isMainThread) {
   }
   // Longest runs first (AMT's multi-city joint solve, then multi-city), so
   // the pool does not end waiting on one slow straggler.
-  const weight = (t) => (t.scenario.startsWith("M") ? 2 : 0) + (t.planner === "amt" ? 1 : 0);
+  const weight = (t) => (/^H?M/.test(t.scenario) ? 2 : 0) + (t.planner === "amt" ? 1 : 0);
   tasks.sort((a, b) => weight(b) - weight(a));
   mkdirSync(dirname(out), { recursive: true });
   writeFileSync(out, "");
@@ -320,15 +355,18 @@ if (!isMainThread) {
       w.postMessage(tasks[next++]);
     };
     for (let i = 0; i < Math.min(jobs, tasks.length); i++) {
-      const w = new Worker(fileURLToPath(import.meta.url), { resourceLimits: { maxOldGenerationSizeMb: 1536 } });
+      const w = new Worker(fileURLToPath(import.meta.url), { resourceLimits: { maxOldGenerationSizeMb: Number(process.env.CMP_HEAP_MB) || 1536 } });
       w.on("message", (r) => {
         done++;
-        if (r.error || r.judgeError) failed++;
+        if (r.error || r.judgeError || Object.values(r.cross || {}).some((c) => !c || c.error)) failed++;
         appendFileSync(out, JSON.stringify(r) + "\n");
         const s = r.score;
+        const crossText = r.cross ? Object.entries(r.cross).map(([k, v]) => `${k} ${v && v.error ? "ERROR " + String(v.error).split("\n")[0].slice(0, 80) : v && v.gain}`).join(" ") : "";
         const summary = r.error ? "ERROR " + r.error.split("\n")[0].slice(0, 160)
+          : crossText ? "cross " + crossText
+          : s && s.siteValue !== undefined ? `siteValue ${s.siteValue} tiles ${s.tileValue} districts ${s.districtPotential} legal ${s.legal} violations ${s.violations.length}`
           : s ? `gain ${s.gain} output ${s.output} legal ${s.legal} violations ${s.violations.length}` : "no score";
-        console.log(`[${done}/${tasks.length}] ${r.scenario} ${r.planner}${r.variant ? ":" + r.variant : ""} ${r.planSeconds.toFixed(1)}s ${summary}`);
+        console.log(`[${done}/${tasks.length}] ${r.scenario} ${r.planner}${r.variant ? ":" + r.variant : ""} ${(r.planSeconds || 0).toFixed(1)}s ${summary}`);
         if ((verbose || r.error || r.judgeError) && r.log) for (const line of r.log.slice(-15)) console.log("    | " + line);
         if (done >= tasks.length) {
           for (const x of workers) x.terminate();

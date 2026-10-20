@@ -93,33 +93,6 @@ local function Add(s)
   byId[s.id] = s
 end
 
-local seed = 1000
-for n, entry in ipairs(SINGLE) do
-  local civKey, biome, extra = entry[1], entry[2], entry[3] or {}
-  for _, stage in ipairs({ "early", "mid", "late" }) do
-    seed = seed + 7
-    local civ = CIVS[civKey]
-    local req = Request(stage, biome, civKey)
-    local s = {
-      id = string.format("S%02d-%s-%s-%s", n, civKey, biome, stage), kind = "single", title = civ[3],
-      seed = seed, biome = biome, civKey = civKey, civ = civ[1], leader = civ[2], stage = stage,
-      cities = 1, districts = req.districts, built = { req.built }, population = req.population,
-      foreign = extra.foreign, cityState = extra.cityState, naturalWonder = extra.naturalWonder,
-    }
-    -- Pins the player placed by hand, on every third situation.
-    if n % 3 == 0 and stage ~= "early" then
-      s.pins = { { icon = "ICON_DISTRICT_NEIGHBORHOOD", ring = 2 }, { icon = "ICON_DISTRICT_WONDER", ring = 2 } }
-    end
-    -- Part of the map not explored yet, on every fourth.
-    if n % 4 == 1 and stage == "early" then s.hidden = 0.35 end
-    -- Same input twice: is the plan the same (requirement: deterministic)?
-    s.runs = Runs("single", (n % 6 == 0 and stage == "mid") and {
-      { planner = "sdp", variant = "STANDARD#2" }, { planner = "amt", variant = "#2" }, { planner = "ep", variant = "#2" },
-    } or nil)
-    Add(s)
-  end
-end
-
 -- Multi-city situations.
 local MULTI = {
   { "rome", "temperate", 3, "mid" }, { "rome", "coastal", 4, "late" }, { "japan", "temperate", 3, "late" },
@@ -127,23 +100,136 @@ local MULTI = {
   { "netherlands", "temperate", 3, "late" }, { "gaul", "highland", 3, "mid" }, { "indonesia", "island", 3, "mid" },
   { "egypt", "desert", 3, "late" }, { "russia", "tundra", 4, "mid" }, { "maya", "jungle", 4, "late" },
 }
-for n, entry in ipairs(MULTI) do
-  local civKey, biome, count, stage = entry[1], entry[2], entry[3], entry[4]
-  seed = seed + 11
-  local civ = CIVS[civKey]
-  local districts = { "DISTRICT_CAMPUS", "DISTRICT_THEATER", "DISTRICT_COMMERCIAL_HUB", "DISTRICT_GOVERNMENT" }
-  if stage == "late" then
-    districts = { "DISTRICT_CAMPUS", "DISTRICT_THEATER", "DISTRICT_COMMERCIAL_HUB", "DISTRICT_INDUSTRIAL_ZONE",
-      "DISTRICT_GOVERNMENT" }
+
+-- One set of situations: 72 single-city ("<S>nn-civ-biome-stage") and 12
+-- multi-city ("<M>nn-...") ones from `seed`. The development set ("S", "M",
+-- seed 1000) is what the planners were debugged on; the held-out set ("HS",
+-- "HM", seed 50000) has new maps nobody looked at while changing a planner
+-- (docs/multicity-design.md 18.1, item 5).
+local function BuildSet(prefixS, prefixM, seed, repeats)
+  for n, entry in ipairs(SINGLE) do
+    local civKey, biome, extra = entry[1], entry[2], entry[3] or {}
+    for _, stage in ipairs({ "early", "mid", "late" }) do
+      seed = seed + 7
+      local civ = CIVS[civKey]
+      local req = Request(stage, biome, civKey)
+      local s = {
+        id = string.format("%s%02d-%s-%s-%s", prefixS, n, civKey, biome, stage), kind = "single", title = civ[3],
+        seed = seed, biome = biome, civKey = civKey, civ = civ[1], leader = civ[2], stage = stage,
+        cities = 1, districts = req.districts, built = { req.built }, population = req.population,
+        foreign = extra.foreign, cityState = extra.cityState, naturalWonder = extra.naturalWonder, set = prefixS,
+      }
+      -- Pins the player placed by hand, on every third situation.
+      if n % 3 == 0 and stage ~= "early" then
+        s.pins = { { icon = "ICON_DISTRICT_NEIGHBORHOOD", ring = 2 }, { icon = "ICON_DISTRICT_WONDER", ring = 2 } }
+      end
+      -- Part of the map not explored yet, on every fourth.
+      if n % 4 == 1 and stage == "early" then s.hidden = 0.35 end
+      -- Same input twice: is the plan the same (requirement: deterministic)?
+      s.runs = Runs("single", (repeats and n % 6 == 0 and stage == "mid") and {
+        { planner = "sdp", variant = "STANDARD#2" }, { planner = "amt", variant = "#2" }, { planner = "ep", variant = "#2" },
+      } or nil)
+      Add(s)
+    end
   end
-  if civKey ~= "kongo" and stage == "mid" then districts[#districts + 1] = "DISTRICT_HOLY_SITE" end
-  local built = {}
-  for c = 1, count do built[c] = {} end
+  for n, entry in ipairs(MULTI) do
+    local civKey, biome, count, stage = entry[1], entry[2], entry[3], entry[4]
+    seed = seed + 11
+    local civ = CIVS[civKey]
+    local districts = { "DISTRICT_CAMPUS", "DISTRICT_THEATER", "DISTRICT_COMMERCIAL_HUB", "DISTRICT_GOVERNMENT" }
+    if stage == "late" then
+      districts = { "DISTRICT_CAMPUS", "DISTRICT_THEATER", "DISTRICT_COMMERCIAL_HUB", "DISTRICT_INDUSTRIAL_ZONE",
+        "DISTRICT_GOVERNMENT" }
+    end
+    if civKey ~= "kongo" and stage == "mid" then districts[#districts + 1] = "DISTRICT_HOLY_SITE" end
+    local built = {}
+    for c = 1, count do built[c] = {} end
+    Add({
+      id = string.format("%s%02d-%s-%s-%dc-%s", prefixM, n, civKey, biome, count, stage), kind = "multi", title = civ[3],
+      seed = seed, biome = biome, civKey = civKey, civ = civ[1], leader = civ[2], stage = stage, cities = count,
+      districts = districts, built = built, population = stage == "late" and 19 or 16, samePopulation = true,
+      runs = Runs("multi"), set = prefixM,
+    })
+  end
+end
+
+BuildSet("S", "M", 1000, true)
+BuildSet("HS", "HM", 50000, false)
+
+-- Weight profiles (18.1, item 4): the development single-city situations
+-- with one yield weighted 3 and the others 1 ("S01-...~SCI"); the judge
+-- weighs the same way. The competitors get the same weights injected.
+local PROFILES = { { "SCI", "YIELD_SCIENCE" }, { "PROD", "YIELD_PRODUCTION" }, { "FAITH", "YIELD_FAITH" } }
+local base = {}
+for _, s in ipairs(list) do
+  if s.set == "S" then base[#base + 1] = s end
+end
+for _, profile in ipairs(PROFILES) do
+  for _, b in ipairs(base) do
+    local s = {}
+    for k, v in pairs(b) do s[k] = v end
+    s.id = b.id .. "~" .. profile[1]
+    s.weights = { [profile[2]] = 3 }
+    s.profile = profile[1]
+    s.set = "W" .. profile[1]
+    s.runs = { { planner = "sdp", variant = "STANDARD" }, { planner = "amt", variant = "" }, { planner = "ep", variant = "" } }
+    Add(s)
+  end
+end
+
+-- Wonders with the districts (one city, mid game): two wonders that suit
+-- the biome and that a city there can have, some of which need a district
+-- next to them (Great Library: campus; Colossus, Great Lighthouse: harbor;
+-- Forbidden City, St. Basil's: city center). Wonders that need something
+-- the scenario does not give (a founded religion for Mahabodhi, Stone for
+-- Stonehenge, a mountain for Machu Picchu, an encampment for the Terracotta
+-- Army) were dropped: no planner could place them, so they compared nothing.
+-- "Wnn-civ-biome".
+local WONDERS = {
+  temperate = { "BUILDING_HANGING_GARDENS", "BUILDING_GREAT_LIBRARY" },
+  coastal = { "BUILDING_COLOSSUS", "BUILDING_GREAT_LIBRARY" },
+  island = { "BUILDING_COLOSSUS", "BUILDING_GREAT_LIGHTHOUSE" },
+  desert = { "BUILDING_PYRAMIDS", "BUILDING_PETRA" },
+  jungle = { "BUILDING_CHICHEN_ITZA", "BUILDING_GREAT_LIBRARY" },
+  highland = { "BUILDING_POTALA_PALACE", "BUILDING_ORACLE" },
+  tundra = { "BUILDING_ST_BASILS_CATHEDRAL", "BUILDING_FORBIDDEN_CITY" },
+  volcanic = { "BUILDING_FORBIDDEN_CITY", "BUILDING_ORACLE" },
+}
+local wseed = 30000
+for n, entry in ipairs(SINGLE) do
+  local civKey, biome, extra = entry[1], entry[2], entry[3] or {}
+  wseed = wseed + 13
+  local civ = CIVS[civKey]
+  local req = Request("mid", biome, civKey)
   Add({
-    id = string.format("M%02d-%s-%s-%dc-%s", n, civKey, biome, count, stage), kind = "multi", title = civ[3],
-    seed = seed, biome = biome, civKey = civKey, civ = civ[1], leader = civ[2], stage = stage, cities = count,
-    districts = districts, built = built, population = stage == "late" and 19 or 16, samePopulation = true,
-    runs = Runs("multi"),
+    id = string.format("W%02d-%s-%s", n, civKey, biome), kind = "single", title = civ[3] .. "; wonders", seed = wseed,
+    biome = biome, civKey = civKey, civ = civ[1], leader = civ[2], stage = "mid", cities = 1, districts = req.districts,
+    built = { req.built }, population = req.population, foreign = extra.foreign, cityState = extra.cityState,
+    naturalWonder = extra.naturalWonder, wantWonders = WONDERS[biome], set = "W",
+    runs = { { planner = "sdp", variant = "STANDARD" }, { planner = "sdp", variant = "STANDARD_LAND" },
+      { planner = "amt", variant = "" }, { planner = "ep", variant = "" } },
+  })
+end
+
+-- New city sites (Empire Planner also picks them; AMT does not): the
+-- capital at mid game, the land around revealed, two sites wanted within
+-- 8 plots, scored with three districts. "Cnn-civ-biome".
+local SITES = {
+  { "rome", "temperate" }, { "japan", "coastal" }, { "korea", "highland" }, { "brazil", "jungle" },
+  { "netherlands", "temperate" }, { "mali", "desert" }, { "russia", "tundra" }, { "indonesia", "island" },
+  { "egypt", "desert" }, { "gaul", "highland" }, { "maya", "jungle" }, { "germany", "volcanic" },
+}
+local cseed = 40000
+for n, entry in ipairs(SITES) do
+  local civKey, biome = entry[1], entry[2]
+  cseed = cseed + 17
+  local civ = CIVS[civKey]
+  Add({
+    id = string.format("C%02d-%s-%s", n, civKey, biome), kind = "sites", title = civ[3] .. "; new city sites",
+    seed = cseed, biome = biome, civKey = civKey, civ = civ[1], leader = civ[2], stage = "mid", cities = 1,
+    districts = { "DISTRICT_CAMPUS", "DISTRICT_HOLY_SITE", "DISTRICT_COMMERCIAL_HUB" }, built = { {} }, population = 10,
+    sites = { count = 2, distance = 8 }, set = "C",
+    runs = { { planner = "sdp", variant = "STANDARD" }, { planner = "ep", variant = "" } },
   })
 end
 

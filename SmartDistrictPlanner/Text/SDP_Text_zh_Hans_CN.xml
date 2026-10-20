@@ -6,10 +6,10 @@
       <Text>智能区域规划器</Text>
     </Replace>
     <Replace Tag="LOC_SDP_MOD_TEASER" Language="zh_Hans_CN">
-      <Text>求解加权相邻加成最高的区域摆放方案，并用地图钉标出。</Text>
+      <Text>为单城、多城或新城址规划加权相邻加成最高的区域摆放，并用地图钉标出。</Text>
     </Replace>
     <Replace Tag="LOC_SDP_MOD_DESCRIPTION" Language="zh_Hans_CN">
-      <Text>选择城市、要建的区域和各产出的权重，规划器会在城市三环内穷举所有合法摆放，把最优方案打成地图钉。已有的地图钉不会被挪动。需要 Detailed Map Tacks。请勿与 Auto Map Tacks Planner 等其他区域规划模组同时启用。</Text>
+      <Text>为单城、多城联合（含奇观）和新城址规划区域。按你设定的产出权重寻找相邻加成最高的方案：规模小时穷举，规模大时搜索并说明结果离最优还有多远。预览后一键打成带区域图标的地图钉，撤销记录随存档保存。合法性与加成都由 Detailed Map Tacks 计算，与地图钉上显示的一致。已建区域和你自己打的钉不会被挪动。需要 Detailed Map Tacks。请勿与 Auto Map Tacks Planner 等其他区域规划模组同时启用。</Text>
     </Replace>
 
     <!-- 启动栏与面板 -->

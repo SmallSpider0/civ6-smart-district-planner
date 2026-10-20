@@ -9,24 +9,59 @@
 -- player does:
 --   1. the player's panel settings are in the player configuration
 --      (EP_SETTINGS_V1, the blob EP's own LoadSettings reads in OnInit):
---      districts only (no new cities, wonders, improvements), every district
---      type that was not requested unticked, every requested one ticked,
+--      districts on, improvements off, every district type that was not
+--      requested unticked in the pick list, every requested one ticked,
 --      "districts per city" = the requested districts that take a population
 --      slot (EP counts only Districts.RequiresPopulation against it; Aqueduct,
 --      Dam, Canal ... are free and planned on top), all eras, BALANCED focus;
+--      and, by scenario kind:
+--        districts only   wonders off, new cities 0 (S, M scenarios);
+--        wonders          (request.wonders, W scenarios) the Wonders box on and
+--                         every wonder in the pick list unticked except the
+--                         requested ones. EP lets the player choose wonders one
+--                         by one (pick list, LOC_EP_PICK_WONDERS); it then
+--                         rations them with two steppers, "Wonders/era"
+--                         (default 3) and "Per city/era" (default 1). A player
+--                         who wants both wonders in this city raises "Per
+--                         city/era" to the number of requested wonders that
+--                         share an era (2 for the coastal and island pairs,
+--                         Colossus + Great Lighthouse / Terracotta Army, all
+--                         Classical by EP's UnlockChrono; 1 otherwise), so
+--                         EP's ration cannot drop one;
+--                         "Wonders/era" stays 3 (never binds with two). EP
+--                         places wonders after the district layout, on the
+--                         tiles left, and DMT (when loaded) must accept each one
+--                         at an existing city: a wonder that needs a district
+--                         next to it (Great Library, Colossus ...) is refused
+--                         when that district is only planned in the same run
+--                         and not built yet;
+--        new city sites   (request.sites, C scenarios) "City Count" = the
+--                         requested count (0..6) and the City sites box on.
+--                         EP has no distance setting: it looks for sites
+--                         within SITE_SEARCH_RANGE (10) of a city the player
+--                         owns, at least MIN_CITY_SPACING (4) from any city and
+--                         MIN_FOREIGN_SPACING (5) from foreign ones; the
+--                         requested distance is only checked and noted. The
+--                         districts value the sites (EP lays them out in every
+--                         candidate city while choosing);
 --   2. the context initialises (OnInit), the game finishes loading
 --      (LoadGameViewStateDone), the player opens the panel (LuaEvents.EP_Open)
 --      and presses Plan; the panel's frame-budgeted coroutine is driven to the
 --      end through its own SetUpdate handler;
 --   3. the plan read is what the panel shows and pins first:
---      result.siteSets[1].layouts[1] (BuildLayouts sorts layouts best first),
---      its DISTRICT entries. Built districts come back in layout.existing and
---      are not new placements.
+--      result.siteSets[1].layouts[1] (Run sorts site sets and BuildLayouts
+--      layouts best first): its DISTRICT entries, its WONDER entries
+--      ({ kind = "WONDER" }) and, for sites scenarios, only its SITE entries
+--      ({ kind = "SITE", x, y }; the judge scores every placement as a site).
+--      Built districts come back in layout.existing and are not new placements.
 --
 -- Variants (tokens, combinable):
---   ""        yield weights all 1 (the comparison's objective), passed through
---             EP_Planner.Run's options.weights -- the one input the panel does
---             not expose (it always passes EP_Meta.DefaultWeights()); DMT on.
+--   ""        yield weights = request.weights (all 1, or the scenario's
+--             profile with one yield at 3; the judge weighs the same way),
+--             passed through EP_Planner.Run's options.weights -- the one input
+--             the panel does not expose (it always passes
+--             EP_Meta.DefaultWeights()); DMT on. stats.weights records what
+--             Run received, stats.weightsSeen what its Prepare kept.
 --   DEFAULT   the panel's own BALANCED focus weights (science 1.6, culture 1.5,
 --             gold 0.8, faith 1.1, production 2.6, food 1.0), i.e. exactly what
 --             the Plan button sends.
@@ -115,16 +150,47 @@ local function SettingsBlob(request, playerID)
   for _, t in ipairs(EP_Rules.GetCivDistricts(playerID)) do
     if not wanted[t] then off[#off + 1] = t end
   end
+  -- Wonders: tick only the requested ones in the pick list.
+  local wonders = request.wonders or {}
+  local planWonders = #wonders > 0
+  if planWonders then
+    local wantedWonder = {}
+    for _, t in ipairs(wonders) do wantedWonder[t] = true end
+    for _, t in ipairs(EP_Rules.GetCivWonders(playerID)) do
+      if not wantedWonder[t] then off[#off + 1] = t end
+    end
+  end
   table.sort(off)
   for _, t in ipairs(request.districts) do
     local row = GameInfo.Districts[t]
     if row and row.RequiresPopulation and not row.CityCenter then slots = slots + 1 end
   end
-  -- The stepper's range is 1..9; LoadSettings drops values outside it.
+  -- The steppers' ranges (1..9, cities 0..6); LoadSettings drops values outside.
   local dpc = math.max(1, math.min(9, slots))
+  -- "Per city/era": the most requested wonders that unlock in one era (EP's
+  -- ration key is UnlockChrono), so the ration never drops a requested one.
+  local wpc, perEra = 1, {}
+  for _, t in ipairs(wonders) do
+    local era = tostring(EP_Rules.UnlockChrono(t))
+    perEra[era] = (perEra[era] or 0) + 1
+    if perEra[era] > wpc then wpc = perEra[era] end
+  end
+  wpc = math.min(9, wpc)
+  local wpe = math.max(3, wpc)
+  local sites = request.scenario.kind == "sites" and request.sites ~= nil
+  local nc = sites and math.max(0, math.min(6, request.sites.count)) or 0
   local blob = string.format("v1|nc=%d,dpc=%d,wpe=%d,wpc=%d,d=%d,w=%d,i=%d,s=%d,era=%d|%s|%s",
-    0, dpc, 3, 1, 1, 0, 0, 0, 0, table.concat(off, ";"), "BALANCED")
-  return blob, dpc
+    nc, dpc, wpe, wpc, 1, planWonders and 1 or 0, 0, sites and 1 or 0, 0, table.concat(off, ";"), "BALANCED")
+  return blob, { districtsPerCity = dpc, wondersPerEra = wpe, wondersPerCityEra = wpc, newCities = nc }
+end
+
+-- A weights table as sorted "YIELD=value" text, for the stats.
+local function WeightsText(t)
+  if t == nil then return nil end
+  local parts = {}
+  for k, v in pairs(t) do parts[#parts + 1] = string.format("%s=%g", tostring(k), v) end
+  table.sort(parts)
+  return table.concat(parts, ",")
 end
 
 function CmpAdapters.ep(request, variant, w)
@@ -166,9 +232,9 @@ function CmpAdapters.ep(request, variant, w)
     end
   end
 
-  -- PlayerResources methods EP's resource snapshot reads (for city-site and
-  -- improvement scoring, both off here). The emulated player owns, trades
-  -- and stockpiles no resources, so the engine would answer 0.
+  -- PlayerResources methods EP's resource snapshot reads (city-site scoring,
+  -- C scenarios; improvement scoring is off). The emulated player owns,
+  -- trades and stockpiles no resources, so the engine would answer 0.
   local player = Players[playerID]
   local realGetResources = player.GetResources
   player.GetResources = function(self, ...)
@@ -189,7 +255,7 @@ function CmpAdapters.ep(request, variant, w)
   stats.epApi = EP_Planner.API
 
   -- The player's saved panel settings, then the context's init handler.
-  local blob, dpc = SettingsBlob(request, playerID)
+  local blob, settings = SettingsBlob(request, playerID)
   PlayerConfigurations[playerID]:SetValue("EP_SETTINGS_V1", blob)
   ui.init()
   -- Read back through EP's own signature: proves LoadSettings took every field.
@@ -197,12 +263,24 @@ function CmpAdapters.ep(request, variant, w)
   if sig ~= blob then
     Note("settings not applied as written: " .. tostring(sig))
   end
-  stats.districtsPerCity = dpc
+  stats.districtsPerCity = settings.districtsPerCity
+  local kind = request.scenario.kind
+  local requestedWonders = request.wonders or {}
+  if #requestedWonders > 0 then
+    stats.wondersPerEra = settings.wondersPerEra
+    stats.wondersPerCityEra = settings.wondersPerCityEra
+  end
+  if kind == "sites" then stats.newCities = settings.newCities end
 
   local civDistricts = {}
   for _, t in ipairs(EP_Rules.GetCivDistricts(playerID)) do civDistricts[t] = true end
   for _, t in ipairs(request.districts) do
     if not civDistricts[t] then Note("requested " .. t .. " is not in EP's district list for this civ") end
+  end
+  local civWonders = {}
+  for _, t in ipairs(EP_Rules.GetCivWonders(playerID)) do civWonders[t] = true end
+  for _, t in ipairs(requestedWonders) do
+    if not civWonders[t] then Note("requested " .. t .. " is not in EP's wonder list for this civ") end
   end
 
   -- The game finishes loading; the player opens the panel and presses Plan.
@@ -219,6 +297,7 @@ function CmpAdapters.ep(request, variant, w)
       options.weights = equal
     end
     captured.weights = options.weights
+    captured.disabled = options.disabledTypes
     local result = realRun(pid, options, yieldFn)
     captured.result = result
     return result
@@ -241,6 +320,15 @@ function CmpAdapters.ep(request, variant, w)
     error("Plan produced no result: " .. tostring(Controls.ResultText.text))
   end
   stats.resultText = Controls.ResultText.text
+  -- The weights EP_Planner.Run received, and the table its Prepare kept (the
+  -- one every scorer reads): the same table, with request.weights' values.
+  stats.weights = WeightsText(captured.weights)
+  local seen = result.prep and result.prep.weights
+  stats.weightsSeen = WeightsText(seen)
+  if seen ~= captured.weights then Note("Run's Prepare did not keep the weights passed in") end
+  if not useDefaultWeights and WeightsText(request.weights) ~= stats.weightsSeen then
+    Note("weights EP used differ from request.weights: " .. tostring(stats.weightsSeen))
+  end
 
   local set = result.siteSets and result.siteSets[1]
   local layouts = set and set.layouts or {}
@@ -252,6 +340,13 @@ function CmpAdapters.ep(request, variant, w)
   stats.polishImproved = diag.polishImproved
   stats.polishRestarts = diag.polishRestarts
   stats.dmtFailures = EP_Rules.DmtFailures or 0
+  if kind == "sites" then
+    stats.sitesWanted = diag.sitesWanted
+    stats.sitesPlanned = diag.sitesPlanned
+    stats.siteScanned = diag.siteScanned
+    stats.siteShortlist = diag.siteShortlist
+    stats.siteSetScore = set and set.score
+  end
   if EP_Rules.LastDmtReason then Note("last DMT refusal: " .. EP_Rules.LastDmtReason) end
   for i = 2, #layouts do
     if layouts[i].score > layouts[i - 1].score + 1e-9 then Note("layouts not sorted best first") break end
@@ -271,21 +366,43 @@ function CmpAdapters.ep(request, variant, w)
   end
   if dup then Note("duplicate city labels; city of an entry may be wrong") end
   local wanted = {}
-  if request.scenario.kind == "single" then
+  if kind == "single" then
     wanted[request.target:GetID()] = true
   else
     for _, c in ipairs(request.cities) do wanted[c:GetID()] = true end
   end
   local requested = {}
   for _, t in ipairs(request.districts) do requested[t] = true end
-  local counts = { district = 0, other = 0, unrequested = 0, skippedCity = 0 }
+  local requestedWonder = {}
+  for _, t in ipairs(requestedWonders) do requestedWonder[t] = true end
+  local counts = { district = 0, wonder = 0, site = 0, other = 0, unrequested = 0, skippedCity = 0, newCityDistricts = 0 }
+  local sites = {}
   for _, e in ipairs(layout.entries or {}) do
-    if e.kind == "DISTRICT" then
+    if e.kind == "SITE" then
+      sites[#sites + 1] = e
+      counts.site = counts.site + 1
+    elseif kind == "sites" then
+      -- Sites scenarios: the plan is the sites; districts and wonders EP
+      -- laid out in them (and in the capital) only valued the choice.
+      if e.kind == "DISTRICT" then
+        if byLabel[e.city] == nil then counts.newCityDistricts = counts.newCityDistricts + 1 end
+        counts.district = counts.district + 1
+      else
+        counts.other = counts.other + 1
+      end
+    elseif e.kind == "DISTRICT" or e.kind == "WONDER" then
       local cityID = byLabel[e.city]
       if cityID ~= nil and wanted[cityID] then
-        out.placements[#out.placements + 1] = { city = cityID, type = e.type, x = e.x, y = e.y }
-        counts.district = counts.district + 1
-        if not requested[e.type] then counts.unrequested = counts.unrequested + 1 end
+        local p = { city = cityID, type = e.type, x = e.x, y = e.y }
+        if e.kind == "WONDER" then
+          p.kind = "WONDER"
+          counts.wonder = counts.wonder + 1
+          if not requestedWonder[e.type] then counts.unrequested = counts.unrequested + 1 end
+        else
+          counts.district = counts.district + 1
+          if not requested[e.type] then counts.unrequested = counts.unrequested + 1 end
+        end
+        out.placements[#out.placements + 1] = p
       else
         counts.skippedCity = counts.skippedCity + 1
         Note("skipped " .. e.type .. " at " .. e.x .. "," .. e.y .. " for city " .. tostring(e.city))
@@ -298,6 +415,50 @@ function CmpAdapters.ep(request, variant, w)
   stats.unrequested = counts.unrequested
   stats.otherEntries = counts.other
   stats.existingEchoed = #(layout.existing or {})
+  if #requestedWonders > 0 then stats.wonders = counts.wonder end
+
+  -- New city sites: the layout's SITE entries, in the order EP picked them
+  -- (the same plots as the site set; checked), as pinned.
+  if kind == "sites" then
+    stats.sites = counts.site
+    stats.newCityDistricts = counts.newCityDistricts
+    stats.siteScores = {}
+    for _, e in ipairs(sites) do
+      out.placements[#out.placements + 1] = { kind = "SITE", x = e.x, y = e.y }
+      stats.siteScores[#stats.siteScores + 1] = e.score
+    end
+    local fromSet = {}
+    for _, idx in ipairs(set.sites or {}) do
+      local plot = Map.GetPlotByIndex(idx)
+      fromSet[#fromSet + 1] = plot.x .. "," .. plot.y
+    end
+    local fromEntries = {}
+    for _, e in ipairs(sites) do fromEntries[#fromEntries + 1] = e.x .. "," .. e.y end
+    if table.concat(fromSet, ";") ~= table.concat(fromEntries, ";") then
+      Note("site set " .. table.concat(fromSet, ";") .. " differs from SITE entries " .. table.concat(fromEntries, ";"))
+    end
+    if #sites < request.sites.count then
+      Note(string.format("%d of %d sites found (%d tiles settleable, %d on the shortlist)", #sites,
+        request.sites.count, diag.siteScanned or 0, diag.siteShortlist or 0))
+    end
+    -- The requested distance, which EP cannot be told: each site's nearest
+    -- own city or earlier site.
+    for n, e in ipairs(sites) do
+      local nearest = nil
+      for _, c in ipairs(request.cities) do
+        local d = Map.GetPlotDistance(e.x, e.y, c:GetX(), c:GetY())
+        if nearest == nil or d < nearest then nearest = d end
+      end
+      for m = 1, n - 1 do
+        local d = Map.GetPlotDistance(e.x, e.y, sites[m].x, sites[m].y)
+        if d < nearest then nearest = d end
+      end
+      if nearest ~= nil and nearest > request.sites.distance then
+        Note(string.format("site %d,%d is %d from the nearest own city or earlier site (asked: %d; EP searches %d)",
+          e.x, e.y, nearest, request.sites.distance, EP_Planner.SITE_SEARCH_RANGE or -1))
+      end
+    end
+  end
 
   -- What the panel put on the map (it pins layouts[1] at once): does it
   -- touch the pins the player placed by hand?
@@ -320,6 +481,7 @@ function CmpAdapters.ep(request, variant, w)
   stats.manualPins = #manual
   stats.manualPinsOverwritten = overwritten
   stats.mapPins = #PlayerConfigurations[playerID]:GetMapPins()
+  if kind == "sites" then return out end
 
   -- Requested districts EP left out, per target city.
   for _, c in ipairs(request.cities) do
@@ -332,10 +494,50 @@ function CmpAdapters.ep(request, variant, w)
       for _, t in ipairs(request.districts) do
         if not have[t] then
           local row = GameInfo.Districts[t]
-          if (row.MaxPerPlayer or -1) < 0 or request.scenario.kind == "single" then
+          if (row.MaxPerPlayer or -1) < 0 or kind == "single" then
             Note("not planned: " .. t .. " in city " .. c:GetID())
           end
         end
+      end
+    end
+  end
+
+  -- Requested wonders EP left out, and why: on how many tiles of the city's
+  -- ring EP's own rules allow it with only what is built and with this layout
+  -- in place, and on how many DMT refused it at commit time (EP records those in
+  -- the city's context).
+  if #requestedWonders > 0 then
+    local placed = {}
+    for _, p in ipairs(out.placements) do
+      if p.kind == "WONDER" then placed[p.type] = true end
+    end
+    local cache = result.prep and result.prep.cache
+    local claims = {}
+    if cache ~= nil then
+      for _, e in ipairs(layout.entries or {}) do
+        local plot = Map.GetPlot(e.x, e.y)
+        if plot ~= nil then
+          if e.kind == "DISTRICT" then claims[plot:GetIndex()] = { district = e.type }
+          elseif e.kind == "WONDER" then claims[plot:GetIndex()] = { wonder = e.type } end
+        end
+      end
+    end
+    local targetCtx = nil
+    for _, ctx in ipairs(layout.cities or {}) do
+      if ctx.cityID == request.target:GetID() then targetCtx = ctx end
+    end
+    for _, t in ipairs(requestedWonders) do
+      if not placed[t] then
+        local empty, legal, refused = 0, 0, 0
+        if cache ~= nil and targetCtx ~= nil then
+          for _, idx in ipairs(EP_Planner._test.PlotsWithin(cache, targetCtx.centerIdx, 3)) do
+            if targetCtx.blocked[idx] and targetCtx.blocked[idx][t] then refused = refused + 1 end
+            if EP_Rules.IsLegalWonder(t, idx, cache, {}, targetCtx) then empty = empty + 1 end
+            if EP_Rules.IsLegalWonder(t, idx, cache, claims, targetCtx) then legal = legal + 1 end
+          end
+        end
+        Note(string.format("not planned: %s (EP rules allow it on %d tiles with only what is built, %d with this "
+          .. "layout; DMT refused %d tiles)", t, empty, legal, refused))
       end
     end
   end

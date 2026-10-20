@@ -22,12 +22,12 @@
       <zh_Hans_CN>智能区域规划器</zh_Hans_CN>
     </Text>
     <Text id="LOC_SDP_MOD_TEASER">
-      <en_US>Finds the district placement with the highest weighted adjacency bonus and marks it with map tacks.</en_US>
-      <zh_Hans_CN>求解加权相邻加成最高的区域摆放方案，并用地图钉标出。</zh_Hans_CN>
+      <en_US>Plans the districts with the highest weighted adjacency bonus for one city, several cities or new city sites, and marks them with map tacks.</en_US>
+      <zh_Hans_CN>为单城、多城或新城址规划加权相邻加成最高的区域摆放，并用地图钉标出。</zh_Hans_CN>
     </Text>
     <Text id="LOC_SDP_MOD_DESCRIPTION">
-      <en_US>Pick a city, the districts you want and how much each yield matters; the planner searches every legal placement within three rings and pins the best plan on the map. Existing map tacks are never moved. Requires Detailed Map Tacks. Do not enable together with another district planner such as Auto Map Tacks Planner.</en_US>
-      <zh_Hans_CN>选择城市、要建的区域和各产出的权重，规划器会在城市三环内穷举所有合法摆放，把最优方案打成地图钉。已有的地图钉不会被挪动。需要 Detailed Map Tacks。请勿与 Auto Map Tacks Planner 等其他区域规划模组同时启用。</zh_Hans_CN>
+      <en_US>Plans districts for one city, for several cities together (wonders included) and for new city sites. Under your yield weights it looks for the plan with the highest adjacency bonus: small problems are solved exhaustively, larger ones by a search that reports how far the result may be from the best. Preview the plan, then pin it with district icons; undo is kept with the save. Legality and bonuses come from Detailed Map Tacks, so they match what its tacks show. Built districts and your own map tacks are never moved. Requires Detailed Map Tacks. Do not enable together with another district planner such as Auto Map Tacks Planner.</en_US>
+      <zh_Hans_CN>为单城、多城联合（含奇观）和新城址规划区域。按你设定的产出权重寻找相邻加成最高的方案：规模小时穷举，规模大时搜索并说明结果离最优还有多远。预览后一键打成带区域图标的地图钉，撤销记录随存档保存。合法性与加成都由 Detailed Map Tacks 计算，与地图钉上显示的一致。已建区域和你自己打的钉不会被挪动。需要 Detailed Map Tacks。请勿与 Auto Map Tacks Planner 等其他区域规划模组同时启用。</zh_Hans_CN>
     </Text>
   </LocalizedText>
 

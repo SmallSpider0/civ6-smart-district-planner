@@ -23,23 +23,55 @@
 -- debug library's upvalue access; no AMT function is replaced except the
 -- call counter on EvaluatePlan and the weight injection below.
 --
---   variant ""         neutral weights: every yield 1.0, the judge's
---                      objective. AMT's focus buttons only give its default
---                      weights x1.75 or 0, so the weights are injected: single
---                      city, into the queued job after Plan is clicked;
---                      multi-city, by AMT_MC_M3_MergeWeights during the solve
+--   variant ""         the comparison's weights, request.weights: every yield
+--                      1.0, or the scenario's profile (one yield 3, "~SCI"),
+--                      the judge's objective. AMT's focus buttons only give
+--                      its default weights x1.75 or 0, so the weights are
+--                      injected: single city, into the queued job after Plan
+--                      is clicked; multi-city, by AMT_MC_M3_MergeWeights
+--                      during the solve. The weights that reach the solve
+--                      (BuildAutoPlanPreview's argument, the joint inputs'
+--                      weights) are read back into stats.solveWeights.
 --   variant DEFAULTW   AMT's own default weights for a player who leaves the
 --                      yield focus buttons alone (sci 1.8, cul 1.5, faith 1.6,
 --                      gold 1.15, prod 0.75, food 0.55)
 --   variant CITY_BY_CITY  multi only: the single-city planner city by city,
 --                      each preview confirmed (pinned) before the next city
 --   variants DEBUG:/TRACE:  diagnostics, see Diagnose below
+--
+-- Wonders (request.wonders, W scenarios, single city, both variants): AMT's
+-- planner page has a "Wonders" tab next to "Districts"; a player switches to
+-- it and clicks the wonders' icons, then Plan. Every selected wonder becomes
+-- one required request of the same solve as the districts (BuildPlanRequests
+-- AddPoolRequests), placed with its support (e.g. a Campus next to the Great
+-- Library) when the district is also selected or already there. AMT refuses
+-- to plan a wonder whose adjacent district is neither (the Plan click shows
+-- a warning); the adapter then unticks that wonder and clicks Plan again,
+-- as a player who cannot or did not ask to build the district would. The
+-- plan's wonders come back as placements with kind = "WONDER". The
+-- multi-city path has a wonder tab per city as well; no multi-city scenario
+-- asks for wonders, so it is not driven here.
+--
+-- CmpAmt exposes the loading and player actions to cmp_cross_amt.lua, which
+-- reuses them to score other planners' plans with AMT's own objective.
 
 CmpAdapters = CmpAdapters or {}
+CmpAmt = {}
 
 local Stub = CmpGame.Stub
 
 local function Note(notes, s) notes[#notes + 1] = s end
+
+-- "YIELD_CULTURE=1 YIELD_FAITH=1 ..." in a fixed order (sorted keys).
+local function WeightsText(weights)
+  local keys = {}
+  for k in pairs(weights or {}) do keys[#keys + 1] = tostring(k) end
+  table.sort(keys)
+  local parts = {}
+  for _, k in ipairs(keys) do parts[#parts + 1] = k .. "=" .. tostring(weights[k]) end
+  return table.concat(parts, " ")
+end
+CmpAmt.WeightsText = WeightsText
 
 -- ===========================================================================
 -- Paths
@@ -452,9 +484,31 @@ local function ClickDistricts(city, districts, notes)
   end
 end
 
+-- Switch to the planner's "Wonders" tab and click each wonder's icon (the
+-- tab lists every wonder of the ruleset; a click toggles the selection).
+local function ClickWonders(city, wonders, notes)
+  if #(wonders or {}) == 0 then return end
+  if not Click(Controls.WonderTabButton) then
+    Note(notes, "city " .. city:GetID() .. ": wonder tab not clickable")
+    return
+  end
+  for _, t in ipairs(wonders) do
+    local icons = Local("m_IconInstances") or {}
+    local inst = icons[t]
+    if inst == nil then
+      Note(notes, "city " .. city:GetID() .. ": AMT offers no wonder icon for " .. t)
+    elseif not Click(inst.IconButton) then
+      Note(notes, "city " .. city:GetID() .. ": wonder icon for " .. t .. " is disabled")
+    end
+  end
+  -- Back to the district page, where a player normally clicks Plan.
+  Click(Controls.DistrictTabButton)
+end
+
 local function SelectionSummary(selection)
   local parts = {}
   for _, t in ipairs(selection.districts or {}) do parts[#parts + 1] = t end
+  for _, t in ipairs(selection.wonders or {}) do parts[#parts + 1] = t end
   local slots = {}
   for cityID, list in pairs(selection.specialtySlotsByCity or {}) do
     local s = {}
@@ -476,6 +530,9 @@ local function TakeItems(out, items, fallbackCity)
     if item.subjectType == "DISTRICT" then
       out.placements[#out.placements + 1] = { city = item.cityID or fallbackCity, type = item.subjectKey,
         x = item.x, y = item.y }
+    elseif item.subjectType == "WONDER" then
+      out.placements[#out.placements + 1] = { city = item.cityID or fallbackCity, type = item.subjectKey,
+        x = item.x, y = item.y, kind = "WONDER" }
     else
       out.stats.otherItems = (out.stats.otherItems or 0) + 1
     end
@@ -490,26 +547,63 @@ local function SkipNotes(out, skipped)
   end
 end
 
--- One city with the public single-city planner: open, tick, Plan, wait.
-local function PlanSingleCity(city, request, variant, out)
+-- Record the weights that reach the solve (once per run).
+local function SeenWeights(out, where, weights)
+  if out.stats.solveWeights ~= nil then return end
+  out.stats.solveWeights = WeightsText(weights)
+  Note(out.notes, "weights reaching " .. where .. ": " .. out.stats.solveWeights)
+end
+
+-- The player's selection for one city in the single-city planner: open it,
+-- set the slot count, click the districts, then the wonders.
+local function SelectSingleCity(city, request, notes)
   UI.GetHeadSelectedCity = function() return city end
   OpenPlanner(false)
-  SetSlotCount(city, request.districts, out.notes)
-  ClickDistricts(city, request.districts, out.notes)
+  SetSlotCount(city, request.districts, notes)
+  ClickDistricts(city, request.districts, notes)
+  ClickWonders(city, request.wonders, notes)
   local ReadSelectedSubjects = RequireLocal("ReadSelectedSubjects")
-  Note(out.notes, "city " .. city:GetID() .. " selection: " .. SelectionSummary(ReadSelectedSubjects()))
+  Note(notes, "city " .. city:GetID() .. " selection: " .. SelectionSummary(ReadSelectedSubjects()))
+end
+
+-- Click Plan and put the comparison's weights into the queued job (variant
+-- ""), as PlanSingleCity does; the caller pumps the update. AMT refuses to
+-- plan a wonder whose adjacent district is neither selected nor in the city
+-- (its warning asks the player to tick that district); a player who cannot
+-- (e.g. Kongo has no Holy Site for Mahabodhi) or did not ask for it unticks
+-- the wonder and clicks Plan again.
+local function ClickPlan(request, variant, notes)
+  for _ = 0, #(request.wonders or {}) do
+    if not Click(Controls.OkButton) then error("AMT plan button not clickable") end
+    local job = Local("m_QueuedPlan")
+    if job ~= nil then
+      if variant ~= "DEFAULTW" then job.weights = NeutralWeights(request) end
+      return job
+    end
+    local city = GetSelectedCityLocal()
+    local wonder, district = RequireLocal("GetMissingSelectedWonderDistrict")(RequireLocal("ReadSelectedSubjects")(), city)
+    if wonder == nil then break end
+    Note(notes, "city " .. city:GetID() .. ": AMT will not plan " .. wonder .. " without " .. tostring(district)
+      .. " selected (not requested or not available to this civilization); wonder unticked")
+    ClickWonders(city, { wonder }, notes)
+  end
+  local warning = Controls.WarningText and Controls.WarningText:GetText() or ""
+  error("AMT did not queue a plan: " .. tostring(Controls.ResultText:GetText()) .. " " .. tostring(warning))
+end
+
+-- One city with the public single-city planner: open, tick, Plan, wait.
+local function PlanSingleCity(city, request, variant, out)
+  SelectSingleCity(city, request, out.notes)
 
   local captured = nil
   local real = BuildAutoPlanPreview
   BuildAutoPlanPreview = function(...)
+    SeenWeights(out, "BuildAutoPlanPreview", (select(3, ...)))
     local preview = real(...)
     captured = preview or {}
     return preview
   end
-  if not Click(Controls.OkButton) then error("AMT plan button not clickable") end
-  local job = Local("m_QueuedPlan")
-  if job == nil then error("AMT did not queue a plan: " .. tostring(Controls.ResultText:GetText())) end
-  if variant ~= "DEFAULTW" then job.weights = NeutralWeights(request) end
+  ClickPlan(request, variant, out.notes)
   local frames = Pump()
   BuildAutoPlanPreview = real
   out.stats.frames = (out.stats.frames or 0) + frames
@@ -538,13 +632,12 @@ local function ConfirmSinglePreview(out)
   return true
 end
 
--- Multi-city: AMT's joint planner (mode chooser -> multi-city), every city
--- of the request in a slot with the same district list, one-per-empire
--- districts (Government Plaza) set to AUTO, save all, confirm the scope,
--- wait for the joint solve and take the recommended plan (plan 1).
-local function PlanJoint(request, variant, out)
+-- Multi-city, the player's steps up to the scope page: AMT's joint planner
+-- (mode chooser -> multi-city), every city of the request in a slot with the
+-- same district list, one-per-empire districts (Government Plaza) set to
+-- AUTO, save all (the joint solve starts when the scope is confirmed).
+local function OpenJointScope(request, notes)
   local cities = request.cities
-  local notes = out.notes
   UI.GetHeadSelectedCity = function() return cities[1] end
   local caps = AMT_MultiCity and AMT_MultiCity.GetCapabilities and AMT_MultiCity.GetCapabilities() or {}
   local capList = {}
@@ -584,9 +677,22 @@ local function PlanJoint(request, variant, out)
   if m_MCPendingScope == nil then
     error("AMT scope not opened: " .. tostring(Controls.ResultText:GetText()))
   end
+end
+
+-- Multi-city: open the scope as above, confirm it, wait for the joint solve
+-- and take the recommended plan (plan 1).
+local function PlanJoint(request, variant, out)
+  local notes = out.notes
+  OpenJointScope(request, notes)
 
   local captured, failure = nil, nil
   local realShow, realFail, realMerge = AMT_MC_M3_ShowJointPreview, AMT_MC_M3_ShowJointFailure, AMT_MC_M3_MergeWeights
+  local realInputs = AMT_MC_M3_BuildJointInputs
+  AMT_MC_M3_BuildJointInputs = function(...)
+    local inputs, reason = realInputs(...)
+    if type(inputs) == "table" then SeenWeights(out, "the joint solve's inputs", inputs.weights) end
+    return inputs, reason
+  end
   AMT_MC_M3_ShowJointPreview = function(snapshot, result)
     captured = { snapshot = snapshot, result = result }
     return realShow(snapshot, result)
@@ -604,6 +710,7 @@ local function PlanJoint(request, variant, out)
   end
   out.stats.frames = Pump()
   AMT_MC_M3_ShowJointPreview, AMT_MC_M3_ShowJointFailure, AMT_MC_M3_MergeWeights = realShow, realFail, realMerge
+  AMT_MC_M3_BuildJointInputs = realInputs
 
   local result = (captured and captured.result) or (failure and failure.result) or {}
   out.stats.status = result.status or (failure and failure.status)
@@ -647,6 +754,7 @@ local function PlanCityByCity(request, variant, out)
     local captured = nil
     local real = BuildAutoPlanPreview
     BuildAutoPlanPreview = function(...)
+      SeenWeights(out, "BuildAutoPlanPreview", (select(3, ...)))
       captured = real(...) or {}
       return captured
     end
@@ -718,6 +826,23 @@ local function InstallTrace(spec, notes)
 end
 
 -- ===========================================================================
+-- Shared with cmp_cross_amt.lua
+-- ===========================================================================
+CmpAmt.Load = LoadAMT
+CmpAmt.Click = Click
+CmpAmt.Pump = Pump
+CmpAmt.FindUpvalue = FindUpvalue
+CmpAmt.Roots = Roots
+CmpAmt.Local = Local
+CmpAmt.RequireLocal = RequireLocal
+CmpAmt.NeutralWeights = NeutralWeights
+CmpAmt.SelectSingleCity = SelectSingleCity
+CmpAmt.ClickPlan = ClickPlan
+CmpAmt.OpenJointScope = OpenJointScope
+CmpAmt.Ui = Ui
+CmpAmt.Runtime = Runtime
+
+-- ===========================================================================
 -- Adapter
 -- ===========================================================================
 function CmpAdapters.amt(request, variant, w)
@@ -746,7 +871,7 @@ function CmpAdapters.amt(request, variant, w)
     stats.mode = "joint"
     PlanJoint(request, variant, out)
   end
-  stats.weights = variant == "DEFAULTW" and "AMT defaults" or "neutral 1.0"
+  stats.weights = variant == "DEFAULTW" and "AMT defaults" or WeightsText(request.weights)
   stats.yieldsInPcall = Runtime.yieldsInPcall
   local unknown = {}
   for k in pairs(Ui.unknown) do unknown[#unknown + 1] = k end

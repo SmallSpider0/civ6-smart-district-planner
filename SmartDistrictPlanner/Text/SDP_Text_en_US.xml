@@ -6,10 +6,10 @@
       <Text>Smart District Planner</Text>
     </Replace>
     <Replace Tag="LOC_SDP_MOD_TEASER" Language="en_US">
-      <Text>Finds the district placement with the highest weighted adjacency bonus and marks it with map tacks.</Text>
+      <Text>Plans the districts with the highest weighted adjacency bonus for one city, several cities or new city sites, and marks them with map tacks.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_MOD_DESCRIPTION" Language="en_US">
-      <Text>Pick a city, the districts you want and how much each yield matters; the planner searches every legal placement within three rings and pins the best plan on the map. Existing map tacks are never moved. Requires Detailed Map Tacks. Do not enable together with another district planner such as Auto Map Tacks Planner.</Text>
+      <Text>Plans districts for one city, for several cities together (wonders included) and for new city sites. Under your yield weights it looks for the plan with the highest adjacency bonus: small problems are solved exhaustively, larger ones by a search that reports how far the result may be from the best. Preview the plan, then pin it with district icons; undo is kept with the save. Legality and bonuses come from Detailed Map Tacks, so they match what its tacks show. Built districts and your own map tacks are never moved. Requires Detailed Map Tacks. Do not enable together with another district planner such as Auto Map Tacks Planner.</Text>
     </Replace>
 
     <!-- Launch bar and panel -->

@@ -86,6 +86,30 @@ test("single-city tab: a wonder planned with the districts and pinned with its i
   end)
 end)
 
+test("a wonder that must touch a district is not lost when the districts cluster", function()
+  Finally(function()
+    local campus = Resolve("DISTRICT_CAMPUS")
+    local wanted = { campus }
+    for _, base in ipairs({ "DISTRICT_THEATER", "DISTRICT_COMMERCIAL_HUB", "DISTRICT_INDUSTRIAL_ZONE" }) do
+      local ok, d = pcall(Resolve, base)
+      if ok then wanted[#wanted + 1] = d end
+    end
+    Reset(wanted)
+    local wonder
+    for _, w in ipairs(SDP_Wonders.List(pid)) do
+      if wonder == nil and w.Status == nil and w.AdjacentDistrict == "DISTRICT_CAMPUS" then wonder = w.Type end
+    end
+    if wonder == nil then T.skip("no free wonder next to a campus") end
+    SDP_Panel.SetWonder(wonder, true)
+    T.eq(SDP_Panel.Solve(), nil, "solved as a task")
+    local result = SDP_Panel.RunTask(5000)
+    T.ok(result and result.Ok, "result: " .. tostring(result and result.Error))
+    for _, u in ipairs(result.Unplaced) do
+      T.ok(not (u.Type == wonder and u.Reason == "NO_FREE_PLOT"), "left off although it had a plot")
+    end
+  end)
+end)
+
 test("the good-places map: legal plots best first, the best not beaten by any one placement", function()
   Finally(function()
     local campus = Resolve("DISTRICT_CAMPUS")

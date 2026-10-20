@@ -15,7 +15,92 @@ import sys
 from collections import defaultdict
 
 HARD = {"off_map", "same_tile", "occupied", "overwrites_pin", "no_city", "out_of_range", "foreign_tile",
-        "other_city_tile", "unknown_type", "dmt_illegal", "twice_in_city", "empire_limit", "slots", "on_resource"}
+        "other_city_tile", "unknown_type", "dmt_illegal", "twice_in_city", "empire_limit", "slots", "on_resource",
+        # city sites
+        "bad_terrain", "unrevealed", "natural_wonder", "too_close"}
+
+SITE_FIELDS = ("siteValue", "tileValue", "districtPotential", "freshWater", "coastal", "newLuxuries", "newStrategics",
+               "overlap")
+
+
+def group(sid):
+    """(set, kind) of a scenario id: dev / heldout / profile:SCI ... / wonders / sites."""
+    if "~" in sid:
+        return "profile:" + sid.split("~", 1)[1], "single"
+    if sid.startswith("HS"):
+        return "heldout", "single"
+    if sid.startswith("HM"):
+        return "heldout", "multi"
+    if sid.startswith("W"):
+        return "wonders", "single"
+    if sid.startswith("C"):
+        return "sites", "sites"
+    if sid.startswith("S"):
+        return "dev", "single"
+    if sid.startswith("M"):
+        return "dev", "multi"
+    return "other", "other"
+
+
+def metric(s):
+    """The judge's main number: adjacency gain, or a site set's value."""
+    if s is None:
+        return None
+    return s["gain"] if s.get("gain") is not None else s.get("siteValue")
+
+
+# ---------------------------------------------------------------- statistics
+def _rng(seed):
+    state = [seed % 2147483647 or 1]
+
+    def nxt(n):
+        state[0] = (state[0] * 48271) % 2147483647
+        return state[0] % n
+    return nxt
+
+
+def bootstrap_ci(values, rounds=2000, seed=20261020):
+    """95% percentile interval of the mean (deterministic resampling)."""
+    if not values:
+        return None, None
+    nxt = _rng(seed)
+    n = len(values)
+    means = []
+    for _ in range(rounds):
+        means.append(sum(values[nxt(n)] for _ in range(n)) / n)
+    means.sort()
+    return means[int(0.025 * rounds)], means[int(0.975 * rounds) - 1]
+
+
+def sign_test(wins, losses):
+    """Two-sided exact sign test over the scenarios that are not ties."""
+    n = wins + losses
+    if n == 0:
+        return 1.0
+    k = min(wins, losses)
+    from math import comb
+    p = sum(comb(n, i) for i in range(k + 1)) / 2 ** n
+    return min(1.0, 2 * p)
+
+
+def paired(scenarios, a, b, field="gain"):
+    """Planner a against b over the scenarios both ran: wins/ties/losses of a,
+    the mean difference a - b with its 95% bootstrap interval, sign test p."""
+    diffs = []
+    for sid in sorted(scenarios):
+        e = scenarios[sid]
+        ra, rb = e["runs"].get(a), e["runs"].get(b)
+        if not ra or not rb or ra.get("error") or rb.get("error"):
+            continue
+        va, vb = ra.get(field), rb.get(field)
+        if va is None or vb is None:
+            continue
+        diffs.append(va - vb)
+    w = sum(1 for d in diffs if d > 1e-9)
+    l = sum(1 for d in diffs if d < -1e-9)
+    lo, hi = bootstrap_ci(diffs)
+    return {"n": len(diffs), "wins": w, "ties": len(diffs) - w - l, "losses": l,
+            "mean": (sum(diffs) / len(diffs)) if diffs else None, "ci": [lo, hi], "p": sign_test(w, l)}
 
 
 def key(r):
@@ -60,8 +145,8 @@ def summarize(rows):
             if not s or r.get("error"):
                 continue
             hard = [v for v in s["violations"] if v["kind"] in HARD]
-            if not hard:
-                best = s["gain"] if best is None else max(best, s["gain"])
+            if not hard and metric(s) is not None:
+                best = metric(s) if best is None else max(best, metric(s))
             if (r.get("plan") or {}).get("stats", {}).get("method") == "exhaustive":
                 exact = True
         # The same for city output (adjacency + worked tiles): a measure
@@ -81,16 +166,25 @@ def summarize(rows):
                 for v in s["violations"]:
                     kinds[v["kind"]] += 1
                 hard = sum(n for kk, n in kinds.items() if kk in HARD)
+                g = metric(s)
                 e.update({
-                    "gain": s["gain"], "legal": hard == 0, "violations": dict(kinds), "missing": s.get("missing", 0),
+                    "gain": g, "legal": hard == 0, "violations": dict(kinds), "missing": s.get("missing", 0),
                     "missingPlaceable": s.get("missingPlaceable"),
                     "tileLoss": s.get("tileLoss"), "placed": s.get("placed"),
-                    "quality": (s["gain"] / best) if best and best > 0 else (1.0 if best == 0 and s["gain"] >= 0 else None),
+                    "quality": (g / best) if best and best > 0 else (1.0 if best == 0 and g is not None and g >= 0 else None),
                     "dmtCalls": (r.get("plan") or {}).get("stats", {}).get("dmtCalls"),
                     "output": s.get("output"), "worked": s.get("worked"),
                     "outputGap": (best_out - s["output"]) if (best_out is not None and s.get("output") is not None) else None,
                     "notes": (r.get("plan") or {}).get("notes"),
+                    "wondersPlaced": s.get("wondersPlaced"), "wondersRequested": s.get("wondersRequested"),
                 })
+                for f in SITE_FIELDS:
+                    if s.get(f) is not None:
+                        e[f] = s[f]
+            # The competitors' own objectives (compare.mjs --crossscore).
+            for scorer, c in (r.get("cross") or {}).items():
+                if isinstance(c, dict) and c.get("gain") is not None and not c.get("error"):
+                    e["cross_" + scorer] = c["gain"]
             entry["runs"][k] = e
         scenarios[sid] = entry
     # Determinism: the repeated run must give the same placements.
@@ -106,10 +200,20 @@ def summarize(rows):
     return scenarios, det
 
 
+def subset(scenarios, set_name=None, kind=None):
+    """The scenarios of one set (dev, heldout, profile:SCI, wonders, sites) and kind."""
+    out = {}
+    for sid, e in scenarios.items():
+        g, k = group(sid)
+        if (set_name is None or g == set_name) and (kind is None or k == kind):
+            out[sid] = e
+    return out
+
+
 def per_planner(scenarios, kind_filter=None):
     agg = defaultdict(lambda: defaultdict(list))
     for sid, e in scenarios.items():
-        if kind_filter and not sid.startswith(kind_filter):
+        if kind_filter and group(sid)[1] != {"S": "single", "M": "multi"}.get(kind_filter, kind_filter):
             continue
         for k, r in e["runs"].items():
             a = agg[k]
@@ -153,20 +257,37 @@ def main():
     args = ap.parse_args()
     rows = load(args.files)
     scenarios, det = summarize(rows)
-    tables = {"all": per_planner(scenarios), "single": per_planner(scenarios, "S"), "multi": per_planner(scenarios, "M")}
-    for name, t in tables.items():
+    sets = sorted({group(sid) for sid in scenarios})
+    tables = {}
+    for set_name, kind in sets:
+        name = set_name + "/" + kind
+        tables[name] = per_planner(subset(scenarios, set_name, kind))
         print("==", name)
+        t = tables[name]
         for k in sorted(t):
             v = t[k]
             q = v["qualityMean"]
             ob, og = v.get("outputBestShare"), v.get("outputGapMean")
-            print("  %-18s output best %s gap %s" % (k, "%.2f" % ob if ob is not None else "-", "%.2f" % og if og is not None else "-"))
             print("  %-18s runs %3d err %2d  quality %s (min %s)  legal %s  best %s  missing %3d (placeable %d)  median %.1fs  %s" % (
                 k, v["runs"], v["errors"], "%.3f" % q if q is not None else "-",
                 "%.2f" % v["qualityMin"] if v["qualityMin"] is not None else "-",
                 "%.2f" % v["legalShare"] if v["legalShare"] is not None else "-",
                 "%.2f" % v["bestShare"] if v["bestShare"] is not None else "-",
                 v["missing"], v["missingPlaceable"], v["secondsMedian"] or 0, json.dumps(v["violations"])))
+            if ob is not None:
+                print("  %-18s output best %.2f gap %.2f" % ("", ob, og))
+        # Paired: this mod's standard tier against each competitor.
+        sub = subset(scenarios, set_name, kind)
+        # Adjacency and the competitors' objectives with the standard tier;
+        # city output with the panel's default (land part on).
+        for other in ("amt", "ep", "amt:DEFAULTW", "ep:DEFAULT"):
+            for ours, field in (("sdp:STANDARD", "gain"), ("sdp:STANDARD_LAND", "output"),
+                                ("sdp:STANDARD", "cross_amt"), ("sdp:STANDARD", "cross_ep")):
+                pr = paired(sub, ours, other, field)
+                if pr["n"]:
+                    lo, hi = pr["ci"]
+                    print("  %-17s vs %-13s %-10s n %3d  W/T/L %d/%d/%d  mean %+.2f  CI [%+.2f, %+.2f]  p %.2g" % (
+                        ours, other, field, pr["n"], pr["wins"], pr["ties"], pr["losses"], pr["mean"], lo, hi, pr["p"]))
     if det:
         print("== determinism")
         for d in det:

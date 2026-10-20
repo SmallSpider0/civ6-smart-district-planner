@@ -47,7 +47,28 @@ function CmpAdapters.sdp(request, variant, w)
       out.placements[#out.placements + 1] = { city = cityID, type = p.Type, x = p.X, y = p.Y }
     end
   end
-  if scn.kind == "single" then
+  if scn.kind == "sites" then
+    -- The sites tab: K sites within D, scored with the scenario's districts.
+    local r = SDP_SiteSolver.Solve({ PlayerID = 0, Tier = variant, K = request.sites.count, D = request.sites.distance,
+      Districts = request.districts })
+    if not r.Ok then out.notes[#out.notes + 1] = tostring(r.Error) end
+    for _, site in ipairs((r.Ok and r.Solutions[1] and r.Solutions[1].Sites) or {}) do
+      out.placements[#out.placements + 1] = { kind = "SITE", x = site.X, y = site.Y }
+    end
+    stats.method = "sites"
+  elseif scn.kind == "single" and #(request.wonders or {}) > 0 then
+    -- Wonders with the districts: the single-city tab solves this city as
+    -- SDP_Multi with only this city (SDP_Panel's WonderRequest).
+    local id = request.target:GetID()
+    local r = SDP_Multi.Solve({ PlayerID = 0, Tier = variant, Districts = request.districts, Wonders = request.wonders,
+      Only = { [id] = true }, Weights = request.weights, Land = land })
+    if not r.Ok then out.notes[#out.notes + 1] = tostring(r.Error) end
+    for _, p in ipairs(r.Plan or {}) do
+      out.placements[#out.placements + 1] = { city = id, type = p.Type, x = p.X, y = p.Y, kind = p.Kind }
+    end
+    stats.sdpGain = r.Adjacency
+    for _, u in ipairs(r.Unplaced or {}) do out.notes[#out.notes + 1] = "unplaced " .. tostring(u.Type) .. " " .. tostring(u.Reason) end
+  elseif scn.kind == "single" then
     local r = SDP_Solver.Solve({ PlayerID = 0, CityID = request.target:GetID(), Districts = request.districts,
       Land = land, Tier = variant, Weights = request.weights })
     if not r.Ok then out.notes[#out.notes + 1] = tostring(r.Error) end

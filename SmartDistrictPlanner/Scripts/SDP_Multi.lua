@@ -548,6 +548,72 @@ function Session:Run()
     self.NextStartIndex = self.NextStartIndex + 1
   end
   search:Kicks(params.Kicks or 0)
+  self:Repair()
+end
+
+-- A requested slot the best layout left off with a legal plot somewhere: a
+-- wonder that must be next to a district whose neighbours all went to other
+-- districts (the Great Library around a clustered campus), or a slot whose
+-- plots the others took. What the player asks for is placed whenever it fits
+-- (design goal G4), so try the slot on its plots, best single value first:
+-- the slot on that plot, and placed again around it whatever stood there,
+-- the districts the slot must touch and, for a wonder, the other wonders
+-- (they compete for the same terrain: the Colossus and the Great Lighthouse
+-- for the coast by the harbor). Consider keeps a layout with more slots
+-- placed even at a lower value. The repair has its own budget, a quarter of
+-- the tier's, so it also runs after a search that used up its own; the first
+-- plot that works ends the slot's repair.
+
+local function Serves(slotType, required)
+  if slotType == required then return true end
+  local row = GameInfo.DistrictReplaces[slotType]
+  return row ~= nil and row.ReplacesDistrictType == required
+end
+
+function Session:Repair()
+  local search, params = self.Search, self.Params
+  if search.BestLayout == nil or SDP_Search.Placed(search.BestLayout) == search.K then return end
+  local callCap, tryCap = search.CallCap, search.TryCap
+  search.CallCap = search.Board.Calls + math.ceil(params.CallLimit / 4)
+  search.TryCap = search.Stats.Tries + math.ceil(params.TryLimit / 4)
+  for m = 1, search.K do
+    if search.BestLayout[m] == 0 and not search:OverBudget() then
+      local spec = self.SlotSpecs[search.SlotIndex[m]]
+      local single, plots = search.Single[m], {}
+      for i = 1, search.N do
+        if search.Legal[m][i] then plots[#plots + 1] = i end
+      end
+      table.sort(plots, function(a, b)
+        if single[a] ~= single[b] then return single[a] > single[b] end
+        return a < b
+      end)
+      for _, i in ipairs(plots) do
+        if search:OverBudget() then break end
+        local base, block = Copy(search.BestLayout), {}
+        for mm = 1, search.K do
+          local other = self.SlotSpecs[search.SlotIndex[mm]]
+          if mm ~= m and (base[mm] == i or (spec.Wonder and other.Wonder)
+              or (spec.Requires ~= nil and Serves(search.Types[mm], spec.Requires))) then
+            block[#block + 1] = mm
+            base[mm] = 0
+          end
+        end
+        base[m] = i
+        local trial, gain
+        if #block > 0 then
+          trial, gain = search:SolveBlock(block, base)
+        else
+          local value, legal = search:Evaluate(base)
+          if legal then trial, gain = base, value end
+        end
+        if trial ~= nil and SDP_Search.Placed(trial) > search.BestPlaced and search:Consider(gain, true, trial) then
+          search:LocalSearch(trial, gain)
+          break
+        end
+      end
+    end
+  end
+  search.CallCap, search.TryCap = callCap, tryCap
 end
 
 function Session:CanContinue()
@@ -568,6 +634,7 @@ function Session:Continue()
     self.NextStartIndex = self.NextStartIndex + 1
   end
   search:Kicks(params.Kicks or 0)
+  self:Repair()
   search.Converged = before ~= nil and search.BestGain == before
   return true
 end

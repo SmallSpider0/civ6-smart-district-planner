@@ -237,6 +237,46 @@ test("wonders: legal places, a required district next to it, unplaceable ones re
   T.eq(reasons.BUILDING_COLOSSEUM, "NEEDS_DISTRICT", "no entertainment complex anywhere")
 end)
 
+test("repair: a wonder the search left off goes back in, next to its district", function()
+  NewWorld()
+  local result = SDP_Overlay.With(0, function()
+    local s = SDP_Multi.NewSession(Request({
+      Districts = { "DISTRICT_CAMPUS", "DISTRICT_THEATER", "DISTRICT_HOLY_SITE" }, Wonders = { "BUILDING_GREAT_LIBRARY" },
+    }))
+    s:Run()
+    local search = s.Search
+    local library
+    for m = 1, search.K do
+      if search.Types[m] == "BUILDING_GREAT_LIBRARY" then library = m end
+    end
+    T.ok(library ~= nil and search.BestLayout[library] ~= 0, "the search placed it")
+    -- What the search can end with when the districts take every plot
+    -- around the campus (seen in the comparison, 2026-10-20): the library off.
+    -- No start placed it either, so the result can only come from the repair.
+    local off = SDP_Search.Copy(search.BestLayout)
+    off[library] = 0
+    search.BestLayout, search.BestPlaced, search.BestGain = off, SDP_Search.Placed(off), search:Evaluate(off)
+    s.Starts = { { Layout = off, Gain = search.BestGain } }
+    s:Repair()
+    T.eq(search.BestPlaced, search.K, "every slot placed again")
+    T.ok(search.BestLayout[library] ~= 0, "the library is back")
+    return s:Result()
+  end)
+  T.ok(result.Ok, tostring(result.Error))
+  T.ok(not result.Stats.Mismatch, "incremental and full evaluation agree")
+  local library, campuses = nil, {}
+  for _, p in ipairs(result.Plan) do
+    if p.Type == "BUILDING_GREAT_LIBRARY" then library = p end
+    if p.Type == "DISTRICT_CAMPUS" then campuses[#campuses + 1] = p end
+  end
+  T.ok(library ~= nil, "in the plan")
+  local next = false
+  for _, c in ipairs(campuses) do
+    if Map.GetPlotDistance(c.X, c.Y, library.X, library.Y) == 1 then next = true end
+  end
+  T.ok(next, "next to a planned campus")
+end)
+
 test("several distinct solutions, best first", function()
   NewWorld()
   local result = SDP_Multi.Solve(Request({ Tier = "STANDARD" }))

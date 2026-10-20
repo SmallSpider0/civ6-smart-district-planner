@@ -183,10 +183,17 @@ function CmpRun.Setup(id)
   for _, base in ipairs(scn.districts) do
     if base ~= "DISTRICT_HARBOR" or SeaInReach(cities[1]) then districts[#districts + 1] = unique[base] or base end
   end
+  -- Yield weights: 1 each, or the scenario's profile (one yield weighted 3).
   local weights = {}
   for row in gi.Yields() do weights[row.YieldType] = 1 end
+  for k, v in pairs(scn.weights or {}) do weights[k] = v end
+  -- Wonders wanted with the districts (W scenarios), the ones this ruleset has.
+  local wonders = {}
+  for _, b in ipairs(scn.wantWonders or {}) do
+    if gi.Buildings[b] ~= nil then wonders[#wonders + 1] = b end
+  end
   local request = { playerID = 0, scenario = scn, cities = cities, districts = districts, weights = weights,
-    target = cities[1] }
+    target = cities[1], wonders = wonders, sites = scn.sites }
   return scn, w, request
 end
 
@@ -221,11 +228,30 @@ function CmpRun.Plan(id, planner, variant)
   cmp_emit("PLAN " .. Json.Encode(out))
 end
 
+-- A competitor's own objective for a plan (design 18.1, item 2): the
+-- scenario's world, the scorer's code loaded in this state
+-- (cmp_cross_<scorer>.lua), CmpCross[scorer](request, plan, w) ->
+-- { score, baseline, gain, ... } with gain = score - baseline, higher better.
+function CmpRun.Cross(id, planJson, scorer)
+  local scn, w, request = CmpRun.Setup(id)
+  local plan = Json.Decode(planJson)
+  include("cmp_cross_" .. scorer)
+  local fn = CmpCross and CmpCross[scorer] or error("no cross scorer " .. scorer)
+  local out = fn(request, plan, w) or {}
+  cmp_emit("CROSS " .. Json.Encode(out))
+end
+
 -- ===========================================================================
 -- Judge
 -- ===========================================================================
-local function Subject(districtType, x, y)
-  return { Key = districtType, Type = "DISTRICT", X = x, Y = y }
+local function IsWonder(t)
+  local row = GameInfo.Buildings[t]
+  return row ~= nil and row.IsWonder == true
+end
+
+-- A district subject, or a wonder's (a building type) as DMT makes it from a pin.
+local function Subject(t, x, y)
+  return { Key = t, Type = IsWonder(t) and "WONDER" or "DISTRICT", X = x, Y = y }
 end
 
 -- Every district subject of the local player DMT would score: built
@@ -253,19 +279,198 @@ local function ScoredSubjects(extra)
   return list
 end
 
-local function Total(subjects)
+-- Sum of the subjects' DMT adjacency, weighted by `weights` (default 1).
+local function Total(subjects, weights)
   pcall(UpdatePinYields, 0, {})
   local total, byYield = 0, {}
   for _, s in ipairs(subjects) do
     local ok, yields = pcall(GetBonusYields, 0, s)
     if ok and yields then
       for y, amount in pairs(yields) do
-        total = total + amount
+        total = total + amount * ((weights and weights[y]) or 1)
         byYield[y] = (byYield[y] or 0) + amount
       end
     end
   end
   return total, byYield
+end
+
+-- New city sites (kind "sites"), judged by measures no planner optimizes
+-- as such, all from the map and DMT:
+--   legal         land, not a mountain, explored, nobody else's, more than
+--                 CITY_MIN_RANGE from every city and from the other sites;
+--                 "too_far" (soft): not linked back to an own city through
+--                 steps of at most request.sites.distance
+--   tileValue     each site works its best 8 plots (all yields 1) among the
+--                 plots within 3 that no city owns, a plot two sites reach
+--                 going to the nearer (then the earlier) site
+--   freshWater    sites on a river or next to a lake; coastal: next to the sea
+--   newLuxuries, newStrategics  kinds in the sites' plots the player's cities
+--                 do not have yet
+--   districtPotential  per site and per district of the scenario's plan, the
+--                 best DMT adjacency of that district alone on a plot the site
+--                 gets (city-center pins at the sites, as the player would
+--                 mark them), summed
+--   overlap       plots within 3 of two sites, or of a site and a city
+--   siteValue     tileValue + districtPotential (yield points)
+local function JudgeSites(scn, w, request, plan)
+  local gi = GameInfo
+  local score = { violations = {}, legal = true, placed = 0, requested = request.sites.count }
+  local function Violation(kind, p, detail)
+    score.violations[#score.violations + 1] = { kind = kind, x = p and p.x, y = p and p.y, detail = detail }
+    if kind ~= "missing" and kind ~= "too_far" then score.legal = false end
+  end
+  local minRange = (GlobalParameters and GlobalParameters.CITY_MIN_RANGE) or 3
+  local allCities = {}
+  for _, player in pairs(Players) do
+    if type(player) == "table" and player.GetCities then
+      for _, c in player:GetCities():Members() do allCities[#allCities + 1] = c end
+    end
+  end
+  table.sort(allCities, function(a, b)
+    if a:GetOwner() ~= b:GetOwner() then return a:GetOwner() < b:GetOwner() end
+    return a:GetID() < b:GetID()
+  end)
+  local own = request.cities
+  local sites = {}
+  for _, p in ipairs(plan.placements or {}) do
+    local plot = Map.GetPlot(p.x, p.y)
+    if plot == nil then
+      Violation("off_map", p)
+    else
+      if plot:IsWater() or plot:IsMountain() or plot:IsImpassable() then Violation("bad_terrain", p) end
+      if not PlayersVisibility[0]:IsRevealed(plot:GetIndex()) then Violation("unrevealed", p) end
+      if plot:GetOwner() ~= -1 and plot:GetOwner() ~= 0 then Violation("foreign_tile", p) end
+      if plot:IsNaturalWonder() then Violation("natural_wonder", p) end
+      for _, c in ipairs(allCities) do
+        if Map.GetPlotDistance(p.x, p.y, c:GetX(), c:GetY()) <= minRange then Violation("too_close", p, "city") end
+      end
+      for _, other in ipairs(sites) do
+        if Map.GetPlotDistance(p.x, p.y, other.x, other.y) <= minRange then Violation("too_close", p, "site") end
+      end
+      sites[#sites + 1] = { x = p.x, y = p.y, plot = plot }
+      score.placed = score.placed + 1
+    end
+  end
+  for _ = #sites + 1, request.sites.count do Violation("missing", nil) end
+  -- Linked back to an own city through steps of at most `distance`.
+  local linked, changed = {}, true
+  while changed do
+    changed = false
+    for n, site in ipairs(sites) do
+      if not linked[n] then
+        for _, c in ipairs(own) do
+          if Map.GetPlotDistance(site.x, site.y, c:GetX(), c:GetY()) <= request.sites.distance then linked[n] = true end
+        end
+        for m, other in ipairs(sites) do
+          if linked[m] and Map.GetPlotDistance(site.x, site.y, other.x, other.y) <= request.sites.distance then linked[n] = true end
+        end
+        if linked[n] then changed = true end
+      end
+    end
+  end
+  for n, site in ipairs(sites) do
+    if not linked[n] then Violation("too_far", { x = site.x, y = site.y }) end
+  end
+
+  -- Plots each site gets.
+  local claim, overlap = {}, 0
+  for i = 0, w.Width * w.Height - 1 do
+    local plot = Map.GetPlotByIndex(i)
+    local reach, best, bestD = 0, nil, nil
+    for n, site in ipairs(sites) do
+      local d = Map.GetPlotDistance(plot.x, plot.y, site.x, site.y)
+      if d >= 1 and d <= 3 then
+        reach = reach + 1
+        if bestD == nil or d < bestD then best, bestD = n, d end
+      end
+    end
+    if reach > 0 then
+      local nearCity = false
+      for _, c in ipairs(own) do
+        if Map.GetPlotDistance(plot.x, plot.y, c:GetX(), c:GetY()) <= 3 then nearCity = true end
+      end
+      if reach > 1 or nearCity then overlap = overlap + 1 end
+      if plot:GetOwner() == -1 and PlayersVisibility[0]:IsRevealed(i) and not plot:IsCity() then claim[i] = best end
+    end
+  end
+  score.overlap = overlap
+  -- Tiles worked, fresh water, coast, new resource kinds.
+  local ownKinds = {}
+  for _, c in ipairs(own) do
+    for i = 0, w.Width * w.Height - 1 do
+      local plot = Map.GetPlotByIndex(i)
+      if plot.city == c and plot:GetResourceType() ~= -1 then ownKinds[plot:GetResourceType()] = true end
+    end
+  end
+  local tileValue, fresh, coastal, newKinds = 0, 0, 0, { LUX = {}, STRAT = {} }
+  for n, site in ipairs(sites) do
+    local values = {}
+    for i, owner in pairs(claim) do
+      if owner == n then
+        local plot = Map.GetPlotByIndex(i)
+        local v = 0
+        for row in gi.Yields() do v = v + w.BaseYield(plot, row.YieldType) end
+        values[#values + 1] = { i = i, v = v }
+        local rt = plot:GetResourceType()
+        if rt ~= -1 and not ownKinds[rt] and Players[0]:GetResources():IsResourceVisible(gi.Resources[rt].Hash) then
+          local class = gi.Resources[rt].ResourceClassType
+          if class == "RESOURCECLASS_LUXURY" then newKinds.LUX[rt] = true end
+          if class == "RESOURCECLASS_STRATEGIC" then newKinds.STRAT[rt] = true end
+        end
+      end
+    end
+    table.sort(values, function(a, b) if a.v ~= b.v then return a.v > b.v end return a.i < b.i end)
+    for k = 1, math.min(8, #values) do tileValue = tileValue + values[k].v end
+    if site.plot:IsFreshWater() then fresh = fresh + 1 end
+    if site.plot:IsCoastalLand() then coastal = coastal + 1 end
+  end
+  local function Count(t) local c = 0 for _ in pairs(t) do c = c + 1 end return c end
+  score.tileValue, score.freshWater, score.coastal = tileValue, fresh, coastal
+  score.newLuxuries, score.newStrategics = Count(newKinds.LUX), Count(newKinds.STRAT)
+
+  -- District potential, with city-center pins at the sites.
+  local cfg = PlayerConfigurations[0]
+  for _, site in ipairs(sites) do
+    local pin = cfg:GetMapPin(site.x, site.y)
+    pin:SetIconName("ICON_DISTRICT_CITY_CENTER")
+    pin:SetName("")
+    w.LuaEvents.DMT_MapPinAdded(pin)
+  end
+  local potential = 0
+  for n, site in ipairs(sites) do
+    for _, districtType in ipairs(request.districts) do
+      local best = 0
+      for i, owner in pairs(claim) do
+        local plot = Map.GetPlotByIndex(i)
+        if owner == n and not plot:IsCity() then
+          local blocked = false
+          local rt = plot:GetResourceType()
+          if rt ~= -1 then
+            local res = gi.Resources[rt]
+            local harvest = false
+            for _ in gi.Resource_Harvests({ ResourceType = res.ResourceType }) do harvest = true end
+            blocked = not harvest and Players[0]:GetResources():IsResourceVisible(res.Hash)
+          end
+          if not blocked then
+            pcall(UpdatePinYields, 0, {})
+            local subject = Subject(districtType, plot.x, plot.y)
+            local ok, can = pcall(CanPlacePin, 0, subject)
+            if ok and can then
+              local okY, yields = pcall(GetBonusYields, 0, subject)
+              local v = 0
+              if okY and yields then for y, a in pairs(yields) do v = v + a * (request.weights[y] or 1) end end
+              if v > best then best = v end
+            end
+          end
+        end
+      end
+      potential = potential + best
+    end
+  end
+  score.districtPotential = potential
+  score.siteValue = tileValue + potential
+  cmp_emit("SCORE " .. Json.Encode(score))
 end
 
 function CmpRun.Judge(id, planJson)
@@ -274,6 +479,7 @@ function CmpRun.Judge(id, planJson)
   -- As in DMT's own context after the game loads: modifiers, pin subjects.
   w.Events.LoadGameViewStateDone()
   local plan = Json.Decode(planJson)
+  if scn.kind == "sites" then return JudgeSites(scn, w, request, plan) end
   local gi = GameInfo
   local cfg = PlayerConfigurations[0]
   local score = { violations = {}, legal = true, placed = 0 }
@@ -283,7 +489,7 @@ function CmpRun.Judge(id, planJson)
     if kind ~= "missing" and kind ~= "not_requested" then score.legal = false end
   end
 
-  local before, beforeByYield = Total(ScoredSubjects())
+  local before, beforeByYield = Total(ScoredSubjects(), request.weights)
   score.before = before
 
   -- City output, a measure that is not this mod's objective: district
@@ -345,7 +551,7 @@ function CmpRun.Judge(id, planJson)
         if owner ~= -1 and owner ~= 0 then Violation("foreign_tile", p)
         elseif owner == 0 and plot.city ~= city then Violation("other_city_tile", p) end
       end
-      if gi.Districts[p.type] == nil then Violation("unknown_type", p) end
+      if gi.Districts[p.type] == nil and not IsWonder(p.type) then Violation("unknown_type", p) end
       -- The game refuses districts on resources it cannot remove (luxury,
       -- strategic); DMT's CanPlacePin misses this for district pins.
       local rt = plot:GetResourceType()
@@ -360,9 +566,9 @@ function CmpRun.Judge(id, planJson)
     end
   end
 
-  -- Put the plan on the map as the player would (pins with district icons).
+  -- Put the plan on the map as the player would (pins with district or wonder icons).
   for _, p in ipairs(placements) do
-    if gi.Districts[p.type] ~= nil and Map.GetPlot(p.x, p.y) ~= nil then
+    if (gi.Districts[p.type] ~= nil or IsWonder(p.type)) and Map.GetPlot(p.x, p.y) ~= nil then
       local pin = cfg:GetMapPin(p.x, p.y)
       pin:SetIconName("ICON_" .. p.type)
       pin:SetName("")
@@ -372,7 +578,7 @@ function CmpRun.Judge(id, planJson)
   end
   pcall(UpdatePinYields, 0, {})
   for _, p in ipairs(placements) do
-    if gi.Districts[p.type] ~= nil and Map.GetPlot(p.x, p.y) ~= nil then
+    if (gi.Districts[p.type] ~= nil or IsWonder(p.type)) and Map.GetPlot(p.x, p.y) ~= nil then
       pcall(UpdatePinYields, 0, {})
       local ok, canPlace, reason = pcall(CanPlacePin, 0, Subject(p.type, p.x, p.y))
       if not ok or not canPlace then Violation("dmt_illegal", p, ok and reason or tostring(canPlace)) end
@@ -412,6 +618,17 @@ function CmpRun.Judge(id, planJson)
       if row.OnePerCity and perCity[p.city][p.type] > 1 then Violation("twice_in_city", p) end
       if (row.MaxPerPlayer or -1) >= 0 and perPlayer[p.type] > row.MaxPerPlayer then Violation("empire_limit", p) end
       if not requested[p.type] then Violation("not_requested", p) end
+    end
+  end
+  -- Wonders: each at most once, only the ones asked for count as placed.
+  local wantWonder, wonderSeen = {}, {}
+  for _, b in ipairs(request.wonders or {}) do wantWonder[b] = true end
+  score.wondersRequested, score.wondersPlaced = #(request.wonders or {}), 0
+  for _, p in ipairs(placements) do
+    if IsWonder(p.type) then
+      if wonderSeen[p.type] then Violation("twice_in_city", p) end
+      wonderSeen[p.type] = true
+      if wantWonder[p.type] then score.wondersPlaced = score.wondersPlaced + 1 else Violation("not_requested", p) end
     end
   end
   local germany = scn.civ == "CIVILIZATION_GERMANY"
@@ -488,12 +705,12 @@ function CmpRun.Judge(id, planJson)
     end
   end
 
-  local after, afterByYield = Total(ScoredSubjects())
+  local after, afterByYield = Total(ScoredSubjects(), request.weights)
   score.after = after
   -- Each placed district's own DMT adjacency (for the report's figures).
   score.items = {}
   for _, p in ipairs(placements) do
-    if gi.Districts[p.type] ~= nil and Map.GetPlot(p.x, p.y) ~= nil then
+    if (gi.Districts[p.type] ~= nil or IsWonder(p.type)) and Map.GetPlot(p.x, p.y) ~= nil then
       pcall(UpdatePinYields, 0, {})
       local ok, yields = pcall(GetBonusYields, 0, Subject(p.type, p.x, p.y))
       local sum = 0
