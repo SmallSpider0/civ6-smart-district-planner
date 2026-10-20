@@ -203,22 +203,29 @@ end)
 
 -- A city-center pin `distance` plots from the capital on revealed land, as
 -- the DMT popup makes one; returns its ID (pin objects go stale: pitfall 21).
-local function SitePin(city, distance)
+-- A city-center pin on free revealed land `distance` plots from the city
+-- (the first distance in the list that has one) and, when `away` is given,
+-- more than `beyond` plots from it.
+local function SitePin(city, distances, away, beyond)
+  if type(distances) ~= "table" then distances = { distances } end
   local cfg = PlayerConfigurations[pid]
-  for index = 0, Map.GetPlotCount() - 1 do
-    local plot = Map.GetPlotByIndex(index)
-    if Map.GetPlotDistance(plot:GetX(), plot:GetY(), city:GetX(), city:GetY()) == distance
-        and PlayersVisibility[pid]:IsRevealed(index) and not plot:IsWater() and not plot:IsMountain()
-        and not plot:IsImpassable() and plot:GetOwner() == -1 then
-      local pin = cfg:GetMapPin(plot:GetX(), plot:GetY())
-      pin:SetIconName("ICON_DISTRICT_CITY_CENTER")
-      pin:SetName("")
-      LuaEvents.DMT_MapPinAdded(pin)
-      Network.BroadcastPlayerInfo()
-      return pin:GetID(), plot:GetX(), plot:GetY()
+  for _, distance in ipairs(distances) do
+    for index = 0, Map.GetPlotCount() - 1 do
+      local plot = Map.GetPlotByIndex(index)
+      if Map.GetPlotDistance(plot:GetX(), plot:GetY(), city:GetX(), city:GetY()) == distance
+          and (away == nil or Map.GetPlotDistance(plot:GetX(), plot:GetY(), away.X, away.Y) > beyond)
+          and PlayersVisibility[pid]:IsRevealed(index) and not plot:IsWater() and not plot:IsMountain()
+          and not plot:IsImpassable() and plot:GetOwner() == -1 then
+        local pin = cfg:GetMapPin(plot:GetX(), plot:GetY())
+        pin:SetIconName("ICON_DISTRICT_CITY_CENTER")
+        pin:SetName("")
+        LuaEvents.DMT_MapPinAdded(pin)
+        Network.BroadcastPlayerInfo()
+        return pin:GetID(), plot:GetX(), plot:GetY()
+      end
     end
   end
-  T.skip("no free revealed land " .. distance .. " plots from the capital")
+  T.skip("no free revealed land " .. table.concat(distances, "/") .. " plots from the capital")
 end
 
 local function RemovePin(id)
@@ -230,15 +237,14 @@ local function RemovePin(id)
   Network.BroadcastPlayerInfo()
 end
 
-test("multi tab: with the coverage weight the industrial zone reaches a planned city that has none", function()
+test("multi tab: with the coverage weight the industrial zone moves to reach a planned city that has none", function()
   local city = Capital()
   local zone = Resolve("DISTRICT_INDUSTRIAL_ZONE")
   local reach = SDP_Coverage.Reaches(pid)[zone]
   if reach == nil then T.skip("no regional building for the industrial zone in this ruleset") end
-  local pinID, sx, sy = SitePin(city, reach.Range)
   local multi = SDP_Panel.Multi
-  local ok, err = pcall(function()
-    SDP_Panel.SelectTab("MULTI")
+  local pinID, sx, sy
+  local function SolveZone(weight)
     multi.Refresh()
     multi.SetExisting(city:GetID(), true)
     multi.SetPlanFor("ALL")
@@ -246,20 +252,36 @@ test("multi tab: with the coverage weight the industrial zone reaches a planned 
     multi.SetPlanFor("C" .. city:GetID())
     multi.ApplyPlan({ zone })
     multi.SetTier("FAST")
-    multi.SetWeight("COVERAGE", 3)
+    multi.SetWeight("COVERAGE", weight)
     T.ok(multi.Solve(), "started")
     SDP_Panel.RunTask(5000)
     local result = multi.State().Result
     T.ok(result and result.Ok, "result: " .. tostring(result and result.Error))
+    for _, p in ipairs(result.Plan) do
+      if p.Type == zone then return result, p end
+    end
+    T.ok(false, "the industrial zone is planned")
+  end
+  local ok, err = pcall(function()
+    SDP_Panel.SelectTab("MULTI")
+    -- Where the zone goes without coverage; the site goes out of its reach.
+    local _, alone = SolveZone(0)
+    -- Within reach of the capital's third ring at most.
+    pinID, sx, sy = SitePin(city, { reach.Range, reach.Range + 1, reach.Range + 2 }, alone, reach.Range)
+    local _, plain = SolveZone(0)
+    T.ok(Map.GetPlotDistance(plain.X, plain.Y, sx, sy) > reach.Range,
+      "without coverage the zone at " .. plain.X .. "," .. plain.Y .. " does not reach the site at " .. sx .. "," .. sy)
+    local result = SolveZone(3)
     T.ok(not result.Stats.Mismatch, "board and full evaluation agree")
     T.ok(math.abs(result.Gain - (result.Adjacency + result.LandDelta + result.CoverageDelta)) < 1e-6, "the gain adds up")
     local placed = nil
     for _, p in ipairs(result.Plan) do
       if p.Type == zone then placed = p end
     end
-    T.ok(placed ~= nil, "the industrial zone is planned")
     T.ok(Map.GetPlotDistance(placed.X, placed.Y, sx, sy) <= reach.Range,
-      "the zone at " .. placed.X .. "," .. placed.Y .. " reaches the site at " .. sx .. "," .. sy)
+      "with weight 3 the zone at " .. placed.X .. "," .. placed.Y .. " reaches the site at " .. sx .. "," .. sy)
+    print(string.format("zone %d,%d without coverage, %d,%d with weight 3; site %d,%d; range %d",
+      plain.X, plain.Y, placed.X, placed.Y, sx, sy, reach.Range))
     local site = nil
     for _, c in ipairs(result.Cities) do
       if c.Kind == "SITE" and c.X == sx and c.Y == sy then site = c.Key end
@@ -277,6 +299,6 @@ test("multi tab: with the coverage weight the industrial zone reaches a planned 
   multi.SetPlanFor("ALL")
   multi.SetExisting(city:GetID(), nil)
   SDP_Panel.SelectTab("SINGLE")
-  RemovePin(pinID)
+  if pinID ~= nil then RemovePin(pinID) end
   if not ok then error(err, 0) end
 end)
