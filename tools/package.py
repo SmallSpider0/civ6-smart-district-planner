@@ -7,9 +7,12 @@ short commit hash) says exactly what is inside:
   SmartDistrictPlanner/   the mod, as committed
   TEST_GUIDE.md           docs/tester-guide.md with the version filled in
   INSTALL_AND_USE.md      docs/install-and-test.md (links to other docs made plain text)
+  REPORT.html             the delivery report as one self-contained page (report/build.py)
 
-The static checks in validate.py run first, and uncommitted changes to the mod
-or to those two documents stop the build. File names in the zip are ASCII so
+The static checks in validate.py run first, and uncommitted changes to the mod,
+to those two documents or to anything the report reads stop the build (the
+report is built from the working tree, which that check makes equal to the
+commit). File names in the zip are ASCII so
 that Windows' built-in zip tool shows them correctly. Entries carry the commit
 time, so the same commit gives the same zip.
 
@@ -27,6 +30,9 @@ import zipfile
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # -I drops the script dir
 import validate  # noqa: E402
+
+sys.path.insert(0, os.path.join(validate.ROOT, "report"))
+import build as report  # noqa: E402
 
 MOD_NAME = "SmartDistrictPlanner"
 GUIDE = "docs/tester-guide.md"
@@ -52,7 +58,7 @@ def main(argv=None):
     if code != 0:
         print("package: validation failed; run tools/validate.py for the details")
         return 1
-    dirty = git("status", "--porcelain", "--", MOD_NAME, GUIDE, INSTALL).strip()
+    dirty = git("status", "--porcelain", "--", MOD_NAME, GUIDE, INSTALL, *report.INPUTS).strip()
     if dirty:
         print("package: commit these first (the zip is built from the last commit):")
         print(dirty)
@@ -67,6 +73,8 @@ def main(argv=None):
     files = [f for f in files if f]
     guide = git("show", "HEAD:" + GUIDE).replace("{{VERSION}}", commit).replace("{{DATE}}", date)
     install = plain_links(git("show", "HEAD:" + INSTALL))
+    page, _data = report.build(make_snapshots=False)
+    report_html = report.standalone(page, lambda name: git("show", "HEAD:docs/images/" + name, text=False))
 
     os.makedirs(args.out, exist_ok=True)
     path = os.path.join(args.out, "%s-%s.zip" % (MOD_NAME, commit))
@@ -83,8 +91,9 @@ def main(argv=None):
                                          check=True, capture_output=True).stdout)
         add(zf, "TEST_GUIDE.md", guide.encode("utf-8"))
         add(zf, "INSTALL_AND_USE.md", install.encode("utf-8"))
+        add(zf, "REPORT.html", report_html.encode("utf-8"))
 
-    print("package: %s (%d mod files + 2 guides, %d KB, commit %s of %s)"
+    print("package: %s (%d mod files + 2 guides + report, %d KB, commit %s of %s)"
           % (path, len(files), os.path.getsize(path) // 1024, commit, date))
     return 0
 

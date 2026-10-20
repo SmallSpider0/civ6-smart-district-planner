@@ -1,0 +1,88 @@
+  <figure>
+    <div class="frame scroll">
+      <svg viewBox="0 0 880 656" role="img" aria-label="架构：面板经分帧任务调用三个求解器，求解器共用搜索引擎、增量评估层、假想钉层，最终调用 DMT 和游戏数据；假想钉层另向游戏引擎复核可建格">
+        <defs>
+          <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="d-arrow" d="M0,0 L10,5 L0,10 z"/></marker>
+          <marker id="ark" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="d-arrow key" d="M0,0 L10,5 L0,10 z"/></marker>
+        </defs>
+        <!-- Row A: UI -->
+        <rect class="d-box" x="20" y="16" width="430" height="72" rx="8"/>
+        <text class="d-title" x="36" y="42">面板 SDP_Panel</text>
+        <text class="d-sub" x="36" y="62">三个页签：单城 · 选城址 · 多城</text>
+        <text class="d-sub" x="36" y="79">档位、预计耗时、继续优化、取消、质量说明</text>
+        <rect class="d-box" x="470" y="16" width="185" height="72" rx="8"/>
+        <text class="d-title" x="486" y="42">地图预览</text>
+        <text class="d-mono" x="486" y="62">SDP_Preview</text>
+        <text class="d-sub" x="486" y="79">透镜着色 + 地图图标，不打钉</text>
+        <rect class="d-box" x="675" y="16" width="185" height="72" rx="8"/>
+        <text class="d-title" x="691" y="42">打钉 / 撤销</text>
+        <text class="d-mono" x="691" y="62">SDP_Pins</text>
+        <text class="d-sub" x="691" y="79">按城编号；记录随存档</text>
+        <path class="d-edge" d="M450 40 L466 40" marker-end="url(#ar)"/>
+        <path class="d-edge" d="M450 70 L462 70 Q466 70 466 74 L466 96 Q466 100 470 100 L760 100 Q767 100 767 94 L767 92" marker-end="url(#ar)"/>
+        <!-- Row B: task -->
+        <rect class="d-box" x="20" y="124" width="840" height="54" rx="8"/>
+        <text class="d-title" x="36" y="148">分帧任务 SDP_Task</text>
+        <text class="d-sub" x="36" y="168">协程：每帧算一份配额（目标约 30 毫秒/帧）后让出；两帧之间收起假想钉层；关闭面板后照常算完并在启动栏按钮上加标记</text>
+        <path class="d-edge" d="M235 88 L235 120" marker-end="url(#ar)"/>
+        <text class="d-lab" x="243" y="110">Start(job)</text>
+        <!-- Row C: solvers -->
+        <rect class="d-box" x="20" y="214" width="268" height="72" rx="8"/>
+        <text class="d-title" x="36" y="240">单城 SDP_Solver</text>
+        <text class="d-sub" x="36" y="260">一座城的候选格与区域</text>
+        <text class="d-sub" x="36" y="277">地块损失 SDP_Land</text>
+        <rect class="d-box" x="306" y="214" width="268" height="72" rx="8"/>
+        <text class="d-title" x="322" y="240">多城 SDP_Multi</text>
+        <text class="d-sub" x="322" y="260">城址钉 + 7 格内现有城市（≤ 8 城）</text>
+        <text class="d-sub" x="322" y="277">奇观 SDP_Wonders，帝国上限</text>
+        <rect class="d-box" x="592" y="214" width="268" height="72" rx="8"/>
+        <text class="d-title" x="608" y="240">选城址 SDP_SiteSolver</text>
+        <text class="d-sub" x="608" y="260">候选与粗评 SDP_Sites</text>
+        <text class="d-sub" x="608" y="277">分支定界选 K 座，给 3 套方案</text>
+        <path class="d-edge" d="M154 178 L154 210" marker-end="url(#ar)"/>
+        <path class="d-edge" d="M440 178 L440 210" marker-end="url(#ar)"/>
+        <path class="d-edge" d="M726 178 L726 210" marker-end="url(#ar)"/>
+        <text class="d-lab" x="448" y="200">Run · Tick 让出</text>
+        <!-- Row D: engine -->
+        <rect class="d-box key" x="20" y="322" width="554" height="72" rx="8"/>
+        <text class="d-title" x="36" y="348">搜索引擎 SDP_Search</text>
+        <text class="d-sub" x="36" y="368">单项表 → 穷举或模型集束搜索 → 短名单精评 → 局部搜索 → 扰动重建</text>
+        <text class="d-sub" x="36" y="385">多城按城分块（SolveBlock），城址的区域分也用它</text>
+        <rect class="d-box" x="592" y="322" width="268" height="72" rx="8"/>
+        <text class="d-title" x="608" y="348">档位参数 SDP_Tiers</text>
+        <text class="d-sub" x="608" y="368">快速 / 标准 / 精细：全部是计数预算</text>
+        <text class="d-sub" x="608" y="385">同输入同输出，与机器快慢无关</text>
+        <path class="d-edge" d="M154 286 L154 318" marker-end="url(#ar)"/>
+        <path class="d-edge" d="M440 286 L440 318" marker-end="url(#ar)"/>
+        <path class="d-edge" d="M726 286 L726 300 Q726 304 722 304 L540 304 Q536 304 536 308 L536 318" marker-end="url(#ar)"/>
+        <text class="d-lab" x="162" y="308">槽位、候选格</text>
+        <path class="d-edge" d="M574 358 L588 358" marker-end="url(#ar)"/>
+        <!-- Row E: board -->
+        <rect class="d-box key" x="20" y="430" width="554" height="62" rx="8"/>
+        <text class="d-title" x="36" y="455">增量 + 记忆评估 SDP_Board</text>
+        <text class="d-sub" x="36" y="476">分数 = f(区域, 格子, 6 个邻格上的规划)：只重算动过的格子周围，相同局面直接取记忆</text>
+        <path class="d-edge key" d="M297 394 L297 426" marker-end="url(#ark)"/>
+        <text class="d-lab" x="305" y="415">Put(槽, 格) · Total()</text>
+        <!-- Row F: overlay / DMT / game -->
+        <rect class="d-box" x="20" y="530" width="268" height="72" rx="8"/>
+        <text class="d-title" x="36" y="555">假想钉层 SDP_Overlay</text>
+        <text class="d-sub" x="36" y="575">替换 GetMapPinSubject，让假想的</text>
+        <text class="d-sub" x="36" y="592">区域对 DMT 可见；不写真实数据</text>
+        <rect class="d-box ext" x="306" y="530" width="268" height="72" rx="8"/>
+        <text class="d-title" x="322" y="555">DMT</text>
+        <text class="d-mono" x="322" y="575">CanPlacePin · GetBonusYields</text>
+        <text class="d-sub" x="322" y="592">合法性与相邻加成（含 tooltip）</text>
+        <rect class="d-box ext" x="592" y="530" width="268" height="72" rx="8"/>
+        <text class="d-title" x="608" y="555">游戏数据</text>
+        <text class="d-mono" x="608" y="575">GameInfo · Map · 地图钉 · 引擎</text>
+        <text class="d-sub" x="608" y="592">相邻规则全部动态读取，不硬编码</text>
+        <path class="d-edge key" d="M154 492 L154 526" marker-end="url(#ark)"/>
+        <text class="d-lab" x="162" y="514">只评估缓存里没有的</text>
+        <path class="d-edge" d="M288 566 L302 566" marker-end="url(#ar)"/>
+        <path class="d-edge" d="M574 566 L588 566" marker-end="url(#ar)"/>
+        <path class="d-edge" d="M154 602 L154 620 Q154 626 160 626 L720 626 Q726 626 726 620 L726 606" marker-end="url(#ar)"/>
+        <text class="d-lab" x="440" y="646" text-anchor="middle">引擎复核：城市已拥有的格，以游戏给出的可建格为准</text>
+      </svg>
+    </div>
+    <figcaption>金色边框是决定性能的两层：搜索引擎决定试哪些布局，增量评估层决定每次试布局要不要真的调用 DMT。虚线框是本 mod 之外的依赖（DMT 由玩家另行订阅）。底部的边：合法性除了问 DMT，还直接问游戏引擎哪些格可建（见 4.6）。</figcaption>
+  </figure>

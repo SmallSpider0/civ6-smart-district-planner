@@ -44,6 +44,7 @@ civ6mod/
 │   ├── offline/                      # 离线测试（spec_*.lua）与基准（bench_*.lua），tools/offline_tests.mjs 在 fengari 里跑，用假世界 world.lua
 │   ├── compare/                      # 与 AMT、Empire Planner 的离线对比：真实规则库 + 真实 DMT/AMT/EP 代码 + 模拟引擎，tools/compare.mjs 运行
 │   └── bench/                        # 游戏内基准与单价校准（不以 test_ 开头，单独运行）
+├── report/                           # 交付报告：build.py 从 tests/compare/results 生成 dist/report/（artifact 页面与单文件版），package.py 打进测试包
 ├── tools/                            # civ6tuner.py、validate.py、luacheck.mjs、deploy.py、package.py、run_tests.py、game.py，见 tools/README.md
 ├── logs/                             # civ6tuner 输出日志，已 gitignore
 └── reference/                        # 指向本机 DMT/AMT/Base UI/DLC 源码的符号链接，已 gitignore

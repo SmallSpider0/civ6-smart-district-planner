@@ -30,7 +30,7 @@
 |------|------|
 | [docs/install-and-test.md](docs/install-and-test.md) | 安装、使用、验收测试步骤、排错、已知限制 |
 | [docs/design.md](docs/design.md) | 求解算法、目标函数、与 DMT 的接缝、模块结构 |
-| [docs/multicity-design.md](docs/multicity-design.md) | 多城规划设计（选城址、多城区域、奇观）、求解档位、阶段 8 起的新算法与离线基准 |
+| [docs/multicity-design.md](docs/multicity-design.md) | 多城规划设计（选城址、多城区域、奇观）、求解档位、阶段 8 起的算法与离线基准 |
 | [docs/self-test-report.md](docs/self-test-report.md) | 自测报告：验收清单逐项证据、测试结果、截图 |
 | [AGENTS.md](AGENTS.md) | 开发约定、环境、模组开发的坑 |
 | [tools/README.md](tools/README.md) | 校验、部署、游戏内测试工具 |
@@ -46,7 +46,8 @@ SmartDistrictPlanner/        模组本体：复制到游戏 Mods 目录即可运
   Scripts/                   规则、城市扫描、假想钉层、增量评估（SDP_Board）、搜索引擎（SDP_Search）、
                              单城/多城/城址求解器、档位、分帧任务、预览、打钉
 tests/                       游戏内测试（经 FireTuner 执行）；tests/offline 为离线测试与基准
-tools/                       校验、部署、测试运行器、游戏控制
+tools/                       校验、部署、测试运行器、游戏控制、打测试包
+report/                      交付报告的生成脚本与模板（输出到 dist/report/）
 docs/                        设计、安装测试说明、自测报告、截图
 ```
 

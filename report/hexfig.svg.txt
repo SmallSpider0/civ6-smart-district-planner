@@ -1,0 +1,27 @@
+<polygon class="hx-far" points="106.1,120.0 132.1,135.0 132.1,165.0 106.1,180.0 80.1,165.0 80.1,135.0"/>
+<polygon class="hx-far" points="132.1,165.0 158.0,180.0 158.0,210.0 132.1,225.0 106.1,210.0 106.1,180.0"/>
+<text class="hx-t hx-t-far" x="132.1" y="195.0" text-anchor="middle" dominant-baseline="central">工业</text>
+<polygon class="hx-far" points="158.0,210.0 184.0,225.0 184.0,255.0 158.0,270.0 132.1,255.0 132.1,225.0"/>
+<polygon class="hx-far" points="132.1,75.0 158.0,90.0 158.0,120.0 132.1,135.0 106.1,120.0 106.1,90.0"/>
+<polygon class="hx-near" points="158.0,120.0 184.0,135.0 184.0,165.0 158.0,180.0 132.1,165.0 132.1,135.0"/>
+<polygon class="hx-near" points="184.0,165.0 210.0,180.0 210.0,210.0 184.0,225.0 158.0,210.0 158.0,180.0"/>
+<text class="hx-t" x="184.0" y="195.0" text-anchor="middle" dominant-baseline="central">商业</text>
+<polygon class="hx-far" points="210.0,210.0 236.0,225.0 236.0,255.0 210.0,270.0 184.0,255.0 184.0,225.0"/>
+<polygon class="hx-far" points="158.0,30.0 184.0,45.0 184.0,75.0 158.0,90.0 132.1,75.0 132.1,45.0"/>
+<text class="hx-t hx-t-far" x="158.0" y="60.0" text-anchor="middle" dominant-baseline="central">山脉</text>
+<polygon class="hx-near" points="184.0,75.0 210.0,90.0 210.0,120.0 184.0,135.0 158.0,120.0 158.0,90.0"/>
+<text class="hx-t" x="184.0" y="105.0" text-anchor="middle" dominant-baseline="central">山脉</text>
+<polygon class="hx-move" points="210.0,120.0 236.0,135.0 236.0,165.0 210.0,180.0 184.0,165.0 184.0,135.0"/>
+<text class="hx-t hx-t-move" x="210.0" y="150.0" text-anchor="middle" dominant-baseline="central">学院</text>
+<polygon class="hx-near" points="236.0,165.0 262.0,180.0 262.0,210.0 236.0,225.0 210.0,210.0 210.0,180.0"/>
+<polygon class="hx-far" points="262.0,210.0 287.9,225.0 287.9,255.0 262.0,270.0 236.0,255.0 236.0,225.0"/>
+<text class="hx-t hx-t-far" x="262.0" y="240.0" text-anchor="middle" dominant-baseline="central">政府</text>
+<polygon class="hx-far" points="210.0,30.0 236.0,45.0 236.0,75.0 210.0,90.0 184.0,75.0 184.0,45.0"/>
+<polygon class="hx-near" points="236.0,75.0 262.0,90.0 262.0,120.0 236.0,135.0 210.0,120.0 210.0,90.0"/>
+<polygon class="hx-near" points="262.0,120.0 287.9,135.0 287.9,165.0 262.0,180.0 236.0,165.0 236.0,135.0"/>
+<text class="hx-t" x="262.0" y="150.0" text-anchor="middle" dominant-baseline="central">圣地</text>
+<polygon class="hx-far" points="287.9,165.0 313.9,180.0 313.9,210.0 287.9,225.0 262.0,210.0 262.0,180.0"/>
+<polygon class="hx-far" points="262.0,30.0 287.9,45.0 287.9,75.0 262.0,90.0 236.0,75.0 236.0,45.0"/>
+<polygon class="hx-far" points="287.9,75.0 313.9,90.0 313.9,120.0 287.9,135.0 262.0,120.0 262.0,90.0"/>
+<text class="hx-t hx-t-far" x="287.9" y="105.0" text-anchor="middle" dominant-baseline="central">剧院</text>
+<polygon class="hx-far" points="313.9,120.0 339.9,135.0 339.9,165.0 313.9,180.0 287.9,165.0 287.9,135.0"/>
