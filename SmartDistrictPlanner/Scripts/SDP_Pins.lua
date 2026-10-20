@@ -32,7 +32,14 @@ end
 -- ===========================================================================
 -- "id:x:y:icon:name" per pin, "," between pins, ";" between batches; a
 -- batch's replaced pins follow a "|" (same fields, id 0). Icons are type
--- names and names city numbers, neither holds a separator.
+-- names; names are city numbers, or a reminder text that Place keeps free
+-- of the separators.
+SDP_Pins.REMIND_ICON = "ICON_UNITOPERATION_REMOVE_FEATURE"
+
+-- A pin name that cannot break the record.
+function SDP_Pins.SafeName(name)
+  return (tostring(name or ""):gsub("[,;|]", " "))
+end
 local function EncodePin(p)
   return table.concat({ p.ID or 0, p.X, p.Y, p.Icon or "", p.Name or "" }, ":")
 end
@@ -110,7 +117,9 @@ function SDP_Pins.Own(playerID, numbers)
   local cfg, out = PlayerConfigurations[playerID], {}
   for _, batch in ipairs(Batches(playerID)) do
     for _, record in ipairs(batch.Pins) do
-      if wanted[record.Name] and Unchanged(cfg, record) then out[#out + 1] = record end
+      -- District pins are named with the number; reminder pins start with it.
+      local number = record.Name:match("^(%d+)") or ""
+      if wanted[number] and Unchanged(cfg, record) then out[#out + 1] = record end
     end
   end
   table.sort(out, function(a, b) return Map.GetPlotIndex(a.X, a.Y) < Map.GetPlotIndex(b.X, b.Y) end)
@@ -133,9 +142,10 @@ local function Make(cfg, entries)
     if PinAt(cfg, entry.X, entry.Y) == nil then
       local pin = cfg:GetMapPin(entry.X, entry.Y)
       local icon = entry.Icon or ("ICON_" .. entry.Type)
-      pin:SetName(entry.Name or "")
+      local name = SDP_Pins.SafeName(entry.Name)
+      pin:SetName(name)
       pin:SetIconName(icon)
-      made[#made + 1] = { ID = pin:GetID(), X = entry.X, Y = entry.Y, Icon = icon, Name = entry.Name or "" }
+      made[#made + 1] = { ID = pin:GetID(), X = entry.X, Y = entry.Y, Icon = icon, Name = name }
     end
   end
   return made

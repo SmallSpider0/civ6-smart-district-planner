@@ -117,7 +117,7 @@
       <Text>Count what the taken plots would yield (food and one-time yields weigh this too)</Text>
     </Replace>
     <Replace Tag="LOC_SDP_LAND_SHORT" Language="en_US">
-      <Text>Count taken plots</Text>
+      <Text>Land loss</Text>
     </Replace>
     <Replace Tag="LOC_SDP_WEIGHT_FEATURE_SHORT" Language="en_US">
       <Text>Clear</Text>
@@ -438,6 +438,139 @@
     </Replace>
     <Replace Tag="LOC_SDP_COVERAGE_TIP" Language="en_US">
       <Text>Cities within reach: {1_Names}</Text>
+    </Replace>
+    <!-- District states, counts, reminders, distance cost -->
+    <Replace Tag="LOC_SDP_COUNT" Language="en_US">
+      <Text>Districts</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_COUNT_PER_CITY" Language="en_US">
+      <Text>Per city</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_COUNT_TOOLTIP" Language="en_US">
+      <Text>How many districts that need population this city should plan, required ones included. Above the required number the rest are picked from the pool (best gain first), and three plans with different districts are offered. At the required number nothing is picked.</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_COUNT_TOOLTIP_MULTI" Language="en_US">
+      <Text>How many districts that need population each city of this list should plan, required ones included. Above the required number the solver picks the rest from the pool for each city.</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_GROUP_SPECIALTY" Language="en_US">
+      <Text>Districts that need population</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_GROUP_OTHER" Language="en_US">
+      <Text>Other districts</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_STATES_LEGEND" Language="en_US">
+      <Text>Click: pool &gt; must &gt; off</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_STATES_LEGEND_OTHER" Language="en_US">
+      <Text>Click: auto &gt; must &gt; off</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_STATES_TOOLTIP" Language="en_US">
+      <Text>Must: always placed. Pool: when the count is above the required number, the best of the pool are picked. Off: left out. Districts are compared by weighted adjacency (plus land, coverage and distance when on), so districts without adjacency (encampment, aerodrome) are never picked from the pool: make them Must. Districts limited to one per empire (government plaza) are Must or Off only.</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_STATES_OTHER_TOOLTIP" Language="en_US">
+      <Text>These districts need no population and do not count. Auto: added when the city needs it, placed by the solver. An aqueduct when the city lacks fresh water (housing from water below the 5 of a river or lake); a dam when three or more floodplain plots in its rings are free (Gathering Storm). Left out, with a note, when it fits nowhere.</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_STATE_MUST" Language="en_US">
+      <Text>Must</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_STATE_POOL" Language="en_US">
+      <Text>Pool</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_STATE_OFF" Language="en_US">
+      <Text>Off</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_STATE_AUTO" Language="en_US">
+      <Text>Auto</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_CELL_TOOLTIP" Language="en_US">
+      <Text>{1_Name}: {2_State} (click to change)</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_FEATURE_SHORT" Language="en_US">
+      <Text>Clear features</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_REMIND_SHORT" Language="en_US">
+      <Text>Reminders</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_REMIND_TOOLTIP" Language="en_US">
+      <Text>The plan's districts take adjacency from woods and rainforest next to them; clearing those later loses it. Placing the plan also puts a reminder pin (the remove-feature icon) on those plots, named with what clearing would cost; undo removes them too.</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_REMIND_PIN" Language="en_US">
+      <Text>Keep: {1_Losses}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_REMIND_LOSS" Language="en_US">
+      <Text>{1_District} {2_Yields}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_REMIND_SEPARATOR" Language="en_US">
+      <Text> / </Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_REMIND" Language="en_US">
+      <Text>Keep the {1_Feature} at {2_Where}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_AUTO" Language="en_US">
+      <Text>(added)</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_PICKED" Language="en_US">
+      <Text>(picked)</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_UNPLACED_AUTO" Language="en_US">
+      <Text>The added {1_Name} fits nowhere</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_POOL_SHORT" Language="en_US">
+      <Text>Pool short: {1_City}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_REASON_POOL_SHORT" Language="en_US">
+      <Text>{1_Count} fewer picked: no room for more of the pool</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SOLUTION_PICKED" Language="en_US">
+      <Text>Picked: {1_Names}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SOLUTION_DISTRICTS" Language="en_US">
+      <Text>{1_Count} districts, other plots</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_SUMMARY_PARTS" Language="en_US">
+      <Text>Weighted gain: {1_Gain} ({2_Parts})</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_PART_ADJACENCY" Language="en_US">
+      <Text>adjacency {1_Value}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_PART_LAND" Language="en_US">
+      <Text>land {1_Value}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_PART_COVERAGE" Language="en_US">
+      <Text>coverage {1_Value}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_PART_DISTANCE" Language="en_US">
+      <Text>distance {1_Value}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_WONDER_ADD" Language="en_US">
+      <Text>Add a wonder</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_WONDER_ADD_MORE" Language="en_US">
+      <Text>{1_N} chosen, add more</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_WONDER_CHIP" Language="en_US">
+      <Text>{1_Name} x</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_WONDER_CHIP_TOOLTIP" Language="en_US">
+      <Text>Click to take this wonder off</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_REPLACE_OWN_SHORT" Language="en_US">
+      <Text>Replace ({1_N})</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_WEIGHT_DISTANCE" Language="en_US">
+      <Text>Distance cost: each district and wonder loses this weight times (plots to the nearest of your city centers - 1), in the same unit as adjacency; 0 is off. The game does not charge more for far districts; far plots come later or cost more gold to buy. This expresses a wish to keep districts close.</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_MULTI_SITE_OFF" Language="en_US">
+      <Text>(off)</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_MULTI_SITE_TOOLTIP" Language="en_US">
+      <Text>Unticked, this site takes no part: no districts are planned for it and it is not counted as a new city. The pin stays where it is and still counts as a neighbour.</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_PLAN_COUNT" Language="en_US">
+      <Text>Per site</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_PLAN_COUNT_TOOLTIP" Language="en_US">
+      <Text>How many districts that need population each site is scored with. With more ticked, each site picks its best ones; otherwise all of them count.</Text>
     </Replace>
   </LocalizedText>
 </GameData>

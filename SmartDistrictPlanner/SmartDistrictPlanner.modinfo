@@ -63,6 +63,7 @@
       <File>Scripts/SDP_PageSites.lua</File>
       <File>Scripts/SDP_Pins.lua</File>
       <File>Scripts/SDP_Preview.lua</File>
+      <File>Scripts/SDP_Remind.lua</File>
       <File>Scripts/SDP_Rules.lua</File>
       <File>Scripts/SDP_Search.lua</File>
       <File>Scripts/SDP_SiteSolver.lua</File>
@@ -93,6 +94,7 @@
     <File>Scripts/SDP_PageSites.lua</File>
     <File>Scripts/SDP_Pins.lua</File>
     <File>Scripts/SDP_Preview.lua</File>
+    <File>Scripts/SDP_Remind.lua</File>
     <File>Scripts/SDP_Rules.lua</File>
     <File>Scripts/SDP_Search.lua</File>
     <File>Scripts/SDP_SiteSolver.lua</File>

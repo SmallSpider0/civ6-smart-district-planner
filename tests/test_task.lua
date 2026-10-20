@@ -43,7 +43,7 @@ end)
 test("the panel runs the fine tier as a task and can cancel it", function()
   local city = City()
   SDP_Panel.SelectCity(city:GetID())
-  for _, d in ipairs(SDP_Rules.PlannableDistricts(pid)) do SDP_Panel.SetSelected(d.Type, false) end
+  for _, d in ipairs(SDP_Rules.PlannableDistricts(pid)) do SDP_Panel.SetState(d.Type, "OFF") end
   for _, d in ipairs(Districts(4)) do SDP_Panel.SetSelected(d, true) end
   SDP_Panel.SetTier("FINE")
   T.eq(SDP_Panel.Solve(), nil, "a sliced solve returns at once")
@@ -65,7 +65,7 @@ test("closing the panel keeps the context shown until the task ends", function()
   local city = City()
   SDP_Panel.Open()
   SDP_Panel.SelectCity(city:GetID())
-  for _, d in ipairs(SDP_Rules.PlannableDistricts(pid)) do SDP_Panel.SetSelected(d.Type, false) end
+  for _, d in ipairs(SDP_Rules.PlannableDistricts(pid)) do SDP_Panel.SetState(d.Type, "OFF") end
   for _, d in ipairs(Districts(4)) do SDP_Panel.SetSelected(d, true) end
   SDP_Panel.SetTier("FINE")
   SDP_Panel.Solve()

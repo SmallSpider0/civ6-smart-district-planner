@@ -26,7 +26,18 @@ Session.__index = Session
 
 -- Request = {
 --   PlayerID, CityID
---   Districts            district types to place (each once)
+--   Districts            district types to place (each once): the required ones
+--   Pool, Count          candidate district types and how many districts that
+--                        take population (specialty districts, required ones
+--                        included) the plan should have: the solver picks the
+--                        rest from the pool (feedback item 1). Count at most
+--                        the required number: no picking, as before
+--   Auto                 { [district type] = true }: districts the plan adds by
+--                        itself when the city needs them (SDP_City.NeedsAuto:
+--                        an aqueduct without fresh water, a dam on floodplains)
+--   Distance             distance cost weight (0 or nil: off; SDP_City.DistanceCosts)
+--   Remind               find the woods and rainforest each solution's
+--                        districts take adjacency from (SDP_Remind)
 --   Weights              { [yield] = 0..3 } for the five adjacency yields; YIELD_FOOD
 --                        and FEATURE also weigh the land part; missing ones weigh 1
 --   AllowFeatureRemoval  default true (requirement constraint 5)
@@ -63,6 +74,36 @@ function SDP_Solver.NewSession(request, scan)
       end
     end
   end
+  -- Districts the city needs (feedback item 4), unless built or pinned.
+  local pinned = {}
+  for _, pin in ipairs(scan.Pins) do pinned[(pin.Icon or ""):gsub("^ICON_", "")] = true end
+  self.Auto = {}
+  for _, d in ipairs(plannable) do
+    if request.Auto and request.Auto[d.Type] and not seen[d.Type] and not status[d.Type] and not pinned[d.Type]
+        and SDP_City.NeedsAuto(scan, d.Type) then
+      seen[d.Type] = true
+      districts[#districts + 1] = d.Type
+      self.Auto[d.Type] = true
+    end
+  end
+  -- Candidates (feedback item 1): districts that take population, not
+  -- required, plannable here, without an empire limit.
+  local requiredSpecialty = 0
+  for _, districtType in ipairs(districts) do
+    if byType[districtType].Specialty then requiredSpecialty = requiredSpecialty + 1 end
+  end
+  local pool = {}
+  for _, districtType in ipairs(request.Pool or {}) do
+    local row = byType[districtType]
+    if row ~= nil and not seen[districtType] and not status[districtType] and row.Specialty
+        and not (row.MaxPerPlayer and row.MaxPerPlayer > 0) then
+      seen[districtType] = true
+      pool[#pool + 1] = districtType
+    end
+  end
+  local pick = math.max(0, math.min((request.Count or 0) - requiredSpecialty, #pool))
+  if pick == 0 then pool = {} end
+  self.Pick = pick
   self.Unplaced = unplaced
 
   self.Fixed = SDP_Overlay.FixedSubjects(scan)
@@ -74,10 +115,7 @@ function SDP_Solver.NewSession(request, scan)
 
   local lands = {}
   if request.Land then
-    local specialty = 0
-    for _, districtType in ipairs(districts) do
-      if byType[districtType].Specialty then specialty = specialty + 1 end
-    end
+    local specialty = requiredSpecialty + pick
     local population = math.max(scan.Population, SDP_Land.RequiredPopulation(scan.SpecialtyBuilt + specialty))
     self.Land = SDP_Land.ForScan(scan, self.Fixed, request.Weights, population)
     lands[1] = self.Land
@@ -85,12 +123,18 @@ function SDP_Solver.NewSession(request, scan)
 
   local slots = {}
   for s, districtType in ipairs(districts) do slots[s] = { Key = districtType, Type = "DISTRICT", Group = 1 } end
+  for _, districtType in ipairs(pool) do slots[#slots + 1] = { Key = districtType, Type = "DISTRICT", Group = 1, Optional = true } end
   self.Search = SDP_Search.New({
     PlayerID = playerID, Board = self.Board, Weights = self.Weights, Params = params,
     Candidates = scan.Candidates, Slots = slots, Lands = lands,
+    Pools = pick > 0 and { [1] = pick } or nil,
+    Costs = SDP_City.DistanceCosts(playerID, scan.Candidates, request.Distance),
+    Alternatives = params.Solutions or 3,
   })
   for _, s in ipairs(self.Search:Singles()) do
-    unplaced[#unplaced + 1] = { Type = districts[s], Reason = "NO_LEGAL_PLOT" }
+    if not slots[s].Optional then
+      unplaced[#unplaced + 1] = { Type = slots[s].Key, Reason = "NO_LEGAL_PLOT", Auto = self.Auto[slots[s].Key] }
+    end
   end
   self.Stats = self.Search.Stats
   return self
@@ -110,20 +154,71 @@ function Session:Continue()
   return self.Search:Continue()
 end
 
--- The plan for the best layout, with DMT's yields and tooltips.
+-- Plan, values and neighbours of one layout, with DMT's yields and
+-- tooltips. The board must be clear.
+function Session:PlanFor(layout)
+  local search, base = self.Search, self.Base
+  local subjects, slotsPlaced = {}, {}
+  for m = 1, search.K do
+    if layout[m] ~= 0 then
+      subjects[#subjects + 1] = search:Subject(m, layout[m])
+      slotsPlaced[#slotsPlaced + 1] = m
+    end
+  end
+  local final = SDP_Overlay.Evaluate(subjects, self.Fixed, self.Weights)
+  self.ExtraCalls = self.ExtraCalls + 2 * #subjects + #self.Fixed
+  local out = { Plan = {}, Neighbours = {}, Picked = {}, Legal = final.Legal }
+  for n, m in ipairs(slotsPlaced) do
+    local item, c = final.Placements[n], search.Candidates[layout[m]]
+    out.Plan[n] = {
+      Type = search.Types[m], X = c.X, Y = c.Y, Index = c.Index,
+      Yields = item.Yields, ToolTip = item.ToolTip, Score = item.Score,
+      Auto = self.Auto[search.Types[m]], Picked = search.Optional[m],
+    }
+    if search.Optional[m] then out.Picked[#out.Picked + 1] = search.Types[m] end
+  end
+  for f, item in ipairs(final.Fixed) do
+    if item.Score ~= base.Fixed[f].Score then
+      out.Neighbours[#out.Neighbours + 1] = {
+        Subject = item.Subject, Before = base.Fixed[f].Score, After = item.Score, ToolTip = item.ToolTip,
+      }
+    end
+  end
+  out.Total = final.Total
+  out.Adjacency = final.Total - base.Total
+  out.LandDelta = search:LandDelta(layout)
+  out.CostDelta = search:CostDelta(layout)
+  out.Gain = out.Adjacency + out.LandDelta + out.CostDelta
+  if self.Request.Remind then
+    local plan = {}
+    for n, p in ipairs(out.Plan) do plan[n] = { Type = p.Type, Kind = "DISTRICT", X = p.X, Y = p.Y } end
+    out.Remind = SDP_Remind.Find(self.PlayerID, plan)
+  end
+  return out
+end
+
+-- The plan for the best layout, with DMT's yields and tooltips, and up to
+-- Params.Solutions distinct solutions (other candidate districts first, then
+-- other plots).
 -- Returns {
 --   Ok, Error,
---   Plan        { Type, X, Y, Index, Yields, ToolTip, Score } per placed district
---   Unplaced    { Type, Reason }: NOT_AVAILABLE (not this civ's), BUILT,
+--   Solutions   best first, each { Plan, Neighbours, Picked (types chosen from
+--               the pool), Gain, Adjacency, LandDelta, CostDelta, Total, Remind }
+--   and the best solution's fields at the top level:
+--   Plan        { Type, X, Y, Index, Yields, ToolTip, Score, Auto, Picked } per placed district
+--   Unplaced    { Type, Reason, Auto }: NOT_AVAILABLE (not this civ's), BUILT,
 --               MAX_PER_PLAYER (SDP_City.DistrictStatus) or NO_LEGAL_PLOT
 --   Gain        adjacency gain over the baseline plus the land part (<= 0)
---   Adjacency   adjacency gain alone; LandDelta: the land part (0 when off)
+--               plus the distance cost (<= 0)
+--   Adjacency   adjacency gain alone; LandDelta, CostDelta: the land part and
+--               the distance cost (0 when off)
 --   Total, Baseline  joint DMT totals with and without the plan
 --   Neighbours  fixed subjects whose score the plan changes: { Subject, Before, After, ToolTip }
+--   Remind      (Request.Remind) the woods and rainforest the plan relies on (SDP_Remind)
 --   Quality     { Exhaustive, Bound, Gap, Converged, CanContinue, Truncated }
---   Stats       { Tier, Method = "exhaustive" | "shortlist" | "none", Layouts (counted
+--   Stats       { Tier, Method = "exhaustive" | "shortlist" | "pools" | "none", Layouts (counted
 --               up to ExactLimit + 1), Nodes, Calls (DMT), Evaluations, Tries,
---               Starts, Continues, Truncated, Hits, Mismatch }
+--               Starts, Continues, Truncated, Hits, Mismatch, Combos }
 --   Session     for SDP_Solver.Continue
 -- }
 function Session:Result()
@@ -131,38 +226,22 @@ function Session:Result()
   board:Clear()
   local base = self.Base
   local result = {
-    Ok = true, Plan = {}, Unplaced = self.Unplaced, Neighbours = {}, Session = self,
-    Baseline = base.Total, Total = base.Total, Gain = 0, Adjacency = 0, LandDelta = 0, Stats = stats,
+    Ok = true, Plan = {}, Unplaced = self.Unplaced, Neighbours = {}, Session = self, Solutions = {},
+    Baseline = base.Total, Total = base.Total, Gain = 0, Adjacency = 0, LandDelta = 0, CostDelta = 0, Stats = stats,
   }
-  local best = search.BestLayout
-  if search.K > 0 and best == nil then
+  if search.K > 0 and search.BestLayout == nil then
     result.Ok, result.Error = false, "NO_LEGAL_LAYOUT"
   end
-  if best ~= nil then
-    local subjects = {}
-    for m, i in ipairs(best) do subjects[m] = search:Subject(m, i) end
-    local final = SDP_Overlay.Evaluate(subjects, self.Fixed, self.Weights)
-    self.ExtraCalls = self.ExtraCalls + 2 * #subjects + #self.Fixed
-    for m, i in ipairs(best) do
-      local item, c = final.Placements[m], search.Candidates[i]
-      result.Plan[m] = {
-        Type = search.Types[m], X = c.X, Y = c.Y, Index = c.Index,
-        Yields = item.Yields, ToolTip = item.ToolTip, Score = item.Score,
-      }
+  if search.BestLayout ~= nil then
+    for _, entry in ipairs(search:Solutions(self.Params.Solutions or 3)) do
+      result.Solutions[#result.Solutions + 1] = self:PlanFor(entry.Layout)
     end
-    for f, item in ipairs(final.Fixed) do
-      if item.Score ~= base.Fixed[f].Score then
-        result.Neighbours[#result.Neighbours + 1] = {
-          Subject = item.Subject, Before = base.Fixed[f].Score, After = item.Score, ToolTip = item.ToolTip,
-        }
-      end
+    local best = result.Solutions[1]
+    for _, key in ipairs({ "Plan", "Neighbours", "Total", "Adjacency", "LandDelta", "CostDelta", "Gain", "Remind", "Picked" }) do
+      result[key] = best[key]
     end
-    local adjacency = final.Total - base.Total
-    local landDelta = search:LandDelta(best)
     -- The board's incremental value must match the full evaluation.
-    stats.Mismatch = (not final.Legal) or math.abs(adjacency + landDelta - search.BestGain) > 1e-6 or nil
-    result.Total, result.Adjacency, result.LandDelta = final.Total, adjacency, landDelta
-    result.Gain = adjacency + landDelta
+    stats.Mismatch = (not best.Legal) or math.abs(best.Gain - search.BestGain) > 1e-6 or nil
   end
   stats.Calls = board.Calls + self.ExtraCalls
   stats.Hits = board.Hits
@@ -173,7 +252,17 @@ end
 -- Expected work of a solve in SDP_Tiers units (one DMT call or one layout
 -- evaluation is about one unit), for the time estimate and the progress
 -- bar. Rough on purpose: it never changes what is computed.
-function SDP_Solver.EstimateUnits(n, k, params)
+function SDP_Solver.EstimateUnits(n, k, params, pool, pick)
+  if (pick or 0) > 0 and (pool or 0) > pick then
+    -- Picking from a pool: every candidate's singles, then about Combos
+    -- combinations solved (screened with a short list) and the best three refined.
+    local combos = 1
+    for i = 1, pick do combos = combos * (pool - pick + i) / i end
+    local each = SDP_Solver.EstimateUnits(n, k + pick, params)
+    local screened = math.min(combos, 1.5 * (params.Combos or 3))
+    return 3 * n * pool + each * (0.5 * screened + math.min(3, combos))
+  end
+  k = k + (pick or 0)
   if k == 0 or n == 0 then return 0 end
   local singles = 3 * n * k
   local layouts = 1

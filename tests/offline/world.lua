@@ -17,6 +17,7 @@
 --   d  desert           M  mountain           ~  coast      o  ocean
 --   f  grassland woods  j  plains rainforest  s  grassland marsh
 --   O  desert oasis     N  natural wonder (impassable)
+--   F  desert floodplains
 
 local World = {}
 
@@ -74,6 +75,7 @@ local function BuildGameInfo()
     { FeatureType = "FEATURE_OASIS", Name = "LOC_FEATURE_OASIS", AddsFreshWater = true, Settlement = false, Yields = Yields(3, 0, 1) },
     { FeatureType = "FEATURE_NW_TEST", Name = "LOC_FEATURE_NW_TEST", NaturalWonder = true, Impassable = true, Settlement = false,
       Yields = Yields(0, 0, 0, 2) },
+    { FeatureType = "FEATURE_FLOODPLAINS", Name = "LOC_FEATURE_FLOODPLAINS", Settlement = true, Yields = Yields(1) },
   }, "FeatureType")
   gi.Feature_Removes = Table({
     { FeatureType = "FEATURE_FOREST", YieldType = "YIELD_PRODUCTION", Yield = 20 },
@@ -123,10 +125,14 @@ local function BuildGameInfo()
     District("DISTRICT_ENCAMPMENT", { RequiresPopulation = true, NoAdjacentCity = true }),
     District("DISTRICT_GOVERNMENT", { RequiresPopulation = true, MaxPerPlayer = 1 }),
     District("DISTRICT_AQUEDUCT", { Aqueduct = true }),
+    District("DISTRICT_DAM", { OnePerCity = false }),
     District("DISTRICT_NEIGHBORHOOD", { OnePerCity = false }),
     District("DISTRICT_WONDER", { OnePerCity = false }),
     District("DISTRICT_ACROPOLIS", { RequiresPopulation = true, TraitType = "TRAIT_CIVILIZATION_DISTRICT_ACROPOLIS" }),
   }, "DistrictType")
+  -- Gathering Storm's extra district columns and required features (the dam).
+  gi.Districts_XP2 = Table({ { DistrictType = "DISTRICT_DAM", PreventsFloods = true, OnePerRiver = true } }, "DistrictType")
+  gi.District_RequiredFeatures = Table({ { DistrictType = "DISTRICT_DAM", FeatureType = "FEATURE_FLOODPLAINS" } })
   gi.DistrictReplaces = Table({
     { CivUniqueDistrictType = "DISTRICT_ACROPOLIS", ReplacesDistrictType = "DISTRICT_THEATER" },
   }, "CivUniqueDistrictType")
@@ -162,6 +168,7 @@ local function BuildGameInfo()
   Adj("DISTRICT_COMMERCIAL_HUB", "District_Gold", "YIELD_GOLD", 1, TWO_DISTRICTS)
   Adj("DISTRICT_COMMERCIAL_HUB", "Government_Gold", "YIELD_GOLD", 1, { AdjacentDistrict = "DISTRICT_GOVERNMENT" })
   Adj("DISTRICT_INDUSTRIAL_ZONE", "Aqueduct_Production", "YIELD_PRODUCTION", 2, { AdjacentDistrict = "DISTRICT_AQUEDUCT" })
+  Adj("DISTRICT_INDUSTRIAL_ZONE", "Dam_Production", "YIELD_PRODUCTION", 2, { AdjacentDistrict = "DISTRICT_DAM" })
   Adj("DISTRICT_INDUSTRIAL_ZONE", "District_Production", "YIELD_PRODUCTION", 1, TWO_DISTRICTS)
   Adj("DISTRICT_INDUSTRIAL_ZONE", "Government_Production", "YIELD_PRODUCTION", 1, { AdjacentDistrict = "DISTRICT_GOVERNMENT" })
   local adjRows = {}
@@ -251,6 +258,7 @@ local TERRAIN_CHARS = {
   d = { "TERRAIN_DESERT" }, M = { "TERRAIN_GRASS_MOUNTAIN" }, ["~"] = { "TERRAIN_COAST" }, o = { "TERRAIN_OCEAN" },
   f = { "TERRAIN_GRASS", "FEATURE_FOREST" }, j = { "TERRAIN_PLAINS", "FEATURE_JUNGLE" }, s = { "TERRAIN_GRASS", "FEATURE_MARSH" },
   O = { "TERRAIN_DESERT", "FEATURE_OASIS" }, N = { "TERRAIN_GRASS", "FEATURE_NW_TEST" },
+  F = { "TERRAIN_DESERT", "FEATURE_FLOODPLAINS" },
 }
 
 local function XY(spec)
@@ -388,6 +396,25 @@ function World.New(spec)
   function City:GetDistricts()
     local list = self.districts
     return { Members = function() return ipairs(list) end }
+  end
+  -- Housing from water as the game counts it: river, lake or oasis next to
+  -- the center 5, coast 3, else 2.
+  function City:GetGrowth()
+    local center = GetPlot(self.x, self.y)
+    return {
+      GetHousingFromWater = function()
+        if center.river then return 5 end
+        local coast = false
+        for dir = 0, 5 do
+          local n = Adjacent(self.x, self.y, dir)
+          if n ~= nil then
+            if n.lake or (n.feature ~= nil and n.feature.AddsFreshWater) then return 5 end
+            if n.terrain.Water then coast = true end
+          end
+        end
+        return coast and 3 or 2
+      end,
+    }
   end
 
   local District = {}
@@ -566,7 +593,8 @@ function World.New(spec)
     local f = Realized(pid, plot)
     if f.naturalWonder then return false, "natural wonder" end
     if plot.terrain.Water or plot.terrain.Mountain then return false, "terrain" end
-    if plot.feature ~= nil and not plot.feature.Removable and not plot.feature.NaturalWonder then return false, "feature" end
+    if plot.feature ~= nil and not plot.feature.Removable and not plot.feature.NaturalWonder
+        and plot.feature.FeatureType ~= "FEATURE_FLOODPLAINS" then return false, "feature" end
     if f.resource ~= nil and f.resource.ResourceClassType ~= "RESOURCECLASS_BONUS"
         and gi.Districts[subject.Key] ~= nil and not gi.Districts[subject.Key].CityCenter then
       return false, "resource"
@@ -583,6 +611,10 @@ function World.New(spec)
         end
       end
       if row.NoAdjacentCity and AdjacentTo(pid, plot.x, plot.y, "DISTRICT_CITY_CENTER") then return false, "next to a city" end
+      if subject.Key == "DISTRICT_DAM" and not (plot.river and plot.feature ~= nil
+          and plot.feature.FeatureType == "FEATURE_FLOODPLAINS") then
+        return false, "dam"
+      end
       if row.Aqueduct then
         local ok = false
         if AdjacentTo(pid, plot.x, plot.y, "DISTRICT_CITY_CENTER") then
@@ -610,7 +642,9 @@ function World.New(spec)
     if subject.Type ~= "DISTRICT" then return yields, "" end
     local plot = GetPlot(subject.X, subject.Y)
     local around = {}
-    for _, n in ipairs(Neighbours(subject.X, subject.Y)) do around[#around + 1] = Realized(pid, n) end
+    for _, n in ipairs(Neighbours(subject.X, subject.Y)) do
+      around[#around + 1] = GetRealizedPlotFeatures(pid, n, GetMapPinSubject(pid, n.x, n.y)) -- the global, as DMT
+    end
     for link in gi.District_Adjacencies() do
       if link.DistrictType == subject.Key then
         local row = gi.Adjacency_YieldChanges[link.YieldChangeId]
@@ -813,6 +847,10 @@ function World.New(spec)
       return copy
     end,
     CreateMapPinSubject = CreateSubject,
+    -- DMT reads a plot's features for its neighbours' adjacency here; the
+    -- feature sits under AdjacencyBonusTypes.ADJACENCY_FEATURE ("feature").
+    GetRealizedPlotFeatures = function(pid, plot) return Realized(pid, plot) end,
+    AdjacencyBonusTypes = { ADJACENCY_FEATURE = "feature", ADJACENCY_DISTRICT = "district", ADJACENCY_TERRAIN = "terrain" },
     UpdatePinYields = function() w.Calls.ClearCache = w.Calls.ClearCache + 1 end,
     CanPlacePin = CanPlace,
     GetBonusYields = BonusYields,

@@ -63,24 +63,36 @@ function SDP_Multi.Sites(playerID)
 end
 
 -- Who takes part. options.Existing = { [cityID] = true | false } overrides
--- the default (within NEAR of a new city). options.Only = { [cityID] = true }:
+-- the default (within NEAR of a new city). options.Sites = { [site Key] =
+-- false }: city-center pins left out (feedback item 10): no districts are
+-- planned for them, they do not count as new cities, and their pins stay
+-- fixed neighbours like any pin. options.Only = { [cityID] = true }:
 -- exactly these cities and no new ones (the single-city tab with wonders). Returns the participants (new
--- cities by plot index, then existing cities by ID) and every existing city
--- with { CityID, Name, Distance, Default, On, Included, Reason }:
--- Reason "CAP" when switched on but beyond MAX_CITIES.
+-- cities by plot index, then existing cities by ID), every existing city
+-- with { CityID, Name, Distance, Default, On, Included, Reason } (Reason
+-- "CAP" when switched on but beyond MAX_CITIES), and every city-center pin
+-- with { Key, X, Y, Name, Number, SiteNumber, Included }.
 function SDP_Multi.Participants(playerID, options)
   options = options or {}
   local participants = {}
-  local sites = options.Only and {} or SDP_Multi.Sites(playerID)
+  local allSites = options.Only and {} or SDP_Multi.Sites(playerID)
   local names = {}
-  for s, site in ipairs(sites) do names[s] = site.Name end
+  for s, site in ipairs(allSites) do names[s] = site.Name end
   local siteNumbers = SDP_City.SiteNumbers(playerID, names)
   local cityNumbers = SDP_City.CityNumbers(playerID)
-  for s, site in ipairs(sites) do
-    participants[#participants + 1] = {
-      Kind = "SITE", Key = "S" .. site.Index, X = site.X, Y = site.Y, Index = site.Index,
-      Name = site.Name, SiteNumber = s, Number = siteNumbers[s], PinID = site.PinID,
-    }
+  local sites, siteList = {}, {}
+  for s, site in ipairs(allSites) do
+    local key = "S" .. site.Index
+    local included = not (options.Sites and options.Sites[key] == false)
+    siteList[#siteList + 1] = { Key = key, X = site.X, Y = site.Y, Name = site.Name, Number = siteNumbers[s],
+      SiteNumber = s, Included = included }
+    if included then
+      sites[#sites + 1] = site
+      participants[#participants + 1] = {
+        Kind = "SITE", Key = key, X = site.X, Y = site.Y, Index = site.Index,
+        Name = site.Name, SiteNumber = s, Number = siteNumbers[s], PinID = site.PinID,
+      }
+    end
   end
   local cities = {}
   for _, city in Players[playerID]:GetCities():Members() do cities[#cities + 1] = city end
@@ -124,7 +136,7 @@ function SDP_Multi.Participants(playerID, options)
       }
     end
   end
-  return participants, existing
+  return participants, existing, siteList
 end
 
 -- ===========================================================================
@@ -146,8 +158,17 @@ end
 -- Request = {
 --   PlayerID, Tier, Params (overrides, tests)
 --   Districts            default plan of every new city, and of existing cities
---                        minus what they have built or pinned already
+--                        minus what they have built or pinned already (required)
 --   Plans                { [participant Key] = { district types } } overrides
+--   Pool, Count          default candidates and number of districts that take
+--                        population per city (required ones included): each
+--                        city picks the rest from its pool (feedback item 11)
+--   Pools, Counts        { [participant Key] = ... } overrides of Pool, Count
+--   Auto, Autos          { [district type] = true }: districts a city gets when
+--                        it needs them (SDP_City.NeedsAuto); Autos per Key
+--   Sites                { [site Key] = false }: city-center pins left out
+--   Distance             distance cost weight (0 or nil: off)
+--   Remind               find the woods and rainforest each solution relies on
 --   Wonders              wonder types (building types) to place, in any participating city
 --   Existing             { [cityID] = bool } who else takes part (see Participants)
 --   Only                 { [cityID] = true }: exactly these cities (see Participants)
@@ -168,15 +189,18 @@ function SDP_Multi.NewSession(request)
   local land = request.Land ~= false
   local options = SDP_City.ScanOptions(request)
 
-  local participants, existing = SDP_Multi.Participants(playerID, { Existing = request.Existing, Only = request.Only })
-  self.Participants, self.Existing = participants, existing
+  local participants, existing, siteList = SDP_Multi.Participants(playerID,
+    { Existing = request.Existing, Only = request.Only, Sites = request.Sites })
+  self.Participants, self.Existing, self.SiteList = participants, existing, siteList
 
   -- Plans, scans.
   local plannable, byType = SDP_Rules.PlannableDistricts(playerID), {}
   for _, d in ipairs(plannable) do byType[d.Type] = d end
   local unplaced = {}
+  self.Auto = {}
   for _, part in ipairs(participants) do
     local wanted = (request.Plans and request.Plans[part.Key]) or request.Districts or {}
+    local count = (request.Counts and request.Counts[part.Key]) or request.Count or 0
     local specialty = 0
     for _, districtType in ipairs(wanted) do
       if byType[districtType] and byType[districtType].Specialty then specialty = specialty + 1 end
@@ -184,7 +208,7 @@ function SDP_Multi.NewSession(request)
     if part.Kind == "SITE" then
       part.Scan = SDP_City.ScanSite(playerID, part.X, part.Y, {
         allowFeatureRemoval = options.allowFeatureRemoval, ignorePins = options.ignorePins, name = part.Name,
-        population = SDP_Land.RequiredPopulation(specialty),
+        population = SDP_Land.RequiredPopulation(math.max(specialty, count)),
       })
     else
       part.Scan = SDP_City.Scan(playerID, part.CityID, options)
@@ -207,6 +231,35 @@ function SDP_Multi.NewSession(request)
         end
       end
     end
+    -- Districts the city needs (feedback item 4), unless built or pinned.
+    local auto = (request.Autos and request.Autos[part.Key]) or request.Auto or {}
+    local pinnedHere = PinnedDistricts(part.Scan)
+    part.Auto = {}
+    for _, d in ipairs(plannable) do
+      if auto[d.Type] and not seen[d.Type] and not status[d.Type] and not pinnedHere[d.Type]
+          and SDP_City.NeedsAuto(part.Scan, d.Type) then
+        seen[d.Type] = true
+        plan[#plan + 1] = d.Type
+        part.Auto[d.Type] = true
+      end
+    end
+    -- Candidates (feedback item 11): districts that take population, not
+    -- required, plannable here, without an empire limit.
+    local requiredSpecialty = 0
+    for _, districtType in ipairs(plan) do
+      if byType[districtType].Specialty then requiredSpecialty = requiredSpecialty + 1 end
+    end
+    local pool = {}
+    for _, districtType in ipairs((request.Pools and request.Pools[part.Key]) or request.Pool or {}) do
+      local row = byType[districtType]
+      if row ~= nil and not seen[districtType] and not status[districtType] and not pinnedHere[districtType]
+          and row.Specialty and not (row.MaxPerPlayer and row.MaxPerPlayer > 0) then
+        seen[districtType] = true
+        pool[#pool + 1] = districtType
+      end
+    end
+    part.Pick = math.max(0, math.min(count - requiredSpecialty, #pool))
+    part.Pool = part.Pick > 0 and pool or {}
     part.Plan = plan
   end
   self.Unplaced = unplaced
@@ -263,7 +316,7 @@ function SDP_Multi.NewSession(request)
       end
     end
     for p, part in ipairs(participants) do
-      local specialty = part.Scan.SpecialtyBuilt
+      local specialty = part.Scan.SpecialtyBuilt + part.Pick
       for _, districtType in ipairs(part.Plan) do
         if byType[districtType].Specialty then specialty = specialty + 1 end
       end
@@ -315,6 +368,17 @@ function SDP_Multi.NewSession(request)
         slots[#slots + 1] = { Key = districtType, Type = "DISTRICT", Group = p, Allowed = part.Allowed }
         slotCity[#slots] = p
       end
+    end
+  end
+  local pools = nil
+  for p, part in ipairs(participants) do
+    for _, districtType in ipairs(part.Pool) do
+      slots[#slots + 1] = { Key = districtType, Type = "DISTRICT", Group = p, Allowed = part.Allowed, Optional = true }
+      slotCity[#slots] = p
+    end
+    if part.Pick > 0 then
+      pools = pools or {}
+      pools[p] = part.Pick
     end
   end
   for _, districtType in ipairs(limitedOrder) do
@@ -378,21 +442,30 @@ function SDP_Multi.NewSession(request)
     end
   end
 
+  local centers = {}
+  for _, part in ipairs(participants) do
+    if part.Kind == "SITE" then centers[#centers + 1] = { X = part.X, Y = part.Y } end
+  end
   self.Search = SDP_Search.New({
     PlayerID = playerID, Board = self.Board, Weights = self.Weights, Params = params,
     Candidates = candidates, Slots = slots, Lands = lands, Coverage = self.Coverage,
+    Pools = pools, Costs = SDP_City.DistanceCosts(playerID, candidates, request.Distance, centers),
   })
   for _, s in ipairs(self.Search:Singles()) do
-    local city = slotCity[s] and participants[slotCity[s]].Key or "WONDERS"
-    unplaced[#unplaced + 1] = { City = city, Type = slots[s].Key, Reason = "NO_LEGAL_PLOT" }
+    if not slots[s].Optional then
+      local city = slotCity[s] and participants[slotCity[s]].Key or "WONDERS"
+      local auto = slotCity[s] and participants[slotCity[s]].Auto[slots[s].Key] or nil
+      unplaced[#unplaced + 1] = { City = city, Type = slots[s].Key, Reason = "NO_LEGAL_PLOT", Auto = auto }
+    end
   end
   self.SlotSpecs = slots
-  -- Blocks: the search's slots of each participant, then the wonders.
+  -- Blocks: the search's required slots of each participant, then the
+  -- wonders (a city's candidates are in Search.PoolSlots).
   local blocks = {}
   for p = 1, wonderGroup do blocks[p] = {} end
   for m = 1, self.Search.K do
     local p = self.Search.Groups[m]
-    blocks[p][#blocks[p] + 1] = m
+    if not self.Search.Optional[m] then blocks[p][#blocks[p] + 1] = m end
   end
   self.Blocks = blocks
   self.Stats = self.Search.Stats
@@ -453,6 +526,52 @@ function Session:Greedy(block, layout)
   return layout
 end
 
+-- The slots of city p in a layout's plan: its required ones and the
+-- candidates the layout places.
+function Session:BlockOf(p, layout)
+  local search = self.Search
+  if (search.PoolCount[p] or 0) == 0 then return self.Blocks[p] end
+  return search:ActiveOrder(p, search:ChosenOf(p, layout))
+end
+
+-- Plan city p with everything else in `base` fixed (its own slots off).
+-- With candidates (feedback item 11) and `choose`, the best Params.Combos
+-- combinations by optimistic value are each solved and the best kept;
+-- otherwise the city keeps the candidates of `keep` (a layout). Returns the
+-- layout and value, or nil.
+function Session:SolveCity(p, base, choose, keep)
+  local search = self.Search
+  if (search.PoolCount[p] or 0) == 0 then return search:SolveBlock(self.Blocks[p], base) end
+  if not choose then return search:SolveBlock(search:ActiveOrder(p, search:ChosenOf(p, keep)), base) end
+  local best, bestGain = nil, nil
+  local tried = 0
+  for _, combo in ipairs(search:Combos(p)) do
+    if tried >= (self.Params.Combos or 3) or search:OverBudget() then break end
+    tried = tried + 1
+    local layout, gain = search:SolveBlock(search:ActiveOrder(p, combo.Slots), base)
+    if layout ~= nil and (best == nil or SDP_Search.Placed(layout) > SDP_Search.Placed(best)
+        or (SDP_Search.Placed(layout) == SDP_Search.Placed(best) and SDP_Search.Better(gain, layout, bestGain, best))) then
+      best, bestGain = layout, gain
+    end
+  end
+  return best, bestGain
+end
+
+-- Local search, then (with candidates) swap a city's candidate for another
+-- while that improves, each swap followed by local search.
+function Session:Polish(layout, gain)
+  local search = self.Search
+  layout, gain = search:LocalSearch(layout, gain)
+  if not search:HasPools() then return layout, gain end
+  for _ = 1, 4 do
+    if search:OverBudget() then break end
+    local swapped, swappedGain = search:TypeSwaps(layout, gain)
+    if swapped == nil then break end
+    layout, gain = search:LocalSearch(swapped, swappedGain)
+  end
+  return layout, gain
+end
+
 -- One start, then local search and block rounds. Returns its layout.
 -- Start 2 is joint: one model beam over every city's districts at once, so
 -- that clusters can merge across cities (districts of two cities next to
@@ -464,17 +583,24 @@ function Session:RunStart(s)
   local beam = params.Beam
   params.Beam = math.max(10, math.floor(beam * scale))
   local layout = search:EmptyLayout()
+  local function Pooled(p) return (search.PoolCount[p] or 0) > 0 end
   if s == 2 then
+    -- Each city with candidates takes its best ranked combination here.
+    local active = {}
+    for p = 1, #self.Participants do
+      active[p] = Pooled(p) and search:ActiveOrder(p, search:Combos(p)[1].Slots) or self.Blocks[p]
+    end
+    active[self.WonderGroup] = self.Blocks[self.WonderGroup]
     local districts = {}
     for p = 1, #self.Participants do
-      for _, m in ipairs(self.Blocks[p]) do districts[#districts + 1] = m end
+      for _, m in ipairs(active[p]) do districts[#districts + 1] = m end
     end
     if #districts > 0 and not search:OverBudget() then
       local ranked = search:Shortlist(districts, layout)
       if ranked[1] ~= nil then layout = Copy(ranked[1].Layout) end
     end
     for _, p in ipairs(order) do
-      local block = self.Blocks[p]
+      local block = active[p]
       local missing = {}
       for _, m in ipairs(block) do
         if layout[m] == 0 then missing[#missing + 1] = m end
@@ -486,26 +612,27 @@ function Session:RunStart(s)
     end
   else
     for _, p in ipairs(order) do
-      local block = self.Blocks[p]
-      if #block > 0 and not search:OverBudget() then
-        local best = search:SolveBlock(block, layout)
-        layout = best or self:Greedy(block, layout)
+      if (#self.Blocks[p] > 0 or Pooled(p)) and not search:OverBudget() then
+        local best = self:SolveCity(p, layout, true)
+        layout = best or self:Greedy(self.Blocks[p], layout)
       end
     end
   end
   local gain, legal = search:Evaluate(layout)
   search:Consider(gain, legal, layout)
   if self.First == nil then self.First = { Layout = Copy(layout), Gain = gain } end
-  layout, gain = search:LocalSearch(layout, gain)
+  layout, gain = self:Polish(layout, gain)
   local placed = SDP_Search.Placed(layout)
   for _ = 1, params.Rounds do
     local improved = false
     for _, p in ipairs(order) do
-      local block = self.Blocks[p]
+      local block = self:BlockOf(p, layout)
       if #block > 0 and not search:OverBudget() then
         local base = Copy(layout)
-        for _, m in ipairs(block) do base[m] = 0 end
-        local trial, trialGain = search:SolveBlock(block, base)
+        for m = 1, search.K do
+          if search.Groups[m] == p then base[m] = 0 end
+        end
+        local trial, trialGain = self:SolveCity(p, base, false, layout)
         if trial ~= nil and SDP_Search.Placed(trial) >= placed and trialGain > gain then
           layout, gain, improved = trial, trialGain, true
           search:Consider(gain, true, layout)
@@ -513,7 +640,7 @@ function Session:RunStart(s)
       end
     end
     if not improved then break end
-    layout, gain = search:LocalSearch(layout, gain)
+    layout, gain = self:Polish(layout, gain)
   end
   params.Beam = beam
   self.Starts[#self.Starts + 1] = { Layout = layout, Gain = gain, Order = order }
@@ -585,12 +712,12 @@ end
 
 function Session:Repair()
   local search, params = self.Search, self.Params
-  if search.BestLayout == nil or SDP_Search.Placed(search.BestLayout) == search.K then return end
+  if search.BestLayout == nil or SDP_Search.Placed(search.BestLayout) == search.Selected then return end
   local callCap, tryCap = search.CallCap, search.TryCap
   search.CallCap = search.Board.Calls + math.ceil(params.CallLimit / 4)
   search.TryCap = search.Stats.Tries + math.ceil(params.TryLimit / 4)
   for m = 1, search.K do
-    if search.BestLayout[m] == 0 and not search:OverBudget() then
+    if search.BestLayout[m] == 0 and not search.Optional[m] and not search:OverBudget() then
       local spec = self.SlotSpecs[search.SlotIndex[m]]
       local single, plots = search.Single[m], {}
       for i = 1, search.N do
@@ -674,7 +801,8 @@ end
 
 -- Up to `count` layouts that differ enough (design 4.5): the best one and
 -- each start's result, best first; a layout is kept when it differs from
--- every kept one in at least max(2, 20% of the slots) positions.
+-- every kept one in at least max(2, 20% of the slots) positions, or picks
+-- other candidate districts (SDP_Search IsDistinct).
 function Session:Distinct(count)
   local search = self.Search
   local pool = {}
@@ -685,17 +813,12 @@ function Session:Distinct(count)
     if a.Placed ~= b.Placed then return a.Placed > b.Placed end
     return SDP_Search.Better(a.Gain, a.Layout, b.Gain, b.Layout)
   end)
-  local need = math.max(2, math.ceil(0.2 * search.K))
   local kept = {}
   for _, entry in ipairs(pool) do
     if #kept >= count then break end
     local distinct = true
     for _, other in ipairs(kept) do
-      local diff = 0
-      for m = 1, search.K do
-        if entry.Layout[m] ~= other.Layout[m] then diff = diff + 1 end
-      end
-      if diff < need then distinct = false end
+      if not search:IsDistinct(entry.Layout, other.Layout) then distinct = false end
     end
     if distinct then kept[#kept + 1] = entry end
   end
@@ -710,7 +833,7 @@ function Session:PlanFor(layout)
   for p, part in ipairs(self.Participants) do
     out.Cities[p] = {
       Key = part.Key, Kind = part.Kind, Name = part.Name, X = part.X, Y = part.Y, CityID = part.CityID,
-      SiteNumber = part.SiteNumber, Number = part.Number, Plan = part.Plan, Gain = 0,
+      SiteNumber = part.SiteNumber, Number = part.Number, Plan = part.Plan, Gain = 0, Picked = {},
     }
   end
   local subjects, slotsPlaced = {}, {}
@@ -718,10 +841,18 @@ function Session:PlanFor(layout)
     if layout[m] ~= 0 then
       subjects[#subjects + 1] = search:Subject(m, layout[m])
       slotsPlaced[#slotsPlaced + 1] = m
-    else
+    elseif not search.Optional[m] then
       local spec = self.SlotSpecs[search.SlotIndex[m]]
       local city = spec.Wonder and "WONDERS" or self.Participants[spec.Group].Key
       out.Unplaced[#out.Unplaced + 1] = { City = city, Type = spec.Key, Reason = "NO_FREE_PLOT" }
+    end
+  end
+  -- A city that could not fit as many candidates as asked.
+  for p, part in ipairs(self.Participants) do
+    local short = (search.PoolCount[p] or 0) - #search:ChosenOf(p, layout)
+    if (part.Pick or 0) > (search.PoolCount[p] or 0) then short = short + part.Pick - search.PoolCount[p] end
+    if short > 0 then
+      out.Unplaced[#out.Unplaced + 1] = { City = part.Key, Type = "POOL", Reason = "POOL_SHORT", Count = short }
     end
   end
   local final = SDP_Overlay.Evaluate(subjects, self.Fixed, self.Weights)
@@ -730,12 +861,18 @@ function Session:PlanFor(layout)
     local i = layout[m]
     local item, c = final.Placements[n], search.Candidates[i]
     local p = self:OwnerOf(m, i)
+    local spec = self.SlotSpecs[search.SlotIndex[m]]
     out.Plan[n] = {
       City = self.Participants[p].Key, Type = search.Types[m], Kind = search.Kinds[m], X = c.X, Y = c.Y, Index = c.Index,
       Yields = item.Yields, ToolTip = item.ToolTip, Score = item.Score,
       Reach = self.Coverage and self.Coverage:Reach(search.Types[m], c.X, c.Y) or nil,
+      Picked = search.Optional[m], Auto = (not spec.Wonder) and self.Participants[p].Auto[search.Types[m]] or nil,
     }
     out.Cities[p].Gain = out.Cities[p].Gain + item.Score
+    if search.Optional[m] then
+      local picked = out.Cities[p].Picked
+      picked[#picked + 1] = search.Types[m]
+    end
   end
   for f, item in ipairs(final.Fixed) do
     if item.Score ~= base.Fixed[f].Score then
@@ -763,9 +900,15 @@ function Session:PlanFor(layout)
     out.Covered, out.CoveredBy = #newly, {}
     for _, group in ipairs(order) do out.CoveredBy[#out.CoveredBy + 1] = byGroup[group] end
   end
-  out.Gain = out.Adjacency + out.LandDelta + out.CoverageDelta
+  out.CostDelta = search:CostDelta(layout)
+  out.Gain = out.Adjacency + out.LandDelta + out.CoverageDelta + out.CostDelta
   out.Total = final.Total
   out.Legal = final.Legal
+  if self.Request.Remind then
+    local plan = {}
+    for n, item in ipairs(out.Plan) do plan[n] = { Type = item.Type, Kind = item.Kind, X = item.X, Y = item.Y } end
+    out.Remind = SDP_Remind.Find(self.PlayerID, plan)
+  end
   return out
 end
 
@@ -793,7 +936,7 @@ function Session:Result()
     Ok = true, Session = self, Existing = self.Existing, Stats = stats, Baseline = self.Base.Total,
     FirstGain = self.First and self.First.Gain or nil, Solutions = {},
     Plan = {}, Unplaced = {}, Neighbours = {}, Cities = {}, Gain = 0, Adjacency = 0, LandDelta = 0, CoverageDelta = 0,
-    Total = self.Base.Total,
+    CostDelta = 0, Total = self.Base.Total, Sites = self.SiteList,
   }
   if search.K > 0 and search.BestLayout == nil then result.Ok, result.Error = false, "NO_LEGAL_LAYOUT" end
   for _, entry in ipairs(self:Distinct(self.Params.Solutions or 3)) do
@@ -804,7 +947,7 @@ function Session:Result()
   local best = result.Solutions[1]
   if best ~= nil then
     for _, key in ipairs({ "Plan", "Unplaced", "Neighbours", "Cities", "Gain", "Adjacency", "LandDelta", "CoverageDelta",
-      "Covered", "CoveredBy", "Total" }) do
+      "CostDelta", "Covered", "CoveredBy", "Total", "Remind" }) do
       result[key] = best[key]
     end
     stats.Mismatch = (not best.Legal) or math.abs(best.Gain - search.BestGain) > 1e-6 or nil
@@ -820,14 +963,20 @@ end
 
 -- Expected work in SDP_Tiers units (time estimate, progress bar); rough, it
 -- never changes what is computed. About 30 candidate plots per city.
-function SDP_Multi.EstimateUnits(cities, districts, wonders, params)
-  local slots = cities * districts + wonders
+-- pick: districts each city picks from a pool of `pool` (0: none).
+function SDP_Multi.EstimateUnits(cities, districts, wonders, params, pick, pool)
+  pick, pool = pick or 0, pool or 0
+  local slots = cities * (districts + pick) + wonders
   if slots == 0 then return 0 end
   local n = 30 -- plots a city can use, typically
   local growth = (math.max(2, cities) / 2) ^ SDP_Tiers.MULTI_GROWTH
   local units = (params.Work or 100) * n * slots * growth
+  if pick > 0 and pool > pick then
+    -- Each city's block is solved for several combinations, and swaps.
+    units = units * (1 + 0.5 * (params.Combos or 3)) + 3 * n * cities * pool
+  end
   local prelude = params.Prelude and SDP_Tiers.Multi[params.Prelude]
-  if prelude ~= nil then units = units + SDP_Multi.EstimateUnits(cities, districts, wonders, prelude) end
+  if prelude ~= nil then units = units + SDP_Multi.EstimateUnits(cities, districts, wonders, prelude, pick, pool) end
   return units
 end
 

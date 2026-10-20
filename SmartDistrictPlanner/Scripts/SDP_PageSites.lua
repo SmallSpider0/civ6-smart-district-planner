@@ -2,7 +2,9 @@
 -- (docs/multicity-design.md section 3, step 1). Included by SDP_Panel.lua
 -- into its context: uses its Controls and the SDP_UI helpers.
 --   Inputs    number of new cities K, relay distance D, a weight preset and
---             the ten weights, the districts each site is scored with
+--             the ten weights plus the distance cost, the districts each site
+--             is scored with: its best PlanCount of the ticked ones (feedback
+--             item 8; default 3)
 --   Solve     over several frames (SDP_Task); up to three distinct site
 --             combinations; the selected one is previewed; "place" puts a
 --             city-center map tack on each site, which step 2 then plans.
@@ -11,32 +13,36 @@ SDP_PageSites = {}
 local P = SDP_PageSites
 P.Name = "SITES"
 
-local m_districtIM = InstanceManager:new("DistrictRow", "Root", Controls.SitesDistrictStack)
+local m_districtIM = InstanceManager:new("CheckCell", "Root", Controls.SitesDistrictStack)
 local m_weightIM = InstanceManager:new("WeightColumn", "Root", Controls.SitesWeightStack)
 local m_weightIM2 = InstanceManager:new("WeightColumn", "Root", Controls.SitesWeightStack2)
 local m_solutionIM = InstanceManager:new("SolutionRow", "Root", Controls.SitesSolutionStack)
 local m_resultIM = InstanceManager:new("ResultRow", "Root", Controls.SitesResultStack)
 
--- The ten site weights in two rows (design 3.3).
+-- The ten site weights (design 3.3) and the distance cost, in two rows, all
+-- with the game's font icons (feedback item 3).
 local COLUMNS_A = {
-  { Key = "YIELD_SCIENCE", Icon = "ICON_ENVOY_BONUS_SCIENCE" },
-  { Key = "YIELD_CULTURE", Icon = "ICON_ENVOY_BONUS_CULTURE" },
-  { Key = "YIELD_FAITH", Icon = "ICON_ENVOY_BONUS_FAITH" },
-  { Key = "YIELD_GOLD", Icon = "ICON_ENVOY_BONUS_GOLD" },
-  { Key = "YIELD_PRODUCTION", Icon = "ICON_ENVOY_BONUS_PRODUCTION" },
+  { Key = "YIELD_SCIENCE", Glyph = "[ICON_Science]" },
+  { Key = "YIELD_CULTURE", Glyph = "[ICON_Culture]" },
+  { Key = "YIELD_FAITH", Glyph = "[ICON_Faith]" },
+  { Key = "YIELD_GOLD", Glyph = "[ICON_Gold]" },
+  { Key = "YIELD_PRODUCTION", Glyph = "[ICON_Production]" },
+  { Key = "DISTANCE", Glyph = "[ICON_Movement]", ToolTip = "LOC_SDP_WEIGHT_DISTANCE", Step = 0.5 },
 }
 local COLUMNS_B = {
   { Key = "YIELD_FOOD", Glyph = "[ICON_Food]" },
   { Key = "AMENITY", Glyph = "[ICON_Amenities]", ToolTip = "LOC_SDP_WEIGHT_AMENITY" },
-  { Key = "STRATEGIC", Glyph = "LOC_SDP_WEIGHT_STRATEGIC_SHORT", ToolTip = "LOC_SDP_WEIGHT_STRATEGIC" },
-  { Key = "FEATURE", Glyph = "LOC_SDP_WEIGHT_FEATURE_SHORT", ToolTip = "LOC_SDP_WEIGHT_FEATURE" },
-  { Key = "APPEAL", Glyph = "LOC_SDP_WEIGHT_APPEAL_SHORT", ToolTip = "LOC_SDP_WEIGHT_APPEAL" },
+  { Key = "STRATEGIC", Glyph = "[ICON_RESOURCE_IRON]", ToolTip = "LOC_SDP_WEIGHT_STRATEGIC" },
+  { Key = "FEATURE", Glyph = "[ICON_Terrain]", ToolTip = "LOC_SDP_WEIGHT_FEATURE" },
+  { Key = "APPEAL", Glyph = "[ICON_GreatWork_Landscape]", ToolTip = "LOC_SDP_WEIGHT_APPEAL" },
 }
 
 local m_k, m_d = 3, 8
 local MIN_D, MAX_D = 4, 15
+local m_planCount = 3 -- districts each site is scored with (feedback item 8)
+local MAX_PLAN = 6
 local m_preset = "BALANCED"
-local m_weights = {}
+local m_weights = { DISTANCE = 0 }
 for key, value in pairs(SDP_Sites.PRESETS.BALANCED) do m_weights[key] = value end
 local m_views = {}
 local m_selected = {}
@@ -66,17 +72,21 @@ end
 function P.Request()
   local weights = {}
   for key, value in pairs(m_weights) do weights[key] = value end
-  return { PlayerID = Game.GetLocalPlayer(), Tier = m_tier, K = m_k, D = m_d, Districts = Plan(), Weights = weights }
+  return { PlayerID = Game.GetLocalPlayer(), Tier = m_tier, K = m_k, D = m_d, Districts = Plan(), Weights = weights,
+    PlanCount = m_planCount, Distance = m_weights.DISTANCE }
 end
 
 local function UpdateEstimate()
   local params = SDP_Tiers.Params(SDP_Tiers.Sites, m_tier)
-  Controls.SitesEstimate:SetText(SDP_UI.EstimateText(SDP_SiteSolver.EstimateUnits(#Plan(), m_k, params)))
+  Controls.SitesEstimate:SetText(SDP_UI.EstimateText(SDP_SiteSolver.EstimateUnits(#Plan(), m_k, params, false, m_planCount)))
 end
 
 local function ShowSteppers()
   Controls.SitesCount:SetText(tostring(m_k))
   Controls.SitesDistance:SetText(tostring(m_d))
+  Controls.SitesPlanValue:SetText(tostring(m_planCount))
+  Controls.SitesPlanLess:SetDisabled(m_planCount <= 1)
+  Controls.SitesPlanMore:SetDisabled(m_planCount >= MAX_PLAN)
   Controls.SitesCountLess:SetDisabled(m_k <= 1)
   Controls.SitesCountMore:SetDisabled(m_k >= SDP_SiteSolver.MAX_K)
   Controls.SitesDistanceLess:SetDisabled(m_d <= MIN_D)
@@ -87,6 +97,17 @@ function P.SetCount(k)
   k = math.max(1, math.min(SDP_SiteSolver.MAX_K, k))
   if k ~= m_k then
     m_k = k
+    ClearResult()
+  end
+  ShowSteppers()
+  UpdateEstimate()
+end
+
+-- How many districts each site is scored with (its best ones of the ticked).
+function P.SetPlanCount(n)
+  n = math.max(1, math.min(MAX_PLAN, n))
+  if n ~= m_planCount then
+    m_planCount = n
     ClearResult()
   end
   ShowSteppers()
@@ -115,7 +136,9 @@ function P.SetPreset(name)
   local preset = SDP_Sites.PRESETS[name]
   if preset == nil then return end
   m_preset = name
-  for _, key in ipairs(SDP_Sites.WEIGHT_KEYS) do P.SetWeight(key, preset[key]) end
+  for _, key in ipairs(SDP_Sites.WEIGHT_KEYS) do
+    if preset[key] ~= nil then P.SetWeight(key, preset[key]) end
+  end
   Controls.SitesPresetPull:GetButton():SetText(Locale.Lookup("LOC_SDP_PRESET_" .. name))
 end
 
@@ -164,9 +187,9 @@ function P.Refresh()
     local inst = m_districtIM:GetInstance()
     local districtType = d.Type
     local limited = d.MaxPerPlayer and d.MaxPerPlayer > 0
-    inst.Icon:SetIcon(d.Icon, 32)
+    inst.Icon:SetIcon(d.Icon, 26)
     inst.Name:SetText(Locale.Lookup(d.Name))
-    inst.Status:SetText(limited and Locale.Lookup("LOC_SDP_SITES_NOT_PER_SITE") or "")
+    inst.Root:SetToolTipString(limited and Locale.Lookup("LOC_SDP_SITES_NOT_PER_SITE") or "")
     inst.Check:SetDisabled(limited)
     inst.Check:SetCheck(not limited and m_selected[districtType] == true)
     inst.Root:SetAlpha(limited and 0.5 or 1)
@@ -313,6 +336,7 @@ function P.UpdateButtons()
   local ok = m_result ~= nil and m_result.Ok
   Controls.SitesSolveButton:SetDisabled(running)
   Controls.SitesContinueButton:SetDisabled(running or not ok or not m_result.Quality.CanContinue or m_result.Placed == true)
+  Controls.SitesContinueButton:SetHide(running)
   Controls.SitesCancelButton:SetHide(not running)
   Controls.SitesPlaceButton:SetDisabled(running or not ok or m_result.Placed == true)
   Controls.SitesUndoButton:SetDisabled(running or not SDP_Pins.CanUndo())
@@ -328,7 +352,7 @@ function P.Solve()
   m_result, m_solution = nil, 1
   SDP_Preview.Clear()
   return SDP_UI.StartTask(function() return SDP_SiteSolver.SolveNow(request) end,
-    SDP_SiteSolver.EstimateUnits(#request.Districts, request.K, params),
+    SDP_SiteSolver.EstimateUnits(#request.Districts, request.K, params, false, request.PlanCount),
     function(result) m_result, m_solution = result, 1 end, P)
 end
 
@@ -338,7 +362,8 @@ function P.Continue()
   return SDP_UI.StartTask(function()
     session:Continue()
     return session:Result()
-  end, SDP_SiteSolver.EstimateUnits(#session.Ctx.Plan, session.K, session.Params, true),
+  end, SDP_SiteSolver.EstimateUnits(#session.Ctx.Plan + #session.Ctx.Pool, session.K, session.Params, true,
+    session.Ctx.Pick > 0 and session.Ctx.Pick or nil),
     function(result) m_result = result end, P)
 end
 
@@ -370,6 +395,7 @@ end
 function P.State()
   return {
     Result = m_result, Solution = m_solution, K = m_k, D = m_d, Tier = m_tier, Weights = m_weights, View = m_view,
+    PlanCount = m_planCount,
     EstimateText = Controls.SitesEstimate:GetText(), PlaceDisabled = Controls.SitesPlaceButton:IsDisabled(),
   }
 end
@@ -378,6 +404,8 @@ Controls.SitesCountLess:RegisterCallback(Mouse.eLClick, function() P.SetCount(m_
 Controls.SitesCountMore:RegisterCallback(Mouse.eLClick, function() P.SetCount(m_k + 1) end)
 Controls.SitesDistanceLess:RegisterCallback(Mouse.eLClick, function() P.SetDistance(m_d - 1) end)
 Controls.SitesDistanceMore:RegisterCallback(Mouse.eLClick, function() P.SetDistance(m_d + 1) end)
+Controls.SitesPlanLess:RegisterCallback(Mouse.eLClick, function() P.SetPlanCount(m_planCount - 1) end)
+Controls.SitesPlanMore:RegisterCallback(Mouse.eLClick, function() P.SetPlanCount(m_planCount + 1) end)
 Controls.SitesSolveButton:RegisterCallback(Mouse.eLClick, function() P.Solve() end)
 Controls.SitesContinueButton:RegisterCallback(Mouse.eLClick, function() P.Continue() end)
 Controls.SitesCancelButton:RegisterCallback(Mouse.eLClick, function() SDP_Task.Cancel() end)

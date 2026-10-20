@@ -382,9 +382,14 @@ end
 
 -- Expected work in SDP_Tiers units (time estimate, progress bar); rough.
 -- `continue`: only the sites one "continue" refines.
-function SDP_SiteSolver.EstimateUnits(districts, k, params, continue)
+-- `planCount`: districts each site picks from the `districts` ticked (nil: all).
+function SDP_SiteSolver.EstimateUnits(districts, k, params, continue, planCount)
   local sites = continue and (params.ContinueSites or 20) or params.Refined
   local perSite = (params.Site and params.Site.Work or 100) * math.max(1, districts)
+  if planCount ~= nil and districts > planCount then
+    -- Each site solves a few combinations of planCount districts.
+    perSite = (params.Site and params.Site.Work or 100) * planCount * (1 + 0.6 * ((params.Site and params.Site.Combos) or 3))
+  end
   -- Combinations reach about a quarter of C(refined, k) (spacing and the
   -- bound prune the rest); each costs about a unit.
   local refined = continue and (params.Refined + sites) or sites

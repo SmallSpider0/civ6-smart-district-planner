@@ -31,7 +31,9 @@ local function Reset(districts)
   local city = Capital()
   SDP_Panel.SelectTab("SINGLE")
   SDP_Panel.SelectCity(city:GetID())
-  for _, d in ipairs(SDP_Rules.PlannableDistricts(pid)) do SDP_Panel.SetSelected(d.Type, false) end
+  for _, d in ipairs(SDP_Rules.PlannableDistricts(pid)) do SDP_Panel.SetState(d.Type, "OFF") end
+  SDP_Panel.SetCount(0)
+  SDP_Panel.SetRemind(false)
   for _, w in ipairs(SDP_Wonders.List(pid)) do SDP_Panel.SetWonder(w.Type, false) end
   for _, d in ipairs(districts) do SDP_Panel.SetSelected(d, true) end
   SDP_Panel.SetReplace(false)

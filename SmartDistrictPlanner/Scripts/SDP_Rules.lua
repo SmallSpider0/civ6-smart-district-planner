@@ -136,6 +136,37 @@ function SDP_Rules.Templates(playerID)
   return out
 end
 
+-- Districts a plan may add on its own when the city needs them (feedback
+-- item 4), read from GameInfo, never by name:
+--   "WATER"  Districts.Aqueduct (the aqueduct and the uniques replacing it):
+--            added when the city has no fresh water
+--   "FLOOD"  Districts_XP2.PreventsFloods (the dam, Gathering Storm only):
+--            added when the city has AUTO_FLOOD_PLOTS or more plots with a
+--            feature the district requires (District_RequiredFeatures: the
+--            floodplains)
+-- Returns the kind for a district type, or nil.
+SDP_Rules.AUTO_FLOOD_PLOTS = 3
+
+function SDP_Rules.AutoKind(districtType)
+  local row = GameInfo.Districts[districtType]
+  if row == nil then return nil end
+  if row.Aqueduct then return "WATER" end
+  local xp2 = GameInfo.Districts_XP2 and GameInfo.Districts_XP2[districtType]
+  if xp2 ~= nil and xp2.PreventsFloods then return "FLOOD" end
+  return nil
+end
+
+-- Features a district must stand on (District_RequiredFeatures): a set.
+function SDP_Rules.RequiredFeatures(districtType)
+  local set = {}
+  if GameInfo.District_RequiredFeatures ~= nil then
+    for row in GameInfo.District_RequiredFeatures() do
+      if row.DistrictType == districtType then set[row.FeatureType] = true end
+    end
+  end
+  return set
+end
+
 -- Yields a district of type `district` gains from one adjacent `neighbour`
 -- (a district type, or a wonder: a building type), from an AdjacencyTable.
 -- Returns a new table.

@@ -35,8 +35,7 @@ test("the panel greys the campus out and cannot select it", function()
     if row.Type == "DISTRICT_CAMPUS" then
       found = true
       T.eq(row.Status, "BUILT", "row status")
-      T.eq(row.Check:IsDisabled(), true, "checkbox enabled")
-      T.eq(row.Check:IsChecked(), false, "checkbox checked")
+      T.eq(row.Cell:IsDisabled(), true, "cell enabled")
     end
   end
   T.ok(found, "no campus row")

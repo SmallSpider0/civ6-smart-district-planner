@@ -48,14 +48,69 @@ test("single-city tab: solve now, solve as a task, continue, place and undo", fu
   T.ok(fine and fine.Ok, "task result: " .. tostring(fine and fine.Error))
   T.eq(fine.Stats.Tier, "FINE", "tier")
   SDP_Panel.SetTier("STANDARD")
-  SDP_Panel.Solve()
+  SDP_Panel.SetRemind(false)
+  local placedPlan = SDP_Panel.Solve()
+  -- Three asked; the capital has no fresh water, so an aqueduct may join (AUTO).
+  T.ok(#placedPlan.Plan >= 3, "the three districts")
   local pins = #w:Pins()
-  T.eq(SDP_Panel.PlacePins(), 3, "three pins")
-  T.eq(#w:Pins(), pins + 3, "pins on the map")
+  T.eq(SDP_Panel.PlacePins(), #placedPlan.Plan, "a pin per district")
+  T.eq(#w:Pins(), pins + #placedPlan.Plan, "pins on the map")
   -- Named with the city's number, not the district (the icon shows that).
-  for i = pins + 1, pins + 3 do T.eq(w:Pins()[i]:GetName(), "1", "pin name") end
-  T.eq(SDP_Panel.UndoPins(), 3, "undo")
+  for i = pins + 1, pins + #placedPlan.Plan do T.eq(w:Pins()[i]:GetName(), "1", "pin name") end
+  T.eq(SDP_Panel.UndoPins(), #placedPlan.Plan, "undo")
   T.eq(#w:Pins(), pins, "pins gone")
+  SDP_Panel.SetRemind(true)
+end)
+
+test("single-city tab: district states and the count; picking from the pool; three solutions; reminder pins", function()
+  SDP_Panel.SelectTab("SINGLE")
+  SDP_Panel.SelectCity(1)
+  local states = {}
+  for _, row in ipairs(SDP_Panel.State().DistrictRows) do states[row.Type] = row.State end
+  T.eq(states.DISTRICT_CAMPUS, "MUST", "the campus is still required from the first test")
+  T.eq(states.DISTRICT_ENTERTAINMENT_COMPLEX, "POOL", "districts that take population are candidates")
+  T.eq(states.DISTRICT_GOVERNMENT, "OFF", "one per empire: not a candidate")
+  T.eq(states.DISTRICT_AQUEDUCT, "AUTO", "the aqueduct is automatic")
+  T.eq(states.DISTRICT_NEIGHBORHOOD, "OFF", "the neighborhood is off")
+  for _, d in ipairs(SINGLE) do SDP_Panel.SetSelected(d, false) end
+  SDP_Panel.SetSelected("DISTRICT_CAMPUS", true)
+  T.eq(SDP_Panel.State().Count, 1, "the count follows the required districts")
+  SDP_Panel.SetCount(3)
+  T.eq(SDP_Panel.State().Count, 3, "count")
+  T.eq(SDP_Panel.Solve(), nil, "picking runs as a task")
+  local result = SDP_Panel.RunTask(500)
+  T.ok(result and result.Ok, "result: " .. tostring(result and result.Error))
+  T.eq(#result.Solutions, 3, "three solutions")
+  for n, sol in ipairs(result.Solutions) do
+    local campus, specialty = false, 0
+    for _, p in ipairs(sol.Plan) do
+      if p.Type == "DISTRICT_CAMPUS" then campus = true end
+      if GameInfo.Districts[p.Type].RequiresPopulation then specialty = specialty + 1 end
+    end
+    T.ok(campus, "the campus in solution " .. n)
+    T.eq(specialty, 3, "three districts that take population in solution " .. n)
+  end
+  SDP_Panel.SelectSolution(2)
+  T.eq(SDP_Panel.State().Solution, 2, "second solution shown")
+  -- Placing the shown solution puts its reminder pins too.
+  local pins = #w:Pins()
+  local second = result.Solutions[2]
+  local placed = SDP_Panel.PlacePins()
+  T.eq(placed, #second.Plan + #(second.Remind or {}), "district and reminder pins")
+  local reminders = 0
+  for i = pins + 1, #w:Pins() do
+    local pin = w:Pins()[i]
+    if pin:GetIconName() == SDP_Pins.REMIND_ICON then
+      reminders = reminders + 1
+      T.ok(pin:GetName():match("^1 ") ~= nil, "a reminder is named with the city number first")
+    end
+  end
+  T.eq(reminders, #(second.Remind or {}), "reminders")
+  T.eq(#SDP_Pins.Own(0, { 1 }), placed, "all of them are this mod's pins of the city")
+  T.eq(SDP_Panel.UndoPins(), placed, "undo takes all")
+  -- The count cannot go below the required districts.
+  SDP_Panel.SetCount(0)
+  T.eq(SDP_Panel.State().Count, 1, "clamped")
 end)
 
 test("single-city tab: the record survives a reload; replace plans over this mod's pins and undo brings them back", function()
@@ -63,6 +118,8 @@ test("single-city tab: the record survives a reload; replace plans over this mod
   SDP_Panel.SelectCity(1)
   for _, d in ipairs(SINGLE) do SDP_Panel.SetSelected(d, false) end
   SDP_Panel.SetSelected("DISTRICT_CAMPUS", true)
+  SDP_Panel.SetState("DISTRICT_AQUEDUCT", "OFF") -- the campus alone
+  SDP_Panel.SetRemind(false)
   SDP_Panel.SetTier("STANDARD")
   local first = SDP_Panel.Solve()
   local campus = first.Plan[1]
@@ -96,6 +153,8 @@ test("single-city tab: the record survives a reload; replace plans over this mod
   local after = SDP_Panel.Solve()
   T.ok(after.Plan[1].Index ~= campus.Index, "the player's pin stays a fixed plot")
   SDP_Panel.SetReplace(false)
+  SDP_Panel.SetRemind(true)
+  SDP_Panel.SetState("DISTRICT_AQUEDUCT", "AUTO")
   while SDP_Pins.CanUndo() do SDP_Pins.UndoLast() end
   PlayerConfigurations[0]:DeleteMapPin(own.ID)
   T.eq(#w:Pins(), pins, "clean")
@@ -106,6 +165,7 @@ test("single-city tab: wonders go with the districts; the good-places map; the o
   SDP_Panel.SelectCity(1)
   for _, d in ipairs(SINGLE) do SDP_Panel.SetSelected(d, false) end
   SDP_Panel.SetSelected("DISTRICT_CAMPUS", true)
+  SDP_Panel.SetState("DISTRICT_AQUEDUCT", "OFF") -- the campus alone
   SDP_Panel.SetTier("FAST")
   SDP_Panel.SetWonder("BUILDING_HANGING_GARDENS", true)
   T.same(SDP_Panel.State().Wonders, { "BUILDING_HANGING_GARDENS" }, "wonder chosen")
@@ -155,6 +215,7 @@ test("single-city tab: wonders go with the districts; the good-places map; the o
   T.eq(SDP_Panel.IsOpen(), not open, "other keys ignored")
   Events.InputActionTriggered("action:SDP_OpenPlanner")
   T.eq(SDP_Panel.IsOpen(), open, "back")
+  SDP_Panel.SetState("DISTRICT_AQUEDUCT", "AUTO")
 end)
 
 test("city sites tab: solve, select, place the site tacks", function()

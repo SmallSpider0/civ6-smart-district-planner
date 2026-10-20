@@ -14,6 +14,7 @@ include("SDP_Board")
 include("SDP_Land")
 include("SDP_Coverage")
 include("SDP_Search")
+include("SDP_Remind")
 include("SDP_Solver")
 include("SDP_Wonders")
 include("SDP_Multi")
@@ -25,38 +26,42 @@ include("SDP_Preview")
 local LAUNCH_BAR_STACK = "/InGame/LaunchBar/ButtonStack"
 local MAX_WEIGHT = 3
 
--- Yield icons for the weight row. There are no plain yield icons (only
--- ICON_YIELD_*_1..5, 64 px, which shrink to dots here; requirements pitfalls
--- 13 and 14), so the five city-state envoy bonus icons stand in: one family,
--- all five yields, drawn at their native 26 px.
--- Food and FEATURE (one-time yields of clearing and harvesting) only weigh
--- the land part (SDP_Land); they have no envoy icon and show a font icon or
--- a short word instead.
+-- The weight row: one family of icons, the game's font icons (feedback
+-- item 3; the texture icons cover only some yields: requirements pitfalls
+-- 13 and 14). Food and FEATURE (one-time yields of clearing and harvesting)
+-- only weigh the land part (SDP_Land). DISTANCE is the distance cost weight
+-- (feedback item 9), in steps of 0.5, 0 (off) by default.
 local WEIGHT_COLUMNS = {
-  { Key = "YIELD_SCIENCE", Icon = "ICON_ENVOY_BONUS_SCIENCE" },
-  { Key = "YIELD_CULTURE", Icon = "ICON_ENVOY_BONUS_CULTURE" },
-  { Key = "YIELD_FAITH", Icon = "ICON_ENVOY_BONUS_FAITH" },
-  { Key = "YIELD_GOLD", Icon = "ICON_ENVOY_BONUS_GOLD" },
-  { Key = "YIELD_PRODUCTION", Icon = "ICON_ENVOY_BONUS_PRODUCTION" },
+  { Key = "YIELD_SCIENCE", Glyph = "[ICON_Science]" },
+  { Key = "YIELD_CULTURE", Glyph = "[ICON_Culture]" },
+  { Key = "YIELD_FAITH", Glyph = "[ICON_Faith]" },
+  { Key = "YIELD_GOLD", Glyph = "[ICON_Gold]" },
+  { Key = "YIELD_PRODUCTION", Glyph = "[ICON_Production]" },
   { Key = "YIELD_FOOD", Glyph = "[ICON_Food]", Land = true },
-  { Key = "FEATURE", Glyph = "LOC_SDP_WEIGHT_FEATURE_SHORT", ToolTip = "LOC_SDP_WEIGHT_FEATURE", Land = true },
+  { Key = "FEATURE", Glyph = "[ICON_Terrain]", ToolTip = "LOC_SDP_WEIGHT_FEATURE", Land = true },
+  { Key = "DISTANCE", Glyph = "[ICON_Movement]", ToolTip = "LOC_SDP_WEIGHT_DISTANCE", Step = 0.5, Default = 0 },
 }
 
 local m_launchItem = {}     -- SDP_LaunchBarItem instance in the game's launch bar
 local m_launchPin = {}      -- SDP_LaunchBarPin instance next to it
 
-local m_districtIM = InstanceManager:new("DistrictRow", "Root", Controls.DistrictStack)
+local m_cellIM = InstanceManager:new("DistrictCell", "Root", Controls.DistrictStack)
+local m_utilityIM = InstanceManager:new("DistrictCell", "Root", Controls.UtilityStack)
+local m_chipIM = InstanceManager:new("WonderChip", "Root", Controls.WonderChipStack)
 local m_weightIM = InstanceManager:new("WeightColumn", "Root", Controls.WeightStack)
+local m_solutionIM = InstanceManager:new("SolutionRow", "Root", Controls.SolutionStack)
 local m_resultIM = InstanceManager:new("ResultRow", "Root", Controls.ResultStack)
 
 -- Panel state, kept while the game runs.
 local m_cityID = nil
-local m_selected = {}         -- [DistrictType] = true
-local m_weights = {}          -- [YieldType or FEATURE] = 0..MAX_WEIGHT
-for _, column in ipairs(WEIGHT_COLUMNS) do m_weights[column.Key] = 1 end
+local m_states = {}           -- [DistrictType] = "MUST" | "POOL" | "OFF" | "AUTO" (chosen; else SDP_UI.DefaultState)
+local m_count = nil           -- districts that take population to plan (nil: the required ones)
+local m_weights = {}          -- [YieldType, FEATURE or DISTANCE] = 0..MAX_WEIGHT
+for _, column in ipairs(WEIGHT_COLUMNS) do m_weights[column.Key] = column.Default or 1 end
 local m_allowFeatureRemoval = true
 local m_land = true           -- count the land part (design 4.2)
 local m_replace = false       -- plan over this mod's earlier pins for the city and replace them
+local m_remind = true         -- reminder pins on the woods and rainforest the plan relies on (feedback item 5)
 local m_wonders = {}          -- [BuildingType] = true: wonders to place too (then solved by SDP_Multi, one city)
 local m_heat = nil            -- the district whose good places the map shows
 local m_heatSpots = nil       -- SDP_Solver.Heat of m_heat (tests)
@@ -66,9 +71,10 @@ local m_scan = nil            -- the selected city (district status, specialty s
 local m_districts = {}        -- SDP_Rules.PlannableDistricts, sorted by type
 local m_status = {}           -- SDP_City.DistrictStatus for the selected city
 local m_result = nil          -- last solve; cleared whenever an input changes
-local m_districtRows = {}     -- what the district list shows, for tests
+local m_solution = 1          -- the solution shown (and previewed)
+local m_districtRows = {}     -- what the district grid shows, for tests
 local m_resultRows = {}       -- what the result list shows, for tests
-local m_weightViews = {}      -- [YieldType] = function that redraws that weight
+local m_weightViews = {}      -- [key] = function that redraws that weight
 local m_tab = "SINGLE"        -- the open tab: SINGLE, SITES or MULTI
 
 -- ===========================================================================
@@ -100,9 +106,10 @@ local function YieldText(yields)
   return table.concat(parts, " ")
 end
 
--- Localized name of a district, improvement or building type.
+-- Localized name of a district, improvement, building or feature type.
 local function TypeName(typeName)
   local row = GameInfo.Districts[typeName] or GameInfo.Improvements[typeName] or GameInfo.Buildings[typeName]
+    or GameInfo.Features[typeName]
   return row and Locale.Lookup(row.Name) or typeName
 end
 
@@ -111,6 +118,177 @@ SDP_UI = {
   MAX_WEIGHT = MAX_WEIGHT, WEIGHT_COLUMNS = WEIGHT_COLUMNS,
   Number = Number, Signed = Signed, Where = Where, YieldText = YieldText, TypeName = TypeName,
 }
+
+-- ===========================================================================
+-- District states (feedback items 1, 4, 7): every plannable district is
+--   MUST  placed for sure
+--   POOL  a candidate: picked when the count asks for more than the MUST ones
+--   OFF   left out
+--   AUTO  added when the city needs it (aqueduct, dam: SDP_Rules.AutoKind)
+-- Districts that take population default to POOL (OFF when the empire may
+-- have only one: those are never picked), the others to AUTO when they can
+-- be automatic, else OFF. A click goes POOL -> MUST -> OFF -> POOL, or
+-- AUTO -> MUST -> OFF -> AUTO.
+-- ===========================================================================
+local function Limited(d) return d.MaxPerPlayer ~= nil and d.MaxPerPlayer > 0 end
+
+function SDP_UI.DefaultState(d)
+  if d.Specialty then return Limited(d) and "OFF" or "POOL" end
+  return SDP_Rules.AutoKind(d.Type) ~= nil and "AUTO" or "OFF"
+end
+
+function SDP_UI.NextState(d, state)
+  local first = SDP_UI.DefaultState(d)
+  if state == "MUST" then return "OFF" end
+  if state == "OFF" then return first == "OFF" and "MUST" or first end
+  return "MUST"
+end
+
+function SDP_UI.StateOf(states, d)
+  return states[d.Type] or SDP_UI.DefaultState(d)
+end
+
+-- What a district list asks for, in type order: Must (types), Pool (types,
+-- candidates that take population), Auto (set), MustSpecialty (count), and
+-- Count, the districts that take population to plan (at least MustSpecialty,
+-- at most MustSpecialty + #Pool). `status` (optional): [type] = reason the
+-- district cannot be planned (left out).
+function SDP_UI.ListRequest(districts, states, count, status)
+  local out = { Must = {}, Pool = {}, Auto = {}, MustSpecialty = 0 }
+  for _, d in ipairs(districts) do
+    if status == nil or status[d.Type] == nil then
+      local state = SDP_UI.StateOf(states, d)
+      if state == "MUST" then
+        out.Must[#out.Must + 1] = d.Type
+        if d.Specialty then out.MustSpecialty = out.MustSpecialty + 1 end
+      elseif state == "POOL" and d.Specialty and not Limited(d) then
+        out.Pool[#out.Pool + 1] = d.Type
+      elseif state == "AUTO" then
+        out.Auto[d.Type] = true
+      end
+    end
+  end
+  out.Count = math.max(out.MustSpecialty, math.min(count or 0, out.MustSpecialty + #out.Pool))
+  out.Pick = out.Count - out.MustSpecialty
+  return out
+end
+
+-- Show one district cell: its icon, name and state; the selected look for
+-- MUST and AUTO; dimmed when OFF or when it cannot be planned (`status`).
+function SDP_UI.ShowCell(inst, d, state, status)
+  local selected = status == nil and (state == "MUST" or state == "AUTO")
+  local name = Locale.Lookup(d.Name)
+  local label = status and Locale.Lookup("LOC_SDP_STATUS_" .. status) or Locale.Lookup("LOC_SDP_STATE_" .. state)
+  inst.Icon:SetIcon(d.Icon, 26)
+  inst.Name:SetText(name)
+  inst.NameDark:SetText(name)
+  inst.State:SetText(label)
+  inst.StateDark:SetText(label)
+  inst.Selected:SetHide(not selected)
+  inst.Name:SetHide(selected)
+  inst.State:SetHide(selected)
+  inst.NameDark:SetHide(not selected)
+  inst.StateDark:SetHide(not selected)
+  inst.Root:SetDisabled(status ~= nil)
+  inst.Root:SetAlpha((status ~= nil or state == "OFF") and 0.55 or 1)
+  inst.Root:SetToolTipString(Locale.Lookup("LOC_SDP_CELL_TOOLTIP", name, label))
+end
+
+-- Fill the two district grids (districts that take population, the others)
+-- in name order. stateOf(d), statusOf(d) (or nil), onClick(d). Returns the
+-- rows { Type, Name, State, Status, Group, Cell } (tests).
+function SDP_UI.BuildCells(im, otherIM, stack, otherStack, districts, stateOf, statusOf, onClick)
+  im:ResetInstances()
+  otherIM:ResetInstances()
+  local display = {}
+  for i, d in ipairs(districts) do display[i] = { District = d, Name = Locale.Lookup(d.Name) } end
+  table.sort(display, function(a, b)
+    if a.Name ~= b.Name then return Locale.Compare(a.Name, b.Name) == -1 end
+    return a.District.Type < b.District.Type
+  end)
+  local rows = {}
+  for _, entry in ipairs(display) do
+    local d = entry.District
+    local inst = (d.Specialty and im or otherIM):GetInstance()
+    local state, status = stateOf(d), statusOf and statusOf(d) or nil
+    SDP_UI.ShowCell(inst, d, state, status)
+    inst.Root:RegisterCallback(Mouse.eLClick, function() onClick(d) end)
+    rows[#rows + 1] = { Type = d.Type, Name = entry.Name, State = state, Status = status,
+      Group = d.Specialty and "SPECIALTY" or "OTHER", Cell = inst.Root }
+  end
+  stack:CalculateSize()
+  otherStack:CalculateSize()
+  return rows
+end
+
+-- Wonder tags (feedback item 2): one per chosen wonder, a click removes it;
+-- the pulldown lists the others, a click adds one. onSet(type, on).
+function SDP_UI.BuildWonders(pull, chipIM, chipStack, wonders, chosen, onSet)
+  pull:ClearEntries()
+  chipIM:ResetInstances()
+  local count = 0
+  for _, w in ipairs(wonders) do
+    if w.Status == nil then
+      local wonderType = w.Type
+      local name = Locale.Lookup(w.Name)
+      if chosen[wonderType] then
+        count = count + 1
+        local inst = chipIM:GetInstance()
+        inst.Name:SetText(Locale.Lookup("LOC_SDP_WONDER_CHIP", name))
+        inst.Root:SetSizeX(math.max(60, inst.Name:GetSizeX() + 20))
+        inst.Root:SetToolTipString(Locale.Lookup("LOC_SDP_WONDER_CHIP_TOOLTIP"))
+        inst.Root:RegisterCallback(Mouse.eLClick, function() onSet(wonderType, false) end)
+      else
+        local entry = {}
+        pull:BuildEntry("InstanceOne", entry)
+        entry.Button:SetText(name)
+        entry.Button:RegisterCallback(Mouse.eLClick, function() onSet(wonderType, true) end)
+      end
+    end
+  end
+  pull:CalculateInternals()
+  pull:GetButton():SetText(count == 0 and Locale.Lookup("LOC_SDP_WONDER_ADD")
+    or Locale.Lookup("LOC_SDP_WONDER_ADD_MORE", count))
+  chipStack:CalculateSize()
+  return count
+end
+
+-- "Gain (adjacency, land, ...)": the parts that are on.
+function SDP_UI.SummaryText(s, parts)
+  local list = { Locale.Lookup("LOC_SDP_PART_ADJACENCY", Signed(s.Adjacency or 0)) }
+  if parts.Land then list[#list + 1] = Locale.Lookup("LOC_SDP_PART_LAND", Signed(s.LandDelta or 0)) end
+  if parts.Coverage then list[#list + 1] = Locale.Lookup("LOC_SDP_PART_COVERAGE", Signed(s.CoverageDelta or 0)) end
+  if parts.Distance then list[#list + 1] = Locale.Lookup("LOC_SDP_PART_DISTANCE", Signed(s.CostDelta or 0)) end
+  return Locale.Lookup("LOC_SDP_RESULT_SUMMARY_PARTS", Signed(s.Gain or 0),
+    table.concat(list, Locale.Lookup("LOC_SDP_LIST_SEPARATOR")))
+end
+
+-- A reminder's text: the districts and what each would lose.
+function SDP_UI.RemindText(remind)
+  local parts = {}
+  for _, loss in ipairs(remind.Losses) do
+    local lost = {}
+    for _, yieldType in ipairs(SDP_Rules.YIELDS) do
+      if loss.Yields[yieldType] then
+        lost[#lost + 1] = Locale.Lookup("LOC_SDP_YIELD_SHORT_" .. yieldType) .. "-" .. Number(loss.Yields[yieldType])
+      end
+    end
+    parts[#parts + 1] = Locale.Lookup("LOC_SDP_REMIND_LOSS", TypeName(loss.Type), table.concat(lost, " "))
+  end
+  return table.concat(parts, Locale.Lookup("LOC_SDP_REMIND_SEPARATOR"))
+end
+
+-- Pin entries for a solution's reminders, named with the city number first
+-- (SDP_Pins.Own then knows them as this mod's pins of that city).
+function SDP_UI.RemindEntries(reminds, numberOf)
+  local entries = {}
+  for _, r in ipairs(reminds or {}) do
+    local number = numberOf(r)
+    entries[#entries + 1] = { Icon = SDP_Pins.REMIND_ICON, X = r.X, Y = r.Y,
+      Name = (number and (tostring(number) .. " ") or "") .. Locale.Lookup("LOC_SDP_REMIND_PIN", SDP_UI.RemindText(r)) }
+  end
+  return entries
+end
 
 -- ===========================================================================
 -- Open / close
@@ -189,6 +367,7 @@ local function UpdateButtons()
   local running = SDP_Task.IsRunning()
   Controls.SolveButton:SetDisabled(m_cityID == nil or running)
   Controls.ContinueButton:SetDisabled(running or not CanContinue())
+  Controls.ContinueButton:SetHide(running)
   Controls.CancelButton:SetHide(not running)
   Controls.PlaceButton:SetDisabled(running or #plan == 0 or m_result.Placed == true)
   Controls.UndoButton:SetDisabled(running or not SDP_Pins.CanUndo())
@@ -220,8 +399,46 @@ local function AddResultRow(icon, name, detail, toolTip)
   m_resultRows[#m_resultRows + 1] = { Icon = icon, Name = name, Detail = detail, ToolTip = toolTip }
 end
 
+-- What a plan entry is beyond its yields: added by itself, picked from the pool.
+function SDP_UI.PlanNote(p)
+  if p.Auto then return "  " .. Locale.Lookup("LOC_SDP_RESULT_AUTO") end
+  if p.Picked then return "  " .. Locale.Lookup("LOC_SDP_RESULT_PICKED") end
+  return ""
+end
+
+-- A solution row's detail: the districts picked from the pool, or how many.
+function SDP_UI.SolutionDetail(solution)
+  local picked = solution.Picked or {}
+  if #picked > 0 then
+    local names = {}
+    for _, t in ipairs(picked) do names[#names + 1] = TypeName(t) end
+    return Locale.Lookup("LOC_SDP_SOLUTION_PICKED", table.concat(names, Locale.Lookup("LOC_SDP_LIST_SEPARATOR")))
+  end
+  return Locale.Lookup("LOC_SDP_SOLUTION_DISTRICTS", #solution.Plan)
+end
+
+-- Show solution n on the map: the city's rings, the plan's icons and values.
+local function Preview(n)
+  local solution = m_result and m_result.Ok and m_result.Solutions and m_result.Solutions[n]
+  if solution == nil or m_scan == nil or Controls.SinglePage:IsHidden() then
+    if m_heat == nil then SDP_Preview.Clear() end
+    return
+  end
+  local plots = {}
+  for _, entry in ipairs(SDP_City.PlotsInRange(m_scan.X, m_scan.Y, SDP_City.RADIUS)) do plots[#plots + 1] = entry.Index end
+  local icons = {}
+  for _, p in ipairs(solution.Plan) do
+    icons[#icons + 1] = { X = p.X, Y = p.Y, Icon = "ICON_" .. p.Type, Text = Signed(p.Score) }
+  end
+  for _, r in ipairs(solution.Remind or {}) do
+    icons[#icons + 1] = { X = r.X, Y = r.Y, Icon = SDP_Pins.REMIND_ICON, Text = "" }
+  end
+  SDP_Preview.Show(Game.GetLocalPlayer(), { { Plots = plots, Color = 1 } }, icons)
+end
+
 local function ShowResult()
   m_resultIM:ResetInstances()
+  m_solutionIM:ResetInstances()
   m_resultRows = {}
   local result = m_result
   Controls.Quality:SetText("")
@@ -235,36 +452,54 @@ local function ShowResult()
     Controls.Summary:SetText(text)
     Controls.Summary:SetToolTipString("")
   else
-    local summary
-    local session = result.Session
-    if session ~= nil and session.Request ~= nil and session.Request.Land then
-      summary = Locale.Lookup("LOC_SDP_RESULT_SUMMARY_LAND", Signed(result.Gain), Signed(result.Adjacency), Signed(result.LandDelta))
-    else
-      summary = Locale.Lookup("LOC_SDP_RESULT_SUMMARY", Signed(result.Gain))
-    end
-    Controls.Summary:SetText(summary)
+    local solutions = result.Solutions or { result }
+    if solutions[m_solution] == nil then m_solution = 1 end
+    local shown = solutions[m_solution] or result
+    local request = result.Session and result.Session.Request or {}
+    Controls.Summary:SetText(SDP_UI.SummaryText(shown, { Land = request.Land,
+      Distance = (request.Distance or 0) > 0, Coverage = shown.Covered ~= nil }))
     local stats = result.Stats
     Controls.Summary:SetToolTipString(Locale.Lookup("LOC_SDP_RESULT_STATS",
       Locale.Lookup("LOC_SDP_TIER_" .. stats.Tier), stats.Method or "multi", stats.Calls or 0, stats.Tries or 0,
       stats.Nodes or 0, stats.Continues or 0))
     Controls.Quality:SetText(QualityText(result))
+    -- The solutions (feedback item 1): a click shows one and previews it.
+    if #solutions > 1 then
+      for n, sol in ipairs(solutions) do
+        local inst = m_solutionIM:GetInstance()
+        SDP_UI.SolutionRow(inst, Locale.Lookup("LOC_SDP_SOLUTION_N", n, Signed(sol.Gain)), SDP_UI.SolutionDetail(sol),
+          n == m_solution)
+        inst.Root:RegisterCallback(Mouse.eLClick, function()
+          m_solution = n
+          ShowResult()
+        end)
+      end
+    end
     -- Each planned district: where, its yields, and DMT's own breakdown on hover.
-    for _, p in ipairs(result.Plan) do
+    for _, p in ipairs(shown.Plan) do
       local toolTip = (p.ToolTip ~= nil and p.ToolTip ~= "") and p.ToolTip or Locale.Lookup("LOC_SDP_NO_ADJACENCY")
-      AddResultRow("ICON_" .. p.Type, TypeName(p.Type) .. "  " .. Where(p.X, p.Y), YieldText(p.Yields), toolTip)
+      AddResultRow(p.Kind == "WONDER" and ("ICON_" .. p.Type) or ("ICON_" .. p.Type),
+        TypeName(p.Type) .. "  " .. Where(p.X, p.Y), YieldText(p.Yields) .. SDP_UI.PlanNote(p), toolTip)
+    end
+    -- Woods and rainforest the plan relies on (feedback item 5).
+    for _, r in ipairs(shown.Remind or {}) do
+      AddResultRow(SDP_Pins.REMIND_ICON, Locale.Lookup("LOC_SDP_RESULT_REMIND", TypeName(r.Feature), Where(r.X, r.Y)),
+        SDP_UI.RemindText(r), Locale.Lookup("LOC_SDP_REMIND_TOOLTIP"))
     end
     -- Districts and locked pins whose adjacency the plan changes.
-    for _, n in ipairs(result.Neighbours) do
+    for _, n in ipairs(shown.Neighbours or {}) do
       local s = n.Subject
       AddResultRow("ICON_" .. s.Key, Locale.Lookup("LOC_SDP_RESULT_NEIGHBOUR", TypeName(s.Key), Where(s.X, s.Y)),
         Locale.Lookup("LOC_SDP_RESULT_NEIGHBOUR_DETAIL", Number(n.Before), Number(n.After)),
         (n.ToolTip ~= nil and n.ToolTip ~= "") and n.ToolTip or Locale.Lookup("LOC_SDP_NO_ADJACENCY"))
     end
-    for _, u in ipairs(result.Unplaced) do
-      AddResultRow("ICON_" .. u.Type, Locale.Lookup("LOC_SDP_RESULT_UNPLACED", TypeName(u.Type)),
-        Locale.Lookup("LOC_SDP_REASON_" .. u.Reason), "")
+    for _, u in ipairs(shown.Unplaced or result.Unplaced or {}) do
+      local key = u.Auto and "LOC_SDP_RESULT_UNPLACED_AUTO" or "LOC_SDP_RESULT_UNPLACED"
+      AddResultRow("ICON_" .. u.Type, Locale.Lookup(key, TypeName(u.Type)), Locale.Lookup("LOC_SDP_REASON_" .. u.Reason), "")
     end
+    Preview(m_solution)
   end
+  Controls.SolutionStack:CalculateSize()
   Controls.ResultStack:CalculateSize()
   Controls.ResultScroll:CalculateSize()
   UpdateButtons()
@@ -276,79 +511,99 @@ local function ClearResult()
   if job ~= nil and job.Page == "SINGLE" then SDP_Task.Cancel() end
   if m_heat ~= nil then ShowHeat(nil) end -- drawn for the old inputs
   if m_result ~= nil then
-    m_result = nil
+    m_result, m_solution = nil, 1
+    SDP_Preview.Clear()
     ShowResult()
   end
 end
 
 -- ===========================================================================
--- Inputs: city, districts, weights, feature switch
+-- Inputs: city, districts and how many, weights, switches
 -- ===========================================================================
+local function StatusOf(d) return m_status[d.Type] end
+
+local function List()
+  return SDP_UI.ListRequest(m_districts, m_states, m_count, m_status)
+end
+
 local function UpdateSpecialtyNote()
   if m_scan == nil then
     Controls.SpecialtyNote:SetText("")
     return
   end
-  local selected = 0
-  for _, d in ipairs(m_districts) do
-    if d.Specialty and m_selected[d.Type] and m_status[d.Type] == nil then selected = selected + 1 end
-  end
-  local text = Locale.Lookup("LOC_SDP_SPECIALTY_NOTE", m_scan.SpecialtyBuilt, selected, m_scan.SpecialtyCapacity)
-  if m_scan.SpecialtyBuilt + selected > m_scan.SpecialtyCapacity then
+  local count = List().Count
+  local text = Locale.Lookup("LOC_SDP_SPECIALTY_NOTE", m_scan.SpecialtyBuilt, count, m_scan.SpecialtyCapacity)
+  if m_scan.SpecialtyBuilt + count > m_scan.SpecialtyCapacity then
     text = text .. " " .. Locale.Lookup("LOC_SDP_SPECIALTY_OVER")
   end
   Controls.SpecialtyNote:SetText(text)
 end
 
-local function SetSelected(districtType, selected)
-  if (m_selected[districtType] == true) ~= (selected == true) then
-    m_selected[districtType] = selected or nil
+local function ShowCount()
+  local list = List()
+  Controls.CountValue:SetText(tostring(list.Count))
+  Controls.CountLess:SetDisabled(list.Count <= list.MustSpecialty)
+  Controls.CountMore:SetDisabled(list.Count >= list.MustSpecialty + #list.Pool)
+end
+
+local SetState -- defined below
+
+local function ShowCells()
+  m_districtRows = SDP_UI.BuildCells(m_cellIM, m_utilityIM, Controls.DistrictStack, Controls.UtilityStack, m_districts,
+    function(d) return SDP_UI.StateOf(m_states, d) end, StatusOf, function(d)
+      SetState(d.Type, SDP_UI.NextState(d, SDP_UI.StateOf(m_states, d)))
+    end)
+  ShowCount()
+  UpdateSpecialtyNote()
+end
+
+-- Set a district's state (MUST, POOL, OFF, AUTO).
+SetState = function(districtType, state)
+  local d = nil
+  for _, row in ipairs(m_districts) do
+    if row.Type == districtType then d = row end
+  end
+  if d == nil then return end
+  if SDP_UI.StateOf(m_states, d) ~= state then
+    m_states[districtType] = state
     ClearResult()
   end
-  for _, row in ipairs(m_districtRows) do
-    if row.Type == districtType and row.Check:IsChecked() ~= (selected == true) then row.Check:SetCheck(selected == true) end
+  ShowCells()
+  UpdateEstimate()
+end
+
+-- Tests and older callers: selected = MUST, unselected = the default state.
+local function SetSelected(districtType, selected)
+  local state = nil
+  for _, d in ipairs(m_districts) do
+    if d.Type == districtType then state = selected and "MUST" or SDP_UI.DefaultState(d) end
   end
+  if state ~= nil then SetState(districtType, state) end
+end
+
+-- How many districts that take population to plan (clamped to what the
+-- states allow; at the required number nothing is picked).
+local function SetCount(count)
+  local list = SDP_UI.ListRequest(m_districts, m_states, count, m_status)
+  if list.Count ~= List().Count then
+    m_count = list.Count
+    ClearResult()
+  else
+    m_count = list.Count
+  end
+  ShowCount()
   UpdateSpecialtyNote()
   UpdateEstimate()
 end
 
 local function RefreshDistricts()
   local playerID = Game.GetLocalPlayer()
-  m_districtIM:ResetInstances()
-  m_districtRows = {}
   m_districts = SDP_Rules.PlannableDistricts(playerID)
   m_scan = m_cityID and SDP_City.Scan(playerID, m_cityID) or nil
   m_status = m_scan and SDP_City.DistrictStatus(m_scan, m_districts) or {}
   UpdateReplaceLabel()
   PopulateHeat()
-
-  -- Shown in name order; the solver always gets them in type order, so the
-  -- plan never depends on the order of clicks.
-  local display = {}
-  for i, d in ipairs(m_districts) do display[i] = { District = d, Name = Locale.Lookup(d.Name) } end
-  table.sort(display, function(a, b)
-    if a.Name ~= b.Name then return Locale.Compare(a.Name, b.Name) == -1 end
-    return a.District.Type < b.District.Type
-  end)
-
-  for _, entry in ipairs(display) do
-    local d = entry.District
-    local status = m_status[d.Type]
-    local inst = m_districtIM:GetInstance()
-    inst.Icon:SetIcon(d.Icon, 32)
-    inst.Name:SetText(entry.Name)
-    inst.Status:SetText(status and Locale.Lookup("LOC_SDP_STATUS_" .. status) or "")
-    inst.Check:SetCheck(status == nil and m_selected[d.Type] == true)
-    inst.Check:SetDisabled(status ~= nil)
-    inst.Root:SetAlpha(status and 0.5 or 1) -- built districts are greyed out
-    inst.Check:RegisterCheckHandler(function()
-      SetSelected(d.Type, inst.Check:IsChecked())
-    end)
-    m_districtRows[#m_districtRows + 1] = { Type = d.Type, Name = entry.Name, Status = status, Check = inst.Check }
-  end
-  Controls.DistrictStack:CalculateSize()
-  Controls.DistrictScroll:CalculateSize()
-  UpdateSpecialtyNote()
+  ShowCells()
   UpdateEstimate()
 end
 
@@ -403,79 +658,50 @@ SelectCity = function(cityID)
   UpdateButtons()
 end
 
-local function SetWeight(yieldType, value)
+local function SetWeight(key, value)
   value = math.max(0, math.min(MAX_WEIGHT, value))
-  if m_weights[yieldType] ~= value then
-    m_weights[yieldType] = value
+  if m_weights[key] ~= value then
+    m_weights[key] = value
     ClearResult()
   end
-  if m_weightViews[yieldType] then m_weightViews[yieldType]() end
-end
-
-local function BuildWeights()
-  m_weightIM:ResetInstances()
-  for _, column in ipairs(WEIGHT_COLUMNS) do
-    local key = column.Key
-    local inst = m_weightIM:GetInstance()
-    local function Show()
-      local off = column.Land and not m_land -- weighs the land part only
-      inst.Value:SetText(tostring(m_weights[key]))
-      inst.Less:SetDisabled(off or m_weights[key] <= 0)
-      inst.More:SetDisabled(off or m_weights[key] >= MAX_WEIGHT)
-      inst.Root:SetAlpha(off and 0.5 or 1)
-    end
-    if column.Icon then
-      inst.Icon:SetIcon(column.Icon)
-      inst.Glyph:SetText("")
-    else
-      inst.Icon:SetHide(true)
-      inst.Glyph:SetText(Locale.Lookup(column.Glyph))
-    end
-    local row = GameInfo.Yields[key]
-    inst.Root:SetToolTipString(Locale.Lookup(column.ToolTip or (row and row.Name) or key))
-    inst.Less:RegisterCallback(Mouse.eLClick, function() SetWeight(key, m_weights[key] - 1) end)
-    inst.More:RegisterCallback(Mouse.eLClick, function() SetWeight(key, m_weights[key] + 1) end)
-    m_weightViews[key] = Show
-    Show()
-  end
-  Controls.WeightStack:CalculateSize()
+  if m_weightViews[key] then m_weightViews[key]() end
 end
 
 -- Weight columns for a tab: `columns` like WEIGHT_COLUMNS, `weights` the
 -- tab's table, isOff(column) greys a column out, onChange(key, value),
--- width (optional) the column width when more columns must fit.
+-- width (optional) the column width when more columns must fit. A column's
+-- Step (default 1) is how much an arrow changes it.
 -- Returns { [key] = redraw function }.
 function SDP_UI.BuildWeights(im, stack, columns, weights, isOff, onChange, width)
   im:ResetInstances()
   local views = {}
   for _, column in ipairs(columns) do
     local key = column.Key
+    local step = column.Step or 1
     local inst = im:GetInstance()
     if width ~= nil then inst.Root:SetSizeX(width) end
     local function Show()
       local off = isOff and isOff(column) or false
-      inst.Value:SetText(tostring(weights[key]))
+      inst.Value:SetText(Number(weights[key]))
       inst.Less:SetDisabled(off or weights[key] <= 0)
       inst.More:SetDisabled(off or weights[key] >= MAX_WEIGHT)
       inst.Root:SetAlpha(off and 0.5 or 1)
     end
-    if column.Icon then
-      inst.Icon:SetHide(false)
-      inst.Icon:SetIcon(column.Icon)
-      inst.Glyph:SetText("")
-    else
-      inst.Icon:SetHide(true)
-      inst.Glyph:SetText(Locale.Lookup(column.Glyph))
-    end
+    inst.Glyph:SetText(Locale.Lookup(column.Glyph))
     local row = GameInfo.Yields[key]
     inst.Root:SetToolTipString(Locale.Lookup(column.ToolTip or (row and row.Name) or key))
-    inst.Less:RegisterCallback(Mouse.eLClick, function() onChange(key, math.max(0, weights[key] - 1)) end)
-    inst.More:RegisterCallback(Mouse.eLClick, function() onChange(key, math.min(MAX_WEIGHT, weights[key] + 1)) end)
+    inst.Less:RegisterCallback(Mouse.eLClick, function() onChange(key, math.max(0, weights[key] - step)) end)
+    inst.More:RegisterCallback(Mouse.eLClick, function() onChange(key, math.min(MAX_WEIGHT, weights[key] + step)) end)
     views[key] = Show
     Show()
   end
   stack:CalculateSize()
   return views
+end
+
+local function BuildWeights()
+  m_weightViews = SDP_UI.BuildWeights(m_weightIM, Controls.WeightStack, WEIGHT_COLUMNS, m_weights,
+    function(column) return column.Land and not m_land end, SetWeight)
 end
 
 -- A tier pulldown: entries for the three tiers, onSelect(tier).
@@ -492,7 +718,6 @@ function SDP_UI.PopulateTierPull(pull, current, onSelect)
   pull:GetButton():SetText(Locale.Lookup("LOC_SDP_TIER_" .. current))
 end
 
--- "About X s" for `units` of work.
 -- A SolutionRow instance: texts and the selected look (light text on the
 -- dark button, dark text on the light selected look).
 function SDP_UI.SolutionRow(inst, name, detail, selected)
@@ -507,9 +732,10 @@ function SDP_UI.SolutionRow(inst, name, detail, selected)
   inst.DetailDark:SetHide(not selected)
 end
 
-function SDP_UI.EstimateText(units)
+-- "About X s" for `units` of work.
+function SDP_UI.EstimateText(units, atOnce)
   if units <= 0 then return "" end
-  local seconds = SDP_Task.EstimateSeconds(units)
+  local seconds = SDP_Task.EstimateSeconds(units, atOnce)
   if seconds < 1 then return Locale.Lookup("LOC_SDP_ESTIMATE_UNDER_ONE") end
   return Locale.Lookup("LOC_SDP_ESTIMATE", Number(math.floor(seconds + 0.5)))
 end
@@ -530,13 +756,22 @@ local function OwnPins()
 end
 
 UpdateReplaceLabel = function()
-  Controls.ReplaceLabel:SetText(Locale.Lookup("LOC_SDP_REPLACE_OWN", #OwnPins()))
+  Controls.ReplaceLabel:SetText(Locale.Lookup("LOC_SDP_REPLACE_OWN_SHORT", #OwnPins()))
 end
 
 local function SetReplace(on)
   Controls.ReplaceCheck:SetCheck(on)
   if m_replace ~= on then
     m_replace = on
+    ClearResult()
+  end
+end
+
+-- Reminder pins only change what "place" puts on the map.
+local function SetRemind(on)
+  Controls.RemindCheck:SetCheck(on)
+  if m_remind ~= on then
+    m_remind = on
     ClearResult()
   end
 end
@@ -551,26 +786,9 @@ local function SelectedWonders()
   return list
 end
 
--- The wonder pulldown: each wonder not built or pinned yet; a click toggles it.
 local function PopulateWonders()
-  local pull = Controls.WonderPull
-  pull:ClearEntries()
-  local chosen = {}
-  for _, w in ipairs(SDP_Wonders.List(Game.GetLocalPlayer())) do
-    if w.Status == nil then
-      local entry = {}
-      pull:BuildEntry("InstanceOne", entry)
-      local name = Locale.Lookup(w.Name)
-      local wonderType = w.Type
-      local on = m_wonders[wonderType] == true
-      entry.Button:SetText(on and Locale.Lookup("LOC_SDP_WONDER_CHOSEN", name) or name)
-      entry.Button:RegisterCallback(Mouse.eLClick, function() SetWonder(wonderType, not m_wonders[wonderType]) end)
-      if on then chosen[#chosen + 1] = name end
-    end
-  end
-  pull:CalculateInternals()
-  pull:GetButton():SetText(#chosen == 0 and Locale.Lookup("LOC_SDP_WONDERS_NONE")
-    or table.concat(chosen, Locale.Lookup("LOC_SDP_LIST_SEPARATOR")))
+  SDP_UI.BuildWonders(Controls.WonderPull, m_chipIM, Controls.WonderChipStack, SDP_Wonders.List(Game.GetLocalPlayer()),
+    m_wonders, function(wonderType, on) SetWonder(wonderType, on) end)
 end
 
 SetWonder = function(wonderType, on)
@@ -656,60 +874,52 @@ local function SetTier(tier)
   UpdateEstimate()
 end
 
-local function PopulateTiers()
-  local pull = Controls.TierPull
-  pull:ClearEntries()
-  for _, tier in ipairs(SDP_Tiers.ORDER) do
-    local entry = {}
-    pull:BuildEntry("InstanceOne", entry)
-    entry.Button:SetText(Locale.Lookup("LOC_SDP_TIER_" .. tier))
-    entry.Button:SetToolTipString(Locale.Lookup("LOC_SDP_TIER_" .. tier .. "_TOOLTIP"))
-    entry.Button:RegisterCallback(Mouse.eLClick, function() SetTier(tier) end)
-  end
-  pull:CalculateInternals()
-  pull:GetButton():SetText(Locale.Lookup("LOC_SDP_TIER_" .. m_tier))
+-- The districts the solver must place: in type order, so the plan never
+-- depends on the order of clicks.
+local function SelectedDistricts()
+  return List().Must
 end
 
--- The districts the solver gets: selected and plannable, in type order, so
--- the plan never depends on the order of clicks.
-local function SelectedDistricts()
-  local districts = {}
-  for _, d in ipairs(m_districts) do
-    if m_selected[d.Type] and m_status[d.Type] == nil then districts[#districts + 1] = d.Type end
+-- Whether a request runs over several frames: the fine tier, wonders, or
+-- picking districts from the pool.
+local function Sliced(request)
+  return SDP_Tiers.Params(SDP_Tiers.Single, request.Tier).Sliced or #request.Wonders > 0
+    or (request.Count or 0) > (request.MustSpecialty or 0)
+end
+
+local Request -- defined below
+
+-- Expected work of a request (time estimate, progress).
+local function EstimateFor(request)
+  local params = SDP_Tiers.Params(SDP_Tiers.Single, request.Tier)
+  local pick = (request.Count or 0) - (request.MustSpecialty or 0)
+  if #request.Wonders > 0 then
+    return SDP_Multi.EstimateUnits(1, #request.Districts, #request.Wonders, SDP_Tiers.Params(SDP_Tiers.Multi, request.Tier),
+      pick, #(request.Pool or {}))
   end
-  return districts
+  local n = m_scan and #m_scan.Candidates or 30
+  return SDP_Solver.EstimateUnits(n, #request.Districts, params, #(request.Pool or {}), pick)
 end
 
 -- "About X s" for the selected tier and districts (design 7.5).
 UpdateEstimate = function()
-  local k, wonders = #SelectedDistricts(), #SelectedWonders()
-  if m_scan == nil or k + wonders == 0 then
+  local request = m_scan and Request() or nil
+  if request == nil then
     Controls.Estimate:SetText("")
     return
   end
-  local params = SDP_Tiers.Params(SDP_Tiers.Single, m_tier)
-  local units = SDP_Solver.EstimateUnits(#m_scan.Candidates, k, params)
-  local sliced = params.Sliced
-  if wonders > 0 then
-    units = SDP_Multi.EstimateUnits(1, k, wonders, SDP_Tiers.Params(SDP_Tiers.Multi, m_tier))
-    sliced = true
-  end
-  local seconds = SDP_Task.EstimateSeconds(units, not sliced)
-  if seconds < 1 then
-    Controls.Estimate:SetText(Locale.Lookup("LOC_SDP_ESTIMATE_UNDER_ONE"))
-  else
-    Controls.Estimate:SetText(Locale.Lookup("LOC_SDP_ESTIMATE", Number(math.floor(seconds + 0.5))))
-  end
+  Controls.Estimate:SetText(SDP_UI.EstimateText(EstimateFor(request), not Sliced(request)))
 end
 
 Refresh = function()
   PopulateCities()
   RefreshDistricts()
   BuildWeights()
-  PopulateTiers()
+  SDP_UI.PopulateTierPull(Controls.TierPull, m_tier, SetTier)
   Controls.FeatureCheck:SetCheck(m_allowFeatureRemoval)
   Controls.LandCheck:SetCheck(m_land)
   Controls.ReplaceCheck:SetCheck(m_replace)
+  Controls.RemindCheck:SetCheck(m_remind)
   UpdateReplaceLabel()
   PopulateWonders()
   m_heat = nil
@@ -804,14 +1014,16 @@ end
 SDP_UI.StartTask = StartTask
 SDP_UI.UpdateAllButtons = function() UpdateAllButtons() end
 
-local function Request()
-  local districts = SelectedDistricts()
+Request = function()
+  local list = List()
   local wonders = SelectedWonders()
-  if m_cityID == nil or (#districts == 0 and #wonders == 0) then return nil end
+  if m_cityID == nil or (#list.Must == 0 and list.Pick == 0 and #wonders == 0) then return nil end
   local weights = {}
   for key, value in pairs(m_weights) do weights[key] = value end
   return {
-    PlayerID = Game.GetLocalPlayer(), CityID = m_cityID, Districts = districts, Weights = weights,
+    PlayerID = Game.GetLocalPlayer(), CityID = m_cityID, Districts = list.Must, Weights = weights,
+    Pool = list.Pool, Count = list.Count, MustSpecialty = list.MustSpecialty, Auto = list.Auto,
+    Distance = m_weights.DISTANCE, Remind = m_remind,
     AllowFeatureRemoval = m_allowFeatureRemoval, Land = m_land, Tier = m_tier,
     IgnorePins = m_replace and OwnPins() or nil, Wonders = wonders,
   }
@@ -820,33 +1032,34 @@ end
 -- With wonders the city is solved as SDP_Multi with this one city (it places
 -- wonders next to districts, design 4.4); always over several frames.
 local function WonderRequest(request)
+  local key = "C" .. request.CityID
   return {
     PlayerID = request.PlayerID, Tier = request.Tier, Districts = request.Districts, Wonders = request.Wonders,
+    Pool = request.Pool, Count = request.Count, Auto = request.Auto, Distance = request.Distance, Remind = request.Remind,
     Only = { [request.CityID] = true }, Weights = request.Weights, Land = request.Land,
     AllowFeatureRemoval = request.AllowFeatureRemoval, IgnorePins = request.IgnorePins,
+    Plans = { [key] = request.Districts },
   }
 end
 
--- Solve now (fast and standard tiers: returns the result) or start a sliced
--- computation (fine tier: returns nil, the result shows when it is done).
+-- Solve now (fast and standard tiers without picking: returns the result) or
+-- start a sliced computation (returns nil, the result shows when it is done).
 local function Solve()
   if SDP_Task.IsRunning() then return nil end
   local request = Request()
   if m_heat ~= nil then ShowHeat(nil) end
+  m_solution = 1
   if request ~= nil and #request.Wonders > 0 then
     local multi = WonderRequest(request)
-    local estimate = SDP_Multi.EstimateUnits(1, #request.Districts, #request.Wonders, SDP_Tiers.Params(SDP_Tiers.Multi, m_tier))
     m_result = nil
-    StartTask(function() return SDP_Multi.SolveNow(multi) end, estimate, function(result) m_result = result end)
+    StartTask(function() return SDP_Multi.SolveNow(multi) end, EstimateFor(request), function(result) m_result = result end)
     return nil
   end
-  local params = SDP_Tiers.Params(SDP_Tiers.Single, m_tier)
-  if request ~= nil and params.Sliced then
+  if request ~= nil and Sliced(request) then
     local scan = SDP_City.Scan(request.PlayerID, request.CityID, SDP_City.ScanOptions(request))
     if scan ~= nil then
       m_result = nil
-      local estimate = SDP_Solver.EstimateUnits(#scan.Candidates, #request.Districts, params)
-      StartTask(function() return SDP_Solver.SolveScan(request, scan) end, estimate,
+      StartTask(function() return SDP_Solver.SolveScan(request, scan) end, EstimateFor(request),
         function(result) m_result = result end)
       return nil
     end
@@ -856,16 +1069,15 @@ local function Solve()
   return m_result
 end
 
--- One more batch of local searches on the shown result (design 7.3).
+-- One more batch on the shown result (design 7.3).
 local function Continue()
   if SDP_Task.IsRunning() or not CanContinue() then return nil end
   local session = m_result.Session
-  if session.Params.Sliced then
+  if session.Params.Sliced or session.Pick ~= nil and session.Pick > 0 or session.Participants ~= nil then
     -- A continue runs SINGLE_CONTINUE_STARTS local searches; the first run
     -- had Starts + Kicks of them.
     local params = session.Params
-    local estimate = SDP_Solver.EstimateUnits(m_scan and #m_scan.Candidates or 30, #(session.Request.Districts or {}), params)
-      * SDP_Tiers.SINGLE_CONTINUE_STARTS / math.max(1, params.Starts + (params.Kicks or 0))
+    local estimate = EstimateFor(session.Request) * SDP_Tiers.SINGLE_CONTINUE_STARTS / math.max(1, params.Starts + (params.Kicks or 0))
     StartTask(function()
       session:Continue()
       return session:Result()
@@ -881,16 +1093,22 @@ local function Cancel()
   return SDP_Task.Cancel()
 end
 
+-- Map tacks for the shown solution, with its reminder pins when asked for.
 local function PlacePins()
   if SDP_Task.IsRunning() or m_result == nil or not m_result.Ok or m_result.Placed then return 0 end
   local playerID = Game.GetLocalPlayer()
-  local number = tostring(SDP_City.CityNumbers(playerID)[m_cityID] or "")
+  local solution = (m_result.Solutions and m_result.Solutions[m_solution]) or m_result
+  local number = SDP_City.CityNumbers(playerID)[m_cityID]
   local entries = {}
-  for i, p in ipairs(m_result.Plan) do entries[i] = { Type = p.Type, X = p.X, Y = p.Y, Name = number } end
+  for i, p in ipairs(solution.Plan) do entries[i] = { Type = p.Type, X = p.X, Y = p.Y, Name = tostring(number or "") } end
+  if m_remind then
+    for _, e in ipairs(SDP_UI.RemindEntries(solution.Remind, function() return number end)) do entries[#entries + 1] = e end
+  end
   -- The plan was made as if this mod's earlier pins were gone: remove them.
   local session = m_result.Session
   local placed = SDP_Pins.Place(playerID, entries, { Replace = session and session.Request.IgnorePins })
   m_result.Placed = true
+  SDP_Preview.Clear()
   UpdateReplaceLabel()
   UpdateButtons()
   return placed
@@ -1061,6 +1279,15 @@ SDP_Panel = {
   Refresh = function() Refresh() end,
   SelectCity = function(cityID) SelectCity(cityID) end,
   SetSelected = SetSelected,
+  SetState = function(districtType, state) SetState(districtType, state) end,
+  SetCount = SetCount,
+  SetRemind = SetRemind,
+  SelectSolution = function(n)
+    if m_result ~= nil and m_result.Ok and m_result.Solutions and m_result.Solutions[n] then
+      m_solution = n
+      ShowResult()
+    end
+  end,
   SetWeight = SetWeight,
   SetAllowFeatureRemoval = SetAllowFeatureRemoval,
   SetReplace = SetReplace,
@@ -1088,6 +1315,7 @@ SDP_Panel = {
   State = function()
     return {
       CityID = m_cityID, Result = m_result, DistrictRows = m_districtRows, ResultRows = m_resultRows,
+      Count = List().Count, Solution = m_solution, Remind = m_remind,
       Weights = m_weights, AllowFeatureRemoval = m_allowFeatureRemoval, Land = m_land, Tier = m_tier, Replace = m_replace,
       Wonders = SelectedWonders(), HeatDistrict = m_heat,
       Running = SDP_Task.IsRunning(), QualityText = Controls.Quality:GetText(), EstimateText = Controls.Estimate:GetText(),
@@ -1110,6 +1338,11 @@ end)
 Controls.LandCheck:RegisterCheckHandler(function()
   SetLand(Controls.LandCheck:IsChecked())
 end)
+Controls.RemindCheck:RegisterCheckHandler(function()
+  SetRemind(Controls.RemindCheck:IsChecked())
+end)
+Controls.CountLess:RegisterCallback(Mouse.eLClick, function() SetCount(List().Count - 1) end)
+Controls.CountMore:RegisterCallback(Mouse.eLClick, function() SetCount(List().Count + 1) end)
 Controls.SolveButton:RegisterCallback(Mouse.eLClick, function() Solve() end)
 Controls.ContinueButton:RegisterCallback(Mouse.eLClick, function() Continue() end)
 Controls.CancelButton:RegisterCallback(Mouse.eLClick, function() Cancel() end)

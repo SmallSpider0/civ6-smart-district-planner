@@ -284,6 +284,75 @@ function SDP_City.EngineRefused(playerID, cityID, districtType)
   return refused
 end
 
+-- Fresh water, coast or neither at a city center plot (housing, design
+-- 3.3): "FRESH" (river, lake, a feature adding fresh water next to it),
+-- "COAST" or "NONE".
+function SDP_City.WaterKind(plot)
+  if plot:IsRiver() then return "FRESH" end
+  local coast = false
+  for direction = 0, DirectionTypes.NUM_DIRECTION_TYPES - 1 do
+    local n = Map.GetAdjacentPlot(plot:GetX(), plot:GetY(), direction)
+    if n ~= nil then
+      if n:IsLake() then return "FRESH" end
+      local feature = n:GetFeatureType()
+      if feature ~= -1 and GameInfo.Features[feature].AddsFreshWater then return "FRESH" end
+      if n:IsWater() then coast = true end
+    end
+  end
+  return coast and "COAST" or "NONE"
+end
+
+-- Whether the city of a scan lacks fresh water: an existing city by the
+-- game's own housing from water (below what a river or lake gives), a
+-- planned city by its center plot.
+function SDP_City.LacksFreshWater(scan)
+  local fresh = (GlobalParameters and GlobalParameters.CITY_POPULATION_RIVER_LAKE) or 5
+  if scan.CityID ~= nil then
+    local city = CityManager.GetCity(scan.PlayerID, scan.CityID)
+    local growth = city and city.GetGrowth and city:GetGrowth()
+    if growth ~= nil and growth.GetHousingFromWater ~= nil then return growth:GetHousingFromWater() < fresh end
+  end
+  return SDP_City.WaterKind(Map.GetPlot(scan.X, scan.Y)) ~= "FRESH"
+end
+
+-- Whether a city needs a district of an automatic kind (SDP_Rules.AutoKind)
+-- that it has not got: no fresh water for "WATER", enough floodplain
+-- candidate plots for "FLOOD".
+function SDP_City.NeedsAuto(scan, districtType)
+  local kind = SDP_Rules.AutoKind(districtType)
+  if kind == "WATER" then return SDP_City.LacksFreshWater(scan) end
+  if kind == "FLOOD" then
+    local features, count = SDP_Rules.RequiredFeatures(districtType), 0
+    for _, c in ipairs(scan.Candidates) do
+      local feature = Map.GetPlotByIndex(c.Index):GetFeatureType()
+      if feature ~= -1 and features[GameInfo.Features[feature].FeatureType] then count = count + 1 end
+    end
+    return count >= SDP_Rules.AUTO_FLOOD_PLOTS
+  end
+  return false
+end
+
+-- Distance cost per candidate (feedback item 9): weight x (plots to the
+-- nearest center - 1), the centers being the player's cities and `extra`
+-- ({ { X, Y } }, planned cities). Returns a list parallel to `candidates`,
+-- or nil when the weight is 0 (off).
+function SDP_City.DistanceCosts(playerID, candidates, weight, extra)
+  if weight == nil or weight <= 0 then return nil end
+  local centers = {}
+  for _, city in Players[playerID]:GetCities():Members() do centers[#centers + 1] = { X = city:GetX(), Y = city:GetY() } end
+  for _, c in ipairs(extra or {}) do centers[#centers + 1] = c end
+  local costs = {}
+  for i, c in ipairs(candidates) do
+    local nearest = math.huge
+    for _, center in ipairs(centers) do
+      nearest = math.min(nearest, Map.GetPlotDistance(c.X, c.Y, center.X, center.Y))
+    end
+    if nearest == math.huge then nearest = 1 end
+    costs[i] = weight * math.max(0, nearest - 1)
+  end
+  return costs
+end
+
 -- Why each plannable district cannot be planned for this city, or nil when
 -- it can: { [DistrictType] = "BUILT" | "MAX_PER_PLAYER" }. BUILT: already in
 -- this city (shown greyed out). MAX_PER_PLAYER: the player has reached the

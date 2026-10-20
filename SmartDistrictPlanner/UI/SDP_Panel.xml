@@ -36,61 +36,81 @@
 
       <!-- ============ Single city ============ -->
       <Container ID="SinglePage" Anchor="C,T" Offset="0,88" Size="520,820">
-      <Stack ID="Body" Anchor="C,T" StackGrowth="Bottom" StackPadding="6">
-        <!-- City -->
+      <Stack ID="Body" Anchor="C,T" StackGrowth="Bottom" StackPadding="4">
+        <!-- City, and how many districts that take population (feedback 1) -->
         <Container Size="480,28">
-          <Label Anchor="L,C" Style="BodyTextDark18" String="LOC_SDP_CITY"/>
-          <PullDown ID="CityPull" Anchor="R,C" Style="PullDownBlue" Size="380,24"/>
+          <Label Anchor="L,C" Style="BodyTextDark16" String="LOC_SDP_CITY"/>
+          <PullDown ID="CityPull" Anchor="L,C" Offset="44,0" Style="PullDownBlue" Size="220,24"/>
+          <Container Anchor="R,C" Size="190,28" ToolTip="LOC_SDP_COUNT_TOOLTIP">
+            <Label Anchor="L,C" Style="BodyTextDark16" String="LOC_SDP_COUNT"/>
+            <Button ID="CountLess" Anchor="R,C" Offset="52,0" Style="ArrowButtonLeft"/>
+            <Label ID="CountValue" Anchor="R,C" Offset="32,0" Style="BodyTextDark18"/>
+            <Button ID="CountMore" Anchor="R,C" Offset="4,0" Style="ArrowButtonRight"/>
+          </Container>
         </Container>
-
-        <!-- Districts -->
-        <Label Style="BodyTextDark18" String="LOC_SDP_DISTRICTS"/>
-        <ScrollPanel ID="DistrictScroll" Size="480,156" Vertical="1">
-          <ScrollBar Anchor="R,C" AnchorSide="I,I" Style="Slider_Blue"/>
-          <Stack ID="DistrictStack" StackGrowth="Bottom" StackPadding="2"/>
-        </ScrollPanel>
         <Label ID="SpecialtyNote" Style="BodyTextDark14" WrapWidth="480"/>
-        <Container Size="480,28">
+
+        <!-- Districts in two groups (feedback 6, 7): a click cycles the state -->
+        <Container Size="480,20">
+          <Label Anchor="L,C" Style="BodyTextDark16" String="LOC_SDP_GROUP_SPECIALTY" ToolTip="LOC_SDP_STATES_TOOLTIP"/>
+          <Label Anchor="R,C" Style="BodyTextDark14" String="LOC_SDP_STATES_LEGEND"/>
+        </Container>
+        <Stack ID="DistrictStack" StackGrowth="Right" WrapWidth="480" WrapGrowth="Bottom" StackPadding="4"/>
+        <Container Size="480,20">
+          <Label Anchor="L,C" Style="BodyTextDark16" String="LOC_SDP_GROUP_OTHER" ToolTip="LOC_SDP_STATES_OTHER_TOOLTIP"/>
+          <Label Anchor="R,C" Style="BodyTextDark14" String="LOC_SDP_STATES_LEGEND_OTHER"/>
+        </Container>
+        <Stack ID="UtilityStack" StackGrowth="Right" WrapWidth="480" WrapGrowth="Bottom" StackPadding="4"/>
+
+        <!-- Wonders as tags (feedback 2), good places -->
+        <Container Size="480,26">
           <Label Anchor="L,C" Style="BodyTextDark16" String="LOC_SDP_SINGLE_WONDERS"/>
-          <PullDown ID="WonderPull" Anchor="L,C" Offset="50,0" Style="PullDownBlue" Size="200,24"/>
-          <Label Anchor="L,C" Offset="262,0" Style="BodyTextDark16" String="LOC_SDP_HEATMAP" ToolTip="LOC_SDP_HEATMAP_TOOLTIP"/>
-          <PullDown ID="HeatPull" Anchor="R,C" Style="PullDownBlue" Size="150,24" ToolTip="LOC_SDP_HEATMAP_TOOLTIP"/>
+          <PullDown ID="WonderPull" Anchor="L,C" Offset="44,0" Style="PullDownBlue" Size="170,24"/>
+          <Label Anchor="L,C" Offset="236,0" Style="BodyTextDark16" String="LOC_SDP_HEATMAP" ToolTip="LOC_SDP_HEATMAP_TOOLTIP"/>
+          <PullDown ID="HeatPull" Anchor="R,C" Style="PullDownBlue" Size="170,24" ToolTip="LOC_SDP_HEATMAP_TOOLTIP"/>
         </Container>
+        <Stack ID="WonderChipStack" StackGrowth="Right" WrapWidth="480" WrapGrowth="Bottom" StackPadding="4"/>
 
-        <!-- Weights -->
-        <Label Style="BodyTextDark18" String="LOC_SDP_WEIGHTS"/>
-        <Stack ID="WeightStack" Anchor="C,T" StackGrowth="Right" StackPadding="2"/>
+        <!-- Weights, one icon family (feedback 3), and the distance cost (feedback 9) -->
+        <Stack ID="WeightStack" Anchor="C,T" StackGrowth="Right" StackPadding="0"/>
+
+        <!-- Switches in one row; the full meaning is in each tooltip -->
         <Container Size="480,26">
-          <CheckBox ID="LandCheck" Anchor="L,C" Style="MainCheckBox"/>
-          <Label Anchor="L,C" Offset="26,0" Style="BodyTextDark16" String="LOC_SDP_LAND"/>
-        </Container>
-        <Container Size="480,26">
-          <CheckBox ID="FeatureCheck" Anchor="L,C" Style="MainCheckBox"/>
-          <Label Anchor="L,C" Offset="26,0" Style="BodyTextDark16" String="LOC_SDP_ALLOW_FEATURE_REMOVAL"/>
-        </Container>
-        <Container Size="480,26" ToolTip="LOC_SDP_REPLACE_OWN_TOOLTIP">
-          <CheckBox ID="ReplaceCheck" Anchor="L,C" Style="MainCheckBox"/>
-          <Label ID="ReplaceLabel" Anchor="L,C" Offset="26,0" Style="BodyTextDark16"/>
+          <Container Anchor="L,C" Size="116,26" ToolTip="LOC_SDP_LAND">
+            <CheckBox ID="LandCheck" Anchor="L,C" Style="MainCheckBox"/>
+            <Label Anchor="L,C" Offset="26,0" Style="BodyTextDark14" String="LOC_SDP_LAND_SHORT"/>
+          </Container>
+          <Container Anchor="L,C" Offset="120,0" Size="116,26" ToolTip="LOC_SDP_ALLOW_FEATURE_REMOVAL">
+            <CheckBox ID="FeatureCheck" Anchor="L,C" Style="MainCheckBox"/>
+            <Label Anchor="L,C" Offset="26,0" Style="BodyTextDark14" String="LOC_SDP_FEATURE_SHORT"/>
+          </Container>
+          <Container Anchor="L,C" Offset="240,0" Size="120,26" ToolTip="LOC_SDP_REPLACE_OWN_TOOLTIP">
+            <CheckBox ID="ReplaceCheck" Anchor="L,C" Style="MainCheckBox"/>
+            <Label ID="ReplaceLabel" Anchor="L,C" Offset="26,0" Style="BodyTextDark14"/>
+          </Container>
+          <Container Anchor="L,C" Offset="364,0" Size="116,26" ToolTip="LOC_SDP_REMIND_TOOLTIP">
+            <CheckBox ID="RemindCheck" Anchor="L,C" Style="MainCheckBox"/>
+            <Label Anchor="L,C" Offset="26,0" Style="BodyTextDark14" String="LOC_SDP_REMIND_SHORT"/>
+          </Container>
         </Container>
 
-        <!-- Tier -->
-        <Container Size="480,28">
-          <Label Anchor="L,C" Style="BodyTextDark18" String="LOC_SDP_TIER"/>
-          <PullDown ID="TierPull" Anchor="L,C" Offset="110,0" Style="PullDownBlue" Size="150,24"/>
-          <Label ID="Estimate" Anchor="R,C" Style="BodyTextDark14"/>
+        <!-- Tier, estimate, solve / continue (cancel while running) -->
+        <Container Size="480,42">
+          <Label Anchor="L,C" Style="BodyTextDark16" String="LOC_SDP_TIER"/>
+          <PullDown ID="TierPull" Anchor="L,C" Offset="44,0" Style="PullDownBlue" Size="100,24"/>
+          <Label ID="Estimate" Anchor="L,C" Offset="150,0" Style="BodyTextDark14" WrapWidth="84"/>
+          <Stack Anchor="R,C" StackGrowth="Right" StackPadding="4">
+            <GridButton ID="SolveButton" Size="110,41" Style="MainButton" String="LOC_SDP_SOLVE"/>
+            <GridButton ID="ContinueButton" Size="124,41" Style="MainButton" String="LOC_SDP_CONTINUE"/>
+            <GridButton ID="CancelButton" Size="124,41" Style="MainButton" String="LOC_SDP_CANCEL"/>
+          </Stack>
         </Container>
 
-        <!-- Solve, continue, cancel -->
-        <Stack Anchor="C,T" StackGrowth="Right" StackPadding="8">
-          <GridButton ID="SolveButton" Size="150,41" Style="MainButton" String="LOC_SDP_SOLVE"/>
-          <GridButton ID="ContinueButton" Size="150,41" Style="MainButton" String="LOC_SDP_CONTINUE"/>
-          <GridButton ID="CancelButton" Size="150,41" Style="MainButton" String="LOC_SDP_CANCEL"/>
-        </Stack>
-
-        <!-- Results -->
+        <!-- Results: the solutions (feedback 1), the selected one's districts -->
         <Label ID="Summary" Style="BodyTextDark16" WrapWidth="480"/>
         <Label ID="Quality" Style="BodyTextDark14" WrapWidth="480"/>
-        <ScrollPanel ID="ResultScroll" Size="480,128" Vertical="1">
+        <Stack ID="SolutionStack" StackGrowth="Bottom" StackPadding="2"/>
+        <ScrollPanel ID="ResultScroll" Size="480,140" Vertical="1">
           <ScrollBar Anchor="R,C" AnchorSide="I,I" Style="Slider_Blue"/>
           <Stack ID="ResultStack" StackGrowth="Bottom" StackPadding="2"/>
         </ScrollPanel>
@@ -105,42 +125,48 @@
 
       <!-- ============ City sites (step 1) ============ -->
       <Container ID="SitesPage" Anchor="C,T" Offset="0,88" Size="520,820" Hidden="1">
-      <Stack ID="SitesBody" Anchor="C,T" StackGrowth="Bottom" StackPadding="6">
-        <Container Size="500,30">
+      <Stack ID="SitesBody" Anchor="C,T" StackGrowth="Bottom" StackPadding="4">
+        <Container Size="480,30">
           <Label Anchor="L,C" Style="BodyTextDark16" String="LOC_SDP_SITES_COUNT"/>
-          <Button ID="SitesCountLess" Anchor="L,C" Offset="110,0" Style="ArrowButtonLeft"/>
-          <Label ID="SitesCount" Anchor="L,C" Offset="140,0" Style="BodyTextDark18"/>
-          <Button ID="SitesCountMore" Anchor="L,C" Offset="160,0" Style="ArrowButtonRight"/>
-          <Label Anchor="L,C" Offset="230,0" Style="BodyTextDark16" String="LOC_SDP_SITES_DISTANCE"/>
-          <Button ID="SitesDistanceLess" Anchor="L,C" Offset="360,0" Style="ArrowButtonLeft"/>
-          <Label ID="SitesDistance" Anchor="L,C" Offset="390,0" Style="BodyTextDark18"/>
-          <Button ID="SitesDistanceMore" Anchor="L,C" Offset="414,0" Style="ArrowButtonRight"/>
+          <Button ID="SitesCountLess" Anchor="L,C" Offset="100,0" Style="ArrowButtonLeft"/>
+          <Label ID="SitesCount" Anchor="L,C" Offset="130,0" Style="BodyTextDark18"/>
+          <Button ID="SitesCountMore" Anchor="L,C" Offset="150,0" Style="ArrowButtonRight"/>
+          <Label Anchor="L,C" Offset="220,0" Style="BodyTextDark16" String="LOC_SDP_SITES_DISTANCE"/>
+          <Button ID="SitesDistanceLess" Anchor="L,C" Offset="350,0" Style="ArrowButtonLeft"/>
+          <Label ID="SitesDistance" Anchor="L,C" Offset="380,0" Style="BodyTextDark18"/>
+          <Button ID="SitesDistanceMore" Anchor="L,C" Offset="404,0" Style="ArrowButtonRight"/>
         </Container>
-        <Container Size="500,28">
+        <Container Size="480,28">
           <Label Anchor="L,C" Style="BodyTextDark16" String="LOC_SDP_SITES_PRESET"/>
-          <PullDown ID="SitesPresetPull" Anchor="L,C" Offset="110,0" Style="PullDownBlue" Size="180,24"/>
+          <PullDown ID="SitesPresetPull" Anchor="L,C" Offset="100,0" Style="PullDownBlue" Size="180,24"/>
         </Container>
-        <Stack ID="SitesWeightStack" Anchor="C,T" StackGrowth="Right" StackPadding="2"/>
-        <Stack ID="SitesWeightStack2" Anchor="C,T" StackGrowth="Right" StackPadding="2"/>
-        <Label Style="BodyTextDark16" String="LOC_SDP_SITES_PLAN"/>
-        <ScrollPanel ID="SitesDistrictScroll" Size="500,120" Vertical="1">
-          <ScrollBar Anchor="R,C" AnchorSide="I,I" Style="Slider_Blue"/>
-          <Stack ID="SitesDistrictStack" StackGrowth="Bottom" StackPadding="2"/>
-        </ScrollPanel>
-        <Container Size="500,28">
-          <Label Anchor="L,C" Style="BodyTextDark18" String="LOC_SDP_TIER"/>
-          <PullDown ID="SitesTierPull" Anchor="L,C" Offset="110,0" Style="PullDownBlue" Size="150,24"/>
-          <Label ID="SitesEstimate" Anchor="R,C" Style="BodyTextDark14"/>
+        <Stack ID="SitesWeightStack" Anchor="C,T" StackGrowth="Right" StackPadding="0"/>
+        <Stack ID="SitesWeightStack2" Anchor="C,T" StackGrowth="Right" StackPadding="0"/>
+        <!-- The districts each site is scored with: its best few (feedback 8) -->
+        <Container Size="480,24">
+          <Label Anchor="L,C" Style="BodyTextDark16" String="LOC_SDP_SITES_PLAN"/>
+          <Container Anchor="R,C" Size="170,24" ToolTip="LOC_SDP_SITES_PLAN_COUNT_TOOLTIP">
+            <Label Anchor="L,C" Style="BodyTextDark14" String="LOC_SDP_SITES_PLAN_COUNT"/>
+            <Button ID="SitesPlanLess" Anchor="R,C" Offset="52,0" Style="ArrowButtonLeft"/>
+            <Label ID="SitesPlanValue" Anchor="R,C" Offset="32,0" Style="BodyTextDark18"/>
+            <Button ID="SitesPlanMore" Anchor="R,C" Offset="4,0" Style="ArrowButtonRight"/>
+          </Container>
         </Container>
-        <Stack Anchor="C,T" StackGrowth="Right" StackPadding="8">
-          <GridButton ID="SitesSolveButton" Size="150,41" Style="MainButton" String="LOC_SDP_SOLVE"/>
-          <GridButton ID="SitesContinueButton" Size="150,41" Style="MainButton" String="LOC_SDP_CONTINUE"/>
-          <GridButton ID="SitesCancelButton" Size="150,41" Style="MainButton" String="LOC_SDP_CANCEL"/>
-        </Stack>
-        <Label ID="SitesSummary" Style="BodyTextDark16" WrapWidth="500"/>
-        <Label ID="SitesQuality" Style="BodyTextDark14" WrapWidth="500"/>
+        <Stack ID="SitesDistrictStack" StackGrowth="Right" WrapWidth="480" WrapGrowth="Bottom" StackPadding="4"/>
+        <Container Size="480,42">
+          <Label Anchor="L,C" Style="BodyTextDark16" String="LOC_SDP_TIER"/>
+          <PullDown ID="SitesTierPull" Anchor="L,C" Offset="44,0" Style="PullDownBlue" Size="100,24"/>
+          <Label ID="SitesEstimate" Anchor="L,C" Offset="150,0" Style="BodyTextDark14" WrapWidth="84"/>
+          <Stack Anchor="R,C" StackGrowth="Right" StackPadding="4">
+            <GridButton ID="SitesSolveButton" Size="110,41" Style="MainButton" String="LOC_SDP_SOLVE"/>
+            <GridButton ID="SitesContinueButton" Size="124,41" Style="MainButton" String="LOC_SDP_CONTINUE"/>
+            <GridButton ID="SitesCancelButton" Size="124,41" Style="MainButton" String="LOC_SDP_CANCEL"/>
+          </Stack>
+        </Container>
+        <Label ID="SitesSummary" Style="BodyTextDark16" WrapWidth="480"/>
+        <Label ID="SitesQuality" Style="BodyTextDark14" WrapWidth="480"/>
         <Stack ID="SitesSolutionStack" StackGrowth="Bottom" StackPadding="2"/>
-        <ScrollPanel ID="SitesResultScroll" Size="500,160" Vertical="1">
+        <ScrollPanel ID="SitesResultScroll" Size="480,190" Vertical="1">
           <ScrollBar Anchor="R,C" AnchorSide="I,I" Style="Slider_Blue"/>
           <Stack ID="SitesResultStack" StackGrowth="Bottom" StackPadding="2"/>
         </ScrollPanel>
@@ -153,54 +179,66 @@
 
       <!-- ============ Several cities (step 2) ============ -->
       <Container ID="MultiPage" Anchor="C,T" Offset="0,88" Size="520,820" Hidden="1">
-      <Stack ID="MultiBody" Anchor="C,T" StackGrowth="Bottom" StackPadding="6">
+      <Stack ID="MultiBody" Anchor="C,T" StackGrowth="Bottom" StackPadding="4">
         <Label Style="BodyTextDark16" String="LOC_SDP_MULTI_CITIES"/>
-        <ScrollPanel ID="MultiCityScroll" Size="500,96" Vertical="1">
+        <ScrollPanel ID="MultiCityScroll" Size="480,72" Vertical="1">
           <ScrollBar Anchor="R,C" AnchorSide="I,I" Style="Slider_Blue"/>
           <Stack ID="MultiCityStack" StackGrowth="Bottom" StackPadding="2"/>
         </ScrollPanel>
-        <Container Size="500,28">
+        <Container Size="480,28">
           <Label Anchor="L,C" Style="BodyTextDark16" String="LOC_SDP_MULTI_PLAN_FOR"/>
-          <PullDown ID="MultiPlanPull" Anchor="L,C" Offset="100,0" Style="PullDownBlue" Size="210,24"/>
-          <PullDown ID="MultiTemplatePull" Anchor="R,C" Style="PullDownBlue" Size="170,24"/>
+          <PullDown ID="MultiPlanPull" Anchor="L,C" Offset="84,0" Style="PullDownBlue" Size="210,24"/>
+          <PullDown ID="MultiTemplatePull" Anchor="R,C" Style="PullDownBlue" Size="150,24"/>
         </Container>
-        <Container Size="500,170">
-          <Label Anchor="L,T" Style="BodyTextDark16" String="LOC_SDP_MULTI_PLAN"/>
-          <ScrollPanel ID="MultiDistrictScroll" Anchor="L,T" Offset="0,22" Size="245,148" Vertical="1">
-            <ScrollBar Anchor="R,C" AnchorSide="I,I" Style="Slider_Blue"/>
-            <Stack ID="MultiDistrictStack" StackGrowth="Bottom" StackPadding="2"/>
-          </ScrollPanel>
-          <Label Anchor="R,T" Offset="155,0" Style="BodyTextDark16" String="LOC_SDP_MULTI_WONDERS"/>
-          <ScrollPanel ID="WonderScroll" Anchor="R,T" Offset="0,22" Size="245,148" Vertical="1">
-            <ScrollBar Anchor="R,C" AnchorSide="I,I" Style="Slider_Blue"/>
-            <Stack ID="WonderStack" StackGrowth="Bottom" StackPadding="2"/>
-          </ScrollPanel>
+        <Container Size="480,22">
+          <Label Anchor="L,C" Style="BodyTextDark16" String="LOC_SDP_GROUP_SPECIALTY" ToolTip="LOC_SDP_STATES_TOOLTIP"/>
+          <Container Anchor="R,C" Size="190,22" ToolTip="LOC_SDP_COUNT_TOOLTIP_MULTI">
+            <Label Anchor="L,C" Style="BodyTextDark14" String="LOC_SDP_COUNT_PER_CITY"/>
+            <Button ID="MultiCountLess" Anchor="R,C" Offset="52,0" Style="ArrowButtonLeft"/>
+            <Label ID="MultiCountValue" Anchor="R,C" Offset="32,0" Style="BodyTextDark18"/>
+            <Button ID="MultiCountMore" Anchor="R,C" Offset="4,0" Style="ArrowButtonRight"/>
+          </Container>
         </Container>
-        <Stack ID="MultiWeightStack" Anchor="C,T" StackGrowth="Right" StackPadding="2"/>
-        <Container Size="500,26">
-          <Container Anchor="L,C" Size="190,26" ToolTip="LOC_SDP_LAND">
+        <Stack ID="MultiDistrictStack" StackGrowth="Right" WrapWidth="480" WrapGrowth="Bottom" StackPadding="4"/>
+        <Container Size="480,20">
+          <Label Anchor="L,C" Style="BodyTextDark16" String="LOC_SDP_GROUP_OTHER" ToolTip="LOC_SDP_STATES_OTHER_TOOLTIP"/>
+          <Label Anchor="R,C" Style="BodyTextDark14" String="LOC_SDP_STATES_LEGEND_OTHER"/>
+        </Container>
+        <Stack ID="MultiUtilityStack" StackGrowth="Right" WrapWidth="480" WrapGrowth="Bottom" StackPadding="4"/>
+        <Container Size="480,26">
+          <Label Anchor="L,C" Style="BodyTextDark16" String="LOC_SDP_MULTI_WONDERS"/>
+          <PullDown ID="MultiWonderPull" Anchor="L,C" Offset="44,0" Style="PullDownBlue" Size="170,24"/>
+        </Container>
+        <Stack ID="MultiWonderChipStack" StackGrowth="Right" WrapWidth="480" WrapGrowth="Bottom" StackPadding="4"/>
+        <Stack ID="MultiWeightStack" Anchor="C,T" StackGrowth="Right" StackPadding="0"/>
+        <Container Size="480,26">
+          <Container Anchor="L,C" Size="150,26" ToolTip="LOC_SDP_LAND">
             <CheckBox ID="MultiLandCheck" Anchor="L,C" Style="MainCheckBox"/>
-            <Label Anchor="L,C" Offset="26,0" Style="BodyTextDark16" String="LOC_SDP_LAND_SHORT"/>
+            <Label Anchor="L,C" Offset="26,0" Style="BodyTextDark14" String="LOC_SDP_LAND_SHORT"/>
           </Container>
-          <Container Anchor="L,C" Offset="200,0" Size="300,26" ToolTip="LOC_SDP_REPLACE_OWN_MULTI_TOOLTIP">
+          <Container Anchor="L,C" Offset="160,0" Size="180,26" ToolTip="LOC_SDP_REPLACE_OWN_MULTI_TOOLTIP">
             <CheckBox ID="MultiReplaceCheck" Anchor="L,C" Style="MainCheckBox"/>
-            <Label ID="MultiReplaceLabel" Anchor="L,C" Offset="26,0" Style="BodyTextDark16"/>
+            <Label ID="MultiReplaceLabel" Anchor="L,C" Offset="26,0" Style="BodyTextDark14"/>
+          </Container>
+          <Container Anchor="L,C" Offset="350,0" Size="130,26" ToolTip="LOC_SDP_REMIND_TOOLTIP">
+            <CheckBox ID="MultiRemindCheck" Anchor="L,C" Style="MainCheckBox"/>
+            <Label Anchor="L,C" Offset="26,0" Style="BodyTextDark14" String="LOC_SDP_REMIND_SHORT"/>
           </Container>
         </Container>
-        <Container Size="500,28">
-          <Label Anchor="L,C" Style="BodyTextDark18" String="LOC_SDP_TIER"/>
-          <PullDown ID="MultiTierPull" Anchor="L,C" Offset="110,0" Style="PullDownBlue" Size="150,24"/>
-          <Label ID="MultiEstimate" Anchor="R,C" Style="BodyTextDark14"/>
+        <Container Size="480,42">
+          <Label Anchor="L,C" Style="BodyTextDark16" String="LOC_SDP_TIER"/>
+          <PullDown ID="MultiTierPull" Anchor="L,C" Offset="44,0" Style="PullDownBlue" Size="100,24"/>
+          <Label ID="MultiEstimate" Anchor="L,C" Offset="150,0" Style="BodyTextDark14" WrapWidth="84"/>
+          <Stack Anchor="R,C" StackGrowth="Right" StackPadding="4">
+            <GridButton ID="MultiSolveButton" Size="110,41" Style="MainButton" String="LOC_SDP_SOLVE"/>
+            <GridButton ID="MultiContinueButton" Size="124,41" Style="MainButton" String="LOC_SDP_CONTINUE"/>
+            <GridButton ID="MultiCancelButton" Size="124,41" Style="MainButton" String="LOC_SDP_CANCEL"/>
+          </Stack>
         </Container>
-        <Stack Anchor="C,T" StackGrowth="Right" StackPadding="8">
-          <GridButton ID="MultiSolveButton" Size="150,41" Style="MainButton" String="LOC_SDP_SOLVE"/>
-          <GridButton ID="MultiContinueButton" Size="150,41" Style="MainButton" String="LOC_SDP_CONTINUE"/>
-          <GridButton ID="MultiCancelButton" Size="150,41" Style="MainButton" String="LOC_SDP_CANCEL"/>
-        </Stack>
-        <Label ID="MultiSummary" Style="BodyTextDark16" WrapWidth="500"/>
-        <Label ID="MultiQuality" Style="BodyTextDark14" WrapWidth="500"/>
+        <Label ID="MultiSummary" Style="BodyTextDark16" WrapWidth="480"/>
+        <Label ID="MultiQuality" Style="BodyTextDark14" WrapWidth="480"/>
         <Stack ID="MultiSolutionStack" StackGrowth="Bottom" StackPadding="2"/>
-        <ScrollPanel ID="MultiResultScroll" Size="500,96" Vertical="1">
+        <ScrollPanel ID="MultiResultScroll" Size="480,96" Vertical="1">
           <ScrollBar Anchor="R,C" AnchorSide="I,I" Style="Slider_Blue"/>
           <Stack ID="MultiResultStack" StackGrowth="Bottom" StackPadding="2"/>
         </ScrollPanel>
@@ -213,25 +251,43 @@
     </Grid>
   </Grid>
 
-  <Instance Name="DistrictRow">
-    <Container ID="Root" Size="460,34">
+  <!-- One district in a three-column grid: a click cycles its state
+       (required / candidate / not wanted / automatic). The selected look
+       marks required and automatic ones; dark text goes with it. -->
+  <Instance Name="DistrictCell">
+    <GridButton ID="Root" Size="156,26" Style="ButtonControl">
+      <GridButton ID="Selected" Size="parent,parent" Style="TabButtonSelected" ConsumeMouseButton="0" ConsumeMouseOver="1" Hidden="1"/>
+      <Image ID="Icon" Anchor="L,C" Offset="2,0" Size="26,26"/>
+      <Label ID="Name" Anchor="L,C" Offset="30,0" Style="FontNormal14" TruncateWidth="88" TruncatedTooltip="1"/>
+      <Label ID="NameDark" Anchor="L,C" Offset="30,0" Style="BodyTextDark14" TruncateWidth="88" TruncatedTooltip="1" Hidden="1"/>
+      <Label ID="State" Anchor="R,C" Offset="5,0" Style="FontNormal14"/>
+      <Label ID="StateDark" Anchor="R,C" Offset="5,0" Style="BodyTextDark14" Hidden="1"/>
+    </GridButton>
+  </Instance>
+
+  <!-- A district that can be ticked, in a three-column grid. -->
+  <Instance Name="CheckCell">
+    <Container ID="Root" Size="156,26">
       <CheckBox ID="Check" Anchor="L,C" Style="MainCheckBox"/>
-      <Image ID="Icon" Anchor="L,C" Offset="26,0" Size="32,32"/>
-      <Label ID="Name" Anchor="L,C" Offset="64,0" Style="BodyTextDark16"/>
-      <Label ID="Status" Anchor="R,C" Offset="16,0" Style="BodyTextDark14"/>
+      <Image ID="Icon" Anchor="L,C" Offset="24,0" Size="26,26"/>
+      <Label ID="Name" Anchor="L,C" Offset="52,0" Style="BodyTextDark14" TruncateWidth="100" TruncatedTooltip="1"/>
     </Container>
   </Instance>
 
+  <!-- A chosen wonder; a click takes it off the list. -->
+  <Instance Name="WonderChip">
+    <GridButton ID="Root" Size="120,24" Style="ButtonControl">
+      <Label ID="Name" Anchor="C,C" Style="FontNormal14"/>
+    </GridButton>
+  </Instance>
+
   <Instance Name="WeightColumn">
-    <Container ID="Root" Size="66,60" ConsumeMouseOver="1">
-      <!-- The envoy icons are white; tint them to read on the light window.
-           Food and the one-time yields have no such icon: Glyph shows a
-           font icon or a short word instead. -->
-      <Image ID="Icon" Anchor="C,T" Size="26,26" Color="40,70,105,255"/>
-      <Label ID="Glyph" Anchor="C,T" Offset="0,4" Style="BodyTextDark16"/>
-      <Button ID="Less" Anchor="L,B" Offset="2,4" Style="ArrowButtonLeft"/>
-      <Label ID="Value" Anchor="C,B" Offset="0,6" Style="BodyTextDark18"/>
-      <Button ID="More" Anchor="R,B" Offset="2,4" Style="ArrowButtonRight"/>
+    <Container ID="Root" Size="60,52" ConsumeMouseOver="1">
+      <!-- The game's font icons: one family for every column (feedback 3). -->
+      <Label ID="Glyph" Anchor="C,T" Offset="0,2" Style="BodyTextDark18"/>
+      <Button ID="Less" Anchor="L,B" Offset="2,2" Style="ArrowButtonLeft"/>
+      <Label ID="Value" Anchor="C,B" Offset="0,5" Style="BodyTextDark16"/>
+      <Button ID="More" Anchor="R,B" Offset="2,2" Style="ArrowButtonRight"/>
     </Container>
   </Instance>
 
@@ -240,16 +296,6 @@
       <Image ID="Icon" Anchor="L,C" Size="32,32"/>
       <Label ID="Name" Anchor="L,T" Offset="40,2" Style="BodyTextDark16"/>
       <Label ID="Detail" Anchor="L,T" Offset="40,21" Style="BodyTextDark14"/>
-    </Container>
-  </Instance>
-
-  <!-- A district, wonder or participant row in the narrower lists. -->
-  <Instance Name="CheckRow">
-    <Container ID="Root" Size="230,30">
-      <CheckBox ID="Check" Anchor="L,C" Style="MainCheckBox"/>
-      <Image ID="Icon" Anchor="L,C" Offset="24,0" Size="26,26"/>
-      <Label ID="Name" Anchor="L,C" Offset="54,0" Style="BodyTextDark14"/>
-      <Label ID="Status" Anchor="R,C" Offset="12,0" Style="BodyTextDark14"/>
     </Container>
   </Instance>
 
@@ -264,7 +310,7 @@
 
   <!-- One solution: a selectable row; selecting it previews it on the map. -->
   <Instance Name="SolutionRow">
-    <GridButton ID="Root" Size="500,30" Style="ButtonControl">
+    <GridButton ID="Root" Size="480,30" Style="ButtonControl">
       <GridButton ID="Selected" Size="parent,parent" Style="TabButtonSelected" ConsumeMouseButton="0" ConsumeMouseOver="1" Hidden="1"/>
       <!-- Light text on the dark button; dark text on the light selected look
            (SDP_UI.SolutionRow shows one pair). -->

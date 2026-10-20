@@ -117,7 +117,7 @@
       <Text>计入占用地块的产出损失（食物、地貌权重用于这一项）</Text>
     </Replace>
     <Replace Tag="LOC_SDP_LAND_SHORT" Language="zh_Hans_CN">
-      <Text>计入占地的产出损失</Text>
+      <Text>计入占地</Text>
     </Replace>
     <Replace Tag="LOC_SDP_WEIGHT_FEATURE_SHORT" Language="zh_Hans_CN">
       <Text>地貌</Text>
@@ -438,6 +438,139 @@
     </Replace>
     <Replace Tag="LOC_SDP_COVERAGE_TIP" Language="zh_Hans_CN">
       <Text>覆盖范围内的城市：{1_Names}</Text>
+    </Replace>
+    <!-- 区域状态、数量、提醒钉、距离成本 -->
+    <Replace Tag="LOC_SDP_COUNT" Language="zh_Hans_CN">
+      <Text>区域数量</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_COUNT_PER_CITY" Language="zh_Hans_CN">
+      <Text>每城数量</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_COUNT_TOOLTIP" Language="zh_Hans_CN">
+      <Text>这座城要规划几个占人口名额的区域，必建的也算在内。多于必建的个数时，其余的从“候选”里挑收益最高的，并给出区域组合不同的三套方案。等于必建个数时不挑，只放必建的。</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_COUNT_TOOLTIP_MULTI" Language="zh_Hans_CN">
+      <Text>这份清单的每座城要规划几个占人口名额的区域，必建的也算在内。多于必建的个数时，其余的由求解器从“候选”里为每座城挑收益最高的。</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_GROUP_SPECIALTY" Language="zh_Hans_CN">
+      <Text>占人口名额的区域</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_GROUP_OTHER" Language="zh_Hans_CN">
+      <Text>不占名额的区域</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_STATES_LEGEND" Language="zh_Hans_CN">
+      <Text>点一下：候选 → 必建 → 不建</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_STATES_LEGEND_OTHER" Language="zh_Hans_CN">
+      <Text>点一下：自动 → 必建 → 不建</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_STATES_TOOLTIP" Language="zh_Hans_CN">
+      <Text>必建：一定放。候选：区域数量多于必建个数时，从候选里挑收益最高的。不建：不考虑。收益只按加权相邻加成（打开时加上地块、覆盖和距离成本）比较，军营、航空港这类没有相邻加成的区域放在候选里不会被挑中，需要时设为必建。全帝国限一个的区域（如政府广场）只能必建或不建。</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_STATES_OTHER_TOOLTIP" Language="zh_Hans_CN">
+      <Text>这些区域不占人口名额，不计入区域数量。自动：城市需要时加进方案，位置照常求解。水渠类区域在城市缺淡水（水源住房低于河流、湖泊给的 5）时加入；水坝在三环内本城可用的泛滥平原不少于 3 格时加入（只在风云变幻）。放不下时不加，并在结果里说明。</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_STATE_MUST" Language="zh_Hans_CN">
+      <Text>必建</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_STATE_POOL" Language="zh_Hans_CN">
+      <Text>候选</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_STATE_OFF" Language="zh_Hans_CN">
+      <Text>不建</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_STATE_AUTO" Language="zh_Hans_CN">
+      <Text>自动</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_CELL_TOOLTIP" Language="zh_Hans_CN">
+      <Text>{1_Name}：{2_State}（点一下切换）</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_FEATURE_SHORT" Language="zh_Hans_CN">
+      <Text>允许砍伐</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_REMIND_SHORT" Language="zh_Hans_CN">
+      <Text>提醒钉</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_REMIND_TOOLTIP" Language="zh_Hans_CN">
+      <Text>方案里的区域靠旁边的树林、雨林拿相邻加成，以后砍掉就会少这部分加成。打钉时在这些格子上一起打一个“移除地貌”图标的提醒钉，钉名写明砍掉会少多少；撤销时一起撤。</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_REMIND_PIN" Language="zh_Hans_CN">
+      <Text>勿砍：{1_Losses}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_REMIND_LOSS" Language="zh_Hans_CN">
+      <Text>{1_District} {2_Yields}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_REMIND_SEPARATOR" Language="zh_Hans_CN">
+      <Text>；</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_REMIND" Language="zh_Hans_CN">
+      <Text>勿砍{1_Feature} {2_Where}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_AUTO" Language="zh_Hans_CN">
+      <Text>（自动加入）</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_PICKED" Language="zh_Hans_CN">
+      <Text>（从候选挑出）</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_UNPLACED_AUTO" Language="zh_Hans_CN">
+      <Text>自动加入的{1_Name}放不下</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_POOL_SHORT" Language="zh_Hans_CN">
+      <Text>候选不够：{1_City}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_REASON_POOL_SHORT" Language="zh_Hans_CN">
+      <Text>少挑了 {1_Count} 个：候选的区域放不下更多</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SOLUTION_PICKED" Language="zh_Hans_CN">
+      <Text>挑出：{1_Names}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SOLUTION_DISTRICTS" Language="zh_Hans_CN">
+      <Text>{1_Count} 个区域，位置不同</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_SUMMARY_PARTS" Language="zh_Hans_CN">
+      <Text>加权提升：{1_Gain}（{2_Parts}）</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_PART_ADJACENCY" Language="zh_Hans_CN">
+      <Text>相邻 {1_Value}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_PART_LAND" Language="zh_Hans_CN">
+      <Text>地块 {1_Value}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_PART_COVERAGE" Language="zh_Hans_CN">
+      <Text>覆盖 {1_Value}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_PART_DISTANCE" Language="zh_Hans_CN">
+      <Text>距离 {1_Value}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_WONDER_ADD" Language="zh_Hans_CN">
+      <Text>添加奇观</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_WONDER_ADD_MORE" Language="zh_Hans_CN">
+      <Text>已选 {1_N} 个，再添加</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_WONDER_CHIP" Language="zh_Hans_CN">
+      <Text>{1_Name} ×</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_WONDER_CHIP_TOOLTIP" Language="zh_Hans_CN">
+      <Text>点一下去掉这个奇观</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_REPLACE_OWN_SHORT" Language="zh_Hans_CN">
+      <Text>替换旧钉（{1_N}）</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_WEIGHT_DISTANCE" Language="zh_Hans_CN">
+      <Text>距离成本：每个区域、奇观按到最近的本方市中心的格数减 1，乘以这个系数扣分（与相邻加成同一单位）；0 为不计。游戏里区域的造价与距离无关，与距离有关的是取得格子的先后和买地价格，这里表达“区域尽量靠近城市”的偏好。</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_MULTI_SITE_OFF" Language="zh_Hans_CN">
+      <Text>（不参与）</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_MULTI_SITE_TOOLTIP" Language="zh_Hans_CN">
+      <Text>取消勾选后，这个城址不参与规划：不为它放区域，也不算作新城。钉本身不动，仍作为固定邻居影响周围的加成。</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_PLAN_COUNT" Language="zh_Hans_CN">
+      <Text>每个城址按</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_PLAN_COUNT_TOOLTIP" Language="zh_Hans_CN">
+      <Text>每个城址按几个占人口名额的区域估算区域分。勾选的多于这个数时，每个城址各自挑区域分最高的几个；不多于时全部计入。</Text>
     </Replace>
   </LocalizedText>
 </GameData>

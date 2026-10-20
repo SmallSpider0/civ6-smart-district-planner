@@ -24,6 +24,14 @@ SDP_Tiers.DEFAULT = "STANDARD"
 --   Kicks       ruin-and-recreate rounds after them (SDP_Search.Kicks)
 --   Swap, Pair  local search also swaps two districts / moves an adjacent pair
 --   Sliced      computed over several frames (SDP_Task) instead of at once
+--               (a plan picking districts from a pool always is)
+--   Combos      picking from a pool: combinations solved first (best
+--               optimistic value first), and as many more found by swapping
+--               one candidate for another (SDP_Search pools)
+--   ScreenShortlist, ScreenExact  model layouts evaluated exactly, and the
+--               exhaustive limit, when a combination is first solved (the
+--               best Solutions then get the tier's full search)
+--   Solutions   distinct solutions offered
 --   Work        time estimate: units = plots * (Work[1] * k + Work[2] * k^2)
 --               for k districts (measured in the game, 2026-10-20; the
 --               search stops well before its budgets)
@@ -31,14 +39,17 @@ SDP_Tiers.Single = {
   FAST = {
     ExactLimit = 1000, Beam = 150, BeamOrder = "pairs", Shortlist = 20, NodeLimit = 100000, CallLimit = 2000, TryLimit = 3000,
     MaxPasses = 10, Starts = 1, Kicks = 0, Swap = false, Pair = false, Sliced = false, Work = { 5.4, 0 },
+    Combos = 3, ScreenShortlist = 10, Solutions = 3,
   },
   STANDARD = {
     ExactLimit = 3000, Beam = 400, BeamOrder = "pairs", Shortlist = 100, NodeLimit = 500000, CallLimit = 6000, TryLimit = 8000,
     MaxPasses = 20, Starts = 3, Kicks = 4, Swap = true, Pair = false, Sliced = false, Work = { 9.7, 1.2 },
+    Combos = 8, ScreenShortlist = 20, Solutions = 3,
   },
   FINE = {
     ExactLimit = 40000, Beam = 1000, BeamOrder = "pairs", Shortlist = 200, NodeLimit = 2000000, CallLimit = 30000, TryLimit = 40000,
     MaxPasses = 30, Starts = 8, Kicks = 24, Swap = true, Pair = false, Sliced = true, Work = { 9.5, 6.3 },
+    Combos = 20, ScreenShortlist = 40, ScreenExact = 3000, Solutions = 3,
   },
 }
 
@@ -49,6 +60,8 @@ SDP_Tiers.Single = {
 --            narrow-beam city by city, reversed, ...
 --   Rounds   block rounds per start: each city re-solved with the others fixed
 --   Solutions  distinct plans to offer (design 4.5)
+--   Combos   picking from a city's pool: combinations solved each time a
+--            start plans that city (best optimistic value first)
 --   Prelude  a lighter tier whose starts run first, with its parameters
 --            (SDP_Multi Session:RunPrelude): the tier never ends below them
 --   Work     time estimate: units per (district or wonder) slot and plot,
@@ -59,17 +72,17 @@ SDP_Tiers.Multi = {
   FAST = {
     ExactLimit = 500, Beam = 100, BeamOrder = "pairs", Shortlist = 20, NodeLimit = 100000,
     CallLimit = 8000, TryLimit = 8000, MaxPasses = 10, Starts = 3, Rounds = 1, Kicks = 0, Solutions = 3,
-    Swap = false, Pair = false, Sliced = true, Work = 21,
+    Swap = false, Pair = false, Sliced = true, Work = 21, Combos = 2,
   },
   STANDARD = {
     ExactLimit = 2000, Beam = 300, BeamOrder = "pairs", Shortlist = 50, NodeLimit = 300000,
     CallLimit = 30000, TryLimit = 40000, MaxPasses = 20, Starts = 5, Rounds = 2, Kicks = 24, Solutions = 3,
-    Swap = true, Pair = false, Sliced = true, Work = 88, Prelude = "FAST",
+    Swap = true, Pair = false, Sliced = true, Work = 88, Prelude = "FAST", Combos = 3,
   },
   FINE = {
     ExactLimit = 8000, Beam = 600, BeamOrder = "pairs", Shortlist = 100, NodeLimit = 1000000,
     CallLimit = 120000, TryLimit = 150000, MaxPasses = 30, Starts = 4, Rounds = 3, Kicks = 64, Solutions = 3,
-    Swap = true, Pair = false, Sliced = true, Work = 140, Prelude = "STANDARD",
+    Swap = true, Pair = false, Sliced = true, Work = 140, Prelude = "STANDARD", Combos = 4,
   },
 }
 
@@ -81,18 +94,23 @@ SDP_Tiers.Multi = {
 --   ContinueSites  sites refined by each "continue"
 --   Site.Work      time estimate: units per refined site and planned district
 --                  (measured in the game, 2026-10-20)
+--   Site.Combos    when more districts are ticked than each site is scored
+--                  with: combinations solved per site (SDP_Search pools)
 SDP_Tiers.Sites = {
   FAST = {
     Refined = 20, ComboNodes = 100000, Keep = 30, Solutions = 3, ContinueSites = 20, Sliced = true,
-    Site = { Beam = 60, Shortlist = 8, Starts = 1, Kicks = 0, Swap = false, TryLimit = 1500, CallLimit = 100000, Work = 85 },
+    Site = { Beam = 60, Shortlist = 8, Starts = 1, Kicks = 0, Swap = false, TryLimit = 1500, CallLimit = 100000, Work = 85,
+      Combos = 2, ScreenShortlist = 4, Solutions = 1 },
   },
   STANDARD = {
     Refined = 40, ComboNodes = 500000, Keep = 40, Solutions = 3, ContinueSites = 20, Sliced = true,
-    Site = { Beam = 120, Shortlist = 15, Starts = 1, Kicks = 0, Swap = true, TryLimit = 3000, CallLimit = 100000, Work = 98 },
+    Site = { Beam = 120, Shortlist = 15, Starts = 1, Kicks = 0, Swap = true, TryLimit = 3000, CallLimit = 100000, Work = 98,
+      Combos = 3, ScreenShortlist = 6, Solutions = 1 },
   },
   FINE = {
     Refined = 80, ComboNodes = 2000000, Keep = 60, Solutions = 3, ContinueSites = 20, Sliced = true,
-    Site = { Beam = 250, Shortlist = 30, Starts = 2, Kicks = 2, Swap = true, TryLimit = 6000, CallLimit = 100000, Work = 195 },
+    Site = { Beam = 250, Shortlist = 30, Starts = 2, Kicks = 2, Swap = true, TryLimit = 6000, CallLimit = 100000, Work = 195,
+      Combos = 4, ScreenShortlist = 10, Solutions = 1 },
   },
 }
 

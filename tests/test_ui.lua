@@ -21,7 +21,9 @@ local function Reset()
   local city = Players[pid]:GetCities():GetCapitalCity()
   if city == nil then T.skip("no capital: run tests/fixtures/found_capital.lua") end
   SDP_Panel.SelectCity(city:GetID())
-  for _, d in ipairs(SDP_Rules.PlannableDistricts(pid)) do SDP_Panel.SetSelected(d.Type, false) end
+  for _, d in ipairs(SDP_Rules.PlannableDistricts(pid)) do SDP_Panel.SetState(d.Type, "OFF") end
+  SDP_Panel.SetCount(0)
+  SDP_Panel.SetRemind(false)
   for _, y in ipairs(SDP_Rules.YIELDS) do SDP_Panel.SetWeight(y, 1) end
   SDP_Panel.SetWeight("YIELD_FOOD", 1)
   SDP_Panel.SetWeight("FEATURE", 1)
@@ -40,7 +42,7 @@ test("the district list shows every plannable district with its status", functio
   local status = SDP_City.DistrictStatus(SDP_City.Scan(pid, city:GetID()), districts)
   for _, row in ipairs(rows) do
     T.eq(row.Status, status[row.Type], row.Type .. " status")
-    T.eq(row.Check:IsChecked(), false, row.Type .. " checked after reset")
+    T.eq(row.State, "OFF", row.Type .. " off after reset")
   end
 end)
 

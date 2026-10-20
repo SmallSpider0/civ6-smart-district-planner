@@ -89,7 +89,22 @@ end
 -- Put the overlay's replacements in place for `state`.
 local function Activate(state)
   state.RealGet, state.RealUpdate = GetMapPinSubject, UpdateMapPinSubject
+  state.RealFeatures = GetRealizedPlotFeatures
   m_state = state
+  -- DMT reads what is on the plots around a subject through this global;
+  -- HideFeature makes one plot's feature (woods, rainforest) look gone.
+  if state.RealFeatures ~= nil then
+    GetRealizedPlotFeatures = function(pid, plot, pinSubject) -- lint: allow global-assign
+      local features = state.RealFeatures(pid, plot, pinSubject)
+      if state.HiddenFeature ~= nil and plot ~= nil and features ~= nil and plot:GetIndex() == state.HiddenFeature then
+        local copy = {}
+        for key, value in pairs(features) do copy[key] = value end
+        copy[AdjacencyBonusTypes.ADJACENCY_FEATURE] = nil
+        return copy
+      end
+      return features
+    end
+  end
   GetMapPinSubject = function(pid, x, y) -- lint: allow global-assign
     if pid ~= state.PlayerID then return state.RealGet(pid, x, y) end
     local value = state.Layer[Key(x, y)]
@@ -118,6 +133,7 @@ function SDP_Overlay.Uninstall()
   local state = m_state
   if state == nil then return end
   GetMapPinSubject, UpdateMapPinSubject = state.RealGet, state.RealUpdate -- lint: allow global-assign
+  if state.RealFeatures ~= nil then GetRealizedPlotFeatures = state.RealFeatures end -- lint: allow global-assign
   m_state = nil
   ClearDMTCache(state.PlayerID)
 end
@@ -166,6 +182,15 @@ function SDP_Overlay.HidePins(pins)
   if m_state == nil then error("SDP_Overlay is not installed", 2) end
   if pins == nil or #pins == 0 then return end
   for _, pin in ipairs(pins) do m_state.Snapshot[Key(pin.X, pin.Y)] = nil end
+  ClearDMTCache(m_state.PlayerID)
+end
+
+-- Make the feature on plot `index` invisible to DMT's adjacency (nil: none),
+-- as if a builder had cleared it. Only for subjects next to it: the plot's
+-- own subject is not affected.
+function SDP_Overlay.HideFeature(index)
+  if m_state == nil then error("SDP_Overlay is not installed", 2) end
+  m_state.HiddenFeature = index
   ClearDMTCache(m_state.PlayerID)
 end
 

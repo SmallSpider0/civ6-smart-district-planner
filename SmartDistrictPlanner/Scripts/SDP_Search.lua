@@ -17,6 +17,13 @@
 --               touching slots one plot over, move an adjacent pair (tier).
 --   Kicks       ruin and recreate: take a slot and its planned neighbours off,
 --               put them back one by one on their best plots, local search.
+--   Pools       a group may hold optional slots (candidate districts) of
+--               which exactly a given number is placed: the search ranks
+--               the combinations by an optimistic model value, solves the
+--               best few exactly (Combos), tries swapping one candidate for
+--               another (TypeSwaps) and refines the best combinations.
+--   Costs       an optional cost per candidate plot (the distance cost)
+--               taken off for every placed slot.
 -- Budgets are counts (SDP_Tiers); loops run over sorted arrays; ties go to
 -- the smaller candidate positions (= plot indices). Same input, same result
 -- (requirement constraint 6). The overlay must be installed while it runs.
@@ -55,6 +62,11 @@ SDP_Search.Better = Better
 --                 Requires = district type a wonder must be next to (GameInfo.Buildings.AdjacentDistrict) }
 --   Lands       SDP_Land models whose part counts (each only sees its own plots)
 --   Coverage    SDP_Coverage model or nil (off)
+--   Pools       { [group] = count }: of the group's slots marked Optional,
+--               exactly `count` are placed (fewer when they do not fit)
+--   Costs       { [position] = cost } or nil: taken off per placed slot
+--   Alternatives  keep this many distinct good layouts (SDP_Solver's
+--               solutions; 0 or nil: none)
 -- }
 function SDP_Search.New(spec)
   local self = setmetatable({}, Search)
@@ -62,6 +74,9 @@ function SDP_Search.New(spec)
   self.Candidates, self.N = spec.Candidates, #spec.Candidates
   self.Lands = spec.Lands or {}
   self.Coverage = spec.Coverage
+  self.PoolSpec, self.Costs = spec.Pools, spec.Costs
+  self.AltCount = spec.Alternatives or 0
+  self.Alt = {}
   self.CoverLists = {} -- scratch for CoverageCount
   self.SlotSpecs = spec.Slots
   self.Moving, self.Taken, self.Mark = {}, {}, {} -- scratch tables for Evaluate
@@ -138,7 +153,39 @@ function Search:Singles()
   self.Types, self.Kinds, self.Groups, self.Single, self.Legal, self.Subjects, self.SlotIndex =
     types, kinds, groups, single, legal, subjects, index
   self.K = #types
+  -- Pools: each group's optional and required slots and how many optional
+  -- ones to place.
+  self.Optional, self.PoolSlots, self.RequiredSlots, self.PoolCount, self.PoolGroups = {}, {}, {}, {}, {}
+  for m = 1, self.K do
+    local g = groups[m]
+    if self.SlotSpecs[index[m]].Optional then
+      self.Optional[m] = true
+      self.PoolSlots[g] = self.PoolSlots[g] or {}
+      table.insert(self.PoolSlots[g], m)
+    else
+      self.RequiredSlots[g] = self.RequiredSlots[g] or {}
+      table.insert(self.RequiredSlots[g], m)
+    end
+  end
+  local selected = 0
+  for m = 1, self.K do
+    if not self.Optional[m] then selected = selected + 1 end
+  end
+  for g, list in pairs(self.PoolSlots) do
+    local count = math.min((self.PoolSpec and self.PoolSpec[g]) or 0, #list)
+    self.PoolCount[g] = count
+    selected = selected + count
+    if count > 0 then self.PoolGroups[#self.PoolGroups + 1] = g end
+  end
+  table.sort(self.PoolGroups)
+  self.Selected = selected
+  self.AltNeed = math.max(2, math.ceil(0.2 * selected))
   return dropped
+end
+
+-- Whether the search has candidate districts to choose from.
+function Search:HasPools()
+  return #self.PoolGroups > 0
 end
 
 -- Move the board to `layout` and return its value (DMT gain + land parts +
@@ -174,7 +221,24 @@ function Search:Evaluate(layout)
     end
   end
   if self.Coverage ~= nil then gain = gain + self.Coverage.Weight * self:CoverageCount(layout) end
+  local costs = self.Costs
+  if costs ~= nil then
+    for m = 1, k do
+      local i = layout[m]
+      if i ~= 0 then gain = gain - costs[i] end
+    end
+  end
   return gain, legal
+end
+
+-- The distance cost of a layout alone (for reports; 0 when off), negative.
+function Search:CostDelta(layout)
+  local costs, total = self.Costs, 0
+  if costs == nil then return 0 end
+  for m = 1, self.K do
+    if layout[m] ~= 0 then total = total - costs[layout[m]] end
+  end
+  return total
 end
 
 -- The pairs a placement of slot m on candidate i newly covers on its own
@@ -261,12 +325,61 @@ SDP_Search.Placed = Placed
 function Search:Consider(gain, legal, layout)
   if not legal then return false end
   local placed = Placed(layout)
+  if self.AltCount > 0 then self:KeepAlternative(gain, layout, placed) end
   local best = self.BestLayout
   if best == nil or placed > self.BestPlaced or (placed == self.BestPlaced and Better(gain, layout, self.BestGain, best)) then
     self.BestLayout, self.BestGain, self.BestPlaced = Copy(layout), gain, placed
     return true
   end
   return false
+end
+
+-- Whether layouts a and b differ in at least `count` slots.
+local function Differ(a, b, count)
+  local diff = 0
+  for m = 1, #a do
+    if a[m] ~= b[m] then
+      diff = diff + 1
+      if diff >= count then return true end
+    end
+  end
+  return diff >= count
+end
+
+-- Two layouts are different solutions when they place other candidate
+-- districts (pools) or put at least AltNeed slots elsewhere.
+function Search:IsDistinct(a, b)
+  for m in pairs(self.Optional) do
+    if (a[m] ~= 0) ~= (b[m] ~= 0) then return true end
+  end
+  return Differ(a, b, self.AltNeed)
+end
+
+-- Placed slots first, then the higher value, then the smaller positions.
+local function Ahead(placedA, gainA, layoutA, placedB, gainB, layoutB)
+  if placedA ~= placedB then return placedA > placedB end
+  return Better(gainA, layoutA, gainB, layoutB)
+end
+
+-- Keep the AltCount best layouts seen that differ from each other in at
+-- least AltNeed slots (design 4.5's rule): alternative solutions.
+function Search:KeepAlternative(gain, layout, placed)
+  for _, e in ipairs(self.Alt) do
+    if not self:IsDistinct(layout, e.Layout) and not Ahead(placed, gain, layout, e.Placed, e.Gain, e.Layout) then return end
+  end
+  local kept = {}
+  for _, e in ipairs(self.Alt) do
+    if self:IsDistinct(layout, e.Layout) then kept[#kept + 1] = e end
+  end
+  local entry = { Gain = gain, Layout = Copy(layout), Placed = placed }
+  local pos = #kept + 1
+  while pos > 1 and Ahead(placed, gain, layout, kept[pos - 1].Placed, kept[pos - 1].Gain, kept[pos - 1].Layout) do
+    kept[pos] = kept[pos - 1]
+    pos = pos - 1
+  end
+  kept[pos] = entry
+  while #kept > self.AltCount do kept[#kept] = nil end
+  self.Alt = kept
 end
 
 -- Candidate positions adjacent to each candidate (ascending), adjacency as a
@@ -387,7 +500,7 @@ function Search:Model()
     single[m] = {}
     local rows = (adjacency[self.Types[m]] or {}).Rows or {}
     for i = 1, n do
-      local value = self.Single[m][i] - loss[i]
+      local value = self.Single[m][i] - loss[i] - (self.Costs and self.Costs[i] or 0)
       -- Coverage alone; two slots of one group over the same city both
       -- count it here, so the model stays optimistic.
       if self.Coverage ~= nil and self.Legal[m][i] then
@@ -680,29 +793,26 @@ function Search:BeamOrder(order, plots)
   return sorted
 end
 
--- Whether two layouts differ in at least `count` slots.
-local function Differ(a, b, count)
-  local diff = 0
-  for m = 1, #a do
-    if a[m] ~= b[m] then diff = diff + 1 end
-  end
-  return diff >= count
-end
-
 -- Local search from the next `count` ranked layouts that differ from every
--- earlier start in at least two slots.
-function Search:RunStarts(count)
+-- earlier start in at least two slots. `state` holds Ranked, NextStart,
+-- Started and the best layout found (BestLayout, BestGain): the search
+-- itself (default) or one combination of a pool (SDP_Search pools).
+function Search:RunStarts(count, state)
+  state = state or self
   local done = 0
-  while done < count and self.NextStart <= #self.Ranked and not self:OverBudget() do
-    local start = self.Ranked[self.NextStart]
-    self.NextStart = self.NextStart + 1
+  while done < count and state.NextStart <= #state.Ranked and not self:OverBudget() do
+    local start = state.Ranked[state.NextStart]
+    state.NextStart = state.NextStart + 1
     local fresh = true
-    for _, earlier in ipairs(self.Started) do
+    for _, earlier in ipairs(state.Started) do
       if not Differ(start.Layout, earlier, math.min(2, self.K)) then fresh = false end
     end
     if fresh then
-      self.Started[#self.Started + 1] = start.Layout
-      self:LocalSearch(start.Layout, start.Gain)
+      state.Started[#state.Started + 1] = start.Layout
+      local layout, gain = self:LocalSearch(start.Layout, start.Gain)
+      if state ~= self and (state.BestLayout == nil or Better(gain, layout, state.BestGain, state.BestLayout)) then
+        state.BestLayout, state.BestGain = layout, gain
+      end
       self.Stats.Starts = self.Stats.Starts + 1
       done = done + 1
     end
@@ -860,24 +970,36 @@ end
 --   cycle 1  the seed and the slots within two plots
 --   cycle 2  the seed and the slots next to it; none may go back
 --   cycle 3+ two seeds (the second c slots further on) and their neighbours
-function Search:Kicks(count)
+-- `state` (default the search itself) holds the layout kicked (BestLayout,
+-- BestGain) and the kick counters; for one combination of a pool, only its
+-- placed slots move, so the combination stays.
+function Search:Kicks(count, state)
+  state = state or self
   local k, n, legal, candidates = self.K, self.N, self.Legal, self.Candidates
   local _, touching = self:Touching()
-  self.KickIndex = self.KickIndex or 0
-  self.KicksWithout = self.KicksWithout or 0
+  state.KickIndex = state.KickIndex or 0
+  state.KicksWithout = state.KicksWithout or 0
   local function Near(a, b, range)
     if range == 1 then return touching[a][b] end
     local ca, cb = candidates[a], candidates[b]
     return Map.GetPlotDistance(ca.X, ca.Y, cb.X, cb.Y) <= range
   end
   for _ = 1, count do
-    if self.BestLayout == nil or self:OverBudget() then return end
-    self.KickIndex = self.KickIndex + 1
-    local seed = (self.KickIndex - 1) % k + 1
-    local cycle = math.floor((self.KickIndex - 1) / k)
-    local layout = Copy(self.BestLayout)
+    if state.BestLayout == nil or self:OverBudget() then return end
+    state.KickIndex = state.KickIndex + 1
+    -- Seeds cycle through the slots; with pools through the placed ones only
+    -- (the others are candidates left out).
+    local cycleSlots = {}
+    for m = 1, k do
+      if not self:HasPools() or state.BestLayout[m] ~= 0 then cycleSlots[#cycleSlots + 1] = m end
+    end
+    local kk = math.max(1, #cycleSlots)
+    local pos = (state.KickIndex - 1) % kk + 1
+    local seed = cycleSlots[pos] or 1
+    local cycle = math.floor((state.KickIndex - 1) / kk)
+    local layout = Copy(state.BestLayout)
     local seeds = { seed }
-    if cycle >= 3 and k > 1 then seeds[2] = (seed - 1 + cycle - 2) % k + 1 end
+    if cycle >= 3 and kk > 1 then seeds[2] = cycleSlots[(pos - 1 + cycle - 2) % kk + 1] end
     local range = (cycle == 1) and 2 or 1
     local removed, isRemoved = {}, {}
     for _, sd in ipairs(seeds) do
@@ -919,15 +1041,18 @@ function Search:Kicks(count)
       end
       layout[m] = bestI
     end
-    local before = self.BestGain
+    local before = state.BestGain
     if ok then
       local gain, isLegal = self:Evaluate(layout)
       if isLegal then
         self:Consider(gain, true, layout)
-        self:LocalSearch(layout, gain)
+        local found, foundGain = self:LocalSearch(layout, gain)
+        if state ~= self and Better(foundGain, found, state.BestGain, state.BestLayout) then
+          state.BestLayout, state.BestGain = found, foundGain
+        end
       end
     end
-    if self.BestGain > before then self.KicksWithout = 0 else self.KicksWithout = self.KicksWithout + 1 end
+    if state.BestGain > before then state.KicksWithout = 0 else state.KicksWithout = state.KicksWithout + 1 end
   end
 end
 
@@ -970,6 +1095,7 @@ end
 -- First run.
 function Search:Run()
   local params = self.Params
+  if self:HasPools() then return self:RunPools(self.PoolGroups[1]) end
   self:SetBudgets()
   if self.K == 0 then return end
   local order, base = self:AllSlots(), self:EmptyLayout()
@@ -989,6 +1115,7 @@ function Search:Run()
 end
 
 function Search:CanContinue()
+  if self.Stats.Method == "pools" then return self:CanContinuePools() end
   if self.Stats.Method ~= "shortlist" or self.Ranked == nil then return false end
   if self.NextStart <= #self.Ranked then return true end
   -- Four cycles of kicks (every strength, see Kicks) found nothing: stop.
@@ -999,6 +1126,7 @@ end
 -- there is nothing left to try.
 function Search:Continue()
   if not self:CanContinue() then return false end
+  if self.Stats.Method == "pools" then return self:ContinuePools() end
   self:SetBudgets()
   local before = self.BestGain
   self.Stats.Continues = self.Stats.Continues + 1
@@ -1008,9 +1136,375 @@ function Search:Continue()
   return true
 end
 
+-- ===========================================================================
+-- Pools: which candidate districts to place (design: feedback item 1). The
+-- single-city solver and the site scores run RunPools on their one group;
+-- SDP_Multi chooses per city with Combos, SolveBlock and TypeSwaps.
+-- ===========================================================================
+SDP_Search.COMBO_LIMIT = 5000 -- combinations ranked per group at most
+
+local function Choose(n, k)
+  local c = 1
+  for i = 1, k do c = c * (n - k + i) / i end
+  return c
+end
+
+-- The group's required slots and `slots`, ascending.
+function Search:ActiveOrder(g, slots)
+  local order = {}
+  for _, m in ipairs(self.RequiredSlots[g] or {}) do order[#order + 1] = m end
+  for _, m in ipairs(slots) do order[#order + 1] = m end
+  table.sort(order)
+  return order
+end
+
+-- The optional slots of group g that `layout` places, ascending.
+function Search:ChosenOf(g, layout)
+  local chosen = {}
+  for _, m in ipairs(self.PoolSlots[g] or {}) do
+    if layout[m] ~= 0 then chosen[#chosen + 1] = m end
+  end
+  return chosen
+end
+
+function Search:ComboKey(slots)
+  local names = {}
+  for x, m in ipairs(slots) do names[x] = self.Types[m] end
+  return table.concat(names, ",")
+end
+
+-- Every way to pick PoolCount[g] of group g's optional slots, best
+-- optimistic value first: { Slots (ascending), Value, Key }. The value is the
+-- model's: each slot's best single value, plus the positive pair gains among
+-- the picked slots and with the group's required ones (each pair once), plus
+-- the same for the required slots alone. Like the model bound it is usually
+-- optimistic. Ties: by the types' names. More than COMBO_LIMIT combinations:
+-- only the candidates with the best values of their own take part.
+function Search:Combos(g)
+  self.ComboCache = self.ComboCache or {}
+  if self.ComboCache[g] ~= nil then return self.ComboCache[g] end
+  self:Model()
+  local single, pair, legal, n = self.ModelSingle, self.Pair, self.Legal, self.N
+  local required, need = self.RequiredSlots[g] or {}, self.PoolCount[g] or 0
+  local function BestSingle(m)
+    local best = nil
+    for i = 1, n do
+      if legal[m][i] and (best == nil or single[m][i] > best) then best = single[m][i] end
+    end
+    return best or 0
+  end
+  local base = 0
+  for x, a in ipairs(required) do
+    base = base + BestSingle(a)
+    for y = 1, x - 1 do
+      if pair[a][required[y]] > 0 then base = base + pair[a][required[y]] end
+    end
+  end
+  local pool, own = {}, {}
+  for _, m in ipairs(self.PoolSlots[g] or {}) do
+    local value = BestSingle(m)
+    for _, r in ipairs(required) do
+      if pair[m][r] > 0 then value = value + pair[m][r] end
+    end
+    own[m] = value
+    pool[#pool + 1] = m
+  end
+  while #pool > need and Choose(#pool, need) > SDP_Search.COMBO_LIMIT do
+    local worst = 1
+    for x = 2, #pool do
+      if own[pool[x]] <= own[pool[worst]] then worst = x end
+    end
+    table.remove(pool, worst)
+  end
+  local list, chosen = {}, {}
+  local function Walk(start, depth, value)
+    if depth > need then
+      local slots = Copy(chosen)
+      list[#list + 1] = { Slots = slots, Value = base + value, Key = self:ComboKey(slots) }
+      return
+    end
+    for x = start, #pool - (need - depth) do
+      local m = pool[x]
+      local add = own[m]
+      for d = 1, depth - 1 do
+        if pair[m][chosen[d]] > 0 then add = add + pair[m][chosen[d]] end
+      end
+      chosen[depth] = m
+      Walk(x + 1, depth + 1, value + add)
+      chosen[depth] = nil
+    end
+  end
+  Walk(1, 1, 0)
+  table.sort(list, function(a, b)
+    if a.Value ~= b.Value then return a.Value > b.Value end
+    return a.Key < b.Key
+  end)
+  self.ComboCache[g] = list
+  return list
+end
+
+-- The moves that swap one placed candidate of group g in `layout` for one
+-- left out, the newcomer on its best free plot (exact values): { Slots
+-- (the new combination), Key, Gain, Layout }, best first. Budgeted like
+-- local search tries.
+function Search:SwapMoves(g, layout)
+  local moves, n, legal = {}, self.N, self.Legal
+  local chosen, out = {}, {}
+  for _, m in ipairs(self.PoolSlots[g] or {}) do
+    if layout[m] ~= 0 then chosen[#chosen + 1] = m else out[#out + 1] = m end
+  end
+  local trial = Copy(layout)
+  for _, x in ipairs(chosen) do
+    local keepX = trial[x]
+    trial[x] = 0
+    local used = {}
+    for m = 1, self.K do
+      if trial[m] ~= 0 then used[trial[m]] = true end
+    end
+    for _, y in ipairs(out) do
+      local bestI, bestGain = nil, nil
+      for i = 1, n do
+        if legal[y][i] and not used[i] then
+          if self:OverBudget() then break end
+          trial[y] = i
+          self.Stats.Tries = self.Stats.Tries + 1
+          Tick(SDP_Tiers.UNITS_PER_TRY)
+          local gain, isLegal = self:Evaluate(trial)
+          if isLegal and (bestI == nil or gain > bestGain) then bestI, bestGain = i, gain end
+        end
+      end
+      trial[y] = 0
+      if bestI ~= nil then
+        local slots = {}
+        for _, m in ipairs(chosen) do
+          if m ~= x then slots[#slots + 1] = m end
+        end
+        slots[#slots + 1] = y
+        table.sort(slots)
+        local moved = Copy(trial)
+        moved[y] = bestI
+        moves[#moves + 1] = { Slots = slots, Key = self:ComboKey(slots), Gain = bestGain, Layout = moved }
+      end
+    end
+    trial[x] = keepX
+  end
+  table.sort(moves, function(a, b)
+    if a.Gain ~= b.Gain then return a.Gain > b.Gain end
+    return a.Key < b.Key
+  end)
+  return moves
+end
+
+-- The best improving swap over the groups with pools (SDP_Multi): returns
+-- the new layout and value, or nil.
+function Search:TypeSwaps(layout, gain)
+  local best = nil
+  for _, g in ipairs(self.PoolGroups) do
+    if self:OverBudget() then break end
+    local move = self:SwapMoves(g, layout)[1]
+    if move ~= nil and move.Gain > gain and (best == nil or move.Gain > best.Gain) then best = move end
+  end
+  if best == nil then return nil end
+  self:Consider(best.Gain, true, best.Layout)
+  return best.Layout, best.Gain
+end
+
+-- Single group: every combination solved so far, best first.
+function Search:SortEntries()
+  table.sort(self.PoolEntries, function(a, b)
+    return Ahead(Placed(a.BestLayout), a.BestGain, a.BestLayout, Placed(b.BestLayout), b.BestGain, b.BestLayout)
+  end)
+end
+
+-- Solve one combination: exhaustively when small (ScreenExact layouts at
+-- most; RefineCombos goes up to ExactLimit for the best ones), else the
+-- model shortlist (ScreenShortlist layouts) and one local search. Its state
+-- (best layout, ranked starts, kick counters) is kept for refining it later.
+function Search:ScreenCombo(g, slots, key)
+  local params = self.Params
+  local entry = { Slots = slots, Key = key, Order = self:ActiveOrder(g, slots), Started = {}, NextStart = 1, Ranked = {} }
+  self.PoolSeen[key] = entry
+  local base = self:EmptyLayout()
+  local limit = math.min(params.ExactLimit, params.ScreenExact or params.ExactLimit)
+  local count = self:CountLayouts(entry.Order, {}, params.ExactLimit)
+  entry.Count = count
+  if count == 0 then return entry end
+  if count <= limit then
+    local complete, layout, gain = self:Exhaustive(entry.Order, base)
+    entry.Exact, entry.BestLayout, entry.BestGain = complete, layout, gain
+  else
+    local shortlist = params.Shortlist
+    params.Shortlist = math.min(shortlist, params.ScreenShortlist or shortlist)
+    entry.Ranked, entry.Bound = self:Shortlist(entry.Order, base)
+    params.Shortlist = shortlist
+    self:RunStarts(1, entry)
+  end
+  if entry.BestLayout ~= nil then
+    self.PoolEntries[#self.PoolEntries + 1] = entry
+    self:SortEntries()
+  end
+  return entry
+end
+
+-- Solve the next `count` combinations in ranked order. A combination whose
+-- optimistic value is below the last solution's value ends it: the rest
+-- rank lower still.
+function Search:ScreenCombos(count)
+  local g = self.PoolGroup
+  local combos = self:Combos(g)
+  local solutions = self.Params.Solutions or 3
+  local done = 0
+  while done < count and self.NextCombo <= #combos and not self:OverBudget() do
+    local c = combos[self.NextCombo]
+    local last = self.PoolEntries[solutions]
+    if last ~= nil and c.Value < last.BestGain then
+      self.Pruned = true
+      self.NextCombo = #combos + 1
+      break
+    end
+    self.NextCombo = self.NextCombo + 1
+    if self.PoolSeen[c.Key] == nil then
+      self:ScreenCombo(g, c.Slots, c.Key)
+      done = done + 1
+    end
+  end
+end
+
+-- From the best combinations, swap one candidate for another; a new
+-- combination that would rank among the solutions is solved too (at most
+-- `limit`). Catches what the optimistic ranking got wrong.
+function Search:SwapCombos(limit)
+  local g, solutions = self.PoolGroup, self.Params.Solutions or 3
+  local tried = 0
+  local top = {}
+  for r = 1, math.min(solutions, #self.PoolEntries) do top[r] = self.PoolEntries[r] end
+  for _, entry in ipairs(top) do
+    for _, move in ipairs(self:SwapMoves(g, entry.BestLayout)) do
+      if tried >= limit or self:OverBudget() then return end
+      if self.PoolSeen[move.Key] == nil then
+        local last = self.PoolEntries[solutions]
+        if last == nil or move.Gain > last.BestGain then
+          self:ScreenCombo(g, move.Slots, move.Key)
+          tried = tried + 1
+        end
+      end
+    end
+  end
+end
+
+-- The best combinations: solved exhaustively when they have at most
+-- ExactLimit layouts, else more local search starts and kicks.
+function Search:RefineCombos(starts, kicks)
+  local params = self.Params
+  local solutions = params.Solutions or 3
+  local top = {}
+  for r = 1, math.min(solutions, #self.PoolEntries) do top[r] = self.PoolEntries[r] end
+  for _, entry in ipairs(top) do
+    if not entry.Exact and not self:OverBudget() then
+      if entry.Count ~= nil and entry.Count <= params.ExactLimit then
+        local complete, layout, gain = self:Exhaustive(entry.Order, self:EmptyLayout())
+        entry.Exact = complete
+        if layout ~= nil and (entry.BestLayout == nil or Better(gain, layout, entry.BestGain, entry.BestLayout)) then
+          entry.BestLayout, entry.BestGain = layout, gain
+        end
+      else
+        self:RunStarts(starts, entry)
+        self:Kicks(kicks, entry)
+      end
+    end
+  end
+  self:SortEntries()
+end
+
+function Search:RunPools(g)
+  local params = self.Params
+  self:SetBudgets()
+  self.Stats.Method = "pools"
+  self.PoolGroup = g
+  self.PoolEntries, self.PoolSeen, self.NextCombo = {}, {}, 1
+  if self.K == 0 then return end
+  self.Stats.Combos = #self:Combos(g)
+  local count = params.Combos or 3
+  self:ScreenCombos(count)
+  self:SwapCombos(count)
+  self:RefineCombos(math.max(0, (params.Starts or 1) - 1), params.Kicks or 0)
+end
+
+function Search:CanContinuePools()
+  if self.PoolEntries == nil or self.K == 0 then return false end
+  if self.NextCombo <= #self:Combos(self.PoolGroup) then return true end
+  local solutions = self.Params.Solutions or 3
+  for r = 1, math.min(solutions, #self.PoolEntries) do
+    local entry = self.PoolEntries[r]
+    if not entry.Exact then
+      if entry.NextStart <= #entry.Ranked then return true end
+      if (self.Params.Kicks or 0) > 0 and (entry.KicksWithout or 0) < 4 * self.Selected then return true end
+    end
+  end
+  return false
+end
+
+function Search:ContinuePools()
+  self:SetBudgets()
+  local before = self.BestGain
+  self.Stats.Continues = self.Stats.Continues + 1
+  local count = math.max(1, math.ceil((self.Params.Combos or 3) / 2))
+  self:ScreenCombos(count)
+  self:SwapCombos(count)
+  self:RefineCombos(SDP_Tiers.SINGLE_CONTINUE_STARTS, self.Params.Kicks or 0)
+  self.Converged = before ~= nil and self.BestGain == before
+  return true
+end
+
+-- Every combination was solved, each exhaustively: the result is optimal.
+function Search:PoolsExact()
+  if self.Pruned or self.PoolEntries == nil or self.NextCombo <= #self:Combos(self.PoolGroup) then return false end
+  for _, entry in pairs(self.PoolSeen) do
+    if entry.BestLayout ~= nil and not entry.Exact then return false end
+  end
+  return true
+end
+
+-- Estimated upper bound: the best optimistic value of a combination not
+-- solved exactly.
+function Search:PoolsBound()
+  local bound = nil
+  for _, c in ipairs(self:Combos(self.PoolGroup)) do
+    local entry = self.PoolSeen[c.Key]
+    local value = c.Value
+    if entry ~= nil and entry.Exact then value = entry.BestGain or value end
+    if entry ~= nil and entry.Bound ~= nil then value = entry.Bound end
+    if bound == nil or value > bound then bound = value end
+  end
+  return bound
+end
+
+-- Up to `count` solutions: the best layout of each solved combination, best
+-- first; then the alternatives kept along the way (other plots for the same
+-- districts), as long as they are distinct from the ones taken.
+function Search:Solutions(count)
+  local pool = {}
+  for _, entry in ipairs(self.PoolEntries or {}) do
+    pool[#pool + 1] = { Layout = entry.BestLayout, Gain = entry.BestGain }
+  end
+  if self.BestLayout ~= nil then table.insert(pool, 1, { Layout = self.BestLayout, Gain = self.BestGain }) end
+  for _, e in ipairs(self.Alt) do pool[#pool + 1] = { Layout = e.Layout, Gain = e.Gain } end
+  local kept = {}
+  for _, entry in ipairs(pool) do
+    if #kept >= count then break end
+    local distinct = true
+    for _, other in ipairs(kept) do
+      if not self:IsDistinct(entry.Layout, other.Layout) then distinct = false end
+    end
+    if distinct then kept[#kept + 1] = entry end
+  end
+  return kept
+end
+
 -- Quality indicators (design 7.4) for `gain`, the value reported.
 function Search:Quality(gain)
   local exhaustive = self.Stats.Method == "exhaustive" and self.Exact == true
+  if self.Stats.Method == "pools" then exhaustive, self.Bound = self:PoolsExact(), self:PoolsBound() end
   local gap = nil
   if not exhaustive and self.Bound ~= nil and self.Bound > 0 and gain ~= nil then
     gap = math.max(0, (self.Bound - gain) / self.Bound)

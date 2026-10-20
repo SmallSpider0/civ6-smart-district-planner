@@ -146,7 +146,19 @@ function SDP_Sites.Context(playerID, request)
       if row.Specialty then specialty = specialty + 1 end
     end
   end
-  ctx.Plan, ctx.Population = plan, SDP_Land.RequiredPopulation(specialty)
+  -- Each site scored with PlanCount districts that take population
+  -- (feedback item 8): with more ticked, each site picks its best ones.
+  -- Without PlanCount every ticked district counts, as before.
+  local pool, pick = {}, 0
+  if request.PlanCount ~= nil and specialty > request.PlanCount then
+    local rest = {}
+    for _, districtType in ipairs(plan) do
+      if byType[districtType].Specialty then pool[#pool + 1] = districtType else rest[#rest + 1] = districtType end
+    end
+    plan, pick, specialty = rest, request.PlanCount, request.PlanCount
+  end
+  ctx.Plan, ctx.Pool, ctx.Pick, ctx.Population = plan, pool, pick, SDP_Land.RequiredPopulation(specialty)
+  ctx.Distance = request.Distance
   -- Resources the player has (amounts) and can see.
   local resources = Players[playerID]:GetResources()
   ctx.Owned, ctx.Visible = {}, {}
@@ -174,20 +186,7 @@ function SDP_Sites.Context(playerID, request)
 end
 
 -- Fresh water, coast or neither at a site (housing, design 3.3).
-local function Water(plot)
-  if plot:IsRiver() then return "FRESH" end
-  local coast = false
-  for direction = 0, DirectionTypes.NUM_DIRECTION_TYPES - 1 do
-    local n = Map.GetAdjacentPlot(plot:GetX(), plot:GetY(), direction)
-    if n ~= nil then
-      if n:IsLake() then return "FRESH" end
-      local feature = n:GetFeatureType()
-      if feature ~= -1 and GameInfo.Features[feature].AddsFreshWater then return "FRESH" end
-      if n:IsWater() then coast = true end
-    end
-  end
-  return coast and "COAST" or "NONE"
-end
+local Water = function(plot) return SDP_City.WaterKind(plot) end
 
 -- The coarse score of a site (no DMT). Returns a site table:
 --   X, Y, Index, Scan, Land (SDP_Land model of its workable plots)
@@ -252,7 +251,7 @@ function SDP_Sites.Coarse(ctx, candidate, centers)
     end
   end
   site.Parts.Appeal = usable > 0 and w.APPEAL * appeal / usable or 0
-  local planned = #ctx.Plan
+  local planned = #ctx.Plan + ctx.Pick
   site.Parts.Penalty = math.max(0, planned - usable) * SDP_Sites.MISSING_PLOT
   site.Valid = usable * 2 >= planned
   site.Info.Usable = usable
@@ -366,12 +365,17 @@ function SDP_Sites.Fine(ctx, site, params)
   board:Put(SDP_Sites.CENTER_SLOT, center)
   local _, centerLegal = board:Total()
   site.Districts, site.Parts.District = {}, 0
-  if centerLegal and #ctx.Plan > 0 then
+  if centerLegal and #ctx.Plan + ctx.Pick > 0 then
     local slots = {}
     for s, districtType in ipairs(ctx.Plan) do slots[s] = { Key = districtType, Type = "DISTRICT", Group = 1 } end
+    for _, districtType in ipairs(ctx.Pool) do
+      slots[#slots + 1] = { Key = districtType, Type = "DISTRICT", Group = 1, Optional = true }
+    end
     local search = SDP_Search.New({
       PlayerID = ctx.PlayerID, Board = board, Weights = ctx.AdjacencyWeights, Params = params,
       Candidates = site.Scan.Candidates, Slots = slots, Lands = { site.Land },
+      Pools = ctx.Pick > 0 and { [1] = ctx.Pick } or nil,
+      Costs = SDP_City.DistanceCosts(ctx.PlayerID, site.Scan.Candidates, ctx.Distance, { { X = site.X, Y = site.Y } }),
     })
     search:Singles()
     search:Run()
