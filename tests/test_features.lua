@@ -275,7 +275,8 @@ test("multi tab: with the coverage weight the industrial zone moves to reach a p
       "without coverage the zone at " .. plain.X .. "," .. plain.Y .. " does not reach the site at " .. sx .. "," .. sy)
     local result = SolveZone(3)
     T.ok(not result.Stats.Mismatch, "board and full evaluation agree")
-    T.ok(math.abs(result.Gain - (result.Adjacency + result.LandDelta + result.CoverageDelta)) < 1e-6, "the gain adds up")
+    T.ok(math.abs(result.Gain - (result.Adjacency + result.LandDelta + result.CoverageDelta + result.CostDelta
+      + (result.AppealDelta or 0))) < 1e-6, "the gain adds up")
     local placed = nil
     for _, p in ipairs(result.Plan) do
       if p.Type == zone then placed = p end

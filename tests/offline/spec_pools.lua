@@ -11,6 +11,7 @@ include("SDP_Tiers")
 include("SDP_Task")
 include("SDP_Board")
 include("SDP_Land")
+include("SDP_Appeal")
 include("SDP_Search")
 include("SDP_Remind")
 include("SDP_Solver")
@@ -184,7 +185,7 @@ test("distance cost: weight 0 changes nothing; a high weight pulls districts in 
   local expected = 0
   for _, p in ipairs(far.Plan) do expected = expected - 3 * (Map.GetPlotDistance(5, 4, p.X, p.Y) - 1) end
   T.eq(far.CostDelta, expected, "cost = weight x (rings - 1)")
-  T.eq(far.Gain, far.Adjacency + far.LandDelta + far.CostDelta, "gain adds up")
+  T.eq(far.Gain, far.Adjacency + far.LandDelta + far.CostDelta + (far.AppealDelta or 0), "gain adds up")
 end)
 
 -- ===========================================================================
@@ -394,6 +395,7 @@ test("multi: distance cost and automatic districts add up in the gain", function
     Weights = ONES, Distance = 1, Auto = { DISTRICT_AQUEDUCT = true }, Remind = true })
   T.ok(result.Ok, tostring(result.Error))
   T.ok(result.CostDelta <= 0, "a cost")
-  T.eq(result.Gain, result.Adjacency + result.LandDelta + result.CoverageDelta + result.CostDelta, "gain adds up")
+  T.eq(result.Gain, result.Adjacency + result.LandDelta + result.CoverageDelta + result.CostDelta
+    + (result.AppealDelta or 0), "gain adds up")
   T.ok(type(result.Remind) == "table", "reminders listed")
 end)

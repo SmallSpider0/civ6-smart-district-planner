@@ -68,7 +68,7 @@ test("single city: a campus and two picked from the pool; three solutions with o
     keys[n] = table.concat(types, ",")
     T.ok(hasCampus, "the campus in solution " .. n)
     T.eq(#s.Picked, 2, "two picked in solution " .. n)
-    T.eq(s.Gain, s.Adjacency + s.LandDelta + s.CostDelta, "gain adds up in solution " .. n)
+    T.eq(s.Gain, s.Adjacency + s.LandDelta + s.CostDelta + (s.AppealDelta or 0), "gain adds up in solution " .. n)
     print(string.format("  solution %d  %+.1f  %s", n, s.Gain, keys[n]))
   end
   T.ok(keys[1] ~= keys[2] and keys[1] ~= keys[3] and keys[2] ~= keys[3], "three different combinations")
@@ -126,7 +126,7 @@ test("distance cost: the cost is weight x (plots to the nearest center - 1) and 
   for _, p in ipairs(far.Plan) do expected = expected - 2 * (Map.GetPlotDistance(city:GetX(), city:GetY(), p.X, p.Y) - 1) end
   T.eq(far.CostDelta, expected, "cost")
   T.ok(Rings(far) <= Rings(plain), "closer or as close: " .. Rings(far) .. " vs " .. Rings(plain))
-  T.eq(far.Gain, far.Adjacency + far.LandDelta + far.CostDelta, "gain adds up")
+  T.eq(far.Gain, far.Adjacency + far.LandDelta + far.CostDelta + (far.AppealDelta or 0), "gain adds up")
 end)
 
 test("automatic districts: an aqueduct (or the civ's own) joins only a city without fresh water", function()

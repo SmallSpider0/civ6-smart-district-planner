@@ -1,0 +1,1581 @@
+{
+ "Scenario": "continents-gs",
+ "Settings": {
+  "ruleset": "RULESET_EXPANSION_2",
+  "script": "Continents.lua",
+  "size": "MAPSIZE_LARGE",
+  "era": "ERA_MEDIEVAL",
+  "leader": "LEADER_WILHELMINA",
+  "seed": 47,
+  "turns": 150
+ },
+ "Census": {
+  "Cities": [
+   {
+    "Built": 8,
+    "Candidates": 14,
+    "Capacity": 7,
+    "Coastal": true,
+    "Free": 5,
+    "ID": 131073,
+    "Name": "鹿特丹",
+    "Pins": 0,
+    "Population": 19,
+    "SpecialtyBuilt": 5
+   },
+   {
+    "Built": 7,
+    "Candidates": 10,
+    "Capacity": 6,
+    "Coastal": true,
+    "Free": 5,
+    "ID": 196610,
+    "Name": "格罗�根",
+    "Pins": 0,
+    "Population": 18,
+    "SpecialtyBuilt": 6
+   },
+   {
+    "Built": 6,
+    "Candidates": 9,
+    "Capacity": 5,
+    "Coastal": false,
+    "Free": 7,
+    "ID": 262147,
+    "Name": "马斯特里赫特",
+    "Pins": 0,
+    "Population": 13,
+    "SpecialtyBuilt": 4
+   },
+   {
+    "Built": 7,
+    "Candidates": 12,
+    "Capacity": 4,
+    "Coastal": false,
+    "Free": 6,
+    "ID": 65536,
+    "Name": "阿姆斯特丹",
+    "Pins": 0,
+    "Population": 12,
+    "SpecialtyBuilt": 4
+   },
+   {
+    "Built": 4,
+    "Candidates": 11,
+    "Capacity": 3,
+    "Coastal": true,
+    "Free": 9,
+    "ID": 393221,
+    "Name": "海牙",
+    "Pins": 0,
+    "Population": 8,
+    "SpecialtyBuilt": 3
+   },
+   {
+    "Built": 3,
+    "Candidates": 16,
+    "Capacity": 3,
+    "Coastal": true,
+    "Free": 7,
+    "ID": 458758,
+    "Name": "乌得勒支",
+    "Pins": 0,
+    "Population": 7,
+    "SpecialtyBuilt": 3
+   },
+   {
+    "Built": 3,
+    "Candidates": 13,
+    "Capacity": 2,
+    "Coastal": true,
+    "Free": 9,
+    "ID": 524295,
+    "Name": "奈梅亨",
+    "Pins": 0,
+    "Population": 6,
+    "SpecialtyBuilt": 2
+   },
+   {
+    "Built": 3,
+    "Candidates": 15,
+    "Capacity": 2,
+    "Coastal": true,
+    "Free": 9,
+    "ID": 327684,
+    "Name": "哈勒姆",
+    "Pins": 0,
+    "Population": 5,
+    "SpecialtyBuilt": 2
+   },
+   {
+    "Built": 2,
+    "Candidates": 12,
+    "Capacity": 1,
+    "Coastal": true,
+    "Free": 10,
+    "ID": 589832,
+    "Name": "阿��尔多伦",
+    "Pins": 0,
+    "Population": 3,
+    "SpecialtyBuilt": 1
+   },
+   {
+    "Built": 1,
+    "Candidates": 17,
+    "Capacity": 1,
+    "Coastal": true,
+    "Free": 9,
+    "ID": 655369,
+    "Name": "埃因�温",
+    "Pins": 0,
+    "Population": 2,
+    "SpecialtyBuilt": 1
+   }
+  ],
+  "Districts": 54,
+  "Era": 7,
+  "Leader": "LEADER_WILHELMINA",
+  "Majors": 9,
+  "Map": [
+   96,
+   60
+  ],
+  "OtherCities": 77,
+  "Pins": 0,
+  "Ruleset": "RULESET_EXPANSION_2",
+  "Step": "Census",
+  "Turn": 221,
+  "Wonders": 0
+ },
+ "Steps": [
+  {
+   "Label": "load steps",
+   "Seconds": 0.078,
+   "Data": {
+    "Step": "Loaded"
+   }
+  },
+  {
+   "Label": "census",
+   "Seconds": 0.054,
+   "Data": {
+    "Cities": [
+     {
+      "Built": 8,
+      "Candidates": 14,
+      "Capacity": 7,
+      "Coastal": true,
+      "Free": 5,
+      "ID": 131073,
+      "Name": "鹿特丹",
+      "Pins": 0,
+      "Population": 19,
+      "SpecialtyBuilt": 5
+     },
+     {
+      "Built": 7,
+      "Candidates": 10,
+      "Capacity": 6,
+      "Coastal": true,
+      "Free": 5,
+      "ID": 196610,
+      "Name": "格罗�根",
+      "Pins": 0,
+      "Population": 18,
+      "SpecialtyBuilt": 6
+     },
+     {
+      "Built": 6,
+      "Candidates": 9,
+      "Capacity": 5,
+      "Coastal": false,
+      "Free": 7,
+      "ID": 262147,
+      "Name": "马斯特里赫特",
+      "Pins": 0,
+      "Population": 13,
+      "SpecialtyBuilt": 4
+     },
+     {
+      "Built": 7,
+      "Candidates": 12,
+      "Capacity": 4,
+      "Coastal": false,
+      "Free": 6,
+      "ID": 65536,
+      "Name": "阿姆斯特丹",
+      "Pins": 0,
+      "Population": 12,
+      "SpecialtyBuilt": 4
+     },
+     {
+      "Built": 4,
+      "Candidates": 11,
+      "Capacity": 3,
+      "Coastal": true,
+      "Free": 9,
+      "ID": 393221,
+      "Name": "海牙",
+      "Pins": 0,
+      "Population": 8,
+      "SpecialtyBuilt": 3
+     },
+     {
+      "Built": 3,
+      "Candidates": 16,
+      "Capacity": 3,
+      "Coastal": true,
+      "Free": 7,
+      "ID": 458758,
+      "Name": "乌得勒支",
+      "Pins": 0,
+      "Population": 7,
+      "SpecialtyBuilt": 3
+     },
+     {
+      "Built": 3,
+      "Candidates": 13,
+      "Capacity": 2,
+      "Coastal": true,
+      "Free": 9,
+      "ID": 524295,
+      "Name": "奈梅亨",
+      "Pins": 0,
+      "Population": 6,
+      "SpecialtyBuilt": 2
+     },
+     {
+      "Built": 3,
+      "Candidates": 15,
+      "Capacity": 2,
+      "Coastal": true,
+      "Free": 9,
+      "ID": 327684,
+      "Name": "哈勒姆",
+      "Pins": 0,
+      "Population": 5,
+      "SpecialtyBuilt": 2
+     },
+     {
+      "Built": 2,
+      "Candidates": 12,
+      "Capacity": 1,
+      "Coastal": true,
+      "Free": 10,
+      "ID": 589832,
+      "Name": "阿��尔多伦",
+      "Pins": 0,
+      "Population": 3,
+      "SpecialtyBuilt": 1
+     },
+     {
+      "Built": 1,
+      "Candidates": 17,
+      "Capacity": 1,
+      "Coastal": true,
+      "Free": 9,
+      "ID": 655369,
+      "Name": "埃因�温",
+      "Pins": 0,
+      "Population": 2,
+      "SpecialtyBuilt": 1
+     }
+    ],
+    "Districts": 54,
+    "Era": 7,
+    "Leader": "LEADER_WILHELMINA",
+    "Majors": 9,
+    "Map": [
+     96,
+     60
+    ],
+    "OtherCities": 77,
+    "Pins": 0,
+    "Ruleset": "RULESET_EXPANSION_2",
+    "Step": "Census",
+    "Turn": 221,
+    "Wonders": 0
+   }
+  },
+  {
+   "Label": "preserves",
+   "Seconds": 0.043,
+   "Data": {
+    "Expected": 0,
+    "List": [
+     {
+      "Grove": false,
+      "Owner": 0,
+      "Sanctuary": false,
+      "Tiles": [
+       {
+        "Appeal": 2,
+        "Expect": [],
+        "Got": {
+         "YIELD_CULTURE": 0,
+         "YIELD_FAITH": 0,
+         "YIELD_FOOD": 1,
+         "YIELD_GOLD": 0,
+         "YIELD_PRODUCTION": 0,
+         "YIELD_SCIENCE": 0
+        },
+        "Improved": false,
+        "Ok": true,
+        "X": 11,
+        "Y": 50
+       },
+       {
+        "Appeal": 1,
+        "Expect": [],
+        "Got": {
+         "YIELD_CULTURE": 0,
+         "YIELD_FAITH": 0,
+         "YIELD_FOOD": 1,
+         "YIELD_GOLD": 3,
+         "YIELD_PRODUCTION": 1,
+         "YIELD_SCIENCE": 0
+        },
+        "Improved": true,
+        "Ok": true,
+        "X": 11,
+        "Y": 52
+       }
+      ],
+      "X": 11,
+      "Y": 51
+     },
+     {
+      "Grove": false,
+      "Owner": 4,
+      "Sanctuary": false,
+      "Tiles": [
+       {
+        "Appeal": 4,
+        "Expect": [],
+        "Got": {
+         "YIELD_CULTURE": 0,
+         "YIELD_FAITH": 0,
+         "YIELD_FOOD": 5,
+         "YIELD_GOLD": 0,
+         "YIELD_PRODUCTION": 1,
+         "YIELD_SCIENCE": 0
+        },
+        "Improved": true,
+        "Ok": true,
+        "X": 23,
+        "Y": 13
+       },
+       {
+        "Appeal": -2,
+        "Expect": [],
+        "Got": {
+         "YIELD_CULTURE": 0,
+         "YIELD_FAITH": 0,
+         "YIELD_FOOD": 5,
+         "YIELD_GOLD": 0,
+         "YIELD_PRODUCTION": 0,
+         "YIELD_SCIENCE": 0
+        },
+        "Improved": true,
+        "Ok": true,
+        "X": 24,
+        "Y": 14
+       }
+      ],
+      "X": 24,
+      "Y": 13
+     },
+     {
+      "Grove": false,
+      "Owner": 8,
+      "Sanctuary": false,
+      "Tiles": [
+       {
+        "Appeal": 1,
+        "Expect": [],
+        "Got": {
+         "YIELD_CULTURE": 1,
+         "YIELD_FAITH": 0,
+         "YIELD_FOOD": 5,
+         "YIELD_GOLD": 3,
+         "YIELD_PRODUCTION": 0,
+         "YIELD_SCIENCE": 0
+        },
+        "Improved": true,
+        "Ok": true,
+        "X": 90,
+        "Y": 29
+       }
+      ],
+      "X": 91,
+      "Y": 29
+     },
+     {
+      "Grove": false,
+      "Owner": 9,
+      "Sanctuary": false,
+      "Tiles": [
+       {
+        "Appeal": 0,
+        "Expect": [],
+        "Got": {
+         "YIELD_CULTURE": 0,
+         "YIELD_FAITH": 0,
+         "YIELD_FOOD": 2,
+         "YIELD_GOLD": 0,
+         "YIELD_PRODUCTION": 0,
+         "YIELD_SCIENCE": 0
+        },
+        "Improved": false,
+        "Ok": true,
+        "X": 79,
+        "Y": 29
+       },
+       {
+        "Appeal": 1,
+        "Expect": [],
+        "Got": {
+         "YIELD_CULTURE": 0,
+         "YIELD_FAITH": 0,
+         "YIELD_FOOD": 2,
+         "YIELD_GOLD": 0,
+         "YIELD_PRODUCTION": 0,
+         "YIELD_SCIENCE": 0
+        },
+        "Improved": false,
+        "Ok": true,
+        "X": 79,
+        "Y": 27
+       },
+       {
+        "Appeal": 4,
+        "Expect": [],
+        "Got": {
+         "YIELD_CULTURE": 0,
+         "YIELD_FAITH": 0,
+         "YIELD_FOOD": 0,
+         "YIELD_GOLD": 0,
+         "YIELD_PRODUCTION": 0,
+         "YIELD_SCIENCE": 0
+        },
+        "Improved": true,
+        "Ok": true,
+        "X": 78,
+        "Y": 27
+       },
+       {
+        "Appeal": 4,
+        "Expect": [],
+        "Got": {
+         "YIELD_CULTURE": 0,
+         "YIELD_FAITH": 0,
+         "YIELD_FOOD": 3,
+         "YIELD_GOLD": 0,
+         "YIELD_PRODUCTION": 0,
+         "YIELD_SCIENCE": 0
+        },
+        "Improved": true,
+        "Ok": true,
+        "X": 78,
+        "Y": 28
+       },
+       {
+        "Appeal": 4,
+        "Expect": [],
+        "Got": {
+         "YIELD_CULTURE": 0,
+         "YIELD_FAITH": 0,
+         "YIELD_FOOD": 0,
+         "YIELD_GOLD": 0,
+         "YIELD_PRODUCTION": 0,
+         "YIELD_SCIENCE": 0
+        },
+        "Improved": true,
+        "Ok": true,
+        "X": 78,
+        "Y": 29
+       }
+      ],
+      "X": 79,
+      "Y": 28
+     }
+    ],
+    "Missing": 0,
+    "Preserves": 4,
+    "Seen": 0,
+    "Step": "Preserves",
+    "WithBuildings": 0
+   }
+  },
+  {
+   "Label": "single 鹿特丹 FAST pool",
+   "Seconds": 0.159,
+   "Data": {
+    "Adjacency": 3,
+    "Appeal": 2,
+    "Asked": 2,
+    "Calls": 351,
+    "City": 131073,
+    "EngineBad": 0,
+    "Exhaustive": false,
+    "Gain": -5,
+    "Land": -10,
+    "Method": "pools",
+    "Mismatch": false,
+    "Mode": "POOL",
+    "Ok": true,
+    "Picked": [
+     "DISTRICT_HOLY_SITE",
+     "DISTRICT_PRESERVE"
+    ],
+    "Placed": 2,
+    "Pool": 5,
+    "Step": "Single",
+    "Tier": "FAST",
+    "Together": 0,
+    "Tries": 24,
+    "Unplaced": 0
+   }
+  },
+  {
+   "Label": "single 鹿特丹 STANDARD pool",
+   "Seconds": 0.178,
+   "Data": {
+    "Adjacency": 3,
+    "Appeal": 2,
+    "Asked": 2,
+    "Calls": 361,
+    "City": 131073,
+    "Deterministic": true,
+    "EngineBad": 0,
+    "Exhaustive": false,
+    "Gain": -5,
+    "Land": -10,
+    "Method": "pools",
+    "Mismatch": false,
+    "Mode": "POOL",
+    "Ok": true,
+    "Picked": [
+     "DISTRICT_HOLY_SITE",
+     "DISTRICT_PRESERVE"
+    ],
+    "Placed": 2,
+    "Pool": 5,
+    "Step": "Single",
+    "Tier": "STANDARD",
+    "Together": 0,
+    "Tries": 23,
+    "Unplaced": 0
+   }
+  },
+  {
+   "Label": "single 鹿特丹 must",
+   "Seconds": 0.165,
+   "Data": {
+    "Adjacency": 5,
+    "Appeal": 0,
+    "Asked": 5,
+    "Calls": 439,
+    "City": 131073,
+    "EngineBad": 0,
+    "Exhaustive": true,
+    "Gain": -16,
+    "Land": -21,
+    "Method": "exhaustive",
+    "Mismatch": false,
+    "Mode": "MUST",
+    "Ok": true,
+    "Picked": [],
+    "Placed": 4,
+    "Pool": 0,
+    "Step": "Single",
+    "Tier": "STANDARD",
+    "Together": 1,
+    "Tries": 13,
+    "Unplaced": 1
+   }
+  },
+  {
+   "Label": "single 格罗�根 FAST pool",
+   "Seconds": 0.14,
+   "Data": {
+    "Adjacency": 5,
+    "Appeal": -1,
+    "Asked": 2,
+    "Calls": 388,
+    "City": 196610,
+    "EngineBad": 0,
+    "Exhaustive": false,
+    "Gain": -7,
+    "Land": -11,
+    "Method": "pools",
+    "Mismatch": false,
+    "Mode": "POOL",
+    "Ok": true,
+    "Picked": [
+     "DISTRICT_HOLY_SITE",
+     "DISTRICT_INDUSTRIAL_ZONE"
+    ],
+    "Placed": 2,
+    "Pool": 5,
+    "Step": "Single",
+    "Tier": "FAST",
+    "Together": 0,
+    "Tries": 73,
+    "Unplaced": 0
+   }
+  },
+  {
+   "Label": "single 格罗�根 STANDARD pool",
+   "Seconds": 0.175,
+   "Data": {
+    "Adjacency": 5,
+    "Appeal": -1,
+    "Asked": 2,
+    "Calls": 417,
+    "City": 196610,
+    "Deterministic": true,
+    "EngineBad": 0,
+    "Exhaustive": false,
+    "Gain": -7,
+    "Land": -11,
+    "Method": "pools",
+    "Mismatch": false,
+    "Mode": "POOL",
+    "Ok": true,
+    "Picked": [
+     "DISTRICT_HOLY_SITE",
+     "DISTRICT_INDUSTRIAL_ZONE"
+    ],
+    "Placed": 2,
+    "Pool": 5,
+    "Step": "Single",
+    "Tier": "STANDARD",
+    "Together": 0,
+    "Tries": 69,
+    "Unplaced": 0
+   }
+  },
+  {
+   "Label": "single 格罗�根 must",
+   "Seconds": 0.126,
+   "Data": {
+    "Adjacency": 6,
+    "Appeal": -2,
+    "Asked": 5,
+    "Calls": 548,
+    "City": 196610,
+    "EngineBad": 0,
+    "Exhaustive": true,
+    "Gain": -20,
+    "Land": -24,
+    "Method": "exhaustive",
+    "Mismatch": false,
+    "Mode": "MUST",
+    "Ok": true,
+    "Picked": [],
+    "Placed": 4,
+    "Pool": 0,
+    "Step": "Single",
+    "Tier": "STANDARD",
+    "Together": 0,
+    "Tries": 0,
+    "Unplaced": 1
+   }
+  },
+  {
+   "Label": "single 马斯特里赫特 FAST pool",
+   "Seconds": 0.108,
+   "Data": {
+    "Adjacency": 3,
+    "Appeal": 14,
+    "Asked": 2,
+    "Calls": 451,
+    "City": 262147,
+    "EngineBad": 0,
+    "Exhaustive": false,
+    "Gain": 6,
+    "Gap": 0,
+    "Land": -11,
+    "Method": "pools",
+    "Mismatch": false,
+    "Mode": "POOL",
+    "Ok": true,
+    "Picked": [
+     "DISTRICT_ENTERTAINMENT_COMPLEX",
+     "DISTRICT_PRESERVE"
+    ],
+    "Placed": 2,
+    "Pool": 7,
+    "Step": "Single",
+    "Tier": "FAST",
+    "Together": 0,
+    "Tries": 126,
+    "Unplaced": 0
+   }
+  },
+  {
+   "Label": "single 马斯特里赫特 STANDARD pool",
+   "Seconds": 0.17,
+   "Data": {
+    "Adjacency": 3,
+    "Appeal": 14,
+    "Asked": 2,
+    "Calls": 451,
+    "City": 262147,
+    "Deterministic": true,
+    "EngineBad": 0,
+    "Exhaustive": false,
+    "Gain": 6,
+    "Gap": 0,
+    "Land": -11,
+    "Method": "pools",
+    "Mismatch": false,
+    "Mode": "POOL",
+    "Ok": true,
+    "Picked": [
+     "DISTRICT_ENTERTAINMENT_COMPLEX",
+     "DISTRICT_PRESERVE"
+    ],
+    "Placed": 2,
+    "Pool": 7,
+    "Step": "Single",
+    "Tier": "STANDARD",
+    "Together": 0,
+    "Tries": 126,
+    "Unplaced": 0
+   }
+  },
+  {
+   "Label": "single 马斯特里赫特 must",
+   "Seconds": 0.163,
+   "Data": {
+    "Adjacency": 7,
+    "Appeal": 13,
+    "Asked": 6,
+    "Calls": 633,
+    "City": 262147,
+    "EngineBad": 0,
+    "Exhaustive": false,
+    "Gain": -1,
+    "Gap": 1.222222222,
+    "Land": -21,
+    "Method": "shortlist",
+    "Mismatch": false,
+    "Mode": "MUST",
+    "Ok": true,
+    "Picked": [],
+    "Placed": 5,
+    "Pool": 0,
+    "Step": "Single",
+    "Tier": "STANDARD",
+    "Together": 0,
+    "Tries": 292,
+    "Unplaced": 1
+   }
+  },
+  {
+   "Label": "single 阿姆斯特丹 FAST pool",
+   "Seconds": 0.145,
+   "Data": {
+    "Adjacency": 12,
+    "Appeal": 15,
+    "Asked": 2,
+    "Calls": 578,
+    "City": 65536,
+    "EngineBad": 0,
+    "Exhaustive": false,
+    "Gain": 23,
+    "Gap": 0,
+    "Land": -4,
+    "Method": "pools",
+    "Mismatch": false,
+    "Mode": "POOL",
+    "Ok": true,
+    "Picked": [
+     "DISTRICT_INDUSTRIAL_ZONE",
+     "DISTRICT_PRESERVE"
+    ],
+    "Placed": 2,
+    "Pool": 6,
+    "Step": "Single",
+    "Tier": "FAST",
+    "Together": 0,
+    "Tries": 132,
+    "Unplaced": 0
+   }
+  },
+  {
+   "Label": "single 阿姆斯特丹 STANDARD pool",
+   "Seconds": 0.321,
+   "Data": {
+    "Adjacency": 12,
+    "Appeal": 15,
+    "Asked": 2,
+    "Calls": 606,
+    "City": 65536,
+    "Deterministic": true,
+    "EngineBad": 0,
+    "Exhaustive": false,
+    "Gain": 23,
+    "Gap": 0,
+    "Land": -4,
+    "Method": "pools",
+    "Mismatch": false,
+    "Mode": "POOL",
+    "Ok": true,
+    "Picked": [
+     "DISTRICT_INDUSTRIAL_ZONE",
+     "DISTRICT_PRESERVE"
+    ],
+    "Placed": 2,
+    "Pool": 6,
+    "Step": "Single",
+    "Tier": "STANDARD",
+    "Together": 0,
+    "Tries": 132,
+    "Unplaced": 0
+   }
+  },
+  {
+   "Label": "single 阿姆斯特丹 must",
+   "Seconds": 0.222,
+   "Data": {
+    "Adjacency": 18,
+    "Appeal": 15,
+    "Asked": 6,
+    "Calls": 711,
+    "City": 65536,
+    "EngineBad": 0,
+    "Exhaustive": false,
+    "Gain": 20,
+    "Gap": 0.375,
+    "Land": -13,
+    "Method": "shortlist",
+    "Mismatch": false,
+    "Mode": "MUST",
+    "Ok": true,
+    "Picked": [],
+    "Placed": 5,
+    "Pool": 0,
+    "Step": "Single",
+    "Tier": "STANDARD",
+    "Together": 0,
+    "Tries": 308,
+    "Unplaced": 1
+   }
+  },
+  {
+   "Label": "single 海牙 FAST pool",
+   "Seconds": 0.155,
+   "Data": {
+    "Adjacency": 4,
+    "Appeal": 42,
+    "Asked": 2,
+    "Calls": 572,
+    "City": 393221,
+    "EngineBad": 0,
+    "Exhaustive": false,
+    "Gain": 44,
+    "Gap": 0,
+    "Land": -2,
+    "Method": "pools",
+    "Mismatch": false,
+    "Mode": "POOL",
+    "Ok": true,
+    "Picked": [
+     "DISTRICT_HOLY_SITE",
+     "DISTRICT_PRESERVE"
+    ],
+    "Placed": 2,
+    "Pool": 9,
+    "Step": "Single",
+    "Tier": "FAST",
+    "Together": 0,
+    "Tries": 263,
+    "Unplaced": 0
+   }
+  },
+  {
+   "Label": "single 海牙 STANDARD pool",
+   "Seconds": 0.351,
+   "Data": {
+    "Adjacency": 4,
+    "Appeal": 42,
+    "Asked": 2,
+    "Calls": 607,
+    "City": 393221,
+    "Deterministic": true,
+    "EngineBad": 0,
+    "Exhaustive": false,
+    "Gain": 44,
+    "Gap": 0,
+    "Land": -2,
+    "Method": "pools",
+    "Mismatch": false,
+    "Mode": "POOL",
+    "Ok": true,
+    "Picked": [
+     "DISTRICT_HOLY_SITE",
+     "DISTRICT_PRESERVE"
+    ],
+    "Placed": 2,
+    "Pool": 9,
+    "Step": "Single",
+    "Tier": "STANDARD",
+    "Together": 0,
+    "Tries": 263,
+    "Unplaced": 0
+   }
+  },
+  {
+   "Label": "single 海牙 must",
+   "Seconds": 0.181,
+   "Data": {
+    "Adjacency": 15,
+    "Appeal": -1,
+    "Asked": 6,
+    "Calls": 618,
+    "City": 393221,
+    "EngineBad": 0,
+    "Exhaustive": false,
+    "Gain": -1,
+    "Gap": 1.083333333,
+    "Land": -15,
+    "Method": "shortlist",
+    "Mismatch": false,
+    "Mode": "MUST",
+    "Ok": true,
+    "Picked": [],
+    "Placed": 6,
+    "Pool": 0,
+    "Step": "Single",
+    "Tier": "STANDARD",
+    "Together": 1,
+    "Tries": 370,
+    "Unplaced": 0
+   }
+  },
+  {
+   "Label": "single 乌得勒支 FAST pool",
+   "Seconds": 0.117,
+   "Data": {
+    "Adjacency": 3,
+    "Appeal": 4,
+    "Asked": 2,
+    "Calls": 565,
+    "City": 458758,
+    "EngineBad": 0,
+    "Exhaustive": false,
+    "Gain": 7,
+    "Gap": 0,
+    "Land": 0,
+    "Method": "pools",
+    "Mismatch": false,
+    "Mode": "POOL",
+    "Ok": true,
+    "Picked": [
+     "DISTRICT_HOLY_SITE",
+     "DISTRICT_PRESERVE"
+    ],
+    "Placed": 2,
+    "Pool": 7,
+    "Step": "Single",
+    "Tier": "FAST",
+    "Together": 0,
+    "Tries": 154,
+    "Unplaced": 0
+   }
+  },
+  {
+   "Label": "single 乌得勒支 STANDARD pool",
+   "Seconds": 0.243,
+   "Data": {
+    "Adjacency": 3,
+    "Appeal": 4,
+    "Asked": 2,
+    "Calls": 619,
+    "City": 458758,
+    "Deterministic": true,
+    "EngineBad": 0,
+    "Exhaustive": false,
+    "Gain": 7,
+    "Gap": 0,
+    "Land": 0,
+    "Method": "pools",
+    "Mismatch": false,
+    "Mode": "POOL",
+    "Ok": true,
+    "Picked": [
+     "DISTRICT_HOLY_SITE",
+     "DISTRICT_PRESERVE"
+    ],
+    "Placed": 2,
+    "Pool": 7,
+    "Step": "Single",
+    "Tier": "STANDARD",
+    "Together": 0,
+    "Tries": 153,
+    "Unplaced": 0
+   }
+  },
+  {
+   "Label": "single 乌得勒支 must",
+   "Seconds": 0.252,
+   "Data": {
+    "Adjacency": 12,
+    "Appeal": -2,
+    "Asked": 6,
+    "Calls": 862,
+    "City": 458758,
+    "EngineBad": 0,
+    "Exhaustive": false,
+    "Gain": -7,
+    "Gap": 1.4375,
+    "Land": -17,
+    "Method": "shortlist",
+    "Mismatch": false,
+    "Mode": "MUST",
+    "Ok": true,
+    "Picked": [],
+    "Placed": 6,
+    "Pool": 0,
+    "Step": "Single",
+    "Tier": "STANDARD",
+    "Together": 1,
+    "Tries": 239,
+    "Unplaced": 0
+   }
+  },
+  {
+   "Label": "single 鹿特丹 appeal",
+   "Seconds": 0.061,
+   "Data": {
+    "Adjacency": 0,
+    "Appeal": 5,
+    "Asked": 3,
+    "Calls": 162,
+    "City": 131073,
+    "EngineBad": 0,
+    "Exhaustive": true,
+    "Gain": -3,
+    "Housing": [
+     {
+      "Appeal": 1,
+      "Housing": 4,
+      "Now": 0,
+      "Type": "DISTRICT_NEIGHBORHOOD",
+      "X": 7,
+      "Y": 49
+     },
+     {
+      "Appeal": 1,
+      "Housing": 1,
+      "Now": 1,
+      "Type": "DISTRICT_PRESERVE",
+      "X": 8,
+      "Y": 49
+     }
+    ],
+    "ImprovementHousing": 0,
+    "Land": -8,
+    "Method": "exhaustive",
+    "Mismatch": false,
+    "Mode": "APPEAL",
+    "Ok": true,
+    "Picked": [],
+    "Placed": 2,
+    "Plan": [
+     {
+      "Index": 4711,
+      "Type": "DISTRICT_NEIGHBORHOOD",
+      "X": 7,
+      "Y": 49
+     },
+     {
+      "Index": 4712,
+      "Type": "DISTRICT_PRESERVE",
+      "X": 8,
+      "Y": 49
+     }
+    ],
+    "Pool": 0,
+    "Step": "Single",
+    "Tier": "STANDARD",
+    "Together": 0,
+    "Tries": 0,
+    "Unplaced": 1
+   }
+  },
+  {
+   "Label": "single 鹿特丹 harbor",
+   "Seconds": 0.068,
+   "Data": {
+    "Adjacency": 4,
+    "Appeal": 0,
+    "Asked": 2,
+    "Calls": 198,
+    "City": 131073,
+    "EngineBad": 0,
+    "Exhaustive": true,
+    "Gain": -6,
+    "Land": -10,
+    "Method": "pools",
+    "Mismatch": false,
+    "Mode": "HARBOR",
+    "Ok": true,
+    "Picked": [
+     "DISTRICT_COMMERCIAL_HUB",
+     "DISTRICT_HOLY_SITE"
+    ],
+    "Placed": 2,
+    "Pool": 4,
+    "Step": "Single",
+    "Tier": "STANDARD",
+    "Together": 1,
+    "Tries": 0,
+    "Unplaced": 0
+   }
+  },
+  {
+   "Label": "single 格罗�根 appeal",
+   "Seconds": 0.056,
+   "Data": {
+    "Adjacency": 4,
+    "Appeal": 3,
+    "Asked": 3,
+    "Calls": 160,
+    "City": 196610,
+    "EngineBad": 0,
+    "Exhaustive": true,
+    "Gain": -4,
+    "Housing": [
+     {
+      "Appeal": 1,
+      "Housing": 4,
+      "Now": 1,
+      "Type": "DISTRICT_NEIGHBORHOOD",
+      "X": 11,
+      "Y": 48
+     }
+    ],
+    "ImprovementHousing": -1,
+    "Land": -11,
+    "Method": "exhaustive",
+    "Mismatch": false,
+    "Mode": "APPEAL",
+    "Ok": true,
+    "Picked": [],
+    "Placed": 2,
+    "Plan": [
+     {
+      "Index": 4619,
+      "Type": "DISTRICT_NEIGHBORHOOD",
+      "X": 11,
+      "Y": 48
+     },
+     {
+      "Index": 5003,
+      "Type": "DISTRICT_INDUSTRIAL_ZONE",
+      "X": 11,
+      "Y": 52
+     }
+    ],
+    "Pool": 0,
+    "Step": "Single",
+    "Tier": "STANDARD",
+    "Together": 0,
+    "Tries": 0,
+    "Unplaced": 1
+   }
+  },
+  {
+   "Label": "single 格罗�根 harbor",
+   "Seconds": 0.037,
+   "Data": {
+    "Adjacency": 3,
+    "Appeal": 1,
+    "Asked": 2,
+    "Calls": 76,
+    "City": 196610,
+    "EngineBad": 0,
+    "Exhaustive": true,
+    "Gain": -1,
+    "Land": -5,
+    "Method": "pools",
+    "Mismatch": false,
+    "Mode": "HARBOR",
+    "Ok": true,
+    "Picked": [
+     "DISTRICT_HOLY_SITE"
+    ],
+    "Placed": 1,
+    "Pool": 4,
+    "Step": "Single",
+    "Tier": "STANDARD",
+    "Together": 0,
+    "Tries": 0,
+    "Unplaced": 0
+   }
+  },
+  {
+   "Label": "single 马斯特里赫特 appeal",
+   "Seconds": 0.1,
+   "Data": {
+    "Adjacency": 2,
+    "Appeal": 18,
+    "Asked": 3,
+    "Calls": 395,
+    "City": 262147,
+    "EngineBad": 0,
+    "Exhaustive": true,
+    "Gain": 6,
+    "Housing": [
+     {
+      "Appeal": 2,
+      "Housing": 5,
+      "Now": 2,
+      "Type": "DISTRICT_NEIGHBORHOOD",
+      "X": 12,
+      "Y": 44
+     },
+     {
+      "Appeal": -1,
+      "Housing": 1,
+      "Now": -1,
+      "Type": "DISTRICT_PRESERVE",
+      "X": 14,
+      "Y": 47
+     }
+    ],
+    "ImprovementHousing": 0,
+    "Land": -14,
+    "Method": "exhaustive",
+    "Mismatch": false,
+    "Mode": "APPEAL",
+    "Ok": true,
+    "Picked": [],
+    "Placed": 3,
+    "Plan": [
+     {
+      "Index": 4236,
+      "Type": "DISTRICT_NEIGHBORHOOD",
+      "X": 12,
+      "Y": 44
+     },
+     {
+      "Index": 4526,
+      "Type": "DISTRICT_PRESERVE",
+      "X": 14,
+      "Y": 47
+     },
+     {
+      "Index": 4621,
+      "Type": "DISTRICT_INDUSTRIAL_ZONE",
+      "X": 13,
+      "Y": 48
+     }
+    ],
+    "Pool": 0,
+    "Step": "Single",
+    "Tier": "STANDARD",
+    "Together": 0,
+    "Tries": 0,
+    "Unplaced": 0
+   }
+  },
+  {
+   "Label": "single 鹿特丹 fine",
+   "Seconds": 0.074,
+   "Data": {
+    "Adjacency": 3,
+    "Appeal": 2,
+    "Asked": 2,
+    "Calls": 361,
+    "City": 131073,
+    "EngineBad": 0,
+    "Exhaustive": false,
+    "Gain": -5,
+    "Land": -10,
+    "Method": "pools",
+    "Mismatch": false,
+    "Mode": "POOL",
+    "Ok": true,
+    "Picked": [
+     "DISTRICT_HOLY_SITE",
+     "DISTRICT_PRESERVE"
+    ],
+    "Placed": 2,
+    "Pool": 5,
+    "Step": "Single",
+    "Tier": "FINE",
+    "Together": 0,
+    "Tries": 23,
+    "Unplaced": 0
+   }
+  },
+  {
+   "Label": "sites 3 within 8",
+   "Seconds": 1.139,
+   "Data": {
+    "Calls": 4266,
+    "D": 8,
+    "Error": "NO_SITE",
+    "Found": 0,
+    "K": 3,
+    "Ok": false,
+    "Solutions": 0,
+    "Step": "Sites",
+    "Tier": "STANDARD"
+   }
+  },
+  {
+   "Label": "place sites",
+   "Seconds": 0.04,
+   "Data": {
+    "Placed": 0,
+    "Step": "PlaceSites"
+   }
+  },
+  {
+   "Label": "multi 4 cities standard",
+   "Seconds": 1.17,
+   "Data": {
+    "Adjacency": 28,
+    "Appeal": 0,
+    "Calls": 1263,
+    "Cities": 4,
+    "Count": 3,
+    "EngineBad": 0,
+    "Exhaustive": false,
+    "Gain": -13,
+    "Land": -41,
+    "Method": "multi",
+    "Mismatch": false,
+    "Ok": true,
+    "Placed": 10,
+    "Step": "Multi",
+    "Tier": "STANDARD",
+    "Together": 1,
+    "Tries": 3978,
+    "Unplaced": 1
+   }
+  },
+  {
+   "Label": "place multi",
+   "Seconds": 0.065,
+   "Data": {
+    "Placed": 10,
+    "Step": "PlaceMulti"
+   }
+  },
+  {
+   "Label": "settle after place multi",
+   "Seconds": 0.213,
+   "Data": null
+  },
+  {
+   "Label": "multi 8 cities standard",
+   "Seconds": 1.879,
+   "Data": {
+    "Adjacency": 31,
+    "Appeal": -1,
+    "Calls": 1422,
+    "Cities": 8,
+    "Count": 3,
+    "EngineBad": 0,
+    "Exhaustive": false,
+    "Gain": 6,
+    "Land": -24,
+    "Method": "multi",
+    "Mismatch": false,
+    "Ok": true,
+    "Placed": 12,
+    "Step": "Multi",
+    "Tier": "STANDARD",
+    "Together": 2,
+    "Tries": 4821,
+    "Unplaced": 2
+   }
+  },
+  {
+   "Label": "multi 4 cities fine",
+   "Seconds": 0.055,
+   "Data": {
+    "Adjacency": 0,
+    "Calls": 124,
+    "Cities": 0,
+    "Count": 3,
+    "EngineBad": 0,
+    "Exhaustive": false,
+    "Gain": 0,
+    "Land": 0,
+    "Method": "none",
+    "Mismatch": false,
+    "Ok": true,
+    "Placed": 0,
+    "Step": "Multi",
+    "Tier": "FINE",
+    "Together": 0,
+    "Tries": 0,
+    "Unplaced": 0
+   }
+  },
+  {
+   "Label": "heavy pins",
+   "Seconds": 0.82,
+   "Data": {
+    "Placed": 72,
+    "Step": "HeavyPins"
+   }
+  },
+  {
+   "Label": "settle after heavy pins",
+   "Seconds": 15.504,
+   "Data": null
+  },
+  {
+   "Label": "single 鹿特丹 pool, crowded",
+   "Seconds": 0.168,
+   "Data": {
+    "Adjacency": 0,
+    "Asked": 2,
+    "Calls": 195,
+    "City": 131073,
+    "EngineBad": 0,
+    "Exhaustive": false,
+    "Gain": 0,
+    "Land": 0,
+    "Method": "none",
+    "Mismatch": false,
+    "Mode": "POOL",
+    "Ok": true,
+    "Placed": 0,
+    "Pool": 5,
+    "Step": "Single",
+    "Tier": "STANDARD",
+    "Together": 0,
+    "Tries": 0,
+    "Unplaced": 0
+   }
+  },
+  {
+   "Label": "multi 4 cities, crowded",
+   "Seconds": 0.044,
+   "Data": {
+    "Adjacency": 0,
+    "Calls": 114,
+    "Cities": 0,
+    "Count": 3,
+    "EngineBad": 0,
+    "Exhaustive": false,
+    "Gain": 0,
+    "Land": 0,
+    "Method": "none",
+    "Mismatch": false,
+    "Ok": true,
+    "Placed": 0,
+    "Step": "Multi",
+    "Tier": "STANDARD",
+    "Together": 0,
+    "Tries": 0,
+    "Unplaced": 0
+   }
+  },
+  {
+   "Label": "panel",
+   "Seconds": 0.114,
+   "Data": {
+    "Ok": true,
+    "Step": "Panel"
+   }
+  },
+  {
+   "Label": "undo",
+   "Seconds": 0.554,
+   "Data": {
+    "Removed": 82,
+    "Step": "UndoAll"
+   }
+  }
+ ],
+ "When": "2026-10-21 22:45",
+ "AppealCheck": [
+  {
+   "City": 131073,
+   "Built": "DISTRICT_NEIGHBORHOOD=true,DISTRICT_PRESERVE=true",
+   "HousingPredicted": 5,
+   "HousingGame": 5.0,
+   "HousingDistricts": 5.0,
+   "HousingImprovements": 0.0,
+   "ImprovementsPredicted": 0,
+   "Districts": [
+    {
+     "Type": "DISTRICT_NEIGHBORHOOD",
+     "X": 7,
+     "Y": 49,
+     "AppealPredicted": 1,
+     "AppealGame": 1,
+     "Housing": 4
+    },
+    {
+     "Type": "DISTRICT_PRESERVE",
+     "X": 8,
+     "Y": 49,
+     "AppealPredicted": 1,
+     "AppealGame": 1,
+     "Housing": 1
+    }
+   ],
+   "Ok": true
+  },
+  {
+   "City": 196610,
+   "Built": "DISTRICT_INDUSTRIAL_ZONE=true,DISTRICT_NEIGHBORHOOD=true",
+   "HousingPredicted": 4,
+   "HousingGame": 3.0,
+   "HousingDistricts": 4.0,
+   "HousingImprovements": -1.0,
+   "ImprovementsPredicted": -1,
+   "Districts": [
+    {
+     "Type": "DISTRICT_NEIGHBORHOOD",
+     "X": 11,
+     "Y": 48,
+     "AppealPredicted": 1,
+     "AppealGame": 1,
+     "Housing": 4
+    }
+   ],
+   "Ok": true
+  },
+  {
+   "City": 262147,
+   "Built": "DISTRICT_INDUSTRIAL_ZONE=true,DISTRICT_NEIGHBORHOOD=true,DISTRICT_PRESERVE=true",
+   "HousingPredicted": 6,
+   "HousingGame": 6.0,
+   "HousingDistricts": 6.0,
+   "HousingImprovements": 0.0,
+   "ImprovementsPredicted": 0,
+   "Districts": [
+    {
+     "Type": "DISTRICT_NEIGHBORHOOD",
+     "X": 12,
+     "Y": 44,
+     "AppealPredicted": 2,
+     "AppealGame": 2,
+     "Housing": 5
+    },
+    {
+     "Type": "DISTRICT_PRESERVE",
+     "X": 14,
+     "Y": 47,
+     "AppealPredicted": -1,
+     "AppealGame": -1,
+     "Housing": 1
+    }
+   ],
+   "Ok": true
+  }
+ ]
+}

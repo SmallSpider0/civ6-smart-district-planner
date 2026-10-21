@@ -353,6 +353,36 @@ def check_ui(report, trees, precedents):
                                    "UI XML (%s); check that it works" % (node.tag, attr, known[attr][1]))
 
 
+CLICKABLE = ("Button", "GridButton", "CheckBox")
+
+
+def check_click_cover(report, trees):
+    """In an instance whose root is a button, no other button may cover it.
+
+    A GridButton of parent size inside a button (the game's tab look,
+    TabButtonSelected) takes the mouse while it is shown: the district cells
+    could not be clicked again once selected (2026-10-21, found by a tester;
+    synthetic clicks cannot reach the game window, so no test saw it). The
+    game's own tabs get away with it because a selected tab needs no click.
+    Use a Grid or Image for such a look."""
+    for path, root in sorted(trees.items()):
+        if root.tag != "Context":
+            continue
+        for instance in root.iter():
+            if instance.tag != "Instance" or not instance.children:
+                continue
+            top = instance.children[0]
+            if top.tag not in CLICKABLE:
+                continue
+            for node in top.iter():
+                if node is top or node.tag not in CLICKABLE:
+                    continue
+                if node.attrib.get("Size", "").replace(" ", "") == "parent,parent":
+                    report.error(path, node.line, "ui",
+                                 "<%s> covers the clickable root of instance %s and takes its clicks; "
+                                 "use a Grid or Image" % (node.tag, instance.attrib.get("Name", "?")))
+
+
 # -- lua -------------------------------------------------------------------
 def check_controls(report, mod_dir, trees):
     """Every Controls.<ID> a mod script uses names a control of the UI XML.
@@ -415,6 +445,7 @@ def run(mod_dir=MOD_DIR, tests_dir=TESTS_DIR, strict=False, quiet=False):
         check_mod(report, mod_dir, trees)
     if any(root.tag == "Context" for root in trees.values()):
         check_ui(report, trees, ui_precedents())
+        check_click_cover(report, trees)
         check_controls(report, mod_dir, trees)
     tool_ok = check_lua(report, [p for p in mod_files + test_files if p.endswith(".lua")])
 

@@ -111,6 +111,10 @@ end
 -- This mod's pins still on the map unchanged, for cities numbered `numbers`
 -- (a list of city numbers: the pins' names): { { ID, X, Y, Icon, Name } }
 -- sorted by plot. These are what "replace my earlier pins" removes.
+-- City-center pins (the sites tab's) are never among them: they are where
+-- the cities go, not an earlier plan for them.
+SDP_Pins.CENTER_ICON = "ICON_DISTRICT_CITY_CENTER"
+
 function SDP_Pins.Own(playerID, numbers)
   local wanted = {}
   for _, n in ipairs(numbers or {}) do wanted[tostring(n)] = true end
@@ -119,7 +123,7 @@ function SDP_Pins.Own(playerID, numbers)
     for _, record in ipairs(batch.Pins) do
       -- District pins are named with the number; reminder pins start with it.
       local number = record.Name:match("^(%d+)") or ""
-      if wanted[number] and Unchanged(cfg, record) then out[#out + 1] = record end
+      if wanted[number] and record.Icon ~= SDP_Pins.CENTER_ICON and Unchanged(cfg, record) then out[#out + 1] = record end
     end
   end
   table.sort(out, function(a, b) return Map.GetPlotIndex(a.X, a.Y) < Map.GetPlotIndex(b.X, b.Y) end)

@@ -16,7 +16,7 @@ CmpAdapters = CmpAdapters or {}
 
 local function LoadSDP()
   include("MapTacks")
-  for _, name in ipairs({ "SDP_Rules", "SDP_City", "SDP_Overlay", "SDP_Tiers", "SDP_Task", "SDP_Board", "SDP_Land",
+  for _, name in ipairs({ "SDP_Rules", "SDP_City", "SDP_Overlay", "SDP_Tiers", "SDP_Task", "SDP_Board", "SDP_Land", "SDP_Appeal",
     "SDP_Coverage", "SDP_Search", "SDP_Solver", "SDP_Wonders", "SDP_Multi", "SDP_Sites", "SDP_SiteSolver" }) do
     include(name)
   end
@@ -70,14 +70,14 @@ function CmpAdapters.sdp(request, variant, w)
     for _, p in ipairs(r.Plan or {}) do
       out.placements[#out.placements + 1] = { city = id, type = p.Type, x = p.X, y = p.Y, kind = p.Kind }
     end
-    stats.sdpGain = r.Adjacency
+    stats.sdpGain, stats.sdpAppeal = r.Adjacency, r.AppealDelta
     for _, u in ipairs(r.Unplaced or {}) do out.notes[#out.notes + 1] = "unplaced " .. tostring(u.Type) .. " " .. tostring(u.Reason) end
   elseif scn.kind == "single" then
     local r = SDP_Solver.Solve({ PlayerID = 0, CityID = request.target:GetID(), Districts = request.districts,
       Land = land, Tier = variant, Weights = request.weights })
     if not r.Ok then out.notes[#out.notes + 1] = tostring(r.Error) end
     Take(r.Plan, request.target:GetID())
-    stats.sdpGain = r.Adjacency
+    stats.sdpGain, stats.sdpAppeal = r.Adjacency, r.AppealDelta
     stats.method = r.Stats and r.Stats.Method
     for _, u in ipairs(r.Unplaced or {}) do out.notes[#out.notes + 1] = "unplaced " .. u.Type .. " " .. tostring(u.Reason) end
   elseif variant == "CITY_BY_CITY" then
@@ -107,7 +107,7 @@ function CmpAdapters.sdp(request, variant, w)
         out.placements[#out.placements + 1] = { city = byKey[p.City], type = p.Type, x = p.X, y = p.Y }
       end
     end
-    stats.sdpGain = r.Adjacency
+    stats.sdpGain, stats.sdpAppeal = r.Adjacency, r.AppealDelta
     stats.sdpCovered = r.Covered
     for _, u in ipairs(r.Unplaced or {}) do out.notes[#out.notes + 1] = "unplaced " .. tostring(u.Type) .. " " .. tostring(u.Reason) end
   end

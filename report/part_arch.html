@@ -30,7 +30,7 @@
         <rect class="d-box" x="20" y="214" width="268" height="72" rx="8"/>
         <text class="d-title" x="36" y="240">单城 SDP_Solver</text>
         <text class="d-sub" x="36" y="260">一座城的候选格与区域</text>
-        <text class="d-sub" x="36" y="277">地块损失 SDP_Land</text>
+        <text class="d-sub" x="36" y="277">自动水渠水坝；分城与互斥 SDP_Rules</text>
         <rect class="d-box" x="306" y="214" width="268" height="72" rx="8"/>
         <text class="d-title" x="322" y="240">多城 SDP_Multi</text>
         <text class="d-sub" x="322" y="260">城址钉 + 7 格内现有城市（≤ 8 城）</text>
@@ -47,7 +47,7 @@
         <rect class="d-box key" x="20" y="322" width="554" height="72" rx="8"/>
         <text class="d-title" x="36" y="348">搜索引擎 SDP_Search</text>
         <text class="d-sub" x="36" y="368">单项表 → 穷举或模型集束搜索 → 短名单精评 → 局部搜索 → 扰动重建</text>
-        <text class="d-sub" x="36" y="385">多城按城分块（SolveBlock），城址的区域分也用它</text>
+        <text class="d-sub" x="36" y="385">目标的其余几项：地块 SDP_Land · 住房与魅力 SDP_Appeal · 覆盖</text>
         <rect class="d-box" x="592" y="322" width="268" height="72" rx="8"/>
         <text class="d-title" x="608" y="348">档位参数 SDP_Tiers</text>
         <text class="d-sub" x="608" y="368">快速 / 标准 / 精细：全部是计数预算</text>
@@ -84,5 +84,5 @@
         <text class="d-lab" x="440" y="646" text-anchor="middle">引擎复核：城市已拥有的格，以游戏给出的可建格为准</text>
       </svg>
     </div>
-    <figcaption>金色边框是决定性能的两层：搜索引擎决定试哪些布局，增量评估层决定每次试布局要不要真的调用 DMT。虚线框是本 mod 之外的依赖（DMT 由玩家另行订阅）。底部的边：合法性除了问 DMT，还直接问游戏引擎哪些格可建（见 4.6）。</figcaption>
+    <figcaption>金色边框是决定性能的两层：搜索引擎决定试哪些布局，增量评估层决定每次试布局要不要真的调用 DMT。虚线框是本 mod 之外的依赖（DMT 由玩家另行订阅）。底部的边：合法性除了问 DMT，还直接问游戏引擎哪些格可建（见 4.8）。</figcaption>
   </figure>

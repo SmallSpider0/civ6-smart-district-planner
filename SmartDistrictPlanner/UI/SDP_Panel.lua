@@ -12,6 +12,7 @@ include("SDP_Tiers")
 include("SDP_Task")
 include("SDP_Board")
 include("SDP_Land")
+include("SDP_Appeal")
 include("SDP_Coverage")
 include("SDP_Search")
 include("SDP_Remind")
@@ -42,7 +43,12 @@ local WEIGHT_COLUMNS = {
   { Key = "YIELD_FOOD", Glyph = "[ICON_Food]", Land = true },
   { Key = "FEATURE", Glyph = "LOC_SDP_WEIGHT_FEATURE_SHORT", ToolTip = "LOC_SDP_WEIGHT_FEATURE", Land = true },
   { Key = "DISTANCE", Glyph = "LOC_SDP_WEIGHT_DISTANCE_SHORT", ToolTip = "LOC_SDP_WEIGHT_DISTANCE", Step = 0.5, Default = 0 },
+  -- Housing of districts that depend on appeal (neighborhood, preserve; SDP_Appeal).
+  -- Short text like the other non-yield columns: [ICON_Housing] is a
+  -- black square in the game (seen 2026-10-21), as 20.5 found for others.
+  { Key = "HOUSING", Glyph = "LOC_SDP_WEIGHT_HOUSING_SHORT", ToolTip = "LOC_SDP_WEIGHT_HOUSING" },
 }
+local WEIGHT_WIDTH = 53 -- nine columns in the 480 wide page
 
 local m_launchItem = {}     -- SDP_LaunchBarItem instance in the game's launch bar
 local m_launchPin = {}      -- SDP_LaunchBarPin instance next to it
@@ -64,6 +70,7 @@ local m_allowFeatureRemoval = true
 local m_land = true           -- count the land part (design 4.2)
 local m_replace = false       -- plan over this mod's earlier pins for the city and replace them
 local m_remind = true         -- reminder pins on the woods and rainforest the plan relies on (feedback item 5)
+local m_apart = true          -- keep partner districts (harbor, commercial hub) out of one city's picks (SDP_Rules.Apart)
 local m_wonders = {}          -- [BuildingType] = true: wonders to place too (then solved by SDP_Multi, one city)
 local m_heat = nil            -- the district whose good places the map shows
 local m_heatSpots = nil       -- SDP_Solver.Heat of m_heat (tests)
@@ -76,6 +83,7 @@ local m_result = nil          -- last solve; cleared whenever an input changes
 local m_solution = 1          -- the solution shown (and previewed)
 local m_districtRows = {}     -- what the district grid shows, for tests
 local m_resultRows = {}       -- what the result list shows, for tests
+local m_solutionCells = {}    -- the solution rows' buttons, for real-click tests
 local m_weightViews = {}      -- [key] = function that redraws that weight
 local m_tab = "SINGLE"        -- the open tab: SINGLE, SITES or MULTI
 
@@ -261,6 +269,7 @@ function SDP_UI.SummaryText(s, parts)
   if parts.Land then list[#list + 1] = Locale.Lookup("LOC_SDP_PART_LAND", Signed(s.LandDelta or 0)) end
   if parts.Coverage then list[#list + 1] = Locale.Lookup("LOC_SDP_PART_COVERAGE", Signed(s.CoverageDelta or 0)) end
   if parts.Distance then list[#list + 1] = Locale.Lookup("LOC_SDP_PART_DISTANCE", Signed(s.CostDelta or 0)) end
+  if s.AppealDelta ~= nil then list[#list + 1] = Locale.Lookup("LOC_SDP_PART_APPEAL", Signed(s.AppealDelta)) end
   return Locale.Lookup("LOC_SDP_RESULT_SUMMARY_PARTS", Signed(s.Gain or 0),
     table.concat(list, Locale.Lookup("LOC_SDP_LIST_SEPARATOR")))
 end
@@ -408,6 +417,68 @@ function SDP_UI.PlanNote(p)
   return ""
 end
 
+-- The switch for partner districts (SDP_Rules.Apart, 2026-10-21 feedback):
+-- the label names the pair (several pairs: a general label), the tooltip
+-- gives the rule as the game's data states it; hidden when the rules have
+-- no such pair.
+function SDP_UI.ShowApart(box, check, label, on)
+  local pairs = SDP_Rules.Apart().Pairs
+  box:SetHide(#pairs == 0)
+  check:SetCheck(on)
+  if #pairs == 0 then return end
+  if #pairs == 1 then
+    label:SetText(Locale.Lookup("LOC_SDP_APART_SHORT", TypeName(pairs[1].A), TypeName(pairs[1].B)))
+  else
+    label:SetText(Locale.Lookup("LOC_SDP_APART_SHORT_ANY"))
+  end
+  local rules = {}
+  for _, pair in ipairs(pairs) do
+    rules[#rules + 1] = Locale.Lookup("LOC_SDP_APART_RULE", TypeName(pair.Building), TypeName(pair.Other), TypeName(pair.A),
+      TypeName(pair.B))
+  end
+  box:SetToolTipString(Locale.Lookup("LOC_SDP_APART_TOOLTIP", table.concat(rules, "[NEWLINE]")))
+end
+
+-- Result rows for partner districts a plan leaves in one city
+-- (Together); `city` names the city (several cities) or is nil.
+-- Housing the plan takes from improvements (SDP_Appeal), as one row.
+function SDP_UI.ImprovementHousingRow(lost, add)
+  if lost ~= nil and lost < 0 then
+    add("ICON_IMPROVEMENT_FARM", Locale.Lookup("LOC_SDP_RESULT_IMPROVEMENT_HOUSING"),
+      Locale.Lookup("LOC_SDP_RESULT_IMPROVEMENT_HOUSING_DETAIL", lost), Locale.Lookup("LOC_SDP_RESULT_IMPROVEMENT_HOUSING_TOOLTIP"))
+  end
+end
+
+function SDP_UI.TogetherRows(together, city, add)
+  for _, t in ipairs(together or {}) do
+    local name = city and Locale.Lookup("LOC_SDP_RESULT_TOGETHER_CITY", city, TypeName(t.A), TypeName(t.B))
+      or Locale.Lookup("LOC_SDP_RESULT_TOGETHER", TypeName(t.A), TypeName(t.B))
+    add("ICON_" .. t.A, name, Locale.Lookup("LOC_SDP_RESULT_TOGETHER_DETAIL", TypeName(t.Building)),
+      Locale.Lookup("LOC_SDP_APART_RULE", TypeName(t.Building), TypeName(t.Other), TypeName(t.A), TypeName(t.B)))
+  end
+end
+
+-- A plan entry's detail: its adjacency yields, then for a district that
+-- depends on appeal its housing (and its plot's appeal) and a preserve's
+-- yields on the plots around it.
+function SDP_UI.PlanDetail(p)
+  local parts = {}
+  local yields = YieldText(p.Yields)
+  if p.Housing == nil or yields ~= Locale.Lookup("LOC_SDP_NO_YIELDS") then parts[#parts + 1] = yields end
+  if p.Housing ~= nil then parts[#parts + 1] = Locale.Lookup("LOC_SDP_RESULT_HOUSING", Signed(p.Housing), Signed(p.Appeal or 0)) end
+  if p.Tiles ~= nil then
+    local tiles = {}
+    for _, yieldType in ipairs(SDP_Land.TILE_YIELDS) do
+      local amount = p.Tiles[yieldType]
+      if amount ~= nil and amount ~= 0 then
+        tiles[#tiles + 1] = Locale.Lookup("LOC_SDP_YIELD_SHORT_" .. yieldType) .. Signed(amount)
+      end
+    end
+    if #tiles > 0 then parts[#parts + 1] = Locale.Lookup("LOC_SDP_RESULT_TILES", table.concat(tiles, " ")) end
+  end
+  return table.concat(parts, "  ") .. SDP_UI.PlanNote(p)
+end
+
 -- A solution row's detail: the districts picked from the pool, or how many.
 function SDP_UI.SolutionDetail(solution)
   local picked = solution.Picked or {}
@@ -441,7 +512,7 @@ end
 local function ShowResult()
   m_resultIM:ResetInstances()
   m_solutionIM:ResetInstances()
-  m_resultRows = {}
+  m_resultRows, m_solutionCells = {}, {}
   local result = m_result
   Controls.Quality:SetText("")
   if result == nil then
@@ -469,6 +540,7 @@ local function ShowResult()
     if #solutions > 1 then
       for n, sol in ipairs(solutions) do
         local inst = m_solutionIM:GetInstance()
+        m_solutionCells[n] = inst.Root
         SDP_UI.SolutionRow(inst, Locale.Lookup("LOC_SDP_SOLUTION_N", n, Signed(sol.Gain)), SDP_UI.SolutionDetail(sol),
           n == m_solution)
         inst.Root:RegisterCallback(Mouse.eLClick, function()
@@ -481,7 +553,7 @@ local function ShowResult()
     for _, p in ipairs(shown.Plan) do
       local toolTip = (p.ToolTip ~= nil and p.ToolTip ~= "") and p.ToolTip or Locale.Lookup("LOC_SDP_NO_ADJACENCY")
       AddResultRow(p.Kind == "WONDER" and ("ICON_" .. p.Type) or ("ICON_" .. p.Type),
-        TypeName(p.Type) .. "  " .. Where(p.X, p.Y), YieldText(p.Yields) .. SDP_UI.PlanNote(p), toolTip)
+        TypeName(p.Type) .. "  " .. Where(p.X, p.Y), SDP_UI.PlanDetail(p), toolTip)
     end
     -- Woods and rainforest the plan relies on (feedback item 5).
     for _, r in ipairs(shown.Remind or {}) do
@@ -497,8 +569,14 @@ local function ShowResult()
     end
     for _, u in ipairs(shown.Unplaced or result.Unplaced or {}) do
       local key = u.Auto and "LOC_SDP_RESULT_UNPLACED_AUTO" or "LOC_SDP_RESULT_UNPLACED"
-      AddResultRow("ICON_" .. u.Type, Locale.Lookup(key, TypeName(u.Type)), Locale.Lookup("LOC_SDP_REASON_" .. u.Reason), "")
+      AddResultRow("ICON_" .. u.Type, Locale.Lookup(key, TypeName(u.Type)),
+        Locale.Lookup("LOC_SDP_REASON_" .. u.Reason, u.Other and TypeName(u.Other) or ""), "")
     end
+    -- Partner districts left together (required ones, or the count needed them).
+    local together = shown.Together
+    if together == nil and shown.Cities ~= nil and shown.Cities[1] ~= nil then together = shown.Cities[1].Together end
+    SDP_UI.TogetherRows(together, nil, AddResultRow)
+    SDP_UI.ImprovementHousingRow(shown.ImprovementHousing, AddResultRow)
     Preview(m_solution)
   end
   Controls.SolutionStack:CalculateSize()
@@ -703,7 +781,7 @@ end
 
 local function BuildWeights()
   m_weightViews = SDP_UI.BuildWeights(m_weightIM, Controls.WeightStack, WEIGHT_COLUMNS, m_weights,
-    function(column) return column.Land and not m_land end, SetWeight)
+    function(column) return column.Land and not m_land end, SetWeight, WEIGHT_WIDTH)
 end
 
 -- A tier pulldown: entries for the three tiers, onSelect(tier).
@@ -765,6 +843,14 @@ local function SetReplace(on)
   Controls.ReplaceCheck:SetCheck(on)
   if m_replace ~= on then
     m_replace = on
+    ClearResult()
+  end
+end
+
+local function SetApart(on)
+  Controls.ApartCheck:SetCheck(on)
+  if m_apart ~= on then
+    m_apart = on
     ClearResult()
   end
 end
@@ -922,6 +1008,7 @@ Refresh = function()
   Controls.LandCheck:SetCheck(m_land)
   Controls.ReplaceCheck:SetCheck(m_replace)
   Controls.RemindCheck:SetCheck(m_remind)
+  SDP_UI.ShowApart(Controls.ApartBox, Controls.ApartCheck, Controls.ApartLabel, m_apart)
   UpdateReplaceLabel()
   PopulateWonders()
   m_heat = nil
@@ -1025,7 +1112,7 @@ Request = function()
   return {
     PlayerID = Game.GetLocalPlayer(), CityID = m_cityID, Districts = list.Must, Weights = weights,
     Pool = list.Pool, Count = list.Count, MustSpecialty = list.MustSpecialty, Auto = list.Auto,
-    Distance = m_weights.DISTANCE, Remind = m_remind,
+    Distance = m_weights.DISTANCE, Remind = m_remind, Apart = m_apart,
     AllowFeatureRemoval = m_allowFeatureRemoval, Land = m_land, Tier = m_tier,
     IgnorePins = m_replace and OwnPins() or nil, Wonders = wonders,
   }
@@ -1038,7 +1125,7 @@ local function WonderRequest(request)
   return {
     PlayerID = request.PlayerID, Tier = request.Tier, Districts = request.Districts, Wonders = request.Wonders,
     Pool = request.Pool, Count = request.Count, Auto = request.Auto, Distance = request.Distance, Remind = request.Remind,
-    Only = { [request.CityID] = true }, Weights = request.Weights, Land = request.Land,
+    Only = { [request.CityID] = true }, Weights = request.Weights, Land = request.Land, Apart = request.Apart,
     AllowFeatureRemoval = request.AllowFeatureRemoval, IgnorePins = request.IgnorePins,
     Plans = { [key] = request.Districts },
   }
@@ -1284,6 +1371,7 @@ SDP_Panel = {
   SetState = function(districtType, state) SetState(districtType, state) end,
   SetCount = SetCount,
   SetRemind = SetRemind,
+  SetApart = SetApart,
   SelectSolution = function(n)
     if m_result ~= nil and m_result.Ok and m_result.Solutions and m_result.Solutions[n] then
       m_solution = n
@@ -1317,7 +1405,8 @@ SDP_Panel = {
   State = function()
     return {
       CityID = m_cityID, Result = m_result, DistrictRows = m_districtRows, ResultRows = m_resultRows,
-      Count = List().Count, Solution = m_solution, Remind = m_remind,
+      SolutionCells = m_solutionCells,
+      Count = List().Count, Solution = m_solution, Remind = m_remind, Apart = m_apart,
       Weights = m_weights, AllowFeatureRemoval = m_allowFeatureRemoval, Land = m_land, Tier = m_tier, Replace = m_replace,
       Wonders = SelectedWonders(), HeatDistrict = m_heat,
       Running = SDP_Task.IsRunning(), QualityText = Controls.Quality:GetText(), EstimateText = Controls.Estimate:GetText(),
@@ -1342,6 +1431,9 @@ Controls.LandCheck:RegisterCheckHandler(function()
 end)
 Controls.RemindCheck:RegisterCheckHandler(function()
   SetRemind(Controls.RemindCheck:IsChecked())
+end)
+Controls.ApartCheck:RegisterCheckHandler(function()
+  SetApart(Controls.ApartCheck:IsChecked())
 end)
 Controls.CountLess:RegisterCallback(Mouse.eLClick, function() SetCount(List().Count - 1) end)
 Controls.CountMore:RegisterCallback(Mouse.eLClick, function() SetCount(List().Count + 1) end)

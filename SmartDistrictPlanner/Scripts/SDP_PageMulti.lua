@@ -39,7 +39,7 @@ local m_wonders = {}   -- [BuildingType] = true
 local m_existing = {}  -- [cityID] = true | false: switches over the default
 local m_sites = {}     -- [site Key] = false: city-center pins switched off
 -- The panel's weight columns plus the coverage part, narrower so that nine fit.
-local COLUMNS, COLUMN_WIDTH = {}, 53
+local COLUMNS, COLUMN_WIDTH = {}, 50 -- ten columns: a little wider than the 480 rows, inside the page
 for _, column in ipairs(SDP_UI.WEIGHT_COLUMNS) do COLUMNS[#COLUMNS + 1] = column end
 COLUMNS[#COLUMNS + 1] = { Key = "COVERAGE", Glyph = "LOC_SDP_WEIGHT_COVERAGE_SHORT", ToolTip = "LOC_SDP_WEIGHT_COVERAGE", Default = 0 }
 local m_weights = {}
@@ -49,6 +49,7 @@ local m_tier = SDP_Tiers.DEFAULT
 local m_land = true
 local m_replace = false -- plan over this mod's earlier pins for the cities and replace them
 local m_remind = true
+local m_apart = true -- partner districts (harbor, commercial hub) not picked into one city (SDP_Rules.Apart)
 local m_result = nil
 local m_solution = 1
 local m_view = { Cities = {}, Districts = {}, Wonders = {}, Solutions = {}, Results = {}, Plans = {}, Templates = {} } -- for tests
@@ -94,6 +95,7 @@ end
 local function Participants()
   return SDP_Multi.Participants(Game.GetLocalPlayer(), { Existing = m_existing, Sites = m_sites })
 end
+P.Participants = Participants -- tests
 
 function P.Request()
   local playerID = Game.GetLocalPlayer()
@@ -122,7 +124,7 @@ function P.Request()
     PlayerID = playerID, Tier = m_tier, Districts = shared.Must, Pool = shared.Pool, Count = shared.Count, Auto = shared.Auto,
     Plans = plans, Pools = pools, Counts = counts, Autos = autos, Wonders = wonders, Sites = sites,
     Existing = existing, Weights = weights, Land = m_land, Coverage = m_weights.COVERAGE, Distance = m_weights.DISTANCE,
-    Remind = m_remind, IgnorePins = m_replace and P.OwnPins() or nil,
+    Remind = m_remind, Apart = m_apart, IgnorePins = m_replace and P.OwnPins() or nil,
   }
 end
 
@@ -151,6 +153,14 @@ function P.SetRemind(on)
   Controls.MultiRemindCheck:SetCheck(on)
   if m_remind ~= on then
     m_remind = on
+    ClearResult()
+  end
+end
+
+function P.SetApart(on)
+  Controls.MultiApartCheck:SetCheck(on)
+  if m_apart ~= on then
+    m_apart = on
     ClearResult()
   end
 end
@@ -271,7 +281,8 @@ end
 
 -- Switch a city-center pin on or off (feedback item 10).
 function P.SetSite(key, on)
-  local value = (not on) and false or nil
+  local value = nil -- included
+  if not on then value = false end
   if m_sites[key] ~= value then
     m_sites[key] = value
     ClearResult()
@@ -340,7 +351,7 @@ function P.RefreshLists()
     inst.Check:SetCheck(site.Included)
     inst.Root:SetToolTipString(Locale.Lookup("LOC_SDP_MULTI_SITE_TOOLTIP"))
     inst.Check:RegisterCheckHandler(function() P.SetSite(key, inst.Check:IsChecked()) end)
-    m_view.Cities[#m_view.Cities + 1] = { Key = key, Kind = "SITE", Included = site.Included }
+    m_view.Cities[#m_view.Cities + 1] = { Key = key, Kind = "SITE", Included = site.Included, Check = inst.Check }
   end
   for _, e in ipairs(existing) do
     local inst = m_cityIM:GetInstance()
@@ -360,7 +371,8 @@ function P.RefreshLists()
     inst.Check:SetCheck(e.On == true)
     inst.Root:SetToolTipString("")
     inst.Check:RegisterCheckHandler(function() P.SetExisting(cityID, inst.Check:IsChecked()) end)
-    m_view.Cities[#m_view.Cities + 1] = { CityID = cityID, Kind = "CITY", On = e.On, Included = e.Included, Reason = e.Reason }
+    m_view.Cities[#m_view.Cities + 1] = { CityID = cityID, Kind = "CITY", On = e.On, Included = e.Included, Reason = e.Reason,
+      Check = inst.Check }
   end
   Controls.MultiCityStack:CalculateSize()
   Controls.MultiCityScroll:CalculateSize()
@@ -395,7 +407,8 @@ function P.RefreshLists()
       row.Cell:SetToolTipString(Locale.Lookup("LOC_SDP_CELL_TOOLTIP", row.Name,
         Locale.Lookup("LOC_SDP_STATE_" .. row.State)) .. "[NEWLINE]" .. status)
     end
-    m_view.Districts[#m_view.Districts + 1] = { Type = row.Type, State = row.State, Status = status, Group = row.Group }
+    m_view.Districts[#m_view.Districts + 1] = { Type = row.Type, State = row.State, Status = status, Group = row.Group,
+      Cell = row.Cell }
   end
   local counts = ListOf(list)
   Controls.MultiCountValue:SetText(tostring(counts.Count))
@@ -471,6 +484,7 @@ function P.Refresh()
   Controls.MultiLandCheck:SetCheck(m_land)
   Controls.MultiReplaceCheck:SetCheck(m_replace)
   Controls.MultiRemindCheck:SetCheck(m_remind)
+  SDP_UI.ShowApart(Controls.MultiApartBox, Controls.MultiApartCheck, Controls.MultiApartLabel, m_apart)
   P.Render()
 end
 
@@ -601,7 +615,7 @@ function P.Render()
       for _, p in ipairs(solution.Plan) do
         if p.City == city.Key then
           local tip = (p.ToolTip ~= nil and p.ToolTip ~= "") and p.ToolTip or Locale.Lookup("LOC_SDP_NO_ADJACENCY")
-          local detail = SDP_UI.YieldText(p.Yields) .. SDP_UI.PlanNote(p)
+          local detail = SDP_UI.PlanDetail(p)
           if p.Reach ~= nil then
             detail = detail .. "  " .. Locale.Lookup("LOC_SDP_COVERAGE_ROW", #p.Reach)
             tip = tip .. "[NEWLINE][NEWLINE]" .. Locale.Lookup("LOC_SDP_COVERAGE_TIP", TargetLabels(p.Reach, byKey))
@@ -614,6 +628,8 @@ function P.Render()
       AddRow(SDP_Pins.REMIND_ICON, Locale.Lookup("LOC_SDP_RESULT_REMIND", SDP_UI.TypeName(r.Feature), SDP_UI.Where(r.X, r.Y)),
         SDP_UI.RemindText(r), Locale.Lookup("LOC_SDP_REMIND_TOOLTIP"))
     end
+    for _, city in ipairs(solution.Cities) do SDP_UI.TogetherRows(city.Together, P.CityLabel(city), AddRow) end
+    SDP_UI.ImprovementHousingRow(solution.ImprovementHousing, AddRow)
     for _, u in ipairs(solution.Unplaced) do
       local city = byKey[u.City]
       local where = city and P.CityLabel(city) or Locale.Lookup("LOC_SDP_MULTI_WONDERS")
@@ -623,7 +639,7 @@ function P.Render()
       else
         local key = u.Auto and "LOC_SDP_RESULT_UNPLACED_AUTO" or "LOC_SDP_RESULT_UNPLACED"
         AddRow("ICON_" .. u.Type, Locale.Lookup(key, SDP_UI.TypeName(u.Type)) .. "  " .. where,
-          Locale.Lookup("LOC_SDP_REASON_" .. u.Reason), "")
+          Locale.Lookup("LOC_SDP_REASON_" .. u.Reason, u.Other and SDP_UI.TypeName(u.Other) or ""), "")
       end
     end
     if not Controls.MultiPage:IsHidden() then P.Preview(m_solution) end
@@ -719,6 +735,7 @@ end
 function P.State()
   return {
     Result = m_result, Solution = m_solution, Tier = m_tier, Land = m_land, Replace = m_replace, Remind = m_remind,
+    Apart = m_apart,
     View = m_view, EstimateText = Controls.MultiEstimate:GetText(), QualityText = Controls.MultiQuality:GetText(),
     PlaceDisabled = Controls.MultiPlaceButton:IsDisabled(), ContinueDisabled = Controls.MultiContinueButton:IsDisabled(),
   }
@@ -727,6 +744,7 @@ end
 Controls.MultiLandCheck:RegisterCheckHandler(function() P.SetLand(Controls.MultiLandCheck:IsChecked()) end)
 Controls.MultiReplaceCheck:RegisterCheckHandler(function() P.SetReplace(Controls.MultiReplaceCheck:IsChecked()) end)
 Controls.MultiRemindCheck:RegisterCheckHandler(function() P.SetRemind(Controls.MultiRemindCheck:IsChecked()) end)
+Controls.MultiApartCheck:RegisterCheckHandler(function() P.SetApart(Controls.MultiApartCheck:IsChecked()) end)
 Controls.MultiCountLess:RegisterCallback(Mouse.eLClick, function() P.SetCount(ListOf(EditedList()).Count - 1) end)
 Controls.MultiCountMore:RegisterCallback(Mouse.eLClick, function() P.SetCount(ListOf(EditedList()).Count + 1) end)
 Controls.MultiSolveButton:RegisterCallback(Mouse.eLClick, function() P.Solve() end)

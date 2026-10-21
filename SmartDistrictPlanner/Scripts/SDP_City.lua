@@ -353,9 +353,34 @@ function SDP_City.DistanceCosts(playerID, candidates, weight, extra)
   return costs
 end
 
+-- District types built in this city (complete or not). A set.
+function SDP_City.BuiltTypes(scan)
+  local built = {}
+  for _, b in ipairs(scan.Built) do built[b.Type] = true end
+  return built
+end
+
+-- District types a city has already: built (complete or not), or pinned
+-- within its RADIUS rings (pins being replaced are not in scan.Pins).
+-- A set; for SDP_Rules.Apart.
+function SDP_City.PresentDistricts(scan)
+  local present = {}
+  for _, built in ipairs(scan.Built) do present[built.Type] = true end
+  for _, pin in ipairs(scan.Pins) do
+    local key = (pin.Icon or ""):gsub("^ICON_", "")
+    local row = GameInfo.Districts[key]
+    if row ~= nil and not row.CityCenter and Map.GetPlotDistance(scan.X, scan.Y, pin.X, pin.Y) <= SDP_City.RADIUS then
+      present[key] = true
+    end
+  end
+  return present
+end
+
 -- Why each plannable district cannot be planned for this city, or nil when
--- it can: { [DistrictType] = "BUILT" | "MAX_PER_PLAYER" }. BUILT: already in
--- this city (shown greyed out). MAX_PER_PLAYER: the player has reached the
+-- it can: { [DistrictType] = "BUILT" | "EXCLUSIVE" | "MAX_PER_PLAYER" }.
+-- BUILT: already in this city (shown greyed out). EXCLUSIVE: the city has
+-- built one it cannot share a city with (SDP_Rules.Exclusive: a water park
+-- next to a built entertainment complex). MAX_PER_PLAYER: the player has reached the
 -- district's MaxPerPlayer elsewhere (e.g. one Government Plaza per empire),
 -- counting the player's pins of it too: a pinned Government Plaza in another
 -- city is where the plan already has it (SDP_Multi counts them the same way).
@@ -381,6 +406,8 @@ function SDP_City.DistrictStatus(scan, districts)
   for _, district in ipairs(districts) do
     if builtHere[district.Type] and district.OnePerCity then
       status[district.Type] = "BUILT"
+    elseif SDP_Rules.ExcludedBy(district.Type, builtHere) ~= nil then
+      status[district.Type] = "EXCLUSIVE"
     elseif district.MaxPerPlayer and district.MaxPerPlayer > 0
         and (builtByPlayer[district.Type] or 0) >= district.MaxPerPlayer then
       status[district.Type] = "MAX_PER_PLAYER"

@@ -31,7 +31,15 @@ import summarize  # noqa: E402
 import hexmap  # noqa: E402
 
 # Everything the report reads, so tools/package.py can refuse uncommitted changes to it.
-INPUTS = ["report", "tests/compare/results", "tests/compare/summarize.py", "docs/images"]
+INPUTS = ["report", "tests/compare/results", "tests/compare/summarize.py", "docs/images", "tests/stress/results"]
+STRESS = os.path.join(REPO, "tests", "stress", "results")
+# The late-game stress scenarios (tools/stress.py SCENARIOS), in report order.
+STRESS_ORDER = ["pangaea-gs", "continents-gs", "islands-rf"]
+STRESS_RULES = {"RULESET_EXPANSION_2": "风云变幻", "RULESET_EXPANSION_1": "迭起兴衰", "RULESET_STANDARD": "原版"}
+STRESS_MAPS = {"Pangaea.lua": "盘古大陆", "Continents.lua": "大陆", "Island_Plates.lua": "群岛"}
+STRESS_SIZES = {"MAPSIZE_STANDARD": "标准", "MAPSIZE_LARGE": "大", "MAPSIZE_SMALL": "小", "MAPSIZE_HUGE": "巨型"}
+STRESS_LEADERS = {"LEADER_HOJO": "北条时宗（日本）", "LEADER_WILHELMINA": "威廉明娜（荷兰）", "LEADER_PERICLES": "伯里克利（希腊）"}
+STRESS_ERAS = {"ERA_ANCIENT": "远古", "ERA_CLASSICAL": "古典", "ERA_MEDIEVAL": "中世纪"}
 RESULTS = ["tests/compare/results/" + f + ".jsonl" for f in (
     "full_rejudged", "land", "full_cross", "heldout", "heldout_cross",
     "profiles_SCI", "profiles_PROD", "profiles_FAITH", "sites",
@@ -845,7 +853,12 @@ def build(files=None, make_snapshots=True):
     srows.append(grp("e-speed", "5.8 速度 · 5.9 本模组自身的测试"))
     if sd and am and ep:
         srows.append(tr(["速度", "游戏内实测", "单城不到 0.3 秒，3 城联合约 3 秒；离线比 AMT 快约 %.0f 倍" % (am["time"] / sd["time"])]))
-    srows.append(tr(["自身的测试", "游戏内 87 项、离线 73 项", "全部通过；裁判与游戏引擎逐格一致（沉船一处已知偏差）"]))
+    srows.append(tr(["自身的测试", "游戏内 92 项、离线 101 项、真实点击 30 项", "全部通过；裁判与游戏引擎逐格一致（沉船一处已知偏差）；魅力逐格校准"]))
+    stress_text, stress_table, stress_row = stress_section()
+    texts["STRESS_TEXT"], texts["STRESS_TABLE"] = stress_text, stress_table
+    if stress_row:
+        srows.append(grp("e-stress", "5.10 后期存档压力测试"))
+        srows.append(tr(stress_row))
     texts["EVAL_SUMMARY"] = ('<table><thead><tr><th>实验</th><th>场景</th><th>结论</th></tr></thead><tbody>%s</tbody></table>' % "".join(srows))
 
     texts["N_HS"] = str(len(summarize.subset(scenarios, "heldout", "single")))
@@ -935,6 +948,153 @@ def build(files=None, make_snapshots=True):
     return out, data
 
 
+def stress_section(markdown=False):
+    """The late-game stress table (5.10) from tests/stress/results/*.json:
+    (summary text, table html, summary-row cells). markdown: the table as
+    Markdown instead (for docs/self-test-report.md)."""
+    runs = []
+    for name in STRESS_ORDER:
+        path = os.path.join(STRESS, name + ".json")
+        if os.path.exists(path):
+            with open(path, encoding="utf-8") as fh:
+                runs.append(json.load(fh))
+    if not runs:
+        return "还没有压力测试结果。", "", None
+
+    def steps(run, test):
+        return [st for st in run["Steps"] if test(st["Label"])]
+
+    def secs(list_):
+        return [st["Seconds"] for st in list_]
+
+    def fmt_s(v):
+        return ("%.1f 秒" % v) if v >= 1 else ("%.2f 秒" % v)
+
+    def times(run, test, many=False):
+        xs = secs(steps(run, test))
+        if not xs:
+            return "—"
+        if many and len(xs) > 1:
+            return "%d 次：中位 %s，最长 %s" % (len(xs), fmt_s(statistics.median(xs)), fmt_s(max(xs)))
+        return fmt_s(xs[0])
+
+    def problems(run):
+        bad = mism = eng = 0
+        det = [0, 0]
+        for st in run["Steps"]:
+            d = st["Data"] or {}
+            if d.get("Ok") is False and d.get("Error") != "NO_SITE":
+                bad += 1
+            if d.get("Mismatch"):
+                mism += 1
+            eng += d.get("EngineBad") or 0
+            if "Deterministic" in d:
+                det[0] += 1 if d["Deterministic"] else 0
+                det[1] += 1
+        return bad, mism, eng, det
+
+    def label_has(*parts, crowded=False):
+        return lambda lb: all(p in lb for p in parts) and (("crowded" in lb) == crowded)
+
+    rows = []
+
+    def row(title, fn):
+        if markdown:
+            rows.append("| %s | %s |" % (title, " | ".join(fn(r).replace("<br>", "；") for r in runs)))
+        else:
+            rows.append("<tr><td>%s</td>%s</tr>" % (title, "".join("<td>%s</td>" % fn(r) for r in runs)))
+
+    def setting(r):
+        st = r.get("Settings") or {}
+        return "%s · %s · %s<br>%s，%s开局，自动 %s 回合" % (
+            STRESS_RULES.get(st.get("ruleset"), st.get("ruleset")), STRESS_MAPS.get(st.get("script"), st.get("script")),
+            STRESS_SIZES.get(st.get("size"), st.get("size")), STRESS_LEADERS.get(st.get("leader"), st.get("leader")),
+            STRESS_ERAS.get(st.get("era"), st.get("era")), st.get("turns"))
+
+    def board(r):
+        c = r["Census"]
+        return "第 %s 回合；本方 %d 城、%d 个区域、%d 个奇观；其他文明与城邦 %d 城" % (
+            c["Turn"], len(c["Cities"]), c["Districts"], c["Wonders"], c["OtherCities"])
+    row("场景", setting)
+    row("局面", board)
+    row("单城 · 候选池 · 快速档", lambda r: times(r, label_has("single", "FAST", "pool"), True))
+    row("单城 · 候选池 · 标准档", lambda r: times(r, label_has("single", "STANDARD", "pool"), True))
+    row("单城 · 最多 6 个必建", lambda r: times(r, label_has("single", "must"), True))
+    row("单城 · 社区 + 保护区 + 工业区", lambda r: times(r, label_has("single", "appeal"), True))
+    row("单城 · 港口与商业中心在候选里", lambda r: times(r, label_has("single", "harbor"), True))
+    row("单城 · 精细档", lambda r: times(r, label_has("single", "fine")))
+    def sites(r):
+        st = steps(r, label_has("sites"))
+        if st and (st[0]["Data"] or {}).get("Error") == "NO_SITE":
+            return "%s（8 格内没有可建城址）" % fmt_s(st[0]["Seconds"])
+        return times(r, label_has("sites"))
+    row("选城址 · 3 个、8 格内", sites)
+    row("多城 · 4 城 · 标准档", lambda r: times(r, label_has("multi 4 cities standard")))
+    row("多城 · 4 城 · 精细档", lambda r: times(r, label_has("multi 4 cities fine")))
+    row("多城 · 8 城 · 标准档", lambda r: times(r, label_has("multi 8 cities standard")))
+    row("打满空格后 · 单城 / 多城", lambda r: "%s / %s" % (
+        times(r, lambda lb: lb.startswith("single") and "crowded" in lb), times(r, lambda lb: lb.startswith("multi") and "crowded" in lb)))
+    row("打钉后游戏处理新钉：多城方案 / 打满空格", lambda r: "%s / %s（%s 个钉）" % (
+        times(r, label_has("settle after place multi")), times(r, label_has("settle after heavy pins")),
+        next(((st["Data"] or {}).get("Placed") for st in r["Steps"] if st["Label"] == "heavy pins"), "—")))
+    row("面板各页签切换", lambda r: times(r, label_has("panel")))
+
+    def checks(r):
+        bad, mism, eng, det = problems(r)
+        return "失败 %d；增量与全量评估不一致 %d；引擎不允许的格 %d；两次求解相同 %d/%d" % (bad, mism, eng, det[0], det[1])
+    row("核对", checks)
+
+    def appeal(r):
+        ac = r.get("AppealCheck")
+        if not ac:
+            return "—"
+        done = [a for a in ac if "Skipped" not in a]
+        ok = [a for a in done if a.get("Ok")]
+        dist = sum(len(a["Districts"]) for a in done)
+        same = sum(1 for a in done for d in a["Districts"] if d["AppealGame"] == d["AppealPredicted"])
+        def district_housing(a):
+            return a["HousingDistricts"] if a.get("HousingDistricts") is not None else a["HousingGame"]
+        text = "%d 个方案建成：社区、保护区格的魅力相同 %d/%d，区域住房相同 %d/%d" % (
+            len(done), same, dist, sum(1 for a in done if abs(district_housing(a) - a["HousingPredicted"]) < 1e-6), len(done))
+        pred = [a for a in done if a.get("ImprovementsPredicted") is not None]
+        if pred:
+            lost = sum(1 for a in pred if (a.get("HousingImprovements") or 0) < 0)
+            text += "，改良设施住房相同 %d/%d（%d 个方案占掉了给住房的改良设施）" % (
+                sum(1 for a in pred if abs(a["HousingImprovements"] - a["ImprovementsPredicted"]) < 1e-6), len(pred), lost)
+        if len(done) < len(ac):
+            text += "（%d 个游戏没建成，不计）" % (len(ac) - len(done))
+        return text
+    row("魅力复核：游戏按正常流程建出“社区 + 保护区 + 工业区”的方案", appeal)
+
+    def preserves(r):
+        st = steps(r, lambda lb: lb == "preserves")
+        d = (st[0]["Data"] or {}) if st else {}
+        if not d:
+            return "—"
+        if not d.get("Preserves"):
+            return "各文明都没有建保护区"
+        if not d.get("WithBuildings"):
+            return "%d 个保护区，都没有建林苑、圣所" % d["Preserves"]
+        return "%d 个保护区（%d 个有林苑或圣所）；按规则该有产出的地块 %d 块，产出不少于规则的 %d 块，少于的 %d 块" % (
+            d["Preserves"], d["WithBuildings"], d["Expected"], d["Seen"], d["Missing"])
+    row("保护区周边产出（AI 自己建的）", preserves)
+
+    if markdown:
+        table = "| 项目 | %s |\n|%s\n%s" % (" | ".join(r["Scenario"] for r in runs), "---|" * (len(runs) + 1), "\n".join(rows))
+    else:
+        head = "".join("<th>%s</th>" % r["Scenario"] for r in runs)
+        table = '<table><thead><tr><th>项目</th>%s</tr></thead><tbody>%s</tbody></table>' % (head, "".join(rows))
+    all_secs = [st["Seconds"] for r in runs for st in r["Steps"]
+                if st["Label"] not in ("load steps", "census") and not st["Label"].startswith("settle")]
+    worst = max(all_secs) if all_secs else 0
+    fails = sum(problems(r)[0] + problems(r)[1] + problems(r)[2] for r in runs)
+    text = ("AI 自动打出 %d 张后期存档，每张跑同一组求解步骤（<code>tools/stress.py</code>）。耗时是一次算完的墙钟时间；"
+            "面板里同样的计算分帧进行，游戏照常响应，所以这是玩家等结果的时间，不是卡顿。最长一步 %s；%s。" % (
+                len(runs), fmt_s(worst), "失败、不一致和引擎不允许的格都为 0" if fails == 0 else "有 %d 处问题，见表" % fails))
+    summary = ["后期存档", "%d 张" % len(runs), "最长一步 %s；%s" % (fmt_s(worst), "全部通过" if fails == 0 else "%d 处问题" % fails)]
+    return text, table, summary
+
+
 MIME = {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png"}
 
 
@@ -958,6 +1118,12 @@ def standalone(page, read_image):
 
 
 def main():
+    if sys.argv[1:] == ["--stress-md"]:
+        text, table, _ = stress_section(markdown=True)
+        print(text.replace("<code>", "`").replace("</code>", "`"))
+        print()
+        print(table)
+        return
     page, data = build(sys.argv[1:])
     os.makedirs(OUT, exist_ok=True)
     open(os.path.join(OUT, "index.html"), "w", encoding="utf-8").write(page)

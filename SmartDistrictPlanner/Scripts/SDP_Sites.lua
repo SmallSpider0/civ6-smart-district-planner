@@ -376,6 +376,7 @@ function SDP_Sites.Fine(ctx, site, params)
       Candidates = site.Scan.Candidates, Slots = slots, Lands = { site.Land },
       Pools = ctx.Pick > 0 and { [1] = ctx.Pick } or nil,
       Costs = SDP_City.DistanceCosts(ctx.PlayerID, site.Scan.Candidates, ctx.Distance, { { X = site.X, Y = site.Y } }),
+      Exclusive = SDP_Rules.Exclusive(),
     })
     search:Singles()
     search:Run()

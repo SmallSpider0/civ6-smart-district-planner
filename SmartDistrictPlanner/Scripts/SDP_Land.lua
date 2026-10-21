@@ -115,14 +115,47 @@ end
 -- Land score with the plots taken[1..count] (plot indices, any plots) built
 -- on. `mark` is a scratch table, left empty. The solvers call this for every
 -- layout they try, so it only walks the best plots until P are found.
-function SDP_Land.ScoreTaken(model, taken, count, mark)
+-- `boost` (optional): { [plot index] = extra tile value } (a preserve's
+-- yields on the plots around it, SDP_Appeal); a boosted plot is worked when
+-- its raised value is among the best P.
+function SDP_Land.ScoreTaken(model, taken, count, mark, boost)
   for t = 1, count do mark[taken[t]] = true end
   local worked, used = 0, 0
-  for _, p in ipairs(model.Plots) do
-    if used >= model.P then break end
-    if not mark[p.Index] then
-      worked = worked + p.Tile
-      used = used + 1
+  if boost == nil then
+    for _, p in ipairs(model.Plots) do
+      if used >= model.P then break end
+      if not mark[p.Index] then
+        worked = worked + p.Tile
+        used = used + 1
+      end
+    end
+  else
+    -- The boosted plots (few) best first, merged into the walk over the rest.
+    local raised = {}
+    for index, extra in pairs(boost) do
+      local p = model.ByIndex[index]
+      if p ~= nil and not mark[index] then raised[#raised + 1] = { Index = index, Tile = p.Tile + extra } end
+    end
+    table.sort(raised, function(a, b)
+      if a.Tile ~= b.Tile then return a.Tile > b.Tile end
+      return a.Index < b.Index
+    end)
+    local r = 1
+    for _, p in ipairs(model.Plots) do
+      if used >= model.P then break end
+      if not mark[p.Index] and boost[p.Index] == nil then
+        while used < model.P and raised[r] ~= nil
+            and (raised[r].Tile > p.Tile or (raised[r].Tile == p.Tile and raised[r].Index < p.Index)) do
+          worked, used, r = worked + raised[r].Tile, used + 1, r + 1
+        end
+        if used < model.P then
+          worked = worked + p.Tile
+          used = used + 1
+        end
+      end
+    end
+    while used < model.P and raised[r] ~= nil do
+      worked, used, r = worked + raised[r].Tile, used + 1, r + 1
     end
   end
   local once = model.OnceTotal

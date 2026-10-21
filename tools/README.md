@@ -11,6 +11,8 @@
 | `package.py` | 从最近一次提交打出给合作者的测试包（zip，含测试说明和交付报告） | 0 成功；1 校验失败；2 有未提交的改动 |
 | `run_tests.py` | 经 Tuner 在游戏内跑 `tests/test_*.lua` | 0 全过；1 有失败；2 连接问题；3 超时 |
 | `game.py` | 退出游戏、经 Steam 启动、从主菜单快速开局（可选建首都） | 0 成功；2 超时 |
+| `realclick.py` | 用系统鼠标事件真实点击面板，每步从面板状态读回核对 | 0 全过；1 有失败；2 环境问题 |
+| `stress.py` | 发布前在后期存档上做压力测试：AI 自动打出存档、逐步计时、魅力复核 | 0 全过；1 有问题步骤；2 环境问题 |
 | `civ6tuner.py` | FireTuner 客户端：收集 Lua 输出、远程执行 Lua | 见下文 |
 
 ## validate.py — 静态校验
@@ -28,6 +30,8 @@ python3 -I tools/validate.py --strict   # 警告也算失败
 | `loc` | Lua/UI XML 引用的 `LOC_SDP_*` 在对局文本里两种语言都有（以 `_` 结尾的视为运行时拼接前缀，跳过）；modinfo 的名称/描述键在前端阶段能加载（坑 1） |
 | `ui` | UI XML（根为 `<Context>`）只用游戏本体与 DLC UI XML 出现过的控件与属性（坑 8）；游戏源码里的拼写错误（`Achnor`、`StachGrowth` 等）单独报错；只出现过一次的属性给警告。需要 `reference/` 符号链接 |
 | `lua` | 调用 `luacheck.mjs`，见下 |
+| `ui`（点击遮挡） | 模板实例的根是可点击的按钮时，里面不能有 `Size="parent,parent"` 的 Button / GridButton / CheckBox：显示时会接住鼠标，下面的按钮点不到（坑 31） |
+| `controls` | 脚本里的 `Controls.<ID>` 都是 UI XML 里的 ID（坑 30） |
 
 ## luacheck.mjs — Lua 检查
 
@@ -148,6 +152,40 @@ end)
 - 失败或 `-v` 时显示该文件的 `print()` 输出。
 - 计时为单文件墙钟时间（含约 0.02 秒 Tuner 往返）。游戏内 `os.clock` 等计时器只有秒级，不能在 Lua 里测耗时。
 - 已验证：通过/失败/跳过/语法错误/加载期错误、72 KB 的测试文件、内容含 `]]`、测试名含 `|` 和中文、状态名写错（只记该文件出错，其余继续）。
+
+## realclick.py — 真实鼠标点击
+
+游戏窗口不向辅助功能暴露控件，电脑操作工具的点击会被拒绝。这里用一个小应用发系统鼠标事件：
+
+```bash
+python3 -I tools/realclick.py build     # 编译 tools/click/sdp-click.swift 为 ~/Applications/SDPClick.app（一次）
+python3 -I tools/realclick.py trusted   # 检查辅助功能权限
+python3 -I tools/realclick.py suite     # 30 项点击检查，需要有首都的对局（game.py newgame --capital --reveal）
+python3 -I tools/realclick.py at 'Controls.SolveButton'   # 点 SDP_Panel 状态里这个 Lua 表达式给出的控件
+```
+
+- 编译好的应用要在"系统设置 → 隐私与安全性 → 辅助功能"里授权一次（由用户操作）。必须是用 `open` 启动的独立应用：macOS 按启动命令行工具的应用判断权限。应用放在 iCloud 之外，因为 iCloud 给文件加的扩展属性会让 codesign 失败。
+- 坐标来自游戏：控件的 `GetScreenOffset` 与尺寸（UI 单位 1920 × 1080）按窗口大小换算，不靠截图估计。
+- 每次点击前检查游戏在最前（不在时 `open -b com.aspyr.civ6.steam`）、点在游戏窗口内、该点最上层的窗口属于游戏，任一不满足就不点。套件开始前先关掉排队的弹窗；结束后把前台还给原来的应用。
+- 点击期间游戏会到前台，会占用屏幕和鼠标，跑之前告诉用户。
+
+## stress.py — 后期存档压力测试（发布前）
+
+```bash
+python3 -I tools/stress.py prepare pangaea-gs     # 主菜单开局，AI 自动打 N 回合，存为 SDP_stress_pangaea-gs
+python3 -I tools/stress.py load pangaea-gs        # 回主菜单读这个存档
+python3 -I tools/stress.py run pangaea-gs         # tests/bench/stress.lua 的各步，逐步计时，结果写 tests/stress/results/
+python3 -I tools/stress.py check pangaea-gs       # 按玩家的建造流程建出"魅力"一步的方案，比较魅力与住房（会改动当前对局，最后跑）
+python3 -I tools/refresh_stress_md.py             # 把汇总表写进 docs/self-test-report.md（报告第 5.10 节由 report/build.py 生成）
+python3 -I tools/stress.py summary                # 汇总表
+```
+
+- 三个场景（`SCENARIOS`）：风云变幻盘古大陆标准图（北条时宗，远古开局 200 回合）、风云变幻大陆大图（威廉明娜，中世纪开局 150 回合）、迭起兴衰群岛（伯里克利，古典开局 170 回合），都用联机速度。存档在游戏自己的存档目录，不进仓库。
+- 自动回合用游戏的 `AutoplayManager`，界面以观察者身份观察：以玩家 0 观察时，AI 的外交（初次见面、交易）会发到本地界面等回答，回合停住。
+- 各步：普查（城市、区域、奇观、钉数）；AI 自己建的保护区周边产出与规则对照；人口最多的几座城各做候选池（快速、标准，标准档跑两次核对确定性）与必建求解；社区 + 保护区 + 工业区；港口与商业中心；精细档；选城址与打城址钉；4 城、8 城多城（标准、精细）与打钉；再打 150 个钉后重复单城与多城；面板开关各页签；撤销全部。每步记录耗时、加成、DMT 自报与裁判是否一致、引擎拒绝的格数。
+- `check` 在格上下令建造（`CityOperationTypes.BUILD`）再 `FinishProgress` 建完，事先只给这座城补上这些区域的前置科技、市政和人口；不用 `CreateDistrict`（AGENTS 坑 36）。魅力、住房在核心状态读。
+- 计时是 Tuner 一次请求的墙钟时间，求解一次算完；面板里同样的计算分帧进行，所以是玩家要等的时间，不是卡顿。
+- 生成存档和计时时不要同时跑离线对比这类重活：2026-10-21 生成大陆存档时并行跑对比（6 个工作线程），回合推进从每分钟约 5 回合掉到 5 分钟 1 回合，游戏画面也很卡。
 
 ## game.py — 启动与进入对局
 

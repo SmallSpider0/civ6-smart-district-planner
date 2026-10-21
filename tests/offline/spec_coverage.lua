@@ -9,6 +9,7 @@ include("SDP_Tiers")
 include("SDP_Task")
 include("SDP_Board")
 include("SDP_Land")
+include("SDP_Appeal")
 include("SDP_Coverage")
 include("SDP_Search")
 include("SDP_Solver")
@@ -160,7 +161,8 @@ test("the coverage part moves an industrial zone to reach a city without one", f
   local on = SDP_Multi.Solve(Request(3))
   T.ok(off.Ok and on.Ok, "solved: " .. tostring(off.Error) .. " " .. tostring(on.Error))
   T.ok(not on.Stats.Mismatch, "board and full evaluation agree")
-  T.near(on.Gain, on.Adjacency + on.LandDelta + on.CoverageDelta, 1e-9, "the gain adds up")
+  T.near(on.Gain, on.Adjacency + on.LandDelta + on.CoverageDelta + on.CostDelta + (on.AppealDelta or 0), 1e-9,
+    "the gain adds up")
   T.eq(on.CoverageDelta, 3 * on.Covered, "weight x newly covered cities")
   -- Counted again here: what the plan made without coverage reaches.
   local model = SDP_Coverage.New({ PlayerID = 0, Weight = 3 })

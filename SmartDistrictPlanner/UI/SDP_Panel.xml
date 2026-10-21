@@ -50,9 +50,15 @@
         </Container>
         <Label ID="SpecialtyNote" Style="BodyTextDark14" WrapWidth="480"/>
 
-        <!-- Districts in two groups (feedback 6, 7): a click cycles the state -->
-        <Container Size="480,20">
+        <!-- Districts in two groups (feedback 6, 7): a click cycles the state.
+             The switch keeps partner districts (the harbor and the commercial
+             hub, SDP_Rules.Apart) out of one city's picks. -->
+        <Container Size="480,24">
           <Label Anchor="L,C" Style="BodyTextDark16" String="LOC_SDP_GROUP_SPECIALTY" ToolTip="LOC_SDP_STATES_TOOLTIP"/>
+          <Container ID="ApartBox" Anchor="L,C" Offset="138,0" Size="160,24">
+            <CheckBox ID="ApartCheck" Anchor="L,C" Style="MainCheckBox"/>
+            <Label ID="ApartLabel" Anchor="L,C" Offset="26,0" Style="BodyTextDark14" TruncateWidth="130" TruncatedTooltip="1"/>
+          </Container>
           <Label Anchor="R,C" Style="BodyTextDark14" String="LOC_SDP_STATES_LEGEND"/>
         </Container>
         <Stack ID="DistrictStack" StackGrowth="Right" WrapWidth="480" WrapGrowth="Bottom" StackPadding="4"/>
@@ -190,9 +196,13 @@
           <PullDown ID="MultiPlanPull" Anchor="L,C" Offset="84,0" Style="PullDownBlue" Size="210,24"/>
           <PullDown ID="MultiTemplatePull" Anchor="R,C" Style="PullDownBlue" Size="150,24"/>
         </Container>
-        <Container Size="480,22">
+        <Container Size="480,24">
           <Label Anchor="L,C" Style="BodyTextDark16" String="LOC_SDP_GROUP_SPECIALTY" ToolTip="LOC_SDP_STATES_TOOLTIP"/>
-          <Container Anchor="R,C" Size="190,22" ToolTip="LOC_SDP_COUNT_TOOLTIP_MULTI">
+          <Container ID="MultiApartBox" Anchor="L,C" Offset="138,0" Size="210,24">
+            <CheckBox ID="MultiApartCheck" Anchor="L,C" Style="MainCheckBox"/>
+            <Label ID="MultiApartLabel" Anchor="L,C" Offset="26,0" Style="BodyTextDark14" TruncateWidth="184" TruncatedTooltip="1"/>
+          </Container>
+          <Container Anchor="R,C" Size="136,22" ToolTip="LOC_SDP_COUNT_TOOLTIP_MULTI">
             <Label Anchor="L,C" Style="BodyTextDark14" String="LOC_SDP_COUNT_PER_CITY"/>
             <Button ID="MultiCountLess" Anchor="R,C" Offset="52,0" Style="ArrowButtonLeft"/>
             <Label ID="MultiCountValue" Anchor="R,C" Offset="32,0" Style="BodyTextDark18"/>
@@ -256,7 +266,11 @@
        marks required and automatic ones; dark text goes with it. -->
   <Instance Name="DistrictCell">
     <GridButton ID="Root" Size="156,26" Style="ButtonControl">
-      <GridButton ID="Selected" Size="parent,parent" Style="TabButtonSelected" ConsumeMouseButton="0" ConsumeMouseOver="1" Hidden="1"/>
+      <!-- The selected look: a plain grid with the texture of the
+           TabButtonSelected style (Civ6_Styles.xml, TabButtonSelectedGrid).
+           A GridButton there, as on the game's tabs, takes the mouse and the
+           cell could not be clicked once selected (2026-10-21). -->
+      <Grid ID="Selected" Size="parent,parent" Texture="Controls_Tab" SliceStart="0,136" SliceCorner="21,16" Hidden="1"/>
       <Image ID="Icon" Anchor="L,C" Offset="2,0" Size="26,26"/>
       <Label ID="Name" Anchor="L,C" Offset="30,0" Style="FontNormal14" TruncateWidth="88" TruncatedTooltip="1"/>
       <Label ID="NameDark" Anchor="L,C" Offset="30,0" Style="BodyTextDark14" TruncateWidth="88" TruncatedTooltip="1" Hidden="1"/>
@@ -311,7 +325,7 @@
   <!-- One solution: a selectable row; selecting it previews it on the map. -->
   <Instance Name="SolutionRow">
     <GridButton ID="Root" Size="480,30" Style="ButtonControl">
-      <GridButton ID="Selected" Size="parent,parent" Style="TabButtonSelected" ConsumeMouseButton="0" ConsumeMouseOver="1" Hidden="1"/>
+      <Grid ID="Selected" Size="parent,parent" Texture="Controls_Tab" SliceStart="0,136" SliceCorner="21,16" Hidden="1"/>
       <!-- Light text on the dark button; dark text on the light selected look
            (SDP_UI.SolutionRow shows one pair). -->
       <Label ID="Name" Anchor="L,C" Offset="10,0" Style="FontNormal16"/>

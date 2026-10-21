@@ -167,6 +167,152 @@ function SDP_Rules.RequiredFeatures(districtType)
   return set
 end
 
+-- ===========================================================================
+-- Districts kept apart (2026-10-21 feedback: the harbor and the commercial
+-- hub). A building gives the player one more trade route only when its city
+-- has no building B: a MODIFIER_PLAYER_ADJUST_TRADE_ROUTE_CAPACITY modifier
+-- whose requirement sets hold an inverted REQUIREMENT_CITY_HAS_BUILDING on B
+-- (in the game's rules the lighthouse's, B = the market). Both districts in
+-- one city then give one trade route, in two cities two.
+-- Returns {
+--   Pairs     { { A, B, Building, Other } }: base district types; A's
+--             Building loses its route when the city has B's Other. Sorted.
+--   Partners  { [district type] = { [district type] = true } }: both ways,
+--             a unique district standing for the one it replaces
+-- }, both empty when the rules have no such modifier.
+-- ===========================================================================
+local m_apart, m_apartFor = nil, nil
+
+local function BaseDistrict(districtType)
+  local replaces = GameInfo.DistrictReplaces[districtType]
+  return replaces and replaces.ReplacesDistrictType or districtType
+end
+SDP_Rules.BaseDistrict = BaseDistrict
+
+function SDP_Rules.Apart()
+  if m_apart ~= nil and m_apartFor == GameInfo then return m_apart end
+  m_apart, m_apartFor = { Pairs = {}, Partners = {} }, GameInfo
+  if GameInfo.BuildingModifiers == nil or GameInfo.RequirementSetRequirements == nil then return m_apart end
+  local sets, argument = {}, {}
+  for row in GameInfo.RequirementSetRequirements() do
+    sets[row.RequirementSetId] = sets[row.RequirementSetId] or {}
+    table.insert(sets[row.RequirementSetId], row.RequirementId)
+  end
+  for row in GameInfo.RequirementArguments() do
+    if row.Name == "BuildingType" then argument[row.RequirementId] = row.Value end
+  end
+  local pairs, seen = {}, {}
+  for row in GameInfo.BuildingModifiers() do
+    local modifier = GameInfo.Modifiers[row.ModifierId]
+    if modifier ~= nil and modifier.ModifierType == "MODIFIER_PLAYER_ADJUST_TRADE_ROUTE_CAPACITY" then
+      for _, setId in ipairs({ modifier.SubjectRequirementSetId or "", modifier.OwnerRequirementSetId or "" }) do
+        for _, requirementId in ipairs(sets[setId] or {}) do
+          local requirement = GameInfo.Requirements[requirementId]
+          local other = argument[requirementId]
+          if requirement ~= nil and requirement.RequirementType == "REQUIREMENT_CITY_HAS_BUILDING" and requirement.Inverse
+              and other ~= nil then
+            local a, b = GameInfo.Buildings[row.BuildingType], GameInfo.Buildings[other]
+            if a ~= nil and b ~= nil and a.PrereqDistrict ~= nil and b.PrereqDistrict ~= nil then
+              local da, db = BaseDistrict(a.PrereqDistrict), BaseDistrict(b.PrereqDistrict)
+              local key = da .. "|" .. db
+              if da ~= db and not seen[key] then
+                seen[key] = true
+                pairs[#pairs + 1] = { A = da, B = db, Building = a.BuildingType, Other = b.BuildingType }
+              end
+            end
+          end
+        end
+      end
+    end
+  end
+  table.sort(pairs, function(x, y)
+    if x.A ~= y.A then return x.A < y.A end
+    return x.B < y.B
+  end)
+  local byBase = {}
+  for row in GameInfo.Districts() do
+    local base = BaseDistrict(row.DistrictType)
+    byBase[base] = byBase[base] or {}
+    table.insert(byBase[base], row.DistrictType)
+  end
+  local partners = {}
+  local function Link(x, y)
+    for _, tx in ipairs(byBase[x] or {}) do
+      partners[tx] = partners[tx] or {}
+      for _, ty in ipairs(byBase[y] or {}) do partners[tx][ty] = true end
+    end
+  end
+  for _, pair in ipairs(pairs) do
+    Link(pair.A, pair.B)
+    Link(pair.B, pair.A)
+  end
+  m_apart, m_apartFor = { Pairs = pairs, Partners = partners }, GameInfo
+  return m_apart
+end
+
+-- The pairs (SDP_Rules.Apart) a city ends up with both of, given the types
+-- a plan places there (a list) and the ones it has already (`present`, a
+-- set, may be nil); a pair the city had before the plan is left out:
+-- { { A, B, Building, Other } } with the city's own types (a unique one as
+-- it is), in Pairs order.
+function SDP_Rules.Together(types, present)
+  local have, planned = {}, {}
+  for _, districtType in ipairs(types) do
+    local base = BaseDistrict(districtType)
+    if have[base] == nil then have[base] = districtType end
+    planned[base] = true
+  end
+  local before = {}
+  for districtType in pairs(present or {}) do before[#before + 1] = districtType end
+  table.sort(before)
+  for _, districtType in ipairs(before) do
+    local base = BaseDistrict(districtType)
+    if have[base] == nil then have[base] = districtType end
+  end
+  local out = {}
+  for _, pair in ipairs(SDP_Rules.Apart().Pairs) do
+    if have[pair.A] and have[pair.B] and (planned[pair.A] or planned[pair.B]) then
+      out[#out + 1] = { A = have[pair.A], B = have[pair.B], Building = pair.Building, Other = pair.Other }
+    end
+  end
+  return out
+end
+
+-- Districts one city cannot have together (MutuallyExclusiveDistricts: the
+-- entertainment complex and the water park, and the unique districts that
+-- replace them). DMT checks this only against built districts, so a plan
+-- could hold both (late-game stress test, 2026-10-21); the solvers keep
+-- them apart. { [district type] = { [district type] = true } }, both ways,
+-- cached per GameInfo; empty when the rules have no such table.
+local m_exclusive, m_exclusiveFor = nil, nil
+
+function SDP_Rules.Exclusive()
+  if m_exclusive ~= nil and m_exclusiveFor == GameInfo then return m_exclusive end
+  m_exclusive, m_exclusiveFor = {}, GameInfo
+  if GameInfo.MutuallyExclusiveDistricts == nil then return m_exclusive end
+  for row in GameInfo.MutuallyExclusiveDistricts() do
+    local a, b = row.District, row.MutuallyExclusiveDistrict
+    if a ~= nil and b ~= nil and a ~= b then
+      m_exclusive[a] = m_exclusive[a] or {}
+      m_exclusive[b] = m_exclusive[b] or {}
+      m_exclusive[a][b], m_exclusive[b][a] = true, true
+    end
+  end
+  return m_exclusive
+end
+
+-- The first type in `types` (a set) that `districtType` cannot share a city
+-- with, by name; nil when none.
+function SDP_Rules.ExcludedBy(districtType, types)
+  local others = SDP_Rules.Exclusive()[districtType]
+  if others == nil then return nil end
+  local found = nil
+  for other in pairs(types) do
+    if others[other] and (found == nil or other < found) then found = other end
+  end
+  return found
+end
+
 -- Yields a district of type `district` gains from one adjacent `neighbour`
 -- (a district type, or a wonder: a building type), from an AdjacencyTable.
 -- Returns a new table.

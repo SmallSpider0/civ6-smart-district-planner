@@ -5,6 +5,7 @@ include("SDP_Rules")
 include("SDP_City")
 include("SDP_Overlay")
 include("SDP_Land")
+include("SDP_Appeal")
 
 test("a taken plot costs its value minus the (P+1)-th best", function()
   local plots = {

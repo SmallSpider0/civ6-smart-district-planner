@@ -30,6 +30,12 @@
     <Replace Tag="LOC_SDP_STATUS_BUILT" Language="en_US">
       <Text>Built</Text>
     </Replace>
+    <Replace Tag="LOC_SDP_STATUS_EXCLUSIVE" Language="en_US">
+      <Text>Excluded</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_REASON_EXCLUSIVE" Language="en_US">
+      <Text>cannot share a city with the {1_Other}</Text>
+    </Replace>
     <Replace Tag="LOC_SDP_STATUS_MAX_PER_PLAYER" Language="en_US">
       <Text>Empire limit reached</Text>
     </Replace>
@@ -453,7 +459,7 @@
       <Text>How many districts that need population each city of this list should plan, required ones included. Above the required number the solver picks the rest from the pool for each city.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_GROUP_SPECIALTY" Language="en_US">
-      <Text>Districts that need population</Text>
+      <Text>Need population</Text>
     </Replace>
     <Replace Tag="LOC_SDP_GROUP_OTHER" Language="en_US">
       <Text>Other districts</Text>
@@ -465,7 +471,7 @@
       <Text>Click: auto &gt; must &gt; off</Text>
     </Replace>
     <Replace Tag="LOC_SDP_STATES_TOOLTIP" Language="en_US">
-      <Text>Must: always placed. Pool: when the count is above the required number, the best of the pool are picked. Off: left out. Districts are compared by weighted adjacency (plus land, coverage and distance when on), so districts without adjacency (encampment, aerodrome) are never picked from the pool: make them Must. Districts limited to one per empire (government plaza) are Must or Off only.</Text>
+      <Text>Must: always placed. Pool: when the count is above the required number, the best of the pool are picked. Off: left out. Districts are compared by weighted adjacency, plus land, coverage and distance when on, plus housing and plot yields for neighborhoods and preserves. Encampments and aerodromes have no adjacency and are never picked from the pool: make them Must. Districts limited to one per empire (government plaza) are Must or Off only.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_STATES_OTHER_TOOLTIP" Language="en_US">
       <Text>These districts need no population and do not count. Auto: added when the city needs it, placed by the solver. An aqueduct when the city lacks fresh water (housing from water below the 5 of a river or lake); a dam when three or more floodplain plots in its rings are free (Gathering Storm). Left out, with a note, when it fits nowhere.</Text>
@@ -580,6 +586,54 @@
     </Replace>
     <Replace Tag="LOC_SDP_TIER_SHORT" Language="en_US">
       <Text>Tier</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_APART_SHORT" Language="en_US">
+      <Text>Split {1_A}/{2_B}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_APART_SHORT_ANY" Language="en_US">
+      <Text>Keep apart</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_APART_RULE" Language="en_US">
+      <Text>The {1_Building} adds a trade route only in a city without a {2_Other}: a {3_A} and a {4_B} in one city give one more route, in two cities two.</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_APART_TOOLTIP" Language="en_US">
+      <Text>{1_Rules}[NEWLINE]When ticked, the pool never gives one city both; a city that already has one (built, pinned or Must) does not get the other. Only when the count cannot be filled otherwise are both picked, and the result says so. Must districts are placed as asked.</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_TOGETHER" Language="en_US">
+      <Text>{1_A} with {2_B}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_TOGETHER_CITY" Language="en_US">
+      <Text>{1_City}: {2_A} with {3_B}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_TOGETHER_DETAIL" Language="en_US">
+      <Text>the {1_Building} adds no trade route</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_WEIGHT_HOUSING" Language="en_US">
+      <Text>Housing: points per housing. A neighborhood's or preserve's housing depends on its plot's appeal. A preserve's grove and sanctuary add yields to the unimproved plots around it, counted with each yield's weight (with the land part on, only on plots the city works). The plan changes appeal: a holy site or theater gives the plots next to it +1, an industrial zone or encampment -1, clearing woods -1 around.</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_HOUSING" Language="en_US">
+      <Text>housing {1_Housing} (appeal {2_Appeal})</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_IMPROVEMENT_HOUSING" Language="en_US">
+      <Text>Improvements built over</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_IMPROVEMENT_HOUSING_DETAIL" Language="en_US">
+      <Text>housing {1_N}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_IMPROVEMENT_HOUSING_TOOLTIP" Language="en_US">
+      <Text>Farms, pastures and the like give half a housing each; the city's total is rounded down. Districts of the plan on such plots cost the city this much housing. Shown for information; not part of the plan's score.</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_TILES" Language="en_US">
+      <Text>plots around {1_Yields}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_PART_APPEAL" Language="en_US">
+      <Text>housing and appeal {1_Value}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_YIELD_SHORT_YIELD_FOOD" Language="en_US">
+      <Text>Food</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_WEIGHT_HOUSING_SHORT" Language="en_US">
+      <Text>Hous.</Text>
     </Replace>
   </LocalizedText>
 </GameData>

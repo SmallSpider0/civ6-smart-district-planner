@@ -5,7 +5,9 @@
 -- group: a city) over one sorted list of candidate plots. A layout gives each
 -- slot a candidate position (0: not placed). Its value is SDP_Board's exact
 -- DMT gain plus the land part of every land model (SDP_Land) plus, when
--- given, the coverage part (SDP_Coverage: weight x newly covered cities).
+-- given, the coverage part (SDP_Coverage: weight x newly covered cities) plus,
+-- when a district depends on appeal, the appeal part (SDP_Appeal: housing,
+-- a preserve's yields on the plots around it).
 --
 --   Singles     every slot alone on every allowed plot: legality and value.
 --   Exhaustive  every legal layout of the active slots (small problems).
@@ -22,6 +24,11 @@
 --               the combinations by an optimistic model value, solves the
 --               best few exactly (Combos), tries swapping one candidate for
 --               another (TypeSwaps) and refines the best combinations.
+--               With Apart, a group never picks two partner districts, nor
+--               one whose partner it has or requires, unless every
+--               combination would (then it may: ApartRelaxed). Two
+--               districts one city cannot have (spec.Exclusive) are never
+--               picked together, nor with a required one.
 --   Costs       an optional cost per candidate plot (the distance cost)
 --               taken off for every placed slot.
 -- Budgets are counts (SDP_Tiers); loops run over sorted arrays; ties go to
@@ -65,6 +72,16 @@ SDP_Search.Better = Better
 --   Pools       { [group] = count }: of the group's slots marked Optional,
 --               exactly `count` are placed (fewer when they do not fit)
 --   Costs       { [position] = cost } or nil: taken off per placed slot
+--   Appeal      { Fixed (SDP_Overlay.FixedSubjects), Weights (the request's),
+--                 Workable = { [plot index] = true } } or nil: the appeal part
+--               (SDP_Appeal; nothing when no district depends on appeal)
+--   Exclusive   { [type] = { [type] = true } } (SDP_Rules.Exclusive) or nil:
+--               no combination of a group holds two of them (the solvers
+--               leave out the required and candidate ones the city cannot
+--               take with what it has)
+--   Apart       { Partners = { [type] = { [type] = true } } (SDP_Rules.Apart),
+--                 Present = { [group] = { [type] = true } } (built or pinned) }
+--               or nil (off): partner districts are not picked into one group
 --   Alternatives  keep this many distinct good layouts (SDP_Solver's
 --               solutions; 0 or nil: none)
 -- }
@@ -75,6 +92,9 @@ function SDP_Search.New(spec)
   self.Lands = spec.Lands or {}
   self.Coverage = spec.Coverage
   self.PoolSpec, self.Costs = spec.Pools, spec.Costs
+  self.Apart, self.ApartRelaxed = spec.Apart, {}
+  self.Exclusive = spec.Exclusive or {}
+  self.AppealSpec = spec.Appeal
   self.AltCount = spec.Alternatives or 0
   self.Alt = {}
   self.CoverLists = {} -- scratch for CoverageCount
@@ -153,6 +173,11 @@ function Search:Singles()
   self.Types, self.Kinds, self.Groups, self.Single, self.Legal, self.Subjects, self.SlotIndex =
     types, kinds, groups, single, legal, subjects, index
   self.K = #types
+  if self.AppealSpec ~= nil then
+    self.AppealModel = SDP_Appeal.New({ PlayerID = self.PlayerID, Types = types, Kinds = kinds, Candidates = self.Candidates,
+      Fixed = self.AppealSpec.Fixed, Weights = self.AppealSpec.Weights, Lands = self.Lands,
+      Workable = self.AppealSpec.Workable })
+  end
   -- Pools: each group's optional and required slots and how many optional
   -- ones to place.
   self.Optional, self.PoolSlots, self.RequiredSlots, self.PoolCount, self.PoolGroups = {}, {}, {}, {}, {}
@@ -208,6 +233,12 @@ function Search:Evaluate(layout)
   end
   local gain, legal = board:Total()
   self.Stats.Evaluations = self.Stats.Evaluations + 1
+  local appeal, boosts = self.AppealModel, nil
+  if appeal ~= nil then
+    local value
+    value, boosts = appeal:Score(layout)
+    gain = gain + value - appeal.Base
+  end
   if #self.Lands > 0 then
     local taken, placed = self.Taken, 0
     for m = 1, k do
@@ -216,10 +247,11 @@ function Search:Evaluate(layout)
         taken[placed] = candidates[layout[m]].Index
       end
     end
-    for _, land in ipairs(self.Lands) do
-      gain = gain + SDP_Land.ScoreTaken(land, taken, placed, self.Mark) - land.Base
+    for l, land in ipairs(self.Lands) do
+      gain = gain + SDP_Land.ScoreTaken(land, taken, placed, self.Mark, boosts and boosts[l]) - land.Base
     end
   end
+  if boosts ~= nil then appeal:ClearBoosts() end
   if self.Coverage ~= nil then gain = gain + self.Coverage.Weight * self:CoverageCount(layout) end
   local costs = self.Costs
   if costs ~= nil then
@@ -284,6 +316,29 @@ end
 function Search:CoverageDelta(layout)
   if self.Coverage == nil then return 0 end
   return self.Coverage.Weight * self:CoverageCount(layout)
+end
+
+-- The appeal part of a layout alone (for reports; 0 when there is none):
+-- housing, and a preserve's yields on the plots around it (with the land
+-- part on, what they add to the land score). `detail` as SDP_Appeal:Score.
+function Search:AppealDelta(layout, detail)
+  local appeal = self.AppealModel
+  if appeal == nil then return 0 end
+  local value, boosts = appeal:Score(layout, detail)
+  local delta = value - appeal.Base
+  if boosts ~= nil then
+    local taken = {}
+    for m = 1, self.K do
+      if layout[m] ~= 0 then taken[#taken + 1] = self.Candidates[layout[m]].Index end
+    end
+    for l, land in ipairs(self.Lands) do
+      if boosts[l] ~= nil then
+        delta = delta + SDP_Land.ScoreTaken(land, taken, #taken, {}, boosts[l]) - SDP_Land.ScoreTaken(land, taken, #taken, {})
+      end
+    end
+    appeal:ClearBoosts()
+  end
+  return delta
 end
 
 -- The land part of a layout alone (for reports).
@@ -495,12 +550,33 @@ function Search:Model()
     for _, land in ipairs(self.Lands) do total = total + (land.Loss[candidates[i].Index] or 0) end
     loss[i] = total
   end
+  -- The appeal part of a neighborhood or preserve slot alone on each plot
+  -- (its housing, a preserve's yields). What other slots do to the appeal of
+  -- a pinned or built neighborhood is left to the exact evaluation: adding
+  -- it here steered the standard tier away from better layouts (dev set,
+  -- 2026-10-21: 7 situations, objective 993 with it, 997 without).
+  local appealSingle = nil
+  if self.AppealModel ~= nil then
+    appealSingle = {}
+    local layout = self:EmptyLayout()
+    for m = 1, k do
+      appealSingle[m] = {}
+      for i = 1, n do
+        if self.Legal[m][i] and self.AppealModel.Value[m] then
+          layout[m] = i
+          appealSingle[m][i] = self:AppealDelta(layout)
+          layout[m] = 0
+        end
+      end
+    end
+  end
   local single = {}
   for m = 1, k do
     single[m] = {}
     local rows = (adjacency[self.Types[m]] or {}).Rows or {}
     for i = 1, n do
       local value = self.Single[m][i] - loss[i] - (self.Costs and self.Costs[i] or 0)
+      if appealSingle ~= nil then value = value + (appealSingle[m][i] or 0) end
       -- Coverage alone; two slots of one group over the same city both
       -- count it here, so the model stays optimistic.
       if self.Coverage ~= nil and self.Legal[m][i] then
@@ -520,11 +596,18 @@ function Search:Model()
     end
   end
   local pair = {}
+  local appeal = self.AppealModel
   for a = 1, k do
     pair[a] = {}
     for b = 1, k do
       pair[a][b] = SDP_Overlay.Score(SDP_Rules.NeighbourGain(adjacency, self.Types[a], self.Types[b]), weights)
         + SDP_Overlay.Score(SDP_Rules.NeighbourGain(adjacency, self.Types[b], self.Types[a]), weights)
+      -- A neighbour that raises appeal can lift a housing district one step
+      -- (optimistic: the model stays a bound).
+      if appeal ~= nil and a ~= b then
+        if appeal.Value[a] and appeal.Own[b] > 0 then pair[a][b] = pair[a][b] + appeal.HousingWeight end
+        if appeal.Value[b] and appeal.Own[a] > 0 then pair[a][b] = pair[a][b] + appeal.HousingWeight end
+      end
     end
   end
   self.ModelSingle, self.Pair = single, pair
@@ -1095,7 +1178,10 @@ end
 -- First run.
 function Search:Run()
   local params = self.Params
-  if self:HasPools() then return self:RunPools(self.PoolGroups[1]) end
+  if self:HasPools() then
+    self:RunPools(self.PoolGroups[1])
+    return self:PlaceWhatFits()
+  end
   self:SetBudgets()
   if self.K == 0 then return end
   local order, base = self:AllSlots(), self:EmptyLayout()
@@ -1111,6 +1197,45 @@ function Search:Run()
     self.NextStart, self.Started = 1, {}
     self:RunStarts(params.Starts)
     self:Kicks(params.Kicks or 0)
+  end
+  self:PlaceWhatFits()
+end
+
+-- No layout places every required slot: some need the same few plots (a
+-- harbor and a water park where one coastal plot takes either; late-game
+-- stress test, 2026-10-21). Place as many as fit (design goal G4): leave out
+-- one required slot, then two, and so on, in slot order, and solve the rest
+-- (SolveBlock; candidates stay out). Consider keeps the layout with the most
+-- slots placed, then the best value. Stops at the first count that places
+-- anything, or on the budget.
+function Search:PlaceWhatFits()
+  if self.BestLayout ~= nil or self.K < 2 then return end
+  local required = {}
+  for m = 1, self.K do
+    if not self.Optional[m] then required[#required + 1] = m end
+  end
+  local base = self:EmptyLayout()
+  for drop = 1, #required - 1 do
+    local out = {}
+    local function Walk(start, depth)
+      if self:OverBudget() then return end
+      if depth > drop then
+        local order = {}
+        for _, m in ipairs(required) do
+          if not out[m] then order[#order + 1] = m end
+        end
+        local layout, gain = self:SolveBlock(order, base)
+        if layout ~= nil then self:Consider(gain, true, layout) end
+        return
+      end
+      for x = start, #required - (drop - depth) do
+        out[required[x]] = true
+        Walk(x + 1, depth + 1)
+        out[required[x]] = nil
+      end
+    end
+    Walk(1, 1)
+    if self.BestLayout ~= nil or self:OverBudget() then return end
   end
 end
 
@@ -1180,9 +1305,65 @@ end
 -- the same for the required slots alone. Like the model bound it is usually
 -- optimistic. Ties: by the types' names. More than COMBO_LIMIT combinations:
 -- only the candidates with the best values of their own take part.
+-- Whether picking `slots` (optional slots of group g) puts partner districts
+-- (spec.Apart) in one city: a slot whose partner the city has or requires,
+-- or two partners among the slots.
+function Search:Clashes(g, slots)
+  local apart = self.Apart
+  if apart == nil then return false end
+  local partners, present = apart.Partners, (apart.Present and apart.Present[g]) or {}
+  for x, m in ipairs(slots) do
+    local own = partners[self.Types[m]]
+    if own ~= nil then
+      for other in pairs(own) do
+        if present[other] then return true end -- a yes or no: the order does not matter
+      end
+      for _, r in ipairs(self.RequiredSlots[g] or {}) do
+        if own[self.Types[r]] then return true end
+      end
+      for y = 1, x - 1 do
+        if own[self.Types[slots[y]]] then return true end
+      end
+    end
+  end
+  return false
+end
+
+-- Whether `slots` (optional slots of group g) hold two districts one city
+-- cannot have (spec.Exclusive), or one that a required slot of g excludes.
+function Search:Excluded(g, slots)
+  local exclusive = self.Exclusive
+  for x, m in ipairs(slots) do
+    local own = exclusive[self.Types[m]]
+    if own ~= nil then
+      for _, r in ipairs(self.RequiredSlots[g] or {}) do
+        if own[self.Types[r]] then return true end
+      end
+      for y = 1, x - 1 do
+        if own[self.Types[slots[y]]] then return true end
+      end
+    end
+  end
+  return false
+end
+
 function Search:Combos(g)
   self.ComboCache = self.ComboCache or {}
   if self.ComboCache[g] ~= nil then return self.ComboCache[g] end
+  local list = self:BuildCombos(g, self.Apart ~= nil)
+  if self.Apart ~= nil and #list == 0 then
+    -- Every combination puts partners together: allow it (and say so).
+    self.ApartRelaxed[g] = true
+    list = self:BuildCombos(g, false)
+  end
+  self.ComboCache[g] = list
+  return list
+end
+
+-- The combinations of group g, best first; `apart`: without the ones that
+-- clash (Clashes), candidates the city cannot take left out before the
+-- COMBO_LIMIT cut.
+function Search:BuildCombos(g, apart)
   self:Model()
   local single, pair, legal, n = self.ModelSingle, self.Pair, self.Legal, self.N
   local required, need = self.RequiredSlots[g] or {}, self.PoolCount[g] or 0
@@ -1202,13 +1383,16 @@ function Search:Combos(g)
   end
   local pool, own = {}, {}
   for _, m in ipairs(self.PoolSlots[g] or {}) do
-    local value = BestSingle(m)
-    for _, r in ipairs(required) do
-      if pair[m][r] > 0 then value = value + pair[m][r] end
+    if not (apart and self:Clashes(g, { m })) and not self:Excluded(g, { m }) then
+      local value = BestSingle(m)
+      for _, r in ipairs(required) do
+        if pair[m][r] > 0 then value = value + pair[m][r] end
+      end
+      own[m] = value
+      pool[#pool + 1] = m
     end
-    own[m] = value
-    pool[#pool + 1] = m
   end
+  if #pool < need then return {} end
   while #pool > need and Choose(#pool, need) > SDP_Search.COMBO_LIMIT do
     local worst = 1
     for x = 2, #pool do
@@ -1225,12 +1409,14 @@ function Search:Combos(g)
     end
     for x = start, #pool - (need - depth) do
       local m = pool[x]
-      local add = own[m]
-      for d = 1, depth - 1 do
-        if pair[m][chosen[d]] > 0 then add = add + pair[m][chosen[d]] end
-      end
       chosen[depth] = m
-      Walk(x + 1, depth + 1, value + add)
+      if not (apart and self:Clashes(g, chosen)) and not self:Excluded(g, chosen) then
+        local add = own[m]
+        for d = 1, depth - 1 do
+          if pair[m][chosen[d]] > 0 then add = add + pair[m][chosen[d]] end
+        end
+        Walk(x + 1, depth + 1, value + add)
+      end
       chosen[depth] = nil
     end
   end
@@ -1239,7 +1425,6 @@ function Search:Combos(g)
     if a.Value ~= b.Value then return a.Value > b.Value end
     return a.Key < b.Key
   end)
-  self.ComboCache[g] = list
   return list
 end
 
@@ -1253,6 +1438,7 @@ function Search:SwapMoves(g, layout)
   for _, m in ipairs(self.PoolSlots[g] or {}) do
     if layout[m] ~= 0 then chosen[#chosen + 1] = m else out[#out + 1] = m end
   end
+  local apart = self.Apart ~= nil and #self:Combos(g) > 0 and not self.ApartRelaxed[g]
   local trial = Copy(layout)
   for _, x in ipairs(chosen) do
     local keepX = trial[x]
@@ -1263,7 +1449,12 @@ function Search:SwapMoves(g, layout)
     end
     for _, y in ipairs(out) do
       local bestI, bestGain = nil, nil
-      for i = 1, n do
+      local swapped = {}
+      for _, m in ipairs(chosen) do
+        if m ~= x then swapped[#swapped + 1] = m end
+      end
+      swapped[#swapped + 1] = y
+      for i = 1, ((apart and self:Clashes(g, swapped)) or self:Excluded(g, swapped)) and 0 or n do
         if legal[y][i] and not used[i] then
           if self:OverBudget() then break end
           trial[y] = i

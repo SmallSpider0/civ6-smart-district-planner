@@ -69,13 +69,16 @@ local function BuildGameInfo()
   }, "TerrainType")
 
   gi.Features = Table({
-    { FeatureType = "FEATURE_FOREST", Name = "LOC_FEATURE_FOREST", Removable = true, Settlement = true, Yields = Yields(0, 1) },
-    { FeatureType = "FEATURE_JUNGLE", Name = "LOC_FEATURE_JUNGLE", Removable = true, Settlement = true, Yields = Yields(1) },
-    { FeatureType = "FEATURE_MARSH", Name = "LOC_FEATURE_MARSH", Removable = true, Settlement = true, Yields = Yields(1) },
+    { FeatureType = "FEATURE_FOREST", Name = "LOC_FEATURE_FOREST", Removable = true, Settlement = true, Yields = Yields(0, 1),
+      Appeal = 1 },
+    { FeatureType = "FEATURE_JUNGLE", Name = "LOC_FEATURE_JUNGLE", Removable = true, Settlement = true, Yields = Yields(1),
+      Appeal = -1 },
+    { FeatureType = "FEATURE_MARSH", Name = "LOC_FEATURE_MARSH", Removable = true, Settlement = true, Yields = Yields(1),
+      Appeal = -1, RemoveTech = "TECH_IRRIGATION" },
     { FeatureType = "FEATURE_OASIS", Name = "LOC_FEATURE_OASIS", AddsFreshWater = true, Settlement = false, Yields = Yields(3, 0, 1) },
     { FeatureType = "FEATURE_NW_TEST", Name = "LOC_FEATURE_NW_TEST", NaturalWonder = true, Impassable = true, Settlement = false,
       Yields = Yields(0, 0, 0, 2) },
-    { FeatureType = "FEATURE_FLOODPLAINS", Name = "LOC_FEATURE_FLOODPLAINS", Settlement = true, Yields = Yields(1) },
+    { FeatureType = "FEATURE_FLOODPLAINS", Name = "LOC_FEATURE_FLOODPLAINS", Settlement = true, Yields = Yields(1), Appeal = -1 },
   }, "FeatureType")
   gi.Feature_Removes = Table({
     { FeatureType = "FEATURE_FOREST", YieldType = "YIELD_PRODUCTION", Yield = 20 },
@@ -105,8 +108,12 @@ local function BuildGameInfo()
     { ResourceType = "RESOURCE_HORSES", ImprovedExtractionRate = 2 },
   }, "ResourceType")
 
-  gi.Technologies = Table({ { TechnologyType = "TECH_BRONZE_WORKING", Name = "LOC_TECH_BRONZE_WORKING" } }, "TechnologyType")
-  gi.Improvements = Table({ { ImprovementType = "IMPROVEMENT_FARM", Name = "LOC_IMPROVEMENT_FARM_NAME" } }, "ImprovementType")
+  gi.Technologies = Table({ { TechnologyType = "TECH_BRONZE_WORKING", Name = "LOC_TECH_BRONZE_WORKING" },
+    { TechnologyType = "TECH_IRRIGATION", Name = "LOC_TECH_IRRIGATION" } }, "TechnologyType")
+  gi.Improvements = Table({
+    { ImprovementType = "IMPROVEMENT_FARM", Name = "LOC_IMPROVEMENT_FARM_NAME", Housing = 1, TilesRequired = 2 },
+    { ImprovementType = "IMPROVEMENT_MINE", Name = "LOC_IMPROVEMENT_MINE_NAME", Appeal = -1 },
+  }, "ImprovementType")
   gi.Civics = Table({}, "CivicType")
 
   local function District(t, extra)
@@ -117,26 +124,63 @@ local function BuildGameInfo()
   gi.Districts = Table({
     District("DISTRICT_CITY_CENTER", { CityCenter = true }),
     District("DISTRICT_CAMPUS", { RequiresPopulation = true }),
-    District("DISTRICT_HOLY_SITE", { RequiresPopulation = true }),
-    District("DISTRICT_THEATER", { RequiresPopulation = true }),
+    District("DISTRICT_HOLY_SITE", { RequiresPopulation = true, Appeal = 1 }),
+    District("DISTRICT_THEATER", { RequiresPopulation = true, Appeal = 1 }),
     District("DISTRICT_COMMERCIAL_HUB", { RequiresPopulation = true }),
-    District("DISTRICT_INDUSTRIAL_ZONE", { RequiresPopulation = true }),
-    District("DISTRICT_ENTERTAINMENT_COMPLEX", { RequiresPopulation = true }),
-    District("DISTRICT_ENCAMPMENT", { RequiresPopulation = true, NoAdjacentCity = true }),
+    District("DISTRICT_INDUSTRIAL_ZONE", { RequiresPopulation = true, Appeal = -1 }),
+    District("DISTRICT_ENTERTAINMENT_COMPLEX", { RequiresPopulation = true, Appeal = 1 }),
+    District("DISTRICT_ENCAMPMENT", { RequiresPopulation = true, NoAdjacentCity = true, Appeal = -1 }),
     District("DISTRICT_GOVERNMENT", { RequiresPopulation = true, MaxPerPlayer = 1 }),
     District("DISTRICT_AQUEDUCT", { Aqueduct = true }),
     District("DISTRICT_DAM", { OnePerCity = false }),
-    District("DISTRICT_NEIGHBORHOOD", { OnePerCity = false }),
-    District("DISTRICT_WONDER", { OnePerCity = false }),
+    District("DISTRICT_NEIGHBORHOOD", { OnePerCity = false, Housing = 4 }),
+    District("DISTRICT_WONDER", { OnePerCity = false, Appeal = 1 }),
     District("DISTRICT_ACROPOLIS", { RequiresPopulation = true, TraitType = "TRAIT_CIVILIZATION_DISTRICT_ACROPOLIS" }),
+    -- On coast next to land (Districts.Coast, AdjacentToLand), as in the game.
+    District("DISTRICT_HARBOR", { RequiresPopulation = true, Coast = true, AdjacentToLand = true }),
+    -- Another civilization's harbor (not the test player's).
+    District("DISTRICT_COTHON", { RequiresPopulation = true, Coast = true, AdjacentToLand = true,
+      TraitType = "TRAIT_CIVILIZATION_DISTRICT_COTHON" }),
+    District("DISTRICT_PRESERVE", { RequiresPopulation = true, NoAdjacentCity = true, Housing = 1, Appeal = 1 }),
+    District("DISTRICT_WATER_ENTERTAINMENT_COMPLEX", { RequiresPopulation = true, Coast = true, AdjacentToLand = true,
+      Appeal = 1 }),
   }, "DistrictType")
+  -- One city cannot have both (the game's MutuallyExclusiveDistricts).
+  gi.MutuallyExclusiveDistricts = Table({
+    { District = "DISTRICT_ENTERTAINMENT_COMPLEX", MutuallyExclusiveDistrict = "DISTRICT_WATER_ENTERTAINMENT_COMPLEX" },
+    { District = "DISTRICT_WATER_ENTERTAINMENT_COMPLEX", MutuallyExclusiveDistrict = "DISTRICT_ENTERTAINMENT_COMPLEX" },
+  })
+  -- Housing by appeal and a preserve's yields on the plots around it, as in
+  -- the game's rules (AppealHousingChanges, Adjacent_AppealYieldChanges).
+  local housing = {}
+  for _, d in ipairs({ { "DISTRICT_NEIGHBORHOOD", -2 }, { "DISTRICT_PRESERVE", -1 } }) do
+    for _, row in ipairs({ { 4, 2 }, { 2, 1 }, { -1, 0 }, { -3, -1 }, { -100, d[2] } }) do
+      housing[#housing + 1] = { DistrictType = d[1], MinimumValue = row[1], AppealChange = row[2] }
+    end
+  end
+  gi.AppealHousingChanges = Table(housing)
+  local tiles = {}
+  for _, row in ipairs({
+    { "BUILDING_GROVE", "YIELD_FAITH", 4, 100, 2 }, { "BUILDING_GROVE", "YIELD_FAITH", 2, 3, 1 },
+    { "BUILDING_GROVE", "YIELD_FOOD", 4, 100, 2 }, { "BUILDING_GROVE", "YIELD_FOOD", 2, 3, 1 },
+    { "BUILDING_GROVE", "YIELD_CULTURE", 4, 100, 2 },
+    { "BUILDING_SANCTUARY", "YIELD_GOLD", 4, 100, 2 }, { "BUILDING_SANCTUARY", "YIELD_GOLD", 2, 3, 1 },
+    { "BUILDING_SANCTUARY", "YIELD_SCIENCE", 4, 100, 2 }, { "BUILDING_SANCTUARY", "YIELD_SCIENCE", 2, 3, 1 },
+    { "BUILDING_SANCTUARY", "YIELD_PRODUCTION", 4, 100, 2 },
+  }) do
+    tiles[#tiles + 1] = { DistrictType = "DISTRICT_PRESERVE", BuildingType = row[1], YieldType = row[2], MinimumValue = row[3],
+      MaximumValue = row[4], YieldChange = row[5], Unimproved = true }
+  end
+  gi.Adjacent_AppealYieldChanges = Table(tiles)
   -- Gathering Storm's extra district columns and required features (the dam).
   gi.Districts_XP2 = Table({ { DistrictType = "DISTRICT_DAM", PreventsFloods = true, OnePerRiver = true } }, "DistrictType")
   gi.District_RequiredFeatures = Table({ { DistrictType = "DISTRICT_DAM", FeatureType = "FEATURE_FLOODPLAINS" } })
   gi.DistrictReplaces = Table({
     { CivUniqueDistrictType = "DISTRICT_ACROPOLIS", ReplacesDistrictType = "DISTRICT_THEATER" },
+    { CivUniqueDistrictType = "DISTRICT_COTHON", ReplacesDistrictType = "DISTRICT_HARBOR" },
   }, "CivUniqueDistrictType")
   gi.Districts.DISTRICT_ACROPOLIS.ReplacesCollection = { gi.DistrictReplaces[0] }
+  gi.Districts.DISTRICT_COTHON.ReplacesCollection = { gi.DistrictReplaces[1] }
 
   -- Adjacency rows, after the base game's (Adjacency_YieldChanges.xml).
   local adj, links = {}, {}
@@ -167,6 +211,11 @@ local function BuildGameInfo()
   Adj("DISTRICT_COMMERCIAL_HUB", "River_Gold", "YIELD_GOLD", 2, { AdjacentRiver = true })
   Adj("DISTRICT_COMMERCIAL_HUB", "District_Gold", "YIELD_GOLD", 1, TWO_DISTRICTS)
   Adj("DISTRICT_COMMERCIAL_HUB", "Government_Gold", "YIELD_GOLD", 1, { AdjacentDistrict = "DISTRICT_GOVERNMENT" })
+  Adj("DISTRICT_COMMERCIAL_HUB", "Harbor_Gold", "YIELD_GOLD", 2, { AdjacentDistrict = "DISTRICT_HARBOR" })
+  for _, harbor in ipairs({ "DISTRICT_HARBOR", "DISTRICT_COTHON" }) do
+    Adj(harbor, "Harbor_City_Gold", "YIELD_GOLD", 2, { AdjacentDistrict = "DISTRICT_CITY_CENTER" })
+    Adj(harbor, "District_Gold", "YIELD_GOLD", 1, TWO_DISTRICTS)
+  end
   Adj("DISTRICT_INDUSTRIAL_ZONE", "Aqueduct_Production", "YIELD_PRODUCTION", 2, { AdjacentDistrict = "DISTRICT_AQUEDUCT" })
   Adj("DISTRICT_INDUSTRIAL_ZONE", "Dam_Production", "YIELD_PRODUCTION", 2, { AdjacentDistrict = "DISTRICT_DAM" })
   Adj("DISTRICT_INDUSTRIAL_ZONE", "District_Production", "YIELD_PRODUCTION", 1, TWO_DISTRICTS)
@@ -191,6 +240,9 @@ local function BuildGameInfo()
       AdjacentDistrict = "DISTRICT_ENTERTAINMENT_COMPLEX", RegionalRange = 6 },
     { BuildingType = "BUILDING_STONEHENGE", Name = "LOC_BUILDING_STONEHENGE_NAME", IsWonder = true, Cost = 180, FlatOnly = true },
     { BuildingType = "BUILDING_LIBRARY", Name = "LOC_BUILDING_LIBRARY_NAME", Cost = 90, PrereqDistrict = "DISTRICT_CAMPUS" },
+    -- Trade route capacity: the lighthouse's only without a market (below).
+    { BuildingType = "BUILDING_MARKET", Name = "LOC_BUILDING_MARKET_NAME", Cost = 120, PrereqDistrict = "DISTRICT_COMMERCIAL_HUB" },
+    { BuildingType = "BUILDING_LIGHTHOUSE", Name = "LOC_BUILDING_LIGHTHOUSE_NAME", Cost = 120, PrereqDistrict = "DISTRICT_HARBOR" },
     -- Regional buildings (Buildings.RegionalRange), as in the base game; the
     -- last one is a made-up civilization building with a longer reach.
     { BuildingType = "BUILDING_FACTORY", Name = "LOC_BUILDING_FACTORY_NAME", Cost = 330,
@@ -199,7 +251,30 @@ local function BuildGameInfo()
       PrereqDistrict = "DISTRICT_ENTERTAINMENT_COMPLEX", RegionalRange = 6 },
     { BuildingType = "BUILDING_TEST_LONG_REACH", Name = "LOC_BUILDING_TEST_LONG_REACH_NAME", Cost = 330,
       PrereqDistrict = "DISTRICT_INDUSTRIAL_ZONE", RegionalRange = 9, TraitType = "TRAIT_CIVILIZATION_DISTRICT_ACROPOLIS" },
+    { BuildingType = "BUILDING_GROVE", Name = "LOC_BUILDING_GROVE_NAME", Cost = 150, PrereqDistrict = "DISTRICT_PRESERVE" },
+    { BuildingType = "BUILDING_SANCTUARY", Name = "LOC_BUILDING_SANCTUARY_NAME", Cost = 300, PrereqDistrict = "DISTRICT_PRESERVE" },
   }, "BuildingType")
+  -- The game's trade route rows (Buildings.xml, Modifiers): the market adds
+  -- a route; the lighthouse adds one when the city has no market.
+  gi.Modifiers = Table({
+    { ModifierId = "MARKET_TRADE_ROUTE_CAPACITY", ModifierType = "MODIFIER_PLAYER_ADJUST_TRADE_ROUTE_CAPACITY" },
+    { ModifierId = "LIGHTHOUSE_TRADE_ROUTE_CAPACITY", ModifierType = "MODIFIER_PLAYER_ADJUST_TRADE_ROUTE_CAPACITY",
+      SubjectRequirementSetId = "LIGHTHOUSE_TRADE_ROUTE_CAPACITY_REQUIREMENTS" },
+  }, "ModifierId")
+  gi.BuildingModifiers = Table({
+    { BuildingType = "BUILDING_MARKET", ModifierId = "MARKET_TRADE_ROUTE_CAPACITY" },
+    { BuildingType = "BUILDING_LIGHTHOUSE", ModifierId = "LIGHTHOUSE_TRADE_ROUTE_CAPACITY" },
+  })
+  gi.RequirementSetRequirements = Table({
+    { RequirementSetId = "LIGHTHOUSE_TRADE_ROUTE_CAPACITY_REQUIREMENTS", RequirementId = "REQUIRES_NO_MARKET" },
+  })
+  gi.Requirements = Table({
+    { RequirementId = "REQUIRES_NO_MARKET", RequirementType = "REQUIREMENT_CITY_HAS_BUILDING", Inverse = true },
+  }, "RequirementId")
+  gi.RequirementArguments = Table({
+    { RequirementId = "REQUIRES_NO_MARKET", Name = "BuildingType", Value = "BUILDING_MARKET" },
+    { RequirementId = "REQUIRES_NO_MARKET", Name = "MustBeFunctioning", Value = "0" },
+  })
   return gi
 end
 
@@ -331,6 +406,7 @@ function World.New(spec)
   function Plot:IsHills() return self.terrain.Hills == true end
   function Plot:IsImpassable() return self.terrain.Impassable == true or (self.feature ~= nil and self.feature.Impassable == true) end
   function Plot:GetAppeal() return self.appeal end
+  function Plot:GetImprovementType() return self.improvement and self.improvement.Index or -1 end
   function Plot:IsCoastalLand()
     if self:IsWater() then return false end
     for dir = 0, 5 do
@@ -366,6 +442,7 @@ function World.New(spec)
   end
   for _, s in ipairs(spec.unrevealed or {}) do GetPlot(XY(s)).revealed = false end
   for _, a in ipairs(spec.appeal or {}) do GetPlot(a[1], a[2]).appeal = a[3] end
+  for _, a in ipairs(spec.improvements or {}) do GetPlot(a[1], a[2]).improvement = gi.Improvements[a[3]] end
 
   -- Players, cities, districts --------------------------------------------
   local players, cities, cityList = {}, {}, {}
@@ -592,7 +669,18 @@ function World.New(spec)
     if plot == nil then return false, "off map" end
     local f = Realized(pid, plot)
     if f.naturalWonder then return false, "natural wonder" end
-    if plot.terrain.Water or plot.terrain.Mountain then return false, "terrain" end
+    local coast = subject.Type == "DISTRICT" and gi.Districts[subject.Key] ~= nil and gi.Districts[subject.Key].Coast
+    if coast then
+      -- Coast districts (the harbor): on coast next to land.
+      if plot.terrain.TerrainType ~= "TERRAIN_COAST" then return false, "terrain" end
+      local land = false
+      for _, n in ipairs(Neighbours(plot.x, plot.y)) do
+        if not n.terrain.Water then land = true end
+      end
+      if not land then return false, "not next to land" end
+    elseif plot.terrain.Water or plot.terrain.Mountain then
+      return false, "terrain"
+    end
     if plot.feature ~= nil and not plot.feature.Removable and not plot.feature.NaturalWonder
         and plot.feature.FeatureType ~= "FEATURE_FLOODPLAINS" then return false, "feature" end
     if f.resource ~= nil and f.resource.ResourceClassType ~= "RESOURCECLASS_BONUS"

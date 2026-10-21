@@ -30,6 +30,12 @@
     <Replace Tag="LOC_SDP_STATUS_BUILT" Language="zh_Hans_CN">
       <Text>已建</Text>
     </Replace>
+    <Replace Tag="LOC_SDP_STATUS_EXCLUSIVE" Language="zh_Hans_CN">
+      <Text>不能同城</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_REASON_EXCLUSIVE" Language="zh_Hans_CN">
+      <Text>不能和{1_Other}建在同一座城</Text>
+    </Replace>
     <Replace Tag="LOC_SDP_STATUS_MAX_PER_PLAYER" Language="zh_Hans_CN">
       <Text>已达帝国上限</Text>
     </Replace>
@@ -465,7 +471,7 @@
       <Text>点一下：自动 → 必建 → 不建</Text>
     </Replace>
     <Replace Tag="LOC_SDP_STATES_TOOLTIP" Language="zh_Hans_CN">
-      <Text>必建：一定放。候选：区域数量多于必建个数时，从候选里挑收益最高的。不建：不考虑。收益只按加权相邻加成（打开时加上地块、覆盖和距离成本）比较，军营、航空港这类没有相邻加成的区域放在候选里不会被挑中，需要时设为必建。全帝国限一个的区域（如政府广场）只能必建或不建。</Text>
+      <Text>必建：一定放。候选：区域数量多于必建个数时，挑收益最高的。不建：不放。收益按加权相邻加成算，打开时加上地块、覆盖、距离成本，社区、保护区再加住房和周边产出。军营、航空港没有相邻加成，放在候选里不会被挑中，要建就设为必建。政府广场这类全帝国限一个的区域只能必建或不建。</Text>
     </Replace>
     <Replace Tag="LOC_SDP_STATES_OTHER_TOOLTIP" Language="zh_Hans_CN">
       <Text>这些区域不占人口名额，不计入区域数量。自动：城市需要时加进方案，位置照常求解。水渠类区域在城市缺淡水（水源住房低于河流、湖泊给的 5）时加入；水坝在三环内本城可用的泛滥平原不少于 3 格时加入（只在风云变幻）。放不下时不加，并在结果里说明。</Text>
@@ -580,6 +586,54 @@
     </Replace>
     <Replace Tag="LOC_SDP_TIER_SHORT" Language="zh_Hans_CN">
       <Text>档位</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_APART_SHORT" Language="zh_Hans_CN">
+      <Text>{1_A}、{2_B}分城</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_APART_SHORT_ANY" Language="zh_Hans_CN">
+      <Text>部分区域分城</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_APART_RULE" Language="zh_Hans_CN">
+      <Text>{1_Building}只在本城没有{2_Other}时加贸易路线：{3_A}和{4_B}同城共多 1 条，分在两城共多 2 条。</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_APART_TOOLTIP" Language="zh_Hans_CN">
+      <Text>{1_Rules}[NEWLINE]勾选后，从候选里挑时一座城不同时挑这两个；城里已有其中一个（已建、已打钉或必建）就不挑另一个。凑不够区域数量时才放行，结果里会提示。必建的照建。</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_TOGETHER" Language="zh_Hans_CN">
+      <Text>{1_A}与{2_B}同城</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_TOGETHER_CITY" Language="zh_Hans_CN">
+      <Text>{1_City}：{2_A}与{3_B}同城</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_TOGETHER_DETAIL" Language="zh_Hans_CN">
+      <Text>{1_Building}不增加贸易路线</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_WEIGHT_HOUSING" Language="zh_Hans_CN">
+      <Text>住房：1 住房折合多少分。社区、保护区的住房取决于所在格的魅力。保护区的林苑、圣所给周围未开发地块加产出，按各产出的权重计（打开“计入占地”时只算城市会耕作的地块）。方案会改变魅力：圣地、剧院让相邻格 +1，工业区、军营 -1，砍掉树林让周围格 -1。</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_HOUSING" Language="zh_Hans_CN">
+      <Text>住房{1_Housing}（魅力 {2_Appeal}）</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_IMPROVEMENT_HOUSING" Language="zh_Hans_CN">
+      <Text>占掉的改良设施</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_IMPROVEMENT_HOUSING_DETAIL" Language="zh_Hans_CN">
+      <Text>住房{1_N}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_IMPROVEMENT_HOUSING_TOOLTIP" Language="zh_Hans_CN">
+      <Text>农场、牧场这类改良设施每块给半个住房，全城加总后向下取整。方案里的区域建在这些格上，城市少这么多住房。只作提示，不计入方案的分数。</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_TILES" Language="zh_Hans_CN">
+      <Text>周边地块 {1_Yields}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_PART_APPEAL" Language="zh_Hans_CN">
+      <Text>住房与魅力 {1_Value}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_YIELD_SHORT_YIELD_FOOD" Language="zh_Hans_CN">
+      <Text>食</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_WEIGHT_HOUSING_SHORT" Language="zh_Hans_CN">
+      <Text>住房</Text>
     </Replace>
   </LocalizedText>
 </GameData>

@@ -346,6 +346,140 @@ test("several cities tab: a city's own list, role templates, an empire-limited d
   multi.SetPlanFor("ALL")
 end)
 
+-- Through the cells' own click handlers, round every state and back. (The
+-- game's mouse routing is not modelled here: validate.py checks that nothing
+-- covers a cell, see check_click_cover.)
+test("district cells: a click goes round the states on both tabs", function()
+  local function Round(rows, districtType, want)
+    for _, state in ipairs(want) do
+      local row = nil
+      for _, r in ipairs(rows()) do
+        if r.Type == districtType then row = r end
+      end
+      T.eq(row.State, state, districtType)
+      row.Cell:Click()
+    end
+  end
+  SDP_Panel.SelectTab("SINGLE")
+  SDP_Panel.SelectCity(1)
+  local single = function() return SDP_Panel.State().DistrictRows end
+  Round(single, "DISTRICT_ENTERTAINMENT_COMPLEX", { "POOL", "MUST", "OFF", "POOL" })
+  Round(single, "DISTRICT_AQUEDUCT", { "AUTO", "MUST", "OFF", "AUTO" })
+  Round(single, "DISTRICT_NEIGHBORHOOD", { "OFF", "MUST", "OFF" })
+  SDP_Panel.SelectTab("MULTI")
+  local multi = SDP_Panel.Multi
+  multi.Refresh()
+  local rows = function() return multi.State().View.Districts end
+  Round(rows, "DISTRICT_ENTERTAINMENT_COMPLEX", { "POOL", "MUST", "OFF", "POOL" })
+  Round(rows, "DISTRICT_AQUEDUCT", { "AUTO", "MUST", "OFF", "AUTO" })
+end)
+
+-- The harbor / commercial hub switch (SDP_Rules.Apart): named from the
+-- rules, on by default, sent with the request, toggled through its box.
+test("the harbor and commercial hub switch on both tabs", function()
+  SDP_Panel.SelectTab("SINGLE")
+  SDP_Panel.SelectCity(1)
+  local c = UI_Mock.Controls
+  T.eq(c.ApartBox:IsHidden(), false, "shown: the rules have the pair")
+  T.ok(c.ApartLabel:GetText():find("LOC_DISTRICT_HARBOR_NAME", 1, true) ~= nil, "named: " .. c.ApartLabel:GetText())
+  T.ok(c.ApartBox:GetToolTipString():find("LOC_BUILDING_LIGHTHOUSE_NAME", 1, true) ~= nil, "the rule in the tooltip")
+  T.eq(SDP_Panel.State().Apart, true, "on by default")
+  T.eq(c.ApartCheck:IsChecked(), true, "ticked")
+  c.ApartCheck:Toggle()
+  T.eq(SDP_Panel.State().Apart, false, "off through the box")
+  c.ApartCheck:Toggle()
+  T.eq(SDP_Panel.State().Apart, true, "on again")
+  SDP_Panel.SelectTab("MULTI")
+  local multi = SDP_Panel.Multi
+  multi.Refresh()
+  T.eq(c.MultiApartBox:IsHidden(), false, "shown on the multi-city tab")
+  T.eq(multi.State().Apart, true, "on by default")
+  multi.SetPlanFor("ALL")
+  multi.ApplyPlan({ "DISTRICT_CAMPUS" })
+  T.eq(multi.Request().Apart, true, "sent")
+  c.MultiApartCheck:Toggle()
+  T.eq(multi.Request().Apart, false, "off through the box")
+  c.MultiApartCheck:Toggle()
+end)
+
+-- Through the row's own check box (its handler), as a click would.
+test("several cities tab: the check boxes switch a city-center pin and a city off and on", function()
+  SDP_Panel.SelectTab("MULTI")
+  local multi = SDP_Panel.Multi
+  multi.Refresh()
+  local function Row(kind)
+    for _, c in ipairs(multi.State().View.Cities) do
+      if c.Kind == kind then return c end
+    end
+  end
+  local site = Row("SITE")
+  T.ok(site and site.Included, "a city-center pin, on")
+  local key = site.Key
+  site.Check:Toggle()
+  local function Find(k)
+    for _, c in ipairs(multi.State().View.Cities) do
+      if c.Key == k then return c end
+    end
+  end
+  T.eq(Find(key).Included, false, "unticked: off")
+  T.eq(Find(key).Check:IsChecked(), false, "the box stays unticked")
+  for _, part in ipairs(multi.Participants()) do T.ok(part.Key ~= key, "takes no part") end
+  Find(key).Check:Toggle()
+  T.eq(Find(key).Included, true, "ticked again: on")
+  local city = Row("CITY")
+  local on = city.On
+  city.Check:Toggle()
+  T.eq(Row("CITY").On, not on, "a city switched")
+  Row("CITY").Check:Toggle()
+  T.eq(Row("CITY").On, on, "and back")
+end)
+
+-- City-center pins from the sites tab are named with their numbers like
+-- district pins; "replace" must leave them alone.
+test("several cities tab: replacing earlier pins keeps the city-center pins", function()
+  SDP_Panel.SelectTab("SITES")
+  local sites = SDP_Panel.Sites
+  sites.SetCount(2)
+  sites.SetDistance(7)
+  sites.SetSelected("DISTRICT_CAMPUS", true)
+  T.ok(sites.Solve(), "started")
+  SDP_Panel.RunTask(200)
+  T.eq(sites.Place(), 2, "two site tacks")
+  local function Centers()
+    local out = {}
+    for _, pin in ipairs(w:Pins()) do
+      if pin:GetIconName() == "ICON_DISTRICT_CITY_CENTER" then out[#out + 1] = pin:GetHexX() .. "," .. pin:GetHexY() end
+    end
+    return table.concat(out, " ")
+  end
+  local before = Centers()
+  SDP_Panel.SelectTab("MULTI")
+  local multi = SDP_Panel.Multi
+  multi.Refresh()
+  T.eq(#multi.OwnPins(), 0, "no earlier district pins yet")
+  multi.SetPlanFor("ALL")
+  multi.ApplyPlan({ "DISTRICT_CAMPUS" })
+  multi.SetTier("FAST")
+  T.ok(multi.Solve(), "started")
+  SDP_Panel.RunTask(500)
+  local first = multi.Place()
+  T.ok(first > 0, "placed")
+  multi.SetReplace(true)
+  T.ok(#multi.OwnPins() > 0, "the district pins are ours to replace")
+  for _, record in ipairs(multi.OwnPins()) do T.ok(record.Icon ~= "ICON_DISTRICT_CITY_CENTER", "no center pin among them") end
+  T.ok(multi.Solve(), "started again")
+  SDP_Panel.RunTask(500)
+  local result = multi.State().Result
+  T.ok(result and result.Ok, "result: " .. tostring(result and result.Error))
+  T.eq(#result.Cities, #multi.Participants(), "every site still takes part")
+  multi.Place()
+  T.eq(Centers(), before, "the city-center pins stay")
+  multi.Undo()
+  T.eq(Centers(), before, "and stay after undo")
+  multi.Undo()
+  multi.SetReplace(false)
+end)
+
 test("closing the panel clears the preview; a background result marks the launch button", function()
   SDP_Panel.SelectTab("SINGLE")
   SDP_Panel.SetTier("FINE")

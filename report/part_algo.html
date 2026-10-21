@@ -1,6 +1,6 @@
   <div class="algo">
   <h3><span class="sn">4.1</span>增量 + 记忆评估（SDP_Board）</h3>
-  <p>DMT 给一个区域打分时只看它自己的格子和周围 6 格。所以一个区域的分数完全由三样东西决定：区域类型、格子、6 个邻格上规划了什么。把邻格的规划编码成一个数（每个方向一位 64 进制数字），三者合起来做记忆键。移动一个区域时，只有它的旧位置、新位置及两处的邻格上的区域需要重新取分，其余的分数不变；取分时先查记忆，查不到才调用 DMT。</p>
+  <p>DMT 给一个区域打分只看它的格子和周围 6 格，所以分数由三样决定：区域类型、格子、6 个邻格上规划了什么。挪动一个区域时，只有新旧位置周围的区域要重新取分；取分先查记忆，查不到才调用 DMT。</p>
   <figure>
     <div class="frame">
       <svg viewBox="0 0 560 300" role="img" aria-label="移动学院到中心格后，只有中心格和 6 个邻格上的区域需要重新取分，外圈区域沿用原分数">
@@ -16,40 +16,37 @@
         </g>
       </svg>
     </div>
-    <figcaption>一次移动最多影响 1 + 6 + 6 个对象。游戏内 8 个区域的标准档求解共约 3400 次 DMT 调用，完成约 1700 次精确布局评估和 2.7 万个模型节点；取分请求中约三分之二直接命中记忆（<code>cost_search</code> 实测）。</figcaption>
+    <figcaption>一次移动最多影响 1 + 6 + 6 个对象。游戏内 8 个区域的标准档求解约调用 DMT 3400 次，约三分之二的取分直接命中记忆。</figcaption>
   </figure>
+  <details><summary>伪代码</summary>
 <pre class="code"><span class="k">function</span> <span class="f">分数</span>(区域, 格)
-    码 = 邻居编码(格)                 <span class="c">-- 6 个方向各一位：邻格上规划的对象类型</span>
-    键 = (区域.类型, 格, 码)
-    <span class="k">if</span> 记忆[键] 存在 <span class="k">then return</span> 记忆[键] <span class="k">end</span>   <span class="c">-- 命中：不调用 DMT</span>
+    键 = (区域.类型, 格, 邻居编码(格))       <span class="c">-- 6 个方向各一位：邻格上规划的对象</span>
+    <span class="k">if</span> 记忆[键] 存在 <span class="k">then return</span> 记忆[键] <span class="k">end</span>
     在假想钉层上摆好这一局面；清 DMT 的地块缓存
     记忆[键] = Σ 权重[产出] × DMT.GetBonusYields(区域)[产出]
     <span class="k">return</span> 记忆[键]
 <span class="k">end</span>
 
 <span class="k">function</span> <span class="f">放置</span>(槽, 新格)                    <span class="c">-- Board:Put</span>
-    旧格 = 槽.格；槽.格 = 新格
     受影响 = {槽} ∪ 旧格 6 邻格上的对象 ∪ 新格 6 邻格上的对象
-    <span class="k">for</span> 对象 <span class="k">in</span> 受影响 <span class="k">do</span>
-        总分 = 总分 − 当前分[对象] + <span class="f">分数</span>(对象, 对象.格)
-    <span class="k">end</span>
-<span class="k">end</span>
-<span class="c">-- 合法性（CanPlacePin）同样按 (格, 区域) 记忆；奇观的合法性取决于邻格，按邻居编码记忆。</span></pre>
+    <span class="k">for</span> 对象 <span class="k">in</span> 受影响 <span class="k">do</span> 总分 = 总分 − 旧分[对象] + <span class="f">分数</span>(对象, 对象.格) <span class="k">end</span>
+<span class="k">end</span></pre>
+  </details>
   </div>
 
   <div class="algo">
   <h3><span class="sn">4.2</span>单城搜索管线（SDP_Search）</h3>
-  <p>先用一个便宜的线性模型在很宽的搜索面上找出一批好布局，再用 DMT 精确评估，最后用局部搜索和扰动重建修正模型的误差。模型只负责"往哪里找"，最终分数一律来自 DMT。</p>
+  <p>先用便宜的线性模型在很大的范围里挑出一批好布局，再用 DMT 精确评估，最后用局部搜索和“拆一片再重放”修正模型的偏差。模型只决定往哪里找，最终分数都来自 DMT。</p>
   <figure>
     <div class="frame scroll">
-      <svg viewBox="0 0 880 200" role="img" aria-label="单城搜索管线：单项表，规模小则穷举，否则模型集束搜索，短名单精评，局部搜索，扰动重建，输出结果和质量">
+      <svg viewBox="0 0 880 262" role="img" aria-label="单城搜索管线：单项表，规模小则穷举，否则模型集束搜索，短名单精评，局部搜索，扰动重建，输出结果；没有完整方案时少放一两个区域再解">
         <defs>
           <marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="d-arrow" d="M0,0 L10,5 L0,10 z"/></marker>
         </defs>
         <rect class="d-box" x="10" y="70" width="120" height="70" rx="8"/>
         <text class="d-title" x="70" y="98" text-anchor="middle">单项表</text>
         <text class="d-sub" x="70" y="118" text-anchor="middle">每区域 × 每格</text>
-        <text class="d-sub" x="70" y="133" text-anchor="middle">合法性、单项分</text>
+        <text class="d-sub" x="70" y="133" text-anchor="middle">合法性、单放分</text>
         <rect class="d-box key" x="160" y="70" width="130" height="70" rx="8"/>
         <text class="d-title" x="225" y="98" text-anchor="middle">模型集束搜索</text>
         <text class="d-sub" x="225" y="118" text-anchor="middle">束宽 150 / 400 / 1000</text>
@@ -57,7 +54,7 @@
         <rect class="d-box" x="320" y="70" width="120" height="70" rx="8"/>
         <text class="d-title" x="380" y="98" text-anchor="middle">短名单精评</text>
         <text class="d-sub" x="380" y="118" text-anchor="middle">前 20 / 100 / 200</text>
-        <text class="d-sub" x="380" y="133" text-anchor="middle">个用 Board 评估</text>
+        <text class="d-sub" x="380" y="133" text-anchor="middle">个用 DMT 评估</text>
         <rect class="d-box" x="470" y="70" width="120" height="70" rx="8"/>
         <text class="d-title" x="530" y="98" text-anchor="middle">局部搜索</text>
         <text class="d-sub" x="530" y="118" text-anchor="middle">移动、交换、</text>
@@ -79,89 +76,126 @@
         <text class="d-lab" x="445" y="25" text-anchor="middle">布局数 ≤ 1000 / 3000 / 40000 时直接穷举 → 精确最优</text>
         <path class="d-edge" d="M680 140 L680 168 Q680 176 672 176 L538 176 Q530 176 530 168 L530 144" marker-end="url(#ar2)"/>
         <text class="d-lab" x="605" y="192" text-anchor="middle">更好就接着局部搜索</text>
+        <rect class="d-box ext" x="10" y="212" width="760" height="40" rx="8"/>
+        <text class="d-sub" x="24" y="237">一个完整方案都没有（几个必建区域抢同几格）：少放 1 个必建区域再解，还不行少放 2 个……放得最多的胜出，没放下的写明原因</text>
+        <path class="d-edge" d="M770 232 L812 232 Q820 232 820 224 L820 144" marker-end="url(#ar2)"/>
       </svg>
     </div>
-    <figcaption>三个数字依次是快速 / 标准 / 精细档的参数。所有预算都是计数（节点数、DMT 调用数、布局尝试数），不看时间，所以同一输入在任何机器上结果相同。</figcaption>
+    <figcaption>三个数字依次是快速 / 标准 / 精细档。预算都按计数（节点数、DMT 调用数、布局尝试数），不看时间，所以同一输入在任何机器上结果相同。</figcaption>
   </figure>
-<pre class="code"><span class="k">function</span> <span class="f">单城求解</span>(城市, 区域列表, 档位)
-    表 = 单项表(区域列表, 城市的候选格)      <span class="c">-- DMT 合法性、单项分、地块损失</span>
-    <span class="k">if</span> 布局总数 ≤ 档位.穷举上限 <span class="k">then return</span> <span class="f">穷举</span>(表) <span class="k">end</span>
-    顺序 = 按"与其他区域的互惠加成"从多到少排列区域
-    束 = <span class="f">集束搜索</span>(顺序, 档位.束宽)          <span class="c">-- 用线性模型打分</span>
-    短名单 = 束里模型分最高的 档位.短名单 个布局
-    最好 = 短名单里 Board 精确分最高的
-    <span class="k">for</span> 起点 <span class="k">in</span> 短名单前 档位.起点数 个 <span class="k">do</span>
-        最好 = 较好者(最好, <span class="f">局部搜索</span>(起点))
+  <p>模型分 = 各区域单放分 + 相邻两区域之间的互惠 − 占掉好地块的损失，只用来排序。地块损失：k 个特色区域需要人口 P = max(人口, 3k − 2)，城市耕作最好的 P 块地，一块地被占的损失是它的产出减去第 P+1 好的地。</p>
+  <p><b>从候选里挑</b>：给出区域数量后，多出必建的部分从候选里挑。</p>
+  <figure>
+    <div class="frame scroll">
+      <svg viewBox="0 0 880 150" role="img" aria-label="从候选里挑：列出全部组合并去掉互斥和分城的组合，按乐观分排序，依次粗解，换类型，前三名完整求解，得到三套组合不同的方案">
+        <defs><marker id="ar4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="d-arrow" d="M0,0 L10,5 L0,10 z"/></marker></defs>
+        <rect class="d-box" x="10" y="20" width="150" height="80" rx="8"/>
+        <text class="d-title" x="85" y="46" text-anchor="middle">全部组合</text>
+        <text class="d-sub" x="85" y="66" text-anchor="middle">去掉互斥的；分城的</text>
+        <text class="d-sub" x="85" y="82" text-anchor="middle">凑不够数时才保留</text>
+        <rect class="d-box" x="184" y="20" width="130" height="80" rx="8"/>
+        <text class="d-title" x="249" y="46" text-anchor="middle">按乐观分排</text>
+        <text class="d-sub" x="249" y="66" text-anchor="middle">单放分最高值</text>
+        <text class="d-sub" x="249" y="82" text-anchor="middle">+ 组合内互惠</text>
+        <rect class="d-box key" x="338" y="20" width="160" height="80" rx="8"/>
+        <text class="d-title" x="418" y="46" text-anchor="middle">依次粗解</text>
+        <text class="d-sub" x="418" y="66" text-anchor="middle">3 / 8 / 20 个；乐观分不高</text>
+        <text class="d-sub" x="418" y="82" text-anchor="middle">于第三名实际分就停</text>
+        <rect class="d-box" x="522" y="20" width="120" height="80" rx="8"/>
+        <text class="d-title" x="582" y="46" text-anchor="middle">换类型</text>
+        <text class="d-sub" x="582" y="66" text-anchor="middle">一个候选换另一个</text>
+        <text class="d-sub" x="582" y="82" text-anchor="middle">放到它最好的空格</text>
+        <rect class="d-box" x="666" y="20" width="204" height="80" rx="8"/>
+        <text class="d-title" x="768" y="46" text-anchor="middle">前三名完整求解</text>
+        <text class="d-sub" x="768" y="66" text-anchor="middle">三套方案，挑出的</text>
+        <text class="d-sub" x="768" y="82" text-anchor="middle">区域组合各不相同</text>
+        <path class="d-edge" d="M160 60 L180 60" marker-end="url(#ar4)"/>
+        <path class="d-edge" d="M314 60 L334 60" marker-end="url(#ar4)"/>
+        <path class="d-edge" d="M498 60 L518 60" marker-end="url(#ar4)"/>
+        <path class="d-edge" d="M642 60 L662 60" marker-end="url(#ar4)"/>
+        <text class="d-lab" x="440" y="130" text-anchor="middle">多城：每座城各挑一次，之后的局部搜索再试“某座城把一个候选换成另一个”；选城址：每个城址按 3 个（可调）估分</text>
+      </svg>
+    </div>
+  </figure>
+  <p><b>距离成本、自动区域、提醒钉</b>：距离成本是每个候选格一个固定扣分，直接加进精确分和模型分。自动加入的水渠、水坝在求解前按城市状况加进必建。提醒钉在方案定下后算：让 DMT 看不到旁边某片树林或雨林再算一次，少了加成就提醒。</p>
+  <details><summary>伪代码</summary>
+<pre class="code"><span class="k">function</span> <span class="f">单城求解</span>(城市, 区域, 档位)
+    表 = 单项表(区域, 城市的候选格)
+    <span class="k">if</span> 布局总数 ≤ 档位.穷举上限 <span class="k">then</span> 最好 = <span class="f">穷举</span>(表)
+    <span class="k">else</span>
+        束 = <span class="f">集束搜索</span>(按互惠从多到少排列的区域, 档位.束宽)
+        最好 = 束里模型分最高的 档位.短名单 个布局中，DMT 精确分最高的
+        对前 档位.起点数 个做 <span class="f">局部搜索</span>；再做 档位.扰动轮数 轮 <span class="f">扰动重建</span>
     <span class="k">end</span>
-    <span class="k">repeat</span> 档位.扰动轮数 次              <span class="c">-- 拆掉一片相邻的区域，按模型重放</span>
-        候选 = <span class="f">局部搜索</span>(<span class="f">扰动重建</span>(最好))
-        最好 = 较好者(最好, 候选)
+    <span class="k">if</span> 没有完整方案 <span class="k">then</span>                   <span class="c">-- 少放 1 个、2 个……</span>
+        <span class="k">for</span> 去掉 = 1, #必建 − 1 <span class="k">do</span>
+            对每种去掉法求解剩下的；<span class="k">if</span> 找到 <span class="k">then break end</span>
+        <span class="k">end</span>
     <span class="k">end</span>
     <span class="k">return</span> 最好, 质量(最好, 模型上界)
 <span class="k">end</span>
 
-<span class="k">function</span> <span class="f">集束搜索</span>(顺序, 宽)
-    束 = { 空布局 }
-    <span class="k">for</span> 区域 <span class="k">in</span> 顺序 <span class="k">do</span>
-        扩展 = 束中每个部分布局 × 该区域的每个空闲合法格
-        束 = 扩展中模型分最高的 宽 个          <span class="c">-- 同分按格子序列字典序，结果确定</span>
-    <span class="k">end</span>
-    <span class="k">return</span> 束
-<span class="k">end</span>
-
-<span class="c">-- 线性模型（只用来排序，精确分一律来自 DMT）</span>
-模型分(布局) = Σ 单项分(区域, 格) − Σ 地块损失(格)
-             + Σ 相邻两区域之间的互惠加成
-             + 与已有区域、市中心的"不取整"加成   <span class="c">-- 凑满 N 个邻居才给一份的规则按比例计入</span></pre>
-  <p>地块损失：k 个特色区域需要人口 P = max(人口, 3k − 2)，城市会耕作最好的 P 块地。一块地被区域占掉的损失 = 它的产出 − 第 P+1 好的地的产出（不小于 0），砍伐树林等一次性产出按 1/20 计。食物和地貌的权重只用于这一项。</p>
-  <p>同一张单项表还用在两处：单城页签的"好位置"对一个区域的每个合法格算它单独放下时的加权增益，从高到低分四档着色；单城页签选了奇观时，这座城按"只有一座城的多城问题"求解（见 4.3），沿用多城的奇观逻辑。</p>
-  <p><b>从候选里挑</b>：给出区域个数后，候选区域是“可选的槽”，求解器要从中选出缺的几个。所有组合先按乐观分排序：每个候选最好的单放分，加上组合内部及与必建区域之间的正互惠，与集束搜索的上界同一口径。然后依次粗解排在前面的组合；某个组合的乐观分已不高于当前第三名的实际分时，后面的不再算。三套方案按区域组合区分。多城在逐城起点里为每座城做同样的挑选，之后的局部搜索再试“任一城把一个候选换成另一个”；选城址对每个精评的城址用同一套挑选，每个城址按 3 个区域估分。</p>
-<pre class="code"><span class="k">function</span> <span class="f">挑选求解</span>(必建, 候选, 个数, 档位)
-    组合表 = 从候选选 (个数 − #必建) 个的全部组合，按乐观分从高到低
-    <span class="k">for</span> 组合 <span class="k">in</span> 组合表前 档位.组合数 个 <span class="k">do</span>        <span class="c">-- 快速 3 / 标准 8 / 精细 20</span>
+<span class="k">function</span> <span class="f">挑选求解</span>(必建, 候选, 个数, 档位)
+    组合表 = 从候选选 (个数 − #必建) 个的组合，去掉互斥的（分城的凑不够数时才保留），按乐观分排序
+    <span class="k">for</span> 组合 <span class="k">in</span> 组合表前 档位.组合数 个 <span class="k">do</span>
         <span class="k">if</span> 乐观分(组合) ≤ 第三名的实际分 <span class="k">then break end</span>
-        <span class="f">粗解</span>(必建 + 组合)       <span class="c">-- 小则穷举，否则集束搜索 + 精评短名单 + 一次局部搜索</span>
+        <span class="f">粗解</span>(必建 + 组合)
     <span class="k">end</span>
-    <span class="f">换类型</span>(前三名)                  <span class="c">-- 把一个候选换成另一个，放到它最好的空格</span>
-    <span class="k">for</span> 组合 <span class="k">in</span> 前三名 <span class="k">do</span> 按本档位完整求解(必建 + 组合) <span class="k">end</span>
+    <span class="f">换类型</span>(前三名)；前三名按本档位完整求解
     <span class="k">return</span> 三套区域组合不同的方案
 <span class="k">end</span></pre>
-  <p><b>距离成本、自动区域与提醒钉</b>：距离成本是每个候选格一个固定扣分，直接加进精确分和模型分。自动加入的水渠、水坝在求解前按城市状况加进必建，位置照常搜索。提醒钉在方案定下后计算：对规划区域旁边可移除、方案又没占用的地貌格，让 DMT 看不到这一格的地貌（包一层 DMT 读取邻格特征的全局函数，只在假想层里生效），再算一次该区域的加成，少了至少 1 点就提醒。</p>
+  </details>
   </div>
 
   <div class="algo">
   <h3><span class="sn">4.3</span>多城联合规划（SDP_Multi）</h3>
-  <p>参与城市是全部城址钉，加上离任一新城 7 格内的现有城市（最多 8 座）。每座城一组"槽位"，所有城的候选格合成一张表，重叠的格子两城都能用但只能放一个对象；有帝国上限的区域（政府广场）只开剩余名额。每座城可以有自己的区域清单；限量区域放在清单里有它的各城候选格的并集里，所以只写进一座城的清单就等于指定那座城。模板按产出从规则数据库推出（本文明有相邻规则产出该项的区域），不写死。搜索结束后，若有要求的对象没放上（例如学院四周被别的区域占满，大图书馆无处可放），再逐格试放它，并把它要挨着的区域和其他奇观重新安排；放上的对象更多的方案优先（G4）。补放有自己的计算预算，是本档位的四分之一。分块搜索沿用单城引擎：一次只重解一座城，其他城固定。因为不同起点会走到不同的局部最优，所以用一组固定的起点组合，并让重的档位先跑轻一档的起点。标准档在这些起点之后再跑一次联合起点，束宽加倍：几座城的区域连成一片、跨城互给加成的形状，窄束常常走不到，扰动一次也挪不动一整片。直接把原来的联合起点加宽并不单调（一张图上反而少 3 分），所以是另加一个起点，原有起点不变。</p>
-  <p>多城页签可以另计覆盖范围，默认关。工厂、动物园等建筑惠及一定距离内的本方城市，同类不叠加；覆盖半径从规则数据读（工业区、娱乐中心 6 格，水上乐园 9 格）。权重为 w 时，每新覆盖一座城加 w 分。精确评估在 DMT 分和地块部分之外加上这一项；模型分里，每个区域按它单独放下时新覆盖的城数计入，所以模型仍偏乐观。原有的覆盖（已建、已打钉的同类区域）不重复计。</p>
-<pre class="code"><span class="k">function</span> <span class="f">多城求解</span>(城市, 每城区域, 奇观, 档位)
-    <span class="k">if</span> 档位.前置 <span class="k">then</span> 用前置档位的参数跑完它的全部起点 <span class="k">end</span>   <span class="c">-- 预算单独计算</span>
-    <span class="k">for</span> s = 1, 档位.起点数 <span class="k">do</span>
-        顺序, 束宽 = 起点方案(s)    <span class="c">-- 1 逐城 2 联合 3 逐城窄束 4 逆序 5 逆序窄束 6+ 轮换</span>
-        布局 = 空
-        <span class="k">for</span> 城 <span class="k">in</span> 顺序 <span class="k">do</span> 布局 = <span class="f">块求解</span>(城的槽位, 布局) <span class="k">end</span>   <span class="c">-- 前面的城固定</span>
-        布局 = <span class="f">局部搜索</span>(布局)                       <span class="c">-- 动作可以跨城</span>
-        <span class="k">repeat</span> 档位.轮数 次
-            <span class="k">for</span> 城 <span class="k">in</span> 顺序 <span class="k">do</span>                        <span class="c">-- 其他城固定，重解这一座</span>
-                布局 = 较好者(布局, <span class="f">块求解</span>(城的槽位, 去掉该城后的布局))
-            <span class="k">end</span>
-        <span class="k">end</span>
-        记录这个起点的结果
-    <span class="k">end</span>
-    <span class="k">if</span> 档位.宽束倍数 <span class="k">and</span> 城数 ≥ 2 <span class="k">then</span>            <span class="c">-- 标准档 2 倍</span>
-        联合起点(束宽 × 档位.宽束倍数)，只做局部搜索，不做逐城轮换
-    <span class="k">end</span>
-    <span class="f">扰动重建</span>(档位.扰动轮数)
-    <span class="k">return</span> 互不相同的前 3 套      <span class="c">-- 两套之间至少 max(2, 20% 槽位) 个对象位置不同</span>
-<span class="k">end</span></pre>
-  <div class="callout">为什么要"前置"：参数不同的搜索（束宽、是否做交换动作、穷举上限）会落到不同的局部最优，轻档位偶尔能走到重档位走不到的形状。一个起点的结果只取决于输入和参数，所以标准档先跑快速档的起点，精细档先跑标准档的起点，重档位就不会低于轻档位的这些起点。共享的记忆评估让前置几乎不增加 DMT 调用。</div>
+  <p>几座城共用一张候选格表，重叠的格两城都能用但只能放一个对象；跨城的相邻加成照常计入。搜索沿用单城引擎，按城分块：一次只重解一座城，其他城固定。不同起点会走到不同的局部最优，所以跑一组固定的起点，取最好的。</p>
+  <figure>
+    <div class="frame scroll">
+      <svg viewBox="0 0 880 236" role="img" aria-label="多城：一组固定起点，每个起点逐城求解后局部搜索、轮流重解每座城；取最好的，再扰动重建、补放没放上的对象，给出三套方案">
+        <defs><marker id="ar5" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="d-arrow" d="M0,0 L10,5 L0,10 z"/></marker></defs>
+        <text class="d-title" x="10" y="20">起点（标准档）</text>
+        <rect class="d-box" x="10" y="32" width="200" height="28" rx="6"/><text class="d-sub" x="22" y="51">1 逐城：按城的顺序依次放</text>
+        <rect class="d-box" x="10" y="66" width="200" height="28" rx="6"/><text class="d-sub" x="22" y="85">2 联合：全部城一起集束搜索</text>
+        <rect class="d-box" x="10" y="100" width="200" height="28" rx="6"/><text class="d-sub" x="22" y="119">3–5 窄束、逆序</text>
+        <rect class="d-box" x="10" y="134" width="200" height="28" rx="6"/><text class="d-sub" x="22" y="153">快速档的起点（前置）</text>
+        <rect class="d-box key" x="10" y="168" width="200" height="28" rx="6"/><text class="d-sub" x="22" y="187">联合起点，束宽加倍</text>
+        <rect class="d-box key" x="252" y="56" width="250" height="116" rx="8"/>
+        <text class="d-title" x="268" y="82">每个起点</text>
+        <text class="d-sub" x="268" y="104">逐城块求解 → 局部搜索（可跨城）</text>
+        <text class="d-sub" x="268" y="124">→ 轮流重解每座城（其他城固定）</text>
+        <text class="d-sub" x="268" y="144">块求解 = 单城引擎：穷举或集束</text>
+        <text class="d-sub" x="268" y="160">+ 短名单 + 局部搜索</text>
+        <rect class="d-box" x="544" y="56" width="150" height="116" rx="8"/>
+        <text class="d-title" x="560" y="82">取最好的</text>
+        <text class="d-sub" x="560" y="104">扰动重建</text>
+        <text class="d-sub" x="560" y="124">补放没放上的：逐格</text>
+        <text class="d-sub" x="560" y="140">试放，挪开它要挨着</text>
+        <text class="d-sub" x="560" y="156">的区域重新安排</text>
+        <rect class="d-box" x="736" y="56" width="134" height="116" rx="8"/>
+        <text class="d-title" x="752" y="82">3 套方案</text>
+        <text class="d-sub" x="752" y="104">两两至少有</text>
+        <text class="d-sub" x="752" y="120">max(2, 20%) 个</text>
+        <text class="d-sub" x="752" y="136">对象位置不同</text>
+        <path class="d-edge" d="M210 46 L232 46 Q240 46 240 54 L240 106 Q240 114 248 114" marker-end="url(#ar5)"/>
+        <path class="d-edge" d="M210 80 L232 80"/><path class="d-edge" d="M210 114 L248 114"/>
+        <path class="d-edge" d="M210 148 L232 148"/><path class="d-edge" d="M210 182 L232 182 Q240 182 240 174 L240 114"/>
+        <path class="d-edge" d="M502 114 L540 114" marker-end="url(#ar5)"/>
+        <path class="d-edge" d="M694 114 L732 114" marker-end="url(#ar5)"/>
+        <text class="d-lab" x="440" y="222" text-anchor="middle">起点的结果只取决于输入和参数，所以标准档先跑快速档的起点、精细档先跑标准档的，重档位不会比轻档位差</text>
+      </svg>
+    </div>
+    <figcaption>束宽加倍的联合起点是另加的：几座城的区域连成一片、跨城互给加成的形状，窄束常常走不到。直接把原来的联合起点加宽反而在一张图上少 3 分，所以原有起点不变。</figcaption>
+  </figure>
+  <p>参与的是全部城址钉，加上离任一新城 7 格内的现有城市（最多 8 座）。全帝国限量的区域（政府广场）只开剩余名额，放在清单里有它的各城候选格里。覆盖范围默认不计；打开后，工厂、动物园这类惠及周围城市的区域每多覆盖一座本方城市加权重分，半径从规则数据读。</p>
   </div>
 
   <div class="algo">
   <h3><span class="sn">4.4</span>选城址（SDP_Sites + SDP_SiteSolver）</h3>
-  <p>选城址要在上百个候选里挑 K 座，既要每座城本身好，又要彼此不抢地、资源不重复、能接力连回本方领土。先用便宜的粗评筛选，再只对一部分城址做包含区域规划的精评，最后在精评过的城址里做组合搜索。</p>
+  <p>在上百个候选里挑 K 座：先用便宜的粗评筛，再只对一部分做带区域规划的精评，最后在精评过的城址里做组合搜索。</p>
   <figure>
     <div class="frame scroll">
-      <svg viewBox="0 0 880 150" role="img" aria-label="选城址漏斗：已揭示格，候选，粗评，精评能连回的前 M 个，分支定界组合，三套方案">
+      <svg viewBox="0 0 880 150" role="img" aria-label="选城址漏斗：候选，粗评，精评能连回的前 M 个，分支定界组合，三套方案">
         <defs><marker id="ar3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="d-arrow" d="M0,0 L10,5 L0,10 z"/></marker></defs>
         <rect class="d-box" x="10" y="30" width="130" height="90" rx="8"/>
         <text class="d-title" x="75" y="62" text-anchor="middle">候选城址</text>
@@ -187,48 +221,105 @@
         <path class="d-edge" d="M296 75 L318 75" marker-end="url(#ar3)"/>
         <path class="d-edge" d="M492 75 L514 75" marker-end="url(#ar3)"/>
         <path class="d-edge" d="M708 75 L730 75" marker-end="url(#ar3)"/>
-        <text class="d-lab" x="75" y="140" text-anchor="middle">测试图：146 个</text>
-        <text class="d-lab" x="407" y="140" text-anchor="middle">每个城址用单城快速档规划区域</text>
+        <text class="d-lab" x="407" y="140" text-anchor="middle">精评：在城址上用较小的单城搜索规划区域</text>
       </svg>
     </div>
-    <figcaption>金框一步只精评能接力连回的城址：地图揭示较多时，粗评最高的城址可能都离本方城市太远，用它们组不出连通的方案。</figcaption>
+    <figcaption>精评只取能接力连回的城址：地图揭示较多时，粗评最高的城址可能都离本方城市太远，用它们组不出连通的方案。组合分 = 各城址精评分 − 两城都能用的格（归损失大的一方）− 重复的奢侈、战略资源。</figcaption>
   </figure>
-<pre class="code"><span class="k">function</span> <span class="f">选城址</span>(K, D, 档位)
-    候选 = 已揭示、可建城、与所有城市距离 &gt; 最小城距、三环多半已揭示 的格
-    <span class="k">for</span> c <span class="k">in</span> 候选 <span class="k">do</span> 粗评[c] = 耕作 + 水源 + 奢侈 + 战略 + 地貌 + 魅力 − 风险 <span class="k">end</span>
-    按粗评从高到低排序
-    <span class="k">while</span> 已精评 &lt; 档位.M <span class="k">do</span>
-        c = 粗评最高、尚未精评、且"能连回"的城址
-            <span class="c">-- 距本方城市或城址钉 ≤ D，或距已精评的城址 ≤ D（最多 K−1 次接力）</span>
-        精评[c] = 粗评各项 + 在 c 用单城快速档规划区域得到的区域分 − 区域占掉的耕作分
-    <span class="k">end</span>
-    <span class="f">分支定界</span>(从精评城址中选 K 个):
-        剪枝：已选的分 + 剩余最高的若干个分 ≤ 保留的第 Keep 名
-        叶子：检查间距与接力连通
-              组合分 = Σ 精评分 − 两城都能用的格归损失大的一方 − 重复的奢侈/战略种类
-                       − 两城区域落在同一格时较小的一方
-    <span class="k">return</span> 互不相同的前 3 套     <span class="c">-- 每套至少有一个城址离更好的每套的所有城址 ≥ 2 格</span>
-<span class="k">end</span></pre>
   </div>
 
   <div class="algo">
   <h3><span class="sn">4.5</span>分帧计算（SDP_Task）</h3>
-  <p>文明6的 UI Lua 只有一个线程，一次算 6 秒会让游戏卡住 6 秒。耗时的档位放进协程，每帧算一份"配额"后让出；配额按上一帧的长度自动调整。计算代码里每做一点工作就报一次工作量（Tick），配额用完就让出。结果与切片位置无关。</p>
-<pre class="code"><span class="c">-- 每帧由 ContextPtr:SetUpdate 调用</span>
-<span class="k">function</span> <span class="f">每帧</span>()
-    配额 = 上一帧 &gt; 1.25 × 目标 ? 配额 × 0.75 : (上一帧 &lt; 0.75 × 目标 ? 配额 × 1.25 : 配额)
-    安装假想钉层；coroutine.resume(计算)
-    卸下假想钉层                         <span class="c">-- 帧与帧之间，游戏其他部分看不到假想钉</span>
-<span class="k">end</span>
-<span class="k">function</span> <span class="f">Tick</span>(单位)                       <span class="c">-- 计算代码里随处调用</span>
-    已用 = 已用 + 单位
-    <span class="k">if</span> 已用 ≥ 配额 <span class="k">then</span> coroutine.yield() <span class="k">end</span>
-<span class="k">end</span>
-<span class="k">function</span> <span class="f">关闭面板</span>()
-    出队弹窗
-    <span class="k">if</span> 正在计算 <span class="k">then</span>                       <span class="c">-- 隐藏的上下文收不到 SetUpdate</span>
-        只隐藏窗口控件，上下文保持显示；算完后再隐藏上下文
-    <span class="k">end</span>
-<span class="k">end</span></pre>
-  <p class="note">工作单位：1 次 DMT 调用 = 1 单位，1 次布局评估 = 0.25 单位，20 个模型节点 = 1 单位。游戏内实测一次算完每秒约 2 万单位；分帧时单城每秒 7400–9900 单位、多城约 15000 单位（每帧约 30 毫秒，其余时间由游戏自己绘制）。</p>
+  <p>游戏的界面 Lua 只有一个线程，一次算 6 秒，游戏就卡 6 秒。长计算放进协程，每帧算一份配额就让出，配额按上一帧的长短自动调整；两帧之间收起假想钉层，游戏其他部分看不到假想的区域。结果与在哪里切片无关。</p>
+  <figure>
+    <div class="frame scroll">
+      <svg viewBox="0 0 880 96" role="img" aria-label="分帧：每帧先算约 30 毫秒，再让游戏绘制，循环直到算完">
+        <rect class="d-box key" x="10" y="20" width="120" height="34" rx="4"/><text class="d-sub" x="70" y="42" text-anchor="middle">计算 ≈ 30 毫秒</text>
+        <rect class="d-box ext" x="130" y="20" width="90" height="34" rx="4"/><text class="d-sub" x="175" y="42" text-anchor="middle">游戏绘制</text>
+        <rect class="d-box key" x="230" y="20" width="120" height="34" rx="4"/><text class="d-sub" x="290" y="42" text-anchor="middle">计算</text>
+        <rect class="d-box ext" x="350" y="20" width="90" height="34" rx="4"/><text class="d-sub" x="395" y="42" text-anchor="middle">游戏绘制</text>
+        <rect class="d-box key" x="450" y="20" width="120" height="34" rx="4"/><text class="d-sub" x="510" y="42" text-anchor="middle">计算</text>
+        <rect class="d-box ext" x="570" y="20" width="90" height="34" rx="4"/><text class="d-sub" x="615" y="42" text-anchor="middle">游戏绘制</text>
+        <text class="d-sub" x="690" y="42">……算完后显示结果</text>
+        <text class="d-lab" x="10" y="80">上一帧太长就把配额减到 3/4，太短就加到 5/4；关掉面板也照常算完，启动栏按钮出现标记</text>
+      </svg>
+    </div>
+  </figure>
+  <p class="note">工作单位：1 次 DMT 调用 = 1，1 次布局评估 = 0.25，20 个模型节点 = 1。游戏内一次算完每秒约 2 万单位，分帧时单城每秒 7400–9900、多城约 15000。</p>
+  </div>
+
+  <div class="algo">
+  <h3><span class="sn">4.6</span>住房与魅力（SDP_Appeal）</h3>
+  <p><span class="tag goal">G1</span></p>
+  <p>社区按所在格的魅力给住房，保护区按自己的魅力给住房，并让周边未开发的地块按各自魅力多出产出。魅力又随方案变化，所以先算方案下每格的魅力，再查规则表。</p>
+  <figure>
+    <div class="frame scroll">
+      <svg viewBox="0 0 880 316" role="img" aria-label="左：社区格的魅力等于游戏现在的魅力，加上相邻圣地 1，减去相邻工业区 1，减去建在树林上的区域清掉的树林 1；右：保护区周边地块按魅力得到产出，迷人 4 点，惊艳 12 点，已开发和山地没有">
+        <g transform="translate(-40,-20) scale(1.35)">
+        <polygon class="hx-move" points="170,95 196,110 196,140 170,155 144,140 144,110"/><text class="hx-t hx-t-move" x="170" y="125" text-anchor="middle" dominant-baseline="central">社区</text>
+        <polygon class="hx-near" points="222,95 248,110 248,140 222,155 196,140 196,110"/><text class="hx-t" x="222" y="118" text-anchor="middle">圣地</text><text class="hx-t" x="222" y="134" text-anchor="middle">+1</text>
+        <polygon class="hx-near" points="118,95 144,110 144,140 118,155 92,140 92,110"/><text class="hx-t" x="118" y="118" text-anchor="middle">工业区</text><text class="hx-t" x="118" y="134" text-anchor="middle">−1</text>
+        <polygon class="hx-near" points="196,50 222,65 222,95 196,110 170,95 170,65"/><text class="hx-t" x="196" y="73" text-anchor="middle">剧院</text><text class="hx-t" x="196" y="89" text-anchor="middle">建在树林</text>
+        <polygon class="hx-far" points="144,50 170,65 170,95 144,110 118,95 118,65"/>
+        <polygon class="hx-far" points="196,140 222,155 222,185 196,200 170,185 170,155"/><text class="hx-t hx-t-far" x="196" y="170" text-anchor="middle" dominant-baseline="central">已建</text>
+        <polygon class="hx-far" points="144,140 170,155 170,185 144,200 118,185 118,155"/>
+        <text class="d-sub" x="196" y="40" text-anchor="middle">剧院 +1，清掉的树林 −1</text>
+        </g>
+        <text class="d-title" x="318" y="72" style="font-size:16px">社区格的魅力</text>
+        <text class="d-sub" x="318" y="96" style="font-size:13.5px">= 游戏现在的魅力（含已建的）</text>
+        <text class="d-sub" x="318" y="116" style="font-size:13.5px">+ 相邻规划区域：圣地 +1，工业区 −1</text>
+        <text class="d-sub" x="318" y="136" style="font-size:13.5px">− 邻格清掉的地貌、改良设施的魅力</text>
+        <text class="d-title" x="318" y="178" style="font-size:16px">社区住房</text>
+        <text class="d-sub" x="318" y="202" style="font-size:13.5px">魅力 ≥ 4：6　2–3：5　−1–1：4</text>
+        <text class="d-sub" x="318" y="222" style="font-size:13.5px">−3–−2：3　更低：2</text>
+        <text class="d-sub" x="318" y="246" style="font-size:13.5px">保护区：基础 1，同样按魅力增减</text>
+        <g transform="translate(-230,-20) scale(1.35)">
+        <polygon class="hx-move" points="700,95 726,110 726,140 700,155 674,140 674,110"/><text class="hx-t hx-t-move" x="700" y="125" text-anchor="middle" dominant-baseline="central">保护区</text>
+        <polygon class="hx-near" points="752,95 778,110 778,140 752,155 726,140 726,110"/><text class="hx-t" x="752" y="118" text-anchor="middle">惊艳</text><text class="hx-t" x="752" y="134" text-anchor="middle">+12</text>
+        <polygon class="hx-near" points="726,50 752,65 752,95 726,110 700,95 700,65"/><text class="hx-t" x="726" y="73" text-anchor="middle">迷人</text><text class="hx-t" x="726" y="89" text-anchor="middle">+4</text>
+        <polygon class="hx-near" points="674,50 700,65 700,95 674,110 648,95 648,65"/><text class="hx-t" x="674" y="73" text-anchor="middle">迷人</text><text class="hx-t" x="674" y="89" text-anchor="middle">+4</text>
+        <polygon class="hx-far" points="648,95 674,110 674,140 648,155 622,140 622,110"/><text class="hx-t hx-t-far" x="648" y="118" text-anchor="middle">农场</text><text class="hx-t hx-t-far" x="648" y="134" text-anchor="middle">0</text>
+        <polygon class="hx-far" points="674,140 700,155 700,185 674,200 648,185 648,155"/><text class="hx-t hx-t-far" x="674" y="163" text-anchor="middle">山</text><text class="hx-t hx-t-far" x="674" y="179" text-anchor="middle">0</text>
+        <polygon class="hx-near" points="726,140 752,155 752,185 726,200 700,185 700,155"/><text class="hx-t" x="726" y="163" text-anchor="middle">一般</text><text class="hx-t" x="726" y="179" text-anchor="middle">0</text>
+        <text class="d-sub" x="700" y="226" text-anchor="middle">林苑：迷人 食信 +1，惊艳 食信文 +2</text>
+        <text class="d-sub" x="700" y="242" text-anchor="middle">圣所：迷人 金科 +1，惊艳 金科产 +2</text>
+        </g>
+      </svg>
+    </div>
+    <figcaption>左：方案在社区旁放了圣地、工业区，剧院建在一片树林上，这三样都改变社区格的魅力。右：保护区周边地块按魅力拿林苑、圣所的产出，只给未开发、城市能耕作的地块；打开“计入占地”时，这些产出加在地块模型里，挤进城市最好的 P 块才算。</figcaption>
+  </figure>
+  <p>这一项 = 住房权重 × 住房 + 各产出权重 × 周边产出，减去不规划时的值（城里已建、已打钉的社区降档也算进去）。区域占掉农场、牧场这类给住房的改良设施时城市少的住房（游戏把全城的“每块住房”加总后向下取整，农场每块 0.5），结果里单列一行提示，不计入分数：试过计入，面板默认设置下相邻加成和城市总产出都变差。建在树林上的区域，清掉的树林也不再计入本格；雨林、沼泽这类负值地貌清掉后本格不变。规则全部从规则表读：<code>AppealHousingChanges</code>、<code>Adjacent_AppealYieldChanges</code>、区域和地貌的魅力值；建区域清掉地貌要玩家有那项地貌的移除科技（树林要采矿），水面格魅力不变。游戏内校准：首都 4 格内 61 格魅力全部与预测相同；三张后期存档里，游戏按玩家的建造流程建出 9 个方案，社区、保护区格的魅力 17 格全部相同，改良设施住房 9 个全部相同，区域住房 9 个中 8 个相同（5.10）；保护区周边产出与规则表逐格相同。</p>
+  </div>
+
+  <div class="algo">
+  <h3><span class="sn">4.7</span>同城约束：分城与互斥</h3>
+  <p><span class="tag goal">G3</span></p>
+  <figure>
+    <div class="frame scroll">
+      <svg viewBox="0 0 880 170" role="img" aria-label="分城：港口和商业中心在一座城只多 1 条贸易路线，分在两座城多 2 条；互斥：娱乐中心和水上乐园一座城只能有一个">
+        <text class="d-title" x="10" y="22">分城（尽量）</text>
+        <rect class="d-box" x="10" y="36" width="170" height="70" rx="8"/>
+        <text class="d-sub" x="24" y="60">城 A：港口 + 商业中心</text>
+        <text class="d-sub" x="24" y="80">灯塔不加贸易路线</text>
+        <text class="d-title" x="24" y="98">+1 条</text>
+        <rect class="d-box key" x="200" y="36" width="110" height="70" rx="8"/>
+        <text class="d-sub" x="214" y="60">城 A：港口</text>
+        <text class="d-sub" x="214" y="80">城 B：商业中心</text>
+        <text class="d-title" x="214" y="98">+2 条</text>
+        <rect class="d-box key" x="330" y="36" width="140" height="70" rx="8"/>
+        <text class="d-sub" x="344" y="60">两城挨着时，港口</text>
+        <text class="d-sub" x="344" y="80">仍给商业中心相邻</text>
+        <text class="d-title" x="344" y="98">+2 金币</text>
+        <text class="d-sub" x="10" y="132">从候选里挑时不让一座城同时有两者；凑不够数量才放行，并在结果里提示。必建的照建。</text>
+        <text class="d-title" x="500" y="22">互斥（必须）</text>
+        <rect class="d-box" x="500" y="36" width="370" height="70" rx="8"/>
+        <text class="d-sub" x="514" y="60">娱乐中心和水上乐园（及替代它们的特色区域），</text>
+        <text class="d-sub" x="514" y="80">一座城只能有一个。DMT 只拿已建的检查，</text>
+        <text class="d-sub" x="514" y="98">规划中的两者要规划器自己挡</text>
+        <text class="d-sub" x="500" y="132">两个都必建：先写的那个放，另一个写明“不能和 X 建在同一座城”。</text>
+        <text class="d-sub" x="500" y="150">候选组合永不同时含两者；城里已建其一，另一个置灰。</text>
+      </svg>
+    </div>
+    <figcaption>两条规则都从规则数据读出：分城来自灯塔贸易路线修正上“本城没有市场”的要求，互斥来自 <code>MutuallyExclusiveDistricts</code>。互斥是后期存档压力测试里发现的漏洞（5.10）。</figcaption>
+  </figure>
   </div>
