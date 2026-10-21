@@ -448,7 +448,7 @@ def build(files=None, make_snapshots=True):
                                          pct(sd["outBest"] or 0) if sd and sd.get("outBest") is not None else "-"))
     if sd and am and ep:
         texts["SPEED_TEXT"] = (
-            "游戏里实测，单城 6–8 个区域标准档不到 0.3 秒；3 城联合 2.7 秒（之后标准档加了宽束联合起点，按计数折算约 3.2 秒），经面板分帧时游戏照常响应。离线环境里同样的单城规划，"
+            "游戏里实测，单城 6–8 个区域标准档不到 0.3 秒；3 城联合 2.7 秒（之后标准档加了宽束联合起点，游戏内同规模实测多约 10%%），经面板分帧时游戏照常响应。离线环境里同样的单城规划，"
             "AMT 慢约 %.0f 倍，EP 慢约 %.0f 倍。" % (am["time"] / sd["time"], ep["time"] / sd["time"]))
     # Picking districts per city on the multi tab: tests/offline/bench_multipools.lua, run by hand
     # (docs/self-test-report.md, fifth round).
