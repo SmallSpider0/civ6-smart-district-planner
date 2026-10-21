@@ -474,7 +474,11 @@ function SDP_UI.PlanDetail(p)
         tiles[#tiles + 1] = Locale.Lookup("LOC_SDP_YIELD_SHORT_" .. yieldType) .. Signed(amount)
       end
     end
-    if #tiles > 0 then parts[#parts + 1] = Locale.Lookup("LOC_SDP_RESULT_TILES", table.concat(tiles, " ")) end
+    if #tiles > 0 then
+      -- A preserve picked from the pool: shown, not scored (SDP_Appeal Optional).
+      local key = p.TilesCounted == false and "LOC_SDP_RESULT_TILES_UNCOUNTED" or "LOC_SDP_RESULT_TILES"
+      parts[#parts + 1] = Locale.Lookup(key, table.concat(tiles, " "))
+    end
   end
   return table.concat(parts, "  ") .. SDP_UI.PlanNote(p)
 end

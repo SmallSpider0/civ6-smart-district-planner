@@ -205,7 +205,7 @@ function Session:PlanFor(layout)
       Type = search.Types[m], X = c.X, Y = c.Y, Index = c.Index,
       Yields = item.Yields, ToolTip = item.ToolTip, Score = item.Score,
       Auto = self.Auto[search.Types[m]], Picked = search.Optional[m],
-      Appeal = a.Appeal, Housing = a.Housing, Tiles = a.Tiles,
+      Appeal = a.Appeal, Housing = a.Housing, Tiles = a.Tiles, TilesCounted = a.TilesCounted,
     }
     if search.Optional[m] then out.Picked[#out.Picked + 1] = search.Types[m] end
   end

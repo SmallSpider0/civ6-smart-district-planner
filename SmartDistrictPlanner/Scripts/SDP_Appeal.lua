@@ -185,11 +185,17 @@ end
 --   Lands          the search's land models (nil or empty: land part off)
 --   Workable       { [plot index] = true } plots a city can work (the tile
 --                  part's plots when the land part is off)
+--   Optional       { [slot] = true } slots picked from the pool: a preserve
+--                  there gets its housing counted, but its grove and
+--                  sanctuary yields only reported (they need two buildings;
+--                  counted, a preserve near charming plots won nearly every
+--                  pick in late-game saves; the user's call, 2026-10-22)
 -- }
 -- Returns a model, or nil when nothing in the problem has appeal rules.
 function SDP_Appeal.New(spec)
   local rules = SDP_Appeal.Rules()
-  local self = { Rules = rules, K = #spec.Types, Types = spec.Types, Kinds = spec.Kinds, Candidates = spec.Candidates }
+  local self = { Rules = rules, K = #spec.Types, Types = spec.Types, Kinds = spec.Kinds, Candidates = spec.Candidates,
+    Optional = spec.Optional or {} }
   local any = false
   self.Value = {}
   for m = 1, self.K do
@@ -322,7 +328,8 @@ function SDP_Appeal:Score(layout, detail)
         if housing ~= nil then value = value + housingWeight * housing end
         local rows = rules.Tiles[self.Types[m]]
         local tiles = nil
-        if rows ~= nil then
+        local counted = not self.Optional[m]
+        if rows ~= nil and (counted or detail ~= nil) then
           tiles = detail and {} or nil
           for _, q in ipairs(Neighbours(self.Cache, index)) do
             if at[q] == nil and not self.FixedAt[q] then
@@ -336,7 +343,7 @@ function SDP_Appeal:Score(layout, detail)
                   if tiles ~= nil and self.Workable[q] then tiles[yieldType] = (tiles[yieldType] or 0) + amount end
                 end
               end
-              if extra ~= 0 then
+              if extra ~= 0 and counted then
                 local owner = nil
                 for l, land in ipairs(self.Lands) do
                   if owner == nil and land.ByIndex[q] ~= nil then owner = l end
@@ -353,7 +360,10 @@ function SDP_Appeal:Score(layout, detail)
             end
           end
         end
-        if detail ~= nil then detail[m] = { Appeal = appeal, Housing = housing, Tiles = tiles } end
+        if detail ~= nil then
+          detail[m] = { Appeal = appeal, Housing = housing, Tiles = tiles }
+          if rows ~= nil then detail[m].TilesCounted = counted end
+        end
       end
     end
   end

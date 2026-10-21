@@ -284,6 +284,15 @@ test("a preserve: its own housing and its yields on the unimproved plots around,
     Weights = { YIELD_FOOD = 0, YIELD_FAITH = 0, YIELD_CULTURE = 0, YIELD_GOLD = 0, YIELD_SCIENCE = 0, YIELD_PRODUCTION = 0,
       HOUSING = 1 }, Lands = {}, Workable = workable })
   T.eq(lazy:Score({ position }), 3, "weights 0: housing only")
+  -- Picked from the pool (an optional slot): housing counts, the grove and
+  -- sanctuary yields are reported but not scored (the user's call, 2026-10-22).
+  local picked = SDP_Appeal.New({ Types = { PRESERVE }, Kinds = { "DISTRICT" }, Candidates = scan.Candidates, Fixed = {},
+    Weights = {}, Lands = {}, Workable = workable, Optional = { true } })
+  local pd = {}
+  T.eq(picked:Score({ position }, pd), 3, "pool pick: housing only")
+  T.same(pd[1].Tiles, want, "the yields still reported")
+  T.eq(pd[1].TilesCounted, false, "marked as not scored")
+  T.eq(d.TilesCounted, true, "a required preserve's are scored")
 end)
 
 test("a preserve with the land part on: its yields raise plots in the land model", function()
@@ -312,6 +321,10 @@ test("a preserve in the pool is picked for its value; deterministic", function()
   local again = SDP_Solver.Solve(request)
   T.eq(again.Gain, result.Gain, "same gain")
   T.eq(Entry(again, PRESERVE).Index, Entry(result, PRESERVE).Index, "same plot")
+  -- Its gain counts its housing, not its plots' yields; the plan shows them.
+  T.ok(Entry(result, PRESERVE).TilesCounted ~= true, "a pool preserve's yields are not scored")
+  local must = SDP_Solver.Solve({ PlayerID = 0, CityID = 1, Districts = { PRESERVE }, Weights = ONES })
+  T.ok(must.AppealDelta >= result.AppealDelta, "required, the yields come on top")
 end)
 
 test("several cities: housing counts per city, the gain parts add up", function()

@@ -72,10 +72,12 @@ test("single city: a campus and two picked from the pool; three solutions with o
     print(string.format("  solution %d  %+.1f  %s", n, s.Gain, keys[n]))
   end
   T.ok(keys[1] ~= keys[2] and keys[1] ~= keys[3] and keys[2] ~= keys[3], "three different combinations")
-  -- Picking two of the pool beats or equals any one fixed pair tried alone.
+  -- Picking two of the pool beats or equals the same pair as the only
+  -- candidates. (Not as Must: a required preserve also scores its grove and
+  -- sanctuary yields, a picked one does not; 2026-10-22.)
   local first = result.Solutions[1]
-  local fixed = SDP_Solver.Solve({ PlayerID = pid, CityID = city:GetID(), Districts = { campus, first.Picked[1], first.Picked[2] },
-    Weights = ONES, Land = true, Tier = "STANDARD" })
+  local fixed = SDP_Solver.Solve({ PlayerID = pid, CityID = city:GetID(), Districts = { campus },
+    Pool = { first.Picked[1], first.Picked[2] }, Count = 3, Weights = ONES, Land = true, Tier = "STANDARD" })
   T.ok(math.abs(fixed.Gain - first.Gain) < 1e-6 or fixed.Gain < first.Gain + 1e-6, "the same districts asked directly")
 end)
 

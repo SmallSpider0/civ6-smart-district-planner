@@ -150,14 +150,14 @@
  "Steps": [
   {
    "Label": "load steps",
-   "Seconds": 0.095,
+   "Seconds": 0.057,
    "Data": {
     "Step": "Loaded"
    }
   },
   {
    "Label": "census",
-   "Seconds": 0.049,
+   "Seconds": 0.034,
    "Data": {
     "Cities": [
      {
@@ -299,7 +299,7 @@
   },
   {
    "Label": "preserves",
-   "Seconds": 0.048,
+   "Seconds": 0.033,
    "Data": {
     "Expected": 0,
     "List": [
@@ -370,7 +370,7 @@
   },
   {
    "Label": "single 京都 FAST pool",
-   "Seconds": 0.071,
+   "Seconds": 0.038,
    "Data": {
     "Adjacency": 3,
     "Appeal": 2,
@@ -400,7 +400,7 @@
   },
   {
    "Label": "single 京都 STANDARD pool",
-   "Seconds": 0.093,
+   "Seconds": 0.048,
    "Data": {
     "Adjacency": 3,
     "Appeal": 2,
@@ -431,7 +431,7 @@
   },
   {
    "Label": "single 京都 must",
-   "Seconds": 0.072,
+   "Seconds": 0.037,
    "Data": {
     "Adjacency": 6,
     "Appeal": 2,
@@ -458,17 +458,17 @@
   },
   {
    "Label": "single 横滨 FAST pool",
-   "Seconds": 0.098,
+   "Seconds": 0.044,
    "Data": {
-    "Adjacency": 5,
-    "Appeal": 12,
+    "Adjacency": 3,
+    "Appeal": 3,
     "Asked": 2,
     "Calls": 400,
     "City": 262147,
     "EngineBad": 0,
     "Exhaustive": true,
-    "Gain": 10,
-    "Land": -7,
+    "Gain": 2,
+    "Land": -4,
     "Method": "pools",
     "Mismatch": false,
     "Mode": "POOL",
@@ -482,24 +482,24 @@
     "Step": "Single",
     "Tier": "FAST",
     "Together": 0,
-    "Tries": 55,
+    "Tries": 54,
     "Unplaced": 0
    }
   },
   {
    "Label": "single 横滨 STANDARD pool",
-   "Seconds": 0.162,
+   "Seconds": 0.088,
    "Data": {
-    "Adjacency": 5,
-    "Appeal": 12,
+    "Adjacency": 3,
+    "Appeal": 3,
     "Asked": 2,
     "Calls": 400,
     "City": 262147,
     "Deterministic": true,
     "EngineBad": 0,
     "Exhaustive": true,
-    "Gain": 10,
-    "Land": -7,
+    "Gain": 2,
+    "Land": -4,
     "Method": "pools",
     "Mismatch": false,
     "Mode": "POOL",
@@ -513,13 +513,13 @@
     "Step": "Single",
     "Tier": "STANDARD",
     "Together": 0,
-    "Tries": 55,
+    "Tries": 54,
     "Unplaced": 0
    }
   },
   {
    "Label": "single 横滨 must",
-   "Seconds": 0.109,
+   "Seconds": 0.067,
    "Data": {
     "Adjacency": 6,
     "Appeal": 12,
@@ -546,7 +546,7 @@
   },
   {
    "Label": "single 东京 FAST pool",
-   "Seconds": 0.058,
+   "Seconds": 0.044,
    "Data": {
     "Adjacency": 8,
     "Appeal": 2,
@@ -576,7 +576,7 @@
   },
   {
    "Label": "single 东京 STANDARD pool",
-   "Seconds": 0.094,
+   "Seconds": 0.069,
    "Data": {
     "Adjacency": 8,
     "Appeal": 2,
@@ -607,7 +607,7 @@
   },
   {
    "Label": "single 东京 must",
-   "Seconds": 0.07,
+   "Seconds": 0.05,
    "Data": {
     "Adjacency": 10,
     "Appeal": 2,
@@ -634,24 +634,24 @@
   },
   {
    "Label": "single 冈山 FAST pool",
-   "Seconds": 0.07,
+   "Seconds": 0.057,
    "Data": {
-    "Adjacency": 2,
-    "Appeal": 41,
+    "Adjacency": 7,
+    "Appeal": 2,
     "Asked": 2,
-    "Calls": 530,
+    "Calls": 552,
     "City": 131073,
     "EngineBad": 0,
     "Exhaustive": false,
-    "Gain": 36,
+    "Gain": 4,
     "Gap": 0,
-    "Land": -7,
+    "Land": -5,
     "Method": "pools",
     "Mismatch": false,
     "Mode": "POOL",
     "Ok": true,
     "Picked": [
-     "DISTRICT_ENTERTAINMENT_COMPLEX",
+     "DISTRICT_INDUSTRIAL_ZONE",
      "DISTRICT_PRESERVE"
     ],
     "Placed": 2,
@@ -659,31 +659,31 @@
     "Step": "Single",
     "Tier": "FAST",
     "Together": 0,
-    "Tries": 107,
+    "Tries": 104,
     "Unplaced": 0
    }
   },
   {
    "Label": "single 冈山 STANDARD pool",
-   "Seconds": 0.121,
+   "Seconds": 0.091,
    "Data": {
-    "Adjacency": 2,
-    "Appeal": 41,
+    "Adjacency": 7,
+    "Appeal": 2,
     "Asked": 2,
-    "Calls": 534,
+    "Calls": 552,
     "City": 131073,
     "Deterministic": true,
     "EngineBad": 0,
     "Exhaustive": false,
-    "Gain": 36,
+    "Gain": 4,
     "Gap": 0,
-    "Land": -7,
+    "Land": -5,
     "Method": "pools",
     "Mismatch": false,
     "Mode": "POOL",
     "Ok": true,
     "Picked": [
-     "DISTRICT_ENTERTAINMENT_COMPLEX",
+     "DISTRICT_INDUSTRIAL_ZONE",
      "DISTRICT_PRESERVE"
     ],
     "Placed": 2,
@@ -691,13 +691,13 @@
     "Step": "Single",
     "Tier": "STANDARD",
     "Together": 0,
-    "Tries": 107,
+    "Tries": 104,
     "Unplaced": 0
    }
   },
   {
    "Label": "single 冈山 must",
-   "Seconds": 0.127,
+   "Seconds": 0.075,
    "Data": {
     "Adjacency": 9,
     "Appeal": 40,
@@ -725,16 +725,16 @@
   },
   {
    "Label": "single ���屋 FAST pool",
-   "Seconds": 0.094,
+   "Seconds": 0.06,
    "Data": {
     "Adjacency": 8,
-    "Appeal": 6,
+    "Appeal": 2,
     "Asked": 2,
-    "Calls": 560,
+    "Calls": 532,
     "City": 327684,
     "EngineBad": 0,
     "Exhaustive": false,
-    "Gain": 10,
+    "Gain": 6,
     "Gap": 0,
     "Land": -4,
     "Method": "pools",
@@ -750,23 +750,23 @@
     "Step": "Single",
     "Tier": "FAST",
     "Together": 0,
-    "Tries": 68,
+    "Tries": 80,
     "Unplaced": 0
    }
   },
   {
    "Label": "single ���屋 STANDARD pool",
-   "Seconds": 0.132,
+   "Seconds": 0.096,
    "Data": {
     "Adjacency": 8,
-    "Appeal": 6,
+    "Appeal": 2,
     "Asked": 2,
-    "Calls": 560,
+    "Calls": 569,
     "City": 327684,
     "Deterministic": true,
     "EngineBad": 0,
     "Exhaustive": false,
-    "Gain": 10,
+    "Gain": 6,
     "Gap": 0,
     "Land": -4,
     "Method": "pools",
@@ -788,7 +788,7 @@
   },
   {
    "Label": "single ���屋 must",
-   "Seconds": 0.141,
+   "Seconds": 0.092,
    "Data": {
     "Adjacency": 10,
     "Appeal": 7,
@@ -815,70 +815,70 @@
   },
   {
    "Label": "single �阜 FAST pool",
-   "Seconds": 0.082,
+   "Seconds": 0.063,
    "Data": {
-    "Adjacency": 4,
-    "Appeal": 9,
+    "Adjacency": 9,
+    "Appeal": 0,
     "Asked": 2,
-    "Calls": 516,
+    "Calls": 651,
     "City": 393221,
     "EngineBad": 0,
     "Exhaustive": false,
-    "Gain": 9,
+    "Gain": 4,
     "Gap": 0,
-    "Land": -4,
+    "Land": -5,
     "Method": "pools",
     "Mismatch": false,
     "Mode": "POOL",
     "Ok": true,
     "Picked": [
-     "DISTRICT_ENTERTAINMENT_COMPLEX",
-     "DISTRICT_PRESERVE"
+     "DISTRICT_COMMERCIAL_HUB",
+     "DISTRICT_INDUSTRIAL_ZONE"
     ],
     "Placed": 2,
     "Pool": 9,
     "Step": "Single",
     "Tier": "FAST",
     "Together": 0,
-    "Tries": 183,
+    "Tries": 164,
     "Unplaced": 0
    }
   },
   {
    "Label": "single �阜 STANDARD pool",
-   "Seconds": 0.113,
+   "Seconds": 0.099,
    "Data": {
-    "Adjacency": 4,
-    "Appeal": 9,
+    "Adjacency": 9,
+    "Appeal": 0,
     "Asked": 2,
-    "Calls": 530,
+    "Calls": 701,
     "City": 393221,
     "Deterministic": true,
     "EngineBad": 0,
     "Exhaustive": false,
-    "Gain": 9,
+    "Gain": 4,
     "Gap": 0,
-    "Land": -4,
+    "Land": -5,
     "Method": "pools",
     "Mismatch": false,
     "Mode": "POOL",
     "Ok": true,
     "Picked": [
-     "DISTRICT_INDUSTRIAL_ZONE",
-     "DISTRICT_PRESERVE"
+     "DISTRICT_COMMERCIAL_HUB",
+     "DISTRICT_INDUSTRIAL_ZONE"
     ],
     "Placed": 2,
     "Pool": 9,
     "Step": "Single",
     "Tier": "STANDARD",
     "Together": 0,
-    "Tries": 183,
+    "Tries": 165,
     "Unplaced": 0
    }
   },
   {
    "Label": "single �阜 must",
-   "Seconds": 0.188,
+   "Seconds": 0.121,
    "Data": {
     "Adjacency": 16,
     "Appeal": 0,
@@ -905,7 +905,7 @@
   },
   {
    "Label": "single 京都 appeal",
-   "Seconds": 0.042,
+   "Seconds": 0.022,
    "Data": {
     "Adjacency": 3,
     "Appeal": 6,
@@ -965,7 +965,7 @@
   },
   {
    "Label": "single 横滨 appeal",
-   "Seconds": 0.087,
+   "Seconds": 0.05,
    "Data": {
     "Adjacency": 6,
     "Appeal": 16,
@@ -1031,7 +1031,7 @@
   },
   {
    "Label": "single 东京 appeal",
-   "Seconds": 0.043,
+   "Seconds": 0.022,
    "Data": {
     "Adjacency": 3,
     "Appeal": 6,
@@ -1091,7 +1091,7 @@
   },
   {
    "Label": "single 京都 fine",
-   "Seconds": 0.057,
+   "Seconds": 0.03,
    "Data": {
     "Adjacency": 3,
     "Appeal": 2,
@@ -1121,7 +1121,7 @@
   },
   {
    "Label": "sites 3 within 8",
-   "Seconds": 0.394,
+   "Seconds": 0.246,
    "Data": {
     "Calls": 3127,
     "D": 8,
@@ -1135,7 +1135,7 @@
   },
   {
    "Label": "place sites",
-   "Seconds": 0.044,
+   "Seconds": 0.02,
    "Data": {
     "Placed": 3,
     "Step": "PlaceSites"
@@ -1143,7 +1143,7 @@
   },
   {
    "Label": "multi 4 cities standard",
-   "Seconds": 1.381,
+   "Seconds": 0.821,
    "Data": {
     "Adjacency": 58,
     "Appeal": 0,
@@ -1167,7 +1167,7 @@
   },
   {
    "Label": "place multi",
-   "Seconds": 0.051,
+   "Seconds": 0.034,
    "Data": {
     "Placed": 15,
     "Step": "PlaceMulti"
@@ -1175,12 +1175,12 @@
   },
   {
    "Label": "settle after place multi",
-   "Seconds": 0.282,
+   "Seconds": 0.152,
    "Data": null
   },
   {
    "Label": "multi 8 cities standard",
-   "Seconds": 1.53,
+   "Seconds": 0.981,
    "Data": {
     "Adjacency": 64,
     "Appeal": 0,
@@ -1204,7 +1204,7 @@
   },
   {
    "Label": "multi 4 cities fine",
-   "Seconds": 1.221,
+   "Seconds": 0.761,
    "Data": {
     "Adjacency": 33,
     "Appeal": 0,
@@ -1228,7 +1228,7 @@
   },
   {
    "Label": "heavy pins",
-   "Seconds": 0.513,
+   "Seconds": 0.326,
    "Data": {
     "Placed": 83,
     "Step": "HeavyPins"
@@ -1236,12 +1236,12 @@
   },
   {
    "Label": "settle after heavy pins",
-   "Seconds": 14.057,
+   "Seconds": 9.39,
    "Data": null
   },
   {
    "Label": "single 京都 pool, crowded",
-   "Seconds": 0.27,
+   "Seconds": 0.107,
    "Data": {
     "Adjacency": 5,
     "Appeal": 0,
@@ -1270,7 +1270,7 @@
   },
   {
    "Label": "multi 4 cities, crowded",
-   "Seconds": 0.664,
+   "Seconds": 0.391,
    "Data": {
     "Adjacency": 33,
     "Appeal": 0,
@@ -1294,7 +1294,7 @@
   },
   {
    "Label": "panel",
-   "Seconds": 0.068,
+   "Seconds": 0.042,
    "Data": {
     "Ok": true,
     "Step": "Panel"
@@ -1302,14 +1302,14 @@
   },
   {
    "Label": "undo",
-   "Seconds": 0.375,
+   "Seconds": 0.226,
    "Data": {
     "Removed": 101,
     "Step": "UndoAll"
    }
   }
  ],
- "When": "2026-10-21 22:43",
+ "When": "2026-10-22 07:31",
  "AppealCheck": [
   {
    "City": 65536,

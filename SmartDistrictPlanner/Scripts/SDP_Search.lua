@@ -174,9 +174,11 @@ function Search:Singles()
     types, kinds, groups, single, legal, subjects, index
   self.K = #types
   if self.AppealSpec ~= nil then
+    local optional = {}
+    for m = 1, self.K do optional[m] = self.SlotSpecs[index[m]].Optional == true end
     self.AppealModel = SDP_Appeal.New({ PlayerID = self.PlayerID, Types = types, Kinds = kinds, Candidates = self.Candidates,
       Fixed = self.AppealSpec.Fixed, Weights = self.AppealSpec.Weights, Lands = self.Lands,
-      Workable = self.AppealSpec.Workable })
+      Workable = self.AppealSpec.Workable, Optional = optional })
   end
   -- Pools: each group's optional and required slots and how many optional
   -- ones to place.
