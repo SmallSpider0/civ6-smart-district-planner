@@ -61,7 +61,7 @@
       <Text>Weighted adjacency gain: {1_Gain}</Text>
     </Replace>
     <Replace Tag="LOC_SDP_RESULT_STATS" Language="en_US">
-      <Text>Effort: {1_Tier}; method: {2_Method}; DMT calls: {3_Calls}; layouts tried: {4_Tries}; search nodes: {5_Nodes}; improved {6_Continues} times</Text>
+      <Text>Effort: {1_Tier}; method: {2_Method}; DMT calls: {3_Calls}; layouts tried: {4_Tries}; search nodes: {5_Nodes}; improved {6_Continues} {6_Continues: plural 1?time; other?times;}</Text>
     </Replace>
     <Replace Tag="LOC_SDP_RESULT_TRUNCATED" Language="en_US">
       <Text>The search budget ran out; this plan may not be the best one.</Text>
@@ -159,7 +159,7 @@
       <Text>Under 1 s</Text>
     </Replace>
     <Replace Tag="LOC_SDP_CONTINUE" Language="en_US">
-      <Text>Keep improving</Text>
+      <Text>Improve</Text>
     </Replace>
     <Replace Tag="LOC_SDP_CANCEL" Language="en_US">
       <Text>Cancel</Text>
@@ -174,10 +174,10 @@
       <Text>the last round found nothing better</Text>
     </Replace>
     <Replace Tag="LOC_SDP_QUALITY_MAYBE" Language="en_US">
-      <Text>it may still improve: press Keep improving</Text>
+      <Text>it may still improve: press Improve</Text>
     </Replace>
-    <Replace Tag="LOC_SDP_LIST_SEPARATOR" Language="en_US">
-      <Text>; </Text>
+    <Replace Tag="LOC_SDP_LIST_JOIN" Language="en_US">
+      <Text>{1_A}; {2_B}</Text>
     </Replace>
     <Replace Tag="LOC_SDP_RESULT_SUMMARY_LAND" Language="en_US">
       <Text>Weighted gain: {1_Gain} (adjacency {2_Adjacency}, tiles taken {3_Land})</Text>
@@ -266,13 +266,13 @@
       <Text>Put City Center map tacks where new cities go (or use City sites), tick the districts and wonders, then press Solve.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_MULTI_SOLUTION_DETAIL" Language="en_US">
-      <Text>{1_Cities} cities, {2_Districts} districts, {3_Wonders} wonders</Text>
+      <Text>{1_Cities} {1_Cities: plural 1?city; other?cities;}, {2_Districts} {2_Districts: plural 1?district; other?districts;}, {3_Wonders} {3_Wonders: plural 1?wonder; other?wonders;}</Text>
     </Replace>
     <Replace Tag="LOC_SDP_MULTI_CITY_GAIN" Language="en_US">
       <Text>weighted adjacency of its new districts {1_Gain}</Text>
     </Replace>
     <Replace Tag="LOC_SDP_MULTI_STATS" Language="en_US">
-      <Text>Effort: {1_Tier}; {2_Cities} cities; DMT calls: {3_Calls}; layouts tried: {4_Tries}; improved {5_Continues} times; planning the cities one after another gave {6_First}</Text>
+      <Text>Effort: {1_Tier}; {2_Cities} {2_Cities: plural 1?city; other?cities;}; DMT calls: {3_Calls}; layouts tried: {4_Tries}; improved {5_Continues} {5_Continues: plural 1?time; other?times;}; planning the cities one after another gave {6_First}</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SITES_COUNT" Language="en_US">
       <Text>New cities</Text>
@@ -329,13 +329,13 @@
       <Text>Place site tacks</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SITES_WATER_FRESH" Language="en_US">
-      <Text>Fresh water</Text>
+      <Text>Fresh Water</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SITES_WATER_COAST" Language="en_US">
-      <Text>Coastal water</Text>
+      <Text>Coastal Water</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SITES_WATER_NONE" Language="en_US">
-      <Text>No water</Text>
+      <Text>No Water</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SITES_OWN_DISTANCE" Language="en_US">
       <Text>{1_Distance} tiles from your nearest city or placed site tack</Text>
@@ -344,16 +344,16 @@
       <Text>{1_Distance} tiles from the nearest other site of this plan</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SITES_LUXURY" Language="en_US">
-      <Text>Luxury resources ({1_Score} points): {2_List}</Text>
+      <Text>Luxury resources (score {1_Score}): {2_List}</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SITES_STRATEGIC" Language="en_US">
-      <Text>Strategic resources ({1_Score} points): {2_List}</Text>
+      <Text>Strategic resources (score {1_Score}): {2_List}</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SITES_NEW_KIND" Language="en_US">
       <Text>{1_Name} {2_Count} (new)</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SITES_UNREVEALED" Language="en_US">
-      <Text>{1_Count} tiles in its 3 rings not yet revealed</Text>
+      <Text>{1_Count} {1_Count: plural 1?tile; other?tiles;} in its 3 rings not yet revealed</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SITES_LOYALTY_MEDIUM" Language="en_US">
       <Text>Loyalty risk: medium (foreign cities nearby)</Text>
@@ -504,7 +504,7 @@
       <Text>{1_Name}: {2_State} (click to change)</Text>
     </Replace>
     <Replace Tag="LOC_SDP_FEATURE_SHORT" Language="en_US">
-      <Text>Clear features</Text>
+      <Text>Allow chop</Text>
     </Replace>
     <Replace Tag="LOC_SDP_REMIND_SHORT" Language="en_US">
       <Text>Reminders</Text>
@@ -518,8 +518,8 @@
     <Replace Tag="LOC_SDP_REMIND_LOSS" Language="en_US">
       <Text>{1_District} {2_Yields}</Text>
     </Replace>
-    <Replace Tag="LOC_SDP_REMIND_SEPARATOR" Language="en_US">
-      <Text> / </Text>
+    <Replace Tag="LOC_SDP_REMIND_JOIN" Language="en_US">
+      <Text>{1_A} / {2_B}</Text>
     </Replace>
     <Replace Tag="LOC_SDP_RESULT_REMIND" Language="en_US">
       <Text>Don't remove the {1_Feature} at {2_Where}</Text>
@@ -543,7 +543,7 @@
       <Text>Picked: {1_Names}</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SOLUTION_DISTRICTS" Language="en_US">
-      <Text>{1_Count} districts, different tiles</Text>
+      <Text>{1_Count} {1_Count: plural 1?district; other?districts;}, different tiles</Text>
     </Replace>
     <Replace Tag="LOC_SDP_RESULT_SUMMARY_PARTS" Language="en_US">
       <Text>Weighted gain: {1_Gain} ({2_Parts})</Text>
@@ -600,7 +600,7 @@
       <Text>Effort</Text>
     </Replace>
     <Replace Tag="LOC_SDP_APART_SHORT" Language="en_US">
-      <Text>Split {1_A}/{2_B}</Text>
+      <Text>Keep apart</Text>
     </Replace>
     <Replace Tag="LOC_SDP_APART_SHORT_ANY" Language="en_US">
       <Text>Keep apart</Text>

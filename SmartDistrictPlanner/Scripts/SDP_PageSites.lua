@@ -197,7 +197,7 @@ function P.Refresh()
     local districtType = d.Type
     local limited = d.MaxPerPlayer and d.MaxPerPlayer > 0
     inst.Icon:SetIcon(d.Icon, 26)
-    inst.Name:SetText(Locale.Lookup(d.Name))
+    SDP_UI.FitName(inst.Name, Locale.Lookup(d.Name), 100)
     inst.Root:SetToolTipString(limited and Locale.Lookup("LOC_SDP_SITES_NOT_PER_SITE") or "")
     inst.Check:SetDisabled(limited)
     inst.Check:SetCheck(not limited and m_selected[districtType] == true)
@@ -322,8 +322,7 @@ function P.Render()
     local solution = result.Solutions[m_solution] or result.Solutions[1]
     Controls.SitesSummary:SetText(Locale.Lookup("LOC_SDP_SITES_SUMMARY", SDP_UI.Number(math.floor(solution.Value * 10 + 0.5) / 10),
       result.Stats.Candidates, result.Stats.Refined))
-    Controls.SitesQuality:SetText(SDP_UI.QualityText(result) .. Locale.Lookup("LOC_SDP_LIST_SEPARATOR")
-      .. Locale.Lookup("LOC_SDP_SITES_MODEL_NOTE"))
+    Controls.SitesQuality:SetText(SDP_UI.Join({ SDP_UI.QualityText(result), Locale.Lookup("LOC_SDP_SITES_MODEL_NOTE") }))
     for n, s in ipairs(result.Solutions) do
       local inst = m_solutionIM:GetInstance()
       local where = {}

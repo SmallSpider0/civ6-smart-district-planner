@@ -176,8 +176,8 @@
     <Replace Tag="LOC_SDP_QUALITY_MAYBE" Language="zh_Hans_CN">
       <Text>可能还有提升，可点“继续优化”</Text>
     </Replace>
-    <Replace Tag="LOC_SDP_LIST_SEPARATOR" Language="zh_Hans_CN">
-      <Text>；</Text>
+    <Replace Tag="LOC_SDP_LIST_JOIN" Language="zh_Hans_CN">
+      <Text>{1_A}；{2_B}</Text>
     </Replace>
     <Replace Tag="LOC_SDP_RESULT_SUMMARY_LAND" Language="zh_Hans_CN">
       <Text>加权提升：{1_Gain}（相邻 {2_Adjacency}，地块 {3_Land}）</Text>
@@ -518,8 +518,8 @@
     <Replace Tag="LOC_SDP_REMIND_LOSS" Language="zh_Hans_CN">
       <Text>{1_District} {2_Yields}</Text>
     </Replace>
-    <Replace Tag="LOC_SDP_REMIND_SEPARATOR" Language="zh_Hans_CN">
-      <Text>；</Text>
+    <Replace Tag="LOC_SDP_REMIND_JOIN" Language="zh_Hans_CN">
+      <Text>{1_A}；{2_B}</Text>
     </Replace>
     <Replace Tag="LOC_SDP_RESULT_REMIND" Language="zh_Hans_CN">
       <Text>勿砍{1_Feature} {2_Where}</Text>

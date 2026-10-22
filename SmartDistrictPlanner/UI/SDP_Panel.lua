@@ -117,6 +117,17 @@ local function YieldText(yields)
 end
 
 -- Localized name of a district, improvement, building or feature type.
+-- Texts joined with the language's separator ("a; b; c"). The separator sits
+-- inside a format string (LOC_SDP_LIST_JOIN = "{1_A}; {2_B}"): the game trims
+-- the spaces at both ends of a text, so a separator text "; " would lose its space.
+local function Join(list, key)
+  local out = nil
+  for _, item in ipairs(list) do
+    out = (out == nil) and item or Locale.Lookup(key or "LOC_SDP_LIST_JOIN", out, item)
+  end
+  return out or ""
+end
+
 local function TypeName(typeName)
   local row = GameInfo.Districts[typeName] or GameInfo.Improvements[typeName] or GameInfo.Buildings[typeName]
     or GameInfo.Features[typeName] or GameInfo.Resources[typeName]
@@ -126,7 +137,7 @@ end
 -- Helpers shared with the other tabs (SDP_PageSites, SDP_PageMulti).
 SDP_UI = {
   MAX_WEIGHT = MAX_WEIGHT, WEIGHT_COLUMNS = WEIGHT_COLUMNS,
-  Number = Number, Signed = Signed, Where = Where, YieldText = YieldText, TypeName = TypeName,
+  Number = Number, Signed = Signed, Where = Where, YieldText = YieldText, TypeName = TypeName, Join = Join,
 }
 
 -- ===========================================================================
@@ -183,6 +194,26 @@ function SDP_UI.ListRequest(districts, states, count, status)
   return out
 end
 
+-- A name in a fixed-width cell (TruncateWidth in the XML): one line in the
+-- normal 14 point font; when that would cut it off (English names are
+-- longer), two lines at 11 points. Cut off, with the full name as tooltip,
+-- only when even that does not fit. `width`: the room for the name (80, a
+-- district cell's, by default).
+local function FitName(label, text, width)
+  width = width or 80
+  label:SetFontSize(14)
+  label:SetWrapWidth(0)
+  label:SetTruncateWidth(width)
+  label:SetText(text)
+  if label.IsTextTruncated ~= nil and label:IsTextTruncated() then
+    label:SetFontSize(11)
+    label:SetTruncateWidth(0)
+    label:SetWrapWidth(width)
+    label:SetText(text)
+  end
+end
+SDP_UI.FitName = FitName
+
 -- Show one district cell: its icon, name and state; the selected look for
 -- MUST and AUTO; dimmed when OFF or when it cannot be planned (`status`).
 function SDP_UI.ShowCell(inst, d, state, status)
@@ -190,8 +221,8 @@ function SDP_UI.ShowCell(inst, d, state, status)
   local name = Locale.Lookup(d.Name)
   local label = status and Locale.Lookup("LOC_SDP_STATUS_" .. status) or Locale.Lookup("LOC_SDP_STATE_" .. state)
   inst.Icon:SetIcon(d.Icon, 26)
-  inst.Name:SetText(name)
-  inst.NameDark:SetText(name)
+  FitName(inst.Name, name)
+  FitName(inst.NameDark, name)
   inst.State:SetText(label)
   inst.StateDark:SetText(label)
   inst.Selected:SetHide(not selected)
@@ -231,6 +262,18 @@ function SDP_UI.BuildCells(im, otherIM, stack, otherStack, districts, stateOf, s
   return rows
 end
 
+-- A pulldown entry whose text is wider than the entry (long English wonder
+-- names such as Mausoleum at Halicarnassus): a smaller font.
+local function FitEntry(button)
+  local text = button.GetTextControl and button:GetTextControl()
+  if text == nil then return end
+  local room = button:GetSizeX() - 16
+  for _, size in ipairs({ 12, 10 }) do
+    if (text:GetSizeX() or 0) <= room then return end
+    text:SetFontSize(size)
+  end
+end
+
 -- Wonder tags (feedback item 2): one per chosen wonder, a click removes it;
 -- the pulldown lists the others, a click adds one. onSet(type, on).
 function SDP_UI.BuildWonders(pull, chipIM, chipStack, wonders, chosen, onSet)
@@ -255,6 +298,7 @@ function SDP_UI.BuildWonders(pull, chipIM, chipStack, wonders, chosen, onSet)
         local era = w.EraType and GameInfo.Eras[w.EraType]
         entry.Button:SetToolTipString(era and Locale.Lookup(era.Name) or "")
         entry.Button:RegisterCallback(Mouse.eLClick, function() onSet(wonderType, true) end)
+        FitEntry(entry.Button)
       end
     end
   end
@@ -272,8 +316,7 @@ function SDP_UI.SummaryText(s, parts)
   if parts.Coverage then list[#list + 1] = Locale.Lookup("LOC_SDP_PART_COVERAGE", Signed(s.CoverageDelta or 0)) end
   if parts.Distance then list[#list + 1] = Locale.Lookup("LOC_SDP_PART_DISTANCE", Signed(s.CostDelta or 0)) end
   if s.AppealDelta ~= nil then list[#list + 1] = Locale.Lookup("LOC_SDP_PART_APPEAL", Signed(s.AppealDelta)) end
-  return Locale.Lookup("LOC_SDP_RESULT_SUMMARY_PARTS", Signed(s.Gain or 0),
-    table.concat(list, Locale.Lookup("LOC_SDP_LIST_SEPARATOR")))
+  return Locale.Lookup("LOC_SDP_RESULT_SUMMARY_PARTS", Signed(s.Gain or 0), Join(list))
 end
 
 -- A reminder's text: the districts and what each would lose.
@@ -288,7 +331,7 @@ function SDP_UI.RemindText(remind)
     end
     parts[#parts + 1] = Locale.Lookup("LOC_SDP_REMIND_LOSS", TypeName(loss.Type), table.concat(lost, " "))
   end
-  return table.concat(parts, Locale.Lookup("LOC_SDP_REMIND_SEPARATOR"))
+  return Join(parts, "LOC_SDP_REMIND_JOIN")
 end
 
 -- Pin entries for a solution's reminders, named with the city number first
@@ -399,7 +442,7 @@ local function QualityText(result)
     parts[#parts + 1] = Locale.Lookup("LOC_SDP_QUALITY_MAYBE")
   end
   if q.Truncated then parts[#parts + 1] = Locale.Lookup("LOC_SDP_RESULT_TRUNCATED") end
-  return table.concat(parts, Locale.Lookup("LOC_SDP_LIST_SEPARATOR"))
+  return Join(parts)
 end
 SDP_UI.QualityText = QualityText
 
@@ -491,7 +534,7 @@ function SDP_UI.SolutionDetail(solution)
   if #picked > 0 then
     local names = {}
     for _, t in ipairs(picked) do names[#names + 1] = TypeName(t) end
-    return Locale.Lookup("LOC_SDP_SOLUTION_PICKED", table.concat(names, Locale.Lookup("LOC_SDP_LIST_SEPARATOR")))
+    return Locale.Lookup("LOC_SDP_SOLUTION_PICKED", Join(names))
   end
   return Locale.Lookup("LOC_SDP_SOLUTION_DISTRICTS", #solution.Plan)
 end

@@ -469,7 +469,7 @@ function P.PopulatePlanPulls(participants)
     local names = {}
     for _, districtType in ipairs(t.Districts) do names[#names + 1] = SDP_UI.TypeName(districtType) end
     AddTemplate(Locale.Lookup("LOC_SDP_TEMPLATE_YIELD", Locale.Lookup(GameInfo.Yields[t.Yield].Name)),
-      table.concat(names, Locale.Lookup("LOC_SDP_LIST_SEPARATOR")), t.Districts)
+      SDP_UI.Join(names), t.Districts)
   end
   AddTemplate(Locale.Lookup("LOC_SDP_TEMPLATE_CLEAR"), "", {})
   if m_planFor ~= "ALL" then AddTemplate(Locale.Lookup("LOC_SDP_TEMPLATE_SHARED"), "", nil) end
@@ -542,7 +542,7 @@ end
 local function TargetLabels(keys, byKey)
   local names = {}
   for _, key in ipairs(keys) do names[#names + 1] = TargetLabel(key, byKey) end
-  return table.concat(names, Locale.Lookup("LOC_SDP_LIST_SEPARATOR"))
+  return SDP_UI.Join(names)
 end
 
 local function AddRow(icon, name, detail, toolTip)
