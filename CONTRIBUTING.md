@@ -17,7 +17,7 @@
 - `main` 受保护，所有改动（包括错字这类小的文档修正）都在分支上做、开 PR，CI 的两项检查 `offline (ubuntu-latest)`、`offline (windows-latest)`（validate 和离线测试）通过后才能合并。不能直接推送、强制推送或删除 `main`；仓库管理员可以绕过。
 - GitHub 不要求审批人数，但合并前请另一人看一下。
 - 仓库只允许 squash 合并：一个 PR 在 `main` 上只留一个提交，标题就是 PR 标题。所以 PR 标题用英文祈使句写清做了什么。
-- 仓库开了自动合并：PR 页面点 **Enable auto-merge**（或 `gh pr merge 编号 --auto --squash`），两项检查通过后 GitHub 自己合并，检查没过就不合并。合并后分支不会自动删，要手动删。
+- 仓库开了自动合并：PR 页面点 **Enable auto-merge**（或 `gh pr merge 编号 --auto --squash`），两项检查通过后 GitHub 自己合并，检查没过就不合并。合并后 GitHub 自动删掉远端分支，本地分支自己删。
 - 分支名写平台或人和主题，如 `win/ui-scale`、`mac/stress-marsh`。
 - 分支里的提交信息也用英文祈使句，与 `git log` 里已有的一致。
 - 生成的结果单独提交，提交信息写明怎么生成的：
