@@ -1,0 +1,14 @@
+Changes since v1.0.0:
+- City sites: hover a site to see the Luxury and Strategic resources it gets, with copies, and which kinds are new to you. Resources are now counted once per plan, so the sites' scores add up to the plan's total.
+- City sites: the tooltip gives the distance to your nearest city or placed site tack, and to the nearest other site of the plan.
+- The Add a wonder dropdown lists wonders by era, then by Production cost; hover an entry to see its era.
+- English interface checked in the game: spaces in lists, labels hidden under dropdowns, overflowing buttons and cut-off district and wonder names are fixed, and the panel uses the game's own English terms (tile, Specialty districts, Effort).
+- The overview and evaluation page now has an English version.
+
+自 v1.0.0 以来的变化：
+- 选城址：悬停看每个城址拿到的奢侈、战略资源和份数，并标出哪些是你还没有的种类。资源按整套方案只算一次，各城址的分加起来等于方案总分。
+- 选城址：悬停写出离我方最近的城市或已打城址钉的距离，以及离本方案其他城址的距离。
+- “添加奇观”下拉框按时代排列，同一时代按生产力造价从低到高；悬停选项显示时代。
+- 英文界面在游戏里逐页检查过：列表里缺的空格、被下拉框挡住的标签、超出按钮的文字和被截断的区域名、奇观名都已修好，用词改为游戏自己的英文。
+- 中文名称改为游戏的中文：市政广场、古树林、避难所、堤坝、宇航中心等。
+- 介绍与评测页有了英文版。
