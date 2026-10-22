@@ -1,0 +1,26 @@
+<!doctype html>
+<!-- Workshop picture "same city, three planners", 1600 x 900. tools/workshop.py render fills
+     {{CSS}} from report/template.html and {{SVG}} with the report's case map. -->
+<html lang="en"><head><meta charset="utf-8"><title>Same city, three planners</title>
+<style>
+{{CSS}}
+  html, body { margin: 0; width: 1600px; height: 900px; overflow: hidden; padding: 0; }
+  body { background: var(--bg); font-family: "Helvetica Neue", Arial, "PingFang SC", "Microsoft YaHei", sans-serif; }
+  header { padding: 44px 64px 0; }
+  h1 { margin: 0; font: 700 50px/1.1 Georgia, "Times New Roman", serif; color: var(--fg); }
+  h1 span { font: 600 40px/1.1 "PingFang SC", "Microsoft YaHei", sans-serif; color: var(--accent); margin-left: 18px; }
+  .sub { margin: 14px 0 0; font-size: 25px; line-height: 1.4; color: var(--muted); }
+  .map { margin: 26px 40px 0; background: var(--surface); border: 2px solid var(--line); border-radius: 10px; padding: 18px 20px 8px; }
+  .map svg { display: block; width: 100%; height: auto; }
+  .key { margin: 18px 64px 0; font-size: 21px; line-height: 1.5; color: var(--muted); }
+  .key b { color: var(--fg); }
+  .key span { white-space: nowrap; }
+</style></head>
+<body>
+  <header>
+    <h1>Same city, same districts <span>同一座城、同样的区域</span></h1>
+    <p class="sub">Rome, coastal, late game. Each number is that district's own adjacency bonus in DMT; the total is in the panel title.<br>罗马 · 沿海 · 后期。数字是该区域在 DMT 里的相邻加成，标题里是总提升。</p>
+  </header>
+  <div class="map hexmap">{{SVG}}</div>
+  <p class="key"><span><b>城</b> City center</span> · <span><b>学</b> Campus</span> · <span><b>剧</b> Theater Square</span> · <span><b>商</b> Commercial Hub</span> · <span><b>工</b> Industrial Zone</span> · <span><b>圣</b> Holy Site</span> · <span><b>政</b> Government Plaza</span> · <span><b>娱</b> Entertainment Complex</span> · <span><b>渠</b> Aqueduct</span>.<br>Grey: already built; colored: planned. 灰色是已建区域，彩色是新规划的区域。</p>
+</body></html>

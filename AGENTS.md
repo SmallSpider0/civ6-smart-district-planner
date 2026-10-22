@@ -42,7 +42,8 @@ civ6mod/
 │   ├── tester-guide.md               # 给测试者的说明，tools/package.py 打进测试包
 │   ├── self-test-report.md           # 自测报告
 │   ├── dev-macos.md                  # macOS 开发环境与只在 Mac 上能用的工具
-│   └── dev-windows.md                # Windows 开发环境
+│   ├── dev-windows.md                # Windows 开发环境
+│   └── workshop-upload.md            # 在 Windows 上把提交包上传到创意工坊（也是提交包里的 UPLOAD.md）
 ├── SmartDistrictPlanner/             # 交付物 1：mod 本体，整目录复制到游戏 Mods 目录
 │   ├── SmartDistrictPlanner.modinfo
 │   ├── Text/                         # 本地化（数据库格式 XML）
@@ -53,6 +54,7 @@ civ6mod/
 │   ├── compare/                      # 与 AMT、Empire Planner 的离线对比：真实规则库 + 真实 DMT/AMT/EP 代码 + 模拟引擎，tools/compare.mjs 运行
 │   ├── stress/                       # 后期存档压力测试的结果（tools/stress.py）
 │   └── bench/                        # 游戏内基准、单价校准与探针（不以 test_ 开头，单独运行）
+├── workshop/                         # 创意工坊的标题、中英简介、更新说明、预览图与示意图（源文件在 src/），tools/workshop.py 打提交包
 ├── report/                           # “介绍与评测”页：build.py 从 tests/compare/results 生成 dist/report/（单文件版、GitHub Pages 版），package.py 打进压缩包
 ├── tools/                            # paths.py、civ6tuner.py、validate.py、deploy.py、run_tests.py、game.py 等，见 tools/README.md
 ├── logs/                             # civ6tuner 输出日志，已 gitignore
