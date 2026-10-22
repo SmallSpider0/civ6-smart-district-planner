@@ -167,6 +167,20 @@ test("single-city tab: wonders go with the districts; the good-places map; the o
   SDP_Panel.SetSelected("DISTRICT_CAMPUS", true)
   SDP_Panel.SetState("DISTRICT_AQUEDUCT", "OFF") -- the campus alone
   SDP_Panel.SetTier("FAST")
+  -- The pulldown lists the wonders by era, then cost (issue 7), with the era as tooltip.
+  local entries = Controls.WonderPull._entries
+  local names = {}
+  for _, entry in ipairs(entries) do names[#names + 1] = entry.Button:GetText() end
+  T.same(names, { "LOC_BUILDING_HANGING_GARDENS_NAME", "LOC_BUILDING_STONEHENGE_NAME", "LOC_BUILDING_PYRAMIDS_NAME",
+    "LOC_BUILDING_COLOSSEUM_NAME", "LOC_BUILDING_GREAT_LIBRARY_NAME" }, "pulldown order")
+  T.eq(entries[1].Button:GetToolTipString(), "LOC_ERA_ANCIENT_NAME", "era tooltip")
+  -- Two wonders: the request keeps type order whatever the list's order.
+  SDP_Panel.SetWonder("BUILDING_STONEHENGE", true)
+  SDP_Panel.SetWonder("BUILDING_COLOSSEUM", true)
+  T.same(SDP_Panel.State().Wonders, { "BUILDING_COLOSSEUM", "BUILDING_STONEHENGE" }, "type order")
+  T.eq(#Controls.WonderPull._entries, 3, "chosen wonders leave the pulldown")
+  SDP_Panel.SetWonder("BUILDING_STONEHENGE", false)
+  SDP_Panel.SetWonder("BUILDING_COLOSSEUM", false)
   SDP_Panel.SetWonder("BUILDING_HANGING_GARDENS", true)
   T.same(SDP_Panel.State().Wonders, { "BUILDING_HANGING_GARDENS" }, "wonder chosen")
   T.eq(SDP_Panel.Solve(), nil, "with a wonder the city is solved as a task")

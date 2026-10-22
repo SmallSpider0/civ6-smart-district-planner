@@ -59,6 +59,36 @@ test("the open key is in the game's input actions", function()
   T.ok(id ~= nil and id ~= -1, "action id " .. tostring(id))
 end)
 
+test("the wonder list goes by era, then production cost, then type (issue 7)", function()
+  local list = SDP_Wonders.List(pid)
+  T.ok(#list > 10, "wonders: " .. #list)
+  local eras = {}
+  for n, w in ipairs(list) do
+    -- The era straight from the rules: the later of the tech's and the civic's.
+    local row = GameInfo.Buildings[w.Type]
+    local expected = 0
+    if row.PrereqTech then
+      expected = GameInfo.Eras[GameInfo.Technologies[row.PrereqTech].EraType].ChronologyIndex
+    end
+    if row.PrereqCivic then
+      expected = math.max(expected, GameInfo.Eras[GameInfo.Civics[row.PrereqCivic].EraType].ChronologyIndex)
+    end
+    T.eq(w.Era, expected, w.Type .. " era")
+    T.eq(w.Cost, row.Cost, w.Type .. " cost")
+    eras[w.Era] = true
+    local prev = list[n - 1]
+    if prev then
+      local ordered = prev.Era < w.Era or (prev.Era == w.Era and (prev.Cost < w.Cost
+        or (prev.Cost == w.Cost and prev.Type < w.Type)))
+      T.ok(ordered, prev.Type .. " before " .. w.Type)
+    end
+  end
+  local count = 0
+  for _ in pairs(eras) do count = count + 1 end
+  T.ok(count >= 5, "wonders from several eras: " .. count)
+  print(("%d wonders, first %s, last %s"):format(#list, list[1].Type, list[#list].Type))
+end)
+
 test("single-city tab: a wonder planned with the districts and pinned with its icon", function()
   Finally(function()
     Reset({ Resolve("DISTRICT_CAMPUS"), Resolve("DISTRICT_HOLY_SITE") })

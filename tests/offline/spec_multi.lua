@@ -230,6 +230,25 @@ test("wonder list: built and pinned wonders are marked, no generic icon", functi
   T.eq(status.DISTRICT_WONDER, nil, "no generic wonder icon")
 end)
 
+test("wonder list: by era, then production cost, then type (issue 7)", function()
+  NewWorld()
+  local list = SDP_Wonders.List(0)
+  local order = {}
+  for _, entry in ipairs(list) do order[#order + 1] = entry.Type end
+  -- Ancient: Hanging Gardens 180, Stonehenge 180, Pyramids 220; classical (civics): Colosseum 400, Great Library 400.
+  T.same(order, { "BUILDING_HANGING_GARDENS", "BUILDING_STONEHENGE", "BUILDING_PYRAMIDS", "BUILDING_COLOSSEUM",
+    "BUILDING_GREAT_LIBRARY" }, "order")
+  T.eq(list[1].EraType, "ERA_ANCIENT", "era type")
+  T.eq(list[1].Era, 1, "chronology index")
+  T.eq(list[1].Cost, 180, "cost")
+  T.eq(list[5].EraType, "ERA_CLASSICAL", "a civic's era")
+  -- Both prerequisites: the later era; neither: before every era.
+  local era, eraType = SDP_Wonders.Era({ PrereqTech = "TECH_MASONRY", PrereqCivic = "CIVIC_RECORDED_HISTORY" })
+  T.eq(era, 2, "the later of tech and civic")
+  T.eq(eraType, "ERA_CLASSICAL", "its type")
+  T.eq(SDP_Wonders.Era({}), 0, "no prerequisite")
+end)
+
 test("wonders: legal places, a required district next to it, unplaceable ones reported", function()
   local w = NewWorld()
   for _, xy in ipairs({ { 10, 7 }, { 11, 7 }, { 8, 7 } }) do w:Plot(xy[1], xy[2]).terrain = GameInfo.Terrains.TERRAIN_DESERT end

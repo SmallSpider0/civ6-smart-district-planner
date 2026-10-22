@@ -252,6 +252,8 @@ function SDP_UI.BuildWonders(pull, chipIM, chipStack, wonders, chosen, onSet)
         local entry = {}
         pull:BuildEntry("InstanceOne", entry)
         entry.Button:SetText(name)
+        local era = w.EraType and GameInfo.Eras[w.EraType]
+        entry.Button:SetToolTipString(era and Locale.Lookup(era.Name) or "")
         entry.Button:RegisterCallback(Mouse.eLClick, function() onSet(wonderType, true) end)
       end
     end
@@ -869,12 +871,13 @@ local function SetRemind(on)
 end
 
 -- Wonders to place with the districts (design 18, item 5): selectable ones,
--- in type order.
+-- in type order (the solver's slot order, independent of the list's order).
 local function SelectedWonders()
   local list = {}
   for _, w in ipairs(SDP_Wonders.List(Game.GetLocalPlayer())) do
     if m_wonders[w.Type] and w.Status == nil then list[#list + 1] = w.Type end
   end
+  table.sort(list)
   return list
 end
 
