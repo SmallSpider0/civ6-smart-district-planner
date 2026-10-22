@@ -41,9 +41,11 @@
 
 ## 发布
 
-- 测试包：`python3 -I tools/package.py`。它从最近一次提交打出 `dist/SmartDistrictPlanner-<提交号>.zip`，里面有 mod、测试说明、安装说明和 `REPORT.html`。
-- 测试包发到 GitHub Releases，标签用提交号或版本号。
-- 发布前跑一遍压力测试，结果写进自测报告和交付报告。
+- 在 GitHub 上发布 Release（标签用 `v` 开头的版本号，如 `v1.0.0`），`.github/workflows/release.yml` 会：
+  - 用 `tools/package.py` 打出 `SmartDistrictPlanner-<版本>.zip`（mod、测试说明、安装说明、`REPORT.html`），连同单文件的页面一起附到这个 Release；
+  - 用 `report/build.py` 生成“介绍与评测”页，发布到 GitHub Pages（<https://smallspider0.github.io/civ6-smart-district-planner/>）。
+- 平时要给测试者一个包，本地跑 `python3 -I tools/package.py`，包名是提交号。
+- 发布前跑一遍压力测试，结果写进自测报告和页面。发布后在 CHANGELOG.md 里把“未发布”改成版本号和日期。
 
 ## 写作规则
 
@@ -54,9 +56,9 @@
   - 不用套话和 AI 腔，比如“赋能”“全面提升”“值得注意的是”；
   - 同一个意思只写一次，不重复已经说过的话。
 - 直接描述功能，不加"新功能""新加""新指标"之类的标签。
-- 测试项数、耗时这类数字只写在自测报告和交付报告里（由脚本生成或刷新），其他文档链接过去，免得过时。
+- 测试项数、耗时这类数字只写在自测报告和“介绍与评测”页里（由脚本生成或刷新），其他文档链接过去，免得过时。
 - 截图只截游戏画面，不带系统菜单栏、标题栏、任务栏或 Dock。放在 `docs/images/`，按 `v<版本>-<内容>.jpg` 命名。
-- 交付报告由 `report/build.py` 生成。用 Claude 做的页面（artifact）沿用交付报告的样式和写法。
+- “介绍与评测”页由 `report/build.py` 生成，前 6 节写给玩家，技术内容放在附录。用 Claude 做的页面（artifact）沿用这个页面的样式和写法。
 
 ## 许可证与第三方内容
 

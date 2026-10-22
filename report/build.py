@@ -1,13 +1,19 @@
-"""Build the delivery report from the comparison results.
+"""Build the mod's page (introduction and evaluation) from the comparison results.
 
-    python3 -I report/build.py [RESULTS.jsonl ...]   (default: RESULTS below)
+    python3 -I report/build.py [RESULTS.jsonl ...] [--version V] [--date D] [--site DIR]
 
-Writes two pages to dist/report/:
+RESULTS default to RESULTS below. The version defaults to the commit, the
+date to the commit's date; a version that is a release tag (v...) links the
+download button to that release, anything else to the latest release.
+Writes to dist/report/:
 
-  index.html    the page published as the artifact; screenshots are referenced
-                as images/<name>, published from docs/images/
+  index.html    the page without the document skeleton (as published as an
+                artifact); screenshots are referenced as images/<name>
   report.html   the same page as one self-contained file (screenshots inlined),
                 to open from disk; tools/package.py puts it in the test package
+
+--site DIR also writes the page for GitHub Pages: DIR/index.html with the
+screenshots it uses in DIR/images/ (.github/workflows/release.yml).
 
 Case-study maps come from `node tools/compare.mjs --snapshot ID`, cached in
 report/snaps/ (commit new snapshots: the package build does not make them).
@@ -16,6 +22,7 @@ import base64
 import json
 import os
 import re
+import shutil
 import statistics
 import subprocess
 import sys
@@ -24,6 +31,7 @@ from collections import defaultdict
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(HERE)
 IMAGES = os.path.join(REPO, "docs", "images")
+REPO_URL = "https://github.com/SmallSpider0/civ6-smart-district-planner"
 OUT = os.path.join(REPO, "dist", "report")
 sys.path.insert(0, os.path.join(REPO, "tests", "compare"))
 sys.path.insert(0, HERE)
@@ -82,12 +90,23 @@ MULTIPOOLS_TEXT = (
     "参照是各档、精细档加两次继续优化、“先逐城挑再联合规划”（每座城单独用单城精细档挑组合，再一起规划）中最好的值。"
     "标准档、精细档 3 个种子都达到参照，按单价折算约 3.1 秒、7.1 秒，分帧计算；快速档平均 97.6%，约 0.5 秒。"
     "“先逐城挑”为 96%、97%、100%。标准档起初在一个种子上只有 93%：它挑的组合与精细档相同，差在多城的摆放搜索，"
-    "加了宽束联合起点（4.3）后达到参照。")
+    "加了宽束联合起点（A.3）后达到参照。")
 MULTIPOOLS_ROW = ["多城挑选", "3", "标准档、精细档 3 个都达到参照，比“先逐城挑再联合规划”（96%–100%）好"]
 
 
-def build(files=None, make_snapshots=True):
-    """Return (page, data): the artifact page (without the document skeleton) and its chart data."""
+def git(*args):
+    try:
+        return subprocess.run(["git", "-C", REPO] + list(args), capture_output=True, encoding="utf-8",
+                              check=True).stdout.strip()
+    except (OSError, subprocess.CalledProcessError):
+        return ""
+
+
+def build(files=None, make_snapshots=True, version=None, date=None):
+    """Return (page, data): the page (without the document skeleton) and its chart data."""
+    version = version or git("rev-parse", "--short", "HEAD") or "dev"
+    date = date or git("log", "-1", "--format=%cs") or ""
+    download = (REPO_URL + "/releases/tag/" + version) if version.startswith("v") else (REPO_URL + "/releases/latest")
     rows = summarize.load([os.path.join(REPO, f) for f in (files or RESULTS)])
     scenarios, det = summarize.summarize(rows)
     raw = {}
@@ -400,8 +419,10 @@ def build(files=None, make_snapshots=True):
         return ("没有一个场景低于 %s" % who) if n == 0 else ("只有 %d 个场景低于 %s" % (n, who))
 
     texts = {
+        "VERSION": version, "DATE": date, "DOWNLOAD_URL": download, "REPO_URL": REPO_URL,
+        "DOWNLOAD_LABEL": ("下载 " + version) if version.startswith("v") else "下载最新版",
         "SUMMARY_COMPARE": (
-            "在 %d 个模拟实际对局的单城场景上与 AMT r49、Empire Planner 正面对比：本模组标准档有 %s 的场景拿到最高加成（AMT %s，EP %s），"
+            "在 %d 个模拟实际对局的单城场景上与 AMT r49、Empire Planner 对比：本模组标准档有 %s 的场景拿到最高加成（AMT %s，EP %s），"
             "%s。" % (sd["n"], pct(sd["best"]), pct(am["best"]), pct(ep["best"]), sd_claim)) if sd and am and ep else "",
         "N_SINGLE": str(len(single)), "N_MULTI": str(len(multi)), "N_CIVS": "17",
         "SELF_CHECK": "%d 次，%d 次不一致" % (self_n, self_mis),
@@ -430,7 +451,7 @@ def build(files=None, make_snapshots=True):
     # Correctness: districts left off although they had a place.
     no_plot = sd["missing"] - sd["missingPlaceable"] if sd else 0
     texts["CORRECT_TEXT"] = (
-        "本模组%s，%s。AMT 和 EP 分别漏放了 %d 个和 %d 个其实有位置的区域（原因见第 2 节）%s。" % (
+        "本模组%s，%s。AMT 和 EP 分别漏放了 %d 个和 %d 个其实有位置的区域（原因见第 3 节）%s。" % (
             sd_claim, "能放下的区域都放了" if sd["missingPlaceable"] == 0 else "但有 %d 个区域有位置却没放" % sd["missingPlaceable"],
             am["missingPlaceable"], ep["missingPlaceable"],
             ("；EP 还有 %d 个方案压掉了玩家事先打的钉" % ep["pinPlans"]) if ep["pinPlans"] else "")) if sd and am and ep else ""
@@ -804,11 +825,11 @@ def build(files=None, make_snapshots=True):
 
     def vs(a, b, c):
         return "%s，AMT %s，EP %s" % (a, b, c)
-    srows = [grp("e-single", "5.3 单城")]
+    srows = [grp("e-single", "B.2 单城")]
     if sd and am and ep:
         srows.append(tr(["相邻加成", "开发集 %d" % sd["n"], "拿到最高加成：本模组 " + vs(pct(sd["best"]), pct(am["best"]), pct(ep["best"]))]))
         srows.append(tr(["合法与完整", "%d" % sd["n"], "本模组%s；有位置却没放的区域：AMT %d 个，EP %d 个" % (
-            "零违规、能放的都放了" if sd_clean and sd["missingPlaceable"] == 0 else "见 5.3", am["missingPlaceable"], ep["missingPlaceable"])]))
+            "零违规、能放的都放了" if sd_clean and sd["missingPlaceable"] == 0 else "见 B.2", am["missingPlaceable"], ep["missingPlaceable"])]))
     if robust_groups:
         rg = {g["label"]: g["values"] for g in robust_groups}
         if "留出集" in rg:
@@ -824,7 +845,7 @@ def build(files=None, make_snapshots=True):
         srows.append(tr(["城市总产出", "%d" % sl["n"], "拿到最高：本模组（计入地块）" + vs(pct(sl["outBest"]), pct(am["outBest"] or 0), pct(ep["outBest"] or 0))]))
     if forest_single:
         srows.append(tr(["对手的目标函数", "开发集、留出集各 %d" % len(single), "%s；%s" % (cross_claim(forest_single, "amt"), cross_claim(forest_single, "ep"))]))
-    srows.append(grp("e-multi", "5.4 多城"))
+    srows.append(grp("e-multi", "B.3 多城"))
     if M.get("sdp:STANDARD"):
         srows.append(tr(["联合规划", "开发集 %d" % len(multi), "平均达到最高值的：本模组 " + vs(
             pct(M["sdp:STANDARD"]["quality"]), pct(M["amt"]["quality"]) if M.get("amt") else "-", pct(M["ep"]["quality"]) if M.get("ep") else "-")
@@ -839,25 +860,25 @@ def build(files=None, make_snapshots=True):
         srows.append(tr(["覆盖范围", "%d" % cov_summary["n"], "有取舍余地的 %d 个场景里，覆盖权重 1 时 %d 个多覆盖了城市；覆盖、相邻两项一起与 AMT 比，%d 个更好、%d 个更差" % (
             cov_summary["room"], cov_summary["more1"], pa.get("better", 0), pa.get("worse", 0))]))
     if wnum.get("sdp:STANDARD"):
-        srows.append(grp("e-wonders", "5.5 奇观"))
+        srows.append(grp("e-wonders", "B.4 奇观"))
         srows.append(tr(["奇观与区域", "%d" % len(wsub), "放下的奇观：本模组 %s；拿到最高加成：本模组 %s" % (
             vs("%d/%d" % wnum["sdp:STANDARD"][:2], "%d" % wnum["amt"][0], "%d" % wnum["ep"][0]),
             vs(pct(wnum["sdp:STANDARD"][2]), pct(wnum["amt"][2]), pct(wnum["ep"][2])))]))
     if csub:
         spr = summarize.paired(csub, "sdp:STANDARD", "ep", "gain")
-        srows.append(grp("e-sites", "5.6 选城址"))
+        srows.append(grp("e-sites", "B.5 选城址"))
         srows.append(tr(["两座新城（只比 EP）", "%d" % spr["n"], "城址总值逐场景：本模组胜 %d、平 %d、负 %d" % (spr["wins"], spr["ties"], spr["losses"])]))
-    srows.append(grp("e-pools", "5.7 从候选里挑"))
+    srows.append(grp("e-pools", "B.6 从候选里挑"))
     srows.append(tr(["单城挑选", "4 种情形 × 4", "标准档 16 个全部挑中最好的组合，约 0.4–1.0 秒；快速档平均 98%"]))
     srows.append(tr(MULTIPOOLS_ROW))
-    srows.append(grp("e-speed", "5.8 速度 · 5.9 本模组自身的测试"))
+    srows.append(grp("e-tests", "速度（第 4 节）· B.7 本模组自身的测试"))
     if sd and am and ep:
         srows.append(tr(["速度", "游戏内实测", "单城不到 0.3 秒，3 城联合约 3 秒；离线比 AMT 快约 %.0f 倍" % (am["time"] / sd["time"])]))
     srows.append(tr(["自身的测试", "游戏内 92 项、离线 101 项、真实点击 30 项", "全部通过；裁判与游戏引擎逐格一致（沉船一处已知偏差）；魅力逐格校准"]))
     stress_text, stress_table, stress_row = stress_section()
     texts["STRESS_TEXT"], texts["STRESS_TABLE"] = stress_text, stress_table
     if stress_row:
-        srows.append(grp("e-stress", "5.10 后期存档压力测试"))
+        srows.append(grp("e-stress", "B.8 后期存档压力测试"))
         srows.append(tr(stress_row))
     texts["EVAL_SUMMARY"] = ('<table><thead><tr><th>实验</th><th>场景</th><th>结论</th></tr></thead><tbody>%s</tbody></table>' % "".join(srows))
 
@@ -928,11 +949,11 @@ def build(files=None, make_snapshots=True):
     arch = open(os.path.join(HERE, "part_arch.html"), encoding="utf-8").read()
     algo = open(os.path.join(HERE, "part_algo.html"), encoding="utf-8").read()
     algo = algo.replace("{{HEX}}", open(os.path.join(HERE, "hexfig.svg.txt"), encoding="utf-8").read())
-    for head, goal in (('<span class="sn">4.1</span>增量 + 记忆评估（SDP_Board）', "G1 G6"),
-                       ('<span class="sn">4.2</span>单城搜索管线（SDP_Search）', "G2 G5"),
-                       ('<span class="sn">4.3</span>多城联合规划（SDP_Multi）', "G2 G3"),
-                       ('<span class="sn">4.4</span>选城址（SDP_Sites + SDP_SiteSolver）', "G2"),
-                       ('<span class="sn">4.5</span>分帧计算（SDP_Task）', "G6")):
+    for head, goal in (('<span class="sn">A.1</span>增量 + 记忆评估（SDP_Board）', "G1 G6"),
+                       ('<span class="sn">A.2</span>单城搜索管线（SDP_Search）', "G2 G5"),
+                       ('<span class="sn">A.3</span>多城联合规划（SDP_Multi）', "G2 G3"),
+                       ('<span class="sn">A.4</span>选城址（SDP_Sites + SDP_SiteSolver）', "G2"),
+                       ('<span class="sn">A.5</span>分帧计算（SDP_Task）', "G6")):
         tags = " ".join('<span class="tag goal">%s</span>' % g for g in goal.split())
         algo = algo.replace("<h3>%s</h3>" % head, "<h3>%s</h3>\n  <p>%s</p>" % (head, tags))
     out = tpl.replace("{{ARCH}}", arch).replace("{{ALGO}}", algo)
@@ -1099,32 +1120,52 @@ MIME = {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png"}
 
 
 def standalone(page, read_image):
-    """The page as one self-contained file: document skeleton added, screenshots inlined.
+    """The page as one file: document skeleton added, screenshots inlined.
 
-    read_image(name) returns the bytes of docs/images/<name>."""
+    read_image(name) returns the bytes of docs/images/<name>; None leaves the
+    screenshots as images/<name> links."""
     m = re.match(r"\s*<title>(.*?)</title>", page)
-    title, body = (m.group(1), page[m.end():]) if m else ("交付报告", page)
+    title, body = (m.group(1), page[m.end():]) if m else ("智能区域规划器", page)
 
     def inline(m):
         name = m.group(1)
         data = base64.b64encode(read_image(name)).decode("ascii")
         return 'src="data:%s;base64,%s"' % (MIME[os.path.splitext(name)[1].lower()], data)
 
-    body = re.sub(r'src="images/([^"]+)"', inline, body)
+    if read_image is not None:
+        body = re.sub(r'src="images/([^"]+)"', inline, body)
     return ('<!doctype html>\n<html lang="zh-CN"><head><meta charset="utf-8">'
             '<meta name="viewport" content="width=device-width, initial-scale=1">'
             '<title>%s</title><style>[hidden]{display:none!important}img{max-width:100%%}</style>'
             '</head><body>%s</body></html>\n' % (title, body))
 
 
+def site(page, out_dir):
+    """The page for GitHub Pages: document skeleton added, the screenshots it uses copied next to it."""
+    os.makedirs(os.path.join(out_dir, "images"), exist_ok=True)
+    for name in sorted(set(re.findall(r'src="images/([^"]+)"', page))):
+        shutil.copyfile(os.path.join(IMAGES, name), os.path.join(out_dir, "images", name))
+    html = standalone(page, None)
+    open(os.path.join(out_dir, "index.html"), "w", encoding="utf-8").write(html)
+    return html
+
+
 def main():
-    if sys.argv[1:] == ["--stress-md"]:
+    import argparse
+    ap = argparse.ArgumentParser(description="Build the mod's page from the comparison results")
+    ap.add_argument("files", nargs="*", help="result files (default: the committed results)")
+    ap.add_argument("--version", help="version shown on the page (default: the commit)")
+    ap.add_argument("--date", help="date shown on the page (default: the commit's date)")
+    ap.add_argument("--site", metavar="DIR", help="also write the GitHub Pages site to DIR")
+    ap.add_argument("--stress-md", action="store_true", help="print the stress-test table as Markdown and stop")
+    args = ap.parse_args()
+    if args.stress_md:
         text, table, _ = stress_section(markdown=True)
         print(text.replace("<code>", "`").replace("</code>", "`"))
         print()
         print(table)
         return
-    page, data = build(sys.argv[1:])
+    page, data = build(args.files, version=args.version, date=args.date)
     os.makedirs(OUT, exist_ok=True)
     open(os.path.join(OUT, "index.html"), "w", encoding="utf-8").write(page)
 
@@ -1133,6 +1174,9 @@ def main():
             return f.read()
 
     single = standalone(page, read_image)
+    if args.site:
+        site(page, args.site)
+        print("site: %s/index.html" % args.site)
     open(os.path.join(OUT, "report.html"), "w", encoding="utf-8").write(single)
     json.dump(data, open(os.path.join(OUT, "data.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
     print("report: dist/report/index.html (%d KB), report.html (%d KB, self-contained)"

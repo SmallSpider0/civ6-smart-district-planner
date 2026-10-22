@@ -53,7 +53,7 @@ civ6mod/
 │   ├── compare/                      # 与 AMT、Empire Planner 的离线对比：真实规则库 + 真实 DMT/AMT/EP 代码 + 模拟引擎，tools/compare.mjs 运行
 │   ├── stress/                       # 后期存档压力测试的结果（tools/stress.py）
 │   └── bench/                        # 游戏内基准、单价校准与探针（不以 test_ 开头，单独运行）
-├── report/                           # 交付报告：build.py 从 tests/compare/results 生成 dist/report/（artifact 页面与单文件版），package.py 打进测试包
+├── report/                           # “介绍与评测”页：build.py 从 tests/compare/results 生成 dist/report/（单文件版、GitHub Pages 版），package.py 打进压缩包
 ├── tools/                            # paths.py、civ6tuner.py、validate.py、deploy.py、run_tests.py、game.py 等，见 tools/README.md
 ├── logs/                             # civ6tuner 输出日志，已 gitignore
 └── reference/                        # 指向本机 DMT/AMT/EP/Base UI/DLC 源码的链接（tools/setup_reference.py 建），已 gitignore

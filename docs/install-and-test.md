@@ -177,8 +177,8 @@ python3 -I tools/game.py newgame --state SDP_Panel --capital --reveal   # 进入
 python3 -I tools/run_tests.py                                   # 游戏内测试
 python3 -I tools/realclick.py suite                             # 真实鼠标点击（macOS，需辅助功能权限，会占用屏幕）
 python3 -I tools/stress.py prepare NAME / load / run / check    # 发布前：后期存档压力测试
-python3 -I report/build.py                                      # 生成交付报告（dist/report/）
-python3 -I tools/package.py                                     # 打出给合作者的测试包（dist/，含 tester-guide.md 和交付报告）
+python3 -I report/build.py                                      # 生成“介绍与评测”页（dist/report/）
+python3 -I tools/package.py                                     # 打出压缩包（dist/，含 tester-guide.md 和“介绍与评测”页）
 ```
 
 Windows 上把 `python3 -I` 换成 `py -3 -I`；`realclick.py` 只能在 macOS 上用。环境搭建见 [dev-macos.md](dev-macos.md)、[dev-windows.md](dev-windows.md)，工具说明见 [tools/README.md](../tools/README.md)。

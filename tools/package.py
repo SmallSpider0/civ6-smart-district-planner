@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
-"""package - build the test package for a collaborator (a zip to unpack on Windows).
+"""package - build the mod package (a zip for players and testers; attached to each release).
 
 The zip is built from the last commit, not the working tree, so its name (the
-short commit hash) says exactly what is inside:
+version, by default the short commit hash) says exactly what is inside:
 
   SmartDistrictPlanner/   the mod, as committed
   TEST_GUIDE.md           docs/tester-guide.md with the version filled in
   INSTALL_AND_USE.md      docs/install-and-test.md (links to other docs made plain text)
-  REPORT.html             the delivery report as one self-contained page (report/build.py)
+  REPORT.html             the mod's page (introduction and evaluation) as one self-contained file (report/build.py)
 
 The static checks in validate.py run first, and uncommitted changes to the mod,
 to those two documents or to anything the report reads stop the build (the
@@ -16,7 +16,7 @@ commit). File names in the zip are ASCII so
 that Windows' built-in zip tool shows them correctly. Entries carry the commit
 time, so the same commit gives the same zip.
 
-Usage: package.py [--out DIR]   (default DIR: dist/)
+Usage: package.py [--out DIR] [--version V]   (default DIR: dist/, V: the short commit hash)
 Exit codes: 0 built, 1 validation failed, 2 uncommitted changes.
 """
 
@@ -53,6 +53,7 @@ def plain_links(markdown):
 def main(argv=None):
     ap = argparse.ArgumentParser(description="Build the collaborator test package")
     ap.add_argument("--out", default=os.path.join(validate.ROOT, "dist"), help="output folder")
+    ap.add_argument("--version", help="version for the zip name, the guide and the page (default: the commit)")
     args = ap.parse_args(argv)
 
     code, _report = validate.run(quiet=True)
@@ -65,7 +66,7 @@ def main(argv=None):
         print(dirty)
         return 2
 
-    commit = git("rev-parse", "--short", "HEAD").strip()
+    commit = args.version or git("rev-parse", "--short", "HEAD").strip()
     stamp = int(git("log", "-1", "--format=%ct").strip())
     date = time.strftime("%Y-%m-%d", time.localtime(stamp))
     when = time.localtime(stamp)[:6]
@@ -74,7 +75,7 @@ def main(argv=None):
     files = [f for f in files if f]
     guide = git("show", "HEAD:" + GUIDE).replace("{{VERSION}}", commit).replace("{{DATE}}", date)
     install = plain_links(git("show", "HEAD:" + INSTALL))
-    page, _data = report.build(make_snapshots=False)
+    page, _data = report.build(make_snapshots=False, version=commit, date=date)
     report_html = report.standalone(page, lambda name: git("show", "HEAD:docs/images/" + name, text=False))
 
     os.makedirs(args.out, exist_ok=True)

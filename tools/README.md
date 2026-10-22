@@ -10,7 +10,7 @@
 | `luacheck.mjs` | Lua 语法与陷阱检查（validate 会调用它） | 0 无错误；1 有错误 |
 | `offline_tests.mjs` | 不开游戏跑求解逻辑测试与基准（`tests/offline/`） | 0 全过；1 有失败；2 用法错误 |
 | `deploy.py` | 校验后把 mod 同步到游戏 Mods 目录 | 0 成功；1 校验失败；2 找不到 Mods 目录 |
-| `package.py` | 从最近一次提交打出给合作者的测试包（zip，含测试说明和交付报告） | 0 成功；1 校验失败；2 有未提交的改动 |
+| `package.py` | 从最近一次提交打出压缩包（mod、测试说明、“介绍与评测”页）；发布 Release 时由工作流调用 | 0 成功；1 校验失败；2 有未提交的改动 |
 | `run_tests.py` | 经 Tuner 在游戏内跑 `tests/test_*.lua` | 0 全过；1 有失败；2 连接问题；3 超时 |
 | `game.py` | 退出游戏、经 Steam 启动、从主菜单快速开局（可选建首都）；启动时的前台切换仅 macOS | 0 成功；2 超时 |
 | `realclick.py` | 仅 macOS：用系统鼠标事件真实点击面板，每步从面板状态读回核对 | 0 全过；1 有失败；2 环境问题 |
@@ -117,26 +117,30 @@ python3 -I tools/deploy.py              # 校验通过后同步
 - 增量复制，并删除部署目录里源目录已没有的文件；只动 `Mods/SmartDistrictPlanner/` 内部。
 - 结尾提示重载方式：改了 modinfo 或 `Text/` 要重启游戏，否则回主菜单重新进入对局即可。
 
-## package.py — 给合作者的测试包
+## package.py — 压缩包
 
 ```bash
-python3 -I tools/package.py             # 输出 dist/SmartDistrictPlanner-<提交号>.zip
+python3 -I tools/package.py                     # 输出 dist/SmartDistrictPlanner-<提交号>.zip
+python3 -I tools/package.py --version v1.0.0    # 输出 dist/SmartDistrictPlanner-v1.0.0.zip（发布工作流这样用）
 ```
 
-- 内容：`SmartDistrictPlanner/`（模组本体）、`TEST_GUIDE.md`（`docs/tester-guide.md`，填好版本号和日期）、`INSTALL_AND_USE.md`（`docs/install-and-test.md`，指向其他文档的链接改成纯文本）、`REPORT.html`（交付报告的单文件版，见下一节）。
-- 从最近一次提交打包：先校验；模组、这两份文档或交付报告读到的文件（`report/build.py` 的 `INPUTS`）有未提交的改动时拒绝打包。文件名里的提交号就是版本号，合作者反馈时报这个号。
+- 内容：`SmartDistrictPlanner/`（模组本体）、`TEST_GUIDE.md`（`docs/tester-guide.md`，填好版本号和日期）、`INSTALL_AND_USE.md`（`docs/install-and-test.md`，指向其他文档的链接改成纯文本）、`REPORT.html`（“介绍与评测”页的单文件版，见下一节）。
+- 从最近一次提交打包：先校验；模组、这两份文档或页面读到的文件（`report/build.py` 的 `INPUTS`）有未提交的改动时拒绝打包。文件名里的版本（默认是提交号）也写在测试说明和页面上，反馈时报这个号。
 - 压缩包里的文件名都是 ASCII，Windows 自带的解压工具不会显示乱码；条目时间取提交时间，同一次提交打出的包相同。`dist/` 不入库。
 
-## report/build.py — 交付报告
+## report/build.py — “介绍与评测”页
 
 ```bash
-python3 -I report/build.py              # 输出 dist/report/index.html 和 report.html
+python3 -I report/build.py                              # 输出 dist/report/index.html 和 report.html
+python3 -I report/build.py --version v1.0.0 --site _site   # 另输出 GitHub Pages 用的 _site/（发布工作流这样用）
 ```
 
-- 读 `tests/compare/results/` 里的对比结果（文件列表见 `RESULTS`），套进 `report/template.html`（第 3、4 节分别来自 `part_arch.html`、`part_algo.html`，图表脚本 `charts.js`，地图案例 `hexmap.py`）。
-- `index.html` 是发布为 artifact 的页面，截图写成 `images/<文件名>`，发布时把 `docs/images/` 里对应的图一起上传；`report.html` 是同一页的单文件版，截图内嵌，可直接用浏览器打开，`package.py` 打进测试包。
+- 页面结构：第 1–6 节写给玩家（能做什么、安装与使用、和其他规划器比、速度、已知限制、反馈与更新），附录 A 技术说明、附录 B 评估方法与完整数据默认折叠；页内链接指向附录时会自动展开。
+- 读 `tests/compare/results/` 里的对比结果（文件列表见 `RESULTS`），套进 `report/template.html`（附录 A 的结构图和算法来自 `part_arch.html`、`part_algo.html`，图表脚本 `charts.js`，地图案例 `hexmap.py`）。
+- 版本默认是提交号，日期是提交日期；`--version` 以 `v` 开头时，下载按钮指向这个版本的 Release，否则指向最新的 Release。
+- `index.html` 不带文档外壳，截图写成 `images/<文件名>`；`report.html` 是单文件版，截图内嵌，可直接用浏览器打开，`package.py` 打进压缩包；`--site DIR` 写出带外壳的 `DIR/index.html` 和用到的截图。
 - 案例地图的场景数据缓存在 `report/snaps/`，缺的会用 `node tools/compare.mjs --snapshot` 生成（需要 `tests/compare/.cache/`），生成后要提交；`package.py` 不生成，缺了就报错。
-- 同样的输入得到同样的页面。改了报告内容或对比结果后重新生成、提交，再打包和更新 artifact。
+- 同样的输入得到同样的页面。线上的页面只在发布 Release 时更新（`.github/workflows/release.yml`，也可在 Actions 里手动运行）。
 
 ## run_tests.py — 游戏内测试
 

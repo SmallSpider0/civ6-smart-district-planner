@@ -1,49 +1,54 @@
-# Smart District Planner（智能区域规划器）
+# 智能区域规划器（Smart District Planner）
 
-《文明6》纯 Lua UI 模组。面板有三个页签：
-- **单城**：选一座城市，勾选要建的区域，调好各产出的权重，规划器在城市三环内搜索加权相邻加成最高的摆放，并一键打成带区域图标的地图钉。
-- **选城址**：在已探索的地图上为若干座新城选位置（水源、耕作地块、奢侈与战略资源、区域潜力、彼此不抢地），给出三套方案，地图上预览后打城址钉。
-- **多城**：城址钉与附近的现有城市一起规划区域和奇观，跨城的相邻加成与帝国上限一并考虑，给出三套方案。
+《文明6》区域规划模组：选一座城和想建的区域，它在城市三环内找相邻加成最高的摆法，一键打成带区域图标的地图钉；也能给新城选址，让几座城一起规划。合法性和加成全部由 [Detailed Map Tacks](https://steamcommunity.com/sharedfiles/filedetails/?id=2428969051)（DMT）计算，与地图钉上显示的数一致。
 
-合法性判定和相邻加成计算直接复用 [Detailed Map Tacks](https://steamcommunity.com/sharedfiles/filedetails/?id=2428969051)（DMT），所以方案里的数值与 DMT 图钉显示的完全一致。
+**[下载](https://github.com/SmallSpider0/civ6-smart-district-planner/releases/latest)** · **[介绍与评测](https://smallspider0.github.io/civ6-smart-district-planner/)** · **[安装与使用](docs/install-and-test.md)**
 
-![面板与结果](docs/images/v4-panel-single.jpg)
+![单城页签：区域分两组排成网格，结果有三套方案](docs/images/v4-panel-single.jpg)
 
-相比 Auto Map Tacks Planner（AMT）的改进：
-- **接近最优**：规模小时穷举，与暴力枚举的最优解一致；规模大时用模型集束搜索、DMT 精确评估、局部搜索和扰动重建，离线基准上单城 3–6 个区域达到已知最优，8 个区域 98–100%。快速、标准、精细三档可选，可"继续优化"，并显示质量说明。
-- **确定性**：同一局面、同样输入，求解结果每次相同。
-- **已有地图钉锁定**：不挪动、不覆盖，并作为固定邻居计入总分；已建区域置灰。
-- **全局唯一区域**：全帝国已达上限的区域（如政府广场）不会被重复规划。
-- **可解释**：结果行显示坐标与产出，悬停显示 DMT 的逐项来源；受影响的已有区域也会列出。
-- **速度**：单城 8 个区域标准档约 0.3 秒；多城 3 城 × 6 个区域标准档约 3 秒纯计算。耗时长的档位分帧计算，游戏不卡，关闭面板也会算完（Mac 实测）。
-- **逐城分工**：多城页签可以给每座城单独的区域清单，或套用按产出生成的模板（科技城、生产力城……）；政府广场可以指定放在哪座城。
-- **单城也能放奇观**；"好位置"在地图上标出某个区域放在哪些格最好，方便手动摆放。
-- **以游戏为准**：城市已拥有的格子上，除 DMT 外还用游戏自己的可建格复核（如不连通水域的运河不会出现在方案里）。
-- **反复调整方便**：可选择替换本模组之前打的钉；撤销记录随存档保存。Shift+L 打开面板。
-- **自动挑选区域**：每个区域可设为必建、候选或不建，再给出区域数量，规划器从候选里挑相邻加成最高的，并给出区域组合不同的三套方案，点一套即在地图上预览；多城页签每座城各挑各的，选城址按每个城址最好的几个区域估分。
-- **水渠、水坝自动加入**：城市缺淡水时加水渠，泛滥平原够多时加水坝（风云变幻），条件从游戏数据判断，可关。
-- **距离成本**：想让区域靠近城市时，可按离市中心的距离扣分，系数可调，默认不扣。
-- **提醒钉**：方案靠旁边的树林、雨林拿相邻加成时，打钉会在这些格子上加一个"勿砍"提醒钉，写明砍掉会少多少。
-- 原版、迭起兴衰、风云变幻规则集都能用；界面中英双语，按游戏语言显示。
+## 能做什么
 
-> ⚠️ **不要与 Auto Map Tacks Planner（AMT）等其他区域规划模组同时启用。**
+面板有三个页签：
 
-## 文档
+- **单城**：选一座城，把区域设为必建、候选或不建，给出区域数量和各产出的权重。规划器在城市三环内找加权相邻加成最高的摆法；从候选里挑时给出组合不同的三套方案，点一套就在地图上预览，再一键打钉。单城也能一起放奇观。
+- **选城址**：在已探索的地图上给几座新城选位置，考虑水源、耕作地块、奢侈与战略资源、区域潜力，以及新城之间不抢地。给出三套方案，预览后打城址钉。
+- **多城**：城址钉和附近的现有城市一起规划区域和奇观，跨城的相邻加成和帝国上限都计入。可以给每座城单独的区域清单，或套用按产出生成的模板（科技城、生产力城……）。
+
+各页签共用：
+
+- 快速、标准、精细三档；规模小时穷举，结果注明是否最优或离上界多远，可以继续优化。同一局面、同样输入，结果每次相同。
+- 已建区域和你自己打的钉不挪、不压，并作为邻居计分；全帝国限量的区域（如政府广场）不会重复规划。
+- 结果行显示坐标和加成，悬停看 DMT 的逐项来源。
+- 社区按魅力计住房，保护区计魅力和周边产出；缺淡水时自动加水渠，泛滥平原多时自动加水坝；方案靠旁边的树林、雨林拿加成时，打钉时在这些格上加“勿砍”提醒钉。
+- 耗时长的计算分帧进行，游戏不卡，关掉面板也会算完。可以撤销，撤销记录随存档保存。<kbd>Shift</kbd>+<kbd>L</kbd> 打开面板。
+- 原版、迭起兴衰、风云变幻都能用；界面中英双语，跟随游戏语言。
+
+和 Auto Map Tacks Planner、Empire Planner 在同样局面下的对比结果、速度和已知限制，见[介绍与评测](https://smallspider0.github.io/civ6-smart-district-planner/)。
+
+> ⚠️ **一局只开一个规划器**：不要和 Auto Map Tacks Planner、Empire Planner 等区域规划模组同时启用，它们会互相干扰。
+
+## 安装
+
+1. 在创意工坊订阅 [Detailed Map Tacks](https://steamcommunity.com/sharedfiles/filedetails/?id=2428969051)。
+2. 从[发布页](https://github.com/SmallSpider0/civ6-smart-district-planner/releases/latest)下载压缩包，把里面的 `SmartDistrictPlanner` 文件夹放进游戏的 Mods 文件夹：
+   - Windows：`文档\My Games\Sid Meier's Civilization VI\Mods\`
+   - macOS：`~/Library/Application Support/Sid Meier's Civilization VI/Sid Meier's Civilization VI/Mods/`
+3. 主菜单“附加内容”里勾上 Detailed Map Tacks 和“智能区域规划器”，重启游戏。
+
+用法、验收步骤和排错见[安装与使用](docs/install-and-test.md)。问题请在 [Issues](https://github.com/SmallSpider0/civ6-smart-district-planner/issues) 反馈，更新内容见 [CHANGELOG](CHANGELOG.md)。
+
+## 参与开发
+
+先读 [CONTRIBUTING.md](CONTRIBUTING.md)（分支、提交、测试分工、写作规则）和 [AGENTS.md](AGENTS.md)（需求约束、技术方案、模组开发的坑、工作流程）。
 
 | 文档 | 内容 |
 |------|------|
-| [docs/install-and-test.md](docs/install-and-test.md) | 安装、使用、验收测试步骤、排错、已知限制 |
-| [docs/design.md](docs/design.md) | 求解算法、目标函数、与 DMT 的接缝、模块结构 |
-| [docs/multicity-design.md](docs/multicity-design.md) | 多城规划设计（选城址、多城区域、奇观）、求解档位、阶段 8 起的算法与离线基准、实测反馈的改进（第 20 节） |
-| [docs/self-test-report.md](docs/self-test-report.md) | 自测报告：验收清单逐项证据、测试结果、截图 |
-| [CHANGELOG.md](CHANGELOG.md) | 各阶段与各版本改了什么 |
-| [CONTRIBUTING.md](CONTRIBUTING.md) | 参与开发：分支、提交、测试分工、写作规则 |
-| [AGENTS.md](AGENTS.md) | 需求约束、技术方案、模组开发的坑、工作流程 |
 | [docs/dev-macos.md](docs/dev-macos.md)、[docs/dev-windows.md](docs/dev-windows.md) | 两个平台的开发环境 |
-| [tools/README.md](tools/README.md) | 校验、部署、游戏内测试工具 |
+| [tools/README.md](tools/README.md) | 校验、部署、游戏内测试、离线对比等工具 |
+| [docs/design.md](docs/design.md) | 求解算法、目标函数、与 DMT 的接缝、模块结构 |
+| [docs/multicity-design.md](docs/multicity-design.md) | 选城址、多城、奇观、求解档位、离线基准，以及历次实测反馈的改进 |
+| [docs/self-test-report.md](docs/self-test-report.md) | 自测报告：验收清单逐项证据、测试结果、截图 |
 | [civ6-mod-from-scratch-prompt.md](civ6-mod-from-scratch-prompt.md) | 需求文档 |
-
-## 目录
 
 ```
 SmartDistrictPlanner/        模组本体：复制到游戏 Mods 目录即可运行
@@ -53,12 +58,10 @@ SmartDistrictPlanner/        模组本体：复制到游戏 Mods 目录即可运
   Scripts/                   规则、城市扫描、假想钉层、增量评估（SDP_Board）、搜索引擎（SDP_Search）、
                              单城/多城/城址求解器、档位、分帧任务、预览、打钉、提醒钉
 tests/                       游戏内测试（经 FireTuner 执行）；tests/offline 为离线测试与基准，tests/compare 为离线对比
-tools/                       校验、部署、测试运行器、游戏控制、打测试包、路径（paths.py）
-report/                      交付报告的生成脚本与模板（输出到 dist/report/）
-docs/                        设计、安装测试说明、自测报告、截图
+tools/                       校验、部署、测试运行器、游戏控制、打包、路径（paths.py）
+report/                      “介绍与评测”页面的生成脚本与模板（发布时由 GitHub Actions 生成并发布）
+docs/                        设计、安装说明、自测报告、开发环境、截图
 ```
-
-状态：单城、选城址、多城与奇观（阶段 1–12）已完成，合作者两轮 Windows 实测的意见已处理。自动化测试在 macOS 上跑，结果见[自测报告](docs/self-test-report.md)。
 
 ## 许可证
 

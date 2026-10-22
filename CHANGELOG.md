@@ -9,6 +9,8 @@
   - 游戏和 Steam 的位置集中到 `tools/paths.py`，Windows 有了默认位置；`tools/setup_reference.py` 在两个平台上建 `reference/` 链接。
   - `game.py` 的退出、开局、关弹窗可以在 Windows 上用。
   - 文档分成共用约定（AGENTS.md、[CONTRIBUTING.md](CONTRIBUTING.md)）和平台环境（[macOS](docs/dev-macos.md)、[Windows](docs/dev-windows.md)）。
+- 交付报告改写成面向玩家的“介绍与评测”页：前 6 节讲能做什么、安装与使用、和 AMT、Empire Planner 的对比（只写做法差异和实测结果）、速度、已知限制、反馈；技术说明和完整数据放进折叠的附录。验收表以自测报告为准，后续设计选择移到[多城设计第 18.2 节](docs/multicity-design.md#182-现状2026-10-22)，交付物清单删掉。
+- 发布 Release 时自动打包、附上页面，并把页面发布到 GitHub Pages；README 顶部加了下载、介绍与评测、安装三个链接。
 
 ## 2026-10-22（c5e70cb）
 

@@ -1,6 +1,6 @@
 # 设计说明
 
-交付物 3：算法结构、目标函数、与 DMT 的接缝。带图的说明见交付报告第 4 节（`report/part_algo.html`）；各项改动的来龙去脉和实验见 [multicity-design.md](multicity-design.md)。
+交付物 3：算法结构、目标函数、与 DMT 的接缝。带图的说明见[介绍与评测](https://smallspider0.github.io/civ6-smart-district-planner/)页的附录 A（`report/part_algo.html`）；各项改动的来龙去脉和实验见 [multicity-design.md](multicity-design.md)。
 
 ## 模块结构
 

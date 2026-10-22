@@ -1,0 +1,67 @@
+# When a release is published: attach the mod package and the one-file page
+# to it, and publish the page (introduction and evaluation) on GitHub Pages.
+# Run by hand (workflow_dispatch) it rebuilds the page from the chosen ref.
+name: release
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      PYTHONUTF8: "1"
+      VERSION: ${{ github.event.release.tag_name || '' }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: tools/package-lock.json
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Install tool dependencies
+        run: npm ci
+        working-directory: tools
+      - name: Build the page
+        run: |
+          if [ -n "$VERSION" ]; then
+            python -I report/build.py --version "$VERSION" --site _site
+          else
+            python -I report/build.py --site _site
+          fi
+      - name: Build the mod package
+        run: python -I tools/package.py ${VERSION:+--version "$VERSION"}
+      - name: Attach the package and the page to the release
+        if: github.event_name == 'release'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp dist/report/report.html "dist/SmartDistrictPlanner-$VERSION-page.html"
+          gh release upload "$VERSION" "dist/SmartDistrictPlanner-$VERSION.zip" "dist/SmartDistrictPlanner-$VERSION-page.html" --clobber
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
