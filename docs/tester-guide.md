@@ -8,7 +8,7 @@
 
 - `SmartDistrictPlanner/`：模组本体；
 - `TEST_GUIDE.md`：本说明；
-- `INSTALL_AND_USE.md`：完整的安装、用法和 35 步验收清单；
+- `INSTALL_AND_USE.md`：完整的安装、用法和 35 步验收清单；`INSTALL_AND_USE_EN.md` 是简短的英文安装与使用说明；
 - `REPORT.html`：“介绍与评测”页，讲能做什么、怎么用、和 Auto Map Tacks Planner 等的对比结果，附录里有技术说明和完整数据。`REPORT_EN.html` 是它的英文版（没有附录）。
 
 两份说明都是纯文本，用记事本或任何编辑器打开即可。`REPORT.html` 双击用浏览器打开，不需要联网（联网时字体更好看）。

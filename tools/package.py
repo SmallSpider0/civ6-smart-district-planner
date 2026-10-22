@@ -7,6 +7,7 @@ version, by default the short commit hash) says exactly what is inside:
   SmartDistrictPlanner/   the mod, as committed
   TEST_GUIDE.md           docs/tester-guide.md with the version filled in
   INSTALL_AND_USE.md      docs/install-and-test.md (links to other docs made plain text)
+  INSTALL_AND_USE_EN.md   docs/install-en.md, the same way
   REPORT.html             the mod's page (introduction and evaluation) as one self-contained file (report/build.py)
   REPORT_EN.html          the English page (sections 1-6), the same way
 
@@ -38,6 +39,7 @@ import build as report  # noqa: E402
 MOD_NAME = "SmartDistrictPlanner"
 GUIDE = "docs/tester-guide.md"
 INSTALL = "docs/install-and-test.md"
+INSTALL_EN = "docs/install-en.md"
 
 
 def git(*args, text=True):
@@ -61,7 +63,7 @@ def main(argv=None):
     if code != 0:
         print("package: validation failed; run tools/validate.py for the details")
         return 1
-    dirty = git("status", "--porcelain", "--", MOD_NAME, GUIDE, INSTALL, *report.INPUTS).strip()
+    dirty = git("status", "--porcelain", "--", MOD_NAME, GUIDE, INSTALL, INSTALL_EN, *report.INPUTS).strip()
     if dirty:
         print("package: commit these first (the zip is built from the last commit):")
         print(dirty)
@@ -76,6 +78,7 @@ def main(argv=None):
     files = [f for f in files if f]
     guide = git("show", "HEAD:" + GUIDE).replace("{{VERSION}}", commit).replace("{{DATE}}", date)
     install = plain_links(git("show", "HEAD:" + INSTALL))
+    install_en = plain_links(git("show", "HEAD:" + INSTALL_EN))
     page, _data = report.build(make_snapshots=False, version=commit, date=date)
     page_en, _data = report.build(make_snapshots=False, version=commit, date=date, lang="en")
     image = lambda name: git("show", "HEAD:docs/images/" + name, text=False)  # noqa: E731
@@ -97,10 +100,11 @@ def main(argv=None):
                                          check=True, capture_output=True).stdout)
         add(zf, "TEST_GUIDE.md", guide.encode("utf-8"))
         add(zf, "INSTALL_AND_USE.md", install.encode("utf-8"))
+        add(zf, "INSTALL_AND_USE_EN.md", install_en.encode("utf-8"))
         add(zf, "REPORT.html", report_html.encode("utf-8"))
         add(zf, "REPORT_EN.html", report_en.encode("utf-8"))
 
-    print("package: %s (%d mod files + 2 guides + 2 pages, %d KB, commit %s of %s)"
+    print("package: %s (%d mod files + 3 guides + 2 pages, %d KB, commit %s of %s)"
           % (path, len(files), os.path.getsize(path) // 1024, commit, date))
     return 0
 
