@@ -15,8 +15,8 @@
 ## 2. 取代码
 
 ```bat
-git clone https://github.com/<账号>/<仓库>.git
-cd <仓库>\tools
+git clone https://github.com/SmallSpider0/civ6-smart-district-planner.git
+cd civ6-smart-district-planner\tools
 npm ci
 cd ..
 ```
