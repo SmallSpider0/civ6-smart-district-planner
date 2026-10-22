@@ -6,6 +6,8 @@
 
 - 准备上架 Steam 创意工坊：标题、中英简介、预览图和示意图放在 `workshop/`；每个 Release 附带创意工坊提交包，由合作者在 Windows 上上传。
 - “添加奇观”下拉框按时代排列，同一时代按造价从低到高；悬停显示时代（[#7](https://github.com/SmallSpider0/civ6-smart-district-planner/issues/7)）。
+- 选城址：悬停列出每个城址拿到的奢侈、战略资源和份数，标出算作新种类的；行上的奢侈分、战略分按整套方案归属后再算，重叠的资源不再两边都算，各城址的分加起来等于方案总分（[#8](https://github.com/SmallSpider0/civ6-smart-district-planner/issues/8)）。
+- 选城址：悬停分别写出离我方最近的城市或已打城址钉的距离、离本方案其他城址的距离（[#9](https://github.com/SmallSpider0/civ6-smart-district-planner/issues/9)）。
 
 ## v1.0.0（2026-10-22）
 

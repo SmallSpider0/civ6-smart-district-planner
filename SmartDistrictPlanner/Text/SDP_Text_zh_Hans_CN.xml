@@ -338,7 +338,19 @@
       <Text>无水源</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SITES_OWN_DISTANCE" Language="zh_Hans_CN">
-      <Text>离我方最近的城市或城址钉 {1_Distance} 格</Text>
+      <Text>离我方最近的城市或已打的城址钉 {1_Distance} 格</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_SITE_DISTANCE" Language="zh_Hans_CN">
+      <Text>离本方案的其他城址最近 {1_Distance} 格</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_LUXURY" Language="zh_Hans_CN">
+      <Text>奢侈资源（{1_Score} 分）：{2_List}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_STRATEGIC" Language="zh_Hans_CN">
+      <Text>战略资源（{1_Score} 分）：{2_List}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_NEW_KIND" Language="zh_Hans_CN">
+      <Text>{1_Name} {2_Count}（新）</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SITES_UNREVEALED" Language="zh_Hans_CN">
       <Text>三环内有 {1_Count} 格未揭示</Text>

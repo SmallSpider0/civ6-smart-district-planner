@@ -251,6 +251,20 @@ test("city sites tab: solve, select, place the site tacks", function()
     sites.SelectSolution(2)
     T.eq(sites.State().Solution, 2, "second solution selected")
   end
+  -- Tooltips: both distances; the resources each site works (issues 8, 9).
+  local solution = result.Solutions[sites.State().Solution]
+  for s, site in ipairs(solution.Sites) do
+    local tip = sites.State().View.Results[s].ToolTip
+    T.ok(tip:find("LOC_SDP_SITES_OWN_DISTANCE(" .. site.OwnDistance .. ")", 1, true), "distance to our city: " .. tip)
+    T.ok(tip:find("LOC_SDP_SITES_SITE_DISTANCE(" .. site.SiteDistance .. ")", 1, true), "distance to the other site")
+    T.eq(tip:find("LOC_SDP_SITES_LUXURY", 1, true) ~= nil, next(site.Luxury) ~= nil, "a luxury line when it has luxuries")
+    T.eq(tip:find("LOC_SDP_SITES_STRATEGIC", 1, true) ~= nil, next(site.Strategic) ~= nil, "a strategic line likewise")
+    for kind, count in pairs(site.Luxury) do
+      local name = GameInfo.Resources[kind].Name
+      local item = site.NewKinds[kind] and ("LOC_SDP_SITES_NEW_KIND(" .. name .. "," .. count .. ")") or (name .. " " .. count)
+      T.ok(tip:find(item, 1, true), kind .. " listed")
+    end
+  end
   local pins = #w:Pins()
   T.eq(sites.Place(), 2, "two site tacks")
   T.eq(#w:Pins(), pins + 2, "on the map")

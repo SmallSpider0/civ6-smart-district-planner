@@ -220,12 +220,36 @@ local function SiteDetail(site)
     SDP_UI.Number(parts.Water), SDP_UI.Number(parts.Luxury), SDP_UI.Number(parts.Strategic))
 end
 
--- Risk notes and the planned districts, for a site's tooltip (design 3.3).
+-- "Silk 2 (new), Spices 1": resource copies by name; "new" for a kind the
+-- player lacks that counts as new at this site.
+local function ResourceList(copies, newKinds)
+  local list = {}
+  for kind, count in pairs(copies or {}) do
+    local name = SDP_UI.TypeName(kind)
+    list[#list + 1] = (newKinds or {})[kind] and Locale.Lookup("LOC_SDP_SITES_NEW_KIND", name, count)
+      or (name .. " " .. count)
+  end
+  table.sort(list)
+  return table.concat(list, ", ")
+end
+
+-- Risk notes, the resources it works and the planned districts, for a
+-- site's tooltip (design 3.3; issues 8, 9).
 local function SiteToolTip(site)
   local lines = {}
   local info = site.Info
   lines[#lines + 1] = Locale.Lookup("LOC_SDP_SITES_WATER_" .. info.WaterKind)
-  lines[#lines + 1] = Locale.Lookup("LOC_SDP_SITES_OWN_DISTANCE", info.OwnDistance)
+  local own = site.OwnDistance or info.OwnDistance
+  if own ~= nil and own < math.huge then lines[#lines + 1] = Locale.Lookup("LOC_SDP_SITES_OWN_DISTANCE", own) end
+  if site.SiteDistance ~= nil then lines[#lines + 1] = Locale.Lookup("LOC_SDP_SITES_SITE_DISTANCE", site.SiteDistance) end
+  if next(site.Luxury or {}) ~= nil then
+    lines[#lines + 1] = Locale.Lookup("LOC_SDP_SITES_LUXURY", SDP_UI.Number(math.floor(site.Parts.Luxury * 10 + 0.5) / 10),
+      ResourceList(site.Luxury, site.NewKinds))
+  end
+  if next(site.Strategic or {}) ~= nil then
+    lines[#lines + 1] = Locale.Lookup("LOC_SDP_SITES_STRATEGIC",
+      SDP_UI.Number(math.floor(site.Parts.Strategic * 10 + 0.5) / 10), ResourceList(site.Strategic, site.NewKinds))
+  end
   if info.Unrevealed > 0 then lines[#lines + 1] = Locale.Lookup("LOC_SDP_SITES_UNREVEALED", info.Unrevealed) end
   if info.Loyalty ~= nil and info.Loyalty ~= "LOW" then lines[#lines + 1] = Locale.Lookup("LOC_SDP_SITES_LOYALTY_" .. info.Loyalty) end
   if info.Disaster then lines[#lines + 1] = Locale.Lookup("LOC_SDP_SITES_DISASTER") end
