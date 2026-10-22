@@ -8,7 +8,7 @@ A district planner for Civilization VI: pick a city and the districts you want, 
 
 **[Steam Workshop](https://steamcommunity.com/sharedfiles/filedetails/?id=3824473635)** · **[Download](https://github.com/SmallSpider0/civ6-smart-district-planner/releases/latest)** · **[Overview and evaluation](https://smallspider0.github.io/civ6-smart-district-planner/en/)** · **[Install and use](docs/install-en.md)**
 
-![The One city tab: districts in two grids, three plans in the result](docs/images/v6-en-panel-single.jpg)
+![The One city tab: districts in two grids, three plans in the result](docs/images/v7-en-panel-single.jpg)
 
 ### What it does
 

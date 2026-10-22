@@ -64,7 +64,7 @@
       <Text>Effort: {1_Tier}; method: {2_Method}; DMT calls: {3_Calls}; layouts tried: {4_Tries}; search nodes: {5_Nodes}; improved {6_Continues} {6_Continues: plural 1?time; other?times;}</Text>
     </Replace>
     <Replace Tag="LOC_SDP_RESULT_TRUNCATED" Language="en_US">
-      <Text>The search budget ran out; this plan may not be the best one.</Text>
+      <Text>the search budget ran out, so this plan may not be the best one</Text>
     </Replace>
     <Replace Tag="LOC_SDP_RESULT_NEIGHBOUR" Language="en_US">
       <Text>Existing {1_Name} {2_Where}</Text>
@@ -168,7 +168,7 @@
       <Text>Every placement checked: this is the best plan.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_QUALITY_GAP" Language="en_US">
-      <Text>At most {1_Percent}% below the estimated upper bound</Text>
+      <Text>at most {1_Percent}% below the estimated upper bound</Text>
     </Replace>
     <Replace Tag="LOC_SDP_QUALITY_CONVERGED" Language="en_US">
       <Text>the last round found nothing better</Text>
