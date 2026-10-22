@@ -2,7 +2,9 @@
 
 只列要点，细节在链接的设计文档章节里。括号里是这一段的提交。
 
-## 未发布
+## v1.0.0（2026-10-22）
+
+第一个公开版本：[发布页](https://github.com/SmallSpider0/civ6-smart-district-planner/releases/tag/v1.0.0)有压缩包和单文件的介绍与评测页，网页版在 <https://smallspider0.github.io/civ6-smart-district-planner/>。这一版相对上一段只改了仓库和文档，模组本身没有变化。
 
 - 仓库整理，为上 GitHub 和与 Windows 合作开发做准备：
   - 加了 MIT 许可证、`.gitattributes`（统一 LF）、CI（validate 和离线测试，在 Ubuntu 和 Windows 上跑）、Issue 和 PR 模板。
