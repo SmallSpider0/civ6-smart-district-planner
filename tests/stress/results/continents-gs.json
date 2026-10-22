@@ -150,7 +150,7 @@
  "Steps": [
   {
    "Label": "load steps",
-   "Seconds": 0.063,
+   "Seconds": 0.068,
    "Data": {
     "Step": "Loaded"
    }
@@ -509,7 +509,7 @@
   },
   {
    "Label": "single 鹿特丹 FAST pool",
-   "Seconds": 0.037,
+   "Seconds": 0.033,
    "Data": {
     "Adjacency": 3,
     "Appeal": 2,
@@ -539,7 +539,7 @@
   },
   {
    "Label": "single 鹿特丹 STANDARD pool",
-   "Seconds": 0.051,
+   "Seconds": 0.046,
    "Data": {
     "Adjacency": 3,
     "Appeal": 2,
@@ -570,7 +570,7 @@
   },
   {
    "Label": "single 鹿特丹 must",
-   "Seconds": 0.038,
+   "Seconds": 0.031,
    "Data": {
     "Adjacency": 5,
     "Appeal": 1,
@@ -597,7 +597,7 @@
   },
   {
    "Label": "single 格罗�根 FAST pool",
-   "Seconds": 0.039,
+   "Seconds": 0.031,
    "Data": {
     "Adjacency": 5,
     "Appeal": 0,
@@ -627,7 +627,7 @@
   },
   {
    "Label": "single 格罗�根 STANDARD pool",
-   "Seconds": 0.058,
+   "Seconds": 0.047,
    "Data": {
     "Adjacency": 5,
     "Appeal": 0,
@@ -658,7 +658,7 @@
   },
   {
    "Label": "single 格罗�根 must",
-   "Seconds": 0.04,
+   "Seconds": 0.032,
    "Data": {
     "Adjacency": 6,
     "Appeal": 0,
@@ -685,7 +685,7 @@
   },
   {
    "Label": "single 马斯特里赫特 FAST pool",
-   "Seconds": 0.04,
+   "Seconds": 0.032,
    "Data": {
     "Adjacency": 3,
     "Appeal": 3,
@@ -715,7 +715,7 @@
   },
   {
    "Label": "single 马斯特里赫特 STANDARD pool",
-   "Seconds": 0.067,
+   "Seconds": 0.051,
    "Data": {
     "Adjacency": 3,
     "Appeal": 3,
@@ -746,7 +746,7 @@
   },
   {
    "Label": "single 马斯特里赫特 must",
-   "Seconds": 0.055,
+   "Seconds": 0.041,
    "Data": {
     "Adjacency": 7,
     "Appeal": 14,
@@ -774,7 +774,7 @@
   },
   {
    "Label": "single 阿姆斯特丹 FAST pool",
-   "Seconds": 0.05,
+   "Seconds": 0.041,
    "Data": {
     "Adjacency": 12,
     "Appeal": 3,
@@ -805,7 +805,7 @@
   },
   {
    "Label": "single 阿姆斯特丹 STANDARD pool",
-   "Seconds": 0.106,
+   "Seconds": 0.083,
    "Data": {
     "Adjacency": 12,
     "Appeal": 3,
@@ -837,7 +837,7 @@
   },
   {
    "Label": "single 阿姆斯特丹 must",
-   "Seconds": 0.065,
+   "Seconds": 0.048,
    "Data": {
     "Adjacency": 18,
     "Appeal": 15,
@@ -865,7 +865,7 @@
   },
   {
    "Label": "single 海牙 FAST pool",
-   "Seconds": 0.048,
+   "Seconds": 0.037,
    "Data": {
     "Adjacency": 7,
     "Appeal": 0,
@@ -896,7 +896,7 @@
   },
   {
    "Label": "single 海牙 STANDARD pool",
-   "Seconds": 0.122,
+   "Seconds": 0.092,
    "Data": {
     "Adjacency": 7,
     "Appeal": 0,
@@ -928,7 +928,7 @@
   },
   {
    "Label": "single 海牙 must",
-   "Seconds": 0.052,
+   "Seconds": 0.041,
    "Data": {
     "Adjacency": 15,
     "Appeal": 0,
@@ -956,7 +956,7 @@
   },
   {
    "Label": "single 乌得勒支 FAST pool",
-   "Seconds": 0.041,
+   "Seconds": 0.032,
    "Data": {
     "Adjacency": 2,
     "Appeal": 2,
@@ -987,7 +987,7 @@
   },
   {
    "Label": "single 乌得勒支 STANDARD pool",
-   "Seconds": 0.097,
+   "Seconds": 0.073,
    "Data": {
     "Adjacency": 2,
     "Appeal": 2,
@@ -1019,7 +1019,7 @@
   },
   {
    "Label": "single 乌得勒支 must",
-   "Seconds": 0.087,
+   "Seconds": 0.072,
    "Data": {
     "Adjacency": 12,
     "Appeal": 0,
@@ -1047,7 +1047,7 @@
   },
   {
    "Label": "single 鹿特丹 appeal",
-   "Seconds": 0.033,
+   "Seconds": 0.019,
    "Data": {
     "Adjacency": 0,
     "Appeal": 5,
@@ -1107,7 +1107,7 @@
   },
   {
    "Label": "single 鹿特丹 harbor",
-   "Seconds": 0.02,
+   "Seconds": 0.025,
    "Data": {
     "Adjacency": 4,
     "Appeal": 0,
@@ -1137,7 +1137,7 @@
   },
   {
    "Label": "single 格罗�根 appeal",
-   "Seconds": 0.031,
+   "Seconds": 0.025,
    "Data": {
     "Adjacency": 4,
     "Appeal": 4,
@@ -1218,7 +1218,7 @@
   },
   {
    "Label": "single 马斯特里赫特 appeal",
-   "Seconds": 0.05,
+   "Seconds": 0.041,
    "Data": {
     "Adjacency": 2,
     "Appeal": 18,
@@ -1314,7 +1314,7 @@
   },
   {
    "Label": "sites 3 within 8",
-   "Seconds": 0.356,
+   "Seconds": 0.28,
    "Data": {
     "Calls": 4266,
     "D": 8,
@@ -1329,7 +1329,7 @@
   },
   {
    "Label": "place sites",
-   "Seconds": 0.029,
+   "Seconds": 0.019,
    "Data": {
     "Placed": 0,
     "Step": "PlaceSites"
@@ -1337,7 +1337,7 @@
   },
   {
    "Label": "multi 4 cities standard",
-   "Seconds": 0.368,
+   "Seconds": 0.313,
    "Data": {
     "Adjacency": 28,
     "Appeal": 1,
@@ -1361,7 +1361,7 @@
   },
   {
    "Label": "place multi",
-   "Seconds": 0.028,
+   "Seconds": 0.024,
    "Data": {
     "Placed": 10,
     "Step": "PlaceMulti"
@@ -1369,12 +1369,12 @@
   },
   {
    "Label": "settle after place multi",
-   "Seconds": 0.068,
+   "Seconds": 0.061,
    "Data": null
   },
   {
    "Label": "multi 8 cities standard",
-   "Seconds": 0.581,
+   "Seconds": 0.521,
    "Data": {
     "Adjacency": 35,
     "Appeal": -1,
@@ -1398,7 +1398,7 @@
   },
   {
    "Label": "multi 4 cities fine",
-   "Seconds": 0.027,
+   "Seconds": 0.032,
    "Data": {
     "Adjacency": 0,
     "Calls": 124,
@@ -1421,7 +1421,7 @@
   },
   {
    "Label": "heavy pins",
-   "Seconds": 0.268,
+   "Seconds": 0.247,
    "Data": {
     "Placed": 72,
     "Step": "HeavyPins"
@@ -1429,12 +1429,12 @@
   },
   {
    "Label": "settle after heavy pins",
-   "Seconds": 5.928,
+   "Seconds": 5.835,
    "Data": null
   },
   {
    "Label": "single 鹿特丹 pool, crowded",
-   "Seconds": 0.068,
+   "Seconds": 0.047,
    "Data": {
     "Adjacency": 0,
     "Asked": 2,
@@ -1459,7 +1459,7 @@
   },
   {
    "Label": "multi 4 cities, crowded",
-   "Seconds": 0.033,
+   "Seconds": 0.023,
    "Data": {
     "Adjacency": 0,
     "Calls": 114,
@@ -1497,7 +1497,7 @@
    }
   }
  ],
- "When": "2026-10-22 07:33",
+ "When": "2026-10-22 17:17",
  "AppealCheck": [
   {
    "City": 131073,
