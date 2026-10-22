@@ -10,7 +10,10 @@ Nothing here talks to Steam: the package is uploaded by hand on Windows
     python3 -I tools/workshop.py vdf DIR          # DIR/item.vdf with this machine's absolute paths
 
 workshop/ holds what goes to the item page:
-  title.txt, description.bbcode   title and description (Steam BBCode, English then Chinese)
+  title.txt, description.bbcode   English title and description (Steam BBCode); uploaded with the package
+  title_zh.txt, description_zh.bbcode
+                                  the Simplified Chinese version, entered on the item page by hand
+                                  (SteamCMD has no field for other languages)
   changenotes/<version>.txt       the update note for each release
   item.json                       app id and, once the item exists, its id (publishedfileid)
   images.txt                      the pictures to add on the item page, in order
@@ -65,21 +68,24 @@ def images():
     return out
 
 
-def check_text(errors, label, text, limit):
+def check_text(errors, label, text, limit, english=False):
     if len(text) > limit or len(text.encode("utf-8")) > limit:
         errors.append("%s: %d characters, %d UTF-8 bytes (limit %d)" % (label, len(text), len(text.encode("utf-8")), limit))
     # Values go into item.vdf between double quotes; keep them free of what would need escaping.
     if '"' in text or "\\" in text:
         errors.append('%s: contains " or \\ (not allowed in item.vdf)' % label)
+    if english and re.search("[\u3000-\u9fff\uff00-\uffef]", text):
+        errors.append("%s: Chinese text in the English version (it goes into the _zh file)" % label)
 
 
 def check(_args=None):
     errors, notes = [], []
-    title = read(os.path.join(WS, "title.txt"))
-    check_text(errors, "title.txt", title, TITLE_MAX)
-    desc = read(os.path.join(WS, "description.bbcode"))
-    check_text(errors, "description.bbcode", desc, TEXT_MAX)
-    notes.append("description: %d characters, %d UTF-8 bytes" % (len(desc), len(desc.encode("utf-8"))))
+    for name, limit, english in (("title.txt", TITLE_MAX, True), ("description.bbcode", TEXT_MAX, True),
+                                 ("title_zh.txt", TITLE_MAX, False), ("description_zh.bbcode", TEXT_MAX, False)):
+        text = read(os.path.join(WS, name))
+        check_text(errors, name, text, limit, english)
+        if name.startswith("description"):
+            notes.append("%s: %d characters, %d UTF-8 bytes" % (name, len(text), len(text.encode("utf-8"))))
     for name in sorted(os.listdir(os.path.join(WS, "changenotes"))):
         check_text(errors, "changenotes/" + name, read(os.path.join(WS, "changenotes", name)), TEXT_MAX)
     for src in ["workshop/preview.jpg"] + [s for s, _ in images()]:
@@ -168,6 +174,21 @@ def changelog_ok(version):
     return ("## " + version) in read(os.path.join(ROOT, "CHANGELOG.md"))
 
 
+def zh_note(version, first):
+    """What the uploader does about the Chinese version, which the package cannot set."""
+    if first:
+        return "第一次上传：上传后在物品页添加简体中文版本（见下文）"
+    try:
+        prev = git("describe", "--tags", "--abbrev=0", version + "^").strip()
+    except subprocess.CalledProcessError:
+        prev = ""
+    if not prev:
+        return "没有更早的版本可比，上传后到物品页核对简体中文版本（见下文）"
+    if git("diff", "--name-only", prev, "HEAD", "--", "workshop/title_zh.txt", "workshop/description_zh.bbcode").strip():
+        return "自 %s 以来有改动，上传后到物品页更新简体中文版本（见下文）" % prev
+    return "自 %s 以来没有改动，物品页的中文版本不用动" % prev
+
+
 def pack(args):
     version = args.version
     if check() != 0:
@@ -222,12 +243,15 @@ def pack(args):
             add(zf, "images/" + arc, git("show", "HEAD:" + src, binary=True))
         add(zf, "title.txt", (read(os.path.join(WS, "title.txt")) + "\n").encode("utf-8"))
         add(zf, "description.txt", (read(os.path.join(WS, "description.bbcode")) + "\n").encode("utf-8"))
+        add(zf, "title_zh.txt", (read(os.path.join(WS, "title_zh.txt")) + "\n").encode("utf-8"))
+        add(zf, "description_zh.txt", (read(os.path.join(WS, "description_zh.bbcode")) + "\n").encode("utf-8"))
         add(zf, "changenote.txt", (read(note_path) + "\n").encode("utf-8"))
         add(zf, "item.vdf.template", vdf.encode("utf-8"))
         guide = re.sub(r"<!--.*?-->\n*", "", read(os.path.join(ROOT, "docs", "workshop-upload.md")), flags=re.S)
         guide = guide.replace("{{VERSION}}", version).replace("{{MOD_VERSION}}", mod_version)
         guide = guide.replace("{{UPLOAD}}", "第一次上传（新建物品，可见性：私密）" if first else
                               "更新已有物品 %s" % item["publishedfileid"])
+        guide = guide.replace("{{ZH}}", zh_note(version, first))
         add(zf, "UPLOAD.md", (guide + "\n").encode("utf-8"))
     print("workshop: %s (%d mod files from tag %s, modinfo version %s, %s, %d KB)" % (
         os.path.relpath(path, ROOT), files, version, mod_version,

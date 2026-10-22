@@ -140,7 +140,7 @@ python3 -I tools/workshop.py pack v1.0.0      # dist/SmartDistrictPlanner-v1.0.0
 python3 -I tools/workshop.py vdf 解压目录      # 在解压后的提交包里写出带本机绝对路径的 item.vdf
 ```
 
-- 素材在 `workshop/`：`title.txt`、`description.bbcode`（Steam BBCode，英文在前）、`changenotes/<版本>.txt`、`item.json`（app id，第一次上传后填物品编号）、`images.txt`（物品页图片的顺序，截图直接引用 `docs/images/`）、`preview.jpg` 和 `images/`（由 `src/` 下的 HTML 渲染，渲染结果要提交）。
+- 素材在 `workshop/`：`title.txt`、`description.bbcode`（英文标题和简介，Steam BBCode，随包上传）、`title_zh.txt`、`description_zh.bbcode`（简体中文版本，SteamCMD 不能分语言上传，在物品页上手动填）、`changenotes/<版本>.txt`、`item.json`（app id，第一次上传后填物品编号）、`images.txt`（物品页图片的顺序，截图直接引用 `docs/images/`）、`preview.jpg` 和 `images/`（由 `src/` 下的 HTML 渲染，渲染结果要提交）。
 - 限制：标题不超过 128 字符；简介和更新说明不超过 8000（字符数和 UTF-8 字节数都算）；预览图和其他图片都小于 1 MB；文字里不能有 ASCII 双引号和反斜杠，因为它们会原样写进 `item.vdf`。
 - `pack` 的模组文件从 tag 导出（`git archive`），其余取最近一次提交，所以提交包总是和某个 Release 对应；缺更新说明、CHANGELOG 里没有这一版或 `workshop/` 有未提交的改动时拒绝打包。物品编号为空时生成“新建、私密”的配置，有编号时生成“更新已有物品”的配置。
 - 发布 Release 时工作流自动打包并附到 Release。上传在 Windows 上手动做，步骤见 [docs/workshop-upload.md](../docs/workshop-upload.md)；提交包里的 `UPLOAD.md` 就是它。
