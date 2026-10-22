@@ -20,12 +20,12 @@
 
 ## 安装
 
-1. 在 Steam 创意工坊订阅 Detailed Map Tacks。
-2. 把整个 `SmartDistrictPlanner/` 文件夹复制到本地 Mods 目录：
+1. 在 Steam 创意工坊订阅[智能区域规划器](https://steamcommunity.com/sharedfiles/filedetails/?id=3824473635)和 Detailed Map Tacks。
+2. 不用创意工坊时：把整个 `SmartDistrictPlanner/` 文件夹复制到本地 Mods 目录（DMT 仍要在创意工坊订阅）：
    - Windows：`文档\My Games\Sid Meier's Civilization VI\Mods\`
    - macOS：`~/Library/Application Support/Sid Meier's Civilization VI/Sid Meier's Civilization VI/Mods/`
 
-   复制后应为 `Mods\SmartDistrictPlanner\SmartDistrictPlanner.modinfo`。开发者可以直接运行 `python3 -I tools/deploy.py`。
+   复制后应为 `Mods\SmartDistrictPlanner\SmartDistrictPlanner.modinfo`。开发者可以直接运行 `python3 -I tools/deploy.py`。只留一份：Mods 里和创意工坊都有时，游戏加载 Mods 里那份，在“额外内容”里启用哪一份都一样（2026-10-22 在 macOS 上实测）；改用创意工坊版时先删掉 Mods 里的文件夹。
 3. 启动游戏，进入主菜单的"额外内容"，确认 **Detailed Map Tacks** 和 **智能区域规划器** 都已启用。
    - 新安装的模组在自建的模组组里默认**未启用**，需要手动勾选；在默认组里则会自动启用。
    - 修改模组启用状态或更新 modinfo 后需要重启游戏。

@@ -14,12 +14,12 @@ Do not enable Smart District Planner together with Auto Map Tacks Planner, Empir
 
 ## Install
 
-1. Subscribe to Detailed Map Tacks on the Steam Workshop.
-2. Download `SmartDistrictPlanner-<version>.zip` from the [releases page](https://github.com/SmallSpider0/civ6-smart-district-planner/releases/latest) and copy the `SmartDistrictPlanner` folder in it into the game's Mods folder:
+1. Subscribe to [Smart District Planner](https://steamcommunity.com/sharedfiles/filedetails/?id=3824473635) and Detailed Map Tacks on the Steam Workshop.
+2. Without the Workshop: download `SmartDistrictPlanner-<version>.zip` from the [releases page](https://github.com/SmallSpider0/civ6-smart-district-planner/releases/latest) and copy the `SmartDistrictPlanner` folder in it into the game's Mods folder (Detailed Map Tacks is still needed from the Workshop):
    - Windows: `Documents\My Games\Sid Meier's Civilization VI\Mods\`
    - macOS: `~/Library/Application Support/Sid Meier's Civilization VI/Sid Meier's Civilization VI/Mods/`
 
-   You should end up with `Mods/SmartDistrictPlanner/SmartDistrictPlanner.modinfo`. To update, delete the old folder first. If you subscribed to the planner on the Steam Workshop, skip this step.
+   You should end up with `Mods/SmartDistrictPlanner/SmartDistrictPlanner.modinfo`. To update, delete the old folder first. Keep only one copy: when you switch to the Workshop, delete this folder, otherwise the game can keep loading it.
 3. Start the game, open **Additional Content** from the main menu and enable both **Detailed Map Tacks** and **Smart District Planner**. In a mod group you created yourself, new mods start disabled. Restart the game after enabling or updating mods.
 
 ## Open the panel
