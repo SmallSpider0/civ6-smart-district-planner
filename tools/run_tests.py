@@ -39,6 +39,15 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TESTS_DIR = os.path.join(ROOT, "tests")
 SEP = "\x1f"  # ASCII unit separator: cannot clash with test names or messages
 PREFIX = "SDP_TEST" + SEP
+MOD_ID = "d2b8b724-4174-42cb-943c-8036778c68ba"
+# With two copies of the mod installed (Mods and Workshop) the game loads the
+# one it registered first, whichever is enabled: its enabled list keeps only
+# the mod ID (checked 2026-10-22). Tests must not run a Workshop copy's code.
+LOADED_COPY = """
+for _, v in ipairs(Modding.GetActiveMods()) do
+  if v.Id == "%s" then print("SDP_COPY " .. tostring(v.SubscriptionId or "")) end
+end
+""" % MOD_ID
 # Frames of the harness itself in HavokScript's automatic tracebacks.
 HARNESS_FRAME = re.compile(r"^\s*(tuner:\d+:|\[C\]: in function 'pcall'|\[string \"local __src)")
 
@@ -158,6 +167,17 @@ def run_fixture(spec, label):
     return None if resp.get("ok") else "%s %s: %s" % (label, rel, resp.get("error"))
 
 
+def workshop_copy():
+    """The Workshop item ID when the game in progress runs a Workshop copy of the mod."""
+    resp = civ6tuner.request({"op": "exec", "state": "InGame", "code": LOADED_COPY, "timeout": 10})
+    if not resp.get("ok"):
+        return None  # no game in progress: the test files report that themselves
+    for line in resp.get("output") or []:
+        if line.startswith("SDP_COPY ") and line[len("SDP_COPY "):].strip():
+            return line[len("SDP_COPY "):].strip()
+    return None
+
+
 def run_file(path, name_filter, verbose):
     """Returns (counts dict, exit kind or None)."""
     counts = {"PASS": 0, "FAIL": 0, "SKIP": 0, "ERROR": 0}
@@ -225,6 +245,11 @@ def main(argv=None):
     files = args.files or sorted(glob.glob(os.path.join(TESTS_DIR, "**", "test_*.lua"), recursive=True))
     if not files:
         print("run_tests: no test files found")
+        return 1
+    item = workshop_copy()
+    if item:
+        print("run_tests: the game runs the Workshop copy of the mod (item %s), not the one deploy.py put "
+              "in Mods. Unsubscribe it and remove its folder (AGENTS.md section 6), then start a new game." % item)
         return 1
     total = {"PASS": 0, "FAIL": 0, "SKIP": 0, "ERROR": 0}
     for path in files:

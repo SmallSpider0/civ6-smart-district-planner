@@ -407,6 +407,25 @@ def check_controls(report, mod_dir, trees):
                         report.error(path, lineno, "ui", "Controls.%s is not an ID in the UI XML" % name)
 
 
+def check_version(report, mod_dir):
+    """The release in the launch bar tooltip (VERSION in UI/SDP_Panel.lua) is
+    the newest version in CHANGELOG.md, so a bug report can name the copy the
+    game loaded (issue 27)."""
+    panel = os.path.join(mod_dir, "UI", "SDP_Panel.lua")
+    changelog = os.path.join(ROOT, "CHANGELOG.md")
+    if not (os.path.isfile(panel) and os.path.isfile(changelog)):
+        return
+    with open(panel, encoding="utf-8") as f:
+        found = re.search(r'^local VERSION = "(v[0-9.]+)"', f.read(), re.M)
+    with open(changelog, encoding="utf-8") as f:
+        newest = re.search(r"^## (v[0-9]+\.[0-9]+\.[0-9]+)", f.read(), re.M)
+    if found is None:
+        report.error(panel, 0, "version", 'no line local VERSION = "vX.Y.Z"')
+    elif newest is not None and found.group(1) != newest.group(1):
+        report.error(panel, 0, "version", "VERSION is %s, the newest version in CHANGELOG.md is %s"
+                     % (found.group(1), newest.group(1)))
+
+
 def check_lua(report, paths):
     if not paths:
         return True
@@ -443,6 +462,7 @@ def run(mod_dir=MOD_DIR, tests_dir=TESTS_DIR, strict=False, quiet=False):
     trees = check_xml(report, xml_paths)
     if os.path.isdir(mod_dir):
         check_mod(report, mod_dir, trees)
+        check_version(report, mod_dir)
     if any(root.tag == "Context" for root in trees.values()):
         check_ui(report, trees, ui_precedents())
         check_click_cover(report, trees)

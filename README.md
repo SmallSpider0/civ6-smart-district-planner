@@ -40,7 +40,7 @@ Without the Workshop, download the zip from the [releases page](https://github.c
 - Windows: `Documents\My Games\Sid Meier's Civilization VI\Mods\`
 - macOS: `~/Library/Application Support/Sid Meier's Civilization VI/Sid Meier's Civilization VI/Mods/`
 
-Keep only one copy: when you switch to the Workshop, delete that folder from Mods, otherwise the game can keep loading it.
+Keep only one copy: with one in Mods and one from the Workshop, the game loads only one of them, not necessarily the newer one or the one you enabled. When you switch to the Workshop, delete that folder from Mods.
 
 How to use each tab, known limitations and troubleshooting: [install and use](docs/install-en.md). Report problems on [Issues](https://github.com/SmallSpider0/civ6-smart-district-planner/issues), in English or Chinese. Each [release](https://github.com/SmallSpider0/civ6-smart-district-planner/releases) lists its changes in English and Chinese; the [CHANGELOG](CHANGELOG.md) is in Chinese.
 
@@ -102,7 +102,7 @@ The development documents are in Chinese; issues and pull requests in English ar
 - Windows：`文档\My Games\Sid Meier's Civilization VI\Mods\`
 - macOS：`~/Library/Application Support/Sid Meier's Civilization VI/Sid Meier's Civilization VI/Mods/`
 
-只留一份：改用创意工坊版时，把 Mods 里的这个文件夹删掉，否则游戏可能一直加载它。
+只留一份：Mods 里和创意工坊各有一份时，游戏只加载其中一份，不一定是新的，也不一定是你启用的那份。改用创意工坊版时，把 Mods 里的这个文件夹删掉。
 
 用法、验收步骤和排错见[安装与使用](docs/install-and-test.md)。问题请在 [Issues](https://github.com/SmallSpider0/civ6-smart-district-planner/issues) 反馈，更新内容见 [CHANGELOG](CHANGELOG.md)。
 

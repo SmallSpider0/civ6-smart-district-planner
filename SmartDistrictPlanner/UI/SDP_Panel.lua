@@ -26,6 +26,10 @@ include("SDP_Preview")
 
 local LAUNCH_BAR_STACK = "/InGame/LaunchBar/ButtonStack"
 local MAX_WEIGHT = 3
+-- The release, in the launch bar button's tooltip, so that a report says
+-- which copy the game loaded (issue 27). tools/validate.py checks it against
+-- the newest version in CHANGELOG.md.
+local VERSION = "v1.1.0"
 
 -- The weight row (feedback item 3): the six yields with the game's font
 -- icons, one family (the texture icons cover only some yields: requirements
@@ -358,7 +362,7 @@ local UpdateEstimate -- defined below
 -- and the mark that a result is ready.
 local function LaunchToolTip(text)
   if m_launchItem.LaunchItemButton ~= nil then
-    m_launchItem.LaunchItemButton:SetToolTipString(text or Locale.Lookup("LOC_SDP_LAUNCHBAR_TOOLTIP"))
+    m_launchItem.LaunchItemButton:SetToolTipString(text or Locale.Lookup("LOC_SDP_LAUNCHBAR_TOOLTIP", VERSION))
   end
 end
 
@@ -1348,6 +1352,7 @@ local function InjectLaunchButton()
 
   ContextPtr:BuildInstanceForControl("SDP_LaunchBarItem", m_launchItem, stack)
   ContextPtr:BuildInstanceForControl("SDP_LaunchBarPin", m_launchPin, stack)
+  LaunchToolTip()
   m_launchItem.LaunchItemIcon:SetIcon("ICON_MAP_PIN_DISTRICT")
   m_launchItem.LaunchItemButton:RegisterCallback(Mouse.eLClick, Toggle)
   m_launchItem.LaunchItemButton:RegisterCallback(Mouse.eMouseEnter, function()

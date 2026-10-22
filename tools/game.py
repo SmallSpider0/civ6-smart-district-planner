@@ -287,6 +287,10 @@ def cmd_newgame(args):
 
 
 def start_game(args):
+    # Called inside a game, leave it first: waiting for the main menu would
+    # only run into the timeout (2026-10-22).
+    if has_state("InGame") and cmd_menu(args) != 0:
+        return 2
     if not wait_for("main menu", lambda: has_state("MainMenu"), args.timeout):
         return 2
     ruleset = 'GameConfiguration.SetValue("RULESET", "%s")' % args.ruleset if args.ruleset else ""

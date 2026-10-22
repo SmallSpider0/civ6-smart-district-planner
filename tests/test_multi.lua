@@ -90,6 +90,73 @@ test("a plan for both: legal, one subject per plot, not worse than city by city"
   end)
 end)
 
+-- A city-center pin 4 plots from the capital: its first ring meets the
+-- capital's three rings.
+local function WithNearSitePin(fn)
+  local city = Capital()
+  local list = SDP_Sites.Candidates(pid, { K = 1, D = 8 })
+  local site = nil
+  for _, c in ipairs(list) do
+    if site == nil and Map.GetPlotDistance(c.X, c.Y, city:GetX(), city:GetY()) == 4 then site = c end
+  end
+  if site == nil then T.skip("no site candidate 4 plots from the capital") end
+  local cfg = PlayerConfigurations[pid]
+  local pin = cfg:GetMapPin(site.X, site.Y)
+  pin:SetIconName("ICON_DISTRICT_CITY_CENTER")
+  pin:SetName("SDP test site")
+  Network.BroadcastPlayerInfo()
+  LuaEvents.DMT_MapPinAdded(pin)
+  local pinID = pin:GetID()
+  local ok, err = pcall(fn, city, site)
+  LuaEvents.DMT_MapPinRemoved(cfg:GetMapPinID(pinID))
+  cfg:DeleteMapPin(pinID)
+  Network.BroadcastPlayerInfo()
+  if not ok then error(err, 0) end
+end
+
+test("a planned city's free first-ring plots stay out of the other cities' plans (issue 26)", function()
+  WithNearSitePin(function(city, site)
+    local scan = SDP_City.Scan(pid, city:GetID())
+    local free = {}
+    for _, e in ipairs(SDP_City.PlotsInRange(site.X, site.Y, 1)) do
+      if Map.GetPlotDistance(e.X, e.Y, city:GetX(), city:GetY()) <= SDP_City.RADIUS
+          and Map.GetPlotByIndex(e.Index):GetOwner() == -1 then
+        free[e.Index] = true
+        local reason = scan.Excluded[e.Index]
+        T.ok(reason ~= nil, "free plot " .. e.X .. "," .. e.Y .. " next to the site is a candidate of the capital")
+      end
+    end
+    local result = SDP_Multi.Solve({ PlayerID = pid, Tier = "FAST",
+      Districts = Types({ "DISTRICT_CAMPUS", "DISTRICT_HOLY_SITE", "DISTRICT_COMMERCIAL_HUB", "DISTRICT_THEATER" }) })
+    T.ok(result.Ok, tostring(result.Error))
+    for _, p in ipairs(result.Plan) do
+      T.ok(not (p.City == "C" .. city:GetID() and free[p.Index]),
+        "the capital's " .. p.Type .. " on the site's free plot " .. p.X .. "," .. p.Y)
+    end
+  end)
+end)
+
+test("a government plaza every city asks for goes to one; the others fill their count (issue 28)", function()
+  WithSitePin(function()
+    local plaza = Types({ "DISTRICT_GOVERNMENT" })[1]
+    if plaza == nil then T.skip("no government plaza in this ruleset") end
+    local result = SDP_Multi.Solve({ PlayerID = pid, Tier = "FAST", Count = 3,
+      Districts = { plaza, Types({ "DISTRICT_CAMPUS" })[1] },
+      Pool = Types({ "DISTRICT_HOLY_SITE", "DISTRICT_THEATER", "DISTRICT_COMMERCIAL_HUB", "DISTRICT_INDUSTRIAL_ZONE" }) })
+    T.ok(result.Ok, tostring(result.Error))
+    local perCity, plazas = {}, {}
+    for _, p in ipairs(result.Plan) do
+      local row = GameInfo.Districts[p.Type]
+      if row ~= nil and row.RequiresPopulation then perCity[p.City] = (perCity[p.City] or 0) + 1 end
+      if p.Type == plaza then plazas[#plazas + 1] = p.City end
+    end
+    T.same(plazas, { result.Cities[1].Key }, "one plaza, in the first city of the list")
+    for _, c in ipairs(result.Cities) do
+      T.eq(perCity[c.Key], 3, c.Name .. ": districts that take population")
+    end
+  end)
+end)
+
 test("wonders: legal where placed, built ones left out", function()
   WithSitePin(function()
     local wonders = {}

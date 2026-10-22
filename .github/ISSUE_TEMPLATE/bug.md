@@ -7,7 +7,7 @@ labels: bug
 <!-- 中文或英文都可以。 / Chinese or English are both fine. -->
 
 **版本 / Versions**
-- 模组版本 / Mod version（Release 版本号如 v1.0.0；从创意工坊订阅的写“创意工坊”和更新日期 / the release, such as v1.0.0; from the Steam Workshop, write "Workshop" and its update date）:
+- 模组版本 / Mod version（悬停启动栏的六边形按钮可以看到，如 v1.1.1 / hover the hexagon button on the toolbar, such as v1.1.1）:
 - 游戏版本和平台 / Game version and platform（主菜单右下角；Windows / macOS / bottom right of the main menu; Windows / macOS）:
 - 规则集 / Ruleset（原版 / 迭起兴衰 / 风云变幻 / base game / Rise and Fall / Gathering Storm）:
 - 同时启用的其他模组 / Other mods enabled:

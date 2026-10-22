@@ -9,8 +9,9 @@
 --                 cannot use plots of existing cities. Plots two cities can
 --                 reach may go to either, one subject per plot.
 --   Slots         (city, district) for every city's plan. A district with an
---                 empire limit (government plaza) gets the slots the limit
---                 leaves, each allowed in every city that plans it.
+--                 empire limit (government plaza) goes to the first cities
+--                 that ask for it, as many as the limit leaves; the others
+--                 take a candidate instead (issue 28).
 --   Objective     SDP_Board's exact DMT gain over all fixed subjects of all
 --                 participants, plus each city's land part (a plot two
 --                 cities could work counts for the nearer one), plus, when
@@ -42,24 +43,9 @@ local function DefaultWeights(weights)
   return out
 end
 
--- The player's city-center map pins that are not cities yet, sorted by plot
--- index: { X, Y, Index, Name, PinID }. A pin is a city center when DMT reads
--- it as one (CreateMapPinSubject: the city center icon, or DMT's own
--- convention for goody hut / barbarian icons named "City...").
+-- The planned cities: SDP_City.Sites.
 function SDP_Multi.Sites(playerID)
-  local list = {}
-  for _, pin in pairs(PlayerConfigurations[playerID]:GetMapPins()) do
-    local subject = CreateMapPinSubject(pin)
-    if subject ~= nil and subject.Type == "DISTRICT" and subject.Key == "DISTRICT_CITY_CENTER" then
-      local x, y = pin:GetHexX(), pin:GetHexY()
-      local plot = Map.GetPlot(x, y)
-      if plot ~= nil and not plot:IsCity() then
-        list[#list + 1] = { X = x, Y = y, Index = plot:GetIndex(), Name = pin:GetName() or "", PinID = pin:GetID() }
-      end
-    end
-  end
-  table.sort(list, function(a, b) return a.Index < b.Index end)
-  return list
+  return SDP_City.Sites(playerID)
 end
 
 -- Who takes part. options.Existing = { [cityID] = true | false } overrides
@@ -199,7 +185,21 @@ function SDP_Multi.NewSession(request)
   for _, d in ipairs(plannable) do byType[d.Type] = d end
   local unplaced = {}
   self.Auto = {}
-  for _, part in ipairs(participants) do
+  local builtByPlayer = {}
+  for _, district in Players[playerID]:GetDistricts():Members() do
+    local districtType = GameInfo.Districts[district:GetType()].DistrictType
+    builtByPlayer[districtType] = (builtByPlayer[districtType] or 0) + 1
+  end
+  local pinnedAnywhere = {}
+  for _, pin in pairs(PlayerConfigurations[playerID]:GetMapPins()) do
+    -- Pins being replaced (this mod's earlier ones) do not count.
+    if not (options.ignorePins and options.ignorePins[pin:GetID()]) then
+      local key = (pin:GetIconName() or ""):gsub("^ICON_", "")
+      pinnedAnywhere[key] = (pinnedAnywhere[key] or 0) + 1
+    end
+  end
+  local asked = {} -- per participant: what the candidates below need to know
+  for p, part in ipairs(participants) do
     local wanted = (request.Plans and request.Plans[part.Key]) or request.Districts or {}
     local count = (request.Counts and request.Counts[part.Key]) or request.Count or 0
     local specialty = 0
@@ -250,6 +250,42 @@ function SDP_Multi.NewSession(request)
         part.Auto[d.Type] = true
       end
     end
+    part.Plan = plan
+    asked[p] = { Count = count, Seen = seen, Kept = kept, Status = status, PinnedHere = pinnedHere }
+  end
+
+  -- A district with an empire limit (government plaza, diplomatic quarter)
+  -- asked by more cities than the limit leaves goes to the first of them in
+  -- participant order (the top of the panel's list); the others drop it and
+  -- take a candidate in its place, so every city still gets its count (issue
+  -- 28). To put it in another city, give that city a list of its own.
+  local left = {}
+  for p, part in ipairs(participants) do
+    local plan = {}
+    for _, districtType in ipairs(part.Plan) do
+      local row = byType[districtType]
+      if row.MaxPerPlayer and row.MaxPerPlayer > 0 then
+        if left[districtType] == nil then
+          left[districtType] = row.MaxPerPlayer - (builtByPlayer[districtType] or 0) - (pinnedAnywhere[districtType] or 0)
+        end
+        if left[districtType] > 0 then
+          left[districtType] = left[districtType] - 1
+          plan[#plan + 1] = districtType
+        else
+          unplaced[#unplaced + 1] = { City = part.Key, Type = districtType, Reason = "MAX_PER_PLAYER" }
+          asked[p].Kept[districtType] = nil
+        end
+      else
+        plan[#plan + 1] = districtType
+      end
+    end
+    part.Plan = plan
+  end
+
+  for p, part in ipairs(participants) do
+    local count, seen, kept, status, pinnedHere =
+      asked[p].Count, asked[p].Seen, asked[p].Kept, asked[p].Status, asked[p].PinnedHere
+    local plan = part.Plan
     -- Candidates (feedback item 11): districts that take population, not
     -- required, plannable here, without an empire limit.
     local requiredSpecialty = 0
@@ -274,7 +310,6 @@ function SDP_Multi.NewSession(request)
     end
     part.Pick = math.max(0, math.min(count - requiredSpecialty, fit))
     part.Pool = part.Pick > 0 and pool or {}
-    part.Plan = plan
   end
   self.Unplaced = unplaced
 
@@ -353,35 +388,13 @@ function SDP_Multi.NewSession(request)
       IgnorePins = options.ignorePins })
   end
 
-  -- Slots. Districts with an empire limit get the slots the limit leaves.
-  local builtByPlayer = {}
-  for _, district in Players[playerID]:GetDistricts():Members() do
-    local districtType = GameInfo.Districts[district:GetType()].DistrictType
-    builtByPlayer[districtType] = (builtByPlayer[districtType] or 0) + 1
-  end
-  local pinnedAnywhere = {}
-  for _, pin in pairs(PlayerConfigurations[playerID]:GetMapPins()) do
-    -- Pins being replaced (this mod's earlier ones) do not count.
-    if not (options.ignorePins and options.ignorePins[pin:GetID()]) then
-      local key = (pin:GetIconName() or ""):gsub("^ICON_", "")
-      pinnedAnywhere[key] = (pinnedAnywhere[key] or 0) + 1
-    end
-  end
-  local slots, slotCity, limited, limitedOrder = {}, {}, {}, {}
+  -- Slots: every city's plan (an empire limit already shared out above),
+  -- then its candidates.
+  local slots, slotCity = {}, {}
   for p, part in ipairs(participants) do
     for _, districtType in ipairs(part.Plan) do
-      local row = byType[districtType]
-      if row.MaxPerPlayer and row.MaxPerPlayer > 0 then
-        if limited[districtType] == nil then
-          limited[districtType] = {}
-          limitedOrder[#limitedOrder + 1] = districtType
-        end
-        local list = limited[districtType]
-        list[#list + 1] = p
-      else
-        slots[#slots + 1] = { Key = districtType, Type = "DISTRICT", Group = p, Allowed = part.Allowed }
-        slotCity[#slots] = p
-      end
+      slots[#slots + 1] = { Key = districtType, Type = "DISTRICT", Group = p, Allowed = part.Allowed }
+      slotCity[#slots] = p
     end
   end
   local pools = nil
@@ -393,22 +406,6 @@ function SDP_Multi.NewSession(request)
     if part.Pick > 0 then
       pools = pools or {}
       pools[p] = part.Pick
-    end
-  end
-  for _, districtType in ipairs(limitedOrder) do
-    local parts = limited[districtType]
-    local left = byType[districtType].MaxPerPlayer - (builtByPlayer[districtType] or 0) - (pinnedAnywhere[districtType] or 0)
-    local allowed = {}
-    for _, p in ipairs(parts) do
-      for i in pairs(participants[p].Allowed) do allowed[i] = true end
-    end
-    for n = 1, #parts do
-      if n <= left then
-        slots[#slots + 1] = { Key = districtType, Type = "DISTRICT", Group = parts[1], Allowed = allowed, Limited = true }
-        slotCity[#slots] = parts[1]
-      else
-        unplaced[#unplaced + 1] = { City = participants[parts[n]].Key, Type = districtType, Reason = "MAX_PER_PLAYER" }
-      end
     end
   end
 
@@ -822,21 +819,13 @@ function Session:Continue()
   return true
 end
 
--- The participant a placed slot belongs to: its city, or for a slot with an
--- empire limit the first planning city whose rings hold the plot.
+-- The participant a placed slot belongs to: its city, or for a wonder the
+-- first city whose plots hold it.
 function Session:OwnerOf(m, i)
   local spec = self.SlotSpecs[self.Search.SlotIndex[m]]
   if spec.Wonder then
     for p, part in ipairs(self.Participants) do
       if part.Allowed[i] then return p end
-    end
-  end
-  if not spec.Limited then return spec.Group end
-  for p, part in ipairs(self.Participants) do
-    if part.Allowed[i] and part.Plan then
-      for _, districtType in ipairs(part.Plan) do
-        if districtType == spec.Key then return p end
-      end
     end
   end
   return spec.Group

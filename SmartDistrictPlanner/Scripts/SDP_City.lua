@@ -18,6 +18,7 @@ SDP_City.EXCLUDED = {
   PIN = "PIN",                       -- an existing map pin: locked
   FOREIGN = "FOREIGN",               -- owned by another player
   OTHER_CITY = "OTHER_CITY",         -- owned by another of the player's cities
+  SITE_RING = "SITE_RING",           -- unowned, next to a planned city: founding it takes the plot
   FEATURE = "FEATURE",               -- clearing its feature is switched off
   RESOURCE = "RESOURCE",             -- a resource a district cannot remove (luxury, strategic)
 }
@@ -79,6 +80,40 @@ function SDP_City.PinsInRange(playerID, x, y, radius, ignore)
   return list
 end
 
+-- The player's city-center map pins that are not cities yet (planned
+-- cities), sorted by plot index: { X, Y, Index, Name, PinID }. A pin is a
+-- city center when DMT reads it as one (CreateMapPinSubject: the city center
+-- icon, or DMT's own convention for goody hut / barbarian icons named "City...").
+function SDP_City.Sites(playerID)
+  local list = {}
+  for _, pin in pairs(PlayerConfigurations[playerID]:GetMapPins()) do
+    local subject = CreateMapPinSubject(pin)
+    if subject ~= nil and subject.Type == "DISTRICT" and subject.Key == "DISTRICT_CITY_CENTER" then
+      local x, y = pin:GetHexX(), pin:GetHexY()
+      local plot = Map.GetPlot(x, y)
+      if plot ~= nil and not plot:IsCity() then
+        list[#list + 1] = { X = x, Y = y, Index = plot:GetIndex(), Name = pin:GetName() or "", PinID = pin:GetID() }
+      end
+    end
+  end
+  table.sort(list, ByIndex)
+  return list
+end
+
+-- The plots next to the player's planned cities, except the one at plot
+-- `except` and pins being replaced (`ignore`): { [plot index] = true }. A
+-- city founded on the pin takes the unowned ones, so another city cannot
+-- build there (issue 26).
+local function SiteRings(playerID, except, ignore)
+  local rings = {}
+  for _, site in ipairs(SDP_City.Sites(playerID)) do
+    if site.Index ~= except and not (ignore and ignore[site.PinID]) then
+      for _, entry in ipairs(SDP_City.PlotsInRange(site.X, site.Y, 1)) do rings[entry.Index] = true end
+    end
+  end
+  return rings
+end
+
 -- City numbers, the names our pins carry. The icon already says which
 -- district a pin is, so the name says which city it belongs to: the player's
 -- cities are numbered 1, 2, ... in founding order (city ID; the capital is
@@ -122,7 +157,7 @@ function SDP_City.SpecialtyCapacity(population)
 end
 
 -- Why `plot` cannot take a new district for this city, or nil.
-local function ExclusionReason(plot, playerID, cityID, pinned, allowFeatureRemoval)
+local function ExclusionReason(plot, playerID, cityID, pinned, siteRings, allowFeatureRemoval)
   local E = SDP_City.EXCLUDED
   -- DMT reads no terrain for unrevealed plots and CanPlacePin then fails.
   if not PlayersVisibility[playerID]:IsRevealed(plot:GetIndex()) then return E.UNREVEALED end
@@ -137,6 +172,7 @@ local function ExclusionReason(plot, playerID, cityID, pinned, allowFeatureRemov
     local owningCity = Cities.GetPlotPurchaseCity(plot)
     if owningCity ~= nil and owningCity:GetID() ~= cityID then return E.OTHER_CITY end
   end
+  if owner == -1 and siteRings[plot:GetIndex()] then return E.SITE_RING end
   local feature = plot:GetFeatureType()
   if not allowFeatureRemoval and feature ~= -1 and GameInfo.Features[feature].Removable then
     return E.FEATURE
@@ -191,8 +227,9 @@ function SDP_City.Scan(playerID, cityID, options)
 
   local pinned = {}
   for _, pin in ipairs(scan.Pins) do pinned[pin.Index] = true end
+  local siteRings = SiteRings(playerID, nil, options and options.ignorePins)
   for _, entry in ipairs(SDP_City.PlotsInRange(cx, cy, SDP_City.RADIUS)) do
-    local reason = ExclusionReason(Map.GetPlotByIndex(entry.Index), playerID, cityID, pinned, allowFeatureRemoval)
+    local reason = ExclusionReason(Map.GetPlotByIndex(entry.Index), playerID, cityID, pinned, siteRings, allowFeatureRemoval)
     if reason then
       scan.Excluded[entry.Index] = reason
     else
@@ -218,7 +255,8 @@ end
 -- Scan a planned city: a city-center map pin at (x, y) that is not a city
 -- yet (docs/multicity-design.md 4.1). Same shape as Scan, without CityID.
 -- A new city cannot use plots that already belong to one of the player's
--- cities (ExclusionReason with no city: OTHER_CITY). options:
+-- cities (ExclusionReason with no city: OTHER_CITY), nor the unowned plots
+-- next to another planned city (SITE_RING). options:
 --   allowFeatureRemoval  as for Scan
 --   population           the population to plan for (default 1)
 --   name                 shown in results (default "")
@@ -235,8 +273,9 @@ function SDP_City.ScanSite(playerID, x, y, options)
   scan.SpecialtyCapacity = SDP_City.SpecialtyCapacity(scan.Population)
   local pinned = {}
   for _, pin in ipairs(scan.Pins) do pinned[pin.Index] = true end
+  local siteRings = SiteRings(playerID, Map.GetPlotIndex(x, y), options.ignorePins)
   for _, entry in ipairs(SDP_City.PlotsInRange(x, y, SDP_City.RADIUS)) do
-    local reason = ExclusionReason(Map.GetPlotByIndex(entry.Index), playerID, nil, pinned, allowFeatureRemoval)
+    local reason = ExclusionReason(Map.GetPlotByIndex(entry.Index), playerID, nil, pinned, siteRings, allowFeatureRemoval)
     if reason then
       scan.Excluded[entry.Index] = reason
     else
