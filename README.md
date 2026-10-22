@@ -70,7 +70,7 @@ The development documents are in Chinese; issues and pull requests in English ar
 
 **[创意工坊](https://steamcommunity.com/sharedfiles/filedetails/?id=3824473635)** · **[下载](https://github.com/SmallSpider0/civ6-smart-district-planner/releases/latest)** · **[介绍与评测](https://smallspider0.github.io/civ6-smart-district-planner/)** · **[安装与使用](docs/install-and-test.md)**
 
-![单城页签：区域分两组排成网格，结果有三套方案](docs/images/v4-panel-single.jpg)
+![单城页签：区域分两组排成网格，结果有三套方案](docs/images/v7-panel-single.jpg)
 
 ### 能做什么
 

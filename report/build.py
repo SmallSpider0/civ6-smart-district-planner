@@ -976,7 +976,7 @@ def build(files=None, make_snapshots=True, version=None, date=None, lang="zh"):
         srows.append(tr([L("速度", "Speed"), L("游戏内实测", "measured in the game"),
                          L("单城不到 0.3 秒，3 城联合约 3 秒；离线比 AMT 快约 %.0f 倍",
                            "one city under 0.3 s, three cities together about 3 s; offline about %.0f times as fast as AMT") % (am["time"] / sd["time"])]))
-    srows.append(tr([L("自身的测试", "Own tests"), L("游戏内 95 项、离线 105 项、真实点击 30 项", "95 in the game, 105 offline, 30 real clicks"),
+    srows.append(tr([L("自身的测试", "Own tests"), L("游戏内 98 项、离线 107 项、真实点击 30 项", "98 in the game, 107 offline, 30 real clicks"),
                      L("全部通过；裁判与游戏引擎逐格一致（沉船一处已知偏差）；魅力逐格校准",
                        "all pass; the judge agrees with the game engine plot by plot (one known difference, at a shipwreck); Appeal "
                        "calibrated plot by plot")]))

@@ -9,4 +9,4 @@ docs/images/v6-en-panel-sites.jpg      选城址页签（英文界面）
 docs/images/v6-en-sites-tooltip.jpg    城址的悬停提示：水源、距离、资源（英文界面）
 docs/images/v4-map-reminders.jpg       “勿砍”提醒钉
 docs/images/v5-late-multi.jpg          后期存档里的多城规划
-docs/images/v4-panel-single.jpg        单城页签（中文界面）
+docs/images/v7-panel-single.jpg        单城页签（中文界面）
