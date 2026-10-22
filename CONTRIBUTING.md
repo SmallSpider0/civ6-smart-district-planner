@@ -10,8 +10,8 @@
 
 ## 分支与提交
 
-- `main` 上的每个提交都要能通过 validate 和离线测试，CI 在 Ubuntu 和 Windows 上检查。
-- 改动在分支上做，开 PR，另一人看过再合并。错字这类小的文档修正可以直接提交到 `main`。
+- `main` 受保护，所有改动（包括错字这类小的文档修正）都在分支上做、开 PR，CI 的两项检查 `offline (ubuntu-latest)`、`offline (windows-latest)`（validate 和离线测试）通过后才能合并。不能直接推送、强制推送或删除 `main`；仓库管理员可以绕过。
+- GitHub 不要求审批人数，但合并前请另一人看一下。
 - 分支名写平台或人和主题，如 `win/ui-scale`、`mac/stress-marsh`。
 - 提交信息用英文，第一行用祈使句说做了什么，与 `git log` 里已有的一致。一个提交只做一件事。
 - 生成的结果单独提交，提交信息写明怎么生成的：
