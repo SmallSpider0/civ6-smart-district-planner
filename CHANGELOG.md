@@ -2,7 +2,7 @@
 
 只列要点，细节在链接的设计文档章节里。括号里是这一段的提交。
 
-## v1.1.1（2026-10-22）
+## v1.1.1（2026-10-23）
 
 修正版：[发布页](https://github.com/SmallSpider0/civ6-smart-district-planner/releases/tag/v1.1.1)。修合作者第三轮实测报告的三个问题。
 
