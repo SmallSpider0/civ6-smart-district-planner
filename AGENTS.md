@@ -161,7 +161,7 @@ include("dmt_yieldcalculator");       -- 尾部会执行 DMT_Initialize()，见�
 - **测试用 mod 组**：AMT（hook `GetMapPinSubject`）、Empire Planner（会自建/删除地图钉）及改相邻/区域规则的 mod 会干扰测试。在"额外内容"里建一个只开官方内容、DMT 和本 mod 的 mod 组再测。新 mod 在新建的组里**默认禁用**，可在主菜单用 `Modding.EnableMod(handle, true)` 启用、`Modding.DisableMod(handle)` 停用（游戏自己的启用逻辑，见 Base `FrontEnd/Mods.lua`）。开发机不要订阅本模组的创意工坊版（3824473635），否则游戏可能加载创意工坊那份，测的是旧代码（坑 38）。取消订阅后 Steam 不一定马上删掉下载的文件夹（`steamapps/workshop/content/289070/3824473635`），游戏仍会扫到它，要自己移走。`run_tests.py` 开测前检查加载的是哪一份，是创意工坊那份就停下。
   - **mod 列表的名称**：mod 未启用时，`FrontEndActions` 的文本不加载，列表显示 `LOC_SDP_MOD_NAME` 原文；列表和详情（`Modding.GetModText`）读的是 modinfo 内嵌的 `<LocalizedText>`。所以名称、简介、描述在 modinfo 里也写一份，validate.py 检查两份一致。
 
-**每轮改动流程**（命令细节见 [tools/README.md](tools/README.md)）
+**每轮改动流程**（命令细节见 [tools/README.md](tools/README.md)）。一批 Issue 修完再开一个 PR（CONTRIBUTING.md“需求、分支与提交”）：修每个 Issue 时只跑相关的测试文件，整套的 0–3 在开 PR 前统一跑一次。
 0. 离线：`node tools/offline_tests.mjs` 跑 `tests/offline/spec_*.lua`（不开游戏，几分钟；CI 上 Ubuntu 约 3.5 分钟、Windows 约 5 分钟）。改求解算法时再跑 `tests/offline/bench_single.lua` 对比质量与预计耗时；
 1. 校验：`python3 -I tools/validate.py`。检查 XML 格式、modinfo 与磁盘文件一致、双语文本键一致、`LOC_SDP_*` 引用都有定义、UI XML 只用游戏本体出现过的控件和属性（坑 8，需要 `reference/`）、Lua 语法（luaparse 5.3 模式解析，再禁掉 5.1 没有的写法）与禁用全局、确定性（禁 `math.random`/`os.time`）；
 2. 部署：`python3 -I tools/deploy.py`。先校验，再把 `SmartDistrictPlanner/` 同步到游戏的 Mods 目录（增量复制，并删除已不存在的文件）；

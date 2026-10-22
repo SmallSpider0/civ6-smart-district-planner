@@ -50,6 +50,9 @@
 | 界面缩放、分辨率、布局 | Windows | 改了界面 |
 | 压力测试 `stress.py` | 任一平台 | 发布前 |
 
+- 本地测试也按批跑，整套只跑一次（离线测试几分钟，游戏内一种规则集约 2 分钟，离线对比十几到二十几分钟）：
+  - 每修完一个 Issue，只跑和它相关的测试文件：`node tools/offline_tests.mjs tests/offline/spec_xxx.lua`、`python3 -I tools/run_tests.py tests/test_xxx.lua`，可加 `-k` 按名字筛选。
+  - 这一批都修完、开 PR 之前，统一跑一次 `validate.py`、整套离线测试、游戏内测试（发版时三种规则集）、需要时再跑离线对比和真实点击。中途改了再补跑受影响的部分，不必整套重跑。
 - PR 里写明在哪个平台跑了哪些测试，没跑的写原因。
 - 先跑游戏内测试，再跑离线的重活。`compare.mjs` 多线程运行时，游戏会被拖到几分钟一回合。
 - 游戏内测试可以直接跑，不用事先问。改 `AppOptions.txt`、`Mods.sqlite` 前要先问，并且游戏要关着。
