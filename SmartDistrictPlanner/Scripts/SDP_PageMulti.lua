@@ -89,6 +89,7 @@ local function WonderTypes()
   for _, w in ipairs(SDP_Wonders.List(Game.GetLocalPlayer())) do
     if m_wonders[w.Type] and w.Status == nil then list[#list + 1] = w.Type end
   end
+  table.sort(list) -- the solver's slot order, as before the list was sorted by era
   return list
 end
 

@@ -5,6 +5,7 @@
 ## 未发布
 
 - 准备上架 Steam 创意工坊：标题、中英简介、预览图和示意图放在 `workshop/`；每个 Release 附带创意工坊提交包，由合作者在 Windows 上上传。
+- “添加奇观”下拉框按时代排列，同一时代按造价从低到高；悬停显示时代（[#7](https://github.com/SmallSpider0/civ6-smart-district-planner/issues/7)）。
 
 ## v1.0.0（2026-10-22）
 

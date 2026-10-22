@@ -172,6 +172,7 @@ SDP_Panel（面板，三个页签：单城 / 城址 / 多城；每页有档位�
 ### 4.4 奇观
 
 - **可选奇观**：`MapTacks.PlayerWonders` 中 `Buildings.IsWonder` 的条目（去掉它附带的通用奇观图标 `DISTRICT_WONDER`），玩家勾选要建的奇观。不检查科技与时代（属于提前规划）。
+- **下拉框顺序**（Issue #7）：先按时代，取前置科技、前置市政中较晚的那个时代（`Eras.ChronologyIndex`）；同一时代按生产力造价（`Buildings.Cost`）从低到高；再相同按类型名。都从 GameInfo 读。下拉项悬停显示时代。交给求解器的奇观仍按类型名排列，求解结果不受显示顺序影响。
 - **合法性**：DMT `CanPlacePin`，subject 为 `{ Type = "WONDER", Key = 奇观类型 }`（`dmt_yieldcalculator.lua:387`）。DMT 已覆盖地形、地貌、河流、海岸、湖泊、山脉、需相邻资源等规则；"需相邻某区域"会读假想区域（`IsAdjacentToDistrict` 读 `GetMapPinSubject`）。
 - **需相邻区域时要求同城**：DMT 不区分区域属于哪座城，本功能保守地要求该区域属于奇观所在的城（需实测游戏规则）。
 - **得分**：奇观本身没有相邻产出（DMT `GetBonusYields` 只对区域和改良设施取产出），它对目标的影响全部来自邻居：如剧院广场（及其特色区域雅典卫城）每相邻一个奇观加文化（`Wonder_Culture`，原版 +1，迭起兴衰、风云变幻改为 +2，由 DMT 从数据读取），以及它占掉的格子和移除的地貌。奇观自身效果（如佩特拉让沙漠增产）不计。

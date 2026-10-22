@@ -108,13 +108,22 @@ local function BuildGameInfo()
     { ResourceType = "RESOURCE_HORSES", ImprovedExtractionRate = 2 },
   }, "ResourceType")
 
-  gi.Technologies = Table({ { TechnologyType = "TECH_BRONZE_WORKING", Name = "LOC_TECH_BRONZE_WORKING" },
-    { TechnologyType = "TECH_IRRIGATION", Name = "LOC_TECH_IRRIGATION" } }, "TechnologyType")
+  gi.Eras = Table({ { EraType = "ERA_ANCIENT", Name = "LOC_ERA_ANCIENT_NAME", ChronologyIndex = 1 },
+    { EraType = "ERA_CLASSICAL", Name = "LOC_ERA_CLASSICAL_NAME", ChronologyIndex = 2 } }, "EraType")
+  gi.Technologies = Table({
+    { TechnologyType = "TECH_BRONZE_WORKING", Name = "LOC_TECH_BRONZE_WORKING", EraType = "ERA_ANCIENT" },
+    { TechnologyType = "TECH_IRRIGATION", Name = "LOC_TECH_IRRIGATION", EraType = "ERA_ANCIENT" },
+    { TechnologyType = "TECH_MASONRY", Name = "LOC_TECH_MASONRY", EraType = "ERA_ANCIENT" },
+    { TechnologyType = "TECH_ASTROLOGY", Name = "LOC_TECH_ASTROLOGY", EraType = "ERA_ANCIENT" },
+  }, "TechnologyType")
   gi.Improvements = Table({
     { ImprovementType = "IMPROVEMENT_FARM", Name = "LOC_IMPROVEMENT_FARM_NAME", Housing = 1, TilesRequired = 2 },
     { ImprovementType = "IMPROVEMENT_MINE", Name = "LOC_IMPROVEMENT_MINE_NAME", Appeal = -1 },
   }, "ImprovementType")
-  gi.Civics = Table({}, "CivicType")
+  gi.Civics = Table({
+    { CivicType = "CIVIC_RECORDED_HISTORY", Name = "LOC_CIVIC_RECORDED_HISTORY_NAME", EraType = "ERA_CLASSICAL" },
+    { CivicType = "CIVIC_GAMES_RECREATION", Name = "LOC_CIVIC_GAMES_RECREATION_NAME", EraType = "ERA_CLASSICAL" },
+  }, "CivicType")
 
   local function District(t, extra)
     local row = { DistrictType = t, Name = "LOC_" .. t .. "_NAME", OnePerCity = true, ReplacesCollection = {} }
@@ -232,13 +241,15 @@ local function BuildGameInfo()
   gi.ExcludedAdjacencies = Table({})
 
   gi.Buildings = Table({
-    { BuildingType = "BUILDING_PYRAMIDS", Name = "LOC_BUILDING_PYRAMIDS_NAME", IsWonder = true, Cost = 220, ValidTerrain = "TERRAIN_DESERT" },
-    { BuildingType = "BUILDING_HANGING_GARDENS", Name = "LOC_BUILDING_HANGING_GARDENS_NAME", IsWonder = true, Cost = 180, RequiresRiver = true },
+    { BuildingType = "BUILDING_PYRAMIDS", Name = "LOC_BUILDING_PYRAMIDS_NAME", IsWonder = true, Cost = 220, PrereqTech = "TECH_MASONRY", ValidTerrain = "TERRAIN_DESERT" },
+    { BuildingType = "BUILDING_HANGING_GARDENS", Name = "LOC_BUILDING_HANGING_GARDENS_NAME", IsWonder = true, Cost = 180, PrereqTech = "TECH_IRRIGATION", RequiresRiver = true },
     { BuildingType = "BUILDING_GREAT_LIBRARY", Name = "LOC_BUILDING_GREAT_LIBRARY_NAME", IsWonder = true, Cost = 400,
+      PrereqCivic = "CIVIC_RECORDED_HISTORY",
       AdjacentDistrict = "DISTRICT_CAMPUS" },
     { BuildingType = "BUILDING_COLOSSEUM", Name = "LOC_BUILDING_COLOSSEUM_NAME", IsWonder = true, Cost = 400,
+      PrereqCivic = "CIVIC_GAMES_RECREATION",
       AdjacentDistrict = "DISTRICT_ENTERTAINMENT_COMPLEX", RegionalRange = 6 },
-    { BuildingType = "BUILDING_STONEHENGE", Name = "LOC_BUILDING_STONEHENGE_NAME", IsWonder = true, Cost = 180, FlatOnly = true },
+    { BuildingType = "BUILDING_STONEHENGE", Name = "LOC_BUILDING_STONEHENGE_NAME", IsWonder = true, Cost = 180, PrereqTech = "TECH_ASTROLOGY", FlatOnly = true },
     { BuildingType = "BUILDING_LIBRARY", Name = "LOC_BUILDING_LIBRARY_NAME", Cost = 90, PrereqDistrict = "DISTRICT_CAMPUS" },
     -- Trade route capacity: the lighthouse's only without a market (below).
     { BuildingType = "BUILDING_MARKET", Name = "LOC_BUILDING_MARKET_NAME", Cost = 120, PrereqDistrict = "DISTRICT_COMMERCIAL_HUB" },
