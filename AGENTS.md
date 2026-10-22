@@ -162,7 +162,7 @@ include("dmt_yieldcalculator");       -- 尾部会执行 DMT_Initialize()，见�
   - **mod 列表的名称**：mod 未启用时，`FrontEndActions` 的文本不加载，列表显示 `LOC_SDP_MOD_NAME` 原文；列表和详情（`Modding.GetModText`）读的是 modinfo 内嵌的 `<LocalizedText>`。所以名称、简介、描述在 modinfo 里也写一份，validate.py 检查两份一致。
 
 **每轮改动流程**（命令细节见 [tools/README.md](tools/README.md)）
-0. 离线：`node tools/offline_tests.mjs` 跑 `tests/offline/spec_*.lua`（不开游戏，几秒到十几秒）。改求解算法时再跑 `tests/offline/bench_single.lua` 对比质量与预计耗时；
+0. 离线：`node tools/offline_tests.mjs` 跑 `tests/offline/spec_*.lua`（不开游戏，几分钟；CI 上 Ubuntu 约 3.5 分钟、Windows 约 5 分钟）。改求解算法时再跑 `tests/offline/bench_single.lua` 对比质量与预计耗时；
 1. 校验：`python3 -I tools/validate.py`。检查 XML 格式、modinfo 与磁盘文件一致、双语文本键一致、`LOC_SDP_*` 引用都有定义、UI XML 只用游戏本体出现过的控件和属性（坑 8，需要 `reference/`）、Lua 语法（luaparse 5.3 模式解析，再禁掉 5.1 没有的写法）与禁用全局、确定性（禁 `math.random`/`os.time`）；
 2. 部署：`python3 -I tools/deploy.py`。先校验，再把 `SmartDistrictPlanner/` 同步到游戏的 Mods 目录（增量复制，并删除已不存在的文件）；
 3. 验证：改 Lua/UI XML 后回主菜单重新进入对局；改 modinfo/文本需重启游戏（deploy 会提示是哪种；重启用 `tools/game.py quit/launch/newgame`）；然后 `python3 -I tools/run_tests.py` 跑 `tests/` 下的游戏内测试；

@@ -12,19 +12,29 @@
 
 ## 需求、分支与提交
 
-- 每个需求或问题开一个 Issue。打算放进下一版的，挂到对应的里程碑（如 `v1.1.0`）上；里程碑页面能看到这一版还剩几项，全部关掉就该发版了。
-- 一个 Issue 对应一个分支、一个 PR，PR 描述里写 `Closes #编号`，合并时 Issue 自动关闭。
+一轮工作的流程：
+
+1. **记成 Issue**：维护者或合作者在 GitHub 上提；在对话里告诉 Claude 的，由它来提。打算放进下一版的挂到里程碑（如 `v1.1.0`），里程碑页面能看到这一版还剩几项。
+2. **本地分多个提交修**：一个分支修这一批 Issue，一个 Issue 一个或几个提交，提交信息里写 `#编号`。分支上随便推，不开 PR 就不跑 CI。
+3. **只开一个 PR**：这一批都修好、本地测过（`validate.py`、离线测试、游戏内测试）再开 PR，描述里每个 Issue 写一行 `Closes #编号`，合并时自动关闭。要发版时，发版准备（版本号、CHANGELOG、更新说明、截图、自测报告、压力测试结果）也放进这个 PR。
+4. **合并后发版**：发 Release，再更新创意工坊（见下文“发版”）。
+
+这样一轮只跑一次 CI（每次约 6 分钟；只在 PR 上跑，合并后 `main` 上不再重跑）：
+
+- 后续修改推到已开的 PR 上，不另开 PR。往 PR 上推新提交会取消这个 PR 还没跑完的那一轮，所以攒几个提交一起推。
+- 只改文档的小修正不单独开 PR，带进下一个 PR。只改文档的 PR（`docs/`、`.md` 文件、问题模板）CI 只跑 `validate.py`，跳过离线测试。
+- 只有必须马上生效、不能等这一轮的改动（如发出去的版本有严重问题）才单独开 PR。
 - `main` 受保护，所有改动（包括错字这类小的文档修正）都在分支上做、开 PR，CI 的两项检查 `offline (ubuntu-latest)`、`offline (windows-latest)`（validate 和离线测试）通过后才能合并。不能直接推送、强制推送或删除 `main`；仓库管理员可以绕过。
 - GitHub 不要求审批人数，但合并前请另一人看一下。
 - 仓库只允许 squash 合并：一个 PR 在 `main` 上只留一个提交，标题就是 PR 标题。所以 PR 标题用英文祈使句写清做了什么。
 - 仓库开了自动合并：PR 页面点 **Enable auto-merge**（或 `gh pr merge 编号 --auto --squash`），两项检查通过后 GitHub 自己合并，检查没过就不合并。合并后 GitHub 自动删掉远端分支，本地分支自己删。
 - 分支名写平台或人和主题，如 `win/ui-scale`、`mac/stress-marsh`。
 - 分支里的提交信息也用英文祈使句，与 `git log` 里已有的一致。
-- 生成的结果单独提交，提交信息写明怎么生成的：
+- 生成的结果在 PR 描述里写明是哪些文件、用什么命令生成的（squash 合并后分支里的提交合成一个，单独提交在 `main` 上看不出来）：
   - `tests/compare/results/`
   - `tests/stress/results/`
   - `report/snaps/`
-  - `docs/images/`
+  - `docs/images/`、`workshop/images/`
   - 自测报告里由脚本写入的表
 - 两人不要同时重跑同一组结果；要重跑时先在 PR 或 Issue 里说一声。
 - 行为有变化时同步更新相关文档，并在 [CHANGELOG.md](CHANGELOG.md) 的“未发布”里加一行，写玩家能感觉到的变化。发版时这一段就是更新说明。
@@ -33,7 +43,7 @@
 
 | 测试 | 谁跑 | 什么时候 |
 |------|------|----------|
-| `validate.py`、离线测试 | CI 自动 | 每次推送和 PR |
+| `validate.py`、离线测试 | CI 自动 | 每个 PR（只改文档时只跑 `validate.py`） |
 | 游戏内 `run_tests.py` | 改动者，在自己的平台 | 改了 mod 代码 |
 | 离线对比 `compare.mjs -p sdp`（开发集） | 改动者 | 改了求解器或合法性规则 |
 | 真实点击 `realclick.py` | macOS | 改了界面 |
@@ -51,12 +61,12 @@
 
 1. 定版本号：修问题改第三位（v1.0.1），加功能改第二位（v1.1.0），大的不兼容改动改第一位。modinfo 的 `version` 每次发版加 1；`SmartDistrictPlanner/UI/SDP_Panel.lua` 的 `VERSION` 改成新版本号，启动栏按钮的悬停提示显示它，`validate.py` 检查它和 CHANGELOG 最新的版本一致。
 2. 发版前测试：三种规则集的游戏内测试、macOS 真实点击、后期存档压力测试（不用在 Windows 上手动测）；改了求解器还要跑离线对比。
-3. 准备文字：CHANGELOG 的“未发布”改成 `vX.Y.Z（日期）`；写 `workshop/changenotes/vX.Y.Z.txt`（英文在前、中文在后）；功能或限制变了，同步 README、`workshop/` 的中英简介（`description.bbcode`、`description_zh.bbcode`）和介绍与评测页。这些也走 PR。
+3. 准备文字：CHANGELOG 的“未发布”改成 `vX.Y.Z（日期）`；写 `workshop/changenotes/vX.Y.Z.txt`（英文在前、中文在后）；功能或限制变了，同步 README、`workshop/` 的中英简介（`description.bbcode`、`description_zh.bbcode`）和介绍与评测页。这些和这一轮的修复在同一个 PR 里。
 4. 在 GitHub 发布 Release `vX.Y.Z`，发布说明写给玩家，英文在前、中文在后。`.github/workflows/release.yml` 会：
    - 打出 `SmartDistrictPlanner-vX.Y.Z.zip`（mod、中英安装与使用说明、`REPORT.html`、`REPORT_EN.html`；不带给测试者的说明），连同中英两个单文件页面一起附到 Release；
    - 打出 `SmartDistrictPlanner-vX.Y.Z-workshop.zip`（创意工坊提交包，`tools/workshop.py pack`）附到 Release；
    - 生成介绍与评测页，发布到 GitHub Pages（中文 <https://smallspider0.github.io/civ6-smart-district-planner/>，英文在 `en/`）。
-5. 合作者在 Windows 上用提交包上传创意工坊，见 [docs/workshop-upload.md](docs/workshop-upload.md)。本仓库的工具不连接 Steam。
+5. 用提交包更新创意工坊，见 [docs/workshop-upload.md](docs/workshop-upload.md)：维护者在 Mac 上用 SteamCMD（贡献者账号能更新内容、英文标题与简介、更新说明，不能换预览图），或合作者在 Windows 上传。物品页的图片和简体中文版本在网页上改，提交包里的 UPLOAD.md 写明这次要动哪些。本仓库的工具不连接 Steam。
 
 其他情况：
 

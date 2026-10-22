@@ -2,6 +2,11 @@
 
 只列要点，细节在链接的设计文档章节里。括号里是这一段的提交。
 
+## 未发布
+
+- 开发流程：一批 Issue 在一个分支上分多个提交修好，只开一个 PR，发版准备也放进去；CI 只在 PR 上跑，合并后 `main` 上不再重跑，往 PR 上推新提交会取消没跑完的那一轮，只改文档的 PR 只跑 `validate.py`（CONTRIBUTING.md）。
+- 创意工坊：在 Mac 上用 SteamCMD 更新物品可行（贡献者账号，不带预览图）；提交包里渲染图的文件名带内容摘要，UPLOAD.md 列出物品页上要上传、删除的图（docs/workshop-upload.md）。
+
 ## v1.1.1（2026-10-23）
 
 修正版：[发布页](https://github.com/SmallSpider0/civ6-smart-district-planner/releases/tag/v1.1.1)。修合作者第三轮实测报告的三个问题。
