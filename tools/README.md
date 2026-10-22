@@ -194,7 +194,7 @@ end)
 python3 -I tools/realclick.py build     # 编译 tools/click/sdp-click.swift 为 ~/Applications/SDPClick.app（一次）
 python3 -I tools/realclick.py trusted   # 检查辅助功能权限
 python3 -I tools/realclick.py suite     # 30 项点击检查，需要有首都的对局（game.py newgame --capital --reveal）
-python3 -I tools/realclick.py at 'Controls.SolveButton'   # 点 SDP_Panel 状态里这个 Lua 表达式给出的控件
+python3 -I tools/realclick.py at 'Controls.SolveButton'   # 点 SDP_Panel 状态里这个 Lua 表达式给出的控件；点完鼠标停在那里，可以借此截悬停提示
 ```
 
 - 编译好的应用要在"系统设置 → 隐私与安全性 → 辅助功能"里授权一次（由用户操作）。必须是用 `open` 启动的独立应用：macOS 按启动命令行工具的应用判断权限。应用放在 iCloud 之外，因为 iCloud 给文件加的扩展属性会让 codesign 失败。

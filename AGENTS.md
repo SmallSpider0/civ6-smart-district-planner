@@ -136,6 +136,7 @@ include("dmt_yieldcalculator");       -- 尾部会执行 DMT_Initialize()，见�
 | 34 | （2026-10-21 压力测试发现）`GameCore_Tuner` 状态里的 `Plot:GetYield` 不含建筑给别的地块的产出，连刚放的农场也不反映；界面状态（`InGame`、`SDP_Panel`）读到的才是玩家看到的产出，且要等一帧。读地块产出一律在界面状态里读。保护区古树林、避难所给周边地块的产出（`Adjacent_AppealYieldChanges`）因此曾被误判为“游戏不给”（`tests/bench/probe_preserve.py`） |
 | 35 | （2026-10-21 压力测试发现）读档后加载界面停在“继续游戏”按钮，等玩家点。读档前在主菜单状态执行 `Automation.SetAutoStartEnabled(true)`，加载界面会自己按（`LoadScreen.lua` 的 `OnLoadGameViewStateDone`），与开新局相同 |
 | 36 | （2026-10-21 压力测试发现）测试里用建造队列的 `CreateDistrict` 直接建出的区域，清不清格上的地貌和玩家正常放置不一样（群岛存档：玩家有采矿，直接建在树林上的商业中心，树林留在区域下面），还绕过人口名额和前置科技。校准“建区域会改变什么”要走正常流程：界面状态里 `CityManager.RequestOperation(city, CityOperationTypes.BUILD, {X, Y, DISTRICT_TYPE})` 下令，再在核心状态 `city:GetBuildQueue():FinishProgress()` 建完（`tools/stress.py check`、`tests/bench/probe_ownplot.py`）；区域不能用金币购买。界面状态里的魅力、住房读数也会滞后，一律在 `GameCore_Tuner` 里读魅力和住房，在界面状态里读地块产出（坑 34） |
+| 37 | （2026-10-22 英文界面检查发现）游戏载入文本时去掉 `<Text>` 首尾的空格：英文分隔符 `"; "` 读出来是 `";"`，`" / "` 是 `"/"`。中文全角标点不受影响，所以中文界面看不出来。分隔符写进格式串（`LOC_SDP_LIST_JOIN` = `{1_A}; {2_B}`，`SDP_UI.Join`）；需要前后空格的短文本同样整句写成格式串（如 `LOC_SDP_SITES_NEW_KIND` = `{1_Name} {2_Count} (new)`） |
 
 ## 6. 开发环境与工作流
 

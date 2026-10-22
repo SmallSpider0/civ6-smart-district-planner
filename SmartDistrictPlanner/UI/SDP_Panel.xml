@@ -70,10 +70,14 @@
 
         <!-- Wonders as tags (feedback 2), good places -->
         <Container Size="480,26">
-          <Label Anchor="L,C" Style="BodyTextDark16" String="LOC_SDP_SINGLE_WONDERS"/>
-          <PullDown ID="WonderPull" Anchor="L,C" Offset="44,0" Style="PullDownBlue" Size="170,24"/>
-          <Label Anchor="L,C" Offset="236,0" Style="BodyTextDark16" String="LOC_SDP_HEATMAP" ToolTip="LOC_SDP_HEATMAP_TOOLTIP"/>
-          <PullDown ID="HeatPull" Anchor="R,C" Style="PullDownBlue" Size="170,24" ToolTip="LOC_SDP_HEATMAP_TOOLTIP"/>
+          <Stack Anchor="L,C" StackGrowth="Right" StackPadding="6">
+            <Label Anchor="L,C" Style="BodyTextDark16" String="LOC_SDP_SINGLE_WONDERS"/>
+            <PullDown ID="WonderPull" Anchor="L,C" Style="PullDownBlue" Size="150,24" AutoSizePopUp="1"/>
+          </Stack>
+          <Stack Anchor="R,C" StackGrowth="Right" StackPadding="6">
+            <Label Anchor="L,C" Style="BodyTextDark16" String="LOC_SDP_HEATMAP" ToolTip="LOC_SDP_HEATMAP_TOOLTIP"/>
+            <PullDown ID="HeatPull" Anchor="L,C" Style="PullDownBlue" Size="150,24" ToolTip="LOC_SDP_HEATMAP_TOOLTIP" AutoSizePopUp="1"/>
+          </Stack>
         </Container>
         <Stack ID="WonderChipStack" StackGrowth="Right" WrapWidth="480" WrapGrowth="Bottom" StackPadding="4"/>
 
@@ -102,9 +106,11 @@
 
         <!-- Tier, estimate, solve / continue (cancel while running) -->
         <Container Size="480,42">
-          <Label Anchor="L,C" Style="BodyTextDark16" String="LOC_SDP_TIER_SHORT"/>
-          <PullDown ID="TierPull" Anchor="L,C" Offset="44,0" Style="PullDownBlue" Size="100,24"/>
-          <Label ID="Estimate" Anchor="L,C" Offset="150,0" Style="BodyTextDark14" WrapWidth="84"/>
+          <Stack Anchor="L,C" StackGrowth="Right" StackPadding="6">
+            <Label Anchor="L,C" Style="BodyTextDark16" String="LOC_SDP_TIER_SHORT"/>
+            <PullDown ID="TierPull" Anchor="L,C" Style="PullDownBlue" Size="100,24"/>
+            <Label ID="Estimate" Anchor="L,C" Style="BodyTextDark14" WrapWidth="76"/>
+          </Stack>
           <Stack Anchor="R,C" StackGrowth="Right" StackPadding="4">
             <GridButton ID="SolveButton" Size="110,41" Style="MainButton" String="LOC_SDP_SOLVE"/>
             <GridButton ID="ContinueButton" Size="124,41" Style="MainButton" String="LOC_SDP_CONTINUE"/>
@@ -160,9 +166,11 @@
         </Container>
         <Stack ID="SitesDistrictStack" StackGrowth="Right" WrapWidth="480" WrapGrowth="Bottom" StackPadding="4"/>
         <Container Size="480,42">
-          <Label Anchor="L,C" Style="BodyTextDark16" String="LOC_SDP_TIER_SHORT"/>
-          <PullDown ID="SitesTierPull" Anchor="L,C" Offset="44,0" Style="PullDownBlue" Size="100,24"/>
-          <Label ID="SitesEstimate" Anchor="L,C" Offset="150,0" Style="BodyTextDark14" WrapWidth="84"/>
+          <Stack Anchor="L,C" StackGrowth="Right" StackPadding="6">
+            <Label Anchor="L,C" Style="BodyTextDark16" String="LOC_SDP_TIER_SHORT"/>
+            <PullDown ID="SitesTierPull" Anchor="L,C" Style="PullDownBlue" Size="100,24"/>
+            <Label ID="SitesEstimate" Anchor="L,C" Style="BodyTextDark14" WrapWidth="76"/>
+          </Stack>
           <Stack Anchor="R,C" StackGrowth="Right" StackPadding="4">
             <GridButton ID="SitesSolveButton" Size="110,41" Style="MainButton" String="LOC_SDP_SOLVE"/>
             <GridButton ID="SitesContinueButton" Size="124,41" Style="MainButton" String="LOC_SDP_CONTINUE"/>
@@ -192,9 +200,11 @@
           <Stack ID="MultiCityStack" StackGrowth="Bottom" StackPadding="2"/>
         </ScrollPanel>
         <Container Size="480,28">
-          <Label Anchor="L,C" Style="BodyTextDark16" String="LOC_SDP_MULTI_PLAN_FOR"/>
-          <PullDown ID="MultiPlanPull" Anchor="L,C" Offset="84,0" Style="PullDownBlue" Size="210,24"/>
-          <PullDown ID="MultiTemplatePull" Anchor="R,C" Style="PullDownBlue" Size="150,24"/>
+          <Stack Anchor="L,C" StackGrowth="Right" StackPadding="6">
+            <Label Anchor="L,C" Style="BodyTextDark16" String="LOC_SDP_MULTI_PLAN_FOR"/>
+            <PullDown ID="MultiPlanPull" Anchor="L,C" Style="PullDownBlue" Size="200,24" AutoSizePopUp="1"/>
+          </Stack>
+          <PullDown ID="MultiTemplatePull" Anchor="R,C" Style="PullDownBlue" Size="150,24" AutoSizePopUp="1"/>
         </Container>
         <Container Size="480,24">
           <Label Anchor="L,C" Style="BodyTextDark16" String="LOC_SDP_GROUP_SPECIALTY" ToolTip="LOC_SDP_STATES_TOOLTIP"/>
@@ -216,8 +226,10 @@
         </Container>
         <Stack ID="MultiUtilityStack" StackGrowth="Right" WrapWidth="480" WrapGrowth="Bottom" StackPadding="4"/>
         <Container Size="480,26">
-          <Label Anchor="L,C" Style="BodyTextDark16" String="LOC_SDP_MULTI_WONDERS"/>
-          <PullDown ID="MultiWonderPull" Anchor="L,C" Offset="44,0" Style="PullDownBlue" Size="170,24"/>
+          <Stack Anchor="L,C" StackGrowth="Right" StackPadding="6">
+            <Label Anchor="L,C" Style="BodyTextDark16" String="LOC_SDP_MULTI_WONDERS"/>
+            <PullDown ID="MultiWonderPull" Anchor="L,C" Style="PullDownBlue" Size="170,24" AutoSizePopUp="1"/>
+          </Stack>
         </Container>
         <Stack ID="MultiWonderChipStack" StackGrowth="Right" WrapWidth="480" WrapGrowth="Bottom" StackPadding="4"/>
         <Stack ID="MultiWeightStack" Anchor="C,T" StackGrowth="Right" StackPadding="0"/>
@@ -236,9 +248,11 @@
           </Container>
         </Container>
         <Container Size="480,42">
-          <Label Anchor="L,C" Style="BodyTextDark16" String="LOC_SDP_TIER_SHORT"/>
-          <PullDown ID="MultiTierPull" Anchor="L,C" Offset="44,0" Style="PullDownBlue" Size="100,24"/>
-          <Label ID="MultiEstimate" Anchor="L,C" Offset="150,0" Style="BodyTextDark14" WrapWidth="84"/>
+          <Stack Anchor="L,C" StackGrowth="Right" StackPadding="6">
+            <Label Anchor="L,C" Style="BodyTextDark16" String="LOC_SDP_TIER_SHORT"/>
+            <PullDown ID="MultiTierPull" Anchor="L,C" Style="PullDownBlue" Size="100,24"/>
+            <Label ID="MultiEstimate" Anchor="L,C" Style="BodyTextDark14" WrapWidth="76"/>
+          </Stack>
           <Stack Anchor="R,C" StackGrowth="Right" StackPadding="4">
             <GridButton ID="MultiSolveButton" Size="110,41" Style="MainButton" String="LOC_SDP_SOLVE"/>
             <GridButton ID="MultiContinueButton" Size="124,41" Style="MainButton" String="LOC_SDP_CONTINUE"/>
@@ -272,8 +286,8 @@
            cell could not be clicked once selected (2026-10-21). -->
       <Grid ID="Selected" Size="parent,parent" Texture="Controls_Tab" SliceStart="0,136" SliceCorner="21,16" Hidden="1"/>
       <Image ID="Icon" Anchor="L,C" Offset="2,0" Size="26,26"/>
-      <Label ID="Name" Anchor="L,C" Offset="30,0" Style="FontNormal14" TruncateWidth="88" TruncatedTooltip="1"/>
-      <Label ID="NameDark" Anchor="L,C" Offset="30,0" Style="BodyTextDark14" TruncateWidth="88" TruncatedTooltip="1" Hidden="1"/>
+      <Label ID="Name" Anchor="L,C" Offset="30,0" Style="FontNormal14" TruncateWidth="80" TruncatedTooltip="1"/>
+      <Label ID="NameDark" Anchor="L,C" Offset="30,0" Style="BodyTextDark14" TruncateWidth="80" TruncatedTooltip="1" Hidden="1"/>
       <Label ID="State" Anchor="R,C" Offset="9,0" Style="FontNormal14"/>
       <Label ID="StateDark" Anchor="R,C" Offset="9,0" Style="BodyTextDark14" Hidden="1"/>
     </GridButton>

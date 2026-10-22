@@ -4,7 +4,7 @@
 
 ## 先读
 
-- [AGENTS.md](AGENTS.md)：需求约束、技术方案、36 条坑、每轮改动流程。
+- [AGENTS.md](AGENTS.md)：需求约束、技术方案、37 条坑、每轮改动流程。
 - 当前平台的环境说明：[docs/dev-macos.md](docs/dev-macos.md) 或 [docs/dev-windows.md](docs/dev-windows.md)。
 - [tools/README.md](tools/README.md)：每个工具的用法。
 
