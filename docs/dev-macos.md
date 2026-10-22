@@ -5,9 +5,22 @@
 ## 本机环境（2026-10-19 检查）
 
 - 可用工具：`node`（v26）、`xmllint`、`sqlite3`、`python3`（3.8）、`git`。
-- 文明6 Mac 版（Aspyr）：版本 **1.0.12.54 (951533)**，universal 二进制（原生 arm64），**Expansion1（R&F）、Expansion2（GS）及全部 DLC 已安装**。显示语言 `zh_Hans_CN`，窗口模式（`FullScreen 0`），开场动画已关（`PlayIntroVideo 0`）。
-- DMT（2428969051，2024-01-17 版）、AMT r49（3771382002，2026-09-19 版）、Empire Planner（3793348626）已通过创意工坊同步到本机。
+- 文明6 Mac 版（Aspyr）：版本 **1.0.12.54 (951533)**，universal 二进制（原生 arm64），**Expansion1（R&F）、Expansion2（GS）及全部 DLC 已安装**（现在的账号没有其中一部分 DLC，见下一节）。显示语言 `zh_Hans_CN`，窗口模式（`FullScreen 0`），开场动画已关（`PlayIntroVideo 0`）。
+- DMT（2428969051，2024-01-17 版）、AMT r49（3771382002，2026-09-19 版）、Empire Planner（3793348626）已通过创意工坊同步到本机（2026-10-22 起只订阅 DMT，见下一节）。
 - 工作目录在 iCloud Drive。iCloud 会给文件加扩展属性（codesign 因此失败过），也可能同步出"文件 2"这类冲突副本；改用 GitHub 后建议把工作副本移出 iCloud。
+
+## Steam 账号与 DLC（2026-10-22 起）
+
+2026-10-22 起这台 Mac 用维护者自己的 Steam 账号。在此之前的测试、截图和离线对比数据，用的是合作者的账号（全部 DLC）。
+
+- **资料片**：迭起兴衰、风云变幻都有，三种规则集都能测。
+- **没有的 DLC**（游戏里 `Modding.GetInstalledMods()` 的 `Allowance=false`）：拜占庭和高卢、越南和忽必烈、玛雅和大哥伦比亚、埃塞俄比亚、巴比伦、葡萄牙、尤里乌斯·凯撒、伟大的建设者、伟大谈判者、伟大指挥官、中国统治者、英国统治者、撒哈拉统治者、凯瑟琳·德·美第奇、泰迪·罗斯福领袖包、猫咪侦察兵。DLC 文件还在磁盘上，但游戏不加载。所以：
+  - 规则里没有**保护区**（及古树林、避难所，来自越南和忽必烈包）和**外交区**（来自埃塞俄比亚包），也没有这些包里的文明。涉及它们的游戏内测试按规则跳过，不算失败。
+  - 游戏内测试结果（2026-10-22）：风云变幻 94 通过、1 跳过；迭起兴衰 93 通过、2 跳过；原版 89 通过、6 跳过；真实点击 30 通过。
+  - 离线对比的规则库 `tests/compare/.cache/gameinfo.lua` 是 2026-10-20 在全 DLC 的账号上导出的，对比场景里有高卢、拜占庭、越南、玛雅。**不要在这个账号上重新导出**，否则这些场景缺规则；确需重导，换一个有全部 DLC 的账号。
+- **创意工坊**：这个账号只订阅了 DMT（2428969051）。AMT、Empire Planner 没有订阅，离线对比要的代码是本地副本：`reference/amt`、`reference/ep` 是真实文件夹（`setup_reference.py` 不会覆盖），另有备份在 `~/Library/Application Support/SDP-reference-backup/`。游戏的 mod 列表里现在只有 DMT 和本模组，不会和其他规划器同开。
+- **第一次用新账号启动游戏**：`steam://rungameid` 停在许可协议（Steam 日志 `console_log.txt` 中 `waiting for user response to ShowEula`），要用户在 Steam 里同意，然后再执行一次 `game.py launch`。
+- Steam 的窗口由它的辅助进程显示，computer-use 截不到、点不到。订阅创意工坊物品这类操作请用户在 Steam 里做。
 
 ## 路径（`~/Library/Application Support/` 下）
 
@@ -49,5 +62,7 @@
 ## 本机的测试 mod 组
 
 本机共启用 165/166 个 mod。2026-10-19 在 `Mods.sqlite` 新建并选中 **"SDP 测试"** 组（`ModGroupRowId=2`）：官方内容沿用默认组状态（39 启用、Tutorial 禁用），创意工坊仅启用 DMT。默认组（`ModGroupRowId=1`）同时启用了 AMT，切回默认组就会两个规划器同开（坑 20）。
+
+（2026-10-22 起换了 Steam 账号，创意工坊只订阅 DMT，下面这段 TopPanel Extension 的情况已不存在。）
 
 2026-10-20 下午本机订阅了 TopPanel Extension（创意工坊 2997927787），它在"SDP 测试"组里是启用的。它只改顶栏，不碰地图钉；自动回合以观察者观察时它的 `RefreshFood` 会反复报运行错误（它自己的问题）。要停用它需在游戏关闭时改 `Mods.sqlite`，先问用户。
