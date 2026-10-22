@@ -16,6 +16,7 @@ logs/
 # 测试包（tools/package.py 的输出）
 dist/
 __pycache__/
+workshop/src/.compare.rendered.html
 
 # 离线对比用的游戏规则导出（Firaxis 数据，不入库）
 tests/compare/.cache/

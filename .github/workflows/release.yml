@@ -1,6 +1,9 @@
-# When a release is published: attach the mod package and the one-file page
-# to it, and publish the page (introduction and evaluation) on GitHub Pages.
-# Run by hand (workflow_dispatch) it rebuilds the page from the chosen ref.
+# When a release is published: attach the mod package, the one-file page and
+# the Steam Workshop upload package to it, and publish the page (introduction
+# and evaluation) on GitHub Pages. A pre-release (v1.1.0-rc.1) gets the files
+# but leaves the page alone. Run by hand (workflow_dispatch) it rebuilds the
+# page from the chosen ref. The Workshop upload itself is done by hand on
+# Windows (docs/workshop-upload.md).
 name: release
 
 on:
@@ -56,8 +59,28 @@ jobs:
         with:
           path: _site
 
+  workshop:
+    if: github.event_name == 'release' && !github.event.release.prerelease
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ github.event.release.tag_name }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Build the Workshop upload package
+        run: python -I tools/workshop.py pack "$VERSION"
+      - name: Attach it to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "$VERSION" "dist/SmartDistrictPlanner-$VERSION-workshop.zip" --clobber
+
   deploy:
     needs: build
+    if: github.event_name != 'release' || !github.event.release.prerelease
     runs-on: ubuntu-latest
     environment:
       name: github-pages

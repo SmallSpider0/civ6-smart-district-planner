@@ -8,12 +8,15 @@
 - 当前平台的环境说明：[docs/dev-macos.md](docs/dev-macos.md) 或 [docs/dev-windows.md](docs/dev-windows.md)。
 - [tools/README.md](tools/README.md)：每个工具的用法。
 
-## 分支与提交
+## 需求、分支与提交
 
+- 每个需求或问题开一个 Issue。打算放进下一版的，挂到对应的里程碑（如 `v1.1.0`）上；里程碑页面能看到这一版还剩几项，全部关掉就该发版了。
+- 一个 Issue 对应一个分支、一个 PR，PR 描述里写 `Closes #编号`，合并时 Issue 自动关闭。
 - `main` 受保护，所有改动（包括错字这类小的文档修正）都在分支上做、开 PR，CI 的两项检查 `offline (ubuntu-latest)`、`offline (windows-latest)`（validate 和离线测试）通过后才能合并。不能直接推送、强制推送或删除 `main`；仓库管理员可以绕过。
 - GitHub 不要求审批人数，但合并前请另一人看一下。
+- 仓库只允许 squash 合并：一个 PR 在 `main` 上只留一个提交，标题就是 PR 标题。所以 PR 标题用英文祈使句写清做了什么。
 - 分支名写平台或人和主题，如 `win/ui-scale`、`mac/stress-marsh`。
-- 提交信息用英文，第一行用祈使句说做了什么，与 `git log` 里已有的一致。一个提交只做一件事。
+- 分支里的提交信息也用英文祈使句，与 `git log` 里已有的一致。
 - 生成的结果单独提交，提交信息写明怎么生成的：
   - `tests/compare/results/`
   - `tests/stress/results/`
@@ -21,7 +24,7 @@
   - `docs/images/`
   - 自测报告里由脚本写入的表
 - 两人不要同时重跑同一组结果；要重跑时先在 PR 或 Issue 里说一声。
-- 行为有变化时同步更新相关文档和 [CHANGELOG.md](CHANGELOG.md)。
+- 行为有变化时同步更新相关文档，并在 [CHANGELOG.md](CHANGELOG.md) 的“未发布”里加一行，写玩家能感觉到的变化。发版时这一段就是更新说明。
 
 ## 测试分工
 
@@ -39,19 +42,31 @@
 - 游戏内测试可以直接跑，不用事先问。改 `AppOptions.txt`、`Mods.sqlite` 前要先问，并且游戏要关着。
 - 汇报时分清"已自动验证"和"需人确认"，不要把没验证过的说成通过。
 
-## 发布
+## 发版
 
-- 在 GitHub 上发布 Release（标签用 `v` 开头的版本号，如 `v1.0.0`），`.github/workflows/release.yml` 会：
-  - 用 `tools/package.py` 打出 `SmartDistrictPlanner-<版本>.zip`（mod、测试说明、安装说明、`REPORT.html`），连同单文件的页面一起附到这个 Release；
-  - 用 `report/build.py` 生成“介绍与评测”页，发布到 GitHub Pages（<https://smallspider0.github.io/civ6-smart-district-planner/>）。
-- 平时要给测试者一个包，本地跑 `python3 -I tools/package.py`，包名是提交号。
-- 发布前跑一遍压力测试，结果写进自测报告和页面。发布后在 CHANGELOG.md 里把“未发布”改成版本号和日期。
+`main` 上攒的改动不会直接到玩家手里，玩家只拿到打了 tag 的版本。步骤见发版清单（新建 Issue 时选“发版清单”模板），大致是：
+
+1. 定版本号：修问题改第三位（v1.0.1），加功能改第二位（v1.1.0），大的不兼容改动改第一位。modinfo 的 `version` 每次发版加 1。
+2. 发版前测试：三种规则集的游戏内测试、macOS 真实点击、Windows 冒烟测试、后期存档压力测试；改了求解器还要跑离线对比。
+3. 准备文字：CHANGELOG 的“未发布”改成 `vX.Y.Z（日期）`；写 `workshop/changenotes/vX.Y.Z.txt`（英文在前、中文在后）；功能或限制变了，同步 README、`workshop/description.bbcode` 和介绍与评测页。这些也走 PR。
+4. 在 GitHub 发布 Release `vX.Y.Z`，发布说明写给玩家。`.github/workflows/release.yml` 会：
+   - 打出 `SmartDistrictPlanner-vX.Y.Z.zip`（mod、测试说明、安装说明、`REPORT.html`），连同单文件页面一起附到 Release；
+   - 打出 `SmartDistrictPlanner-vX.Y.Z-workshop.zip`（创意工坊提交包，`tools/workshop.py pack`）附到 Release；
+   - 生成介绍与评测页，发布到 GitHub Pages（<https://smallspider0.github.io/civ6-smart-district-planner/>）。
+5. 合作者在 Windows 上用提交包上传创意工坊，见 [docs/workshop-upload.md](docs/workshop-upload.md)。本仓库的工具不连接 Steam。
+
+其他情况：
+
+- **想先给少数人试**：发布时勾选 pre-release，标签如 `v1.1.0-rc.1`。只附压缩包和单文件页面，不更新网页，也不打工坊提交包。
+- **线上版本有严重问题，而 `main` 上已有没准备好的改动**：从上一个 tag 拉出 `release/1.0` 分支修好，发 v1.0.1，再把修复合回 `main`。
+- **平时给测试者一个包**：本地跑 `python3 -I tools/package.py`，包名是提交号。
+- **并行开发**：几个需求可以在不同分支上同时写，但游戏内测试只有一个游戏、一个 Tuner 连接，只能一个一个跑。
 
 ## 写作规则
 
 适用于界面文字、文档、报告和 PR 说明。
 
-- 用中文；代码标识符和注释用英文或中文都可以，但同一个文件里保持一致。
+- 用中文；代码标识符和注释用英文或中文都可以，但同一个文件里保持一致。创意工坊的标题、简介和更新说明例外：英文在前，中文在后。
 - 写得平实：
   - 不用套话和 AI 腔，比如“赋能”“全面提升”“值得注意的是”；
   - 同一个意思只写一次，不重复已经说过的话。

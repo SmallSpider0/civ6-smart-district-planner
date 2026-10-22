@@ -1,0 +1,47 @@
+<!doctype html>
+<!-- Workshop picture "how it works", 1600 x 900. Rendered by tools/workshop.py render. -->
+<html lang="en"><head><meta charset="utf-8"><title>How it works</title>
+<style>
+  html, body { margin: 0; width: 1600px; height: 900px; overflow: hidden; background: #f3f5f6; color: #14202a;
+    font-family: "Helvetica Neue", Arial, "PingFang SC", "Microsoft YaHei", sans-serif; }
+  header { padding: 46px 64px 0; }
+  h1 { margin: 0; font: 700 50px/1.1 Georgia, "Times New Roman", serif; }
+  h1 span { font: 600 40px/1.1 "PingFang SC", "Microsoft YaHei", sans-serif; color: #946510; margin-left: 18px; }
+  .steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0 26px; padding: 38px 64px 0; position: relative; }
+  .step { position: relative; }
+  .pic { height: 580px; border-radius: 10px; border: 2px solid #d4dce1; background: #fff center / cover no-repeat; }
+  .n { position: absolute; top: -18px; left: -14px; width: 52px; height: 52px; border-radius: 50%; background: #1d6470; color: #fff;
+    font: 700 28px/52px Georgia, serif; text-align: center; box-shadow: 0 0 0 5px #f3f5f6; }
+  .en { margin: 18px 0 0; font: 600 27px/1.25 "Helvetica Neue", Arial, sans-serif; }
+  .zh { margin: 6px 0 0; font: 400 24px/1.3 "PingFang SC", "Microsoft YaHei", sans-serif; color: #56646e; }
+  .arrow { position: absolute; top: 250px; right: -26px; width: 26px; text-align: center; color: #946510; font: 700 34px/1 Arial, sans-serif; }
+</style></head>
+<body>
+  <header><h1>How it works <span>用法</span></h1></header>
+  <div class="steps">
+    <div class="step">
+      <div class="pic" style="background-image:url('../../docs/images/v4-panel-single.jpg'); background-position: 50% 22%;"></div>
+      <div class="n">1</div><div class="arrow">›</div>
+      <p class="en">Mark districts Must, Pool or Off</p>
+      <p class="zh">把区域设为必建、候选或不建</p>
+    </div>
+    <div class="step">
+      <div class="pic" style="background-image:url('../../docs/images/v4-panel-single.jpg'); background-position: 50% 92%;"></div>
+      <div class="n">2</div><div class="arrow">›</div>
+      <p class="en">Solve: three plans with different districts</p>
+      <p class="zh">求解：三套区域组合不同的方案</p>
+    </div>
+    <div class="step">
+      <div class="pic" style="background-image:url('../../docs/images/v4-map-single-preview.jpg'); background-position: 52% 40%;"></div>
+      <div class="n">3</div><div class="arrow">›</div>
+      <p class="en">Preview a plan on the map</p>
+      <p class="zh">在地图上预览一套方案</p>
+    </div>
+    <div class="step">
+      <div class="pic" style="background-image:url('../../docs/images/v3-map-single-tacks.jpg'); background-position: 50% 45%;"></div>
+      <div class="n">4</div>
+      <p class="en">Place it as map tacks; undo any time</p>
+      <p class="zh">打成地图钉，随时可以撤销</p>
+    </div>
+  </div>
+</body></html>

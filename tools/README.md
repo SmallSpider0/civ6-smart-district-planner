@@ -10,6 +10,7 @@
 | `luacheck.mjs` | Lua 语法与陷阱检查（validate 会调用它） | 0 无错误；1 有错误 |
 | `offline_tests.mjs` | 不开游戏跑求解逻辑测试与基准（`tests/offline/`） | 0 全过；1 有失败；2 用法错误 |
 | `deploy.py` | 校验后把 mod 同步到游戏 Mods 目录 | 0 成功；1 校验失败；2 找不到 Mods 目录 |
+| `workshop.py` | 创意工坊素材检查、预览图和示意图渲染、提交包（不连接 Steam） | 0 成功；1 超出限制；2 缺 tag、更新说明或有未提交的改动 |
 | `package.py` | 从最近一次提交打出压缩包（mod、测试说明、“介绍与评测”页）；发布 Release 时由工作流调用 | 0 成功；1 校验失败；2 有未提交的改动 |
 | `run_tests.py` | 经 Tuner 在游戏内跑 `tests/test_*.lua` | 0 全过；1 有失败；2 连接问题；3 超时 |
 | `game.py` | 退出游戏、经 Steam 启动、从主菜单快速开局（可选建首都）；启动时的前台切换仅 macOS | 0 成功；2 超时 |
@@ -127,6 +128,20 @@ python3 -I tools/package.py --version v1.0.0    # 输出 dist/SmartDistrictPlann
 - 内容：`SmartDistrictPlanner/`（模组本体）、`TEST_GUIDE.md`（`docs/tester-guide.md`，填好版本号和日期）、`INSTALL_AND_USE.md`（`docs/install-and-test.md`，指向其他文档的链接改成纯文本）、`REPORT.html`（“介绍与评测”页的单文件版，见下一节）。
 - 从最近一次提交打包：先校验；模组、这两份文档或页面读到的文件（`report/build.py` 的 `INPUTS`）有未提交的改动时拒绝打包。文件名里的版本（默认是提交号）也写在测试说明和页面上，反馈时报这个号。
 - 压缩包里的文件名都是 ASCII，Windows 自带的解压工具不会显示乱码；条目时间取提交时间，同一次提交打出的包相同。`dist/` 不入库。
+
+## workshop.py — 创意工坊提交包
+
+```bash
+python3 -I tools/workshop.py check            # 标题、简介、更新说明的长度，图片大小
+python3 -I tools/workshop.py render           # workshop/src/*.html 渲染成 preview.jpg 和示意图（需要 Chrome 和 Pillow）
+python3 -I tools/workshop.py pack v1.0.0      # dist/SmartDistrictPlanner-v1.0.0-workshop.zip
+python3 -I tools/workshop.py vdf 解压目录      # 在解压后的提交包里写出带本机绝对路径的 item.vdf
+```
+
+- 素材在 `workshop/`：`title.txt`、`description.bbcode`（Steam BBCode，英文在前）、`changenotes/<版本>.txt`、`item.json`（app id，第一次上传后填物品编号）、`images.txt`（物品页图片的顺序，截图直接引用 `docs/images/`）、`preview.jpg` 和 `images/`（由 `src/` 下的 HTML 渲染，渲染结果要提交）。
+- 限制：标题不超过 128 字符；简介和更新说明不超过 8000（字符数和 UTF-8 字节数都算）；预览图和其他图片都小于 1 MB；文字里不能有 ASCII 双引号和反斜杠，因为它们会原样写进 `item.vdf`。
+- `pack` 的模组文件从 tag 导出（`git archive`），其余取最近一次提交，所以提交包总是和某个 Release 对应；缺更新说明、CHANGELOG 里没有这一版或 `workshop/` 有未提交的改动时拒绝打包。物品编号为空时生成“新建、私密”的配置，有编号时生成“更新已有物品”的配置。
+- 发布 Release 时工作流自动打包并附到 Release。上传在 Windows 上手动做，步骤见 [docs/workshop-upload.md](../docs/workshop-upload.md)；提交包里的 `UPLOAD.md` 就是它。
 
 ## report/build.py — “介绍与评测”页
 
