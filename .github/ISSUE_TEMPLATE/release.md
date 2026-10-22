@@ -11,7 +11,6 @@ labels: release
 **测试**（写明平台和结果）
 - [ ] 游戏内 `run_tests.py`：原版、迭起兴衰、风云变幻
 - [ ] 真实点击 `realclick.py`（macOS）
-- [ ] Windows 冒烟测试：界面布局（100%、150% 缩放）、耗时
 - [ ] 改了求解器或合法性规则：`compare.mjs -p sdp` 开发集，必要时刷新对比结果
 - [ ] 后期存档压力测试 `stress.py`，`refresh_stress_md.py` 刷新自测报告
 - [ ] 界面变了：重新截图（`docs/images/`），需要时重做工坊图片（`tools/workshop.py render`）
