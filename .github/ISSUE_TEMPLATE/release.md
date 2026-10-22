@@ -22,7 +22,7 @@ labels: release
 - [ ] 功能或限制变了：README、`workshop/` 的中英简介（`description.bbcode`、`description_zh.bbcode`）、介绍与评测页（`report/template.html`）同步
 
 **发布**
-- [ ] 以上改动经 PR 合并到 main，CI 通过
+- [ ] 以上改动和这一批修复在同一个 PR 里合并到 main，CI 通过
 - [ ] 在 GitHub 发布 Release `vX.Y.Z`，贴上双语发布说明
 - [ ] Release 页上有四个附件：压缩包、中英两个单文件页面、`-workshop.zip`；GitHub Pages 的中文页和 `en/` 英文页都已是新版本
-- [ ] 上传创意工坊（`docs/workshop-upload.md`），订阅后在游戏里确认能加载（Mods 里的旧版先移走，悬停启动栏按钮看版本号）；中文标题或简介改过时，在物品页更新简体中文版本（提交包里 UPLOAD.md 的开头会写明）
+- [ ] 更新创意工坊（`docs/workshop-upload.md`）：Mac 上用 SteamCMD 或合作者在 Windows 上传，下载回来或订阅后核对是这一版（开发机核对完把下载的那份移走，悬停启动栏按钮看版本号）；物品页的图片和简体中文版本照提交包里 UPLOAD.md 开头写的改

@@ -24,6 +24,7 @@ pack takes the mod from the release tag (git archive) and everything else from
 the last commit, so a package always matches a release.
 """
 import argparse
+import hashlib
 import io
 import json
 import os
@@ -57,15 +58,53 @@ def git(*args, binary=False):
                           encoding=None if binary else "utf-8").stdout
 
 
-def images():
-    """(source path, name in the package) for each line of images.txt."""
+def images(ref=None):
+    """(source path, name in the package) for each line of images.txt, on disk
+    or at a git ref.
+
+    Steam keeps the names of deleted item images: an upload under such a name
+    fails with error 29, and a re-upload under the same name to replace an
+    image lost the picture (2026-10-23). So a rendered diagram
+    (workshop/images/) carries a short hash of its content in its name, and a
+    changed one gets a new name; screenshots in docs/images/ already get a new
+    name when they are retaken."""
+    text = git("show", ref + ":workshop/images.txt") if ref else read(os.path.join(WS, "images.txt"))
     out = []
-    for line in read(os.path.join(WS, "images.txt")).splitlines():
+    for line in text.splitlines():
         line = line.split("#", 1)[0].strip()
-        if line:
-            src = line.split()[0]
-            out.append((src, "%02d-%s" % (len(out) + 1, os.path.basename(src))))
+        if not line:
+            continue
+        src = line.split()[0]
+        stem, ext = os.path.splitext(os.path.basename(src))
+        if src.startswith("workshop/images/"):
+            path = os.path.join(ROOT, src)
+            data = (git("show", "%s:%s" % (ref, src), binary=True) if ref
+                    else open(path, "rb").read() if os.path.exists(path) else b"")
+            stem += "-" + hashlib.sha1(data).hexdigest()[:6]
+        out.append((src, "%02d-%s%s" % (len(out) + 1, stem, ext)))
     return out
+
+
+def images_note(version, first):
+    """What to change on the item page's images, against the previous release."""
+    names = [name for _, name in images()]
+    if first:
+        return "第一次上传，`images/` 里的 %d 张图都按文件名顺序上传" % len(names)
+    try:
+        prev = git("describe", "--tags", "--abbrev=0", version + "^").strip()
+        old = [name for _, name in images(prev)]
+    except subprocess.CalledProcessError:
+        return "找不到上一版的图片清单，对照物品页上的文件名逐张检查"
+    add = [n for n in names if n not in old]
+    drop = [n for n in old if n not in names]
+    if not add and not drop:
+        return "和 %s 相同，不用动" % prev
+    parts = []
+    if add:
+        parts.append("上传 " + "、".join("`%s`" % n for n in add))
+    if drop:
+        parts.append("删除 " + "、".join("`%s`" % n for n in drop))
+    return "与 %s 相比，%s；然后在“管理图片”下点“图像排序依据：文件名”，再点“保存并继续”" % (prev, "，".join(parts))
 
 
 def check_text(errors, label, text, limit, english=False):
@@ -162,8 +201,7 @@ VDF = """"workshopitem"
 	"appid"		"%(appid)s"
 	"publishedfileid"		"%(id)s"
 	"contentfolder"		"__DIR__/content"
-	"previewfile"		"__DIR__/preview.jpg"
-%(visibility)s	"title"		"%(title)s"
+%(preview)s%(visibility)s	"title"		"%(title)s"
 	"description"		"%(description)s"
 	"changenote"		"%(changenote)s"
 }
@@ -216,6 +254,9 @@ def pack(args):
     vdf = VDF % {
         "appid": item["appid"], "id": item.get("publishedfileid") or "0",
         "visibility": '\t"visibility"\t\t"2"\n' if first else "",  # first upload: private until checked in game
+        # An update leaves the preview image alone: with it, the upload from a
+        # contributor's account was refused (Access Denied, 2026-10-23).
+        "preview": '\t"previewfile"\t\t"__DIR__/preview.jpg"\n' if first else "",
         "title": read(os.path.join(WS, "title.txt")),
         "description": read(os.path.join(WS, "description.bbcode")),
         "changenote": read(note_path),
@@ -252,6 +293,7 @@ def pack(args):
         guide = guide.replace("{{UPLOAD}}", "第一次上传（新建物品，可见性：私密）" if first else
                               "更新已有物品 %s" % item["publishedfileid"])
         guide = guide.replace("{{ZH}}", zh_note(version, first))
+        guide = guide.replace("{{IMAGES}}", images_note(version, first))
         add(zf, "UPLOAD.md", (guide + "\n").encode("utf-8"))
     print("workshop: %s (%d mod files from tag %s, modinfo version %s, %s, %d KB)" % (
         os.path.relpath(path, ROOT), files, version, mod_version,
