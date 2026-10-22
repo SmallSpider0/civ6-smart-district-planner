@@ -7,9 +7,9 @@
     python3 -I tools/stress.py all                      # load and run every scenario in SCENARIOS
     python3 -I tools/stress.py summary                  # the results as a table
 
-`prepare` needs the game at the main menu (game.py launch). The local player
-is handed to the AI for the autoplay (AutoplayManager, as the game's own
-automation tests do), so the save holds an empire the AI built: many cities,
+`prepare` needs the game running (game.py launch); inside a game it leaves
+for the main menu first. The local player is handed to the AI for the
+autoplay (AutoplayManager, as the game's own automation tests do), so the save holds an empire the AI built: many cities,
 built districts, wonders, foreign borders. The UI watches as the observer:
 watching as player 0 sends the AI's diplomacy (first meetings, deals) to the
 local screen, which waits for an answer and stops the autoplay. Popups
@@ -94,6 +94,8 @@ def cmd_prepare(args):
     missing = [k for k in ("ruleset", "script", "size", "era", "leader", "seed", "turns") if k not in sc]
     if missing:
         print("missing settings: %s" % ", ".join(missing))
+        return 2
+    if game.has_state("InGame") and game.cmd_menu(args) != 0:  # e.g. the previous scenario's game
         return 2
     if not game.wait_for("main menu", lambda: game.has_state("MainMenu"), 300):
         return 2

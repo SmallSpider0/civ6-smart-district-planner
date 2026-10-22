@@ -17,6 +17,20 @@ test("launch bar button is injected once", function()
   T.ok(stack ~= nil and not ContextPtr:LookUpControl("/InGame/LaunchBar"):IsHidden(), "launch bar hidden")
 end)
 
+test("the launch bar button's tooltip names the version (issue 27)", function()
+  local button = SDP_Panel.LaunchButton()
+  T.ok(button ~= nil, "button missing")
+  if SDP_Task.IsRunning() then T.skip("the tooltip shows a computation now") end
+  if SDP_Panel.State().LaunchMark then
+    -- A result is waiting; opening the panel clears the mark and its tooltip.
+    SDP_Panel.Open()
+    SDP_Panel.Close()
+  end
+  T.ok(not SDP_Panel.State().LaunchMark, "the result mark stayed after opening the panel")
+  local tip = button:GetToolTipString()
+  T.ok(tip:find("v%d+%.%d+%.%d+") ~= nil, "no version in the tooltip: " .. tip)
+end)
+
 test("open and close through the popup queue", function()
   reset()
   T.ok(ContextPtr:IsHidden(), "closed panel should be hidden")

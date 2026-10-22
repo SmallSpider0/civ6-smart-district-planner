@@ -14,7 +14,7 @@
 
     <!-- Launch bar and panel -->
     <Replace Tag="LOC_SDP_LAUNCHBAR_TOOLTIP" Language="en_US">
-      <Text>Smart District Planner</Text>
+      <Text>Smart District Planner {1_Version}</Text>
     </Replace>
     <Replace Tag="LOC_SDP_PANEL_TITLE" Language="en_US">
       <Text>Smart District Planner</Text>

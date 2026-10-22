@@ -1,12 +1,17 @@
 """Export the game's rules database to a Lua file for the offline comparison.
 
 The game writes the gameplay database of the last loaded game to
-Cache/DebugGameplay.sqlite (full rules, with every DLC and the active
-expansion). This script turns the tables the planners read into a Lua chunk
+Cache/DebugGameplay.sqlite (full rules, with every DLC the account owns and
+the active expansion). This script turns the tables the planners read into a Lua chunk
 that tests/compare/game.lua loads as GameInfo. The output is Firaxis data, so
 it goes to tests/compare/.cache/ (git-ignored), never into the repository.
 
-    python3 -I tests/compare/export_gameinfo.py [--db PATH] [--out PATH]
+    python3 -I tests/compare/export_gameinfo.py [--db PATH] [--out PATH] [--force]
+
+An account without some DLC writes a database without their civilizations
+(Gaul, Vietnam, Maya, Byzantium are in the comparison's scenarios). So the
+script refuses to overwrite an existing export that has civilizations the
+database lacks; --force overwrites anyway.
 
 Each table becomes { pk = "<primary key column or nil>", rows = { ... } },
 rows in rowid order (the game's Index order). BOOLEAN columns become Lua
@@ -14,6 +19,7 @@ booleans and NULL fields are left out, as GameInfo rows show them.
 """
 import argparse
 import os
+import re
 import sqlite3
 import sys
 
@@ -83,6 +89,24 @@ def lua_value(v, boolean):
     return lua_string(str(v))
 
 
+def exported_civs(path):
+    """CivilizationType of every row in an earlier export, or None without one."""
+    if not os.path.exists(path):
+        return None
+    civs, inside = set(), False
+    with open(path, encoding="utf-8") as f:
+        for line in f:
+            if line.startswith("Civilizations = {"):
+                inside = True
+            elif inside and line.startswith("} },"):
+                break
+            elif inside:
+                m = re.search(r'\bCivilizationType="([^"]+)"', line)
+                if m:
+                    civs.add(m.group(1))
+    return civs
+
+
 def export(db_path, out_path):
     con = sqlite3.connect("file:%s?mode=ro" % db_path, uri=True)
     have = {r[0] for r in con.execute("select name from sqlite_master where type='table'")}
@@ -119,10 +143,21 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--db", default=DEFAULT_DB)
     ap.add_argument("--out", default=DEFAULT_OUT)
+    ap.add_argument("--force", action="store_true", help="overwrite even when civilizations would be lost")
     args = ap.parse_args()
     if not os.path.exists(args.db):
         print("no database at %s (load a game once to create it)" % args.db, file=sys.stderr)
         return 2
+    old = exported_civs(args.out)
+    if old is not None and not args.force:
+        con = sqlite3.connect("file:%s?mode=ro" % args.db, uri=True)
+        lost = sorted(old - {r[0] for r in con.execute("select CivilizationType from Civilizations")})
+        con.close()
+        if lost:
+            print("not overwriting %s: this database lacks %d civilizations the export has (%s). "
+                  "The account probably lacks some DLC; export on one that has them, or pass --force."
+                  % (args.out, len(lost), ", ".join(lost)), file=sys.stderr)
+            return 1
     missing = export(args.db, args.out)
     size = os.path.getsize(args.out)
     print("wrote %s (%.1f MB)" % (args.out, size / 1e6))

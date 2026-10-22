@@ -6,7 +6,7 @@
 
 ## 先读
 
-- [AGENTS.md](AGENTS.md)：需求约束、技术方案、37 条坑、每轮改动流程。
+- [AGENTS.md](AGENTS.md)：需求约束、技术方案、38 条坑、每轮改动流程。
 - 当前平台的环境说明：[docs/dev-macos.md](docs/dev-macos.md) 或 [docs/dev-windows.md](docs/dev-windows.md)。
 - [tools/README.md](tools/README.md)：每个工具的用法。
 
@@ -49,7 +49,7 @@
 
 `main` 上攒的改动不会直接到玩家手里，玩家只拿到打了 tag 的版本。步骤见发版清单（新建 Issue 时选“发版清单”模板），大致是：
 
-1. 定版本号：修问题改第三位（v1.0.1），加功能改第二位（v1.1.0），大的不兼容改动改第一位。modinfo 的 `version` 每次发版加 1。
+1. 定版本号：修问题改第三位（v1.0.1），加功能改第二位（v1.1.0），大的不兼容改动改第一位。modinfo 的 `version` 每次发版加 1；`SmartDistrictPlanner/UI/SDP_Panel.lua` 的 `VERSION` 改成新版本号，启动栏按钮的悬停提示显示它，`validate.py` 检查它和 CHANGELOG 最新的版本一致。
 2. 发版前测试：三种规则集的游戏内测试、macOS 真实点击、后期存档压力测试（不用在 Windows 上手动测）；改了求解器还要跑离线对比。
 3. 准备文字：CHANGELOG 的“未发布”改成 `vX.Y.Z（日期）`；写 `workshop/changenotes/vX.Y.Z.txt`（英文在前、中文在后）；功能或限制变了，同步 README、`workshop/` 的中英简介（`description.bbcode`、`description_zh.bbcode`）和介绍与评测页。这些也走 PR。
 4. 在 GitHub 发布 Release `vX.Y.Z`，发布说明写给玩家，英文在前、中文在后。`.github/workflows/release.yml` 会：

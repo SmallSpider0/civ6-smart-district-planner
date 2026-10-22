@@ -80,7 +80,7 @@ node tools/offline_tests.mjs -v -k k6 tests/offline/bench_single.lua   # 单城�
 ## compare.mjs — 与其他规划模组的离线对比
 
 ```bash
-python3 -I tests/compare/export_gameinfo.py        # 一次：从游戏缓存导出规则数据库（tests/compare/.cache/，不入库）；要在有全部 DLC 的账号上导出，见 docs/dev-macos.md
+python3 -I tests/compare/export_gameinfo.py        # 一次：从游戏缓存导出规则数据库（tests/compare/.cache/，不入库）；要在有全部 DLC 的账号上导出，见 docs/dev-macos.md。已有导出、而游戏缓存里的文明比它少时拒绝覆盖（`--force` 强制）
 node tools/compare.mjs --list                       # 场景列表
 node tools/compare.mjs -s S04-japan -p sdp,amt,ep -j 4 -v   # 某些场景、某些规划器（-s 是编号的子串）
 node tools/compare.mjs -s '^C\d' -p sdp,ep -j 3            # 以 ^ 开头时按正则匹配（子串 "C" 也会匹配 "~SCI"）
@@ -167,6 +167,8 @@ python3 -I tools/run_tests.py                     # 跑 tests/**/test_*.lua
 python3 -I tools/run_tests.py -k campus -v tests/test_dmt.lua
 ```
 
+开测前先查对局加载的是本模组的哪一份：是创意工坊那份（订阅了创意工坊版，见 AGENTS.md 坑 38）就不跑，返回 1。
+
 测试文件格式：
 
 ```lua
@@ -207,7 +209,7 @@ python3 -I tools/realclick.py at 'Controls.SolveButton'   # 点 SDP_Panel 状态
 ## stress.py — 后期存档压力测试（发布前）
 
 ```bash
-python3 -I tools/stress.py prepare pangaea-gs     # 主菜单开局，AI 自动打 N 回合，存为 SDP_stress_pangaea-gs
+python3 -I tools/stress.py prepare pangaea-gs     # 主菜单开局（在对局里先退回主菜单），AI 自动打 N 回合，存为 SDP_stress_pangaea-gs
 python3 -I tools/stress.py load pangaea-gs        # 回主菜单读这个存档
 python3 -I tools/stress.py run pangaea-gs         # tests/bench/stress.lua 的各步，逐步计时，结果写 tests/stress/results/
 python3 -I tools/stress.py check pangaea-gs       # 按玩家的建造流程建出"魅力"一步的方案，比较魅力与住房（会改动当前对局，最后跑）
@@ -231,7 +233,7 @@ python3 -I tools/game.py quit                          # 经 Tuner 退出游戏�
 python3 -I tools/game.py menu                          # 退回主菜单（只改了 Lua/UI XML 时用它重载，不必重启）
 python3 -I tools/game.py launch                        # 记下前台应用，open -g steam://rungameid/289070，等启动器出现（Steam 有时要 1 分钟以上）
 # 然后用 computer-use 对启动器（com.aspyr.civ6.steam）的"开始"按钮做 AXPress
-python3 -I tools/game.py newgame --state SDP_Panel --capital   # 等主菜单→快速开始→等指定 Lua 状态可用→用开局开拓者建首都
+python3 -I tools/game.py newgame --state SDP_Panel --capital   # 在对局里先退回主菜单→等主菜单→快速开始→等指定 Lua 状态可用→用开局开拓者建首都
 python3 -I tools/game.py popups --close                # 关掉排队中的游戏弹窗（历史时刻等），规划面板才会显示
 python3 -I tools/game.py newgame --state SDP_Panel --capital --reveal   # 另外揭示首都周围 12 格（城址、多城测试需要）
 ```
@@ -256,7 +258,7 @@ python3 -I tools/game.py newgame --state SDP_Panel --capital --reveal   # 另外
 
 `newgame` 默认固定领袖（`--leader LEADER_TRAJAN`）和地图/游戏种子（`--seed 20261019`），做法是包装主菜单状态里的全局 `GameSetup_RefreshParameters`："快速开始"重置配置后会调用它。所以每次都是同一张地图；`--random` 恢复随机。
 
-只改了 Lua 或 UI XML：`deploy.py` → `game.py menu` → `game.py newgame --state SDP_Panel --capital` → `run_tests.py`（约 30 秒）。
+只改了 Lua 或 UI XML：`deploy.py` → `game.py newgame --state SDP_Panel --capital`（在对局里调用时先退回主菜单，不用另跑 `game.py menu`）→ `run_tests.py`（约 30 秒）。
 
 改 modinfo 或文本后的完整循环：`deploy.py` → `game.py quit` → `game.py launch` → 点"开始" → `game.py newgame --state SDP_Panel --capital` → `run_tests.py`。
 

@@ -19,12 +19,12 @@ Do not enable Smart District Planner together with Auto Map Tacks Planner, Empir
    - Windows: `Documents\My Games\Sid Meier's Civilization VI\Mods\`
    - macOS: `~/Library/Application Support/Sid Meier's Civilization VI/Sid Meier's Civilization VI/Mods/`
 
-   You should end up with `Mods/SmartDistrictPlanner/SmartDistrictPlanner.modinfo`. To update, delete the old folder first. Keep only one copy: when you switch to the Workshop, delete this folder, otherwise the game can keep loading it.
+   You should end up with `Mods/SmartDistrictPlanner/SmartDistrictPlanner.modinfo`. To update, delete the old folder first. Keep only one copy: with one in Mods and one from the Workshop, the game loads only one of them, not necessarily the newer one or the one you enabled in Additional Content. When you switch to the Workshop, delete this folder.
 3. Start the game, open **Additional Content** from the main menu and enable both **Detailed Map Tacks** and **Smart District Planner**. In a mod group you created yourself, new mods start disabled. Restart the game after enabling or updating mods.
 
 ## Open the panel
 
-In a game, a hexagon button appears at the end of the toolbar at the upper left of the screen (tooltip "Smart District Planner"). Click it to open the panel; click it again or press Esc to close it. **Shift+L** also opens and closes it; you can change the key in **Options → Key Bindings**, under "Smart District Planner".
+In a game, a hexagon button appears at the end of the toolbar at the upper left of the screen (its tooltip shows "Smart District Planner" and the version). Click it to open the panel; click it again or press Esc to close it. **Shift+L** also opens and closes it; you can change the key in **Options → Key Bindings**, under "Smart District Planner".
 
 The panel has three tabs: **One city**, **City sites** and **Several cities**. The panel follows the game's language (English or Chinese).
 
@@ -57,7 +57,7 @@ Only revealed tiles are considered; a tile whose 3 rings are mostly unrevealed i
 ## Several cities
 
 1. **Cities**: every City Center tack, plus your cities within 7 tiles of a new one (up to 8). Untick one to leave it out; an unticked tack stays on the map as a neighbor.
-2. **Districts for**: one list shared by every city, or a list for one city. **Apply a template** fills a list by yield (Science city, Production city…) from your civilization's adjacency rules. The number per city works as on the One city tab.
+2. **Districts for**: one list shared by every city, or a list for one city. **Apply a template** fills a list by yield (Science city, Production city…) from your civilization's adjacency rules. The number per city works as on the One city tab. A district limited to one per empire (Government Plaza, Diplomatic Quarter) that is Must in the shared list goes to the first city of the list; the others are marked "empire limit reached" and take a Pool district instead. To put it in another city, make it Must in that city's own list only.
 3. Wonders, weights, switches and Effort as on the One city tab. **Reach** (default 0) moves districts with a regional effect, such as the Industrial Zone, to where they cover more of your cities.
 4. **Solve**, preview a plan, **Place tacks**; tacks are named with their city's number. **Undo tacks** works as on the One city tab.
 
@@ -66,6 +66,7 @@ Only revealed tiles are considered; a tile whose 3 rings are mostly unrevealed i
 - Map tacks already on the map are fixed: the planner never uses their tiles, and their bonuses count.
 - To plan a city again, undo its tacks or tick **Replace**.
 - On tiles a city owns, the game's own list of valid tiles is checked as well, so tiles the game refuses (such as a Canal that does not connect water) never enter a plan.
+- Tiles next to a City Center tack that is not a city yet, and that nobody owns, are left to that planned city: it takes them when it is founded, so no other city plans a district there.
 - The same game state and the same settings always give the same plan.
 
 ## Known limitations

@@ -14,7 +14,7 @@
 
     <!-- 启动栏与面板 -->
     <Replace Tag="LOC_SDP_LAUNCHBAR_TOOLTIP" Language="zh_Hans_CN">
-      <Text>智能区域规划器</Text>
+      <Text>智能区域规划器 {1_Version}</Text>
     </Replace>
     <Replace Tag="LOC_SDP_PANEL_TITLE" Language="zh_Hans_CN">
       <Text>智能区域规划器</Text>

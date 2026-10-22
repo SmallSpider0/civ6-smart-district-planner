@@ -95,6 +95,65 @@ local function Request(extra)
   return r
 end
 
+test("a planned city's first ring is left to it (issue 26)", function()
+  local w = World.New({
+    rows = MAP,
+    cities = { { id = 1, x = 4, y = 5, population = 6, capital = true, radius = 1 } },
+    pins = { { 8, 6, "ICON_DISTRICT_CITY_CENTER", "A" } },
+  })
+  local ring, shared = SDP_City.PlotsInRange(8, 6, 1), {}
+  for _, e in ipairs(ring) do
+    if Map.GetPlotDistance(4, 5, e.X, e.Y) <= SDP_City.RADIUS and w:Plot(e.X, e.Y):GetOwner() == -1 then
+      shared[#shared + 1] = e
+    end
+  end
+  T.ok(#shared >= 2, "setup: the capital reaches two free plots of the site's first ring")
+  local own = shared[1]
+  w:Own(own.X, own.Y, 0, w:City(1))
+  local scan = SDP_City.Scan(0, 1)
+  T.eq(scan.Excluded[own.Index], nil, "a plot the capital owns stays its own")
+  for n = 2, #shared do
+    T.eq(scan.Excluded[shared[n].Index], "SITE_RING", "free plot " .. shared[n].X .. "," .. shared[n].Y)
+  end
+  local site = SDP_City.ScanSite(0, 8, 6)
+  for _, e in ipairs(ring) do
+    T.ok(site.Excluded[e.Index] ~= "SITE_RING", "the site keeps its own first ring")
+  end
+  local result = SDP_Multi.Solve(Request({ Districts = { "DISTRICT_CAMPUS", "DISTRICT_HOLY_SITE", "DISTRICT_THEATER",
+    "DISTRICT_COMMERCIAL_HUB" } }))
+  T.ok(result.Ok, tostring(result.Error))
+  for _, p in ipairs(result.Plan) do
+    if p.City == "C1" and Map.GetPlotDistance(8, 6, p.X, p.Y) == 1 then
+      T.eq(p.Index, own.Index, "the capital's " .. p.Type .. " in the site's first ring")
+    end
+  end
+end)
+
+test("an empire-limited district every city asks for goes to the first; the others fill their count (issue 28)", function()
+  NewWorld()
+  local result = SDP_Multi.Solve(Request({
+    Districts = { "DISTRICT_GOVERNMENT", "DISTRICT_CAMPUS" },
+    Pool = { "DISTRICT_HOLY_SITE", "DISTRICT_THEATER", "DISTRICT_COMMERCIAL_HUB", "DISTRICT_INDUSTRIAL_ZONE" },
+    Count = 3,
+  }))
+  T.ok(result.Ok, tostring(result.Error))
+  local perCity, plazas = {}, {}
+  for _, p in ipairs(result.Plan) do
+    perCity[p.City] = (perCity[p.City] or 0) + 1
+    if p.Type == "DISTRICT_GOVERNMENT" then plazas[#plazas + 1] = p.City end
+  end
+  T.same(plazas, { result.Cities[1].Key }, "one plaza, in the first city of the list")
+  for _, c in ipairs(result.Cities) do T.eq(perCity[c.Key], 3, c.Key .. ": three districts") end
+  local told = 0
+  for _, u in ipairs(result.Unplaced) do
+    if u.Type == "DISTRICT_GOVERNMENT" then
+      T.eq(u.Reason, "MAX_PER_PLAYER", "why " .. u.City .. " has none")
+      told = told + 1
+    end
+  end
+  T.eq(told, #result.Cities - 1, "every other city is told")
+end)
+
 test("a multi-city plan: legal plots, one per plot, empire limit, never worse than city by city", function()
   NewWorld()
   local result = SDP_Multi.Solve(Request({ Tier = "STANDARD" }))
