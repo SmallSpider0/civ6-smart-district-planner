@@ -50,9 +50,9 @@
 2. 发版前测试：三种规则集的游戏内测试、macOS 真实点击、Windows 冒烟测试、后期存档压力测试；改了求解器还要跑离线对比。
 3. 准备文字：CHANGELOG 的“未发布”改成 `vX.Y.Z（日期）`；写 `workshop/changenotes/vX.Y.Z.txt`（英文在前、中文在后）；功能或限制变了，同步 README、`workshop/description.bbcode` 和介绍与评测页。这些也走 PR。
 4. 在 GitHub 发布 Release `vX.Y.Z`，发布说明写给玩家，英文在前、中文在后。`.github/workflows/release.yml` 会：
-   - 打出 `SmartDistrictPlanner-vX.Y.Z.zip`（mod、测试说明、安装说明、`REPORT.html`），连同单文件页面一起附到 Release；
+   - 打出 `SmartDistrictPlanner-vX.Y.Z.zip`（mod、测试说明、安装说明、`REPORT.html`、`REPORT_EN.html`），连同中英两个单文件页面一起附到 Release；
    - 打出 `SmartDistrictPlanner-vX.Y.Z-workshop.zip`（创意工坊提交包，`tools/workshop.py pack`）附到 Release；
-   - 生成介绍与评测页，发布到 GitHub Pages（<https://smallspider0.github.io/civ6-smart-district-planner/>）。
+   - 生成介绍与评测页，发布到 GitHub Pages（中文 <https://smallspider0.github.io/civ6-smart-district-planner/>，英文在 `en/`）。
 5. 合作者在 Windows 上用提交包上传创意工坊，见 [docs/workshop-upload.md](docs/workshop-upload.md)。本仓库的工具不连接 Steam。
 
 其他情况：
@@ -73,7 +73,7 @@
 - 直接描述功能，不加"新功能""新加""新指标"之类的标签。
 - 测试项数、耗时这类数字只写在自测报告和“介绍与评测”页里（由脚本生成或刷新），其他文档链接过去，免得过时。
 - 截图只截游戏画面，不带系统菜单栏、标题栏、任务栏或 Dock。放在 `docs/images/`，按 `v<版本>-<内容>.jpg` 命名。
-- “介绍与评测”页由 `report/build.py` 生成，前 6 节写给玩家，技术内容放在附录。用 Claude 做的页面（artifact）沿用这个页面的样式和写法。
+- “介绍与评测”页由 `report/build.py` 生成，前 6 节写给玩家，技术内容放在附录。英文页只有前 6 节，改中文页前 6 节时同步改 `report/template_en.html`。用 Claude 做的页面（artifact）沿用这个页面的样式和写法。
 
 ## 许可证与第三方内容
 

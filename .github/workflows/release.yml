@@ -54,7 +54,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           cp dist/report/report.html "dist/SmartDistrictPlanner-$VERSION-page.html"
-          gh release upload "$VERSION" "dist/SmartDistrictPlanner-$VERSION.zip" "dist/SmartDistrictPlanner-$VERSION-page.html" --clobber
+          cp dist/report/report_en.html "dist/SmartDistrictPlanner-$VERSION-page-en.html"
+          gh release upload "$VERSION" "dist/SmartDistrictPlanner-$VERSION.zip" "dist/SmartDistrictPlanner-$VERSION-page.html" \
+            "dist/SmartDistrictPlanner-$VERSION-page-en.html" --clobber
       - uses: actions/upload-pages-artifact@v4
         with:
           path: _site

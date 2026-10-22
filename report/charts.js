@@ -1,6 +1,8 @@
 (function () {
   const D = JSON.parse(document.getElementById('data').textContent);
   const has = id => document.getElementById(id) != null;
+  // The English page (D.lang "en") has sections 1-6 only: just the time chart's words differ.
+  const EN = D.lang === 'en';
   const NS = 'http://www.w3.org/2000/svg';
   const tip = document.getElementById('tip');
   function el(tag, attrs, parent) {
@@ -256,7 +258,7 @@
     const x = v => left + (Math.log10(v) - lo) / (hi - lo) * (W - left - right);
     cfg.ticks.forEach(t => {
       el('line', { x1: x(t), x2: x(t), y1: top, y2: H - 24, class: 'grid' }, svg);
-      txt(svg, x(t), H - 8, t + ' 秒', 'ax', 'middle');
+      txt(svg, x(t), H - 8, t + (EN ? ' s' : ' 秒'), 'ax', 'middle');
     });
     cfg.rows.forEach((r, i) => {
       const y0 = top + i * rowH;
@@ -266,7 +268,7 @@
       const d = 'M' + left + ',' + by + ' L' + (left + w - rr) + ',' + by + ' Q' + (left + w) + ',' + by + ' ' + (left + w) + ',' + (by + rr) +
         ' L' + (left + w) + ',' + (by + bh - rr) + ' Q' + (left + w) + ',' + (by + bh) + ' ' + (left + w - rr) + ',' + (by + bh) + ' L' + left + ',' + (by + bh) + ' Z';
       const p = el('path', { d: d, style: 'fill: var(' + r.color + ')' }, svg);
-      hover(p, r.label + '：中位 ' + r.value.toFixed(1) + ' 秒（离线）');
+      hover(p, EN ? r.label + ': median ' + r.value.toFixed(1) + ' s (offline)' : r.label + '：中位 ' + r.value.toFixed(1) + ' 秒（离线）');
       txt(svg, left + w + 5, by + 11, r.value < 10 ? r.value.toFixed(1) : r.value.toFixed(0), 'val', 'start');
     });
   }
@@ -381,5 +383,5 @@
 
   legend('lg-time', D.time.legend.map(k => ({ key: k, label: P[k].label, color: P[k].color, square: true })));
   timeBars('ch-time', { rows: D.time.rows, min: D.time.min, max: D.time.max, ticks: D.time.ticks,
-    aria: '离线中位耗时对比' });
+    aria: EN ? 'Median time offline' : '离线中位耗时对比' });
 })();

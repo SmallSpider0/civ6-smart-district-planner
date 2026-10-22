@@ -8,6 +8,7 @@ version, by default the short commit hash) says exactly what is inside:
   TEST_GUIDE.md           docs/tester-guide.md with the version filled in
   INSTALL_AND_USE.md      docs/install-and-test.md (links to other docs made plain text)
   REPORT.html             the mod's page (introduction and evaluation) as one self-contained file (report/build.py)
+  REPORT_EN.html          the English page (sections 1-6), the same way
 
 The static checks in validate.py run first, and uncommitted changes to the mod,
 to those two documents or to anything the report reads stop the build (the
@@ -76,7 +77,10 @@ def main(argv=None):
     guide = git("show", "HEAD:" + GUIDE).replace("{{VERSION}}", commit).replace("{{DATE}}", date)
     install = plain_links(git("show", "HEAD:" + INSTALL))
     page, _data = report.build(make_snapshots=False, version=commit, date=date)
-    report_html = report.standalone(page, lambda name: git("show", "HEAD:docs/images/" + name, text=False))
+    page_en, _data = report.build(make_snapshots=False, version=commit, date=date, lang="en")
+    image = lambda name: git("show", "HEAD:docs/images/" + name, text=False)  # noqa: E731
+    report_html = report.standalone(page, image)
+    report_en = report.standalone(page_en, image, "en")
 
     os.makedirs(args.out, exist_ok=True)
     path = os.path.join(args.out, "%s-%s.zip" % (MOD_NAME, commit))
@@ -94,8 +98,9 @@ def main(argv=None):
         add(zf, "TEST_GUIDE.md", guide.encode("utf-8"))
         add(zf, "INSTALL_AND_USE.md", install.encode("utf-8"))
         add(zf, "REPORT.html", report_html.encode("utf-8"))
+        add(zf, "REPORT_EN.html", report_en.encode("utf-8"))
 
-    print("package: %s (%d mod files + 2 guides + report, %d KB, commit %s of %s)"
+    print("package: %s (%d mod files + 2 guides + 2 pages, %d KB, commit %s of %s)"
           % (path, len(files), os.path.getsize(path) // 1024, commit, date))
     return 0
 

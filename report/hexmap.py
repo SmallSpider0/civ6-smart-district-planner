@@ -1,6 +1,6 @@
 """Hex map figures for the report: a scenario's map with one or more plans.
 
-render(snapshot, panels, center, radius) -> SVG string. panels = list of
+render(snapshot, panels, center, radius, lang="zh") -> SVG string. panels = list of
 { "title": str, "items": [ {type, x, y, adj} ], "bad": set((x, y)) }.
 Pointy-top hexes, odd rows shifted right (the comparison world's layout).
 Colors are CSS classes defined in the page, so dark mode works.
@@ -23,6 +23,25 @@ ABBR = {
     "DISTRICT_OPPIDUM": "工", "DISTRICT_PRESERVE": "保", "DISTRICT_AERODROME": "机", "DISTRICT_SPACEPORT": "航",
     "DISTRICT_WONDER": "奇",
 }
+
+# English page: two letters per district (the caption explains the colors).
+ABBR_EN = {
+    "DISTRICT_CAMPUS": "Ca", "DISTRICT_SEOWON": "Ca", "DISTRICT_OBSERVATORY": "Ca",
+    "DISTRICT_HOLY_SITE": "HS", "DISTRICT_LAVRA": "HS",
+    "DISTRICT_THEATER": "Th", "DISTRICT_ACROPOLIS": "Th",
+    "DISTRICT_COMMERCIAL_HUB": "CH", "DISTRICT_SUGUBA": "CH", "DISTRICT_HARBOR": "Ha", "DISTRICT_COTHON": "Ha",
+    "DISTRICT_ROYAL_NAVY_DOCKYARD": "Ha",
+    "DISTRICT_INDUSTRIAL_ZONE": "IZ", "DISTRICT_HANSA": "IZ",
+    "DISTRICT_ENTERTAINMENT_COMPLEX": "EC", "DISTRICT_STREET_CARNIVAL": "EC", "DISTRICT_HIPPODROME": "EC",
+    "DISTRICT_ENCAMPMENT": "En", "DISTRICT_IKANDA": "En", "DISTRICT_THANH": "En",
+    "DISTRICT_GOVERNMENT": "GP", "DISTRICT_DIPLOMATIC_QUARTER": "DQ", "DISTRICT_AQUEDUCT": "Aq", "DISTRICT_BATH": "Aq",
+    "DISTRICT_DAM": "Da", "DISTRICT_CANAL": "Cn", "DISTRICT_NEIGHBORHOOD": "Ne", "DISTRICT_MBANZA": "Ne",
+    "DISTRICT_OPPIDUM": "IZ", "DISTRICT_PRESERVE": "Pr", "DISTRICT_AERODROME": "Ae", "DISTRICT_SPACEPORT": "Sp",
+    "DISTRICT_WONDER": "W",
+}
+# Labels for city centers and unknown districts or pins, by language.
+WORDS = {"zh": {"city": "城", "foreign": "他", "district": "区", "pin": "钉"},
+         "en": {"city": "C", "foreign": "F", "district": "D", "pin": "P"}}
 
 TERRAIN = {"GRASS": "tg", "PLAINS": "tp", "DESERT": "td", "TUNDRA": "tt", "SNOW": "ts"}
 
@@ -58,7 +77,9 @@ def fmt(points):
     return " ".join("%.1f,%.1f" % p for p in points)
 
 
-def render(snapshot, panels, center, radius=3, s=17, gap=26, title_h=26):
+def render(snapshot, panels, center, radius=3, s=17, gap=26, title_h=26, lang="zh"):
+    abbr = ABBR_EN if lang == "en" else ABBR
+    words = WORDS["en" if lang == "en" else "zh"]
     plots = {(p["x"], p["y"]): p for p in snapshot["plots"]}
     area = [xy for xy in plots if distance(xy, center) <= radius]
     def pos(x, y):
@@ -118,17 +139,17 @@ def render(snapshot, panels, center, radius=3, s=17, gap=26, title_h=26):
             if xy in cities:
                 c = cities[xy]
                 out.append('<polygon class="hx-city%s" points="%s"/>' % ("" if c["owner"] == 0 else " foreign", fmt(corners(cx, cy, s - 3))))
-                label = ("hm-city", "城" if c["owner"] == 0 else "他")
+                label = ("hm-city", words["city"] if c["owner"] == 0 else words["foreign"])
             elif p.get("d"):
                 out.append('<polygon class="hx-built" points="%s"/>' % fmt(corners(cx, cy, s - 3)))
-                label = ("hm-built", ABBR.get(p["d"], "区"))
+                label = ("hm-built", abbr.get(p["d"], words["district"]))
             elif xy in pins:
                 out.append('<polygon class="hx-pin" points="%s"/>' % fmt(corners(cx, cy, s - 3)))
-                label = ("hm-pin", ABBR.get(pins[xy]["icon"].replace("ICON_", ""), "钉"))
+                label = ("hm-pin", abbr.get(pins[xy]["icon"].replace("ICON_", ""), words["pin"]))
             if xy in placed and xy not in cities:
                 it = placed[xy]
                 out.append('<polygon class="hx-plan%s" points="%s"/>' % (" bad" if xy in bad else "", fmt(corners(cx, cy, s - 2.2))))
-                label = ("hm-plan", ABBR.get(it["type"], "区"))
+                label = ("hm-plan", abbr.get(it["type"], words["district"]))
                 if it.get("adj") is not None:
                     out.append('<text class="hm-adj" x="%.1f" y="%.1f">+%d</text>' % (cx, cy + 10.5, it["adj"]))
             if label:
