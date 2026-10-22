@@ -140,6 +140,7 @@ include("dmt_yieldcalculator");       -- 尾部会执行 DMT_Initialize()，见�
 | 36 | （2026-10-21 压力测试发现）测试里用建造队列的 `CreateDistrict` 直接建出的区域，清不清格上的地貌和玩家正常放置不一样（群岛存档：玩家有采矿，直接建在树林上的商业中心，树林留在区域下面），还绕过人口名额和前置科技。校准“建区域会改变什么”要走正常流程：界面状态里 `CityManager.RequestOperation(city, CityOperationTypes.BUILD, {X, Y, DISTRICT_TYPE})` 下令，再在核心状态 `city:GetBuildQueue():FinishProgress()` 建完（`tools/stress.py check`、`tests/bench/probe_ownplot.py`）；区域不能用金币购买。界面状态里的魅力、住房读数也会滞后，一律在 `GameCore_Tuner` 里读魅力和住房，在界面状态里读地块产出（坑 34） |
 | 37 | （2026-10-22 英文界面检查发现）游戏载入文本时去掉 `<Text>` 首尾的空格：英文分隔符 `"; "` 读出来是 `";"`，`" / "` 是 `"/"`。中文全角标点不受影响，所以中文界面看不出来。分隔符写进格式串（`LOC_SDP_LIST_JOIN` = `{1_A}; {2_B}`，`SDP_UI.Join`）；需要前后空格的短文本同样整句写成格式串（如 `LOC_SDP_SITES_NEW_KIND` = `{1_Name} {2_Count} (new)`） |
 | 38 | （2026-10-22 实测）同一个模组 ID 装了两份（Mods 文件夹和创意工坊）时，“额外内容”里两份都列出、可以分别启用，但对局的启用列表（`GameConfiguration.GetEnabledMods()`）只记模组 ID，开局时游戏加载 `Mods.sqlite` 里先登记的那份（`ModRowId` 小），与启用的是哪一份无关：Mods 那份启用、创意工坊那份停用，对局里 `Modding.GetActiveMods()` 给出的仍是创意工坊那份（带 `SubscriptionId`）。哪份先登记取决于安装经过（`deploy.py` 改了文件后，本地那份会重新登记、排到后面），不一定是新的那份。所以只留一份；开发机上测试前确认加载的是 deploy 的那份 |
+| 39 | （2026-10-22 英文界面截图时发现）游戏的 Lua 里带 `^` 锚点的 `string.gsub` 不止替换一次：`("at most"):gsub("^%l", string.upper)` 得到 `"AT most"`，次数 2。标准 Lua（离线测试的 fengari）只替换一次，所以离线测不出。要只改开头，用 `s:sub(1, 1):upper() .. s:sub(2)` 或 `find` 加 `sub` |
 
 ## 6. 开发环境与工作流
 

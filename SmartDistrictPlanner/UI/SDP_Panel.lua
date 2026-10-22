@@ -29,7 +29,7 @@ local MAX_WEIGHT = 3
 -- The release, in the launch bar button's tooltip, so that a report says
 -- which copy the game loaded (issue 27). tools/validate.py checks it against
 -- the newest version in CHANGELOG.md.
-local VERSION = "v1.1.0"
+local VERSION = "v1.1.1"
 
 -- The weight row (feedback item 3): the six yields with the game's font
 -- icons, one family (the texture icons cover only some yields: requirements
@@ -446,7 +446,11 @@ local function QualityText(result)
     parts[#parts + 1] = Locale.Lookup("LOC_SDP_QUALITY_MAYBE")
   end
   if q.Truncated then parts[#parts + 1] = Locale.Lookup("LOC_SDP_RESULT_TRUNCATED") end
-  return Join(parts)
+  -- The English parts start in lower case, whichever comes first; the line
+  -- starts with a capital (Chinese text has no case and is left as it is).
+  -- Not gsub("^%l", ...): the game's Lua replaces twice there (pitfall 39).
+  local text = Join(parts)
+  return text:sub(1, 1):upper() .. text:sub(2)
 end
 SDP_UI.QualityText = QualityText
 

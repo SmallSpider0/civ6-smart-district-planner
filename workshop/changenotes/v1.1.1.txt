@@ -1,0 +1,11 @@
+Changes since v1.1.0:
+- Several cities: a district limited to one per empire (Government Plaza, Diplomatic Quarter) that is Must in the shared list goes to the first city of the list. The other cities take a Pool district instead, so each still gets its number of districts; before, they got one fewer.
+- Tiles next to a City Center tack that is not a city yet, and that nobody owns, are left to that planned city: no other city plans a district there, since the new city takes them when it is founded. This holds on the One city and Several cities tabs.
+- The toolbar button's tooltip shows the version.
+- If you installed the planner by hand before, delete the SmartDistrictPlanner folder from your Mods folder: with both, the game loads only one of them, not necessarily the Workshop one, whichever you enable.
+
+自 v1.1.0 以来的变化：
+- 多城：市政广场、外交区这类全帝国限建的区域在共用清单里设为必建时，放在城市列表里最靠前的那座城，其他城从候选里补足每城数量；之前这些城会少规划一个区域。
+- 城址钉（还没建城的市中心钉）一环内没有主人的格子留给这座新城：建城时它会拿走这些格子，所以别的城不再在上面规划区域。单城页和多城页都是这样。
+- 启动栏按钮的悬停提示显示版本号。
+- 以前手动装过本模组的，请删掉 Mods 文件夹里的 SmartDistrictPlanner：两份都在时，游戏只加载其中一份，不一定是创意工坊的，启用哪一份都一样。
