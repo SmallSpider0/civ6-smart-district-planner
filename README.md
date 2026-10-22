@@ -1,5 +1,9 @@
 # 智能区域规划器（Smart District Planner）
 
+> **English.** A Civilization VI mod that finds the district layout with the highest adjacency bonus for one city, for several cities together or for new city sites, and places it as map tacks with district icons. It needs [Detailed Map Tacks](https://steamcommunity.com/sharedfiles/filedetails/?id=2428969051) and works with the base game, Rise and Fall, and Gathering Storm; the panel follows the game's language. Use one planner per game: do not enable it together with Auto Map Tacks Planner or Empire Planner.
+>
+> **[Download](https://github.com/SmallSpider0/civ6-smart-district-planner/releases/latest)** · **[Overview and evaluation](https://smallspider0.github.io/civ6-smart-district-planner/en/)** · **[Install and use](docs/install-en.md)**
+
 《文明6》区域规划模组：选一座城和想建的区域，它在城市三环内找相邻加成最高的摆法，一键打成带区域图标的地图钉；也能给新城选址，让几座城一起规划。合法性和加成全部由 [Detailed Map Tacks](https://steamcommunity.com/sharedfiles/filedetails/?id=2428969051)（DMT）计算，与地图钉上显示的数一致。
 
 **[下载](https://github.com/SmallSpider0/civ6-smart-district-planner/releases/latest)** · **[介绍与评测](https://smallspider0.github.io/civ6-smart-district-planner/)** · **[安装与使用](docs/install-and-test.md)**

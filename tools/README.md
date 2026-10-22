@@ -125,7 +125,7 @@ python3 -I tools/package.py                     # 输出 dist/SmartDistrictPlann
 python3 -I tools/package.py --version v1.0.0    # 输出 dist/SmartDistrictPlanner-v1.0.0.zip（发布工作流这样用）
 ```
 
-- 内容：`SmartDistrictPlanner/`（模组本体）、`TEST_GUIDE.md`（`docs/tester-guide.md`，填好版本号和日期）、`INSTALL_AND_USE.md`（`docs/install-and-test.md`，指向其他文档的链接改成纯文本）、`REPORT.html` 和 `REPORT_EN.html`（“介绍与评测”页中英两页的单文件版，见下一节）。
+- 内容：`SmartDistrictPlanner/`（模组本体）、`TEST_GUIDE.md`（`docs/tester-guide.md`，填好版本号和日期）、`INSTALL_AND_USE.md`（`docs/install-and-test.md`，指向其他文档的链接改成纯文本）、`INSTALL_AND_USE_EN.md`（英文安装与使用说明 `docs/install-en.md`，同样处理）、`REPORT.html` 和 `REPORT_EN.html`（“介绍与评测”页中英两页的单文件版，见下一节）。
 - 从最近一次提交打包：先校验；模组、这两份文档或页面读到的文件（`report/build.py` 的 `INPUTS`）有未提交的改动时拒绝打包。文件名里的版本（默认是提交号）也写在测试说明和页面上，反馈时报这个号。
 - 压缩包里的文件名都是 ASCII，Windows 自带的解压工具不会显示乱码；条目时间取提交时间，同一次提交打出的包相同。`dist/` 不入库。
 

@@ -39,6 +39,7 @@ civ6mod/
 │   ├── design.md                     # 交付物 3：算法结构 / 目标函数 / DMT 接缝
 │   ├── multicity-design.md           # 选城址、多城、奇观、档位、离线基准
 │   ├── install-and-test.md           # 交付物 2：安装、使用与验收（含"勿与 AMT 同开"）
+│   ├── install-en.md                 # 英文安装与使用说明（README 英文部分链接它，package.py 打进压缩包）
 │   ├── tester-guide.md               # 给测试者的说明，tools/package.py 打进测试包
 │   ├── self-test-report.md           # 自测报告
 │   ├── dev-macos.md                  # macOS 开发环境与只在 Mac 上能用的工具
