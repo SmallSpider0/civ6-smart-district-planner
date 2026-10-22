@@ -36,6 +36,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(HERE)
 IMAGES = os.path.join(REPO, "docs", "images")
 REPO_URL = "https://github.com/SmallSpider0/civ6-smart-district-planner"
+WORKSHOP_URL = "https://steamcommunity.com/sharedfiles/filedetails/?id=3824473635"
 OUT = os.path.join(REPO, "dist", "report")
 sys.path.insert(0, os.path.join(REPO, "tests", "compare"))
 sys.path.insert(0, HERE)
@@ -471,7 +472,7 @@ def build(files=None, make_snapshots=True, version=None, date=None, lang="zh"):
         return ("没有一个场景低于 %s" % who) if n == 0 else ("只有 %d 个场景低于 %s" % (n, who))
 
     texts = {
-        "VERSION": version, "DATE": date, "DOWNLOAD_URL": download, "REPO_URL": REPO_URL, "PAGES_URL": PAGES_URL,
+        "VERSION": version, "DATE": date, "DOWNLOAD_URL": download, "REPO_URL": REPO_URL, "WORKSHOP_URL": WORKSHOP_URL, "PAGES_URL": PAGES_URL,
         "DOWNLOAD_LABEL": (L("下载 ", "Download ") + version) if version.startswith("v") else L("下载最新版", "Download the latest version"),
         "SUMMARY_COMPARE": (L(
             "在 %d 个模拟实际对局的单城场景上与 AMT r49、Empire Planner 对比：本模组标准档有 %s 的场景拿到最高加成（AMT %s，EP %s），%s。",
