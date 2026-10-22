@@ -18,9 +18,10 @@ import sqlite3
 import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-DEFAULT_DB = os.path.expanduser(
-    "~/Library/Application Support/Sid Meier's Civilization VI/Firaxis Games/"
-    "Sid Meier's Civilization VI/Cache/DebugGameplay.sqlite")
+sys.path.insert(0, os.path.join(ROOT, "tools"))
+import paths  # noqa: E402
+
+DEFAULT_DB = paths.gameplay_db()
 DEFAULT_OUT = os.path.join(ROOT, "tests", "compare", ".cache", "gameinfo.lua")
 
 # Every table that DMT, MapTacks, the three planners or the fake world read,

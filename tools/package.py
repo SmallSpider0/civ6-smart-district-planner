@@ -40,8 +40,9 @@ INSTALL = "docs/install-and-test.md"
 
 
 def git(*args, text=True):
+    # Git writes UTF-8; say so, or Windows decodes with the ANSI code page.
     return subprocess.run(["git", "-C", validate.ROOT] + list(args), check=True,
-                          capture_output=True, text=text).stdout
+                          capture_output=True, encoding="utf-8" if text else None).stdout
 
 
 def plain_links(markdown):

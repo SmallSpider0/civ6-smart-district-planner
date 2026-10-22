@@ -159,11 +159,8 @@ SDP_Panel (UI/SDP_Panel.lua，InGame 上下文，Lua 状态名 SDP_Panel)
 - **快捷键**（第 8 项，`Config/SDP_Input.xml`）：前端数据库里加输入动作 `SDP_OpenPlanner`，默认 Shift+L，面板监听 `Events.InputActionTriggered`。
 - **覆盖范围**（第 7 项，`SDP_Coverage`，离线与游戏内已验证）：覆盖半径从 `GameInfo.Buildings.RegionalRange` 读，按基础区域取最大值（通用建筑和本文明特性的建筑），奇观用自己的半径。被覆盖的对象是玩家的全部城市和本次规划的新城；已建、已打钉的同类区域已覆盖的不再计。`SDP_Search` 的精确评估加上"权重 × 新覆盖的（城市, 类别）个数"，模型的单放值加上单独放下时新覆盖的城数（偏乐观）。只在多城页签，权重 0（默认）时不建模型，结果与没有这项时逐字相同。
 
-## 后续扩展预留
+## 后续扩展
 
-- **多城联合规划**：
-  - `SDP_City.Scan` 和 `SDP_Overlay` 都以玩家与城市为参数，没有"只有一个城市"的假设。
-  - 联合规划可以合并多座城市的候选格（同一格只能归一座城市），把各城的已建区域与锁定钉合并成一份固定 subject，再用同一个 `Evaluate` 计算联合总分。
-  - 求解器的布局表示（区域 → 候选格下标）可以扩展为（城市, 区域）→ 格。
-- **奇观规划**：DMT 已支持 `Type = "WONDER"` 的 subject 及其合法性（`CanPlaceWonderCheckHelper`）。需要做的是把奇观加入可规划列表，并在相邻表里加入 `AdjacentWonder` 一类行（如剧院广场 +2 文化/奇观）。
+多城联合规划和奇观规划已在阶段 9–12 实现，见 [multicity-design.md](multicity-design.md)。还没做的：
+
 - **同类区域多个**：如社区。目前请求里同一类型只放一个；放多个需要在求解器里允许重复类型，并在同分比较中对同类区域做对称性去重。

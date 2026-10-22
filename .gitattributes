@@ -1,0 +1,7 @@
+# LF in the repository and in every working copy, Windows included
+# (Git for Windows would otherwise check text files out with CRLF).
+* text=auto eol=lf
+*.jpg binary
+*.png binary
+*.zip binary
+*.Civ6Save binary

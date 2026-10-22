@@ -33,12 +33,12 @@ import time
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # -I drops the script dir
 import civ6tuner  # noqa: E402
 import game  # noqa: E402
+import paths  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 RESULTS = os.path.join(ROOT, "tests", "stress", "results")
 STEPS = os.path.join(ROOT, "tests", "bench", "stress.lua")
-SAVES = os.path.expanduser("~/Library/Application Support/Sid Meier's Civilization VI/"
-                           "Sid Meier's Civilization VI/Saves/Single")
+SAVES = paths.saves_dir()
 
 # The release scenarios: different rules, maps, sizes and civilizations.
 SCENARIOS = {

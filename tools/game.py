@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""game - start, enter and quit Civilization VI for testing (macOS).
+"""game - start, enter and quit Civilization VI for testing.
 
   game.py quit       quit the running game through the tuner, wait for exit
   game.py menu       leave the current game for the main menu (reloads the
@@ -26,6 +26,10 @@
                      While it waits, the game is kept out of the front if
                      another app was in front (see launch). Mutes the game
                      for the run (the saved volume is not changed).
+
+quit, menu, popups and newgame work through the tuner on macOS and Windows.
+launch opens Steam on both; the launcher click and keeping the game out of
+the front are macOS only (on Windows the game simply comes to the front).
 
 Exit codes: 0 done, 2 the game did not reach the expected state in time.
 """
@@ -78,11 +82,16 @@ MUTE = 'Options.SetAudioOption("Sound", "Master Volume", 0, 0)'
 
 
 def game_running():
+    if sys.platform == "win32":  # CivilizationVI.exe or CivilizationVI_DX12.exe
+        listed = subprocess.run(["tasklist", "/FO", "CSV", "/NH"], capture_output=True, text=True, errors="replace")
+        return "civilizationvi" in listed.stdout.lower()
     return subprocess.run(["pgrep", "-f", "Civ6_Exe"], capture_output=True).returncode == 0
 
 
 def front_app():
-    """Bundle id of the frontmost regular app (one with a Dock icon), else None."""
+    """Bundle id of the frontmost regular app (one with a Dock icon), else None (always None off macOS)."""
+    if sys.platform != "darwin":
+        return None
     asn = subprocess.run(["lsappinfo", "front"], capture_output=True, text=True).stdout.strip()
     if not asn:
         return None
@@ -246,9 +255,15 @@ def cmd_launch(args):
         with open(FRONT_RECORD, "w", encoding="utf-8") as fh:
             fh.write(front)
         print("in front: %s (newgame gives the front back to it)" % front, flush=True)
-    subprocess.run(["open", "-g", STEAM_URL], check=True)  # -g: leave Steam itself in the background
-    ok = wait_for("launcher", game_running, 180, 2)  # Steam can take over a minute
-    print("next: press the launcher's start button (computer-use, bundle %s), then newgame" % CIV6_BUNDLE)
+    if sys.platform == "win32":
+        os.startfile(STEAM_URL)
+    else:
+        subprocess.run(["open", "-g", STEAM_URL], check=True)  # -g: leave Steam itself in the background
+    ok = wait_for("game process", game_running, 180, 2)  # Steam can take over a minute
+    if sys.platform == "darwin":
+        print("next: press the launcher's start button (computer-use, bundle %s), then newgame" % CIV6_BUNDLE)
+    else:
+        print("next: if a launcher window asks, start the game by hand, then newgame")
     return 0 if ok else 2
 
 

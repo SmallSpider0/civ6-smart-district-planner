@@ -1,19 +1,32 @@
 # tools/
 
-开发循环：`validate.py` → `offline_tests.mjs`（不开游戏）→ `deploy.py` → 进入对局 → `run_tests.py`。Python 脚本只用标准库，统一用 `python3 -I` 运行；`luacheck.mjs` 依赖 luaparse（新环境先 `cd tools && npm install`）。
+开发循环：`validate.py` → `offline_tests.mjs`（不开游戏）→ `deploy.py` → 进入对局 → `run_tests.py`。Python 脚本只用标准库，统一用 `python3 -I` 运行（Windows 上是 `py -3 -I`）；`luacheck.mjs`、`offline_tests.mjs`、`compare.mjs` 依赖 luaparse 和 fengari（新环境先 `cd tools && npm ci`）。新机器先跑 `paths.py` 和 `setup_reference.py`。标“仅 macOS”的工具在 Windows 上暂时不能用，见 [docs/dev-windows.md](../docs/dev-windows.md)。
 
 | 脚本 | 作用 | 退出码 |
 |------|------|--------|
+| `paths.py` | 列出 Steam、游戏、创意工坊、Mods、存档、日志的位置（其他工具的默认位置都从这里取） | 0 |
+| `setup_reference.py` | 在 `reference/` 下建指向游戏和 DMT/AMT/EP 源码的链接 | 0 成功；2 缺游戏或 DMT |
 | `validate.py` | 静态校验 mod 与测试文件 | 0 通过；1 有错误；2 缺工具 |
 | `luacheck.mjs` | Lua 语法与陷阱检查（validate 会调用它） | 0 无错误；1 有错误 |
 | `offline_tests.mjs` | 不开游戏跑求解逻辑测试与基准（`tests/offline/`） | 0 全过；1 有失败；2 用法错误 |
 | `deploy.py` | 校验后把 mod 同步到游戏 Mods 目录 | 0 成功；1 校验失败；2 找不到 Mods 目录 |
 | `package.py` | 从最近一次提交打出给合作者的测试包（zip，含测试说明和交付报告） | 0 成功；1 校验失败；2 有未提交的改动 |
 | `run_tests.py` | 经 Tuner 在游戏内跑 `tests/test_*.lua` | 0 全过；1 有失败；2 连接问题；3 超时 |
-| `game.py` | 退出游戏、经 Steam 启动、从主菜单快速开局（可选建首都） | 0 成功；2 超时 |
-| `realclick.py` | 用系统鼠标事件真实点击面板，每步从面板状态读回核对 | 0 全过；1 有失败；2 环境问题 |
+| `game.py` | 退出游戏、经 Steam 启动、从主菜单快速开局（可选建首都）；启动时的前台切换仅 macOS | 0 成功；2 超时 |
+| `realclick.py` | 仅 macOS：用系统鼠标事件真实点击面板，每步从面板状态读回核对 | 0 全过；1 有失败；2 环境问题 |
 | `stress.py` | 发布前在后期存档上做压力测试：AI 自动打出存档、逐步计时、魅力复核 | 0 全过；1 有问题步骤；2 环境问题 |
 | `civ6tuner.py` | FireTuner 客户端：收集 Lua 输出、远程执行 Lua | 见下文 |
+
+## paths.py、setup_reference.py — 位置与参考源码
+
+```bash
+python3 -I tools/paths.py             # 列出找到的位置，每行 ok 或 missing
+python3 -I tools/setup_reference.py   # 在 reference/ 下建 base-ui、dlc、dmt、amt、ep 的链接
+```
+
+- 默认位置按平台给出：macOS 在 `~/Library/Application Support/` 下；Windows 从注册表读 Steam 和“文档”的位置，日志和缓存在 `%LOCALAPPDATA%\Firaxis Games\`。Steam 的其他库从 `libraryfolders.vdf` 读。
+- 不对时设环境变量：`SDP_STEAM`（Steam 文件夹）、`SDP_GAME_DOCS`（放 Mods、Saves 的文件夹）、`SDP_GAME_DATA`（放 Logs、Cache 的文件夹）。
+- `setup_reference.py` 在 macOS 上建符号链接，在 Windows 上建目录联接（`mklink /J`，不需要管理员）。已有的链接会被替换，真实文件夹不动；没订阅的 mod 跳过。
 
 ## validate.py — 静态校验
 
@@ -28,7 +41,7 @@ python3 -I tools/validate.py --strict   # 警告也算失败
 | `modinfo` | mod id 固定；`<Dependencies>` 含 DMT；`<Files>` 与磁盘一致（大小写精确）；动作引用的文件都在 `<Files>`；`AddUserInterfaces` 有 `<Context>`（坑 3）；没被任何动作加载的 XML 给警告 |
 | `text` | 文本文件根为 `<GameData>`，禁止外部文件用 `<Text id><en_US>` 格式（坑 2）；同一加载阶段 en_US 与 zh_Hans_CN 的 `LOC_SDP_*` 键一致；modinfo `<LocalizedText>` 里的文本与 `Text/*.xml` 同键同语言时必须一致 |
 | `loc` | Lua/UI XML 引用的 `LOC_SDP_*` 在对局文本里两种语言都有（以 `_` 结尾的视为运行时拼接前缀，跳过）；modinfo 的名称/描述键在前端阶段能加载（坑 1） |
-| `ui` | UI XML（根为 `<Context>`）只用游戏本体与 DLC UI XML 出现过的控件与属性（坑 8）；游戏源码里的拼写错误（`Achnor`、`StachGrowth` 等）单独报错；只出现过一次的属性给警告。需要 `reference/` 符号链接 |
+| `ui` | UI XML（根为 `<Context>`）只用游戏本体与 DLC UI XML 出现过的控件与属性（坑 8）；游戏源码里的拼写错误（`Achnor`、`StachGrowth` 等）单独报错；只出现过一次的属性给警告。需要 `reference/`（`setup_reference.py` 建）；没有时跳过并给警告，CI 上就是这样 |
 | `lua` | 调用 `luacheck.mjs`，见下 |
 | `ui`（点击遮挡） | 模板实例的根是可点击的按钮时，里面不能有 `Size="parent,parent"` 的 Button / GridButton / CheckBox：显示时会接住鼠标，下面的按钮点不到（坑 31） |
 | `controls` | 脚本里的 `Controls.<ID>` 都是 UI XML 里的 ID（坑 30） |
@@ -100,7 +113,7 @@ python3 -I tools/deploy.py --dry-run    # 只显示会改什么
 python3 -I tools/deploy.py              # 校验通过后同步
 ```
 
-- 目标：Mac `~/Library/Application Support/Sid Meier's Civilization VI/Sid Meier's Civilization VI/Mods/SmartDistrictPlanner/`，Windows `文档/My Games/Sid Meier's Civilization VI/Mods/SmartDistrictPlanner/`；`--mods-dir` 可改。
+- 目标：`paths.py` 给出的 Mods 目录下的 `SmartDistrictPlanner/`（Mac 在 `~/Library/Application Support/Sid Meier's Civilization VI/Sid Meier's Civilization VI/Mods/`，Windows 在 `文档\My Games\Sid Meier's Civilization VI\Mods\`）；`--mods-dir` 可改。
 - 增量复制，并删除部署目录里源目录已没有的文件；只动 `Mods/SmartDistrictPlanner/` 内部。
 - 结尾提示重载方式：改了 modinfo 或 `Text/` 要重启游戏，否则回主菜单重新进入对局即可。
 
@@ -153,7 +166,7 @@ end)
 - 计时为单文件墙钟时间（含约 0.02 秒 Tuner 往返）。游戏内 `os.clock` 等计时器只有秒级，不能在 Lua 里测耗时。
 - 已验证：通过/失败/跳过/语法错误/加载期错误、72 KB 的测试文件、内容含 `]]`、测试名含 `|` 和中文、状态名写错（只记该文件出错，其余继续）。
 
-## realclick.py — 真实鼠标点击
+## realclick.py — 真实鼠标点击（仅 macOS）
 
 游戏窗口不向辅助功能暴露控件，电脑操作工具的点击会被拒绝。这里用一个小应用发系统鼠标事件：
 
@@ -189,6 +202,8 @@ python3 -I tools/stress.py summary                # 汇总表
 
 ## game.py — 启动与进入对局
 
+`quit`、`menu`、`popups`、`newgame` 经 Tuner 执行，两个平台相同。`launch` 在 macOS 上用 `open`，在 Windows 上用 `os.startfile` 打开 Steam 链接；下面讲的启动器点击和前台切换只在 macOS 上有。
+
 ```bash
 python3 -I tools/game.py quit                          # 经 Tuner 退出游戏并等待进程结束
 python3 -I tools/game.py menu                          # 退回主菜单（只改了 Lua/UI XML 时用它重载，不必重启）
@@ -223,12 +238,12 @@ python3 -I tools/game.py newgame --state SDP_Panel --capital --reveal   # 另外
 
 改 modinfo 或文本后的完整循环：`deploy.py` → `game.py quit` → `game.py launch` → 点"开始" → `game.py newgame --state SDP_Panel --capital` → `run_tests.py`。
 
-**截图**（游戏要在前台，2026-10-20 用过的做法）：
+**截图**（macOS，游戏要在前台，2026-10-20 用过的做法）：
 
 - `game.py launch --stay` 让游戏留在前台；`newgame` 开始时游戏在前台就不会切走。
 - 附加内容界面：在 `MainMenu` 状态执行 `OnMods()`。名为 `Mods` 的 Lua 状态有两个（`ModsMenu`、`ModsContext`），屏幕上的是 `ContextPtr:GetID()` 为 `ModsContext` 的那个，按序号 `exec -s <序号>`，在里面用 `SelectMod(handle)` 选中本模组。
 - 地图镜头：在 `WorldInput` 状态执行 `UI.SetMapZoom(z, 0, 0)` 和 `UI.LookAtPlotScreenPosition(x, y, 横向比例, 纵向比例)`。在面板的状态里调 `SetMapZoom` 不生效。
-- 揭示地图、移动镜头后会弹出与苏格兰的首次相遇外交画面：在 `DiplomacyActionView` 状态执行 `OnForceClose()`，出现回复选项时再执行一次；随后的"尤里卡"用 `popups --close` 关。
+- 揭示地图、移动镜头后会弹出与苏格兰的首次相遇外交画面：在 `DiplomacyActionView` 状态执行 `OnForceClose()`，出现回复选项时再执行一次（2026-10-21 压力测试时这样关过之后游戏崩溃过一次，见 AGENTS 坑 33，能避开就避开）；随后的"尤里卡"用 `popups --close` 关。
 - 用 computer-use 的 `zoom` 只截游戏窗口内的区域，裁掉 macOS 的菜单栏、窗口标题栏和 Dock。结果列表用 `Controls.MultiResultScroll:SetScrollValue(v)` 滚动；悬停提示要用真实的鼠标移动（`mouse_move`），滚动位置可能被重绘复位，移动鼠标后马上截。
 
 ## civ6tuner.py — FireTuner 客户端（Lua 输出 + 远程执行 Lua）

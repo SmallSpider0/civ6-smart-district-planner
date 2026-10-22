@@ -181,4 +181,4 @@ python3 -I report/build.py                                      # 生成交付�
 python3 -I tools/package.py                                     # 打出给合作者的测试包（dist/，含 tester-guide.md 和交付报告）
 ```
 
-工具说明见 [tools/README.md](../tools/README.md)。
+Windows 上把 `python3 -I` 换成 `py -3 -I`；`realclick.py` 只能在 macOS 上用。环境搭建见 [dev-macos.md](dev-macos.md)、[dev-windows.md](dev-windows.md)，工具说明见 [tools/README.md](../tools/README.md)。

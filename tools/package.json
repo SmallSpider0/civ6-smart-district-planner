@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "description": "Dev tooling for Smart District Planner (Lua syntax/lint checks via luaparse).",
-  "license": "UNLICENSED",
+  "license": "MIT",
   "type": "module",
   "devDependencies": {
     "fengari": "0.1.5",

@@ -1,0 +1,35 @@
+# Static checks and offline tests on every push to main and every pull request.
+# The in-game tests and the comparison need the game; they run on our machines.
+name: checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  offline:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    env:
+      PYTHONUTF8: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: tools/package-lock.json
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install tool dependencies
+        run: npm ci
+        working-directory: tools
+      - name: validate.py (no reference/ here, so the UI precedent check is skipped)
+        run: python -I tools/validate.py
+      - name: Offline tests
+        run: node tools/offline_tests.mjs

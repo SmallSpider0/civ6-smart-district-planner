@@ -1,4 +1,4 @@
-"""Real mouse clicks on the planner panel, checked through the panel's state.
+"""Real mouse clicks on the planner panel, checked through the panel's state (macOS only).
 
 The game window refuses the computer-use tool's clicks and exposes no
 accessibility elements, so a small app posts system mouse events:
@@ -278,6 +278,9 @@ def main(argv=None):
     ap_at = sub.add_parser("at")
     ap_at.add_argument("code")
     args = ap.parse_args(argv)
+    if sys.platform != "darwin":
+        print("realclick.py posts macOS mouse events (SDPClick.app); on other systems click by hand")
+        return 2
     return {"suite": suite, "at": at, "build": build, "trusted": trusted}[args.cmd](args)
 
 

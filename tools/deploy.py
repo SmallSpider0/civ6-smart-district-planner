@@ -19,20 +19,11 @@ import shutil
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # -I drops the script dir
+import paths  # noqa: E402
 import validate  # noqa: E402
 
 MOD_NAME = "SmartDistrictPlanner"
 SOURCE = os.path.join(validate.ROOT, MOD_NAME)
-
-
-def default_mods_dir():
-    home = os.path.expanduser("~")
-    if sys.platform == "darwin":
-        return os.path.join(home, "Library", "Application Support", "Sid Meier's Civilization VI",
-                            "Sid Meier's Civilization VI", "Mods")
-    if sys.platform == "win32":
-        return os.path.join(home, "Documents", "My Games", "Sid Meier's Civilization VI", "Mods")
-    return None
 
 
 def plan(source, target):
@@ -64,7 +55,7 @@ def main(argv=None):
     ap = argparse.ArgumentParser(description="Deploy the mod into the game's Mods folder")
     ap.add_argument("--dry-run", action="store_true", help="show what would change")
     ap.add_argument("--skip-validate", action="store_true", help="deploy even if validate.py fails")
-    ap.add_argument("--mods-dir", default=default_mods_dir(), help="the game's Mods folder")
+    ap.add_argument("--mods-dir", default=paths.mods_dir(), help="the game's Mods folder")
     ap.add_argument("--source", default=SOURCE, help=argparse.SUPPRESS)  # for testing the tool
     args = ap.parse_args(argv)
 

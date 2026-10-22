@@ -36,7 +36,10 @@
 | [docs/design.md](docs/design.md) | 求解算法、目标函数、与 DMT 的接缝、模块结构 |
 | [docs/multicity-design.md](docs/multicity-design.md) | 多城规划设计（选城址、多城区域、奇观）、求解档位、阶段 8 起的算法与离线基准、实测反馈的改进（第 20 节） |
 | [docs/self-test-report.md](docs/self-test-report.md) | 自测报告：验收清单逐项证据、测试结果、截图 |
-| [AGENTS.md](AGENTS.md) | 开发约定、环境、模组开发的坑 |
+| [CHANGELOG.md](CHANGELOG.md) | 各阶段与各版本改了什么 |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | 参与开发：分支、提交、测试分工、写作规则 |
+| [AGENTS.md](AGENTS.md) | 需求约束、技术方案、模组开发的坑、工作流程 |
+| [docs/dev-macos.md](docs/dev-macos.md)、[docs/dev-windows.md](docs/dev-windows.md) | 两个平台的开发环境 |
 | [tools/README.md](tools/README.md) | 校验、部署、游戏内测试工具 |
 | [civ6-mod-from-scratch-prompt.md](civ6-mod-from-scratch-prompt.md) | 需求文档 |
 
@@ -49,10 +52,14 @@ SmartDistrictPlanner/        模组本体：复制到游戏 Mods 目录即可运
   UI/SDP_Panel.xml/.lua      启动栏按钮与规划面板
   Scripts/                   规则、城市扫描、假想钉层、增量评估（SDP_Board）、搜索引擎（SDP_Search）、
                              单城/多城/城址求解器、档位、分帧任务、预览、打钉、提醒钉
-tests/                       游戏内测试（经 FireTuner 执行）；tests/offline 为离线测试与基准
-tools/                       校验、部署、测试运行器、游戏控制、打测试包
+tests/                       游戏内测试（经 FireTuner 执行）；tests/offline 为离线测试与基准，tests/compare 为离线对比
+tools/                       校验、部署、测试运行器、游戏控制、打测试包、路径（paths.py）
 report/                      交付报告的生成脚本与模板（输出到 dist/report/）
 docs/                        设计、安装测试说明、自测报告、截图
 ```
 
-状态：单城、选城址、多城与奇观（阶段 1–12），以及合作者 Windows 实测后的 11 条改进（阶段 14–18）已完成。2026-10-20 在 macOS 上三种规则集的游戏内测试全部通过（见[自测报告](docs/self-test-report.md)）；真实鼠标点击和 Windows 需按安装测试文档做一次冒烟测试。
+状态：单城、选城址、多城与奇观（阶段 1–12）已完成，合作者两轮 Windows 实测的意见已处理。自动化测试在 macOS 上跑，结果见[自测报告](docs/self-test-report.md)。
+
+## 许可证
+
+[MIT](LICENSE)。本仓库不含 Detailed Map Tacks 及其他模组、游戏本体的代码或数据；玩家需自行订阅 DMT。

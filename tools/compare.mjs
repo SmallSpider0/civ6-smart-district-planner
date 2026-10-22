@@ -8,8 +8,8 @@
 // database, exported by tests/compare/export_gameinfo.py.
 //
 // Planners: sdp (this mod, Scripts only), amt (Auto Map Tacks Planner r49),
-// ep (Empire Planner). Their sources are read from reference/ and the local
-// Steam workshop folder; nothing of theirs is copied into the repository.
+// ep (Empire Planner). Their sources are read from reference/ (links made by
+// tools/setup_reference.py); nothing of theirs is copied into the repository.
 //
 // Usage:
 //   node tools/compare.mjs [--list] [-s SUBSTRING|^REGEX] [-p sdp,amt,ep] [-j JOBS]
@@ -28,7 +28,7 @@ import { join, resolve, dirname, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { performance } from "node:perf_hooks";
 import { Worker, isMainThread, parentPort, workerData } from "node:worker_threads";
-import { homedir, availableParallelism } from "node:os";
+import { availableParallelism } from "node:os";
 
 const require = createRequire(import.meta.url);
 const { lua, lauxlib, lualib, to_luastring, to_jsstring } = require("fengari");
@@ -36,8 +36,7 @@ const { lua, lauxlib, lualib, to_luastring, to_jsstring } = require("fengari");
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const COMPARE = join(ROOT, "tests", "compare");
 const GAMEINFO = join(COMPARE, ".cache", "gameinfo.lua");
-const WORKSHOP = join(homedir(), "Library", "Application Support", "Steam", "steamapps", "workshop", "content", "289070");
-const EP_DIR = join(WORKSHOP, "3793348626", "ui");
+const EP_DIR = join(ROOT, "reference", "ep", "ui");
 
 // include() search path per planner. The game resolves include() by file
 // name across every loaded mod; the order here only matters for duplicates.

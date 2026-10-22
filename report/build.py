@@ -72,7 +72,7 @@ def snapshot(sid, make):
         if not make:
             raise RuntimeError("report/snaps/%s.json is missing: run report/build.py and commit it" % sid)
         out = subprocess.run(["node", "tools/compare.mjs", "--snapshot", sid], cwd=REPO,
-                             capture_output=True, text=True, check=True)
+                             capture_output=True, encoding="utf-8", check=True)
         open(path, "w", encoding="utf-8").write(out.stdout)
     return json.load(open(path, encoding="utf-8"))
 
