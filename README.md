@@ -23,7 +23,7 @@
 - 快速、标准、精细三档；规模小时穷举，结果注明是否最优或离上界多远，可以继续优化。同一局面、同样输入，结果每次相同。
 - 已建区域和你自己打的钉不挪、不压，并作为邻居计分；全帝国限量的区域（如市政广场）不会重复规划。
 - 结果行显示坐标和加成，悬停看 DMT 的逐项来源。
-- 社区按魅力计住房，保护区计魅力和周边产出；缺淡水时自动加水渠，泛滥平原多时自动加水坝；方案靠旁边的树林、雨林拿加成时，打钉时在这些格上加“勿砍”提醒钉。
+- 社区按魅力计住房，保护区计魅力和周边产出；缺淡水时自动加水渠，泛滥平原多时自动加堤坝；方案靠旁边的树林、雨林拿加成时，打钉时在这些格上加“勿砍”提醒钉。
 - 耗时长的计算分帧进行，游戏不卡，关掉面板也会算完。可以撤销，撤销记录随存档保存。<kbd>Shift</kbd>+<kbd>L</kbd> 打开面板。
 - 原版、迭起兴衰、风云变幻都能用；界面中英双语，跟随游戏语言。
 
@@ -37,7 +37,7 @@
 2. 从[发布页](https://github.com/SmallSpider0/civ6-smart-district-planner/releases/latest)下载压缩包，把里面的 `SmartDistrictPlanner` 文件夹放进游戏的 Mods 文件夹：
    - Windows：`文档\My Games\Sid Meier's Civilization VI\Mods\`
    - macOS：`~/Library/Application Support/Sid Meier's Civilization VI/Sid Meier's Civilization VI/Mods/`
-3. 主菜单“附加内容”里勾上 Detailed Map Tacks 和“智能区域规划器”，重启游戏。
+3. 主菜单“额外内容”里勾上 Detailed Map Tacks 和“智能区域规划器”，重启游戏。
 
 用法、验收步骤和排错见[安装与使用](docs/install-and-test.md)。问题请在 [Issues](https://github.com/SmallSpider0/civ6-smart-district-planner/issues) 反馈，更新内容见 [CHANGELOG](CHANGELOG.md)。
 

@@ -82,7 +82,7 @@ SDP_Panel (UI/SDP_Panel.lua，InGame 上下文，Lua 状态名 SDP_Panel)
 两个纯逻辑模块，经 modinfo `ImportFiles` 导入，由 `SDP_Panel.lua` 先 `include("MapTacks")`（游戏本体文件）再 include。所有返回的列表都已排序，不依赖 `pairs()` 顺序。
 
 **`Scripts/SDP_Rules.lua`**（全部从 GameInfo 读，约束 2）
-- `Ruleset()`：`GameConfiguration.GetRuleSet()`，即 `RULESET_STANDARD` / `RULESET_EXPANSION_1` / `RULESET_EXPANSION_2`。运河、水坝等只在 GS 的 GameInfo 里存在，不需要按规则集写分支。
+- `Ruleset()`：`GameConfiguration.GetRuleSet()`，即 `RULESET_STANDARD` / `RULESET_EXPANSION_1` / `RULESET_EXPANSION_2`。运河、堤坝等只在 GS 的 GameInfo 里存在，不需要按规则集写分支。
 - `PlannableDistricts(pid)`：沿用地图钉弹窗的 `MapTacks.PlayerDistricts`（本文明特色区域替换其基础区域，其他文明的特色区域与奇观伪区域 `DISTRICT_WONDER` 剔除），再去掉 `CityCenter`；按 `DistrictType` 排序。字段：`Type`、`Name`、`Icon`（`ICON_` + 类型）、`Specialty`（`RequiresPopulation`，占特色区域名额）、`OnePerCity`、`MaxPerPlayer`。
 - `AdjacencyTable(pid)`：线性排序模型用的区域互惠表。只取 `District_Adjacencies` → `Adjacency_YieldChanges` 中 `OtherDistrictAdjacent`（任意相邻区域）和 `AdjacentDistrict`（指定类型）两类行。`TilesRequired = N` 折算为每个邻居 `YieldChange / N`（坑 16：会略微高估，只用于排序）。按 DMT 的口径过滤：科技/市政前置与过时、`ExcludedAdjacencies` 中本玩家特性排除的行。
 - `NeighbourGain(adj, D, X)`：D 从一个相邻 X 区域获得的五项计分产出（`Any` + `From[X]`）。
@@ -114,7 +114,7 @@ SDP_Panel (UI/SDP_Panel.lua，InGame 上下文，Lua 状态名 SDP_Panel)
 - **特色区域名额提示**：已建数、本次数量、当前人口上限。超出时只提示，不阻止。
 - **区域网格**：`PlannableDistricts` 分两组、各排成三列（反馈第 6、7 条），按本地化名称排序：
   - 占人口名额的区域（`RequiresPopulation`），状态 必建 / 候选 / 不建，默认候选；全帝国限一个的（市政广场）只有必建 / 不建，默认不建。
-  - 不占名额的区域，状态 自动 / 必建 / 不建；能自动的（`SDP_Rules.AutoKind`：水渠类、水坝）默认自动，其余默认不建。
+  - 不占名额的区域，状态 自动 / 必建 / 不建；能自动的（`SDP_Rules.AutoKind`：水渠类、堤坝）默认自动，其余默认不建。
   - 点一下按 候选（或自动）→ 必建 → 不建 循环（`SDP_UI.NextState`）。必建和自动用选中的亮底；不建、本城已建或已达帝国上限的变暗，后两者不能点，格子右侧写原因。
   - 求解请求里的区域始终按类型名排序，方案不受点击顺序影响。
 - **奇观与好位置**：选中的奇观显示成标签，点一下去掉；"添加奇观"下拉框只列还没选的（反馈第 2 条）。右侧是好位置下拉框。

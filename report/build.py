@@ -69,7 +69,7 @@ PLANNERS = {
     "ep": {"label": "Empire Planner", "color": "--ep"},
     "ep:DEFAULT": {"label": "EP（默认权重）", "color": "--ep"},
 }
-DNAME = {"DISTRICT_AQUEDUCT": "水渠", "DISTRICT_DAM": "水坝", "DISTRICT_HARBOR": "港口", "DISTRICT_SEOWON": "书院",
+DNAME = {"DISTRICT_AQUEDUCT": "水渠", "DISTRICT_DAM": "堤坝", "DISTRICT_HARBOR": "港口", "DISTRICT_SEOWON": "书院",
          "DISTRICT_CANAL": "运河", "DISTRICT_GOVERNMENT": "市政广场"}
 STAGES = [("early", "前期 · 2 个区域"), ("mid", "中期 · 4–5 个"), ("late", "后期 · 7–8 个")]
 PAGES_URL = "https://smallspider0.github.io/civ6-smart-district-planner/"

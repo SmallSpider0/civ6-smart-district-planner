@@ -153,7 +153,7 @@ include("dmt_yieldcalculator");       -- 尾部会执行 DMT_Initialize()，见�
   - **计时器只有秒级**：`os.clock`、`Automation.GetTime` 按整秒跳，`UI.GetElapsedTime` 按帧更新，一次调用内都不变，无法在 Lua 内测耗时。性能（停顿 ≤ ~2 秒）用 `run_tests.py` 报告的单文件墙钟时间测量（Tuner 往返约 0.02 秒）。
   - 执行很快：3000 万次简单循环约 0.1 秒。
 - **测试对局固定**：`tools/game.py newgame` 默认把本地玩家设为图拉真（罗马，陆地开局）、地图与游戏种子设为 20261019，每次都是同一张图，测试结果可复现。城址与多城测试需要已探索的地图：`game.py newgame --capital --reveal` 在建城后揭示首都周围 12 格（`tests/fixtures/reveal_area.lua`）并关掉随之出现的自然奇观弹窗。随机开局里可能出现毛利这类海上开局的文明，开拓者第 1 回合无法建城，导致测试前置失败。新建城市后会弹出"历史时刻"等弹窗，低优先级的规划面板会排在它们后面；截图核对前用 `game.py popups --close` 关掉。退出游戏用 `game.py quit`（`Events.UserConfirmedClose()`）。
-- **测试用 mod 组**：AMT（hook `GetMapPinSubject`）、Empire Planner（会自建/删除地图钉）及改相邻/区域规则的 mod 会干扰测试。在"附加内容"里建一个只开官方内容、DMT 和本 mod 的 mod 组再测。新 mod 在新建的组里**默认禁用**，可在主菜单用 `Modding.EnableMod(handle, true)` 启用（游戏自己的启用逻辑，见 Base `FrontEnd/Mods.lua`）。
+- **测试用 mod 组**：AMT（hook `GetMapPinSubject`）、Empire Planner（会自建/删除地图钉）及改相邻/区域规则的 mod 会干扰测试。在"额外内容"里建一个只开官方内容、DMT 和本 mod 的 mod 组再测。新 mod 在新建的组里**默认禁用**，可在主菜单用 `Modding.EnableMod(handle, true)` 启用（游戏自己的启用逻辑，见 Base `FrontEnd/Mods.lua`）。
   - **mod 列表的名称**：mod 未启用时，`FrontEndActions` 的文本不加载，列表显示 `LOC_SDP_MOD_NAME` 原文；列表和详情（`Modding.GetModText`）读的是 modinfo 内嵌的 `<LocalizedText>`。所以名称、简介、描述在 modinfo 里也写一份，validate.py 检查两份一致。
 
 **每轮改动流程**（命令细节见 [tools/README.md](tools/README.md)）
@@ -169,7 +169,7 @@ include("dmt_yieldcalculator");       -- 尾部会执行 DMT_Initialize()，见�
 
 2026-10-19 在 macOS 上完成自测，逐项证据见 [docs/self-test-report.md](docs/self-test-report.md)。标 ◐ 的项逻辑已自动验证，但真实鼠标点击或画面需用户确认。
 
-- [x] 模组列表正确显示中文名与描述（Lua 验证 + 附加内容界面截图）
+- [x] 模组列表正确显示中文名与描述（Lua 验证 + 额外内容界面截图）
 - [◐] 启动栏出现图标按钮，点击弹出面板（按钮截图 + 回调测试；游戏窗口拒绝合成点击）
 - [x] 学院+圣地求解秒级出结果；存在相邻互惠更优解时必须给出该解（与暴力枚举最优一致）
 - [x] 结果行显示坐标与加成明细；悬停逐项来源与 DMT 图钉数值一致（悬停截图 + DMT 存储比对）

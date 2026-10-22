@@ -60,7 +60,7 @@ cd ..
 
 ## 5. 测试用 mod 组
 
-在游戏的"附加内容"里新建一个 mod 组，只开官方内容、DMT 和本 mod。不要同时开 AMT、Empire Planner 等规划器（坑 20）。
+在游戏的"额外内容"里新建一个 mod 组，只开官方内容、DMT 和本 mod。不要同时开 AMT、Empire Planner 等规划器（坑 20）。
 
 ## 6. 每轮流程
 
