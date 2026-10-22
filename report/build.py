@@ -70,7 +70,7 @@ PLANNERS = {
     "ep:DEFAULT": {"label": "EP（默认权重）", "color": "--ep"},
 }
 DNAME = {"DISTRICT_AQUEDUCT": "水渠", "DISTRICT_DAM": "水坝", "DISTRICT_HARBOR": "港口", "DISTRICT_SEOWON": "书院",
-         "DISTRICT_CANAL": "运河", "DISTRICT_GOVERNMENT": "政府广场"}
+         "DISTRICT_CANAL": "运河", "DISTRICT_GOVERNMENT": "市政广场"}
 STAGES = [("early", "前期 · 2 个区域"), ("mid", "中期 · 4–5 个"), ("late", "后期 · 7–8 个")]
 PAGES_URL = "https://smallspider0.github.io/civ6-smart-district-planner/"
 
@@ -695,7 +695,7 @@ def build(files=None, make_snapshots=True, version=None, date=None, lang="zh"):
         mb = robust_best.get("dev/multi", {})
         every = mb.get("sdp:STANDARD") == 1
         texts["MULTI_TEXT"] = (
-            "联合规划在%s拿到最高。用单城页签一座一座规划，平均只有最高值的 %s：差的是跨城互惠和政府广场的位置。AMT 也做联合规划，平均 %s；EP %s。" % (
+            "联合规划在%s拿到最高。用单城页签一座一座规划，平均只有最高值的 %s：差的是跨城互惠和市政广场的位置。AMT 也做联合规划，平均 %s；EP %s。" % (
                 ("全部 %d 个场景里都" % M["sdp:STANDARD"]["n"]) if every else (" %s 的场景" % pct(mb.get("sdp:STANDARD") or 0)),
                 pct(M["sdp:CITY_BY_CITY"]["quality"]) if M.get("sdp:CITY_BY_CITY") else "-",
                 pct(M["amt"]["quality"]) if M.get("amt") else "-", pct(M["ep"]["quality"]) if M.get("ep") else "-"))
@@ -1210,8 +1210,8 @@ def stress_section(markdown=False, lang="zh"):
         if not d.get("Preserves"):
             return "各文明都没有建保护区"
         if not d.get("WithBuildings"):
-            return "%d 个保护区，都没有建林苑、圣所" % d["Preserves"]
-        return "%d 个保护区（%d 个有林苑或圣所）；按规则该有产出的地块 %d 块，产出不少于规则的 %d 块，少于的 %d 块" % (
+            return "%d 个保护区，都没有建古树林、避难所" % d["Preserves"]
+        return "%d 个保护区（%d 个有古树林或避难所）；按规则该有产出的地块 %d 块，产出不少于规则的 %d 块，少于的 %d 块" % (
             d["Preserves"], d["WithBuildings"], d["Expected"], d["Seen"], d["Missing"])
     row("保护区周边产出（AI 自己建的）", preserves)
 

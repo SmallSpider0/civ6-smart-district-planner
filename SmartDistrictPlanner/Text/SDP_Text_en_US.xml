@@ -9,7 +9,7 @@
       <Text>Plans the districts with the highest weighted adjacency bonus for one city, several cities or new city sites, and marks them with map tacks.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_MOD_DESCRIPTION" Language="en_US">
-      <Text>Plans districts for one city, for several cities together (wonders included) and for new city sites. Under your yield weights it looks for the plan with the highest adjacency bonus: small problems are solved exhaustively, larger ones by a search that reports how far the result may be from the best. Preview the plan, then pin it with district icons; undo is kept with the save. Legality and bonuses come from Detailed Map Tacks, so they match what its tacks show. Built districts and your own map tacks are never moved. Requires Detailed Map Tacks. Do not enable together with another district planner such as Auto Map Tacks Planner.</Text>
+      <Text>Plans districts for one city, for several cities together (wonders included) and for new city sites. Under your yield weights it looks for the plan with the highest adjacency bonus: small problems are solved exhaustively, larger ones by a search that reports how far the result may be from the best. Preview the plan, then place it as map tacks with district icons; undo is kept with the save. Placement rules and bonuses come from Detailed Map Tacks, so they match what its tacks show. Built districts and your own map tacks are never moved. Requires Detailed Map Tacks. Do not enable together with another district planner such as Auto Map Tacks Planner.</Text>
     </Replace>
 
     <!-- Launch bar and panel -->
@@ -49,7 +49,7 @@
       <Text>Yield weights (0-3)</Text>
     </Replace>
     <Replace Tag="LOC_SDP_ALLOW_FEATURE_REMOVAL" Language="en_US">
-      <Text>Allow clearing woods, rainforest and marsh</Text>
+      <Text>Allow removing Woods, Rainforest and Marsh</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SOLVE" Language="en_US">
       <Text>Solve</Text>
@@ -76,7 +76,7 @@
       <Text>Not placed: {1_Name}</Text>
     </Replace>
     <Replace Tag="LOC_SDP_REASON_NO_LEGAL_PLOT" Language="en_US">
-      <Text>no legal plot in range</Text>
+      <Text>no valid tile in range</Text>
     </Replace>
     <Replace Tag="LOC_SDP_REASON_BUILT" Language="en_US">
       <Text>already built in this city</Text>
@@ -103,7 +103,7 @@
       <Text>Cul</Text>
     </Replace>
     <Replace Tag="LOC_SDP_YIELD_SHORT_YIELD_FAITH" Language="en_US">
-      <Text>Fth</Text>
+      <Text>Faith</Text>
     </Replace>
     <Replace Tag="LOC_SDP_YIELD_SHORT_YIELD_GOLD" Language="en_US">
       <Text>Gold</Text>
@@ -120,16 +120,16 @@
 
     <!-- Tiers, land part, quality, background computation -->
     <Replace Tag="LOC_SDP_LAND" Language="en_US">
-      <Text>Count what the taken plots would yield (food and one-time yields weigh this too)</Text>
+      <Text>Count the yields of the tiles the districts take (the Food and Chop weights apply here)</Text>
     </Replace>
     <Replace Tag="LOC_SDP_LAND_SHORT" Language="en_US">
       <Text>Land loss</Text>
     </Replace>
     <Replace Tag="LOC_SDP_WEIGHT_FEATURE_SHORT" Language="en_US">
-      <Text>Clear</Text>
+      <Text>Chop</Text>
     </Replace>
     <Replace Tag="LOC_SDP_WEIGHT_FEATURE" Language="en_US">
-      <Text>One-time yields of clearing woods, rainforest and marsh and harvesting bonus resources</Text>
+      <Text>One-time yields from removing Woods, Rainforest and Marsh and from harvesting Bonus resources</Text>
     </Replace>
     <Replace Tag="LOC_SDP_TIER" Language="en_US">
       <Text>Effort</Text>
@@ -168,7 +168,7 @@
       <Text>Every placement checked: this is the best plan.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_QUALITY_GAP" Language="en_US">
-      <Text>At most {1_Percent}% below the estimated bound</Text>
+      <Text>At most {1_Percent}% below the estimated upper bound</Text>
     </Replace>
     <Replace Tag="LOC_SDP_QUALITY_CONVERGED" Language="en_US">
       <Text>the last round found nothing better</Text>
@@ -180,7 +180,7 @@
       <Text>; </Text>
     </Replace>
     <Replace Tag="LOC_SDP_RESULT_SUMMARY_LAND" Language="en_US">
-      <Text>Weighted gain: {1_Gain} (adjacency {2_Adjacency}, plots taken {3_Land})</Text>
+      <Text>Weighted gain: {1_Gain} (adjacency {2_Adjacency}, tiles taken {3_Land})</Text>
     </Replace>
     <Replace Tag="LOC_SDP_RUNNING" Language="en_US">
       <Text>Computing... {1_Percent}%</Text>
@@ -192,10 +192,10 @@
       <Text>Smart District Planner: the plan is ready</Text>
     </Replace>
     <Replace Tag="LOC_SDP_RESULT_STALE" Language="en_US">
-      <Text>The map changed during the computation (new turn or map tacks). Solve again.</Text>
+      <Text>The map changed during the computation (a new turn, or map tacks added or removed). Solve again.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_RESULT_NO_LEGAL_LAYOUT" Language="en_US">
-      <Text>No legal placement was found for these districts.</Text>
+      <Text>No valid placement was found for these districts.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_RESULT_NO_CITY" Language="en_US">
       <Text>The city no longer exists.</Text>
@@ -221,13 +221,13 @@
       <Text>{1_N} {2_Name}</Text>
     </Replace>
     <Replace Tag="LOC_SDP_REASON_PINNED" Language="en_US">
-      <Text>already pinned</Text>
+      <Text>already has a map tack</Text>
     </Replace>
     <Replace Tag="LOC_SDP_REASON_NEEDS_DISTRICT" Language="en_US">
       <Text>needs a district next to it that no city plans</Text>
     </Replace>
     <Replace Tag="LOC_SDP_REASON_NO_FREE_PLOT" Language="en_US">
-      <Text>no free plot left for it</Text>
+      <Text>no free tile left for it</Text>
     </Replace>
     <Replace Tag="LOC_SDP_RESULT_NO_SITE" Language="en_US">
       <Text>No combination of sites fits (spacing, distance or too few candidates).</Text>
@@ -236,10 +236,10 @@
       <Text>Built</Text>
     </Replace>
     <Replace Tag="LOC_SDP_WONDER_PINNED" Language="en_US">
-      <Text>Pinned</Text>
+      <Text>Has a tack</Text>
     </Replace>
     <Replace Tag="LOC_SDP_MULTI_CITIES" Language="en_US">
-      <Text>Cities (city-center map tacks and the cities near them)</Text>
+      <Text>Cities (City Center map tacks and the cities near them)</Text>
     </Replace>
     <Replace Tag="LOC_SDP_MULTI_PLAN" Language="en_US">
       <Text>Districts for each city</Text>
@@ -251,19 +251,19 @@
       <Text>map tack {1_Where}</Text>
     </Replace>
     <Replace Tag="LOC_SDP_MULTI_DISTANCE" Language="en_US">
-      <Text>{1_Distance} plots from a new city</Text>
+      <Text>{1_Distance} tiles from a new city</Text>
     </Replace>
     <Replace Tag="LOC_SDP_MULTI_CAP" Language="en_US">
       <Text>(beyond the {1_Max} cities planned at once)</Text>
     </Replace>
     <Replace Tag="LOC_SDP_MULTI_NEIGHBOUR_ONLY" Language="en_US">
-      <Text>neighbour only</Text>
+      <Text>neighbor only</Text>
     </Replace>
     <Replace Tag="LOC_SDP_MULTI_EMPIRE_LIMIT" Language="en_US">
       <Text>{1_Max} per empire</Text>
     </Replace>
     <Replace Tag="LOC_SDP_MULTI_NONE" Language="en_US">
-      <Text>Put city-center map tacks where new cities go (or use City sites), tick the districts and wonders, then press Solve.</Text>
+      <Text>Put City Center map tacks where new cities go (or use City sites), tick the districts and wonders, then press Solve.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_MULTI_SOLUTION_DETAIL" Language="en_US">
       <Text>{1_Cities} cities, {2_Districts} districts, {3_Wonders} wonders</Text>
@@ -293,7 +293,7 @@
       <Text>Districts first</Text>
     </Replace>
     <Replace Tag="LOC_SDP_WEIGHT_AMENITY" Language="en_US">
-      <Text>Amenities from luxury resources</Text>
+      <Text>Amenities from Luxury resources</Text>
     </Replace>
     <Replace Tag="LOC_SDP_WEIGHT_STRATEGIC_SHORT" Language="en_US">
       <Text>Strat.</Text>
@@ -305,7 +305,7 @@
       <Text>Appeal</Text>
     </Replace>
     <Replace Tag="LOC_SDP_WEIGHT_APPEAL" Language="en_US">
-      <Text>Appeal of the plots districts can take (off by default)</Text>
+      <Text>Appeal of the tiles districts can take (off by default)</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SITES_PLAN" Language="en_US">
       <Text>Districts each site is scored with</Text>
@@ -323,7 +323,7 @@
       <Text>site scores are estimates; step 2 plans the districts exactly</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SITES_PARTS" Language="en_US">
-      <Text>districts {1_District}, plots {2_Land}, water {3_Water}, luxuries {4_Luxury}, strategic {5_Strategic}</Text>
+      <Text>districts {1_District}, tiles {2_Land}, water {3_Water}, luxuries {4_Luxury}, strategics {5_Strategic}</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SITES_PLACE" Language="en_US">
       <Text>Place site tacks</Text>
@@ -332,16 +332,16 @@
       <Text>Fresh water</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SITES_WATER_COAST" Language="en_US">
-      <Text>Coast, no fresh water</Text>
+      <Text>Coastal water</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SITES_WATER_NONE" Language="en_US">
       <Text>No water</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SITES_OWN_DISTANCE" Language="en_US">
-      <Text>{1_Distance} plots from our nearest city or placed site tack</Text>
+      <Text>{1_Distance} tiles from your nearest city or placed site tack</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SITES_SITE_DISTANCE" Language="en_US">
-      <Text>{1_Distance} plots from the nearest other site of this plan</Text>
+      <Text>{1_Distance} tiles from the nearest other site of this plan</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SITES_LUXURY" Language="en_US">
       <Text>Luxury resources ({1_Score} points): {2_List}</Text>
@@ -353,7 +353,7 @@
       <Text>{1_Name} {2_Count} (new)</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SITES_UNREVEALED" Language="en_US">
-      <Text>{1_Count} plots of its rings unrevealed</Text>
+      <Text>{1_Count} tiles in its 3 rings not yet revealed</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SITES_LOYALTY_MEDIUM" Language="en_US">
       <Text>Loyalty risk: medium (foreign cities nearby)</Text>
@@ -362,7 +362,7 @@
       <Text>Loyalty risk: high (foreign cities nearby)</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SITES_DISASTER" Language="en_US">
-      <Text>Floodplains or volcanic soil nearby: disaster risk</Text>
+      <Text>Floodplains or Volcanic Soil nearby: natural disaster risk</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SITES_UNKNOWN_STRATEGIC" Language="en_US">
       <Text>Some strategic resources are not visible yet</Text>
@@ -425,7 +425,7 @@
       <Text>Good places</Text>
     </Replace>
     <Replace Tag="LOC_SDP_HEATMAP_TOOLTIP" Language="en_US">
-      <Text>Shows on the map where one district is good: every plot where it can go, shaded from the best down, with the bonus of placing it there alone.</Text>
+      <Text>Shows on the map where one district is good: every tile where it can go, shaded from the best down, with the bonus of placing it there alone.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_HEAT_OFF" Language="en_US">
       <Text>Off</Text>
@@ -434,16 +434,16 @@
       <Text>Smart District Planner</Text>
     </Replace>
     <Replace Tag="LOC_SDP_HOTKEY_OPEN" Language="en_US">
-      <Text>Open or close the planner</Text>
+      <Text>Toggle Smart District Planner</Text>
     </Replace>
     <Replace Tag="LOC_SDP_WEIGHT_COVERAGE_SHORT" Language="en_US">
       <Text>Reach</Text>
     </Replace>
     <Replace Tag="LOC_SDP_WEIGHT_COVERAGE" Language="en_US">
-      <Text>Reach: factories, power plants, zoos, stadiums, aquariums and some wonders help every city of yours within a distance (mostly 6 tiles in the rules); the same kind does not stack. The plan counts the cities it newly covers: each one adds this many points, in the same unit as adjacency; 0 leaves it out. It only decides where the chosen districts go and never adds districts to a city. For reference: a factory gives each covered city +3 production, a power plant +3 to +4 more; zoos, stadiums and aquariums +1 amenity each.</Text>
+      <Text>Reach: the regional effects of Factories, Power Plants, Zoos, Stadiums, Aquariums and some wonders reach each of your cities within range (6 tiles for most); buildings of the same type do not stack. The plan counts the cities it newly covers: each one adds this many points, in the same unit as adjacency; 0 leaves it out. It only decides where the chosen districts go and never adds districts to a city. For reference: a Factory gives each covered city +3 Production, a Power Plant +3 to +4 more; a Zoo, Stadium or Aquarium +1 Amenity each.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_RESULT_SUMMARY_COVERAGE" Language="en_US">
-      <Text>Weighted gain: {1_Gain} (adjacency {2_Adjacency}, plots taken {3_Land}, reach {4_Coverage})</Text>
+      <Text>Weighted gain: {1_Gain} (adjacency {2_Adjacency}, tiles taken {3_Land}, reach {4_Coverage})</Text>
     </Replace>
     <Replace Tag="LOC_SDP_COVERAGE_GROUP" Language="en_US">
       <Text>{1_Name}: covers {2_N} more ({3_Names})</Text>
@@ -465,28 +465,28 @@
       <Text>Per city</Text>
     </Replace>
     <Replace Tag="LOC_SDP_COUNT_TOOLTIP" Language="en_US">
-      <Text>How many districts that need population this city should plan, required ones included. Above the required number the rest are picked from the pool (best gain first), and three plans with different districts are offered. At the required number nothing is picked.</Text>
+      <Text>How many specialty districts this city should plan, required ones included. Above the required number the rest are picked from the pool (best gain first), and three plans with different districts are offered. At the required number nothing is picked.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_COUNT_TOOLTIP_MULTI" Language="en_US">
-      <Text>How many districts that need population each city of this list should plan, required ones included. Above the required number the solver picks the rest from the pool for each city.</Text>
+      <Text>How many specialty districts each city of this list should plan, required ones included. Above the required number the solver picks the rest from the pool for each city.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_GROUP_SPECIALTY" Language="en_US">
-      <Text>Need population</Text>
+      <Text>Specialty districts</Text>
     </Replace>
     <Replace Tag="LOC_SDP_GROUP_OTHER" Language="en_US">
       <Text>Other districts</Text>
     </Replace>
     <Replace Tag="LOC_SDP_STATES_LEGEND" Language="en_US">
-      <Text>Click: pool &gt; must &gt; off</Text>
+      <Text>Click: Pool &gt; Must &gt; Off</Text>
     </Replace>
     <Replace Tag="LOC_SDP_STATES_LEGEND_OTHER" Language="en_US">
-      <Text>Click: auto &gt; must &gt; off</Text>
+      <Text>Click: Auto &gt; Must &gt; Off</Text>
     </Replace>
     <Replace Tag="LOC_SDP_STATES_TOOLTIP" Language="en_US">
-      <Text>Must: always placed. Pool: when the count is above the required number, the best of the pool are picked. Off: left out. Districts are compared by weighted adjacency, plus land, coverage and distance when on, plus housing for neighborhoods and preserves (and plot yields for a Must preserve). Encampments and aerodromes have no adjacency and are never picked from the pool: make them Must. Districts limited to one per empire (government plaza) are Must or Off only.</Text>
+      <Text>Must: always placed. Pool: when the count is above the required number, the best of the pool are picked. Off: left out. Districts are compared by weighted adjacency, plus land, reach and distance when on, plus Housing for Neighborhoods and Preserves (and tile yields for a Must Preserve). Encampments and Aerodromes have no adjacency bonus and are never picked from the pool: make them Must. Districts limited to one per empire (Government Plaza, Diplomatic Quarter) are Must or Off only.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_STATES_OTHER_TOOLTIP" Language="en_US">
-      <Text>These districts need no population and do not count. Auto: added when the city needs it, placed by the solver. An aqueduct when the city lacks fresh water (housing from water below the 5 of a river or lake); a dam when three or more floodplain plots in its rings are free (Gathering Storm). Left out, with a note, when it fits nowhere.</Text>
+      <Text>These districts have no Population requirement and do not count toward the number. Auto: added when the city needs it, placed by the solver. An Aqueduct when the city lacks fresh water (its water Housing is below the 5 a River or Lake gives); a Dam when 3 or more free Floodplains tiles lie in its 3 rings (Gathering Storm only). Left out, with a note, when it fits nowhere.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_STATE_MUST" Language="en_US">
       <Text>Must</Text>
@@ -510,10 +510,10 @@
       <Text>Reminders</Text>
     </Replace>
     <Replace Tag="LOC_SDP_REMIND_TOOLTIP" Language="en_US">
-      <Text>The plan's districts take adjacency from woods and rainforest next to them; clearing those later loses it. Placing the plan also puts a reminder pin (the remove-feature icon) on those plots, named with what clearing would cost; undo removes them too.</Text>
+      <Text>The plan's districts get adjacency bonuses from adjacent Woods and Rainforest; removing them later loses those bonuses. Placing the plan also puts a reminder tack (with the Remove Feature icon) on those tiles, named with what removing them would cost; undo removes these tacks too.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_REMIND_PIN" Language="en_US">
-      <Text>Keep: {1_Losses}</Text>
+      <Text>Don't chop: {1_Losses}</Text>
     </Replace>
     <Replace Tag="LOC_SDP_REMIND_LOSS" Language="en_US">
       <Text>{1_District} {2_Yields}</Text>
@@ -522,7 +522,7 @@
       <Text> / </Text>
     </Replace>
     <Replace Tag="LOC_SDP_RESULT_REMIND" Language="en_US">
-      <Text>Keep the {1_Feature} at {2_Where}</Text>
+      <Text>Don't remove the {1_Feature} at {2_Where}</Text>
     </Replace>
     <Replace Tag="LOC_SDP_RESULT_AUTO" Language="en_US">
       <Text>(added)</Text>
@@ -543,7 +543,7 @@
       <Text>Picked: {1_Names}</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SOLUTION_DISTRICTS" Language="en_US">
-      <Text>{1_Count} districts, other plots</Text>
+      <Text>{1_Count} districts, different tiles</Text>
     </Replace>
     <Replace Tag="LOC_SDP_RESULT_SUMMARY_PARTS" Language="en_US">
       <Text>Weighted gain: {1_Gain} ({2_Parts})</Text>
@@ -555,7 +555,7 @@
       <Text>land {1_Value}</Text>
     </Replace>
     <Replace Tag="LOC_SDP_PART_COVERAGE" Language="en_US">
-      <Text>coverage {1_Value}</Text>
+      <Text>reach {1_Value}</Text>
     </Replace>
     <Replace Tag="LOC_SDP_PART_DISTANCE" Language="en_US">
       <Text>distance {1_Value}</Text>
@@ -576,19 +576,19 @@
       <Text>Replace ({1_N})</Text>
     </Replace>
     <Replace Tag="LOC_SDP_WEIGHT_DISTANCE" Language="en_US">
-      <Text>Distance cost: each district and wonder loses this weight times (plots to the nearest of your city centers - 1), in the same unit as adjacency; 0 is off. The game does not charge more for far districts; far plots come later or cost more gold to buy. This expresses a wish to keep districts close.</Text>
+      <Text>Distance cost: each district and wonder loses this weight times (tiles to your nearest City Center - 1), in the same unit as adjacency; 0 is off. The game does not charge more for distant districts; distant tiles join the city later or cost more Gold to purchase. This expresses a wish to keep districts close.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_MULTI_SITE_OFF" Language="en_US">
       <Text>(off)</Text>
     </Replace>
     <Replace Tag="LOC_SDP_MULTI_SITE_TOOLTIP" Language="en_US">
-      <Text>Unticked, this site takes no part: no districts are planned for it and it is not counted as a new city. The pin stays where it is and still counts as a neighbour.</Text>
+      <Text>Unticked, this site takes no part: no districts are planned for it and it is not counted as a new city. The tack stays where it is and still counts as a neighbor.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SITES_PLAN_COUNT" Language="en_US">
       <Text>Per site</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SITES_PLAN_COUNT_TOOLTIP" Language="en_US">
-      <Text>How many districts that need population each site is scored with. With more ticked, each site picks its best ones; otherwise all of them count.</Text>
+      <Text>How many specialty districts each site is scored with. With more ticked, each site picks its best ones; otherwise all of them count.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_WEIGHT_DISTANCE_SHORT" Language="en_US">
       <Text>Dist.</Text>
@@ -597,7 +597,7 @@
       <Text>Amen.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_TIER_SHORT" Language="en_US">
-      <Text>Tier</Text>
+      <Text>Effort</Text>
     </Replace>
     <Replace Tag="LOC_SDP_APART_SHORT" Language="en_US">
       <Text>Split {1_A}/{2_B}</Text>
@@ -606,10 +606,10 @@
       <Text>Keep apart</Text>
     </Replace>
     <Replace Tag="LOC_SDP_APART_RULE" Language="en_US">
-      <Text>The {1_Building} adds a trade route only in a city without a {2_Other}: a {3_A} and a {4_B} in one city give one more route, in two cities two.</Text>
+      <Text>The {1_Building} gives +1 Trade Route capacity only in a city without a {2_Other}: a {3_A} and a {4_B} in the same city give one extra route, in two different cities two.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_APART_TOOLTIP" Language="en_US">
-      <Text>{1_Rules}[NEWLINE]When ticked, the pool never gives one city both; a city that already has one (built, pinned or Must) does not get the other. Only when the count cannot be filled otherwise are both picked, and the result says so. Must districts are placed as asked.</Text>
+      <Text>{1_Rules}[NEWLINE]When ticked, the pool never gives one city both; a city that already has one (built, with a map tack, or Must) does not get the other. Only when the count cannot be filled otherwise are both picked, and the result says so. Must districts are placed as asked.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_RESULT_TOGETHER" Language="en_US">
       <Text>{1_A} with {2_B}</Text>
@@ -618,31 +618,31 @@
       <Text>{1_City}: {2_A} with {3_B}</Text>
     </Replace>
     <Replace Tag="LOC_SDP_RESULT_TOGETHER_DETAIL" Language="en_US">
-      <Text>the {1_Building} adds no trade route</Text>
+      <Text>the {1_Building} gives no Trade Route capacity</Text>
     </Replace>
     <Replace Tag="LOC_SDP_WEIGHT_HOUSING" Language="en_US">
-      <Text>Housing: points per housing. A neighborhood's or preserve's housing depends on its plot's appeal. With the preserve set to Must, its grove and sanctuary yields on the unimproved plots around it count too, with each yield's weight (with the land part on, only on plots the city works); picked from the pool they are shown, not scored. The plan changes appeal: a holy site or theater gives the plots next to it +1, an industrial zone or encampment -1, clearing woods -1 around.</Text>
+      <Text>Housing: points per Housing. A Neighborhood's or Preserve's Housing depends on the Appeal of its tile. With the Preserve set to Must, the yields its Grove and Sanctuary give to adjacent unimproved tiles count too, with each yield's weight (with Land loss on, only on tiles the city works); when it is picked from the pool they are shown, not scored. The plan changes Appeal: a Holy Site or Theater Square gives adjacent tiles +1, an Industrial Zone or Encampment -1, and removing Woods -1 to the tiles around it.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_RESULT_HOUSING" Language="en_US">
-      <Text>housing {1_Housing} (appeal {2_Appeal})</Text>
+      <Text>Housing {1_Housing} (Appeal {2_Appeal})</Text>
     </Replace>
     <Replace Tag="LOC_SDP_RESULT_IMPROVEMENT_HOUSING" Language="en_US">
-      <Text>Improvements built over</Text>
+      <Text>Improvements replaced</Text>
     </Replace>
     <Replace Tag="LOC_SDP_RESULT_IMPROVEMENT_HOUSING_DETAIL" Language="en_US">
-      <Text>housing {1_N}</Text>
+      <Text>Housing {1_N}</Text>
     </Replace>
     <Replace Tag="LOC_SDP_RESULT_IMPROVEMENT_HOUSING_TOOLTIP" Language="en_US">
-      <Text>Farms, pastures and the like give half a housing each; the city's total is rounded down. Districts of the plan on such plots cost the city this much housing. Shown for information; not part of the plan's score.</Text>
+      <Text>Farms, Pastures and similar improvements give +0.5 Housing each; the city's total is rounded down. Districts of the plan on such tiles cost the city this much Housing. Shown for information; not part of the plan's score.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_RESULT_TILES_UNCOUNTED" Language="en_US">
-      <Text>plots around {1_Yields} (pool pick, not scored)</Text>
+      <Text>adjacent tiles {1_Yields} (pool pick, not scored)</Text>
     </Replace>
     <Replace Tag="LOC_SDP_RESULT_TILES" Language="en_US">
-      <Text>plots around {1_Yields}</Text>
+      <Text>adjacent tiles {1_Yields}</Text>
     </Replace>
     <Replace Tag="LOC_SDP_PART_APPEAL" Language="en_US">
-      <Text>housing and appeal {1_Value}</Text>
+      <Text>Housing and Appeal {1_Value}</Text>
     </Replace>
     <Replace Tag="LOC_SDP_YIELD_SHORT_YIELD_FOOD" Language="en_US">
       <Text>Food</Text>
