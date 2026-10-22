@@ -19,10 +19,11 @@ labels: release
 **文字**
 - [ ] CHANGELOG：“未发布”改成 `vX.Y.Z（日期）`，每条都是玩家能看懂的变化
 - [ ] `workshop/changenotes/vX.Y.Z.txt`：英文在前、中文在后
+- [ ] GitHub 发布说明的草稿：英文在前、中文在后，写给玩家（可以从更新说明和 CHANGELOG 改写）
 - [ ] 功能或限制变了：README、`workshop/description.bbcode`、介绍与评测页（`report/template.html`）同步
 
 **发布**
 - [ ] 以上改动经 PR 合并到 main，CI 通过
-- [ ] 在 GitHub 发布 Release `vX.Y.Z`，发布说明写给玩家
+- [ ] 在 GitHub 发布 Release `vX.Y.Z`，贴上双语发布说明
 - [ ] Release 页上有三个附件：压缩包、单文件页面、`-workshop.zip`；GitHub Pages 已是新版本
 - [ ] 上传创意工坊（Windows，`docs/workshop-upload.md`），订阅后在游戏里确认能加载

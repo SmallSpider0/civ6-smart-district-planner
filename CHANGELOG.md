@@ -8,6 +8,7 @@
 - “添加奇观”下拉框按时代排列，同一时代按造价从低到高；悬停显示时代（[#7](https://github.com/SmallSpider0/civ6-smart-district-planner/issues/7)）。
 - 选城址：悬停列出每个城址拿到的奢侈、战略资源和份数，标出算作新种类的；行上的奢侈分、战略分按整套方案归属后再算，重叠的资源不再两边都算，各城址的分加起来等于方案总分（[#8](https://github.com/SmallSpider0/civ6-smart-district-planner/issues/8)）。
 - 选城址：悬停分别写出离我方最近的城市或已打城址钉的距离、离本方案其他城址的距离（[#9](https://github.com/SmallSpider0/civ6-smart-district-planner/issues/9)）。
+- 问题反馈模板改为中英并列，新建 Issue 的页面链接介绍与评测页和安装说明；GitHub 发布说明以后英文在前、中文在后（[#4](https://github.com/SmallSpider0/civ6-smart-district-planner/issues/4)、[#6](https://github.com/SmallSpider0/civ6-smart-district-planner/issues/6)）。
 
 ## v1.0.0（2026-10-22）
 

@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: 介绍与评测 / Overview and evaluation (Chinese)
+    url: https://smallspider0.github.io/civ6-smart-district-planner/
+    about: 能做什么、和其他规划器的对比、速度和已知限制 / What it does, how it compares with other planners, speed and known limitations
+  - name: 安装与使用 / Install and use (Chinese)
+    url: https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/docs/install-and-test.md
+    about: 安装、各页签的用法、排错 / Installing, using each tab, troubleshooting
