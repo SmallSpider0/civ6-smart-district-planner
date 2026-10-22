@@ -1,8 +1,67 @@
-# 智能区域规划器（Smart District Planner）
+# Smart District Planner 智能区域规划器
 
-> **English.** A Civilization VI mod that finds the district layout with the highest adjacency bonus for one city, for several cities together or for new city sites, and places it as map tacks with district icons. It needs [Detailed Map Tacks](https://steamcommunity.com/sharedfiles/filedetails/?id=2428969051) and works with the base game, Rise and Fall, and Gathering Storm; the panel follows the game's language. Use one planner per game: do not enable it together with Auto Map Tacks Planner or Empire Planner.
->
-> **[Download](https://github.com/SmallSpider0/civ6-smart-district-planner/releases/latest)** · **[Overview and evaluation](https://smallspider0.github.io/civ6-smart-district-planner/en/)** · **[Install and use](docs/install-en.md)**
+**[English](#english)** · **[中文](#中文)**
+
+## English
+
+A district planner for Civilization VI: pick a city and the districts you want, and it searches the city's 3 rings for the layout with the highest adjacency bonus and places it as map tacks with district icons in one click. It also chooses sites for new cities and plans several cities together. Placement rules and bonuses all come from [Detailed Map Tacks](https://steamcommunity.com/sharedfiles/filedetails/?id=2428969051) (DMT), so they match the numbers on the tacks.
+
+**[Download](https://github.com/SmallSpider0/civ6-smart-district-planner/releases/latest)** · **[Overview and evaluation](https://smallspider0.github.io/civ6-smart-district-planner/en/)** · **[Install and use](docs/install-en.md)**
+
+![The One city tab: districts in two grids, three plans in the result](docs/images/v6-en-panel-single.jpg)
+
+### What it does
+
+The panel has three tabs:
+
+- **One city**: pick a city, mark each district Must, Pool or Off, and set how many districts to plan and how much each yield counts. The planner finds the layout with the highest weighted adjacency within the city's 3 rings; when it picks from the pool you get three plans with different districts. Click one to preview it on the map, then place the tacks. Wonders can be planned along with the districts.
+- **City sites**: choose sites for new cities on the explored map, weighing fresh water, workable tiles, Luxury and Strategic resources, district potential, and how much the new cities overlap. Three plans; hover a site for the resources it gets and how far it is from the other sites; preview on the map, then place site tacks.
+- **Several cities**: plan districts and wonders for the site tacks and the cities near them together, counting adjacency across cities and empire limits. Each city can have its own district list, or a template built from your civilization's adjacency rules (Science city, Production city…).
+
+On every tab:
+
+- Three effort levels: Fast, Standard and Thorough. Small cases are solved exhaustively; otherwise the result says whether it is the best or how far it may be from an upper bound, and you can keep improving it. The same game state and settings give the same plan every time.
+- Built districts and the tacks you placed yourself are never moved or covered and count as neighbors; districts limited to one per empire (such as the Government Plaza) are never planned twice.
+- Each result row gives the tile and the bonus; hover it for DMT's breakdown.
+- Neighborhoods get Housing from Appeal; Preserves count Appeal and the yields they give nearby tiles. An Aqueduct is added when the city lacks fresh water, a Dam when there are enough Floodplains tiles. When a plan takes adjacency from nearby Woods or Rainforest, placing it also puts a "Don't chop" reminder tack on those tiles.
+- Long computations run over several frames, so the game stays responsive, and they finish even if you close the panel. Placed tacks can be undone, also after loading a save. <kbd>Shift</kbd>+<kbd>L</kbd> opens the panel.
+- Base game, Rise and Fall, and Gathering Storm; the panel is in English and Chinese and follows the game's language.
+
+How it compares with Auto Map Tacks Planner and Empire Planner on the same positions, its speed and known limitations: see the [overview and evaluation](https://smallspider0.github.io/civ6-smart-district-planner/en/).
+
+> ⚠️ **One planner per game**: do not enable it together with Auto Map Tacks Planner, Empire Planner or another district planner; they disturb each other.
+
+### Install
+
+1. Subscribe to [Detailed Map Tacks](https://steamcommunity.com/sharedfiles/filedetails/?id=2428969051) on the Steam Workshop.
+2. Download the zip from the [releases page](https://github.com/SmallSpider0/civ6-smart-district-planner/releases/latest) and put the `SmartDistrictPlanner` folder in it into the game's Mods folder:
+   - Windows: `Documents\My Games\Sid Meier's Civilization VI\Mods\`
+   - macOS: `~/Library/Application Support/Sid Meier's Civilization VI/Sid Meier's Civilization VI/Mods/`
+3. In the main menu's Additional Content, enable Detailed Map Tacks and Smart District Planner, then restart the game.
+
+How to use each tab, known limitations and troubleshooting: [install and use](docs/install-en.md). Report problems on [Issues](https://github.com/SmallSpider0/civ6-smart-district-planner/issues), in English or Chinese. Each [release](https://github.com/SmallSpider0/civ6-smart-district-planner/releases) lists its changes in English and Chinese; the [CHANGELOG](CHANGELOG.md) is in Chinese.
+
+### Development
+
+The development documents are in Chinese; issues and pull requests in English are welcome. Start with [CONTRIBUTING.md](CONTRIBUTING.md) (branches, commits, who runs which tests, writing rules) and [AGENTS.md](AGENTS.md) (requirements, design constraints, modding pitfalls, workflow).
+
+| Document | Contents |
+|------|------|
+| [docs/dev-macos.md](docs/dev-macos.md), [docs/dev-windows.md](docs/dev-windows.md) | The development setup on each platform |
+| [tools/README.md](tools/README.md) | Tools: validation, deployment, in-game tests, the offline comparison |
+| [docs/workshop-upload.md](docs/workshop-upload.md) | Uploading the package to the Steam Workshop (Windows) |
+| [docs/design.md](docs/design.md) | The solver, the objective, the seam with DMT, the modules |
+| [docs/multicity-design.md](docs/multicity-design.md) | City sites, several cities, wonders, effort levels, offline benchmarks, and the changes made after each round of hands-on testing |
+| [docs/self-test-report.md](docs/self-test-report.md) | Self-test report: evidence for each acceptance item, test results, screenshots |
+| [civ6-mod-from-scratch-prompt.md](civ6-mod-from-scratch-prompt.md) | The requirements |
+
+### License
+
+[MIT](LICENSE). This repository contains no code or data of Detailed Map Tacks, other mods or the game; players subscribe to DMT themselves.
+
+---
+
+## 中文
 
 《文明6》区域规划模组：选一座城和想建的区域，它在城市三环内找相邻加成最高的摆法，一键打成带区域图标的地图钉；也能给新城选址，让几座城一起规划。合法性和加成全部由 [Detailed Map Tacks](https://steamcommunity.com/sharedfiles/filedetails/?id=2428969051)（DMT）计算，与地图钉上显示的数一致。
 
@@ -10,7 +69,7 @@
 
 ![单城页签：区域分两组排成网格，结果有三套方案](docs/images/v4-panel-single.jpg)
 
-## 能做什么
+### 能做什么
 
 面板有三个页签：
 
@@ -31,7 +90,7 @@
 
 > ⚠️ **一局只开一个规划器**：不要和 Auto Map Tacks Planner、Empire Planner 等区域规划模组同时启用，它们会互相干扰。
 
-## 安装
+### 安装
 
 1. 在创意工坊订阅 [Detailed Map Tacks](https://steamcommunity.com/sharedfiles/filedetails/?id=2428969051)。
 2. 从[发布页](https://github.com/SmallSpider0/civ6-smart-district-planner/releases/latest)下载压缩包，把里面的 `SmartDistrictPlanner` 文件夹放进游戏的 Mods 文件夹：
@@ -41,7 +100,7 @@
 
 用法、验收步骤和排错见[安装与使用](docs/install-and-test.md)。问题请在 [Issues](https://github.com/SmallSpider0/civ6-smart-district-planner/issues) 反馈，更新内容见 [CHANGELOG](CHANGELOG.md)。
 
-## 参与开发
+### 参与开发
 
 先读 [CONTRIBUTING.md](CONTRIBUTING.md)（分支、提交、测试分工、写作规则）和 [AGENTS.md](AGENTS.md)（需求约束、技术方案、模组开发的坑、工作流程）。
 
@@ -68,6 +127,6 @@ report/                      “介绍与评测”页面的生成脚本与模板
 docs/                        设计、安装说明、自测报告、开发环境、截图
 ```
 
-## 许可证
+### 许可证
 
 [MIT](LICENSE)。本仓库不含 Detailed Map Tacks 及其他模组、游戏本体的代码或数据；玩家需自行订阅 DMT。

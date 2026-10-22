@@ -1,5 +1,7 @@
 # AGENTS.md — 智能区域规划器（Smart District Planner）
 
+> The development documents of this project are in Chinese. Issues and pull requests in English are welcome. For players: the English part of the [README](README.md#english) and the [English install guide](docs/install-en.md).
+
 给接手本项目的 AI 代理/开发者的工作约定。**需求唯一来源**：[civ6-mod-from-scratch-prompt.md](civ6-mod-from-scratch-prompt.md)（下称"需求文档"）。本文是它的执行摘要与工程约定；两者冲突时以需求文档第二节（需求约束）为准。
 
 ## 1. 项目概述

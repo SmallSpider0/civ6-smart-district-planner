@@ -1,6 +1,6 @@
 # Smart District Planner: install and use
 
-The Chinese guide ([install-and-test.md](install-and-test.md) in the repository, `INSTALL_AND_USE.md` in the download) has more detail and the acceptance checklist. What the planner does, how it compares with other planners, its speed and known limitations are on the [overview page](https://smallspider0.github.io/civ6-smart-district-planner/en/).
+The Chinese guide ([install-and-test.md](install-and-test.md) in the repository, `INSTALL_AND_USE.md` in the download) has more detail and the acceptance checklist. What the planner does, how it compares with other planners and its speed are on the [overview page](https://smallspider0.github.io/civ6-smart-district-planner/en/).
 
 ## One planner per game
 
@@ -10,6 +10,7 @@ Do not enable Smart District Planner together with Auto Map Tacks Planner, Empir
 
 - Civilization VI with the base game, Rise and Fall, or Gathering Storm rules. The mod detects the rules when a game starts.
 - [Detailed Map Tacks](https://steamcommunity.com/sharedfiles/filedetails/?id=2428969051) (DMT) from the Steam Workshop, subscribed and enabled. The planner uses it for every placement rule and adjacency bonus.
+- Tested on the macOS version 1.0.12.54 (Aspyr) with all three rulesets: every automated test, real mouse clicks and late-game saves. On Windows the co-developer has tested it by hand twice; the full acceptance checklist has not been run there yet.
 
 ## Install
 
@@ -66,6 +67,22 @@ Only revealed tiles are considered; a tile whose 3 rings are mostly unrevealed i
 - To plan a city again, undo its tacks or tick **Replace**.
 - On tiles a city owns, the game's own list of valid tiles is checked as well, so tiles the game refuses (such as a Canal that does not connect water) never enter a plan.
 - The same game state and the same settings always give the same plan.
+
+## Known limitations
+
+- The Several cities tab has no switch to forbid removing features: there, districts may always go on Woods, Rainforest and Marsh.
+- Reach (regional effects) counts only on the Several cities tab; the One city tab ignores how many nearby cities a district would cover.
+- The Several cities and City sites tabs list their plans only when the whole computation has finished.
+- A wonder that must be next to a district (such as one next to a Harbor) is checked with DMT's adjacency only; the district does not have to belong to the same city.
+- City site scores are estimates: tile yields, resources and district potential are judged from what is revealed now; the districts are planned exactly in the Several cities step.
+- Each kind of district is planned once; for several Neighborhoods, solve more than once.
+- Picking from the pool compares only adjacency (plus land loss, reach and distance cost when they are on); the yields of a district's buildings are not counted.
+- Reminder tacks are only for Woods and Rainforest next to the planned districts, not next to districts that already exist.
+- Unrevealed tiles are left out: DMT cannot read their terrain.
+- Multiplayer has not been tested; the tacks use the game's default visibility.
+- Appeal starts from the game's current values (civilization, governor, policy and wonder modifiers included) plus what the plan's districts, wonders and removed features or improvements change; improvements built later outside the plan are not in the model. A Preserve's yields on nearby tiles assume those tiles stay unimproved; a Preserve that is only a tack counts its Housing only.
+
+The overview page lists a few more, with measurements: [known limitations](https://smallspider0.github.io/civ6-smart-district-planner/en/#limits).
 
 ## Troubleshooting
 

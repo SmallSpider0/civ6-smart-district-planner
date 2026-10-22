@@ -1,5 +1,7 @@
 # 参与开发
 
+> The development documents of this project are in Chinese. Issues and pull requests in English are welcome. For players: the English part of the [README](README.md#english) and the [English install guide](docs/install-en.md).
+
 仓库：<https://github.com/SmallSpider0/civ6-smart-district-planner>。开发在 macOS 和 Windows 两台机器上进行，双方都用 Claude Code。仓库根目录的 `CLAUDE.md` 让 Claude Code 自动读入 [AGENTS.md](AGENTS.md) 和本文，所以这两份既写给人，也写给代理。
 
 ## 先读
@@ -50,7 +52,7 @@
 2. 发版前测试：三种规则集的游戏内测试、macOS 真实点击、Windows 冒烟测试、后期存档压力测试；改了求解器还要跑离线对比。
 3. 准备文字：CHANGELOG 的“未发布”改成 `vX.Y.Z（日期）`；写 `workshop/changenotes/vX.Y.Z.txt`（英文在前、中文在后）；功能或限制变了，同步 README、`workshop/description.bbcode` 和介绍与评测页。这些也走 PR。
 4. 在 GitHub 发布 Release `vX.Y.Z`，发布说明写给玩家，英文在前、中文在后。`.github/workflows/release.yml` 会：
-   - 打出 `SmartDistrictPlanner-vX.Y.Z.zip`（mod、测试说明、安装说明、`REPORT.html`、`REPORT_EN.html`），连同中英两个单文件页面一起附到 Release；
+   - 打出 `SmartDistrictPlanner-vX.Y.Z.zip`（mod、中英安装与使用说明、`REPORT.html`、`REPORT_EN.html`；不带给测试者的说明），连同中英两个单文件页面一起附到 Release；
    - 打出 `SmartDistrictPlanner-vX.Y.Z-workshop.zip`（创意工坊提交包，`tools/workshop.py pack`）附到 Release；
    - 生成介绍与评测页，发布到 GitHub Pages（中文 <https://smallspider0.github.io/civ6-smart-district-planner/>，英文在 `en/`）。
 5. 合作者在 Windows 上用提交包上传创意工坊，见 [docs/workshop-upload.md](docs/workshop-upload.md)。本仓库的工具不连接 Steam。
@@ -59,14 +61,14 @@
 
 - **想先给少数人试**：发布时勾选 pre-release，标签如 `v1.1.0-rc.1`。只附压缩包和单文件页面，不更新网页，也不打工坊提交包。
 - **线上版本有严重问题，而 `main` 上已有没准备好的改动**：从上一个 tag 拉出 `release/1.0` 分支修好，发 v1.0.1，再把修复合回 `main`。
-- **平时给测试者一个包**：本地跑 `python3 -I tools/package.py`，包名是提交号。
+- **平时给测试者一个包**：本地跑 `python3 -I tools/package.py`，包名是提交号，里面带测试说明 `TEST_GUIDE.md`。
 - **并行开发**：几个需求可以在不同分支上同时写，但游戏内测试只有一个游戏、一个 Tuner 连接，只能一个一个跑。
 
 ## 写作规则
 
 适用于界面文字、文档、报告和 PR 说明。
 
-- 用中文；代码标识符和注释用英文或中文都可以，但同一个文件里保持一致。例外：创意工坊的标题、简介和更新说明，以及 GitHub 发布说明，英文在前、中文在后；问题反馈模板中英并列。
+- 用中文；代码标识符和注释用英文或中文都可以，但同一个文件里保持一致。例外：README、创意工坊的标题、简介和更新说明，以及 GitHub 发布说明，英文在前、中文在后；问题反馈模板中英并列；英文安装说明 `docs/install-en.md` 和英文介绍页只用英文。README 和安装说明改了中文，英文同步改。
 - 写得平实：
   - 不用套话和 AI 腔，比如“赋能”“全面提升”“值得注意的是”；
   - 同一个意思只写一次，不重复已经说过的话。

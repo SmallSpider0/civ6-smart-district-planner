@@ -1,5 +1,7 @@
 # tools/
 
+> The development documents of this project are in Chinese. Issues and pull requests in English are welcome. For players: the English part of the [README](../README.md#english) and the [English install guide](../docs/install-en.md).
+
 开发循环：`validate.py` → `offline_tests.mjs`（不开游戏）→ `deploy.py` → 进入对局 → `run_tests.py`。Python 脚本只用标准库，统一用 `python3 -I` 运行（Windows 上是 `py -3 -I`）；`luacheck.mjs`、`offline_tests.mjs`、`compare.mjs` 依赖 luaparse 和 fengari（新环境先 `cd tools && npm ci`）。新机器先跑 `paths.py` 和 `setup_reference.py`。标“仅 macOS”的工具在 Windows 上暂时不能用，见 [docs/dev-windows.md](../docs/dev-windows.md)。
 
 | 脚本 | 作用 | 退出码 |
@@ -11,7 +13,7 @@
 | `offline_tests.mjs` | 不开游戏跑求解逻辑测试与基准（`tests/offline/`） | 0 全过；1 有失败；2 用法错误 |
 | `deploy.py` | 校验后把 mod 同步到游戏 Mods 目录 | 0 成功；1 校验失败；2 找不到 Mods 目录 |
 | `workshop.py` | 创意工坊素材检查、预览图和示意图渲染、提交包（不连接 Steam） | 0 成功；1 超出限制；2 缺 tag、更新说明或有未提交的改动 |
-| `package.py` | 从最近一次提交打出压缩包（mod、测试说明、“介绍与评测”页）；发布 Release 时由工作流调用 | 0 成功；1 校验失败；2 有未提交的改动 |
+| `package.py` | 从最近一次提交打出压缩包（mod、安装说明、测试说明、“介绍与评测”页）；发布 Release 时由工作流以 `--release` 调用，不带测试说明 | 0 成功；1 校验失败；2 有未提交的改动 |
 | `run_tests.py` | 经 Tuner 在游戏内跑 `tests/test_*.lua` | 0 全过；1 有失败；2 连接问题；3 超时 |
 | `game.py` | 退出游戏、经 Steam 启动、从主菜单快速开局（可选建首都）；启动时的前台切换仅 macOS | 0 成功；2 超时 |
 | `realclick.py` | 仅 macOS：用系统鼠标事件真实点击面板，每步从面板状态读回核对 | 0 全过；1 有失败；2 环境问题 |
@@ -122,10 +124,10 @@ python3 -I tools/deploy.py              # 校验通过后同步
 
 ```bash
 python3 -I tools/package.py                     # 输出 dist/SmartDistrictPlanner-<提交号>.zip
-python3 -I tools/package.py --version v1.0.0    # 输出 dist/SmartDistrictPlanner-v1.0.0.zip（发布工作流这样用）
+python3 -I tools/package.py --release --version v1.1.0    # 输出 dist/SmartDistrictPlanner-v1.1.0.zip，不带 TEST_GUIDE.md（发布工作流这样用）
 ```
 
-- 内容：`SmartDistrictPlanner/`（模组本体）、`TEST_GUIDE.md`（`docs/tester-guide.md`，填好版本号和日期）、`INSTALL_AND_USE.md`（`docs/install-and-test.md`，指向其他文档的链接改成纯文本）、`INSTALL_AND_USE_EN.md`（英文安装与使用说明 `docs/install-en.md`，同样处理）、`REPORT.html` 和 `REPORT_EN.html`（“介绍与评测”页中英两页的单文件版，见下一节）。
+- 内容：`SmartDistrictPlanner/`（模组本体）、`TEST_GUIDE.md`（`docs/tester-guide.md`，填好版本号和日期；`--release` 时不带）、`INSTALL_AND_USE.md`（`docs/install-and-test.md`，指向其他文档的链接改成纯文本）、`INSTALL_AND_USE_EN.md`（英文安装与使用说明 `docs/install-en.md`，同样处理）、`REPORT.html` 和 `REPORT_EN.html`（“介绍与评测”页中英两页的单文件版，见下一节）。
 - 从最近一次提交打包：先校验；模组、这两份文档或页面读到的文件（`report/build.py` 的 `INPUTS`）有未提交的改动时拒绝打包。文件名里的版本（默认是提交号）也写在测试说明和页面上，反馈时报这个号。
 - 压缩包里的文件名都是 ASCII，Windows 自带的解压工具不会显示乱码；条目时间取提交时间，同一次提交打出的包相同。`dist/` 不入库。
 

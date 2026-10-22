@@ -47,7 +47,7 @@ jobs:
             python -I report/build.py --site _site
           fi
       - name: Build the mod package
-        run: python -I tools/package.py ${VERSION:+--version "$VERSION"}
+        run: python -I tools/package.py --release ${VERSION:+--version "$VERSION"}
       - name: Attach the package and the page to the release
         if: github.event_name == 'release'
         env:
