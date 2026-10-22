@@ -78,7 +78,7 @@ node tools/offline_tests.mjs -v -k k6 tests/offline/bench_single.lua   # 单城�
 ## compare.mjs — 与其他规划模组的离线对比
 
 ```bash
-python3 -I tests/compare/export_gameinfo.py        # 一次：从游戏缓存导出规则数据库（tests/compare/.cache/，不入库）
+python3 -I tests/compare/export_gameinfo.py        # 一次：从游戏缓存导出规则数据库（tests/compare/.cache/，不入库）；要在有全部 DLC 的账号上导出，见 docs/dev-macos.md
 node tools/compare.mjs --list                       # 场景列表
 node tools/compare.mjs -s S04-japan -p sdp,amt,ep -j 4 -v   # 某些场景、某些规划器（-s 是编号的子串）
 node tools/compare.mjs -s '^C\d' -p sdp,ep -j 3            # 以 ^ 开头时按正则匹配（子串 "C" 也会匹配 "~SCI"）

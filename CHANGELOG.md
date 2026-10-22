@@ -13,6 +13,7 @@
 - 问题反馈模板改为中英并列，新建 Issue 的页面链接介绍与评测页和安装说明；GitHub 发布说明以后英文在前、中文在后（[#4](https://github.com/SmallSpider0/civ6-smart-district-planner/issues/4)、[#6](https://github.com/SmallSpider0/civ6-smart-district-planner/issues/6)）。
 - 英文界面改用游戏自己的叫法：tile（不再写 plot）、valid（不再写 legal）、map tack、Specialty districts、Woods / Rainforest / Marsh 等专有名词首字母大写；“Need population”分组改叫“Specialty districts”，“Tier”改叫“Effort”，提醒钉名改为“Don't chop: …”。中文界面和文档里的名称也按游戏中文改：政府广场 → 市政广场，林苑、圣所 → 古树林、避难所，水坝 → 堤坝，航天中心 → 宇航中心，科森 → U型港，苏库巴 → 曼丁哥市场，主菜单的“附加内容” → “额外内容”（[#2](https://github.com/SmallSpider0/civ6-smart-district-planner/issues/2) 的文字部分）。
 - 英文界面在游戏里逐页检查过：英文分隔符丢了空格（游戏去掉文本首尾的空格）、“奇观”“好位置”“区域清单”“档位”标签被下拉框挡住、按钮和开关文字溢出、过长的区域名和奇观名被截断，都已修好；“1 wonders”这类单复数按游戏的写法处理。补了英文界面截图，用在创意工坊、用法示意图和英文介绍页上（[#2](https://github.com/SmallSpider0/civ6-smart-district-planner/issues/2)）。
+- 游戏内测试不再假定所有 DLC 和规则都在：没有保护区（越南和忽必烈包）时、原版规则没有“港口与商业中心分城”这条规则时，相关检查跳过。
 
 ## v1.0.0（2026-10-22）
 

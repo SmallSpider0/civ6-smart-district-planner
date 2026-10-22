@@ -42,19 +42,27 @@ test("the game's rules: the lighthouse needs a city without a market; housing an
   for _, pair in ipairs(apart.Pairs) do
     if pair.A == "DISTRICT_HARBOR" and pair.B == "DISTRICT_COMMERCIAL_HUB" then found = pair end
   end
-  T.ok(found ~= nil, "the harbor / commercial hub pair is read from the modifiers")
-  T.eq(found.Building, "BUILDING_LIGHTHOUSE", "the lighthouse loses its route")
-  T.eq(found.Other, "BUILDING_MARKET", "to a market")
-  for row in GameInfo.DistrictReplaces() do
-    if row.ReplacesDistrictType == "DISTRICT_HARBOR" then
-      T.ok(apart.Partners[row.CivUniqueDistrictType]["DISTRICT_COMMERCIAL_HUB"], row.CivUniqueDistrictType .. " counts as a harbor")
+  -- The base game's lighthouse and market give no trade route capacity: no pair there.
+  if SDP_Rules.Ruleset() == "RULESET_STANDARD" then
+    T.eq(#apart.Pairs, 0, "no pair in the base game")
+  else
+    T.ok(found ~= nil, "the harbor / commercial hub pair is read from the modifiers")
+    T.eq(found.Building, "BUILDING_LIGHTHOUSE", "the lighthouse loses its route")
+    T.eq(found.Other, "BUILDING_MARKET", "to a market")
+    for row in GameInfo.DistrictReplaces() do
+      if row.ReplacesDistrictType == "DISTRICT_HARBOR" then
+        T.ok(apart.Partners[row.CivUniqueDistrictType]["DISTRICT_COMMERCIAL_HUB"], row.CivUniqueDistrictType .. " counts as a harbor")
+      end
     end
   end
   local rules = SDP_Appeal.Rules()
   T.eq(SDP_Appeal.Housing(rules, "DISTRICT_NEIGHBORHOOD", 4), 6, "breathtaking: 6")
   T.eq(SDP_Appeal.Housing(rules, "DISTRICT_NEIGHBORHOOD", 0), 4, "average: 4")
   T.eq(SDP_Appeal.Housing(rules, "DISTRICT_NEIGHBORHOOD", -4), 2, "disgusting: 2")
-  T.ok(rules.Housing.DISTRICT_PRESERVE ~= nil and rules.Tiles.DISTRICT_PRESERVE ~= nil, "the preserve has both")
+  -- The preserve comes with the Vietnam & Kublai Khan pack; an account without it has none.
+  if GameInfo.Districts.DISTRICT_PRESERVE ~= nil then
+    T.ok(rules.Housing.DISTRICT_PRESERVE ~= nil and rules.Tiles.DISTRICT_PRESERVE ~= nil, "the preserve has both")
+  end
   if GameInfo.Districts.DISTRICT_MBANZA ~= nil then T.eq(rules.Housing.DISTRICT_MBANZA, nil, "the mbanza ignores appeal") end
 end)
 
@@ -141,6 +149,10 @@ test("the panel: the switch names the pair and starts on", function()
   Capital()
   SDP_Panel.SelectTab("SINGLE")
   SDP_Panel.Refresh()
+  if #SDP_Rules.Apart().Pairs == 0 then
+    T.eq(Controls.ApartBox:IsHidden(), true, "hidden where the rules have no such pair")
+    T.skip("no harbor / commercial hub rule in this ruleset")
+  end
   T.eq(Controls.ApartBox:IsHidden(), false, "shown")
   -- The tooltip names the pair; the short label too in Chinese ("Keep apart" in English).
   local harbor = Locale.Lookup(GameInfo.Districts.DISTRICT_HARBOR.Name)
