@@ -193,12 +193,16 @@ local Water = function(plot) return SDP_City.WaterKind(plot) end
 --   Parts = { Farm, Water, Luxury, Strategic, Feature, Appeal, Penalty } (weighted)
 --   Coarse  sum of the parts; Valid false when too few plots take districts
 --   Luxury = { [type] = copies }, Strategic = { [type] = amount }
+--   Resources = { { Index, Type, Luxury (bool), Count (copies), Amount } }: the
+--     visible luxury and strategic resources on its workable plots
 --   Info = { WaterKind, Usable, Unrevealed, Disaster, OwnDistance, Loyalty, Features = { [type] = plots } }
+--     OwnDistance: to the nearest of the player's cities and city-center pins
 function SDP_Sites.Coarse(ctx, candidate, centers)
   local playerID, w = ctx.PlayerID, ctx.Weights
   local x, y = candidate.X, candidate.Y
   local scan = SDP_City.ScanSite(playerID, x, y, { population = ctx.Population })
-  local site = { X = x, Y = y, Index = candidate.Index, Scan = scan, Parts = {}, Info = {}, Luxury = {}, Strategic = {} }
+  local site = { X = x, Y = y, Index = candidate.Index, Scan = scan, Parts = {}, Info = {}, Luxury = {}, Strategic = {},
+    Resources = {} }
 
   -- Worked plots and one-time yields.
   local plots, featureCount, disaster = {}, {}, false
@@ -220,9 +224,13 @@ function SDP_Sites.Coarse(ctx, candidate, centers)
         local count = math.max(1, plot:GetResourceCount())
         if row.ResourceClassType == "RESOURCECLASS_LUXURY" then
           site.Luxury[row.ResourceType] = (site.Luxury[row.ResourceType] or 0) + count
+          site.Resources[#site.Resources + 1] = { Index = index, Type = row.ResourceType, Luxury = true, Count = count,
+            Amount = count }
         elseif row.ResourceClassType == "RESOURCECLASS_STRATEGIC" then
           local amount = ctx.Extraction[row.ResourceType] or count
           site.Strategic[row.ResourceType] = (site.Strategic[row.ResourceType] or 0) + amount
+          site.Resources[#site.Resources + 1] = { Index = index, Type = row.ResourceType, Luxury = false, Count = count,
+            Amount = amount }
         end
       end
     end

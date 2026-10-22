@@ -338,7 +338,19 @@
       <Text>No water</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SITES_OWN_DISTANCE" Language="en_US">
-      <Text>{1_Distance} plots from our nearest city or site tack</Text>
+      <Text>{1_Distance} plots from our nearest city or placed site tack</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_SITE_DISTANCE" Language="en_US">
+      <Text>{1_Distance} plots from the nearest other site of this plan</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_LUXURY" Language="en_US">
+      <Text>Luxury resources ({1_Score} points): {2_List}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_STRATEGIC" Language="en_US">
+      <Text>Strategic resources ({1_Score} points): {2_List}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_NEW_KIND" Language="en_US">
+      <Text>{1_Name} {2_Count} (new)</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SITES_UNREVEALED" Language="en_US">
       <Text>{1_Count} plots of its rings unrevealed</Text>

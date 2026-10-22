@@ -119,7 +119,7 @@ end
 -- Localized name of a district, improvement, building or feature type.
 local function TypeName(typeName)
   local row = GameInfo.Districts[typeName] or GameInfo.Improvements[typeName] or GameInfo.Buildings[typeName]
-    or GameInfo.Features[typeName]
+    or GameInfo.Features[typeName] or GameInfo.Resources[typeName]
   return row and Locale.Lookup(row.Name) or typeName
 end
 

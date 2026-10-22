@@ -186,3 +186,95 @@ test("refinement takes the sites that link back, even when far ones score higher
   end
   for _, solution in ipairs(result.Solutions) do T.eq(#solution.Sites, 2, "K sites") end
 end)
+
+test("each site's resources and distances in a solution (issues 8, 9)", function()
+  NewWorld()
+  -- Three sites with a long relay: rings overlap in some solutions.
+  local request = { PlayerID = 0, K = 3, D = 6, Districts = PLAN, Tier = "FAST" }
+  local result = SDP_SiteSolver.Solve(request)
+  T.ok(result.Ok, tostring(result.Error))
+  local ctx = result.Session.Ctx
+  local centers = SDP_Sites.Centers(0)
+  local withResources = 0
+  for n, solution in ipairs(result.Solutions) do
+    -- The sites' values and resource shares add up to the solution's.
+    local sum, resources = 0, 0
+    for _, site in ipairs(solution.Sites) do
+      sum = sum + site.Value
+      resources = resources + site.Parts.Luxury + site.Parts.Strategic
+    end
+    T.near(sum - solution.Conflict, solution.Value, 1e-6, "solution " .. n .. ": site values")
+    T.near(resources, solution.Resources, 1e-6, "solution " .. n .. ": resource shares")
+    -- Every visible luxury or strategic copy on the sites' workable plots
+    -- is counted once, at one site.
+    local onMap, counted, seen = {}, {}, {}
+    for _, site in ipairs(solution.Sites) do
+      local scan = SDP_City.ScanSite(0, site.X, site.Y, { population = ctx.Population })
+      for _, index in ipairs(SDP_Land.Workable(scan)) do
+        local plot = Map.GetPlotByIndex(index)
+        local resource = plot:GetResourceType()
+        if not seen[index] and resource ~= -1 then
+          seen[index] = true
+          local row = GameInfo.Resources[resource]
+          if ctx.Visible[row.ResourceType] and row.ResourceClassType ~= "RESOURCECLASS_BONUS" then
+            onMap[row.ResourceType] = (onMap[row.ResourceType] or 0) + math.max(1, plot:GetResourceCount())
+          end
+        end
+      end
+      for _, copies in ipairs({ site.Luxury, site.Strategic }) do
+        for kind, count in pairs(copies) do
+          counted[kind] = (counted[kind] or 0) + count
+          withResources = withResources + 1
+        end
+      end
+      for kind in pairs(site.Strategic) do
+        T.eq(GameInfo.Resources[kind].ResourceClassType, "RESOURCECLASS_STRATEGIC", kind .. " listed as strategic")
+      end
+    end
+    T.same(counted, onMap, "solution " .. n .. ": copies counted once")
+    -- A kind the player lacks is new at exactly one site.
+    local newAt = {}
+    for _, site in ipairs(solution.Sites) do
+      for kind in pairs(site.NewKinds) do newAt[kind] = (newAt[kind] or 0) + 1 end
+    end
+    for kind in pairs(onMap) do
+      T.eq(newAt[kind], (not ctx.Owned[kind]) and 1 or nil, "solution " .. n .. ": " .. kind .. " new once")
+    end
+    -- Distances: to our cities and pins; to the nearest other site.
+    for _, site in ipairs(solution.Sites) do
+      local own, other = math.huge, nil
+      for _, c in ipairs(centers) do
+        if c.Own then own = math.min(own, Map.GetPlotDistance(site.X, site.Y, c.X, c.Y)) end
+      end
+      for _, s in ipairs(solution.Sites) do
+        if s ~= site then
+          local d = Map.GetPlotDistance(site.X, site.Y, s.X, s.Y)
+          if other == nil or d < other then other = d end
+        end
+      end
+      T.eq(site.OwnDistance, own, "distance to our cities and pins")
+      T.eq(site.SiteDistance, other, "distance to the other sites")
+    end
+  end
+  T.ok(withResources > 0, "the test needs sites with luxury or strategic resources")
+end)
+
+test("a resource kind new to the player is new at one site only", function()
+  -- Two wine plots, one near each of two sites: the first site (by plot) gets
+  -- the new kind's amenities, the other a copy's worth.
+  local ctx = { Owned = {}, Weights = SDP_Sites.Weights() }
+  local taken = {}
+  local first = SDP_Sites.LuxuryValue(ctx, { RESOURCE_WINE = 1 }, taken)
+  local second = SDP_Sites.LuxuryValue(ctx, { RESOURCE_WINE = 1 }, taken)
+  NewWorld()
+  T.eq(first, GameInfo.Resources.RESOURCE_WINE.Happiness, "first: the kind's amenities")
+  T.eq(second, SDP_Sites.DUPLICATE_VALUE, "second: a duplicate")
+  T.eq(first + second, SDP_Sites.LuxuryValue(ctx, { RESOURCE_WINE = 2 }, {}), "same as counted together")
+end)
+
+test("one site: no distance to other sites", function()
+  NewWorld()
+  local result = SDP_SiteSolver.Solve({ PlayerID = 0, K = 1, D = 6, Districts = PLAN, Tier = "FAST" })
+  T.ok(result.Ok, tostring(result.Error))
+  T.eq(result.Solutions[1].Sites[1].SiteDistance, nil, "no other site")
+end)

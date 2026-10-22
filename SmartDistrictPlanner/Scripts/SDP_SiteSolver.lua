@@ -160,26 +160,17 @@ function Session:Value(chosen)
     end
     local land = SDP_Land.ScoreTaken(site.Land, taken, #taken, {})
     -- Resources on the plots this site works.
-    for _, index in ipairs(SDP_Land.Workable(site.Scan)) do
-      local o = owner[index]
+    local owned = {}
+    for _, r in ipairs(site.Resources) do
+      local o = owner[r.Index]
       if o == nil or o.Site == s then
-        local plot = Map.GetPlotByIndex(index)
-        local resource = plot:GetResourceType()
-        if resource ~= -1 then
-          local row = GameInfo.Resources[resource]
-          if ctx.Visible[row.ResourceType] then
-            local count = math.max(1, plot:GetResourceCount())
-            if row.ResourceClassType == "RESOURCECLASS_LUXURY" then
-              luxury[row.ResourceType] = (luxury[row.ResourceType] or 0) + count
-            elseif row.ResourceClassType == "RESOURCECLASS_STRATEGIC" then
-              strategic[row.ResourceType] = (strategic[row.ResourceType] or 0) + (ctx.Extraction[row.ResourceType] or count)
-            end
-          end
-        end
+        owned[#owned + 1] = r
+        local into = r.Luxury and luxury or strategic
+        into[r.Type] = (into[r.Type] or 0) + r.Amount
       end
     end
     local value = site.Parts.District + land + site.Parts.Water + site.Parts.Appeal - site.Parts.Penalty
-    details[#details + 1] = { Site = site, Land = land, Value = value }
+    details[#details + 1] = { Site = site, Land = land, Value = value, Resources = owned }
     total = total + value
   end
   local resources = w.AMENITY * SDP_Sites.LuxuryValue(ctx, luxury, {}) + w.STRATEGIC * SDP_Sites.StrategicValue(ctx, strategic, {})
@@ -349,10 +340,60 @@ function Session:Distinct(count)
   return out
 end
 
+-- A solution's sites with their share of the resources (issue 8): each
+-- site the copies on the plots it works there; a kind new to the player is
+-- new at the first site (in plot order) that has it. The shares add up to
+-- the solution's resource value, so the sites' values add up to the
+-- solution's (less the conflicts). Also the distance to the nearest other
+-- site of the solution (issue 9).
+local function SolutionSites(ctx, entry)
+  local w = ctx.Weights
+  local sites = {}
+  for n, d in ipairs(entry.Details) do
+    local site = d.Site
+    local parts = {}
+    for key, value in pairs(site.Parts) do parts[key] = value end
+    sites[n] = { X = site.X, Y = site.Y, Index = site.Index, Value = d.Value, Land = d.Land, Parts = parts,
+      Districts = site.Districts, Info = site.Info, Owned = d.Resources, OwnDistance = site.Info.OwnDistance }
+  end
+  table.sort(sites, function(a, b) return a.Index < b.Index end)
+  local takenLuxury, takenStrategic = {}, {}
+  for _, site in ipairs(sites) do
+    local luxury, strategic, copies = {}, {}, {}
+    for _, r in ipairs(site.Owned) do
+      local into = r.Luxury and luxury or strategic
+      into[r.Type] = (into[r.Type] or 0) + r.Amount
+      copies[r.Type] = (copies[r.Type] or 0) + r.Count
+    end
+    site.NewKinds = {}
+    for kind in pairs(luxury) do site.NewKinds[kind] = not ctx.Owned[kind] and not takenLuxury[kind] or nil end
+    for kind in pairs(strategic) do site.NewKinds[kind] = not ctx.Owned[kind] and not takenStrategic[kind] or nil end
+    site.Parts.Luxury = w.AMENITY * SDP_Sites.LuxuryValue(ctx, luxury, takenLuxury)
+    site.Parts.Strategic = w.STRATEGIC * SDP_Sites.StrategicValue(ctx, strategic, takenStrategic)
+    site.Value = site.Value + site.Parts.Luxury + site.Parts.Strategic
+    site.Luxury, site.Strategic = {}, {}
+    for kind, count in pairs(copies) do
+      if luxury[kind] ~= nil then site.Luxury[kind] = count else site.Strategic[kind] = count end
+    end
+    for _, other in ipairs(sites) do
+      if other ~= site then
+        local d = Map.GetPlotDistance(site.X, site.Y, other.X, other.Y)
+        if site.SiteDistance == nil or d < site.SiteDistance then site.SiteDistance = d end
+      end
+    end
+  end
+  return sites
+end
+
 -- Result = {
 --   Ok, Error ("NO_SITE" when no combination fits), Stats, Session, Quality
 --   Solutions  best first: { Value, Resources, Conflict, Sites = { site } }, each
---              site { X, Y, Index, Value, Parts, Districts, Info, Land (its land score here) }
+--              site { X, Y, Index, Value, Parts, Districts, Info, Land (its land score here),
+--                Luxury, Strategic ({ [type] = copies } it works here), Owned (those resources),
+--                NewKinds ({ [type] = true }: kinds the player lacks, counted as new at this site),
+--                OwnDistance (to the nearest city or city-center pin of the player),
+--                SiteDistance (to the nearest other site of the solution; nil for one site) }
+--              Value = the sum of the sites' values - Conflict.
 -- }
 function Session:Result()
   local ctx = self.Ctx
@@ -362,14 +403,8 @@ function Session:Result()
   end
   local result = { Ok = true, Stats = self.Stats, Session = self, Solutions = {} }
   for _, entry in ipairs(self:Distinct(self.Params.Solutions or 3)) do
-    local sites = {}
-    for n, d in ipairs(entry.Details) do
-      local site = d.Site
-      sites[n] = { X = site.X, Y = site.Y, Index = site.Index, Value = d.Value, Land = d.Land, Parts = site.Parts,
-        Districts = site.Districts, Info = site.Info, Luxury = site.Luxury, Strategic = site.Strategic }
-    end
-    table.sort(sites, function(a, b) return a.Index < b.Index end)
-    result.Solutions[#result.Solutions + 1] = { Value = entry.Value, Resources = entry.Resources, Conflict = entry.Conflict, Sites = sites }
+    result.Solutions[#result.Solutions + 1] = { Value = entry.Value, Resources = entry.Resources, Conflict = entry.Conflict,
+      Sites = SolutionSites(ctx, entry) }
   end
   if #result.Solutions == 0 then result.Ok, result.Error = false, "NO_SITE" end
   local best = result.Solutions[1]
