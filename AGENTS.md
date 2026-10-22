@@ -55,7 +55,7 @@ civ6mod/
 │   ├── stress/                       # 后期存档压力测试的结果（tools/stress.py）
 │   └── bench/                        # 游戏内基准、单价校准与探针（不以 test_ 开头，单独运行）
 ├── workshop/                         # 创意工坊的标题、中英简介、更新说明、预览图与示意图（源文件在 src/），tools/workshop.py 打提交包
-├── report/                           # “介绍与评测”页：build.py 从 tests/compare/results 生成 dist/report/（单文件版、GitHub Pages 版），package.py 打进压缩包
+├── report/                           # “介绍与评测”页：build.py 从 tests/compare/results 生成 dist/report/（中文页、英文页，各有单文件版和 GitHub Pages 版），package.py 打进压缩包
 ├── tools/                            # paths.py、civ6tuner.py、validate.py、deploy.py、run_tests.py、game.py 等，见 tools/README.md
 ├── logs/                             # civ6tuner 输出日志，已 gitignore
 └── reference/                        # 指向本机 DMT/AMT/EP/Base UI/DLC 源码的链接（tools/setup_reference.py 建），已 gitignore

@@ -125,7 +125,7 @@ python3 -I tools/package.py                     # 输出 dist/SmartDistrictPlann
 python3 -I tools/package.py --version v1.0.0    # 输出 dist/SmartDistrictPlanner-v1.0.0.zip（发布工作流这样用）
 ```
 
-- 内容：`SmartDistrictPlanner/`（模组本体）、`TEST_GUIDE.md`（`docs/tester-guide.md`，填好版本号和日期）、`INSTALL_AND_USE.md`（`docs/install-and-test.md`，指向其他文档的链接改成纯文本）、`REPORT.html`（“介绍与评测”页的单文件版，见下一节）。
+- 内容：`SmartDistrictPlanner/`（模组本体）、`TEST_GUIDE.md`（`docs/tester-guide.md`，填好版本号和日期）、`INSTALL_AND_USE.md`（`docs/install-and-test.md`，指向其他文档的链接改成纯文本）、`REPORT.html` 和 `REPORT_EN.html`（“介绍与评测”页中英两页的单文件版，见下一节）。
 - 从最近一次提交打包：先校验；模组、这两份文档或页面读到的文件（`report/build.py` 的 `INPUTS`）有未提交的改动时拒绝打包。文件名里的版本（默认是提交号）也写在测试说明和页面上，反馈时报这个号。
 - 压缩包里的文件名都是 ASCII，Windows 自带的解压工具不会显示乱码；条目时间取提交时间，同一次提交打出的包相同。`dist/` 不入库。
 
@@ -146,14 +146,15 @@ python3 -I tools/workshop.py vdf 解压目录      # 在解压后的提交包里
 ## report/build.py — “介绍与评测”页
 
 ```bash
-python3 -I report/build.py                              # 输出 dist/report/index.html 和 report.html
+python3 -I report/build.py                              # 输出 dist/report/ 下的中文页、英文页（en/）和两个单文件版
 python3 -I report/build.py --version v1.0.0 --site _site   # 另输出 GitHub Pages 用的 _site/（发布工作流这样用）
 ```
 
 - 页面结构：第 1–6 节写给玩家（能做什么、安装与使用、和其他规划器比、速度、已知限制、反馈与更新），附录 A 技术说明、附录 B 评估方法与完整数据默认折叠；页内链接指向附录时会自动展开。
+- 英文页（Issue #5）：`build(lang="en")` 套 `report/template_en.html`，只有第 1–6 节，附录链接到中文页。由脚本生成的句子、表格和图表文字在 `build.py`、`charts.js` 里中英各一份，数字来自同一份数据。两页顶部互相链接。改了中文页的前 6 节，英文页要同步改。
 - 读 `tests/compare/results/` 里的对比结果（文件列表见 `RESULTS`），套进 `report/template.html`（附录 A 的结构图和算法来自 `part_arch.html`、`part_algo.html`，图表脚本 `charts.js`，地图案例 `hexmap.py`）。
 - 版本默认是提交号，日期是提交日期；`--version` 以 `v` 开头时，下载按钮指向这个版本的 Release，否则指向最新的 Release。
-- `index.html` 不带文档外壳，截图写成 `images/<文件名>`；`report.html` 是单文件版，截图内嵌，可直接用浏览器打开，`package.py` 打进压缩包；`--site DIR` 写出带外壳的 `DIR/index.html` 和用到的截图。
+- `index.html`、`en/index.html` 不带文档外壳，截图写成 `images/<文件名>`；`report.html`、`report_en.html` 是单文件版，截图内嵌，可直接用浏览器打开，`package.py` 打进压缩包（`REPORT.html`、`REPORT_EN.html`）；`--site DIR` 写出带外壳的 `DIR/index.html`、`DIR/en/index.html` 和用到的截图。
 - 案例地图的场景数据缓存在 `report/snaps/`，缺的会用 `node tools/compare.mjs --snapshot` 生成（需要 `tests/compare/.cache/`），生成后要提交；`package.py` 不生成，缺了就报错。
 - 同样的输入得到同样的页面。线上的页面只在发布 Release 时更新（`.github/workflows/release.yml`，也可在 Actions 里手动运行）。
 

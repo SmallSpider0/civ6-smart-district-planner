@@ -25,5 +25,5 @@ labels: release
 **发布**
 - [ ] 以上改动经 PR 合并到 main，CI 通过
 - [ ] 在 GitHub 发布 Release `vX.Y.Z`，贴上双语发布说明
-- [ ] Release 页上有三个附件：压缩包、单文件页面、`-workshop.zip`；GitHub Pages 已是新版本
+- [ ] Release 页上有四个附件：压缩包、中英两个单文件页面、`-workshop.zip`；GitHub Pages 的中文页和 `en/` 英文页都已是新版本
 - [ ] 上传创意工坊（Windows，`docs/workshop-upload.md`），订阅后在游戏里确认能加载
