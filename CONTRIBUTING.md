@@ -49,7 +49,7 @@
 1. 定版本号：修问题改第三位（v1.0.1），加功能改第二位（v1.1.0），大的不兼容改动改第一位。modinfo 的 `version` 每次发版加 1。
 2. 发版前测试：三种规则集的游戏内测试、macOS 真实点击、Windows 冒烟测试、后期存档压力测试；改了求解器还要跑离线对比。
 3. 准备文字：CHANGELOG 的“未发布”改成 `vX.Y.Z（日期）`；写 `workshop/changenotes/vX.Y.Z.txt`（英文在前、中文在后）；功能或限制变了，同步 README、`workshop/description.bbcode` 和介绍与评测页。这些也走 PR。
-4. 在 GitHub 发布 Release `vX.Y.Z`，发布说明写给玩家。`.github/workflows/release.yml` 会：
+4. 在 GitHub 发布 Release `vX.Y.Z`，发布说明写给玩家，英文在前、中文在后。`.github/workflows/release.yml` 会：
    - 打出 `SmartDistrictPlanner-vX.Y.Z.zip`（mod、测试说明、安装说明、`REPORT.html`），连同单文件页面一起附到 Release；
    - 打出 `SmartDistrictPlanner-vX.Y.Z-workshop.zip`（创意工坊提交包，`tools/workshop.py pack`）附到 Release；
    - 生成介绍与评测页，发布到 GitHub Pages（<https://smallspider0.github.io/civ6-smart-district-planner/>）。
@@ -66,7 +66,7 @@
 
 适用于界面文字、文档、报告和 PR 说明。
 
-- 用中文；代码标识符和注释用英文或中文都可以，但同一个文件里保持一致。创意工坊的标题、简介和更新说明例外：英文在前，中文在后。
+- 用中文；代码标识符和注释用英文或中文都可以，但同一个文件里保持一致。例外：创意工坊的标题、简介和更新说明，以及 GitHub 发布说明，英文在前、中文在后；问题反馈模板中英并列。
 - 写得平实：
   - 不用套话和 AI 腔，比如“赋能”“全面提升”“值得注意的是”；
   - 同一个意思只写一次，不重复已经说过的话。
