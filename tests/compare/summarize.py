@@ -2,10 +2,14 @@
 
     python3 -I tests/compare/summarize.py RESULTS.jsonl [MORE.jsonl ...] [--json OUT]
 
-For every scenario the reference is the best gain any planner reached with
-a legal plan (no rule broken; leaving a requested district out is not a
-broken rule, but it costs gain). Quality = gain / reference. A plan that
-breaks a rule keeps its gain in the tables but is counted as illegal.
+For every scenario the reference is the proven optimum when the exact
+solver (sdp:ORACLE, tests/compare/cmp_oracle.lua) proved one, else the best
+gain any planner reached with a legal plan (no rule broken; leaving a
+requested district out is not a broken rule, but it costs gain); the
+oracle's upper bound is kept for those. Quality = gain / reference;
+"optimal" counts plans that reach a proven optimum. A plan that breaks a
+rule keeps its gain in the tables but is counted as illegal. The oracle's
+own runs are left out of the per-planner tables.
 Repeated runs ("#2" variants) only feed the determinism check.
 """
 import argparse
@@ -28,6 +32,8 @@ def group(sid):
     """(set, kind) of a scenario id: dev / heldout / real / profile:SCI ... / wonders / sites / coverage."""
     if "~" in sid:
         return "profile:" + sid.split("~", 1)[1], "single"
+    if sid.startswith("OM"):
+        return "smallmulti", "multi"
     if sid.startswith("RS"):
         return "real", "single"
     if sid.startswith("RM"):
@@ -132,6 +138,9 @@ def key(r):
     return r["planner"] + (":" + r["variant"] if r.get("variant") else "")
 
 
+ORACLE_KEYS = ("sdp:ORACLE", "sdp:ORACLE_CHECK")
+
+
 def load(paths):
     rows = []
     for p in paths:
@@ -182,7 +191,20 @@ def summarize(rows):
             if s and not r.get("error") and s.get("output") is not None:
                 if not [v for v in s["violations"] if v["kind"] in HARD]:
                     best_out = s["output"] if best_out is None else max(best_out, s["output"])
-        entry = {"reference": best, "exact": exact, "referenceOutput": best_out, "runs": {}}
+        # The exact reference (issue 48): a proven optimum replaces the best
+        # known gain; otherwise its upper bound gives the range.
+        optimum, upper = None, None
+        for k in ORACLE_KEYS:
+            o = ((runs.get(k) or {}).get("plan") or {}).get("stats", {}).get("oracle")
+            if isinstance(o, dict) and not runs[k].get("error"):
+                if o.get("proven"):
+                    optimum = o["value"]
+                else:
+                    upper = o.get("upper")
+        if optimum is not None:
+            best, exact = optimum, True
+        entry = {"reference": best, "exact": exact, "optimum": optimum, "upper": upper, "referenceOutput": best_out,
+                 "runs": {}}
         for k, r in runs.items():
             s = r.get("score")
             e = {"seconds": r.get("planSeconds"), "error": r.get("error")}
@@ -253,6 +275,8 @@ def per_planner(scenarios, kind_filter=None):
         if kind_filter and group(sid)[1] != {"S": "single", "M": "multi"}.get(kind_filter, kind_filter):
             continue
         for k, r in e["runs"].items():
+            if k in ORACLE_KEYS:
+                continue
             a = agg[k]
             a["n"].append(1)
             if r.get("error"):
@@ -266,6 +290,9 @@ def per_planner(scenarios, kind_filter=None):
             a["seconds"].append(r.get("seconds") or 0)
             if e["reference"] is not None and r.get("gain") is not None:
                 a["best"].append(1 if r["legal"] and r["gain"] >= e["reference"] - 1e-9 else 0)
+            if e.get("optimum") is not None and r.get("gain") is not None:
+                a["optimal"].append(1 if r["legal"] and r["gain"] >= e["optimum"] - 1e-9 else 0)
+                a["overOptimum"].append(1 if r["legal"] and r["gain"] > e["optimum"] + 1e-9 else 0)
             if r.get("outputGap") is not None:
                 a["outGap"].append(r["outputGap"])
                 a["outBest"].append(1 if r["legal"] and r["outputGap"] <= 1e-9 else 0)
@@ -288,6 +315,8 @@ def per_planner(scenarios, kind_filter=None):
             "qualityMean": statistics.mean(q) if q else None, "qualityMin": min(q) if q else None,
             "legalShare": statistics.mean(a["legal"]) if a["legal"] else None,
             "bestShare": statistics.mean(a["best"]) if a["best"] else None,
+            "optimalShare": statistics.mean(a["optimal"]) if a["optimal"] else None, "optimalRuns": len(a["optimal"]),
+            "overOptimum": sum(a["overOptimum"]),
             "missing": sum(a["missing"]), "missingPlaceable": sum(a["missingPlaceable"]), "secondsMedian": statistics.median(a["seconds"]) if a["seconds"] else None,
             "violations": {kk[2:]: sum(v) for kk, v in a.items() if kk.startswith("v_")},
             "outputBestShare": statistics.mean(a["outBest"]) if a["outBest"] else None,
@@ -317,7 +346,10 @@ def main():
     for set_name, kind in sets:
         name = set_name + "/" + kind
         tables[name] = per_planner(subset(scenarios, set_name, kind))
-        print("==", name)
+        sub_all = subset(scenarios, set_name, kind)
+        proven = sum(1 for e in sub_all.values() if e.get("optimum") is not None)
+        ranged = sum(1 for e in sub_all.values() if e.get("optimum") is None and e.get("upper") is not None)
+        print("==", name, " proven optimum %d/%d, range only %d" % (proven, len(sub_all), ranged))
         t = tables[name]
         for k in sorted(t):
             v = t[k]
@@ -329,6 +361,9 @@ def main():
                 "%.2f" % v["legalShare"] if v["legalShare"] is not None else "-",
                 "%.2f" % v["bestShare"] if v["bestShare"] is not None else "-",
                 v["missing"], v["missingPlaceable"], v["secondsMedian"] or 0, json.dumps(v["violations"])))
+            if v.get("optimalShare") is not None:
+                print("  %-18s optimal %.2f (of %d with a proven optimum), above the optimum %d" % (
+                    "", v["optimalShare"], v["optimalRuns"], v["overOptimum"]))
             if ob is not None:
                 print("  %-18s output best %.2f gap %.2f" % ("", ob, og))
             sq = v.get("sdpQuality")
