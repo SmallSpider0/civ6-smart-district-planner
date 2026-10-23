@@ -479,17 +479,23 @@ local function AddResultRow(icon, name, detail, toolTip)
 end
 
 -- What a plan entry is beyond its yields: added by itself, picked from the
--- pool; what the city has to do first: own the plot (grow into it or buy
--- it), research the technology that clears its feature.
+-- pool; what the city has to do first: own the plot (grow into it, buy it,
+-- or swap it from another city), research the technology that clears its
+-- feature or harvests its resource, clear or harvest it.
 function SDP_UI.PlanNote(p)
   local notes = {}
   if p.Auto then notes[#notes + 1] = Locale.Lookup("LOC_SDP_RESULT_AUTO") end
   if p.Picked then notes[#notes + 1] = Locale.Lookup("LOC_SDP_RESULT_PICKED") end
   if p.Unowned then notes[#notes + 1] = Locale.Lookup("LOC_SDP_RESULT_UNOWNED") end
+  if p.Swap ~= nil then
+    local city = CityManager.GetCity(Game.GetLocalPlayer(), p.Swap)
+    notes[#notes + 1] = Locale.Lookup("LOC_SDP_RESULT_SWAP", city ~= nil and Locale.Lookup(city:GetName()) or "")
+  end
   if p.RemoveTech ~= nil then
     local tech = GameInfo.Technologies[p.RemoveTech]
     notes[#notes + 1] = Locale.Lookup("LOC_SDP_RESULT_NEEDS_TECH", tech and Locale.Lookup(tech.Name) or p.RemoveTech)
   end
+  if p.ClearFirst then notes[#notes + 1] = Locale.Lookup("LOC_SDP_RESULT_CLEAR_FIRST") end
   if #notes == 0 then return "" end
   return "  " .. table.concat(notes, " ")
 end

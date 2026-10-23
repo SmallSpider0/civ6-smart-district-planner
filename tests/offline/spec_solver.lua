@@ -331,3 +331,64 @@ test("a plan says which plots the city must own first and which features need a 
   T.eq(p.Unowned, c.Unowned, "Unowned as the scan says")
   T.eq(p.RemoveTech, c.RemoveTech, "RemoveTech as the scan says")
 end)
+
+test("a plot another of our cities owns is a candidate when it can be swapped (issue 54)", function()
+  -- Capital at (2,4) and city 2 at (6,4), each owning its first ring; city 2
+  -- also owns a plot two from its center that touches the capital's ring.
+  local flat = {}
+  for y = 1, 9 do flat[y] = "~..........~" end
+  flat[1], flat[9] = "~~~~~~~~~~~~", "~~~~~~~~~~~~"
+  local w = World.New({ rows = flat, cities = { { id = 1, x = 2, y = 4, population = 7, capital = true, radius = 1 },
+    { id = 2, x = 6, y = 4, population = 4, radius = 1 } } })
+  local swap = nil
+  for _, p in ipairs(SDP_City.PlotsInRange(2, 4, 2)) do
+    local plot = Map.GetPlotByIndex(p.Index)
+    if swap == nil and plot:GetOwner() == -1 and Map.GetPlotDistance(6, 4, plot:GetX(), plot:GetY()) == 2 then swap = plot end
+  end
+  T.ok(swap ~= nil, "a plot two from each center")
+  w:Own(swap:GetX(), swap:GetY(), 0, w:City(2))
+  local ring = Map.GetPlotIndex(5, 4) -- next to city 2's center, three from the capital
+  local scan = SDP_City.Scan(0, 1)
+  local found = nil
+  for _, c in ipairs(scan.Candidates) do
+    if c.Index == swap:GetIndex() then found = c end
+  end
+  T.ok(found ~= nil, "the swappable plot is a candidate")
+  T.eq(found.Swap, 2, "swapped from city 2")
+  T.eq(found.Unowned, nil, "not a plot to buy")
+  T.eq(scan.Excluded[ring], "OTHER_CITY", "next to the other city's center: not swappable")
+  local result = SDP_Solver.Solve({ PlayerID = 0, CityID = 1, Weights = ONES, Districts = { "DISTRICT_CAMPUS" }, Land = true })
+  T.ok(result.Ok, tostring(result.Error))
+  for _, p in ipairs(result.Plan) do
+    T.eq(p.Swap, p.Index == swap:GetIndex() and 2 or nil, "swap note at " .. p.X .. "," .. p.Y)
+  end
+end)
+
+test("unowned plots another city is nearer to are that city's to work (issue 54)", function()
+  local flat = {}
+  for y = 1, 9 do flat[y] = "~..........~" end
+  flat[1], flat[9] = "~~~~~~~~~~~~", "~~~~~~~~~~~~"
+  World.New({ rows = flat, cities = { { id = 1, x = 2, y = 4, population = 7, capital = true, radius = 1 },
+    { id = 2, x = 7, y = 4, population = 4, radius = 1 } } })
+  local result = SDP_Solver.Solve({ PlayerID = 0, CityID = 1, Weights = ONES, Districts = { "DISTRICT_CAMPUS" }, Land = true })
+  T.ok(result.Ok, tostring(result.Error))
+  -- The solver's land model leaves out the unowned plots nearer city 2.
+  local land = SDP_Overlay.With(0, function()
+    return SDP_Solver.NewSession({ PlayerID = 0, CityID = 1, Weights = ONES, Districts = { "DISTRICT_CAMPUS" }, Land = true },
+      SDP_City.Scan(0, 1)).Land
+  end)
+  local nearer, kept = 0, 0
+  for _, p in ipairs(SDP_City.PlotsInRange(2, 4, 3)) do
+    local plot = Map.GetPlotByIndex(p.Index)
+    if plot:GetOwner() == -1 and not plot:IsWater() then
+      local d1, d2 = Map.GetPlotDistance(2, 4, plot:GetX(), plot:GetY()), Map.GetPlotDistance(7, 4, plot:GetX(), plot:GetY())
+      if d2 < d1 then
+        nearer = nearer + 1
+        T.ok(land.ByIndex[p.Index] == nil, "nearer city 2: " .. plot:GetX() .. "," .. plot:GetY())
+      elseif land.ByIndex[p.Index] ~= nil then
+        kept = kept + 1
+      end
+    end
+  end
+  T.ok(nearer > 0 and kept > 0, "both kinds present")
+end)

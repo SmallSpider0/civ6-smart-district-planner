@@ -158,7 +158,14 @@ function Session:Value(chosen)
       local b = built[p.Index]
       if (o ~= nil and o.Site ~= s) or b ~= nil then taken[#taken + 1] = p.Index end
     end
-    local land = SDP_Land.ScoreTaken(site.Land, taken, #taken, {})
+    -- One-time yields of the plots it keeps: removed before building, so
+    -- its own districts do not lose them (issue 52).
+    local once = 0
+    for _, p in ipairs(site.Land.Plots) do
+      local o = owner[p.Index]
+      if o == nil or o.Site == s then once = once + p.Once end
+    end
+    local land = SDP_Land.ScoreTaken(site.Land, taken, #taken, {}) + once
     -- Resources on the plots this site works.
     local owned = {}
     for _, r in ipairs(site.Resources) do

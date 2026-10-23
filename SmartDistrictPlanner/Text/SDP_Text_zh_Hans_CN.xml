@@ -539,6 +539,12 @@
     <Replace Tag="LOC_SDP_RESULT_UNOWNED" Language="zh_Hans_CN">
       <Text>（需先扩张或购买）</Text>
     </Replace>
+    <Replace Tag="LOC_SDP_RESULT_SWAP" Language="zh_Hans_CN">
+      <Text>（需从{1_City}换格）</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_CLEAR_FIRST" Language="zh_Hans_CN">
+      <Text>（先砍伐或收获）</Text>
+    </Replace>
     <Replace Tag="LOC_SDP_RESULT_NEEDS_TECH" Language="zh_Hans_CN">
       <Text>（需先研究{1_Tech}）</Text>
     </Replace>

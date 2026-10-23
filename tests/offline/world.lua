@@ -286,6 +286,21 @@ local function BuildGameInfo()
     { RequirementId = "REQUIRES_NO_MARKET", Name = "BuildingType", Value = "BUILDING_MARKET" },
     { RequirementId = "REQUIRES_NO_MARKET", Name = "MustBeFunctioning", Value = "0" },
   })
+  -- The yields of features and resources as the rules list them.
+  local function Changes(rows, key)
+    local out = {}
+    for _, row in ipairs(rows) do
+      for _, y in ipairs(YIELDS) do
+        if (row.Yields[y] or 0) ~= 0 then out[#out + 1] = { [key] = row[key], YieldType = y, YieldChange = row.Yields[y] } end
+      end
+    end
+    return Table(out)
+  end
+  local features, resources = {}, {}
+  for row in gi.Features() do features[#features + 1] = row end
+  for row in gi.Resources() do resources[#resources + 1] = row end
+  gi.Feature_YieldChanges = Changes(features, "FeatureType")
+  gi.Resource_YieldChanges = Changes(resources, "ResourceType")
   return gi
 end
 
@@ -359,6 +374,46 @@ function World.New(spec)
   local w = { Calls = { GetBonusYields = 0, CanPlacePin = 0, ClearCache = 0 }, Turn = spec.turn or 1, Time = 0 }
   local gi = BuildGameInfo()
   w.GameInfo = gi
+  -- Improvement rules (issue 52), on request: farms on grassland, plains and
+  -- floodplains (+1 food), mines on hills (+1 production, +1 more with
+  -- Masonry), lumber mills on woods (+2 production), pastures on horses
+  -- (+1 production), mines on copper. Without them no plot has a potential.
+  if spec.improvementRules then
+    gi.Improvements = Table({
+      { ImprovementType = "IMPROVEMENT_FARM", Name = "LOC_IMPROVEMENT_FARM_NAME", Housing = 1, TilesRequired = 2,
+        Buildable = true, Domain = "DOMAIN_LAND" },
+      { ImprovementType = "IMPROVEMENT_MINE", Name = "LOC_IMPROVEMENT_MINE_NAME", Appeal = -1, Buildable = true,
+        Domain = "DOMAIN_LAND" },
+      { ImprovementType = "IMPROVEMENT_LUMBER_MILL", Name = "LOC_IMPROVEMENT_LUMBER_MILL_NAME", Buildable = true,
+        Domain = "DOMAIN_LAND" },
+      { ImprovementType = "IMPROVEMENT_PASTURE", Name = "LOC_IMPROVEMENT_PASTURE_NAME", Buildable = true,
+        Domain = "DOMAIN_LAND" },
+    }, "ImprovementType")
+    gi.Improvement_YieldChanges = Table({
+      { ImprovementType = "IMPROVEMENT_FARM", YieldType = "YIELD_FOOD", YieldChange = 1 },
+      { ImprovementType = "IMPROVEMENT_MINE", YieldType = "YIELD_PRODUCTION", YieldChange = 1 },
+      { ImprovementType = "IMPROVEMENT_LUMBER_MILL", YieldType = "YIELD_PRODUCTION", YieldChange = 2 },
+      { ImprovementType = "IMPROVEMENT_PASTURE", YieldType = "YIELD_PRODUCTION", YieldChange = 1 },
+    })
+    gi.Improvement_BonusYieldChanges = Table({
+      { Id = 1, ImprovementType = "IMPROVEMENT_MINE", YieldType = "YIELD_PRODUCTION", BonusYieldChange = 1, PrereqTech = "TECH_MASONRY" },
+    })
+    gi.Improvement_ValidTerrains = Table({
+      { ImprovementType = "IMPROVEMENT_FARM", TerrainType = "TERRAIN_GRASS" },
+      { ImprovementType = "IMPROVEMENT_FARM", TerrainType = "TERRAIN_PLAINS" },
+      { ImprovementType = "IMPROVEMENT_MINE", TerrainType = "TERRAIN_GRASS_HILLS" },
+      { ImprovementType = "IMPROVEMENT_MINE", TerrainType = "TERRAIN_PLAINS_HILLS" },
+    })
+    gi.Improvement_ValidFeatures = Table({
+      { ImprovementType = "IMPROVEMENT_FARM", FeatureType = "FEATURE_FLOODPLAINS" },
+      { ImprovementType = "IMPROVEMENT_LUMBER_MILL", FeatureType = "FEATURE_FOREST" },
+    })
+    gi.Improvement_ValidResources = Table({
+      { ImprovementType = "IMPROVEMENT_FARM", ResourceType = "RESOURCE_WHEAT" },
+      { ImprovementType = "IMPROVEMENT_MINE", ResourceType = "RESOURCE_COPPER" },
+      { ImprovementType = "IMPROVEMENT_PASTURE", ResourceType = "RESOURCE_HORSES" },
+    })
+  end
   -- A trait that replaces a table row with a bonus only DMT knows, as
   -- Japan's: spec.traitNeighbour = { [DistrictType] = { YieldType, Change, YieldChangeId } }
   -- gives Change per neighbouring district instead of the row YieldChangeId.

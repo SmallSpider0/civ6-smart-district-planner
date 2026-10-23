@@ -319,9 +319,11 @@ function SDP_Multi.NewSession(request)
     for _, c in ipairs(part.Scan.Candidates) do
       if at[c.Index] == nil then
         at[c.Index] = true
-        -- A plot one city owns is no candidate of another, so Unowned and
-        -- RemoveTech are the same whichever scan lists the plot.
-        candidates[#candidates + 1] = { Index = c.Index, X = c.X, Y = c.Y, Unowned = c.Unowned, RemoveTech = c.RemoveTech }
+        -- Unowned and RemoveTech are the same whichever scan lists the plot
+        -- (a plot one city owns is a candidate of another only by swapping,
+        -- worked out with the plan).
+        candidates[#candidates + 1] = { Index = c.Index, X = c.X, Y = c.Y, Unowned = c.Unowned, RemoveTech = c.RemoveTech,
+          ClearFirst = c.ClearFirst }
       end
     end
   end
@@ -367,11 +369,19 @@ function SDP_Multi.NewSession(request)
   -- Land part per city; a plot several cities could work goes to the nearest.
   local lands = {}
   if land then
-    local owner = {}
+    -- A plot a participating city owns stays that city's, also when another
+    -- can swap it (issue 54).
+    local owner, byCity = {}, {}
+    for p, part in ipairs(participants) do
+      if part.CityID ~= nil then byCity[part.CityID] = p end
+    end
     for p, part in ipairs(participants) do
       for _, index in ipairs(SDP_Land.Workable(part.Scan)) do
         local plot = Map.GetPlotByIndex(index)
+        local owningCity = plot:GetOwner() == playerID and Cities.GetPlotPurchaseCity(plot) or nil
+        local holder = owningCity ~= nil and byCity[owningCity:GetID()] or nil
         local d = Map.GetPlotDistance(part.X, part.Y, plot:GetX(), plot:GetY())
+        if holder == p then d = -1 elseif holder ~= nil then d = math.huge end
         local current = owner[index]
         if current == nil or d < current.Distance then owner[index] = { Part = p, Distance = d } end
       end
@@ -952,10 +962,15 @@ function Session:PlanFor(layout)
     local p = self:OwnerOf(m, i)
     local spec = self.SlotSpecs[search.SlotIndex[m]]
     local a = appeal[m] or {}
+    -- A plot another of the player's cities owns is swapped from it (issue 54).
+    local plot = Map.GetPlotByIndex(c.Index)
+    local owningCity = plot:GetOwner() == self.PlayerID and Cities.GetPlotPurchaseCity(plot) or nil
+    local swap = owningCity ~= nil and self.Participants[p].CityID ~= nil and owningCity:GetID() ~= self.Participants[p].CityID
+      and owningCity:GetID() or nil
     out.Plan[n] = {
       City = self.Participants[p].Key, Type = search.Types[m], Kind = search.Kinds[m], X = c.X, Y = c.Y, Index = c.Index,
       Yields = item.Yields, ToolTip = item.ToolTip, Score = item.Score,
-      Unowned = c.Unowned, RemoveTech = c.RemoveTech,
+      Unowned = c.Unowned, RemoveTech = c.RemoveTech, Swap = swap, ClearFirst = c.ClearFirst,
       Appeal = a.Appeal, Housing = a.Housing, Tiles = a.Tiles, TilesCounted = a.TilesCounted,
       Reach = self.Coverage and self.Coverage:Reach(search.Types[m], c.X, c.Y) or nil,
       Picked = search.Optional[m], Auto = (not spec.Wonder) and self.Participants[p].Auto[search.Types[m]] or nil,

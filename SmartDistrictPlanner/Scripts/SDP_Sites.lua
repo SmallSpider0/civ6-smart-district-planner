@@ -131,8 +131,7 @@ end
 -- What is shared by every site of one request.
 function SDP_Sites.Context(playerID, request)
   local ctx = { PlayerID = playerID, Weights = SDP_Sites.Weights(request.Weights) }
-  ctx.LandWeights = SDP_Land.Weights(ctx.Weights)
-  ctx.OneTime = SDP_Land.OneTimeYields()
+  ctx.Land = SDP_Land.Context(playerID, ctx.Weights, true)
   local plannable, byType = SDP_Rules.PlannableDistricts(playerID), {}
   for _, d in ipairs(plannable) do byType[d.Type] = d end
   -- The plan every site is scored with. A district with an empire limit
@@ -233,7 +232,7 @@ function SDP_Sites.Coarse(ctx, candidate, centers)
   local plots, featureCount, disaster = {}, {}, false
   for _, index in ipairs(SDP_Land.Workable(scan)) do
     local plot = Map.GetPlotByIndex(index)
-    local tile, once = SDP_Land.PlotValues(plot, ctx.LandWeights, ctx.OneTime)
+    local tile, once = SDP_Land.PlotValues(plot, ctx.Land)
     plots[#plots + 1] = { Index = index, Tile = tile, Once = once }
     local feature = plot:GetFeatureType()
     if feature ~= -1 then
@@ -262,7 +261,7 @@ function SDP_Sites.Coarse(ctx, candidate, centers)
   end
   site.Land = SDP_Land.Model(plots, ctx.Population)
   local once = site.Land.OnceTotal
-  site.Parts.Farm = site.Land.Base - once
+  site.Parts.Farm = site.Land.Base
   site.Parts.Feature = once
 
   site.Info.WaterKind = Water(Map.GetPlot(x, y))
@@ -423,8 +422,7 @@ function SDP_Sites.Fine(ctx, site, params)
       end
       local land = SDP_Land.ScoreTaken(site.Land, taken, #taken, {})
       site.Parts.District = search.BestGain - (land - site.Land.Base)
-      site.Parts.Farm = land - site.Land.OnceTotal + SDP_Sites.OnceLost(site.Land, taken)
-      site.Parts.Feature = site.Land.OnceTotal - SDP_Sites.OnceLost(site.Land, taken)
+      site.Parts.Farm = land
       local types = {}
       for _, d in ipairs(site.Districts) do types[#types + 1] = d.Type end
       site.Parts.Water = SDP_Sites.WaterPart(ctx, site, types)
@@ -435,14 +433,4 @@ function SDP_Sites.Fine(ctx, site, params)
   site.Fine = site.Parts.District + site.Parts.Farm + site.Parts.Feature + site.Parts.Water + site.Parts.Luxury
     + site.Parts.Strategic + site.Parts.Appeal - site.Parts.Penalty
   return site
-end
-
--- One-time value of the plots in `taken` (lost when built on).
-function SDP_Sites.OnceLost(model, taken)
-  local lost = 0
-  for _, index in ipairs(taken) do
-    local p = model.ByIndex[index]
-    if p ~= nil then lost = lost + p.Once end
-  end
-  return lost
 end

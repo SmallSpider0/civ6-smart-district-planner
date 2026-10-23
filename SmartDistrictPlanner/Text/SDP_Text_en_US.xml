@@ -539,6 +539,12 @@
     <Replace Tag="LOC_SDP_RESULT_UNOWNED" Language="en_US">
       <Text>(expand or buy the tile first)</Text>
     </Replace>
+    <Replace Tag="LOC_SDP_RESULT_SWAP" Language="en_US">
+      <Text>(swap the tile from {1_City})</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_CLEAR_FIRST" Language="en_US">
+      <Text>(clear or harvest the tile first)</Text>
+    </Replace>
     <Replace Tag="LOC_SDP_RESULT_NEEDS_TECH" Language="en_US">
       <Text>(needs {1_Tech} first)</Text>
     </Replace>
