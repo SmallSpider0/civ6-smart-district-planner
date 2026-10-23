@@ -85,7 +85,7 @@ local function ImprovementRules()
   for row in Rows("Improvements") do
     if row.Buildable and row.TraitType == nil and not row.RequiresRiver and not row.RequiresAdjacentBonusOrLuxury
         and not row.RequiresAdjacentLuxury and (row.ValidAdjacentTerrainAmount or 0) == 0 and row.Workable ~= false then
-      local entry = { Index = row.Index, Sea = row.Domain == "DOMAIN_SEA", Terrains = {}, Features = {}, Resources = {},
+      local entry = { Type = row.ImprovementType, Index = row.Index, Sea = row.Domain == "DOMAIN_SEA", Terrains = {}, Features = {}, Resources = {},
         Yields = {}, Bonus = {}, Any = false }
       byType[row.ImprovementType] = entry
     end
@@ -210,28 +210,37 @@ function SDP_Land.Context(playerID, weights, allowRemoval)
   return ctx
 end
 
--- Best weighted improvement gain on a plot of terrain `terrain` (type),
+-- The improvements that can go on a plot of terrain `terrain` (type),
 -- feature `feature` and resource `resource` (types or nil) in the sea or on
--- land; 0 when none applies. A resource with improvements of its own takes
--- only those (Improvement_ValidResources).
-local function BestImprovement(ctx, sea, terrain, feature, resource)
-  local best, own = 0, false
+-- land (entries of the rules). A resource with improvements of its own
+-- takes only those (Improvement_ValidResources).
+function SDP_Land.ValidImprovements(ctx, sea, terrain, feature, resource)
+  local list, own = {}, false
   if resource ~= nil then
     for _, entry in ipairs(ctx.Rules.Improvements) do
       local must = entry.Resources[resource]
       if must ~= nil then
         own = true
-        if entry.Sea == sea and not (must and feature ~= nil) then best = math.max(best, ctx.Gain[entry]) end
+        if entry.Sea == sea and not (must and feature ~= nil) then list[#list + 1] = entry end
       end
     end
-    if own then return best end
+    if own then return list end
   end
   for _, entry in ipairs(ctx.Rules.Improvements) do
     if entry.Sea == sea then
       local valid
       if feature ~= nil then valid = entry.Features[feature] == true else valid = entry.Terrains[terrain] == true end
-      if valid then best = math.max(best, ctx.Gain[entry]) end
+      if valid then list[#list + 1] = entry end
     end
+  end
+  return list
+end
+
+-- Best weighted gain of those; 0 when none applies.
+local function BestImprovement(ctx, sea, terrain, feature, resource)
+  local best = 0
+  for _, entry in ipairs(SDP_Land.ValidImprovements(ctx, sea, terrain, feature, resource)) do
+    best = math.max(best, ctx.Gain[entry])
   end
   return best
 end
