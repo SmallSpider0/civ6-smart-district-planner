@@ -71,6 +71,7 @@ function CmpAdapters.sdp(request, variant, w)
       out.placements[#out.placements + 1] = { city = id, type = p.Type, x = p.X, y = p.Y, kind = p.Kind }
     end
     stats.sdpGain, stats.sdpAppeal = r.Adjacency, r.AppealDelta
+    stats.sdpQuality = r.Quality -- design 7.4: Exhaustive, Bound, Gap, Converged, Truncated
     for _, u in ipairs(r.Unplaced or {}) do out.notes[#out.notes + 1] = "unplaced " .. tostring(u.Type) .. " " .. tostring(u.Reason) end
   elseif scn.kind == "single" then
     local r = SDP_Solver.Solve({ PlayerID = 0, CityID = request.target:GetID(), Districts = request.districts,
@@ -78,6 +79,7 @@ function CmpAdapters.sdp(request, variant, w)
     if not r.Ok then out.notes[#out.notes + 1] = tostring(r.Error) end
     Take(r.Plan, request.target:GetID())
     stats.sdpGain, stats.sdpAppeal = r.Adjacency, r.AppealDelta
+    stats.sdpQuality = r.Quality -- design 7.4: Exhaustive, Bound, Gap, Converged, Truncated
     stats.method = r.Stats and r.Stats.Method
     for _, u in ipairs(r.Unplaced or {}) do out.notes[#out.notes + 1] = "unplaced " .. u.Type .. " " .. tostring(u.Reason) end
   elseif variant == "CITY_BY_CITY" then
@@ -108,6 +110,7 @@ function CmpAdapters.sdp(request, variant, w)
       end
     end
     stats.sdpGain, stats.sdpAppeal = r.Adjacency, r.AppealDelta
+    stats.sdpQuality = r.Quality -- design 7.4: Exhaustive, Bound, Gap, Converged, Truncated
     stats.sdpCovered = r.Covered
     for _, u in ipairs(r.Unplaced or {}) do out.notes[#out.notes + 1] = "unplaced " .. tostring(u.Type) .. " " .. tostring(u.Reason) end
   end
