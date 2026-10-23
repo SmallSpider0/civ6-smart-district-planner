@@ -25,9 +25,13 @@ SITE_FIELDS = ("siteValue", "tileValue", "districtPotential", "freshWater", "coa
 
 
 def group(sid):
-    """(set, kind) of a scenario id: dev / heldout / profile:SCI ... / wonders / sites / coverage."""
+    """(set, kind) of a scenario id: dev / heldout / real / profile:SCI ... / wonders / sites / coverage."""
     if "~" in sid:
         return "profile:" + sid.split("~", 1)[1], "single"
+    if sid.startswith("RS"):
+        return "real", "single"
+    if sid.startswith("RM"):
+        return "real", "multi"
     if sid.startswith("HS"):
         return "heldout", "single"
     if sid.startswith("HM"):
@@ -201,6 +205,16 @@ def summarize(rows):
                     # Coverage (design 19.5): (city, kind) pairs newly reached.
                     "coverage": s.get("coverageGain"),
                 })
+                # This mod's own quality indicators (design 7.4, issue 36):
+                # exhaustive, the model's upper bound and the gap to it,
+                # converged, truncated; and whether the reference (the best
+                # legal plan of any planner) beats that bound.
+                q = (r.get("plan") or {}).get("stats", {}).get("sdpQuality")
+                if isinstance(q, dict):
+                    e["sdpQuality"] = q
+                    bound = q.get("Bound")
+                    e["boundBeaten"] = bool(not q.get("Exhaustive") and bound is not None and best is not None
+                                            and best > bound + 1e-9)
                 for f in SITE_FIELDS:
                     if s.get(f) is not None:
                         e[f] = s[f]
@@ -257,6 +271,15 @@ def per_planner(scenarios, kind_filter=None):
                 a["outBest"].append(1 if r["legal"] and r["outputGap"] <= 1e-9 else 0)
             for kk, n in (r.get("violations") or {}).items():
                 a["v_" + kk].append(n)
+            q = r.get("sdpQuality")
+            if isinstance(q, dict):
+                a["q_n"].append(1)
+                a["q_exhaustive"].append(1 if q.get("Exhaustive") else 0)
+                if not q.get("Exhaustive") and q.get("Gap") is not None:
+                    a["q_gap"].append(q["Gap"])
+                a["q_truncated"].append(1 if q.get("Truncated") else 0)
+                a["q_notConverged"].append(1 if q.get("Converged") is False else 0)
+                a["q_boundBeaten"].append(1 if r.get("boundBeaten") else 0)
     out = {}
     for k, a in agg.items():
         q = a["quality"]
@@ -270,6 +293,15 @@ def per_planner(scenarios, kind_filter=None):
             "outputBestShare": statistics.mean(a["outBest"]) if a["outBest"] else None,
             "outputGapMean": statistics.mean(a["outGap"]) if a["outGap"] else None,
         }
+        if a["q_n"]:
+            out[k]["sdpQuality"] = {
+                "runs": len(a["q_n"]), "exhaustive": sum(a["q_exhaustive"]),
+                "gapRuns": len(a["q_gap"]),
+                "gapMean": statistics.mean(a["q_gap"]) if a["q_gap"] else None,
+                "gapMax": max(a["q_gap"]) if a["q_gap"] else None,
+                "truncated": sum(a["q_truncated"]), "notConverged": sum(a["q_notConverged"]),
+                "boundBeaten": sum(a["q_boundBeaten"]),
+            }
     return out
 
 
@@ -299,6 +331,13 @@ def main():
                 v["missing"], v["missingPlaceable"], v["secondsMedian"] or 0, json.dumps(v["violations"])))
             if ob is not None:
                 print("  %-18s output best %.2f gap %.2f" % ("", ob, og))
+            sq = v.get("sdpQuality")
+            if sq:
+                print("  %-18s self-reported: exhaustive %d/%d, gap to the model's bound mean %s max %s (n %d), truncated %d, not converged %d, bound beaten by the reference %d" % (
+                    "", sq["exhaustive"], sq["runs"],
+                    "%.3f" % sq["gapMean"] if sq["gapMean"] is not None else "-",
+                    "%.3f" % sq["gapMax"] if sq["gapMax"] is not None else "-",
+                    sq["gapRuns"], sq["truncated"], sq["notConverged"], sq["boundBeaten"]))
         # Paired: this mod's standard tier against each competitor.
         sub = subset(scenarios, set_name, kind)
         # Adjacency and the competitors' objectives with the standard tier;

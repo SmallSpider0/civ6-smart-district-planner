@@ -136,6 +136,55 @@ function Json.Decode(s)
 end
 
 -- ===========================================================================
+-- Scenes exported from real games (tools/snapshot.py, design section 25):
+-- tests/compare/scenes/index.json lists them; each is a scenario whose world
+-- comes from its file instead of the generator.
+-- ===========================================================================
+local SCENES = (CMP_GAMEINFO or ""):gsub("[/\\]%.cache[/\\]gameinfo%.lua$", "") .. "/scenes/"
+do
+  local text = cmp_read_file and cmp_read_file(SCENES .. "index.json")
+  if text ~= nil then
+    -- Only the scenes of the ruleset GameInfo was exported from (compare.mjs
+    -- --ruleset): Rise and Fall's adjacency differs from Gathering Storm's.
+    local ruleset = CMP_RULESET or "RULESET_EXPANSION_2"
+    for _, s in ipairs(Json.Decode(text)) do
+      if s.ruleset == nil or s.ruleset == ruleset then
+        s.runs = CmpScenarios.Runs(s.kind)
+        s.path = SCENES .. s.file
+        CmpScenarios.Add(s)
+      end
+    end
+  end
+end
+
+local function LoadScene(scn)
+  if scn.spec == nil then
+    local text = cmp_read_file(scn.path) or error("missing scene file " .. tostring(scn.path))
+    scn.spec = Json.Decode(text)
+  end
+  return scn.spec
+end
+
+-- The exporter wrote each chosen city's rings as local plot indices; the
+-- world built here must put them at the same distances (same hex layout).
+local function CheckRings(spec, w)
+  for _, entry in ipairs(spec.rings or {}) do
+    local city = nil
+    for _, c in Players[0]:GetCities():Members() do
+      if c:GetID() == entry.city then city = c end
+    end
+    if city == nil then error("scene city " .. tostring(entry.city) .. " missing") end
+    for _, pair in ipairs(entry.rings) do
+      local x, y = pair[1] % w.Width, math.floor(pair[1] / w.Width)
+      local d = Map.GetPlotDistance(x, y, city:GetX(), city:GetY())
+      if d ~= pair[2] then
+        error(string.format("scene geometry: plot %d,%d is %d from city %d, the game had %d", x, y, d, entry.city, pair[2]))
+      end
+    end
+  end
+end
+
+-- ===========================================================================
 -- Scenario setup shared by planners and the judge
 -- ===========================================================================
 function CmpRun.List()
@@ -151,8 +200,9 @@ end
 -- keeps it in the player configuration; planners read it from there).
 function CmpRun.Setup(id)
   local scn = CmpScenarios.ById[id] or error("unknown scenario " .. tostring(id))
-  local spec = CmpMapgen.Generate(scn)
+  local spec = scn.path and LoadScene(scn) or CmpMapgen.Generate(scn)
   local w = CmpGame.New(spec)
+  if scn.path then CheckRings(spec, w) end
   include("dmt_serialize")
   local subjects = {}
   for _, pin in ipairs(PlayerConfigurations[0]:GetMapPins()) do
@@ -168,9 +218,19 @@ function CmpRun.Setup(id)
   -- What the player asks for, in this civilization's own district types.
   local gi = GameInfo
   local unique = CmpMapgen.UniqueFor(gi, scn.civ, scn.leader)
-  local cities = {}
-  for _, city in Players[0]:GetCities():Members() do cities[#cities + 1] = city end
+  -- A scene plans only its chosen cities (`only`) and a named target.
+  local only = nil
+  if scn.only ~= nil then
+    only = {}
+    for _, cid in ipairs(scn.only) do only[cid] = true end
+  end
+  local cities, target = {}, nil
+  for _, city in Players[0]:GetCities():Members() do
+    if only == nil or only[city:GetID()] then cities[#cities + 1] = city end
+    if scn.target ~= nil and city:GetID() == scn.target then target = city end
+  end
   table.sort(cities, function(a, b) return a:GetID() < b:GetID() end)
+  target = target or cities[1]
   -- A player asks for a Harbor only where the sea is in reach.
   local function SeaInReach(city)
     for i = 0, w.Width * w.Height - 1 do
@@ -181,7 +241,7 @@ function CmpRun.Setup(id)
   end
   local districts = {}
   for _, base in ipairs(scn.districts) do
-    if base ~= "DISTRICT_HARBOR" or SeaInReach(cities[1]) then districts[#districts + 1] = unique[base] or base end
+    if base ~= "DISTRICT_HARBOR" or SeaInReach(target) then districts[#districts + 1] = unique[base] or base end
   end
   -- A list per city (V scenarios): { [city ID] = district types }, by city order.
   local plans = nil
@@ -203,7 +263,7 @@ function CmpRun.Setup(id)
     if gi.Buildings[b] ~= nil then wonders[#wonders + 1] = b end
   end
   local request = { playerID = 0, scenario = scn, cities = cities, districts = districts, weights = weights,
-    target = cities[1], wonders = wonders, sites = scn.sites, plans = plans }
+    target = target, wonders = wonders, sites = scn.sites, plans = plans }
   return scn, w, request
 end
 

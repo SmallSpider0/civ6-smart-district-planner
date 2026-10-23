@@ -282,4 +282,6 @@ end
 
 CmpScenarios.List = list
 CmpScenarios.ById = byId
+CmpScenarios.Runs = Runs -- for the scenes cmp_lib adds from files
+CmpScenarios.Add = Add
 return CmpScenarios

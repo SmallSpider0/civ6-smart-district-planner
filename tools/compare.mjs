@@ -36,6 +36,7 @@ const { lua, lauxlib, lualib, to_luastring, to_jsstring } = require("fengari");
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const COMPARE = join(ROOT, "tests", "compare");
 const GAMEINFO = join(COMPARE, ".cache", "gameinfo.lua");
+let RULESET = "RULESET_EXPANSION_2"; // --ruleset; see cmp_lib.lua's scene loading
 const EP_DIR = join(ROOT, "reference", "ep", "ui");
 
 // include() search path per planner. The game resolves include() by file
@@ -151,6 +152,8 @@ function newState(planner, output) {
   lua.lua_setglobal(L, to_luastring("CMP_PLANNER"));
   lua.lua_pushstring(L, to_luastring(GAMEINFO));
   lua.lua_setglobal(L, to_luastring("CMP_GAMEINFO"));
+  lua.lua_pushstring(L, to_luastring(RULESET));
+  lua.lua_setglobal(L, to_luastring("CMP_RULESET"));
   return L;
 }
 
@@ -257,6 +260,7 @@ function listScenarios(filter) {
 }
 
 if (!isMainThread) {
+  if (workerData && workerData.ruleset) RULESET = workerData.ruleset;
   parentPort.on("message", (task) => {
     parentPort.postMessage(runTask(task));
   });
@@ -271,6 +275,10 @@ if (!isMainThread) {
   let dump = null;
   let snapshot = null;
   let probe = null; // a Lua file to run in this mod's state (ad-hoc checks)
+  let probeArg = null; // its PROBE_ARG global
+  // The ruleset .cache/gameinfo.lua was exported from (export_gameinfo.py
+  // takes the last game loaded); scenes from another ruleset are skipped.
+  let ruleset = "RULESET_EXPANSION_2";
   let rejudgeFile = null;
   let crossFile = null;
   let scorers = ["amt", "ep"];
@@ -287,14 +295,17 @@ if (!isMainThread) {
     else if (a === "--dump") dump = argv[++i];
     else if (a === "--snapshot") snapshot = argv[++i];
     else if (a === "--probe") probe = argv[++i];
+    else if (a === "--arg") probeArg = argv[++i];
+    else if (a === "--ruleset") ruleset = argv[++i];
     else if (a === "--rejudge") rejudgeFile = resolve(argv[++i]);
     else if (a === "--crossscore") crossFile = resolve(argv[++i]);
     else if (a === "--scorers") scorers = argv[++i].split(",");
     else {
-      console.error("usage: compare.mjs [--list] [-s SUBSTRING] [-p sdp,amt,ep] [-j JOBS] [--out FILE] [-v]");
+      console.error("usage: compare.mjs [--list] [-s SUBSTRING] [-p sdp,amt,ep] [-j JOBS] [--out FILE] [--ruleset RULESET_...] [-v]");
       process.exit(2);
     }
   }
+  RULESET = ruleset;
   if (!existsSync(GAMEINFO)) {
     console.error("missing " + display(GAMEINFO) + ": run python3 -I tests/compare/export_gameinfo.py");
     process.exit(2);
@@ -306,7 +317,7 @@ if (!isMainThread) {
     process.exit(0);
   }
   if (probe) {
-    const out = runLua("sdp", readFileSync(resolve(probe), "utf8"), "probe");
+    const out = runLua("sdp", `PROBE_ARG = ${luaString(probeArg || "")}\n` + readFileSync(resolve(probe), "utf8"), "probe");
     console.log(out.log.join("\n"));
     if (out.error) console.log(out.error);
     process.exit(out.error ? 1 : 0);
@@ -342,7 +353,7 @@ if (!isMainThread) {
   }
   // Longest runs first (AMT's multi-city joint solve, then multi-city), so
   // the pool does not end waiting on one slow straggler.
-  const weight = (t) => (/^(H?M|V)/.test(t.scenario) ? 2 : 0) + (t.planner === "amt" ? 1 : 0);
+  const weight = (t) => (/^(H?M|RM|V)/.test(t.scenario) ? 2 : 0) + (t.planner === "amt" ? 1 : 0);
   tasks.sort((a, b) => weight(b) - weight(a));
   mkdirSync(dirname(out), { recursive: true });
   writeFileSync(out, "");
@@ -362,7 +373,8 @@ if (!isMainThread) {
       w.postMessage(tasks[next++]);
     };
     for (let i = 0; i < Math.min(jobs, tasks.length); i++) {
-      const w = new Worker(fileURLToPath(import.meta.url), { resourceLimits: { maxOldGenerationSizeMb: Number(process.env.CMP_HEAP_MB) || 1536 } });
+      const w = new Worker(fileURLToPath(import.meta.url), { workerData: { ruleset: RULESET },
+        resourceLimits: { maxOldGenerationSizeMb: Number(process.env.CMP_HEAP_MB) || 1536 } });
       w.on("message", (r) => {
         done++;
         if (r.error || r.judgeError || Object.values(r.cross || {}).some((c) => !c || c.error)) failed++;
