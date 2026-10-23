@@ -204,6 +204,7 @@ function Session:PlanFor(layout)
     out.Plan[n] = {
       Type = search.Types[m], X = c.X, Y = c.Y, Index = c.Index,
       Yields = item.Yields, ToolTip = item.ToolTip, Score = item.Score,
+      Unowned = c.Unowned, RemoveTech = c.RemoveTech,
       Auto = self.Auto[search.Types[m]], Picked = search.Optional[m],
       Appeal = a.Appeal, Housing = a.Housing, Tiles = a.Tiles, TilesCounted = a.TilesCounted,
     }
@@ -382,7 +383,9 @@ function SDP_Solver.Heat(request)
     local out = {}
     for _, c in ipairs(scan.Candidates) do
       local result = SDP_Overlay.Evaluate({ SDP_Overlay.Subject(request.District, c.X, c.Y) }, fixed, weights)
-      if result.Legal then out[#out + 1] = { Index = c.Index, X = c.X, Y = c.Y, Gain = result.Total - base } end
+      if result.Legal then
+        out[#out + 1] = { Index = c.Index, X = c.X, Y = c.Y, Gain = result.Total - base, Yields = result.Placements[1].Yields }
+      end
     end
     table.sort(out, function(a, b)
       if a.Gain ~= b.Gain then return a.Gain > b.Gain end

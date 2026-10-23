@@ -1,0 +1,13 @@
+Changes since v1.1.1:
+- A city's districts only go on tiles its territory can reach. The game lets a city grow into or buy a tile only next to one it owns, so tiles cut off by another city (an existing one, or another city's planned districts) are no longer used. Before, a plan could put a district behind another city's districts where it could never be built. Same on the One city tab.
+- Each planned district says what the city has to do first: "expand or buy the tile first" when the city does not own it yet, "needs <technology> first" when its feature can only be cleared after that technology. Hints only; the plan is the same.
+- The numbers under the preview icons on the map are DMT's adjacency yields, as the game's placement view shows them, not the weighted score. The weighted score stays in the panel. Same for the "good places" view.
+- The map preview no longer shows every tile's appeal number.
+- New preview image.
+
+自 v1.1.1 以来的变化：
+- 一座城的区域只放在它的领土能连到的格子上。游戏只允许城市扩张或购买挨着自己领土的格子，所以被别的城（已有的，或方案里别的城的区域）隔开的格子不再使用；之前方案可能把区域放到另一座城的区域后面，永远建不出来。单城页同样如此。
+- 结果里每个区域标出城市还要先做的事：格子还没有归属时写“需先扩张或购买”，格上的地貌要科技才能清除时写“需先研究某科技”。只是提示，方案不变。
+- 地图预览里图标下的数字改为 DMT 的相邻加成，和游戏放置区域时看到的一样，不再是按权重算的分；加权分仍在面板里。“好位置”着色里的数字也一样。
+- 预览方案时地图上不再显示每格的魅力数字。
+- 换了预览图。

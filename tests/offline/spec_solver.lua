@@ -232,3 +232,67 @@ test("plots the game refuses are left out; districts the engine says nothing abo
   T.eq(holy.EngineRefused, nil, "no engine list, no refusal")
   SDP_Overlay.ResetEngine()
 end)
+
+test("an unowned plot cut off from the city's territory is left out (issue 35)", function()
+  -- Another player's territory all around ring 2: ring 3 cannot be reached.
+  local w = NewWorld({ cities = {
+    { id = 1, x = 5, y = 4, population = 7, capital = true, radius = 1 },
+    { id = 9, x = 2, y = 8, owner = 1, radius = 0 },
+  } })
+  local open = SDP_City.Scan(0, 1)
+  local ring3 = 0
+  for _, c in ipairs(open.Candidates) do
+    if c.Ring == 3 then ring3 = ring3 + 1 end
+    T.eq(open.Excluded[c.Index], nil, "a candidate is not excluded")
+    T.eq(c.Unowned, c.Ring > 1 or nil, "owned within the first ring only")
+  end
+  T.ok(ring3 > 0, "ring 3 reachable with open land around")
+  local foreign = w:City(9, 1)
+  for _, p in ipairs(SDP_City.PlotsInRange(5, 4, 3)) do
+    if p.Ring == 2 then w:Own(p.X, p.Y, 1, foreign) end
+  end
+  local walled = SDP_City.Scan(0, 1)
+  local unreachable = 0
+  for _, c in ipairs(walled.Candidates) do T.ok(c.Ring <= 1, "only the owned ring stays: " .. c.X .. "," .. c.Y) end
+  for _, p in ipairs(SDP_City.PlotsInRange(5, 4, 3)) do
+    if p.Ring == 3 and open.Excluded[p.Index] == nil then
+      T.eq(walled.Excluded[p.Index], "UNREACHABLE", "ring 3 behind the wall")
+      unreachable = unreachable + 1
+    end
+  end
+  T.eq(unreachable, ring3, "every former ring-3 candidate")
+  T.ok(walled.Reach.Reached[Map.GetPlotIndex(5, 4)], "the center is reached")
+end)
+
+test("a plan says which plots the city must own first and which features need a technology", function()
+  -- A city next to the marsh at (2,7); clearing marsh takes irrigation.
+  local function Plan(techs)
+    NewWorld({ cities = { { id = 1, x = 3, y = 6, population = 7, capital = true, radius = 1 } }, techs = techs })
+    local scan = SDP_City.Scan(0, 1)
+    local marsh = GameInfo.Features["FEATURE_MARSH"].Index
+    local onMarsh = nil
+    for _, c in ipairs(scan.Candidates) do
+      if Map.GetPlotByIndex(c.Index):GetFeatureType() == marsh then onMarsh = c end
+    end
+    T.ok(onMarsh ~= nil, "a marsh candidate")
+    return scan, onMarsh
+  end
+  local scan, onMarsh = Plan({})
+  T.eq(onMarsh.RemoveTech, "TECH_IRRIGATION", "irrigation missing")
+  for _, c in ipairs(scan.Candidates) do
+    if c.Ring <= 1 then T.eq(c.Unowned, nil, "owned") else T.eq(c.Unowned, true, "not owned yet") end
+  end
+  local _, withTech = Plan({ "TECH_IRRIGATION" })
+  T.eq(withTech.RemoveTech, nil, "irrigation known")
+  -- The plan carries the same flags for the plot it picks.
+  Plan({})
+  local result = SDP_Solver.Solve({ PlayerID = 0, CityID = 1, Weights = ONES, Districts = { "DISTRICT_CAMPUS" } })
+  local p = result.Plan[1]
+  T.ok(p ~= nil, "a campus plan")
+  local c = nil
+  for _, entry in ipairs(SDP_City.Scan(0, 1).Candidates) do
+    if entry.Index == p.Index then c = entry end
+  end
+  T.eq(p.Unowned, c.Unowned, "Unowned as the scan says")
+  T.eq(p.RemoveTech, c.RemoveTech, "RemoveTech as the scan says")
+end)

@@ -113,7 +113,11 @@ print('AT', x + c:GetSizeX() / 2, y + c:GetSizeY() / 2, w, h, tostring(c:IsHidde
     ok, text = run_click("%.1f" % x, "%.1f" % y)
     if not ok:
         raise RuntimeError(text)
-    time.sleep(0.6)  # a frame or two for the callback
+    # A frame or two for the callback, and enough that the next click on
+    # the same control is not taken for a double click: with the Tuner
+    # daemon the checks between clicks take milliseconds, and 0.6 s between
+    # two clicks on one cell lost every other click (2026-10-23).
+    time.sleep(1.0)
 
 
 class Suite:

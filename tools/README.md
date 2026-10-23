@@ -91,6 +91,7 @@ node tools/compare.mjs --crossscore RESULTS.jsonl --scorers amt,ep -j 4 --out CR
 python3 -I tests/compare/summarize.py tests/compare/results/full_rejudged.jsonl tests/compare/results/land.jsonl   # 汇总（后面的文件覆盖前面的同名运行）
 node tools/compare.mjs --dump S01-rome-temperate-mid       # 场景地图的文字图
 node tools/compare.mjs --snapshot S01-rome-temperate-mid   # 场景地图数据（报告画图用）
+node tools/compare.mjs --probe FILE.lua                    # 在本 mod 的状态里跑一段 Lua（临时探针：先 include("cmp_lib")，CmpRun.Setup(场景) 建好世界）
 ```
 
 - 不开游戏，在 fengari 里比较本 mod、Auto Map Tacks Planner r49（AMT）和 Empire Planner（EP）的区域规划。**规则是真的**：`GameInfo` 来自游戏写在缓存里的规则数据库 `Cache/DebugGameplay.sqlite`（最后一次加载的对局的规则集，目前是风云变幻；导出文件是 Firaxis 的数据，只放在被忽略的 `.cache/`）。**代码是真的**：DMT、AMT、EP 的 Lua 原样从 `reference/` 和本机创意工坊目录加载，不改一行。**引擎是模拟的**：`tests/compare/cmp_game.lua` 实现地图、城市、地图钉、玩家配置、可见性、河流与泛滥平原、修正系统（`GameEffects`，DMT 从它读文明特性的相邻规则）和 UI 替身。
@@ -205,6 +206,7 @@ python3 -I tools/realclick.py at 'Controls.SolveButton'   # 点 SDP_Panel 状态
 - 坐标来自游戏：控件的 `GetScreenOffset` 与尺寸（UI 单位 1920 × 1080）按窗口大小换算，不靠截图估计。
 - 每次点击前检查游戏在最前（不在时 `open -b com.aspyr.civ6.steam`）、点在游戏窗口内、该点最上层的窗口属于游戏，任一不满足就不点。套件开始前先关掉排队的弹窗；结束后把前台还给原来的应用。
 - 点击期间游戏会到前台，会占用屏幕和鼠标，跑之前告诉用户。
+- 两次点击至少隔 1 秒：同一个格子连点两下间隔不到约 0.6 秒时，游戏把第二下当成双击，状态不变（2026-10-23，`civ6tuner.py serve` 常驻后两次点击之间的核对只要几毫秒，才暴露出来；之前直连 Tuner 时每次连接本身就慢）。窗口要整个在屏幕上，点击期间不要挪动。
 
 ## stress.py — 后期存档压力测试（发布前）
 

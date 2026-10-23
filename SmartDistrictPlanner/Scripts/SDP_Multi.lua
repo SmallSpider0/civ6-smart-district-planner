@@ -319,7 +319,9 @@ function SDP_Multi.NewSession(request)
     for _, c in ipairs(part.Scan.Candidates) do
       if at[c.Index] == nil then
         at[c.Index] = true
-        candidates[#candidates + 1] = { Index = c.Index, X = c.X, Y = c.Y }
+        -- A plot one city owns is no candidate of another, so Unowned and
+        -- RemoveTech are the same whichever scan lists the plot.
+        candidates[#candidates + 1] = { Index = c.Index, X = c.X, Y = c.Y, Unowned = c.Unowned, RemoveTech = c.RemoveTech }
       end
     end
   end
@@ -467,11 +469,15 @@ function SDP_Multi.NewSession(request)
     apart = { Partners = SDP_Rules.Apart().Partners, Present = {} }
     for p, part in ipairs(participants) do apart.Present[p] = part.Present end
   end
+  -- Each city's districts must stay joined to its territory, the other
+  -- cities' planned districts in the way (issue 35; SDP_City.Reach).
+  local reach = {}
+  for p, part in ipairs(participants) do reach[p] = part.Scan.Reach end
   self.Search = SDP_Search.New({
     PlayerID = playerID, Board = self.Board, Weights = self.Weights, Params = params,
     Candidates = candidates, Slots = slots, Lands = lands, Coverage = self.Coverage,
     Pools = pools, Costs = SDP_City.DistanceCosts(playerID, candidates, request.Distance, centers), Apart = apart,
-    Exclusive = SDP_Rules.Exclusive(),
+    Exclusive = SDP_Rules.Exclusive(), Reach = reach,
     Appeal = { Fixed = fixed, Weights = request.Weights, Workable = workable },
   })
   for _, s in ipairs(self.Search:Singles()) do
@@ -903,6 +909,7 @@ function Session:PlanFor(layout)
     out.Plan[n] = {
       City = self.Participants[p].Key, Type = search.Types[m], Kind = search.Kinds[m], X = c.X, Y = c.Y, Index = c.Index,
       Yields = item.Yields, ToolTip = item.ToolTip, Score = item.Score,
+      Unowned = c.Unowned, RemoveTech = c.RemoveTech,
       Appeal = a.Appeal, Housing = a.Housing, Tiles = a.Tiles, TilesCounted = a.TilesCounted,
       Reach = self.Coverage and self.Coverage:Reach(search.Types[m], c.X, c.Y) or nil,
       Picked = search.Optional[m], Auto = (not spec.Wonder) and self.Participants[p].Auto[search.Types[m]] or nil,

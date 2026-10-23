@@ -399,3 +399,119 @@ test("several distinct solutions, best first", function()
     end
   end
 end)
+
+-- Independent check of issue 35: every district of a city joins the city's
+-- plots (a planned city: its center and first ring) through unowned plots
+-- within 3 rings that no other city's district takes.
+local function Joined(result)
+  local cities = {}
+  for _, c in ipairs(result.Cities) do cities[c.Key] = c end
+  local taken = {}
+  for _, p in ipairs(result.Plan) do
+    if p.Kind == "DISTRICT" then taken[p.Index] = p.City end
+  end
+  for _, city in ipairs(result.Cities) do
+    local reached, queue = {}, {}
+    local function Start(plot)
+      reached[plot:GetIndex()] = true
+      queue[#queue + 1] = plot
+    end
+    local center = Map.GetPlot(city.X, city.Y)
+    Start(center)
+    for _, e in ipairs(SDP_City.PlotsInRange(city.X, city.Y, 3)) do
+      local plot = Map.GetPlotByIndex(e.Index)
+      local own = (city.Kind == "SITE" and e.Ring <= 1 and plot:GetOwner() == -1)
+        or (city.Kind == "CITY" and plot:GetOwner() == 0 and Cities.GetPlotPurchaseCity(plot) ~= nil
+          and Cities.GetPlotPurchaseCity(plot):GetID() == city.CityID)
+      if own then Start(plot) end
+    end
+    local head = 1
+    while head <= #queue do
+      local plot = queue[head]
+      head = head + 1
+      for _, n in ipairs(Map.GetAdjacentPlots(plot:GetX(), plot:GetY())) do
+        if n ~= nil and not reached[n:GetIndex()] and n:GetOwner() == -1
+            and Map.GetPlotDistance(n:GetX(), n:GetY(), city.X, city.Y) <= 3
+            and (taken[n:GetIndex()] == nil or taken[n:GetIndex()] == city.Key) then
+          reached[n:GetIndex()] = true
+          queue[#queue + 1] = n
+        end
+      end
+    end
+    for _, p in ipairs(result.Plan) do
+      if p.City == city.Key and p.Kind == "DISTRICT" then
+        T.ok(reached[p.Index], p.Type .. " of " .. tostring(city.Key) .. " at " .. p.X .. "," .. p.Y .. " is cut off")
+      end
+    end
+  end
+end
+
+test("every city's districts stay joined to its territory (issue 35)", function()
+  NewWorld()
+  for _, tier in ipairs({ "FAST", "STANDARD" }) do
+    local result = SDP_Multi.Solve(Request({ Tier = tier }))
+    T.ok(result.Ok, tostring(result.Error))
+    Joined(result)
+  end
+  -- Sites close together, more districts each: cities compete for the same plots.
+  World.New({
+    rows = MAP, rivers = { "6,4", "7,4", "7,5", "12,7", "13,7" },
+    cities = { { id = 1, x = 4, y = 5, population = 6, capital = true, radius = 1 } },
+    pins = { { 8, 5, "ICON_DISTRICT_CITY_CENTER", "A" }, { 7, 8, "ICON_DISTRICT_CITY_CENTER", "B" },
+      { 11, 7, "ICON_DISTRICT_CITY_CENTER", "C" } },
+  })
+  local result = SDP_Multi.Solve({ PlayerID = 0, Tier = "FAST", Weights = ONES, Land = false,
+    Districts = { "DISTRICT_CAMPUS", "DISTRICT_HOLY_SITE", "DISTRICT_THEATER", "DISTRICT_COMMERCIAL_HUB" } })
+  T.ok(result.Ok, tostring(result.Error))
+  Joined(result)
+end)
+
+test("a layout whose district is walled in by other cities' districts is illegal (issue 35)", function()
+  NewWorld()
+  local meta = SDP_Overlay.With(0, function() return getmetatable(SDP_Multi.NewSession(Request({ Tier = "FAST" })).Search) end)
+  -- A ring-3 plot of the capital and the plots around it within its rings.
+  local cx, cy = 4, 5
+  local target = nil
+  for _, e in ipairs(SDP_City.PlotsInRange(cx, cy, 3)) do
+    if e.Ring == 3 and target == nil and not Map.GetPlotByIndex(e.Index):IsWater() then target = e end
+  end
+  local around = {}
+  for _, n in ipairs(Map.GetAdjacentPlots(target.X, target.Y)) do
+    if n ~= nil and Map.GetPlotDistance(n:GetX(), n:GetY(), cx, cy) <= 3 then
+      around[#around + 1] = { Index = n:GetIndex(), X = n:GetX(), Y = n:GetY() }
+    end
+  end
+  T.ok(#around >= 2, "neighbours within the rings")
+  local candidates = { { Index = target.Index, X = target.X, Y = target.Y } }
+  for _, a in ipairs(around) do candidates[#candidates + 1] = a end
+  table.sort(candidates, function(a, b) return a.Index < b.Index end)
+  local position = {}
+  for i, c in ipairs(candidates) do position[c.Index] = i end
+  -- Group 1: the capital (owns ring 1, may run over unowned plots in 3 rings).
+  local start, through = {}, {}
+  start[Map.GetPlotIndex(cx, cy)], through[Map.GetPlotIndex(cx, cy)] = true, true
+  for _, e in ipairs(SDP_City.PlotsInRange(cx, cy, 3)) do
+    local plot = Map.GetPlotByIndex(e.Index)
+    if plot:GetOwner() == 0 then start[e.Index], through[e.Index] = true, true
+    elseif plot:GetOwner() == -1 then through[e.Index] = true end
+  end
+  -- Group 2: another city whose own plots lie elsewhere (an empty reach here).
+  local groups, k = { 1 }, 1 + #around
+  for _ = 1, #around do groups[#groups + 1] = 2 end
+  local search = setmetatable({
+    Candidates = candidates, N = #candidates, Groups = groups, K = k,
+    ReachSpec = { [1] = { Start = start, Through = through }, [2] = { Start = {}, Through = {} } },
+  }, meta)
+  search:PrepareReach()
+  local layout = { position[target.Index] }
+  for _, a in ipairs(around) do layout[#layout + 1] = position[a.Index] end
+  T.eq(search:Reachable(layout), false, "walled in")
+  layout[2] = 0
+  T.eq(search:Reachable(layout), true, "one gap is enough")
+  for m = 2, k do layout[m] = 0 end
+  T.eq(search:Reachable(layout), true, "nobody in the way")
+  -- The other group's districts do not need a path of their own here.
+  layout[1] = 0
+  for m = 2, k do layout[m] = position[around[m - 1].Index] end
+  T.eq(search:Reachable(layout), true, "a group without reach plots is not checked")
+end)

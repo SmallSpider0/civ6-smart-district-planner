@@ -84,6 +84,11 @@ SDP_Search.Better = Better
 --               or nil (off): partner districts are not picked into one group
 --   Alternatives  keep this many distinct good layouts (SDP_Solver's
 --               solutions; 0 or nil: none)
+--   Reach       { [group] = { Start, Through } } plot index sets
+--               (SDP_City scan.Reach) or nil: a layout is legal only when
+--               every placed slot of such a group joins the group's Start
+--               through Through plots that no other group's slot occupies
+--               (issue 35: a city can only grow into plots next to its own)
 -- }
 function SDP_Search.New(spec)
   local self = setmetatable({}, Search)
@@ -97,6 +102,7 @@ function SDP_Search.New(spec)
   self.AppealSpec = spec.Appeal
   self.AltCount = spec.Alternatives or 0
   self.Alt = {}
+  self.ReachSpec = spec.Reach
   self.CoverLists = {} -- scratch for CoverageCount
   self.SlotSpecs = spec.Slots
   self.Moving, self.Taken, self.Mark = {}, {}, {} -- scratch tables for Evaluate
@@ -207,7 +213,104 @@ function Search:Singles()
   table.sort(self.PoolGroups)
   self.Selected = selected
   self.AltNeed = math.max(2, math.ceil(0.2 * selected))
+  self:PrepareReach()
   return dropped
+end
+
+-- Reach (spec.Reach): for each group, its Start plots in order, which
+-- candidate positions lie on its Through plots, and the neighbours of
+-- every Through plot, worked out once.
+function Search:PrepareReach()
+  local spec = self.ReachSpec
+  if spec == nil then return end
+  local groups = {}
+  for g in pairs(spec) do groups[#groups + 1] = g end
+  table.sort(groups)
+  local neighbours, inside, starts = {}, {}, {}
+  for _, g in ipairs(groups) do
+    local list = {}
+    for index in pairs(spec[g].Through) do list[#list + 1] = index end
+    table.sort(list)
+    for _, index in ipairs(list) do
+      if neighbours[index] == nil then
+        local plot = Map.GetPlotByIndex(index)
+        local around = {}
+        for _, n in ipairs(SDP_City.PlotsInRange(plot:GetX(), plot:GetY(), 1)) do around[#around + 1] = n.Index end
+        neighbours[index] = around
+      end
+    end
+    local first = {}
+    for index in pairs(spec[g].Start) do first[#first + 1] = index end
+    table.sort(first)
+    starts[g] = first
+    local positions = {}
+    for i = 1, self.N do
+      if spec[g].Through[self.Candidates[i].Index] then positions[i] = true end
+    end
+    inside[g] = positions
+  end
+  self.Reach = { Spec = spec, Groups = groups, Neighbours = neighbours, Inside = inside, Starts = starts,
+    Mark = {}, Stamp = 0, Queue = {}, Blocked = {} }
+end
+
+-- Whether every placed slot of each group with a Reach joins the group's
+-- Start plots through its Through plots, the other groups' placed slots
+-- (of groups with a Reach: wonders do not block) being in the way. A group
+-- none of the others' slots touch needs no walk: its candidates are
+-- reachable by the scan already.
+function Search:Reachable(layout)
+  local reach = self.Reach
+  if reach == nil then return true end
+  local candidates, groups, k = self.Candidates, self.Groups, self.K
+  local blocked, mark, queue = reach.Blocked, reach.Mark, reach.Queue
+  for _, g in ipairs(reach.Groups) do
+    local inside, any, placed = reach.Inside[g], false, false
+    for m = 1, k do
+      local i = layout[m]
+      if i ~= 0 and inside[i] then
+        if groups[m] == g then
+          placed = true
+        elseif reach.Spec[groups[m]] ~= nil then
+          blocked[candidates[i].Index], any = true, true
+        end
+      end
+    end
+    local ok = true
+    if any and placed then
+      reach.Stamp = reach.Stamp + 1
+      local stamp, through, n = reach.Stamp, reach.Spec[g].Through, 0
+      for _, index in ipairs(reach.Starts[g]) do
+        mark[index], n = stamp, n + 1
+        queue[n] = index
+      end
+      local head = 1
+      while head <= n do
+        local index = queue[head]
+        head = head + 1
+        for _, next in ipairs(reach.Neighbours[index]) do
+          if through[next] and mark[next] ~= stamp and not blocked[next] then
+            mark[next], n = stamp, n + 1
+            queue[n] = next
+          end
+        end
+      end
+      for m = 1, k do
+        local i = layout[m]
+        if i ~= 0 and groups[m] == g and mark[candidates[i].Index] ~= stamp then
+          ok = false
+          break
+        end
+      end
+    end
+    if any then
+      for m = 1, k do
+        local i = layout[m]
+        if i ~= 0 then blocked[candidates[i].Index] = nil end
+      end
+    end
+    if not ok then return false end
+  end
+  return true
 end
 
 -- Whether the search has candidate districts to choose from.
@@ -235,6 +338,7 @@ function Search:Evaluate(layout)
   end
   local gain, legal = board:Total()
   self.Stats.Evaluations = self.Stats.Evaluations + 1
+  if legal and self.Reach ~= nil and not self:Reachable(layout) then legal = false end
   local appeal, boosts = self.AppealModel, nil
   if appeal ~= nil then
     local value

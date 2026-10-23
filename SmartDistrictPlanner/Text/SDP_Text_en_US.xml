@@ -530,6 +530,12 @@
     <Replace Tag="LOC_SDP_RESULT_PICKED" Language="en_US">
       <Text>(picked)</Text>
     </Replace>
+    <Replace Tag="LOC_SDP_RESULT_UNOWNED" Language="en_US">
+      <Text>(expand or buy the tile first)</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_NEEDS_TECH" Language="en_US">
+      <Text>(needs {1_Tech} first)</Text>
+    </Replace>
     <Replace Tag="LOC_SDP_RESULT_UNPLACED_AUTO" Language="en_US">
       <Text>The added {1_Name} fits nowhere</Text>
     </Replace>

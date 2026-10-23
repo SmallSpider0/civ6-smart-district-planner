@@ -180,3 +180,63 @@ test("wonders: legal where placed, built ones left out", function()
     end)
   end)
 end)
+
+-- Independent check of issue 35: each city's districts join the city's own
+-- plots (a planned city: its center and first ring) through unowned plots
+-- within 3 rings that no other city's district takes.
+local function Joined(result)
+  local taken = {}
+  for _, p in ipairs(result.Plan) do
+    if p.Kind == "DISTRICT" then taken[p.Index] = p.City end
+  end
+  for _, city in ipairs(result.Cities) do
+    local reached, queue = {}, {}
+    local function Start(index)
+      reached[index] = true
+      queue[#queue + 1] = index
+    end
+    Start(Map.GetPlotIndex(city.X, city.Y))
+    for _, e in ipairs(SDP_City.PlotsInRange(city.X, city.Y, 3)) do
+      local plot = Map.GetPlotByIndex(e.Index)
+      local owner = plot:GetOwner() == pid and Cities.GetPlotPurchaseCity(plot) or nil
+      local own = (city.Kind == "SITE" and e.Ring <= 1 and plot:GetOwner() == -1)
+        or (city.Kind == "CITY" and owner ~= nil and owner:GetID() == city.CityID)
+      if own then Start(e.Index) end
+    end
+    local head = 1
+    while head <= #queue do
+      local plot = Map.GetPlotByIndex(queue[head])
+      head = head + 1
+      for _, n in ipairs(SDP_City.PlotsInRange(plot:GetX(), plot:GetY(), 1)) do
+        if not reached[n.Index] and Map.GetPlotByIndex(n.Index):GetOwner() == -1
+            and Map.GetPlotDistance(n.X, n.Y, city.X, city.Y) <= 3
+            and (taken[n.Index] == nil or taken[n.Index] == city.Key) then
+          Start(n.Index)
+        end
+      end
+    end
+    for _, p in ipairs(result.Plan) do
+      if p.City == city.Key and p.Kind == "DISTRICT" then
+        T.ok(reached[p.Index], p.Type .. " of " .. tostring(city.Key) .. " at " .. p.X .. "," .. p.Y .. " is cut off")
+      end
+    end
+  end
+end
+
+test("every city's districts stay joined to its territory around the other cities' districts (issue 35)", function()
+  WithNearSitePin(function(city, site)
+    local scan = SDP_City.Scan(pid, city:GetID())
+    for _, c in ipairs(scan.Candidates) do T.ok(scan.Reach.Reached[c.Index], "candidate not reached") end
+    local result = SDP_Multi.Solve({ PlayerID = pid, Tier = "STANDARD", Land = false,
+      Districts = Types({ "DISTRICT_CAMPUS", "DISTRICT_HOLY_SITE", "DISTRICT_COMMERCIAL_HUB", "DISTRICT_THEATER",
+        "DISTRICT_INDUSTRIAL_ZONE", "DISTRICT_ENCAMPMENT" }) })
+    T.ok(result.Ok, tostring(result.Error))
+    T.ok(#result.Cities >= 2, "two cities planned")
+    Joined(result)
+    for _, p in ipairs(result.Plan) do
+      if p.Kind == "DISTRICT" and p.Unowned then
+        T.ok(Map.GetPlotByIndex(p.Index):GetOwner() == -1, "Unowned flag on an owned plot")
+      end
+    end
+  end)
+end)
