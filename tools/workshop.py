@@ -117,7 +117,10 @@ def check_text(errors, label, text, limit, english=False):
         errors.append("%s: Chinese text in the English version (it goes into the _zh file)" % label)
 
 
-def check(_args=None):
+def problems():
+    """(errors, notes) for the texts, change notes and images: what pack
+    would refuse. validate.py reports the errors too, so a PR catches them
+    before the release workflow does."""
     errors, notes = [], []
     for name, limit, english in (("title.txt", TITLE_MAX, True), ("description.bbcode", TEXT_MAX, True),
                                  ("title_zh.txt", TITLE_MAX, False), ("description_zh.bbcode", TEXT_MAX, False)):
@@ -136,6 +139,11 @@ def check(_args=None):
         notes.append("%s: %d KB" % (src, size // 1024))
         if size >= IMAGE_MAX:
             errors.append("%s: %d bytes (limit %d)" % (src, size, IMAGE_MAX))
+    return errors, notes
+
+
+def check(_args=None):
+    errors, notes = problems()
     for n in notes:
         print(n)
     for e in errors:
