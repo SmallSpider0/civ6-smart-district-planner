@@ -337,6 +337,12 @@
     <Replace Tag="LOC_SDP_SITES_WATER_NONE" Language="zh_Hans_CN">
       <Text>无水源</Text>
     </Replace>
+    <Replace Tag="LOC_SDP_SITES_WEIGHT_HOUSING" Language="zh_Hans_CN">
+      <Text>住房：城址的住房（水源、粮仓；计划里有港口时加上灯塔、海港）比无水城址多出的部分折合多少分。到建齐计划区域所需人口为止，每点住房算 1，之后每多一点减半。</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_HOUSING" Language="zh_Hans_CN">
+      <Text>住房 {1_Housing}</Text>
+    </Replace>
     <Replace Tag="LOC_SDP_SITES_OWN_DISTANCE" Language="zh_Hans_CN">
       <Text>离我方最近的城市或已打的城址钉 {1_Distance} 格</Text>
     </Replace>

@@ -2,7 +2,7 @@
 -- (docs/multicity-design.md section 3, step 1). Included by SDP_Panel.lua
 -- into its context: uses its Controls and the SDP_UI helpers.
 --   Inputs    number of new cities K, relay distance D, a weight preset and
---             the ten weights plus the distance cost, the districts each site
+--             the eleven weights plus the distance cost, the districts each site
 --             is scored with: its best PlanCount of the ticked ones (feedback
 --             item 8; default 3)
 --   Solve     over several frames (SDP_Task); up to three distinct site
@@ -19,7 +19,7 @@ local m_weightIM2 = InstanceManager:new("WeightColumn", "Root", Controls.SitesWe
 local m_solutionIM = InstanceManager:new("SolutionRow", "Root", Controls.SitesSolutionStack)
 local m_resultIM = InstanceManager:new("ResultRow", "Root", Controls.SitesResultStack)
 
--- The ten site weights (design 3.3) and the distance cost, in two rows: the
+-- The eleven site weights (design 3.3) and the distance cost, in two rows: the
 -- yields with the game's font icons, the others with a short word (feedback
 -- item 3, as on the single-city tab).
 local COLUMNS_A = {
@@ -32,6 +32,7 @@ local COLUMNS_A = {
 }
 local COLUMNS_B = {
   { Key = "YIELD_FOOD", Glyph = "[ICON_Food]" },
+  { Key = "HOUSING", Glyph = "LOC_SDP_WEIGHT_HOUSING_SHORT", ToolTip = "LOC_SDP_SITES_WEIGHT_HOUSING" },
   { Key = "AMENITY", Glyph = "LOC_SDP_WEIGHT_AMENITY_SHORT", ToolTip = "LOC_SDP_WEIGHT_AMENITY" },
   { Key = "STRATEGIC", Glyph = "LOC_SDP_WEIGHT_STRATEGIC_SHORT", ToolTip = "LOC_SDP_WEIGHT_STRATEGIC" },
   { Key = "FEATURE", Glyph = "LOC_SDP_WEIGHT_FEATURE_SHORT", ToolTip = "LOC_SDP_WEIGHT_FEATURE" },
@@ -239,6 +240,7 @@ local function SiteToolTip(site)
   local lines = {}
   local info = site.Info
   lines[#lines + 1] = Locale.Lookup("LOC_SDP_SITES_WATER_" .. info.WaterKind)
+  if info.Housing ~= nil then lines[#lines + 1] = Locale.Lookup("LOC_SDP_SITES_HOUSING", SDP_UI.Number(info.Housing)) end
   local own = site.OwnDistance or info.OwnDistance
   if own ~= nil and own < math.huge then lines[#lines + 1] = Locale.Lookup("LOC_SDP_SITES_OWN_DISTANCE", own) end
   if site.SiteDistance ~= nil then lines[#lines + 1] = Locale.Lookup("LOC_SDP_SITES_SITE_DISTANCE", site.SiteDistance) end

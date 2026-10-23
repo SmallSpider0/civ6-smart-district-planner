@@ -130,10 +130,11 @@ function SDP_Solver.NewSession(request, scan)
   self.Board = SDP_Board.New(playerID, self.Fixed, self.Weights, bases)
   self.ExtraCalls = #self.Fixed -- the baseline evaluation above
 
+  -- The population the plan needs: the land part's worked plots and the
+  -- housing target (issue 55).
+  local population = math.max(scan.Population, SDP_Land.RequiredPopulation(scan.SpecialtyBuilt + requiredSpecialty + pick))
   local lands = {}
   if request.Land then
-    local specialty = requiredSpecialty + pick
-    local population = math.max(scan.Population, SDP_Land.RequiredPopulation(scan.SpecialtyBuilt + specialty))
     self.Land = SDP_Land.ForScan(scan, self.Fixed, request.Weights, population)
     lands[1] = self.Land
   end
@@ -157,7 +158,15 @@ function SDP_Solver.NewSession(request, scan)
     Pools = pick > 0 and { [1] = pick } or nil,
     Costs = SDP_City.DistanceCosts(playerID, scan.Candidates, request.Distance),
     Alternatives = params.Solutions or 3, Apart = apart, Exclusive = SDP_Rules.Exclusive(),
-    Appeal = { Fixed = self.Fixed, Weights = request.Weights, Workable = workable },
+    Appeal = { Fixed = self.Fixed, Weights = request.Weights, Workable = workable,
+      Cities = { [1] = { Housing = SDP_Land.ScanHousing(scan), Target = population } },
+      -- A neighbouring city's district does not count in this city's housing.
+      FixedGroup = function(index)
+        local plot = Map.GetPlotByIndex(index)
+        local owner = plot:GetOwner() == playerID and Cities.GetPlotPurchaseCity(plot) or nil
+        if owner == nil or owner:GetID() == scan.CityID then return 1 end
+        return nil
+      end },
   })
   for _, s in ipairs(self.Search:Singles()) do
     if not slots[s].Optional then

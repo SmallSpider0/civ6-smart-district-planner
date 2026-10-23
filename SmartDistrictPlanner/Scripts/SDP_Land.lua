@@ -222,3 +222,125 @@ function SDP_Land.ForScan(scan, fixed, weights, population, keep)
   for _, index in ipairs(excluded) do Add(index) end
   return SDP_Land.Model(plots, population)
 end
+
+-- ===========================================================================
+-- Housing (issues 55, 56)
+-- ===========================================================================
+-- A city grows at full speed while its housing is 2 or more above its
+-- population, at half and a quarter speed at 1 and 0, and stops a few past
+-- it (GlobalParameters CITY_HOUSING_LEFT_*). Housing is worth most until
+-- the city can reach the population its districts need, little after: the
+-- city's k-th housing counts 1 up to its target population T, each one past
+-- it half the one before (0.5, 0.25, ...). Summed, continuous between whole
+-- numbers:
+--   HousingValue(n, T) = n                     n <= T
+--                      = T + 1 - 0.5^(n - T)   n > T
+function SDP_Land.HousingValue(n, target)
+  if n <= target then return n end
+  return target + 1 - 0.5 ^ (n - target)
+end
+
+-- The era a technology or civic belongs to (nil when unknown).
+local function EraOf(tech, civic)
+  local row = (tech and GameInfo.Technologies[tech]) or (civic and GameInfo.Civics[civic]) or nil
+  return row and row.EraType or nil
+end
+
+local function FirstEra()
+  local first, index = nil, math.huge
+  if GameInfo.Eras == nil then return nil end
+  for row in GameInfo.Eras() do
+    if (row.ChronologyIndex or math.huge) < index then first, index = row.EraType, row.ChronologyIndex end
+  end
+  return first
+end
+
+-- Housing every new city soon has from city-center buildings: those of the
+-- first era that are not wonders, the palace (Capital) or a civilization's
+-- own (the granary in the game's rules). Sites add it to their water housing.
+function SDP_Land.CenterHousing()
+  local first, total = FirstEra(), 0
+  if first == nil or GameInfo.Buildings == nil then return 0 end
+  for row in GameInfo.Buildings() do
+    if row.PrereqDistrict == "DISTRICT_CITY_CENTER" and (row.Housing or 0) > 0 and not row.IsWonder
+        and not row.Capital and row.TraitType == nil and (row.PrereqTech or row.PrereqCivic)
+        and EraOf(row.PrereqTech, row.PrereqCivic) == first then
+      total = total + row.Housing
+    end
+  end
+  return total
+end
+
+-- Whether every requirement of requirement set `id` is of type `kind`.
+local function SetIsOnly(id, kind)
+  if GameInfo.RequirementSetRequirements == nil or GameInfo.Requirements == nil then return false end
+  local any = false
+  for row in GameInfo.RequirementSetRequirements() do
+    if row.RequirementSetId == id then
+      local requirement = GameInfo.Requirements[row.RequirementId]
+      if requirement == nil or requirement.RequirementType ~= kind or requirement.Inverse then return false end
+      any = true
+    end
+  end
+  return any
+end
+
+-- Housing the buildings of a district type give a city (issue 55: the
+-- harbor's lighthouse and seaport): their Housing, plus building modifiers
+-- that adjust the owner city's housing with no requirement or only "plot is
+-- next to the coast" (counted when `coastal`, the city center is; Gathering
+-- Storm's lighthouse). Not wonders, not a civilization's own buildings.
+-- The base type's buildings count for a replacement (Cothon for Harbor).
+local m_buildingHousing, m_buildingHousingFor = {}, nil
+function SDP_Land.BuildingHousing(districtType, coastal)
+  if m_buildingHousingFor ~= GameInfo then m_buildingHousing, m_buildingHousingFor = {}, GameInfo end
+  local key = districtType .. (coastal and "+" or "-")
+  if m_buildingHousing[key] ~= nil then return m_buildingHousing[key] end
+  local base = districtType
+  if GameInfo.DistrictReplaces ~= nil then
+    for row in GameInfo.DistrictReplaces() do
+      if row.CivUniqueDistrictType == districtType then base = row.ReplacesDistrictType end
+    end
+  end
+  local total, buildings = 0, {}
+  if GameInfo.Buildings == nil then return 0 end
+  for row in GameInfo.Buildings() do
+    if (row.PrereqDistrict == districtType or row.PrereqDistrict == base) and not row.IsWonder and row.TraitType == nil then
+      total = total + (row.Housing or 0)
+      buildings[row.BuildingType] = true
+    end
+  end
+  if GameInfo.BuildingModifiers ~= nil and GameInfo.Modifiers ~= nil and GameInfo.ModifierArguments ~= nil then
+    for link in GameInfo.BuildingModifiers() do
+      local modifier = buildings[link.BuildingType] and GameInfo.Modifiers[link.ModifierId] or nil
+      if modifier ~= nil and modifier.ModifierType == "MODIFIER_CITY_OWNER_ADJUST_BUILDING_HOUSING" then
+        local set = modifier.SubjectRequirementSetId
+        local applies = set == nil or (coastal and SetIsOnly(set, "REQUIREMENT_PLOT_ADJACENT_TO_COAST"))
+        if applies then
+          for argument in GameInfo.ModifierArguments() do
+            if argument.ModifierId == link.ModifierId and argument.Name == "Amount" then
+              total = total + (tonumber(argument.Value) or 0)
+            end
+          end
+        end
+      end
+    end
+  end
+  m_buildingHousing[key] = total
+  return total
+end
+
+-- A city's housing now (issue 55): the game's figure for a city, water
+-- housing plus CenterHousing for a planned one (a city-center pin or site).
+function SDP_Land.ScanHousing(scan)
+  if scan.CityID ~= nil then
+    local city = CityManager.GetCity(scan.PlayerID, scan.CityID)
+    local growth = city ~= nil and city.GetGrowth ~= nil and city:GetGrowth() or nil
+    if growth ~= nil and growth.GetHousing ~= nil then return growth:GetHousing() end
+  end
+  local p = GlobalParameters or {}
+  local kind = SDP_City.WaterKind(Map.GetPlot(scan.X, scan.Y))
+  local water = (kind == "FRESH" and (p.CITY_POPULATION_RIVER_LAKE or 5)) or (kind == "COAST" and (p.CITY_POPULATION_COAST or 3))
+    or (p.CITY_POPULATION_NO_WATER or 2)
+  return water + SDP_Land.CenterHousing()
+end

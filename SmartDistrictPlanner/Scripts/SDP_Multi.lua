@@ -354,6 +354,16 @@ function SDP_Multi.NewSession(request)
   self.Board = SDP_Board.New(playerID, fixed, self.Weights, bases)
   self.ExtraCalls = #fixed
 
+  -- The population each city's plan needs: its land part's worked plots
+  -- and its housing target (issue 55).
+  for _, part in ipairs(participants) do
+    local specialty = part.Scan.SpecialtyBuilt + part.Pick
+    for _, districtType in ipairs(part.Plan) do
+      if byType[districtType].Specialty then specialty = specialty + 1 end
+    end
+    part.Population = math.max(part.Kind == "CITY" and part.Scan.Population or 1, SDP_Land.RequiredPopulation(specialty))
+  end
+
   -- Land part per city; a plot several cities could work goes to the nearest.
   local lands = {}
   if land then
@@ -367,12 +377,7 @@ function SDP_Multi.NewSession(request)
       end
     end
     for p, part in ipairs(participants) do
-      local specialty = part.Scan.SpecialtyBuilt + part.Pick
-      for _, districtType in ipairs(part.Plan) do
-        if byType[districtType].Specialty then specialty = specialty + 1 end
-      end
-      local population = math.max(part.Kind == "CITY" and part.Scan.Population or 1, SDP_Land.RequiredPopulation(specialty))
-      part.Land = SDP_Land.ForScan(part.Scan, fixed, request.Weights, population, function(index)
+      part.Land = SDP_Land.ForScan(part.Scan, fixed, request.Weights, part.Population, function(index)
         return owner[index] ~= nil and owner[index].Part == p
       end)
       lands[#lands + 1] = part.Land
@@ -493,12 +498,33 @@ function SDP_Multi.NewSession(request)
       owners.Fixed[index] = { Type = subject.Key, Groups = groups }
     end
   end
+  -- Each city's housing (issue 55); a fixed district's housing goes to the
+  -- participant that owns its plot, an unowned one's to the nearest.
+  local housingCities = {}
+  for p, part in ipairs(participants) do
+    housingCities[p] = { Housing = SDP_Land.ScanHousing(part.Scan), Target = part.Population }
+  end
+  local function HousingGroup(index)
+    local plot = Map.GetPlotByIndex(index)
+    local owner = plot:GetOwner() == playerID and Cities.GetPlotPurchaseCity(plot) or nil
+    local best, bestDistance = nil, math.huge
+    for p, part in ipairs(participants) do
+      if owner ~= nil then
+        if part.CityID == owner:GetID() then return p end
+      else
+        local d = Map.GetPlotDistance(part.X, part.Y, plot:GetX(), plot:GetY())
+        if d <= SDP_City.RADIUS and d < bestDistance then best, bestDistance = p, d end
+      end
+    end
+    return best
+  end
   self.Search = SDP_Search.New({
     PlayerID = playerID, Board = self.Board, Weights = self.Weights, Params = params,
     Candidates = candidates, Slots = slots, Lands = lands, Coverage = self.Coverage,
     Pools = pools, Costs = SDP_City.DistanceCosts(playerID, candidates, request.Distance, centers), Apart = apart,
     Exclusive = SDP_Rules.Exclusive(), Reach = reach, Owners = owners,
-    Appeal = { Fixed = fixed, Weights = request.Weights, Workable = workable },
+    Appeal = { Fixed = fixed, Weights = request.Weights, Workable = workable, Cities = housingCities,
+      FixedGroup = HousingGroup },
   })
   for _, s in ipairs(self.Search:Singles()) do
     if not slots[s].Optional then

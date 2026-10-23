@@ -247,7 +247,8 @@ function Search:Singles()
     for m = 1, self.K do optional[m] = self.SlotSpecs[index[m]].Optional == true end
     self.AppealModel = SDP_Appeal.New({ PlayerID = self.PlayerID, Types = types, Kinds = kinds, Candidates = self.Candidates,
       Fixed = self.AppealSpec.Fixed, Weights = self.AppealSpec.Weights, Lands = self.Lands,
-      Workable = self.AppealSpec.Workable, Optional = optional })
+      Workable = self.AppealSpec.Workable, Optional = optional, Groups = groups, Cities = self.AppealSpec.Cities,
+      FixedGroup = self.AppealSpec.FixedGroup })
   end
   -- Pools: each group's optional and required slots and how many optional
   -- ones to place.

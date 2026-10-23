@@ -51,7 +51,7 @@ local function Weights(extra)
 end
 
 -- Independent reference: housing of every neighborhood or preserve in a
--- plan, appeal = the plot's set appeal + each planned neighbour's district
+-- plan (weighted, summed), appeal = the plot's set appeal + each planned neighbour's district
 -- appeal - the appeal of the feature a planned neighbour clears. (No
 -- preserve tiles here; those have their own test.)
 local function RefHousing(world, plan, weight)
@@ -85,6 +85,25 @@ local function RefHousing(world, plan, weight)
   return total
 end
 
+-- What housing `total` adds to the test city (issue 55): its housing now
+-- (water, 2 here) plus the plan's, valued 1 each up to its target
+-- population (6: its population; one specialty district needs 1), half
+-- the one before after that.
+local CITY_HOUSING, CITY_TARGET = 2, 6
+local function HousingWorth(total, weight)
+  if weight == 0 then return 0 end
+  local function Value(n)
+    if n <= CITY_TARGET then return n end
+    local v, step = CITY_TARGET, 1
+    for _ = CITY_TARGET + 1, math.floor(n) do
+      step = step / 2
+      v = v + step
+    end
+    return v
+  end
+  return weight * (Value(CITY_HOUSING + total) - Value(CITY_HOUSING))
+end
+
 -- Best value over every placement of `districts`: DMT adjacency (fake) plus
 -- the reference housing.
 local function BruteForce(world, districts, weights)
@@ -104,7 +123,7 @@ local function BruteForce(world, districts, weights)
         end
         local res = SDP_Overlay.Evaluate(subjects, fixed, w)
         if res.Legal then
-          local value = res.Total - baseline + RefHousing(world, plan, w.HOUSING or 1)
+          local value = res.Total - baseline + HousingWorth(RefHousing(world, plan, 1), w.HOUSING or 1)
           if best == nil or value > best then best = value end
         end
         return
@@ -150,10 +169,11 @@ test("a neighborhood goes to the most appealing plot; its housing is in the gain
   T.eq(p.X .. "," .. p.Y, "8,2", "on the breathtaking plot")
   T.eq(p.Appeal, 4, "its appeal")
   T.eq(p.Housing, 6, "six housing")
-  T.eq(result.AppealDelta, 6, "the appeal part")
-  T.eq(result.Gain, result.Adjacency + 6, "in the gain")
+  -- Housing 2 -> 8 against a target of 6: 4 + 0.5 + 0.25 (issue 55).
+  T.eq(result.AppealDelta, 4.75, "the appeal part")
+  T.eq(result.Gain, result.Adjacency + 4.75, "in the gain")
   local double = SDP_Solver.Solve({ PlayerID = 0, CityID = 1, Districts = { HOOD }, Weights = Weights({ HOUSING = 2 }) })
-  T.eq(double.AppealDelta, 12, "weighted")
+  T.eq(double.AppealDelta, 9.5, "weighted")
   local campus = SDP_Solver.Solve({ PlayerID = 0, CityID = 1, Districts = { "DISTRICT_CAMPUS" }, Weights = ONES })
   T.eq(campus.AppealDelta, nil, "no appeal part without such a district")
 end)
@@ -173,7 +193,7 @@ test("districts change appeal: the plan matches a brute force over every layout"
     T.ok(not result.Stats.Mismatch, label .. ": board and full evaluation agree")
     local plan = {}
     for i, p in ipairs(result.Plan) do plan[i] = { Type = p.Type, X = p.X, Y = p.Y } end
-    T.ok(math.abs((result.AppealDelta or 0) - RefHousing(world, plan, case.weights.HOUSING)) < 1e-9,
+    T.ok(math.abs((result.AppealDelta or 0) - HousingWorth(RefHousing(world, plan, 1), case.weights.HOUSING)) < 1e-9,
       label .. ": housing as the reference counts it")
     local best = BruteForce(world, case.districts, case.weights)
     T.ok(math.abs(result.Gain - best) < 1e-9, string.format("%s: %.2f = brute force %.2f", label, result.Gain, best))

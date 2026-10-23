@@ -337,6 +337,12 @@
     <Replace Tag="LOC_SDP_SITES_WATER_NONE" Language="en_US">
       <Text>No Water</Text>
     </Replace>
+    <Replace Tag="LOC_SDP_SITES_WEIGHT_HOUSING" Language="en_US">
+      <Text>Housing: points for the Housing a site has over a site without water (water, Granary, and the Lighthouse and Seaport when the plan has a Harbor). Each Housing up to the population the planned districts need counts 1, each one after it half the one before.</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_HOUSING" Language="en_US">
+      <Text>Housing {1_Housing}</Text>
+    </Replace>
     <Replace Tag="LOC_SDP_SITES_OWN_DISTANCE" Language="en_US">
       <Text>{1_Distance} tiles from your nearest city or placed site tack</Text>
     </Replace>

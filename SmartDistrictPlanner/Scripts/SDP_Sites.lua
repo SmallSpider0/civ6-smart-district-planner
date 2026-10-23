@@ -26,14 +26,14 @@ SDP_Sites.LOYALTY_RANGE = 9    -- cities this close press on a city's loyalty (R
 
 -- The weights a site score uses, with their defaults (design 3.3).
 SDP_Sites.WEIGHT_KEYS = { "YIELD_SCIENCE", "YIELD_CULTURE", "YIELD_FAITH", "YIELD_GOLD", "YIELD_PRODUCTION",
-  "YIELD_FOOD", "AMENITY", "STRATEGIC", "FEATURE", "APPEAL" }
+  "YIELD_FOOD", "HOUSING", "AMENITY", "STRATEGIC", "FEATURE", "APPEAL" }
 SDP_Sites.PRESETS = {
   BALANCED = { YIELD_SCIENCE = 1, YIELD_CULTURE = 1, YIELD_FAITH = 1, YIELD_GOLD = 1, YIELD_PRODUCTION = 1,
-    YIELD_FOOD = 1, AMENITY = 1, STRATEGIC = 1, FEATURE = 1, APPEAL = 0 },
+    YIELD_FOOD = 1, HOUSING = 1, AMENITY = 1, STRATEGIC = 1, FEATURE = 1, APPEAL = 0 },
   GROWTH = { YIELD_SCIENCE = 1, YIELD_CULTURE = 1, YIELD_FAITH = 1, YIELD_GOLD = 1, YIELD_PRODUCTION = 1,
-    YIELD_FOOD = 2, AMENITY = 1, STRATEGIC = 1, FEATURE = 1, APPEAL = 0 },
+    YIELD_FOOD = 2, HOUSING = 2, AMENITY = 1, STRATEGIC = 1, FEATURE = 1, APPEAL = 0 },
   DISTRICTS = { YIELD_SCIENCE = 2, YIELD_CULTURE = 2, YIELD_FAITH = 2, YIELD_GOLD = 2, YIELD_PRODUCTION = 2,
-    YIELD_FOOD = 1, AMENITY = 1, STRATEGIC = 0, FEATURE = 1, APPEAL = 0 },
+    YIELD_FOOD = 1, HOUSING = 1, AMENITY = 1, STRATEGIC = 0, FEATURE = 1, APPEAL = 0 },
 }
 SDP_Sites.PRESET_ORDER = { "BALANCED", "GROWTH", "DISTRICTS" }
 
@@ -181,12 +181,37 @@ function SDP_Sites.Context(playerID, request)
     Fresh = (GlobalParameters and GlobalParameters.CITY_POPULATION_RIVER_LAKE) or 5,
     Coast = (GlobalParameters and GlobalParameters.CITY_POPULATION_COAST) or 3,
     None = (GlobalParameters and GlobalParameters.CITY_POPULATION_NO_WATER) or 2,
+    Center = SDP_Land.CenterHousing(),
   }
+  -- Districts on the coast (the harbor): their buildings' housing counts
+  -- for the site (issue 55).
+  ctx.CoastDistricts = {}
+  for row in GameInfo.Districts() do
+    if row.Coast then ctx.CoastDistricts[row.DistrictType] = true end
+  end
   return ctx
 end
 
 -- Fresh water, coast or neither at a site (housing, design 3.3).
 local Water = function(plot) return SDP_City.WaterKind(plot) end
+
+-- Water part of a site (design 3.3, issues 55 and 56): what its housing is
+-- worth over a dry site's, weighed by HOUSING. A site's housing is its water
+-- housing, the first-era city-center buildings' (granary), and the
+-- buildings' of the coast districts (harbor) among `districts`; its worth
+-- is SDP_Land.HousingValue with the population the plan needs as target.
+function SDP_Sites.WaterPart(ctx, site, districts)
+  local plot = Map.GetPlot(site.X, site.Y)
+  local kind = site.Info.WaterKind
+  local housing = ((kind == "FRESH" and ctx.Housing.Fresh) or (kind == "COAST" and ctx.Housing.Coast) or ctx.Housing.None)
+    + ctx.Housing.Center
+  for _, districtType in ipairs(districts) do
+    if ctx.CoastDistricts[districtType] then housing = housing + SDP_Land.BuildingHousing(districtType, plot:IsCoastalLand()) end
+  end
+  site.Info.Housing = housing
+  local dry = ctx.Housing.None + ctx.Housing.Center
+  return ctx.Weights.HOUSING * (SDP_Land.HousingValue(housing, ctx.Population) - SDP_Land.HousingValue(dry, ctx.Population))
+end
 
 -- The coarse score of a site (no DMT). Returns a site table:
 --   X, Y, Index, Scan, Land (SDP_Land model of its workable plots)
@@ -240,11 +265,8 @@ function SDP_Sites.Coarse(ctx, candidate, centers)
   site.Parts.Farm = site.Land.Base - once
   site.Parts.Feature = once
 
-  -- Fresh water: extra housing over a dry site, weighed as food.
-  local kind = Water(Map.GetPlot(x, y))
-  local housing = (kind == "FRESH" and ctx.Housing.Fresh) or (kind == "COAST" and ctx.Housing.Coast) or ctx.Housing.None
-  site.Parts.Water = (housing - ctx.Housing.None) * w.YIELD_FOOD
-  site.Info.WaterKind = kind
+  site.Info.WaterKind = Water(Map.GetPlot(x, y))
+  site.Parts.Water = SDP_Sites.WaterPart(ctx, site, ctx.Plan)
 
   site.Parts.Luxury = w.AMENITY * SDP_Sites.LuxuryValue(ctx, site.Luxury, {})
   site.Parts.Strategic = w.STRATEGIC * SDP_Sites.StrategicValue(ctx, site.Strategic, {})
@@ -403,6 +425,9 @@ function SDP_Sites.Fine(ctx, site, params)
       site.Parts.District = search.BestGain - (land - site.Land.Base)
       site.Parts.Farm = land - site.Land.OnceTotal + SDP_Sites.OnceLost(site.Land, taken)
       site.Parts.Feature = site.Land.OnceTotal - SDP_Sites.OnceLost(site.Land, taken)
+      local types = {}
+      for _, d in ipairs(site.Districts) do types[#types + 1] = d.Type end
+      site.Parts.Water = SDP_Sites.WaterPart(ctx, site, types)
     end
   end
   board:Clear()

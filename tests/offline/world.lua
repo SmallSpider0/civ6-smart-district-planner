@@ -500,21 +500,25 @@ function World.New(spec)
   end
   -- Housing from water as the game counts it: river, lake or oasis next to
   -- the center 5, coast 3, else 2.
+  -- GetHousing: the city's `housing` when the spec gives one, else that.
   function City:GetGrowth()
     local center = GetPlot(self.x, self.y)
-    return {
-      GetHousingFromWater = function()
-        if center.river then return 5 end
-        local coast = false
-        for dir = 0, 5 do
-          local n = Adjacent(self.x, self.y, dir)
-          if n ~= nil then
-            if n.lake or (n.feature ~= nil and n.feature.AddsFreshWater) then return 5 end
-            if n.terrain.Water then coast = true end
-          end
+    local function Water()
+      if center.river then return 5 end
+      local coast = false
+      for dir = 0, 5 do
+        local n = Adjacent(self.x, self.y, dir)
+        if n ~= nil then
+          if n.lake or (n.feature ~= nil and n.feature.AddsFreshWater) then return 5 end
+          if n.terrain.Water then coast = true end
         end
-        return coast and 3 or 2
-      end,
+      end
+      return coast and 3 or 2
+    end
+    local housing = self.housing
+    return {
+      GetHousingFromWater = function() return Water() end,
+      GetHousing = function() return housing or Water() end,
     }
   end
 
@@ -542,7 +546,7 @@ function World.New(spec)
     local owner = c.owner or 0
     local city = setmetatable({
       id = c.id, owner = owner, x = c.x, y = c.y, name = c.name or ("CITY_" .. c.id),
-      population = c.population or 1, capital = c.capital, districts = {}, buildings = {},
+      population = c.population or 1, capital = c.capital, districts = {}, buildings = {}, housing = c.housing,
     }, City)
     cities[owner .. ":" .. c.id] = city
     cityList[#cityList + 1] = city

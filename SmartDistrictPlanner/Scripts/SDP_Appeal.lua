@@ -23,7 +23,11 @@
 --                  clears there, when positive
 --   housing part = HOUSING weight x over every district with
 --                  AppealHousingChanges rows (placed, pinned or built):
---                  Districts.Housing + the change for its plot's appeal
+--                  Districts.Housing + the change for its plot's appeal;
+--                  with the cities given (issue 55), summed per city and
+--                  valued by SDP_Land.HousingValue: the city's housing
+--                  without these districts plus theirs, against the
+--                  population its districts need
 --   tile part    = for each placed district with Adjacent_AppealYieldChanges
 --                  rows (the preserve; its buildings counted as built), each
 --                  unimproved workable neighbour gets the rows' yields for its
@@ -190,6 +194,11 @@ end
 --                  sanctuary yields only reported (they need two buildings;
 --                  counted, a preserve near charming plots won nearly every
 --                  pick in late-game saves; the user's call, 2026-10-22)
+--   Groups         { [slot] = city } (the search's groups), with
+--   Cities         { [city] = { Housing, Target } } (optional): the city's
+--                  housing now, built neighborhoods included, and its
+--                  target population; nil: each housing counts 1
+--   FixedGroup     function(plot index) -> city, for fixed districts
 -- }
 -- Returns a model, or nil when nothing in the problem has appeal rules.
 function SDP_Appeal.New(spec)
@@ -223,6 +232,7 @@ function SDP_Appeal.New(spec)
   end
   if not any then return nil end
   setmetatable(self, { __index = SDP_Appeal })
+  self.Groups = spec.Groups or {}
   self.Cache = {}
   local player = spec.PlayerID ~= nil and Players[spec.PlayerID] or nil
   local techs = player ~= nil and player:GetTechs() or nil
@@ -259,7 +269,25 @@ function SDP_Appeal.New(spec)
   self.Own = {}
   for m = 1, self.K do self.Own[m] = OwnAppeal(rules, spec.Kinds[m], spec.Types[m]) end
   self.Improved = {}
-  self.At, self.OwnAt, self.Boosts = {}, {}, {} -- scratch
+  self.At, self.OwnAt, self.Boosts, self.Sums = {}, {}, {}, {} -- scratch
+  -- Per-city housing (issue 55): the city's housing without the districts
+  -- counted here (a built one's housing is in the game's figure already).
+  if spec.Cities ~= nil then
+    self.Cities, self.CityOrder = {}, {}
+    for g, c in pairs(spec.Cities) do
+      self.Cities[g] = { Housing = c.Housing, Target = c.Target }
+      self.CityOrder[#self.CityOrder + 1] = g
+    end
+    table.sort(self.CityOrder)
+    for _, f in ipairs(self.FixedValue) do
+      f.Group = spec.FixedGroup ~= nil and spec.FixedGroup(f.Index) or nil
+      local city = f.Group ~= nil and self.Cities[f.Group] or nil
+      local plot = Map.GetPlotByIndex(f.Index)
+      if city ~= nil and plot:GetDistrictType() ~= -1 then
+        city.Housing = city.Housing - (SDP_Appeal.Housing(rules, f.Type, plot:GetAppeal()) or 0)
+      end
+    end
+  end
   self.Base = self:Score(nil)
   return self
 end
@@ -312,9 +340,16 @@ function SDP_Appeal:Score(layout, detail)
   end
   local value = 0
   local housingWeight = self.HousingWeight
+  local cities, sums = self.Cities, self.Sums
   for _, f in ipairs(self.FixedValue) do
     if at[f.Index] == nil then
-      value = value + housingWeight * SDP_Appeal.Housing(rules, f.Type, self:AppealAt(f.Index))
+      local housing = SDP_Appeal.Housing(rules, f.Type, self:AppealAt(f.Index))
+      local g = f.Group
+      if cities ~= nil and g ~= nil and cities[g] ~= nil then
+        sums[g] = (sums[g] or 0) + housing
+      else
+        value = value + housingWeight * housing
+      end
     end
   end
   local boosts = nil
@@ -325,7 +360,14 @@ function SDP_Appeal:Score(layout, detail)
         local index = candidates[i].Index
         local appeal = self:AppealAt(index)
         local housing = SDP_Appeal.Housing(rules, self.Types[m], appeal)
-        if housing ~= nil then value = value + housingWeight * housing end
+        if housing ~= nil then
+          local g = self.Groups[m]
+          if cities ~= nil and g ~= nil and cities[g] ~= nil then
+            sums[g] = (sums[g] or 0) + housing
+          else
+            value = value + housingWeight * housing
+          end
+        end
         local rows = rules.Tiles[self.Types[m]]
         local tiles = nil
         local counted = not self.Optional[m]
@@ -365,6 +407,13 @@ function SDP_Appeal:Score(layout, detail)
           if rows ~= nil then detail[m].TilesCounted = counted end
         end
       end
+    end
+  end
+  if cities ~= nil then
+    for _, g in ipairs(self.CityOrder) do
+      local city = cities[g]
+      value = value + housingWeight * SDP_Land.HousingValue(city.Housing + (sums[g] or 0), city.Target)
+      sums[g] = nil
     end
   end
   for _, index in ipairs(placedAt) do
