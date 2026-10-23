@@ -283,11 +283,13 @@ if (!isMainThread) {
   let crossFile = null;
   let scorers = ["amt", "ep"];
   let only = null; // planner:variant keys
+  let add = []; // planner:variant runs added to every selected scenario
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === "-s") filter = argv[++i];
     else if (a === "-p") planners = argv[++i].split(",");
     else if (a === "--only") only = argv[++i].split(",");
+    else if (a === "--add") add = argv[++i].split(",");
     else if (a === "-j") jobs = parseInt(argv[++i], 10);
     else if (a === "--out") out = resolve(argv[++i]);
     else if (a === "-v") verbose = true;
@@ -301,7 +303,7 @@ if (!isMainThread) {
     else if (a === "--crossscore") crossFile = resolve(argv[++i]);
     else if (a === "--scorers") scorers = argv[++i].split(",");
     else {
-      console.error("usage: compare.mjs [--list] [-s SUBSTRING] [-p sdp,amt,ep] [-j JOBS] [--out FILE] [--ruleset RULESET_...] [-v]");
+      console.error("usage: compare.mjs [--list] [-s SUBSTRING] [-p sdp,amt,ep] [--only P:V,...] [--add P:V,...] [-j JOBS] [--out FILE] [--ruleset RULESET_...] [-v]");
       process.exit(2);
     }
   }
@@ -345,7 +347,8 @@ if (!isMainThread) {
     }
   }
   for (const s of rejudgeFile || crossFile ? [] : scenarios) {
-    for (const run of s.runs) {
+    const runs = s.runs.concat(add.map((k) => ({ planner: k.split(":")[0], variant: k.split(":").slice(1).join(":") })));
+    for (const run of runs) {
       const key = run.planner + ":" + (run.variant || "");
       if (planners.includes(run.planner) && (!only || only.includes(key)))
         tasks.push({ scenario: s.id, planner: run.planner, variant: run.variant, verbose });

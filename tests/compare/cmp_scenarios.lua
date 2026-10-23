@@ -157,6 +157,35 @@ end
 BuildSet("S", "M", 1000, true)
 BuildSet("HS", "HM", 50000, false)
 
+-- Small multi-city situations with a provable optimum (issue 48): two or
+-- three cities, six districts in all, none limited to one per empire, so
+-- the exact reference (sdp:ORACLE, cmp_oracle.lua) can search every layout.
+-- Two cities want a campus, a theater square and a commercial hub each;
+-- three cities a campus and a commercial hub (an industrial zone where the
+-- civilization has no holy site rule to show). "OMnn-civ-biome-Nc".
+local SMALL_MULTI = {
+  { "rome", "temperate", 2 }, { "japan", "temperate", 2 }, { "korea", "highland", 2 }, { "germany", "temperate", 3 },
+  { "brazil", "jungle", 2 }, { "netherlands", "temperate", 3 }, { "gaul", "highland", 2 }, { "indonesia", "island", 2 },
+  { "egypt", "desert", 3 }, { "russia", "tundra", 2 }, { "maya", "jungle", 3 }, { "byzantium", "temperate", 2 },
+  { "japan", "coastal", 3 }, { "rome", "volcanic", 2 }, { "mali", "desert", 2 }, { "vietnam", "jungle", 2 },
+}
+local omseed = 70000
+for n, entry in ipairs(SMALL_MULTI) do
+  local civKey, biome, count = entry[1], entry[2], entry[3]
+  omseed = omseed + 23
+  local civ = CIVS[civKey]
+  local districts = count == 2 and { "DISTRICT_CAMPUS", "DISTRICT_THEATER", "DISTRICT_COMMERCIAL_HUB" }
+    or { "DISTRICT_CAMPUS", n % 2 == 0 and "DISTRICT_INDUSTRIAL_ZONE" or "DISTRICT_COMMERCIAL_HUB" }
+  local built = {}
+  for c = 1, count do built[c] = {} end
+  Add({
+    id = string.format("OM%02d-%s-%s-%dc", n, civKey, biome, count), kind = "multi", title = civ[3] .. "; small",
+    seed = omseed, biome = biome, civKey = civKey, civ = civ[1], leader = civ[2], stage = "mid", cities = count,
+    districts = districts, built = built, population = 16, samePopulation = true, set = "OM",
+    runs = Runs("multi", { { planner = "sdp", variant = "ORACLE" } }),
+  })
+end
+
 -- Weight profiles (18.1, item 4): the development single-city situations
 -- with one yield weighted 3 and the others 1 ("S01-...~SCI"); the judge
 -- weighs the same way. The competitors get the same weights injected.
