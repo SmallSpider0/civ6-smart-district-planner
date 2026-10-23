@@ -307,6 +307,11 @@ def per_planner(scenarios, kind_filter=None):
             a["n"].append(1)
             if r.get("error"):
                 a["errors"].append(sid)
+                # A planner that gives no plan reaches 0 % of a proven optimum.
+                if e.get("optimum") is not None:
+                    a["optimal"].append(0)
+                    a["overOptimum"].append(0)
+                    a["ofOptimum"].append(0.0)
                 continue
             if r.get("quality") is not None:
                 a["quality"].append(r["quality"])
