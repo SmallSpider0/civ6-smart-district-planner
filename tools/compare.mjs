@@ -270,6 +270,7 @@ if (!isMainThread) {
   let list = false;
   let dump = null;
   let snapshot = null;
+  let probe = null; // a Lua file to run in this mod's state (ad-hoc checks)
   let rejudgeFile = null;
   let crossFile = null;
   let scorers = ["amt", "ep"];
@@ -285,6 +286,7 @@ if (!isMainThread) {
     else if (a === "--list") list = true;
     else if (a === "--dump") dump = argv[++i];
     else if (a === "--snapshot") snapshot = argv[++i];
+    else if (a === "--probe") probe = argv[++i];
     else if (a === "--rejudge") rejudgeFile = resolve(argv[++i]);
     else if (a === "--crossscore") crossFile = resolve(argv[++i]);
     else if (a === "--scorers") scorers = argv[++i].split(",");
@@ -302,6 +304,12 @@ if (!isMainThread) {
     console.log(out.log.join("\n"));
     if (out.error) console.log(out.error);
     process.exit(0);
+  }
+  if (probe) {
+    const out = runLua("sdp", readFileSync(resolve(probe), "utf8"), "probe");
+    console.log(out.log.join("\n"));
+    if (out.error) console.log(out.error);
+    process.exit(out.error ? 1 : 0);
   }
   if (snapshot) {
     const out = runLua("judge", `include("cmp_lib") CmpRun.Snapshot(${luaString(snapshot)})`, "snapshot");

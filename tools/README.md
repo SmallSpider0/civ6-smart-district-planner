@@ -91,6 +91,7 @@ node tools/compare.mjs --crossscore RESULTS.jsonl --scorers amt,ep -j 4 --out CR
 python3 -I tests/compare/summarize.py tests/compare/results/full_rejudged.jsonl tests/compare/results/land.jsonl   # 汇总（后面的文件覆盖前面的同名运行）
 node tools/compare.mjs --dump S01-rome-temperate-mid       # 场景地图的文字图
 node tools/compare.mjs --snapshot S01-rome-temperate-mid   # 场景地图数据（报告画图用）
+node tools/compare.mjs --probe FILE.lua                    # 在本 mod 的状态里跑一段 Lua（临时探针：先 include("cmp_lib")，CmpRun.Setup(场景) 建好世界）
 ```
 
 - 不开游戏，在 fengari 里比较本 mod、Auto Map Tacks Planner r49（AMT）和 Empire Planner（EP）的区域规划。**规则是真的**：`GameInfo` 来自游戏写在缓存里的规则数据库 `Cache/DebugGameplay.sqlite`（最后一次加载的对局的规则集，目前是风云变幻；导出文件是 Firaxis 的数据，只放在被忽略的 `.cache/`）。**代码是真的**：DMT、AMT、EP 的 Lua 原样从 `reference/` 和本机创意工坊目录加载，不改一行。**引擎是模拟的**：`tests/compare/cmp_game.lua` 实现地图、城市、地图钉、玩家配置、可见性、河流与泛滥平原、修正系统（`GameEffects`，DMT 从它读文明特性的相邻规则）和 UI 替身。
