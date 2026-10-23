@@ -269,6 +269,16 @@ def subset(scenarios, set_name=None, kind=None):
     return out
 
 
+def share_stats(values):
+    """Mean, median, worst and how many reach 100 %, 95 %, 90 % of the optimum."""
+    if not values:
+        return None
+    n = len(values)
+    return {"n": n, "mean": statistics.mean(values), "median": statistics.median(values), "min": min(values),
+            "at100": sum(1 for v in values if v >= 1 - 1e-9) / n, "at95": sum(1 for v in values if v >= 0.95 - 1e-9) / n,
+            "at90": sum(1 for v in values if v >= 0.90 - 1e-9) / n}
+
+
 def per_planner(scenarios, kind_filter=None):
     agg = defaultdict(lambda: defaultdict(list))
     for sid, e in scenarios.items():
@@ -292,6 +302,10 @@ def per_planner(scenarios, kind_filter=None):
                 a["best"].append(1 if r["legal"] and r["gain"] >= e["reference"] - 1e-9 else 0)
             if e.get("optimum") is not None and r.get("gain") is not None:
                 a["optimal"].append(1 if r["legal"] and r["gain"] >= e["optimum"] - 1e-9 else 0)
+                # Share of the optimum: an illegal plan counts 0.
+                o = e["optimum"]
+                g = r["gain"] if r["legal"] else 0
+                a["ofOptimum"].append(g / o if o > 0 else (1.0 if g >= 0 else 0.0))
                 a["overOptimum"].append(1 if r["legal"] and r["gain"] > e["optimum"] + 1e-9 else 0)
             if r.get("outputGap") is not None:
                 a["outGap"].append(r["outputGap"])
@@ -317,6 +331,7 @@ def per_planner(scenarios, kind_filter=None):
             "bestShare": statistics.mean(a["best"]) if a["best"] else None,
             "optimalShare": statistics.mean(a["optimal"]) if a["optimal"] else None, "optimalRuns": len(a["optimal"]),
             "overOptimum": sum(a["overOptimum"]),
+            "ofOptimum": share_stats(a["ofOptimum"]),
             "missing": sum(a["missing"]), "missingPlaceable": sum(a["missingPlaceable"]), "secondsMedian": statistics.median(a["seconds"]) if a["seconds"] else None,
             "violations": {kk[2:]: sum(v) for kk, v in a.items() if kk.startswith("v_")},
             "outputBestShare": statistics.mean(a["outBest"]) if a["outBest"] else None,
@@ -362,8 +377,10 @@ def main():
                 "%.2f" % v["bestShare"] if v["bestShare"] is not None else "-",
                 v["missing"], v["missingPlaceable"], v["secondsMedian"] or 0, json.dumps(v["violations"])))
             if v.get("optimalShare") is not None:
-                print("  %-18s optimal %.2f (of %d with a proven optimum), above the optimum %d" % (
-                    "", v["optimalShare"], v["optimalRuns"], v["overOptimum"]))
+                so = v["ofOptimum"]
+                print("  %-18s of the optimum (n %d): mean %.1f%% median %.1f%% worst %.1f%%; at 100%% %.0f%%, >=95%% %.0f%%, >=90%% %.0f%%; above the optimum %d" % (
+                    "", so["n"], 100 * so["mean"], 100 * so["median"], 100 * so["min"], 100 * so["at100"], 100 * so["at95"],
+                    100 * so["at90"], v["overOptimum"]))
             if ob is not None:
                 print("  %-18s output best %.2f gap %.2f" % ("", ob, og))
             sq = v.get("sdpQuality")
