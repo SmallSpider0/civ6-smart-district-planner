@@ -79,6 +79,19 @@ test("the shortlist path finds the same optimum", function()
   T.eq(result.Gain, BruteForce(districts, ONES), "gain vs brute force")
 end)
 
+test("a bonus the adjacency table does not hold still counts in the bound (issue 36)", function()
+  -- As Japan's districts: a trait replaces the campus's +1 science per two
+  -- districts with +1 per district. Only DMT knows it, the table does not.
+  NewWorld({ traitNeighbour = { DISTRICT_CAMPUS = { "YIELD_SCIENCE", 1, "District_Science" } } })
+  local districts = { "DISTRICT_CAMPUS", "DISTRICT_HOLY_SITE" }
+  local best = BruteForce(districts, ONES)
+  local result = SDP_Solver.Solve({ PlayerID = 0, CityID = 1, Districts = districts, Weights = ONES, Params = { ExactLimit = 0 } })
+  T.eq(result.Stats.Method, "shortlist", "method")
+  T.eq(result.Gain, best, "gain vs brute force")
+  T.ok(result.Quality.Bound ~= nil and result.Quality.Bound >= best - 1e-9,
+    "bound " .. tostring(result.Quality.Bound) .. " >= best " .. tostring(best))
+end)
+
 -- Best gain over every placement including the land part.
 local function BruteForceLand(districts, weights)
   local scan = SDP_City.Scan(0, 1)

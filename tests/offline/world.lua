@@ -359,6 +359,19 @@ function World.New(spec)
   local w = { Calls = { GetBonusYields = 0, CanPlacePin = 0, ClearCache = 0 }, Turn = spec.turn or 1, Time = 0 }
   local gi = BuildGameInfo()
   w.GameInfo = gi
+  -- A trait that replaces a table row with a bonus only DMT knows, as
+  -- Japan's: spec.traitNeighbour = { [DistrictType] = { YieldType, Change, YieldChangeId } }
+  -- gives Change per neighbouring district instead of the row YieldChangeId.
+  local traitRows = {}
+  for district, t in pairs(spec.traitNeighbour or {}) do
+    traitRows[#traitRows + 1] = { YieldChangeId = t[3], TraitType = "TRAIT_TEST_NEIGHBOUR", District = district }
+  end
+  if #traitRows > 0 then
+    table.sort(traitRows, function(a, b) return a.District < b.District end)
+    gi.ExcludedAdjacencies = Table(traitRows)
+    spec.traits = spec.traits or {}
+    spec.traits[#spec.traits + 1] = "TRAIT_TEST_NEIGHBOUR"
+  end
   local rows = spec.rows
   local height, width = #rows, #rows[1]
   w.Width, w.Height = width, height
@@ -744,8 +757,9 @@ function World.New(spec)
     for _, n in ipairs(Neighbours(subject.X, subject.Y)) do
       around[#around + 1] = GetRealizedPlotFeatures(pid, n, GetMapPinSubject(pid, n.x, n.y)) -- the global, as DMT
     end
+    local trait = (spec.traitNeighbour or {})[subject.Key]
     for link in gi.District_Adjacencies() do
-      if link.DistrictType == subject.Key then
+      if link.DistrictType == subject.Key and not (trait and link.YieldChangeId == trait[3]) then
         local row = gi.Adjacency_YieldChanges[link.YieldChangeId]
         local count = 0
         if row.AdjacentRiver then
@@ -767,6 +781,16 @@ function World.New(spec)
           yields[row.YieldType] = (yields[row.YieldType] or 0) + amount
           tips[#tips + 1] = row.ID .. " " .. amount
         end
+      end
+    end
+    if trait ~= nil then
+      local count = 0
+      for _, f in ipairs(around) do
+        if f.district ~= nil then count = count + 1 end
+      end
+      if count > 0 then
+        yields[trait[1]] = (yields[trait[1]] or 0) + count * trait[2]
+        tips[#tips + 1] = "TRAIT " .. count * trait[2]
       end
     end
     return yields, table.concat(tips, "[NEWLINE]")
