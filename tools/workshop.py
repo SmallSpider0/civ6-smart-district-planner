@@ -288,27 +288,13 @@ def multi_page(probe):
     return out
 
 
-def preview_page(probe):
-    """src/preview.html with the probe's joint plan drawn in."""
-    spec, plans, _ = probe
-    src = read(os.path.join(WS, "src", "preview.html")).replace("{{JOINT_SVG}}", multi_svg(spec, plans["joint"]))
-    out = os.path.join(WS, "src", ".preview.rendered.html")
-    with open(out, "w", encoding="utf-8") as fh:
-        fh.write(src)
-    return out
-
-
 def render(_args):
-    """The preview (src/preview.html with the probe's joint plan, 1024 x
-    1024), then the gallery pictures: src/g<n>-<name>.html, src/g1-multi.html
-    (with the probe's plans drawn in) and src/compare.html (picture 03) ->
-    images/<n>-<name>.jpg, 1920 x 1080."""
+    """The preview (src/preview.html, 1024 x 1024), then the gallery
+    pictures: src/g<n>-<name>.html, src/g1-multi.html (with the probe's plans
+    drawn in) and src/compare.html (picture 03) -> images/<n>-<name>.jpg,
+    1920 x 1080."""
+    shoot(os.path.join(WS, "src", "preview.html"), os.path.join(WS, "preview.jpg"), 1024, 1024)
     probe = multi_probe()
-    page = preview_page(probe)
-    try:
-        shoot(page, os.path.join(WS, "preview.jpg"), 1024, 1024)
-    finally:
-        os.remove(page)
     os.makedirs(os.path.join(WS, "images"), exist_ok=True)
     for name in sorted(os.listdir(os.path.join(WS, "src"))):
         m = re.match(r"g(\d)-([a-z]+)\.html$", name)
