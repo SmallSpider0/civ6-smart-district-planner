@@ -15,7 +15,8 @@ import sys
 from collections import defaultdict
 
 HARD = {"off_map", "same_tile", "occupied", "overwrites_pin", "no_city", "out_of_range", "foreign_tile",
-        "other_city_tile", "unknown_type", "dmt_illegal", "twice_in_city", "empire_limit", "slots", "on_resource",
+        "other_city_tile", "unreachable", "unknown_type", "dmt_illegal", "twice_in_city", "empire_limit", "slots",
+        "on_resource",
         # city sites
         "bad_terrain", "unrevealed", "natural_wonder", "too_close"}
 

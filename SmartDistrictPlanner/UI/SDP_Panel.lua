@@ -463,11 +463,20 @@ local function AddResultRow(icon, name, detail, toolTip)
   m_resultRows[#m_resultRows + 1] = { Icon = icon, Name = name, Detail = detail, ToolTip = toolTip }
 end
 
--- What a plan entry is beyond its yields: added by itself, picked from the pool.
+-- What a plan entry is beyond its yields: added by itself, picked from the
+-- pool; what the city has to do first: own the plot (grow into it or buy
+-- it), research the technology that clears its feature.
 function SDP_UI.PlanNote(p)
-  if p.Auto then return "  " .. Locale.Lookup("LOC_SDP_RESULT_AUTO") end
-  if p.Picked then return "  " .. Locale.Lookup("LOC_SDP_RESULT_PICKED") end
-  return ""
+  local notes = {}
+  if p.Auto then notes[#notes + 1] = Locale.Lookup("LOC_SDP_RESULT_AUTO") end
+  if p.Picked then notes[#notes + 1] = Locale.Lookup("LOC_SDP_RESULT_PICKED") end
+  if p.Unowned then notes[#notes + 1] = Locale.Lookup("LOC_SDP_RESULT_UNOWNED") end
+  if p.RemoveTech ~= nil then
+    local tech = GameInfo.Technologies[p.RemoveTech]
+    notes[#notes + 1] = Locale.Lookup("LOC_SDP_RESULT_NEEDS_TECH", tech and Locale.Lookup(tech.Name) or p.RemoveTech)
+  end
+  if #notes == 0 then return "" end
+  return "  " .. table.concat(notes, " ")
 end
 
 -- The switch for partner districts (SDP_Rules.Apart, 2026-10-21 feedback):

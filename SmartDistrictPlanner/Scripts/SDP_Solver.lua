@@ -204,6 +204,7 @@ function Session:PlanFor(layout)
     out.Plan[n] = {
       Type = search.Types[m], X = c.X, Y = c.Y, Index = c.Index,
       Yields = item.Yields, ToolTip = item.ToolTip, Score = item.Score,
+      Unowned = c.Unowned, RemoveTech = c.RemoveTech,
       Auto = self.Auto[search.Types[m]], Picked = search.Optional[m],
       Appeal = a.Appeal, Housing = a.Housing, Tiles = a.Tiles, TilesCounted = a.TilesCounted,
     }

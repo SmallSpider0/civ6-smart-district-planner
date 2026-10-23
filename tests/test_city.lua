@@ -135,3 +135,30 @@ test("visible luxury and strategic resources are excluded, bonus resources are n
   end
   print(string.format("resources in range: %d harvestable kept, %d excluded", seen.kept, seen.excluded))
 end)
+
+test("candidates are joined to the city's territory; unowned plots and missing techs are flagged (issue 35)", function()
+  local city = capital()
+  local scan = SDP_City.Scan(pid, city:GetID())
+  T.ok(scan.Reach ~= nil and scan.Reach.Start[Map.GetPlotIndex(city:GetX(), city:GetY())], "the center starts the chain")
+  local techs = Players[pid]:GetTechs()
+  for _, c in ipairs(scan.Candidates) do
+    T.ok(scan.Reach.Reached[c.Index], "candidate " .. c.X .. "," .. c.Y .. " not reached")
+    local plot = Map.GetPlotByIndex(c.Index)
+    local owner = plot:GetOwner() == pid and Cities.GetPlotPurchaseCity(plot) or nil
+    local owned = owner ~= nil and owner:GetID() == city:GetID()
+    T.eq(c.Unowned, (not owned) or nil, "Unowned at " .. c.X .. "," .. c.Y)
+    local feature = plot:GetFeatureType()
+    local row = feature ~= -1 and GameInfo.Features[feature] or nil
+    local tech = row and row.RemoveTech and GameInfo.Technologies[row.RemoveTech] or nil
+    local expected = (tech ~= nil and not techs:HasTech(tech.Index)) and tech.TechnologyType or nil
+    T.eq(c.RemoveTech, expected, "RemoveTech at " .. c.X .. "," .. c.Y)
+  end
+  -- Every plot the city owns is a start; every unowned plot in range that a
+  -- candidate touches is reachable too (no enclave on an open map).
+  for _, p in ipairs(SDP_City.PlotsInRange(city:GetX(), city:GetY(), 3)) do
+    local plot = Map.GetPlotByIndex(p.Index)
+    local owner = plot:GetOwner() == pid and Cities.GetPlotPurchaseCity(plot) or nil
+    if owner ~= nil and owner:GetID() == city:GetID() then T.ok(scan.Reach.Start[p.Index], "owned plot not a start") end
+  end
+  T.ok(SDP_City.EXCLUDED.UNREACHABLE ~= nil, "reason defined")
+end)

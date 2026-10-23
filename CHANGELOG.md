@@ -4,6 +4,11 @@
 
 ## 未发布
 
+- 多城：一座城的区域只放在它的领土能连到的格子上。游戏里城市只能扩张或购买挨着自己领土的格子，所以被别的城（已有的或方案里的）隔开的格子现在不再使用；之前方案可能把一座城的区域放到另一座城的区域后面，建不出来（[#35](https://github.com/SmallSpider0/civ6-smart-district-planner/issues/35)、[#38](https://github.com/SmallSpider0/civ6-smart-district-planner/issues/38)）。单城页同样只用能连到的格子。
+- 结果里每个区域标出城市还要先做的事：格子还没有归属时写“需先扩张或购买”，格上的地貌要科技才能清除时写“需先研究某科技”（[#38](https://github.com/SmallSpider0/civ6-smart-district-planner/issues/38)）。只是提示，不改变方案。
+- 地图预览里钉下的数字改为 DMT 的相邻加成（和游戏放置时看到的一样），不再是按权重算的分；“好位置”着色里的数字也一样。加权分仍在面板里（[#34](https://github.com/SmallSpider0/civ6-smart-district-planner/issues/34)）。
+- 预览方案时地图上不再出现每格的魅力数字：预览改用政体透镜的图层着色（[#33](https://github.com/SmallSpider0/civ6-smart-district-planner/issues/33)）。
+- 创意工坊的预览图改成画的：市中心和三个规划区域，不再用游戏截图（[#41](https://github.com/SmallSpider0/civ6-smart-district-planner/issues/41)）。
 - 开发流程：一批 Issue 在一个分支上分多个提交修好，只开一个 PR，发版准备也放进去；CI 只在 PR 上跑，合并后 `main` 上不再重跑，往 PR 上推新提交会取消没跑完的那一轮，只改文档的 PR 只跑 `validate.py`（CONTRIBUTING.md）。
 - 创意工坊：在 Mac 上用 SteamCMD 更新物品可行（贡献者账号，不带预览图）；提交包里渲染图的文件名带内容摘要，UPLOAD.md 列出物品页上要上传、删除的图（docs/workshop-upload.md）。
 

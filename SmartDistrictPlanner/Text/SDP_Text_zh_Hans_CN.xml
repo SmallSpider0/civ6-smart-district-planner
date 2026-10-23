@@ -530,6 +530,12 @@
     <Replace Tag="LOC_SDP_RESULT_PICKED" Language="zh_Hans_CN">
       <Text>（从候选挑出）</Text>
     </Replace>
+    <Replace Tag="LOC_SDP_RESULT_UNOWNED" Language="zh_Hans_CN">
+      <Text>（需先扩张或购买）</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_NEEDS_TECH" Language="zh_Hans_CN">
+      <Text>（需先研究{1_Tech}）</Text>
+    </Replace>
     <Replace Tag="LOC_SDP_RESULT_UNPLACED_AUTO" Language="zh_Hans_CN">
       <Text>自动加入的{1_Name}放不下</Text>
     </Replace>

@@ -576,6 +576,53 @@ function CmpRun.Judge(id, planJson)
     end
   end
 
+  -- A city can only grow into or buy a plot next to one it owns (issue 35):
+  -- every placement must join its city's plots through unowned plots within
+  -- 3 rings that no other city's placement takes.
+  local byCity = {}
+  for _, p in ipairs(placements) do
+    if cities[p.city] ~= nil and Map.GetPlot(p.x, p.y) ~= nil then
+      byCity[p.city] = byCity[p.city] or {}
+      table.insert(byCity[p.city], p)
+    end
+  end
+  local cityIDs = {}
+  for id in pairs(byCity) do cityIDs[#cityIDs + 1] = id end
+  table.sort(cityIDs)
+  for _, id in ipairs(cityIDs) do
+    local city = cities[id]
+    local cx, cy = city:GetX(), city:GetY()
+    local blocked = {}
+    for _, p in ipairs(placements) do
+      if p.city ~= id and cities[p.city] ~= nil then blocked[p.x .. "_" .. p.y] = true end
+    end
+    local reached, queue = {}, {}
+    for i = 0, w.Width * w.Height - 1 do
+      local plot = Map.GetPlotByIndex(i)
+      if (plot.city == city or plot:IsCity() and plot.x == cx and plot.y == cy)
+          and Map.GetPlotDistance(plot.x, plot.y, cx, cy) <= 3 then
+        reached[plot.x .. "_" .. plot.y] = true
+        queue[#queue + 1] = plot
+      end
+    end
+    local head = 1
+    while head <= #queue do
+      local plot = queue[head]
+      head = head + 1
+      for _, n in ipairs(w.Neighbours(plot)) do
+        local key = n.x .. "_" .. n.y
+        if not reached[key] and not blocked[key] and n:GetOwner() == -1
+            and Map.GetPlotDistance(n.x, n.y, cx, cy) <= 3 then
+          reached[key] = true
+          queue[#queue + 1] = n
+        end
+      end
+    end
+    for _, p in ipairs(byCity[id]) do
+      if not reached[p.x .. "_" .. p.y] then Violation("unreachable", p) end
+    end
+  end
+
   -- Put the plan on the map as the player would (pins with district or wonder icons).
   for _, p in ipairs(placements) do
     if (gi.Districts[p.type] ~= nil or IsWonder(p.type)) and Map.GetPlot(p.x, p.y) ~= nil then
