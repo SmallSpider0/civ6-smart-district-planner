@@ -473,11 +473,31 @@ function SDP_Multi.NewSession(request)
   -- cities' planned districts in the way (issue 35; SDP_City.Reach).
   local reach = {}
   for p, part in ipairs(participants) do reach[p] = part.Scan.Reach end
+  -- Whose districts a wonder may count (issue 45): a wonder's plot goes to
+  -- a city that can take it, a fixed district belongs to the cities whose
+  -- territory or reach holds its plot.
+  local owners = { Wonder = {}, Fixed = {} }
+  for p, part in ipairs(participants) do
+    for i in pairs(part.Allowed) do
+      owners.Wonder[i] = owners.Wonder[i] or {}
+      owners.Wonder[i][p] = true
+    end
+  end
+  for _, subject in ipairs(fixed) do
+    if subject.Type == "DISTRICT" then
+      local index = Map.GetPlotIndex(subject.X, subject.Y)
+      local groups = {}
+      for p, part in ipairs(participants) do
+        if part.Scan.Reach.Through[index] then groups[p] = true end
+      end
+      owners.Fixed[index] = { Type = subject.Key, Groups = groups }
+    end
+  end
   self.Search = SDP_Search.New({
     PlayerID = playerID, Board = self.Board, Weights = self.Weights, Params = params,
     Candidates = candidates, Slots = slots, Lands = lands, Coverage = self.Coverage,
     Pools = pools, Costs = SDP_City.DistanceCosts(playerID, candidates, request.Distance, centers), Apart = apart,
-    Exclusive = SDP_Rules.Exclusive(), Reach = reach,
+    Exclusive = SDP_Rules.Exclusive(), Reach = reach, Owners = owners,
     Appeal = { Fixed = fixed, Weights = request.Weights, Workable = workable },
   })
   for _, s in ipairs(self.Search:Singles()) do

@@ -1,0 +1,9 @@
+Changes since v1.1.2:
+- Gathering Storm: coastal lowland flooded by the rising sea is no longer offered for districts. The game does not allow districts there. A city that builds a Flood Barrier gets those tiles back.
+- Wonders that need an adjacent district (Bolshoi Theatre, Broadway, Colosseum, Ruhr Valley and others) are only placed next to that district of their own city. The game does not count another city's district.
+- New pictures on this page.
+
+自 v1.1.2 以来的变化：
+- 风云变幻：被海平面淹没的沿海低地不再作为区域的候选格，游戏不允许在那里放区域。城市修了防洪堤后这些格恢复可用。
+- 需相邻某区域的奇观（大剧院、百老汇、大竞技场、鲁尔山谷等）只放在本城的那种区域旁边，游戏不认别的城市的区域。
+- 换了物品页上的图片。

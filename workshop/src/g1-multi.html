@@ -1,0 +1,37 @@
+<!doctype html>
+<!-- Workshop picture 01 "several cities at once", 1920 x 1080. tools/workshop.py render runs
+     tests/compare/cmp_workshop_multi.lua and draws its two plans into {{SINGLE_SVG}} and {{JOINT_SVG}}. -->
+<html lang="en"><head><meta charset="utf-8"><title>Several cities, planned together</title>
+<link rel="stylesheet" href="slide.css">
+<style>
+  header { position: absolute; left: 96px; top: 64px; right: 96px; }
+  .num::after { margin: 16px 0 22px; }
+  h1 { display: inline; font-size: 62px; }
+  h2 { display: inline; margin-left: 24px; font-size: 46px; }
+  .sub { margin: 18px 0 0; font-size: 28px; color: var(--text); }
+  .sub span { color: var(--muted); margin-left: 16px; }
+  .panels { position: absolute; left: 96px; right: 96px; top: 310px; display: flex; gap: 64px; }
+  .panel { flex: 1; }
+  .panel .t { font: 600 34px/1.2 "Helvetica Neue", Arial, "PingFang SC", sans-serif; color: var(--text); margin-bottom: 14px; }
+  .panel .t b { font: 700 46px/1 Georgia, serif; margin-left: 12px; color: var(--fg); }
+  .panel .t span { color: var(--muted); font-size: 28px; margin-left: 12px; }
+  .panel.win .t b { color: var(--gold); }
+  .card { border-radius: 14px; overflow: hidden; border: 3px solid rgba(255, 255, 255, .12); background: #22313a; padding: 8px; }
+  .panel.win .card { border-color: var(--gold); }
+  .card svg { display: block; width: 100%; height: auto; }
+  .key { position: absolute; left: 96px; right: 96px; bottom: 40px; margin: 0; font-size: 26px; color: var(--muted); }
+  .key i { display: inline-block; width: 22px; height: 22px; border-radius: 4px; vertical-align: -3px; margin: 0 8px 0 0; }
+  .key b { color: var(--fg); margin-right: 26px; font-weight: 600; }
+</style></head>
+<body>
+  <header>
+    <div class="num">01</div>
+    <h1>Several cities, planned together</h1><h2>几座城一起规划</h2>
+    <p class="sub">Three German cities, a Commercial Hub and a Hansa each.<span>三座德国城市，每城一个商业中心、一个汉萨商站。</span></p>
+  </header>
+  <div class="panels">
+    <div class="panel"><div class="t">One city at a time<span>逐城规划</span><b>{{SINGLE}}</b></div><div class="card">{{SINGLE_SVG}}</div></div>
+    <div class="panel win"><div class="t">Together<span>一起规划</span><b>{{JOINT}}</b></div><div class="card">{{JOINT_SVG}}</div></div>
+  </div>
+  <p class="key"><i style="background:#2f8fb5"></i><b>City 1</b><i style="background:#e0703a"></i><b>City 2</b><i style="background:#9a5cc8"></i><b>City 3</b>CH Commercial Hub 商业中心 · H Hansa 汉萨商站 · number: adjacency 数字为相邻加成</p>
+</body></html>

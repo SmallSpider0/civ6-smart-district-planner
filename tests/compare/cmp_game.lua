@@ -216,7 +216,8 @@ end
 --   width, height
 --   plots[i] (i = plot index + 1) = { t = TerrainType, f = FeatureType,
 --       r = ResourceType, rc = count, imp = ImprovementType, lake = true,
---       hidden = true (unrevealed to the local player) }
+--       hidden = true (unrevealed to the local player), low = CoastalLowland
+--       index (Gathering Storm), flooded = true, submerged = true }
 --   rivers = { { name, edges = { {a, b}, ... }, floodplains = { index } } }
 --   players = { { id, civ, leader, minor = bool } }  (id 0 = local player)
 --   cities = { { id, owner, x, y, name, population, capital, plots = { index },
@@ -243,6 +244,7 @@ function CmpGame.New(spec)
       resourceCount = p.rc or 1,
       improvement = p.imp and (gi.Improvements[p.imp] or error("unknown improvement " .. p.imp)) or nil,
       lake = p.lake == true, hidden = p.hidden == true,
+      lowland = p.low or -1, flooded = p.flooded == true, submerged = p.submerged == true,
       owner = -1, city = nil, district = nil, wonder = nil, riverEdges = {}, appeal = 0,
     }, Plot)
     byIndex[i] = plot
@@ -1007,6 +1009,12 @@ function CmpGame.New(spec)
     },
     GameEffects = GameEffects,
     RiverManager = RiverManager,
+    -- Coastal lowland and the sea level (scenes from Gathering Storm games).
+    TerrainManager = {
+      GetCoastalLowlandType = function(plot) return plot.lowland end,
+      IsFlooded = function(plot) return plot.flooded end,
+      IsSubmerged = function(plot) return plot.submerged end,
+    },
     AdjacencyBonusTypes = {
       NO_ADJACENCY = -1, ADJACENCY_DISTRICT = 0, ADJACENCY_FEATURE = 1, ADJACENCY_IMPROVEMENT = 2,
       ADJACENCY_NATURAL_WONDER = 3, ADJACENCY_RESOURCE = 4, ADJACENCY_RESOURCE_CLASS = 5, ADJACENCY_RIVER = 6,

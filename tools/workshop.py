@@ -18,7 +18,7 @@ workshop/ holds what goes to the item page:
   item.json                       app id and, once the item exists, its id (publishedfileid)
   images.txt                      the pictures to add on the item page, in order
   preview.jpg                     the preview image (rendered from src/preview.html)
-  images/                         rendered diagrams (src/flow.html, src/compare.html)
+  images/                         the gallery pictures rendered from src/g*.html and src/compare.html (slide.css)
 
 pack takes the mod from the release tag (git archive) and everything else from
 the last commit, so a package always matches a release.
@@ -193,14 +193,109 @@ def compare_page():
     return out
 
 
+CITY_COLORS = ["#2f8fb5", "#e0703a", "#9a5cc8"]
+TERRAIN_FILL = {"TERRAIN_GRASS": "#8fae5a", "TERRAIN_PLAINS": "#c2b170", "TERRAIN_GRASS_HILLS": "#7d9450",
+                "TERRAIN_COAST": "#6fa8c7"}
+LABEL = {"DISTRICT_COMMERCIAL_HUB": "CH", "DISTRICT_HANSA": "H"}
+
+
+def multi_svg(spec, items, x0=5, x1=13, y0=3, y1=9, s=33.0):
+    """One plan of the triangle probe as a hex map: districts in their city's
+    color, city centers numbered. Pointy-top hexes, odd rows shifted right,
+    north up (as in the game)."""
+    import math
+    w = math.sqrt(3) * s
+    cities = [tuple(c) for c in spec["cities"]]
+    ids = sorted({it["city"] for it in items})
+    color = {cid: CITY_COLORS[i % len(CITY_COLORS)] for i, cid in enumerate(ids)}
+    at = {(it["x"], it["y"]): it for it in items}
+
+    def center(x, y):
+        return (x - x0 + 0.5 * (y & 1)) * w + w / 2 + 6, (y1 - y) * 1.5 * s + s + 6
+
+    def hexagon(cx, cy, r):
+        pts = []
+        for k in range(6):
+            a = math.radians(60 * k - 30)
+            pts.append("%.1f,%.1f" % (cx + r * math.cos(a), cy + r * math.sin(a)))
+        return " ".join(pts)
+    out = []
+    for y in range(y0, y1 + 1):
+        for x in range(x0, x1 + 1):
+            p = spec["plots"][y * spec["width"] + x]
+            cx, cy = center(x, y)
+            out.append('<polygon points="%s" fill="%s" stroke="#33402a" stroke-width="1.2"/>'
+                       % (hexagon(cx, cy, s - 0.6), TERRAIN_FILL.get(p["t"], "#8fae5a")))
+            if p["t"].endswith("_HILLS"):
+                out.append('<path d="M%.1f %.1f l9 -10 l9 10" fill="none" stroke="#4d5c33" stroke-width="2.4"/>' % (cx - 9, cy + 12))
+            if p.get("f") == "FEATURE_FOREST" and (x, y) not in at:
+                for dx in (-8, 6):
+                    out.append('<path d="M%.1f %.1f l6 -13 l6 13 z" fill="#3f6a32"/>' % (cx + dx - 6, cy + 6))
+    for y in range(y0, y1 + 1):  # the river runs between columns 8 and 9
+        if 3 <= y <= 12:
+            cx, cy = center(8, y)
+            out.append('<line x1="%.1f" y1="%.1f" x2="%.1f" y2="%.1f" stroke="#3b7fd0" stroke-width="7" stroke-linecap="round"/>'
+                       % (cx + w / 2, cy - s / 2, cx + w / 2, cy + s / 2))
+    for (x, y), it in at.items():
+        cx, cy = center(x, y)
+        out.append('<polygon points="%s" fill="%s" stroke="#fff" stroke-width="2.5"/>' % (hexagon(cx, cy, s - 3), color[it["city"]]))
+        out.append('<text x="%.1f" y="%.1f" text-anchor="middle" font-size="19" font-weight="700" fill="#fff">%s</text>'
+                   % (cx, cy - 2, LABEL.get(it["type"], "?")))
+        out.append('<text x="%.1f" y="%.1f" text-anchor="middle" font-size="17" font-weight="600" fill="#fff">+%d</text>'
+                   % (cx, cy + 17, it["adj"]))
+    for n, (x, y) in enumerate(cities):
+        cx, cy = center(x, y)
+        cid = 65536 + n
+        out.append('<polygon points="%s" fill="#1d2326" stroke="%s" stroke-width="5"/>' % (hexagon(cx, cy, s - 3), color.get(cid, "#fff")))
+        out.append('<text x="%.1f" y="%.1f" text-anchor="middle" font-size="26" font-weight="700" fill="#fff">%d</text>' % (cx, cy + 9, n + 1))
+    W = (x1 - x0 + 1.5) * w + 12
+    H = (y1 - y0) * 1.5 * s + 2 * s + 12
+    return ('<svg viewBox="0 0 %.0f %.0f" font-family="Helvetica Neue, Arial, sans-serif">%s</svg>' % (W, H, "".join(out)))
+
+
+def multi_page():
+    """src/g1-multi.html with the triangle probe's two plans drawn in."""
+    run = subprocess.run(["node", os.path.join(ROOT, "tools", "compare.mjs"), "--probe",
+                          os.path.join(ROOT, "tests", "compare", "cmp_workshop_multi.lua")],
+                         cwd=ROOT, capture_output=True, text=True, check=True)
+    spec, plans, gains = None, {}, {}
+    for line in run.stdout.splitlines():
+        if line.startswith("SPEC "):
+            spec = json.loads(line[5:])
+        elif line.startswith("RESULT "):
+            _, label, gain = line.split()
+            gains[label] = int(float(gain))
+        elif line.startswith("ITEM "):
+            _, label, city, dtype, x, y, ylds = (line.split() + [""])[:7]
+            adj = sum(int(v.split("=")[1]) for v in ylds.split(",") if "=" in v)
+            plans.setdefault("joint" if label == "joint" else "single", []).append(
+                {"city": int(city), "type": dtype, "x": int(x), "y": int(y), "adj": adj})
+        elif line.startswith("SINGLE_TOTAL "):
+            gains["single"] = int(float(line.split()[1]))
+    src = read(os.path.join(WS, "src", "g1-multi.html"))
+    src = (src.replace("{{SINGLE_SVG}}", multi_svg(spec, plans["single"])).replace("{{JOINT_SVG}}", multi_svg(spec, plans["joint"]))
+              .replace("{{SINGLE}}", "+%d" % gains["single"]).replace("{{JOINT}}", "+%d" % gains["joint"]))
+    out = os.path.join(WS, "src", ".g1-multi.rendered.html")
+    with open(out, "w", encoding="utf-8") as fh:
+        fh.write(src)
+    return out
+
+
 def render(_args):
+    """The preview, then the gallery pictures: src/g<n>-<name>.html,
+    src/g1-multi.html (with the probe's plans drawn in) and src/compare.html
+    (picture 03) -> images/<n>-<name>.jpg, 1920 x 1080."""
     shoot(os.path.join(WS, "src", "preview.html"), os.path.join(WS, "preview.jpg"), 1024, 1024)
-    shoot(os.path.join(WS, "src", "flow.html"), os.path.join(WS, "images", "flow.jpg"), 1600, 900)
-    page = compare_page()
-    try:
-        shoot(page, os.path.join(WS, "images", "compare.jpg"), 1600, 900)
-    finally:
-        os.remove(page)
+    os.makedirs(os.path.join(WS, "images"), exist_ok=True)
+    for name in sorted(os.listdir(os.path.join(WS, "src"))):
+        m = re.match(r"g(\d)-([a-z]+)\.html$", name)
+        if m and name != "g1-multi.html":
+            shoot(os.path.join(WS, "src", name), os.path.join(WS, "images", "0%s-%s.jpg" % m.groups()), 1920, 1080)
+    for page, out in ((multi_page(), "01-multi.jpg"), (compare_page(), "03-compare.jpg")):
+        try:
+            shoot(page, os.path.join(WS, "images", out), 1920, 1080)
+        finally:
+            os.remove(page)
     return 0
 
 

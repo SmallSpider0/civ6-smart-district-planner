@@ -1,12 +1,7 @@
 # 物品页上的图片，按顺序在网页的“添加/编辑图片和视频”里上传。每行：路径  说明
-workshop/images/flow.jpg               用法：设必建、候选 → 三套方案 → 地图预览 → 打钉
-docs/images/v7-en-panel-single.jpg     单城页签（英文界面）
-docs/images/v4-map-single-preview.jpg  单城方案在地图上预览
-workshop/images/compare.jpg            同一座城、同样的区域，三个规划器的方案
-docs/images/v7-en-panel-multi.jpg      多城页签（英文界面）
-docs/images/v3-map-multi-preview.jpg   多城方案预览
-docs/images/v7-en-panel-sites.jpg      选城址页签（英文界面）
-docs/images/v7-en-sites-tooltip.jpg    城址的悬停提示：水源、距离、资源（英文界面）
-docs/images/v4-map-reminders.jpg       “勿砍”提醒钉
-docs/images/v5-late-multi.jpg          后期存档里的多城规划
-docs/images/v7-panel-single.jpg        单城页签（中文界面）
+workshop/images/01-multi.jpg        几座城一起规划：逐城 +19 与一起 +29（tests/compare/cmp_workshop_multi.lua）
+workshop/images/02-plan.jpg         单城：方案在地图上预览
+workshop/images/03-compare.jpg      同一座城，三个规划器
+workshop/images/04-sites.jpg        选城址与悬停提示
+workshop/images/05-reminders.jpg    勿砍提醒钉
+workshop/images/06-panel.jpg        面板三个页签，中英文界面

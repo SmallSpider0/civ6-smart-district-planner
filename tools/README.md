@@ -109,7 +109,7 @@ node tools/compare.mjs --probe FILE.lua                    # 在本 mod 的状�
 - 交叉评分（第 18.1 节第 2 条）：`--crossscore` 对结果文件里每个方案，在新的 Lua 状态里调用 `tests/compare/cmp_cross_<打分方>.lua` 的 `CmpCross[打分方](request, plan, w)`，返回该对手自己的目标函数对这个方案的分数（`score`、空方案的 `baseline`、`gain`），写进 `row.cross`；`summarize.py` 以 `cross_amt`、`cross_ep` 字段汇总。
 - `summarize.py` 按场景集分组列表，并给出本模组标准档对每个对手的逐场景配对比较：胜/平/负、平均差及其 95% 自助法置信区间（2000 次确定性重抽样）、符号检验 p 值；城市总产出用本模组的"计入地块"一组比较。覆盖场景另列覆盖与相邻加成两项的帕累托比较（`pareto`：两项都不差且至少一项更好 / 更差 / 相同 / 各有胜负）和各设置的平均值。
 - 结果 JSON lines：方案、裁判分（`gain`、`violations`、`items`、城市总产出 `output = gain + worked`、漏放 `missing` 与其中有位置却没放的 `missingPlaceable`）、耗时、DMT 调用次数。`summarize.py` 以每个场景所有合法方案里的最高加成为参照，算质量、达到最高的比例、合法率、漏放、城市总产出、确定性（"#2" 重复运行与原运行比方案）。
-- 入库的结果（2026-10-20）：开发集 `full_rejudged.jsonl`（588 次运行）与 `land.jsonl`（本 mod 计入地块的 84 次）、留出集 `heldout.jsonl`、三组权重 `profiles_{SCI,PROD,FAITH}.jsonl`、奇观 `wonders_sdp_ep.jsonl` + `wonders_amt.jsonl`（本 mod 加入补放后重跑的是 `wonders_sdp_repair.jsonl`）、选城址 `sites.jsonl`，以及交叉评分 `*_cross.jsonl`；覆盖范围 `coverage_sdp.jsonl`、`coverage_amt.jsonl`。汇总时把后者放在后面，同名运行以后面的为准。
+- 入库的结果（2026-10-20）：开发集 `full_rejudged.jsonl`（588 次运行）与 `land.jsonl`（本 mod 计入地块的 84 次）、留出集 `heldout.jsonl`、三组权重 `profiles_{SCI,PROD,FAITH}.jsonl`、奇观 `wonders_sdp_ep.jsonl` + `wonders_amt.jsonl`（本 mod 加入补放后重跑的是 `wonders_sdp_repair.jsonl`；v1.2.0 加了奇观同城规则后三个规划器重跑、用新裁判重评的是 `wonders_v120.jsonl`）、选城址 `sites.jsonl`，以及交叉评分 `*_cross.jsonl`；覆盖范围 `coverage_sdp.jsonl`、`coverage_amt.jsonl`。汇总时把后者放在后面，同名运行以后面的为准。
 
 ## snapshot.py — 从真实对局导出对比场景
 
@@ -151,7 +151,7 @@ python3 -I tools/package.py --release --version v1.1.0    # 输出 dist/SmartDis
 
 ```bash
 python3 -I tools/workshop.py check            # 标题、简介、更新说明的长度，图片大小
-python3 -I tools/workshop.py render           # workshop/src/*.html 渲染成 preview.jpg 和示意图（需要 Chrome 和 Pillow）
+python3 -I tools/workshop.py render           # workshop/src/*.html 渲染成 preview.jpg 和 images/ 里的 6 张图（需要 Chrome 和 Pillow；第 1 张先跑 tests/compare/cmp_workshop_multi.lua）
 python3 -I tools/workshop.py pack v1.0.0      # dist/SmartDistrictPlanner-v1.0.0-workshop.zip
 python3 -I tools/workshop.py vdf 解压目录      # 在解压后的提交包里写出带本机绝对路径的 item.vdf
 ```

@@ -152,6 +152,11 @@ function E.Scene(opts)
       if plot:GetImprovementType() ~= -1 then entry.imp = gi.Improvements[plot:GetImprovementType()].ImprovementType end
       if plot:IsLake() then entry.lake = true end
       if not visibility:IsRevealed(plot:GetIndex()) then entry.hidden = true end
+      if TerrainManager ~= nil and TerrainManager.GetCoastalLowlandType(plot) ~= -1 then
+        entry.low = TerrainManager.GetCoastalLowlandType(plot)
+        if TerrainManager.IsFlooded(plot) then entry.flooded = true end
+        if TerrainManager.IsSubmerged(plot) then entry.submerged = true end
+      end
       plots[#plots + 1] = entry
       local index = ly * width + lx
       if plot:GetOwner() ~= -1 then

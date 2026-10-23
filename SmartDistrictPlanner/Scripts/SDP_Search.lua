@@ -89,6 +89,13 @@ SDP_Search.Better = Better
 --               every placed slot of such a group joins the group's Start
 --               through Through plots that no other group's slot occupies
 --               (issue 35: a city can only grow into plots next to its own)
+--   Owners      { Wonder = { [position] = { [group] = true } } (the groups whose
+--                 city could own the candidate), Fixed = { [plot index] =
+--                 { Type, Groups = { [group] = true } } } (fixed districts and
+--                 the groups they belong to) } or nil (off): a wonder slot's
+--               Requires counts only a district of a city that could own the
+--               wonder's plot, placed (a slot of such a group) or fixed
+--               (issue 45: the game takes only the wonder's own city's)
 -- }
 function SDP_Search.New(spec)
   local self = setmetatable({}, Search)
@@ -103,6 +110,7 @@ function SDP_Search.New(spec)
   self.AltCount = spec.Alternatives or 0
   self.Alt = {}
   self.ReachSpec = spec.Reach
+  self.Owners = spec.Owners
   self.CoverLists = {} -- scratch for CoverageCount
   self.SlotSpecs = spec.Slots
   self.Moving, self.Taken, self.Mark = {}, {}, {} -- scratch tables for Evaluate
@@ -127,6 +135,51 @@ function Search:Subject(m, i)
   return subject
 end
 
+local function Serves(slotType, required)
+  if slotType == required then return true end
+  local row = GameInfo.DistrictReplaces[slotType]
+  return row ~= nil and row.ReplacesDistrictType == required
+end
+
+-- Whether a district of type `required` next to candidate i belongs to a
+-- city that could own i (spec.Owners): a fixed one, or (with `layout`) a
+-- placed slot of such a city's group. Without Owners any city's counts.
+function Search:OwnDistrictNext(required, i, layout)
+  local owners = self.Owners
+  if owners == nil then return true end
+  local cities = owners.Wonder[i]
+  if cities == nil then return false end
+  for _, index in ipairs(self.Board:Neighbours(self.Candidates[i].Index)) do
+    local f = index and owners.Fixed[index]
+    if f ~= nil and Serves(f.Type, required) then
+      for g in pairs(f.Groups) do
+        if cities[g] then return true end
+      end
+    end
+  end
+  if layout ~= nil then
+    local _, is = self:Touching()
+    for m = 1, self.K do
+      local j = layout[m]
+      if j ~= 0 and is[i][j] and self.Kinds[m] == "DISTRICT" and cities[self.Groups[m]]
+          and Serves(self.Types[m], required) then
+        return true
+      end
+    end
+  end
+  return false
+end
+
+-- Whether every placed wonder that must be next to a district has one of
+-- its own city's (OwnDistrictNext).
+function Search:WondersServed(layout)
+  for m = 1, self.K do
+    local i, required = layout[m], self.SlotSpecs[self.SlotIndex[m]].Requires
+    if i ~= 0 and required ~= nil and not self:OwnDistrictNext(required, i, layout) then return false end
+  end
+  return true
+end
+
 -- Every slot alone on every allowed candidate. Slots without any legal plot
 -- are dropped; returns the list of their indices into spec.Slots. Afterwards
 -- K, Types, Kinds, Groups, Single, Legal and SlotIndex (into spec.Slots)
@@ -146,17 +199,26 @@ function Search:Singles()
         row[i] = { Key = slot.Key, Type = slot.Type or "DISTRICT", X = c.X, Y = c.Y }
         board:Put(1, row[i])
         local gain, isLegal = board:Total()
+        -- Next to another city's district only: not legal alone (issue 45).
+        if isLegal and slot.Requires ~= nil and not self:OwnDistrictNext(slot.Requires, i) then isLegal = false end
         if not isLegal and slot.Requires ~= nil then
+          local mine = self.Owners and self.Owners.Wonder[i] or nil
           for _, j in ipairs(adjacent[i]) do
-            local cj = self.Candidates[j]
-            board:Put(2, { Key = slot.Requires, Type = "DISTRICT", X = cj.X, Y = cj.Y })
-            board:Total()
-            local wonderLegal = board.slots[1].Legal
-            board:Put(2, nil)
-            board:Total()
-            if wonderLegal then
-              isLegal = true
-              break
+            local shared = mine == nil
+            for g in pairs(mine or {}) do
+              if self.Owners.Wonder[j] and self.Owners.Wonder[j][g] then shared = true end
+            end
+            if shared then
+              local cj = self.Candidates[j]
+              board:Put(2, { Key = slot.Requires, Type = "DISTRICT", X = cj.X, Y = cj.Y })
+              board:Total()
+              local wonderLegal = board.slots[1].Legal
+              board:Put(2, nil)
+              board:Total()
+              if wonderLegal then
+                isLegal = true
+                break
+              end
             end
           end
         end
@@ -339,6 +401,7 @@ function Search:Evaluate(layout)
   local gain, legal = board:Total()
   self.Stats.Evaluations = self.Stats.Evaluations + 1
   if legal and self.Reach ~= nil and not self:Reachable(layout) then legal = false end
+  if legal and self.Owners ~= nil and not self:WondersServed(layout) then legal = false end
   local appeal, boosts = self.AppealModel, nil
   if appeal ~= nil then
     local value

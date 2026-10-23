@@ -90,14 +90,14 @@
  "Steps": [
   {
    "Label": "load steps",
-   "Seconds": 0.097,
+   "Seconds": 0.123,
    "Data": {
     "Step": "Loaded"
    }
   },
   {
    "Label": "census",
-   "Seconds": 0.043,
+   "Seconds": 0.065,
    "Data": {
     "Cities": [
      {
@@ -179,7 +179,7 @@
   },
   {
    "Label": "preserves",
-   "Seconds": 0.045,
+   "Seconds": 0.059,
    "Data": {
     "Expected": 0,
     "List": [],
@@ -192,7 +192,7 @@
   },
   {
    "Label": "single 京都 FAST pool",
-   "Seconds": 0.084,
+   "Seconds": 0.129,
    "Data": {
     "Adjacency": 11,
     "Appeal": 0,
@@ -223,7 +223,7 @@
   },
   {
    "Label": "single 京都 STANDARD pool",
-   "Seconds": 0.161,
+   "Seconds": 0.238,
    "Data": {
     "Adjacency": 11,
     "Appeal": 0,
@@ -255,7 +255,7 @@
   },
   {
    "Label": "single 京都 must",
-   "Seconds": 0.1,
+   "Seconds": 0.165,
    "Data": {
     "Adjacency": 20,
     "Appeal": 0,
@@ -283,7 +283,7 @@
   },
   {
    "Label": "single 大阪 FAST pool",
-   "Seconds": 0.104,
+   "Seconds": 0.14,
    "Data": {
     "Adjacency": 9,
     "Asked": 2,
@@ -313,7 +313,7 @@
   },
   {
    "Label": "single 大阪 STANDARD pool",
-   "Seconds": 0.192,
+   "Seconds": 0.253,
    "Data": {
     "Adjacency": 9,
     "Asked": 2,
@@ -344,7 +344,7 @@
   },
   {
    "Label": "single 大阪 must",
-   "Seconds": 0.146,
+   "Seconds": 0.158,
    "Data": {
     "Adjacency": 22,
     "Asked": 6,
@@ -371,7 +371,7 @@
   },
   {
    "Label": "single ���屋 FAST pool",
-   "Seconds": 0.061,
+   "Seconds": 0.114,
    "Data": {
     "Adjacency": 12,
     "Appeal": 0,
@@ -402,7 +402,7 @@
   },
   {
    "Label": "single ���屋 STANDARD pool",
-   "Seconds": 0.103,
+   "Seconds": 0.162,
    "Data": {
     "Adjacency": 12,
     "Appeal": 0,
@@ -434,7 +434,7 @@
   },
   {
    "Label": "single ���屋 must",
-   "Seconds": 0.083,
+   "Seconds": 0.146,
    "Data": {
     "Adjacency": 23,
     "Appeal": 0,
@@ -462,7 +462,7 @@
   },
   {
    "Label": "single �阜 FAST pool",
-   "Seconds": 0.064,
+   "Seconds": 0.105,
    "Data": {
     "Adjacency": 16,
     "Appeal": 1,
@@ -493,7 +493,7 @@
   },
   {
    "Label": "single �阜 STANDARD pool",
-   "Seconds": 0.085,
+   "Seconds": 0.167,
    "Data": {
     "Adjacency": 16,
     "Appeal": 1,
@@ -525,7 +525,7 @@
   },
   {
    "Label": "single �阜 must",
-   "Seconds": 0.05,
+   "Seconds": 0.101,
    "Data": {
     "Adjacency": 10,
     "Appeal": 0,
@@ -553,7 +553,7 @@
   },
   {
    "Label": "single 冈山 FAST pool",
-   "Seconds": 0.067,
+   "Seconds": 0.126,
    "Data": {
     "Adjacency": 6,
     "Asked": 2,
@@ -583,7 +583,7 @@
   },
   {
    "Label": "single 冈山 STANDARD pool",
-   "Seconds": 0.147,
+   "Seconds": 0.233,
    "Data": {
     "Adjacency": 6,
     "Asked": 2,
@@ -614,7 +614,7 @@
   },
   {
    "Label": "single 冈山 must",
-   "Seconds": 0.109,
+   "Seconds": 0.184,
    "Data": {
     "Adjacency": 15,
     "Asked": 6,
@@ -641,7 +641,7 @@
   },
   {
    "Label": "single 京都 appeal",
-   "Seconds": 0.023,
+   "Seconds": 0.037,
    "Data": {
     "Adjacency": 9,
     "Appeal": 6,
@@ -693,7 +693,7 @@
   },
   {
    "Label": "single 京都 harbor",
-   "Seconds": 0.027,
+   "Seconds": 0.037,
    "Data": {
     "Adjacency": 13,
     "Appeal": 0,
@@ -723,7 +723,7 @@
   },
   {
    "Label": "single 大阪 appeal",
-   "Seconds": 0.034,
+   "Seconds": 0.048,
    "Data": {
     "Adjacency": 5,
     "Appeal": 5,
@@ -775,7 +775,7 @@
   },
   {
    "Label": "single ���屋 appeal",
-   "Seconds": 0.024,
+   "Seconds": 0.032,
    "Data": {
     "Adjacency": 2,
     "Appeal": 6,
@@ -821,7 +821,7 @@
   },
   {
    "Label": "single 京都 fine",
-   "Seconds": 0.049,
+   "Seconds": 0.081,
    "Data": {
     "Adjacency": 11,
     "Appeal": 0,
@@ -852,7 +852,7 @@
   },
   {
    "Label": "sites 3 within 8",
-   "Seconds": 0.648,
+   "Seconds": 1.131,
    "Data": {
     "Calls": 8513,
     "D": 8,
@@ -866,7 +866,7 @@
   },
   {
    "Label": "place sites",
-   "Seconds": 0.04,
+   "Seconds": 0.067,
    "Data": {
     "Placed": 3,
     "Step": "PlaceSites"
@@ -874,7 +874,7 @@
   },
   {
    "Label": "multi 4 cities standard",
-   "Seconds": 3.397,
+   "Seconds": 4.515,
    "Data": {
     "Adjacency": 103,
     "Appeal": 1,
@@ -906,12 +906,12 @@
   },
   {
    "Label": "settle after place multi",
-   "Seconds": 0.304,
+   "Seconds": 0.411,
    "Data": null
   },
   {
    "Label": "multi 8 cities standard",
-   "Seconds": 1.055,
+   "Seconds": 1.358,
    "Data": {
     "Adjacency": 46,
     "Appeal": 0,
@@ -935,7 +935,7 @@
   },
   {
    "Label": "multi 4 cities fine",
-   "Seconds": 1.537,
+   "Seconds": 1.994,
    "Data": {
     "Adjacency": 36,
     "Appeal": 0,
@@ -959,7 +959,7 @@
   },
   {
    "Label": "heavy pins",
-   "Seconds": 0.177,
+   "Seconds": 0.384,
    "Data": {
     "Placed": 51,
     "Step": "HeavyPins"
@@ -967,12 +967,12 @@
   },
   {
    "Label": "settle after heavy pins",
-   "Seconds": 3.638,
+   "Seconds": 4.565,
    "Data": null
   },
   {
    "Label": "single 京都 pool, crowded",
-   "Seconds": 0.105,
+   "Seconds": 0.083,
    "Data": {
     "Adjacency": 11,
     "Appeal": 0,
@@ -1002,7 +1002,7 @@
   },
   {
    "Label": "multi 4 cities, crowded",
-   "Seconds": 0.341,
+   "Seconds": 0.405,
    "Data": {
     "Adjacency": 27,
     "Appeal": 0,
@@ -1026,7 +1026,7 @@
   },
   {
    "Label": "panel",
-   "Seconds": 0.042,
+   "Seconds": 0.045,
    "Data": {
     "Ok": true,
     "Step": "Panel"
@@ -1034,74 +1034,12 @@
   },
   {
    "Label": "undo",
-   "Seconds": 0.142,
+   "Seconds": 0.162,
    "Data": {
     "Removed": 75,
     "Step": "UndoAll"
    }
   }
  ],
- "When": "2026-10-23 10:07",
- "AppealCheck": [
-  {
-   "City": 65536,
-   "Built": "DISTRICT_INDUSTRIAL_ZONE=true,DISTRICT_NEIGHBORHOOD=true",
-   "HousingPredicted": 6,
-   "HousingGame": 6.0,
-   "HousingDistricts": 6.0,
-   "HousingImprovements": -1.0,
-   "ImprovementsPredicted": -1,
-   "Districts": [
-    {
-     "Type": "DISTRICT_NEIGHBORHOOD",
-     "X": 27,
-     "Y": 20,
-     "AppealPredicted": 5,
-     "AppealGame": 5,
-     "Housing": 6
-    }
-   ],
-   "Ok": true
-  },
-  {
-   "City": 393219,
-   "Built": "DISTRICT_INDUSTRIAL_ZONE=true,DISTRICT_NEIGHBORHOOD=true",
-   "HousingPredicted": 5,
-   "HousingGame": 5.0,
-   "HousingDistricts": 5.0,
-   "HousingImprovements": 0.0,
-   "ImprovementsPredicted": 0,
-   "Districts": [
-    {
-     "Type": "DISTRICT_NEIGHBORHOOD",
-     "X": 28,
-     "Y": 13,
-     "AppealPredicted": 2,
-     "AppealGame": 2,
-     "Housing": 5
-    }
-   ],
-   "Ok": true
-  },
-  {
-   "City": 327682,
-   "Built": "DISTRICT_NEIGHBORHOOD=true",
-   "HousingPredicted": 6,
-   "HousingGame": 6.0,
-   "HousingDistricts": 6.0,
-   "HousingImprovements": 0.0,
-   "ImprovementsPredicted": 0,
-   "Districts": [
-    {
-     "Type": "DISTRICT_NEIGHBORHOOD",
-     "X": 27,
-     "Y": 19,
-     "AppealPredicted": 5,
-     "AppealGame": 5,
-     "Housing": 6
-    }
-   ],
-   "Ok": true
-  }
- ]
+ "When": "2026-10-23 12:50"
 }

@@ -264,6 +264,28 @@ test("an unowned plot cut off from the city's territory is left out (issue 35)",
   T.ok(walled.Reach.Reached[Map.GetPlotIndex(5, 4)], "the center is reached")
 end)
 
+test("flooded coastal lowland is left out (issue 44)", function()
+  NewWorld({ cities = { { id = 1, x = 5, y = 4, population = 7, capital = true, radius = 1 } } })
+  local before = SDP_City.Scan(0, 1)
+  local flooded, dry = before.Candidates[1], before.Candidates[2]
+  -- Two lowland plots, one of them flooded; TerrainManager exists only in Gathering Storm.
+  TerrainManager = { -- lint: allow global-assign
+    GetCoastalLowlandType = function(plot)
+      return (plot:GetIndex() == flooded.Index or plot:GetIndex() == dry.Index) and 0 or -1
+    end,
+    IsFlooded = function(plot) return plot:GetIndex() == flooded.Index end,
+    IsSubmerged = function() return false end,
+  }
+  local ok, after = pcall(SDP_City.Scan, 0, 1)
+  TerrainManager = nil -- lint: allow global-assign
+  T.ok(ok, tostring(after))
+  T.eq(after.Excluded[flooded.Index], "FLOODED", "the flooded plot")
+  T.eq(after.Excluded[dry.Index], nil, "lowland that is not flooded stays")
+  T.eq(#after.Candidates, #before.Candidates - 1, "one candidate fewer")
+  local plan = SDP_Solver.Solve({ PlayerID = 0, CityID = 1, Weights = ONES, Districts = { "DISTRICT_CAMPUS" } })
+  T.ok(plan.Plan[1] ~= nil, "no TerrainManager: nothing is flooded")
+end)
+
 test("a plan says which plots the city must own first and which features need a technology", function()
   -- A city next to the marsh at (2,7); clearing marsh takes irrigation.
   local function Plan(techs)
