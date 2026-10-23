@@ -120,6 +120,21 @@ local function YieldText(yields)
   return table.concat(parts, " ")
 end
 
+-- The text under a preview icon: the plan entry's adjacency yields as the
+-- game shows them (DMT's numbers, not weighted; issue 34), nothing when
+-- there are none.
+local function PinText(yields)
+  if yields == nil then return "" end
+  local parts = {}
+  for _, yieldType in ipairs(SDP_Rules.YIELDS) do
+    local amount = yields[yieldType]
+    if amount ~= nil and amount ~= 0 then
+      parts[#parts + 1] = Locale.Lookup("LOC_SDP_YIELD_SHORT_" .. yieldType) .. Signed(amount)
+    end
+  end
+  return table.concat(parts, " ")
+end
+
 -- Localized name of a district, improvement, building or feature type.
 -- Texts joined with the language's separator ("a; b; c"). The separator sits
 -- inside a format string (LOC_SDP_LIST_JOIN = "{1_A}; {2_B}"): the game trims
@@ -141,7 +156,7 @@ end
 -- Helpers shared with the other tabs (SDP_PageSites, SDP_PageMulti).
 SDP_UI = {
   MAX_WEIGHT = MAX_WEIGHT, WEIGHT_COLUMNS = WEIGHT_COLUMNS,
-  Number = Number, Signed = Signed, Where = Where, YieldText = YieldText, TypeName = TypeName, Join = Join,
+  Number = Number, Signed = Signed, Where = Where, YieldText = YieldText, PinText = PinText, TypeName = TypeName, Join = Join,
 }
 
 -- ===========================================================================
@@ -567,7 +582,7 @@ local function Preview(n)
   for _, entry in ipairs(SDP_City.PlotsInRange(m_scan.X, m_scan.Y, SDP_City.RADIUS)) do plots[#plots + 1] = entry.Index end
   local icons = {}
   for _, p in ipairs(solution.Plan) do
-    icons[#icons + 1] = { X = p.X, Y = p.Y, Icon = "ICON_" .. p.Type, Text = Signed(p.Score) }
+    icons[#icons + 1] = { X = p.X, Y = p.Y, Icon = "ICON_" .. p.Type, Text = PinText(p.Yields) }
   end
   for _, r in ipairs(solution.Remind or {}) do
     icons[#icons + 1] = { X = r.X, Y = r.Y, Icon = SDP_Pins.REMIND_ICON, Text = "" }
@@ -976,7 +991,7 @@ ShowHeat = function(districtType)
       if best > worst then shade = math.min(4, 1 + math.floor(3 * (best - spot.Gain) / (best - worst) + 1e-9)) end
       local plots = areas[shade].Plots
       plots[#plots + 1] = spot.Index
-      icons[#icons + 1] = { X = spot.X, Y = spot.Y, Icon = "ICON_" .. districtType, Text = Signed(spot.Gain) }
+      icons[#icons + 1] = { X = spot.X, Y = spot.Y, Icon = "ICON_" .. districtType, Text = PinText(spot.Yields) }
     end
     SDP_Preview.Show(playerID, areas, icons)
     m_heatSpots = spots
