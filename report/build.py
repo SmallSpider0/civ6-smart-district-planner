@@ -56,7 +56,7 @@ STRESS_ERAS = {"ERA_ANCIENT": "远古", "ERA_CLASSICAL": "古典", "ERA_MEDIEVAL
 RESULTS = ["tests/compare/results/" + f + ".jsonl" for f in (
     "full_rejudged", "land", "full_cross", "heldout", "heldout_cross",
     "profiles_SCI", "profiles_PROD", "profiles_FAITH", "sites",
-    "wonders_sdp_ep", "wonders_amt", "wonders_cross", "wonders_sdp_repair",
+    "wonders_sdp_ep", "wonders_amt", "wonders_cross", "wonders_sdp_repair", "wonders_v120",
     "coverage_sdp", "coverage_amt")]
 
 PLANNERS = {
