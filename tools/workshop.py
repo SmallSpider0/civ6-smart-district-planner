@@ -253,8 +253,9 @@ def multi_svg(spec, items, x0=5, x1=13, y0=3, y1=9, s=33.0):
     return ('<svg viewBox="0 0 %.0f %.0f" font-family="Helvetica Neue, Arial, sans-serif">%s</svg>' % (W, H, "".join(out)))
 
 
-def multi_page():
-    """src/g1-multi.html with the triangle probe's two plans drawn in."""
+def multi_probe():
+    """The triangle probe (tests/compare/cmp_workshop_multi.lua): the map,
+    the two plans and their gains."""
     run = subprocess.run(["node", os.path.join(ROOT, "tools", "compare.mjs"), "--probe",
                           os.path.join(ROOT, "tests", "compare", "cmp_workshop_multi.lua")],
                          cwd=ROOT, capture_output=True, text=True, check=True)
@@ -272,6 +273,12 @@ def multi_page():
                 {"city": int(city), "type": dtype, "x": int(x), "y": int(y), "adj": adj})
         elif line.startswith("SINGLE_TOTAL "):
             gains["single"] = int(float(line.split()[1]))
+    return spec, plans, gains
+
+
+def multi_page(probe):
+    """src/g1-multi.html with the triangle probe's two plans drawn in."""
+    spec, plans, gains = probe
     src = read(os.path.join(WS, "src", "g1-multi.html"))
     src = (src.replace("{{SINGLE_SVG}}", multi_svg(spec, plans["single"])).replace("{{JOINT_SVG}}", multi_svg(spec, plans["joint"]))
               .replace("{{SINGLE}}", "+%d" % gains["single"]).replace("{{JOINT}}", "+%d" % gains["joint"]))
@@ -281,17 +288,33 @@ def multi_page():
     return out
 
 
+def preview_page(probe):
+    """src/preview.html with the probe's joint plan drawn in."""
+    spec, plans, _ = probe
+    src = read(os.path.join(WS, "src", "preview.html")).replace("{{JOINT_SVG}}", multi_svg(spec, plans["joint"]))
+    out = os.path.join(WS, "src", ".preview.rendered.html")
+    with open(out, "w", encoding="utf-8") as fh:
+        fh.write(src)
+    return out
+
+
 def render(_args):
-    """The preview, then the gallery pictures: src/g<n>-<name>.html,
-    src/g1-multi.html (with the probe's plans drawn in) and src/compare.html
-    (picture 03) -> images/<n>-<name>.jpg, 1920 x 1080."""
-    shoot(os.path.join(WS, "src", "preview.html"), os.path.join(WS, "preview.jpg"), 1024, 1024)
+    """The preview (src/preview.html with the probe's joint plan, 1024 x
+    1024), then the gallery pictures: src/g<n>-<name>.html, src/g1-multi.html
+    (with the probe's plans drawn in) and src/compare.html (picture 03) ->
+    images/<n>-<name>.jpg, 1920 x 1080."""
+    probe = multi_probe()
+    page = preview_page(probe)
+    try:
+        shoot(page, os.path.join(WS, "preview.jpg"), 1024, 1024)
+    finally:
+        os.remove(page)
     os.makedirs(os.path.join(WS, "images"), exist_ok=True)
     for name in sorted(os.listdir(os.path.join(WS, "src"))):
         m = re.match(r"g(\d)-([a-z]+)\.html$", name)
         if m and name != "g1-multi.html":
             shoot(os.path.join(WS, "src", name), os.path.join(WS, "images", "0%s-%s.jpg" % m.groups()), 1920, 1080)
-    for page, out in ((multi_page(), "01-multi.jpg"), (compare_page(), "03-compare.jpg")):
+    for page, out in ((multi_page(probe), "01-multi.jpg"), (compare_page(), "03-compare.jpg")):
         try:
             shoot(page, os.path.join(WS, "images", out), 1920, 1080)
         finally:

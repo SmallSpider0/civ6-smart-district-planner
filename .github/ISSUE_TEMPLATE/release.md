@@ -14,6 +14,7 @@ labels: release
 - [ ] 改了求解器或合法性规则：`compare.mjs -p sdp` 开发集，必要时刷新对比结果
 - [ ] 后期存档压力测试 `stress.py`，`refresh_stress_md.py` 刷新自测报告
 - [ ] 界面变了：重新截图（`docs/images/`），需要时重做工坊图片（`tools/workshop.py render`）
+- [ ] 打开 `workshop/preview.jpg` 和 `workshop/images/` 看一遍：封面与第一张图讲的是同一件事（模组最主要的功能），图上的截图是这一版的
 
 **文字**
 - [ ] CHANGELOG：“未发布”改成 `vX.Y.Z（日期）`，每条都是玩家能看懂的变化
