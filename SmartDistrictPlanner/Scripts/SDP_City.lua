@@ -22,6 +22,7 @@ SDP_City.EXCLUDED = {
   FEATURE = "FEATURE",               -- clearing its feature is switched off
   RESOURCE = "RESOURCE",             -- a resource a district cannot remove (luxury, strategic)
   UNREACHABLE = "UNREACHABLE",       -- unowned, and not connected to the city's territory (issue 35)
+  FLOODED = "FLOODED",               -- coastal lowland the sea has flooded (Gathering Storm, issue 44)
 }
 
 -- Resources a district can be built on: the ones the game can harvest
@@ -35,6 +36,18 @@ local function Harvestable(resourceType)
     for row in GameInfo.Resource_Harvests() do m_harvestable[row.ResourceType] = true end
   end
   return m_harvestable[resourceType] == true
+end
+
+-- Coastal lowland the rising sea has flooded or submerged (Gathering
+-- Storm): the game refuses every district there without giving a reason,
+-- and DMT does not check it (pitfall 41). The sea level changes over the
+-- game, so only the current state counts. No TerrainManager (other rule
+-- sets): nothing is flooded.
+local function Flooded(plot)
+  if TerrainManager == nil or TerrainManager.GetCoastalLowlandType == nil then return false end
+  if TerrainManager.GetCoastalLowlandType(plot) == -1 then return false end
+  return (TerrainManager.IsFlooded ~= nil and TerrainManager.IsFlooded(plot) == true)
+    or (TerrainManager.IsSubmerged ~= nil and TerrainManager.IsSubmerged(plot) == true)
 end
 
 local function ByIndex(a, b)
@@ -244,6 +257,7 @@ local function ExclusionReason(plot, playerID, cityID, pinned, siteRings, allowF
   if plot:GetDistrictType() ~= -1 then return E.DISTRICT end
   if plot:GetWonderType() ~= -1 then return E.WONDER end
   if plot:IsNaturalWonder() then return E.NATURAL_WONDER end
+  if Flooded(plot) then return E.FLOODED end
   if pinned[plot:GetIndex()] then return E.PIN end
   local owner = plot:GetOwner()
   if owner ~= -1 and owner ~= playerID then return E.FOREIGN end
