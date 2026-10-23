@@ -426,6 +426,20 @@ def check_version(report, mod_dir):
                      % (found.group(1), newest.group(1)))
 
 
+def check_workshop(report):
+    """The Workshop texts and change notes go into item.vdf at release time
+    (tools/workshop.py); what pack would refuse fails here first."""
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    try:
+        import workshop
+    except ImportError:
+        return
+    for problem in workshop.problems()[0]:
+        label = problem.split(":")[0]
+        path = label if os.path.exists(os.path.join(ROOT, label)) else os.path.join("workshop", label)
+        report.error(os.path.join(ROOT, path), 0, "workshop", problem[len(label) + 1:].strip())
+
+
 def check_lua(report, paths):
     if not paths:
         return True
@@ -467,6 +481,8 @@ def run(mod_dir=MOD_DIR, tests_dir=TESTS_DIR, strict=False, quiet=False):
         check_ui(report, trees, ui_precedents())
         check_click_cover(report, trees)
         check_controls(report, mod_dir, trees)
+    if os.path.isdir(os.path.join(ROOT, "workshop")):
+        check_workshop(report)
     tool_ok = check_lua(report, [p for p in mod_files + test_files if p.endswith(".lua")])
 
     if not quiet:

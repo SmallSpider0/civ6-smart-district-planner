@@ -2,6 +2,15 @@
 
 只列要点，细节在链接的设计文档章节里。括号里是这一段的提交。
 
+## 未发布
+
+仓库与流程：
+
+- 离线对比加了真实集：`tools/snapshot.py` 经 Tuner 把运行中对局的一个窗口（地形、河流、归属、已建区域与奇观、科技、地图钉）导出成场景文件（`tests/compare/scenes/`，编号 `RS`/`RM`），并带上游戏里 DMT 对每个候选格的判定，`snapshot.py check` 用它核对离线世界；三张压力存档导出了 24 个场景，风云变幻的 19 个与游戏逐格一致。`summarize.py` 把它们列为 `real` 组；`compare.mjs --ruleset` 只取规则库对应的场景（multicity-design.md 第 25 节）。
+- 引擎审计 `tests/bench/audit_engine.lua`：存档里每座城、每种区域，引擎可建格与“本模组候选 + DMT”逐格比较，另查需相邻区域的奇观认不认别城的区域。发现两条引擎有、DMT 没有的规则：淹没的沿海低地不能放区域（#44）、奇观只认本城的相邻区域（#45），都排到 v1.2.0；AGENTS 坑 41、42。
+- 对比结果记下求解器自报的质量（穷举、距估计上界的差距、截断、未收敛），`summarize.py` 汇总，并统计估计上界被已知最好解突破的次数：开发集单城 72 个场景里突破 6 次，估计上界不是真上界（#36）。
+- `validate.py` 顺带检查创意工坊的文字（`tools/workshop.py` 打包会拒绝的内容，如更新说明里的英文直引号），发版工作流不再因此失败。
+
 ## v1.1.2（2026-10-23）
 
 修正版：[发布页](https://github.com/SmallSpider0/civ6-smart-district-planner/releases/tag/v1.1.2)。修合作者第四轮实测报告的四个问题（multicity-design.md 第 24 节）。

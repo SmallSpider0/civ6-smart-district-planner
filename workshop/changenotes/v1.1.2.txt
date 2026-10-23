@@ -1,7 +1,7 @@
 Changes since v1.1.1:
 - A city's districts only go on tiles its territory can reach. The game lets a city grow into or buy a tile only next to one it owns, so tiles cut off by another city (an existing one, or another city's planned districts) are no longer used. Before, a plan could put a district behind another city's districts where it could never be built. Same on the One city tab.
-- Each planned district says what the city has to do first: "expand or buy the tile first" when the city does not own it yet, "needs <technology> first" when its feature can only be cleared after that technology. Hints only; the plan is the same.
-- The numbers under the preview icons on the map are DMT's adjacency yields, as the game's placement view shows them, not the weighted score. The weighted score stays in the panel. Same for the "good places" view.
+- Each planned district says what the city has to do first: ‘expand or buy the tile first’ when the city does not own it yet, ‘needs <technology> first’ when its feature can only be cleared after that technology. Hints only; the plan is the same.
+- The numbers under the preview icons on the map are DMT's adjacency yields, as the game's placement view shows them, not the weighted score. The weighted score stays in the panel. Same for the ‘good places’ view.
 - The map preview no longer shows every tile's appeal number.
 - New preview image.
 

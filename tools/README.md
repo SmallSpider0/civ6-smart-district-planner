@@ -103,12 +103,27 @@ node tools/compare.mjs --probe FILE.lua                    # 在本 mod 的状�
   - `W`：24 个中期单城场景，另要两个与地形相符的奇观（`request.wonders`；裁判用 DMT 判奇观合法性，报告 `wondersPlaced`）。
   - `C`：12 个选城址场景（kind `sites`，`request.sites = { count = 2, distance = 8 }`），只比本模组与 EP。裁判 `JudgeSites` 不用任何一方的评分，独立计算合法性与间距、各城址最好 8 块地的产出、淡水、新的奢侈与战略资源种类、区域潜力（城址处打市中心钉后各区域在 DMT 下的最好相邻加成）、重叠格，`siteValue` = 地块产出 + 区域潜力。
   - `V`：12 个覆盖范围场景（multicity-design.md 19.5）：后期 3–4 座城，每座城自己一张清单（`scn.plans`，请求里是 `request.plans[城市 ID]`），只有一两座城要工业区、娱乐中心。本模组跑标准档、精细档各三种覆盖权重（变体 `STANDARD`、`STANDARD_COV1`、`STANDARD_COV3`、`FINE`…；`_COV<n>` 即多城页签的覆盖权重 n），AMT 用同样的逐城清单（它自带覆盖）；EP 不能逐城给清单，不参加。裁判按城检查"没要求的区域"和漏放，并独立计算覆盖：每类基础区域取通用建筑最大的 `RegionalRange`，数玩家城市被覆盖的（城市, 类别）个数，方案前后各一次（`coverageBefore`、`coverage`、`coverageGain`）。
+  - `RS`/`RM`：真实集，从运行中的对局导出的场景文件（`tests/compare/scenes/<编号>.json`，`index.json` 列出；`tools/snapshot.py`，见下）。单城 `RS` 规划 `target` 那座城，多城 `RM` 只规划 `only` 里的城，每城各自的清单（`plans`）。后期的城人口往往放不下请求的特色区域，加载时把要规划的城的人口提到刚好够（已建加请求的特色区域，与裁判的名额规则相同；原人口记在 `savedPopulation`），和生成场景一样按“为以后规划”比较。只取规则库对应规则集的场景（`--ruleset`，默认 `RULESET_EXPANSION_2`）：迭起兴衰存档导出的 5 个场景用风云变幻的规则库核对，学院、工业区的加成不同，所以默认不参加。
   - 对手各跑两种设置：权重与裁判一致（与场景权重相同）和它们面板的默认设置。
 - 模拟层缺的接口会记在输出的 `missingApi` 里；HavokScript 的类型标注在加载时去掉。AMT 的多城联合很慢（离线一局 3–40 分钟），全量对比建议在机器空闲时跑。每个工作线程的 JS 堆上限默认 1536 MB，AMT 的 4 城联合偶尔会超出（线程被终止，那次运行和同线程排队的一次都没有结果，日志里是 `ERR_WORKER_OUT_OF_MEMORY`）；用环境变量 `CMP_HEAP_MB=6144` 单独补跑缺的运行。
 - 交叉评分（第 18.1 节第 2 条）：`--crossscore` 对结果文件里每个方案，在新的 Lua 状态里调用 `tests/compare/cmp_cross_<打分方>.lua` 的 `CmpCross[打分方](request, plan, w)`，返回该对手自己的目标函数对这个方案的分数（`score`、空方案的 `baseline`、`gain`），写进 `row.cross`；`summarize.py` 以 `cross_amt`、`cross_ep` 字段汇总。
 - `summarize.py` 按场景集分组列表，并给出本模组标准档对每个对手的逐场景配对比较：胜/平/负、平均差及其 95% 自助法置信区间（2000 次确定性重抽样）、符号检验 p 值；城市总产出用本模组的"计入地块"一组比较。覆盖场景另列覆盖与相邻加成两项的帕累托比较（`pareto`：两项都不差且至少一项更好 / 更差 / 相同 / 各有胜负）和各设置的平均值。
 - 结果 JSON lines：方案、裁判分（`gain`、`violations`、`items`、城市总产出 `output = gain + worked`、漏放 `missing` 与其中有位置却没放的 `missingPlaceable`）、耗时、DMT 调用次数。`summarize.py` 以每个场景所有合法方案里的最高加成为参照，算质量、达到最高的比例、合法率、漏放、城市总产出、确定性（"#2" 重复运行与原运行比方案）。
 - 入库的结果（2026-10-20）：开发集 `full_rejudged.jsonl`（588 次运行）与 `land.jsonl`（本 mod 计入地块的 84 次）、留出集 `heldout.jsonl`、三组权重 `profiles_{SCI,PROD,FAITH}.jsonl`、奇观 `wonders_sdp_ep.jsonl` + `wonders_amt.jsonl`（本 mod 加入补放后重跑的是 `wonders_sdp_repair.jsonl`）、选城址 `sites.jsonl`，以及交叉评分 `*_cross.jsonl`；覆盖范围 `coverage_sdp.jsonl`、`coverage_amt.jsonl`。汇总时把后者放在后面，同名运行以后面的为准。
+
+## snapshot.py — 从真实对局导出对比场景
+
+```bash
+python3 -I tools/snapshot.py export RS01-pangaea-japan-kyoto --save pangaea-gs --cities 65536   # 读存档后导出一座城的场景
+python3 -I tools/snapshot.py export RM01-pangaea-japan-3c --from pangaea-gs --cities 327682,393219,458756   # 已在对局里：只记存档名
+python3 -I tools/snapshot.py check                 # 全部场景：离线世界里 DMT 的判定与游戏里导出的样本逐格比较
+python3 -I tools/snapshot.py list
+```
+
+- 需要游戏开着、Tuner 连通。`tests/bench/export_scene.lua` 在 `SDP_Panel` 状态里跑：取所选城市周围 6 格的窗口（加上在 4 格内拥有格子的城的市中心），按 `cmp_game.lua` 的 spec 格式写出地形、地貌、资源、改良、湖、未揭示、河流边（风云变幻按命名河流带泛滥平原；其他规则集从过河判断收集）、玩家（本地玩家的科技、市政、万神殿）、城市（归属格、已建区域、建筑）、奇观、地图钉，窗口跨地图接缝时重新编号，起始行取偶数行以保持六边形行的奇偶。另带每座所选城市 3 环内已拥有格上每种可规划区域的 DMT 判定与加成（`sample`）和各环的格索引（`rings`，加载时核对几何）。
+- 请求的区域：开发集的五种加娱乐中心，3 环内有海再加港口，减去该城已建的（特色区域按基础区域算）；多城每城一张清单。
+- `check` 用 `compare.mjs --probe tests/compare/cmp_scene_check.lua --arg <编号>` 在离线世界里重算样本，列出可放置性和加成的差异。
+- 窗口外的城拥有的格会丢掉归属（输出里的 `droppedOwned`）；按构造它们都在所选城市 4 格以外，候选格和相邻格不受影响。
 
 ## deploy.py — 部署
 
@@ -217,6 +232,7 @@ python3 -I tools/stress.py run pangaea-gs         # tests/bench/stress.lua 的�
 python3 -I tools/stress.py check pangaea-gs       # 按玩家的建造流程建出"魅力"一步的方案，比较魅力与住房（会改动当前对局，最后跑）
 python3 -I tools/refresh_stress_md.py             # 把汇总表写进 docs/self-test-report.md（报告第 5.10 节由 report/build.py 生成）
 python3 -I tools/stress.py summary                # 汇总表
+python3 -I tools/run_tests.py -v tests/bench/audit_engine.lua   # 读存档后：每座城每种区域，引擎可建格与"本模组候选 + DMT"逐格比较（会改对局：全部科技、各城 3 环、人口 25）
 ```
 
 - 三个场景（`SCENARIOS`）：风云变幻盘古大陆标准图（北条时宗，远古开局 200 回合）、风云变幻大陆大图（威廉明娜，中世纪开局 150 回合）、迭起兴衰群岛（伯里克利，古典开局 170 回合），都用联机速度。存档在游戏自己的存档目录，不进仓库。
