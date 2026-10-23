@@ -147,10 +147,20 @@ test("candidates are joined to the city's territory; unowned plots and missing t
     local owner = plot:GetOwner() == pid and Cities.GetPlotPurchaseCity(plot) or nil
     local owned = owner ~= nil and owner:GetID() == city:GetID()
     T.eq(c.Unowned, (not owned) or nil, "Unowned at " .. c.X .. "," .. c.Y)
+    -- The feature's removal technology, else the visible bonus resource's
+    -- harvest technology (issue 52; measured 2026-10-23: a campus could go
+    -- on bananas only once Irrigation was known).
     local feature = plot:GetFeatureType()
     local row = feature ~= -1 and GameInfo.Features[feature] or nil
-    local tech = row and row.RemoveTech and GameInfo.Technologies[row.RemoveTech] or nil
+    local tech = row and row.Removable and row.RemoveTech and GameInfo.Technologies[row.RemoveTech] or nil
     local expected = (tech ~= nil and not techs:HasTech(tech.Index)) and tech.TechnologyType or nil
+    local resource = plot:GetResourceType() ~= -1 and GameInfo.Resources[plot:GetResourceType()] or nil
+    if expected == nil and resource ~= nil and Players[pid]:GetResources():IsResourceVisible(resource.Hash) then
+      for harvest in GameInfo.Resource_Harvests() do
+        local need = harvest.ResourceType == resource.ResourceType and harvest.PrereqTech and GameInfo.Technologies[harvest.PrereqTech]
+        if expected == nil and need and not techs:HasTech(need.Index) then expected = need.TechnologyType end
+      end
+    end
     T.eq(c.RemoveTech, expected, "RemoveTech at " .. c.X .. "," .. c.Y)
   end
   -- Every plot the city owns is a start; every unowned plot in range that a
