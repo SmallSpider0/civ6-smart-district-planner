@@ -1,15 +1,17 @@
 -- SDP_Preview: shows a plan on the map without placing map tacks
 -- (docs/multicity-design.md section 5). Placing real tacks would broadcast
 -- over the network and make DMT recompute; a preview only draws.
---   Areas  colored hexes, one color per city or per shade, on the appeal
---          lens's layer (MinimapPanel.lua: m_HexColoringAppeal), which draws
---          each area in its own color. The placement layer the game uses for
---          districts (WorldInput.lua: g_HexColoringPlacement) draws every
---          area in its one green whatever color is passed (seen in the game).
---          Turning the appeal layer on makes the minimap fill in the appeal
---          colors (MinimapPanel.lua: OnLensLayerOn -> SetAppealHexes, an
---          event that comes after the call), so the preview redraws its own
---          hexes when that event arrives (OnLensLayerOn below).
+--   Areas  colored hexes, one color per city or per shade, on the government
+--          lens's layer (MinimapPanel.lua: m_HexColoringGovernment), which
+--          draws each area in its own color. The placement layer the game
+--          uses for districts (WorldInput.lua: g_HexColoringPlacement) draws
+--          every area in its one green whatever color is passed (seen in the
+--          game); the appeal lens's layer, used until v1.1.1, makes the game
+--          show every plot's appeal number on top (issue 33). Turning the
+--          layer on makes the minimap fill in its own colors
+--          (MinimapPanel.lua: OnLensLayerOn -> SetGovernmentHexes, an event
+--          that comes after the call), so the preview redraws its own hexes
+--          when that event arrives (OnLensLayerOn below).
 --   Icons  WorldAnchor instances at plots (as MapPinManager and AMT do):
 --          the district, wonder or city center icon and a short text
 -- The preview must be cleared when the panel closes, the tab or the
@@ -24,7 +26,7 @@ SDP_Preview.COLORS = {
   "COLOR_BREATHTAKING_APPEAL", "COLOR_CHARMING_APPEAL", "COLOR_AVERAGE_APPEAL", "COLOR_DISGUSTING_APPEAL",
 }
 
-SDP_Preview.LAYER = "Hex_Coloring_Appeal_Level"
+SDP_Preview.LAYER = "Hex_Coloring_Government"
 
 local m_layer = nil
 local m_icons = nil       -- InstanceManager of world icons
