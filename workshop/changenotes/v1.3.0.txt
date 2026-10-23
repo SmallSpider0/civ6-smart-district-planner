@@ -1,13 +1,13 @@
 Changes since v1.2.0:
 - Land loss values a tile by what it gives with its best improvement (a Mine on Hills, a Farm on flat land, read from the game's rules). Chopping and harvesting are done before building, so they no longer count as lost. Covering Hills now costs more, covering Woods or Marsh less. The plan says to clear or harvest a tile first, and which technology harvesting needs.
-- A tile that another of your cities owns can be used when the game lets the city swap it (next to the city's territory, no district on it, not next to the other City Center). The plan says which city to swap it from, and the tile's yields count as that city's loss.
+- A switch (off by default) lets a city use tiles it can swap from another of your cities with Swap in Manage Citizens (next to the city's territory, no district or wonder on it, not next to the other City Center). The plan says which city to swap from; the tile's yields count as that city's loss. On real late-game saves it raised adjacency by 13% on average for one city and 20% for several cities; about three in ten districts then need a swap by hand, and solving several cities takes about twice as long.
 - Housing counts by what each city still needs: each Housing up to the population its planned districts need counts 1, each one after it half the one before.
 - The City sites tab has its own Housing weight; Housing from water no longer uses the Food weight. A planned Harbor adds the Housing of the Lighthouse and Seaport to a site.
 - Civilizations whose districts gain more from each adjacent district (such as Japan) are estimated better, so the Fast setting finds the best layout more often.
 
 自 v1.2.0 以来的变化：
 - 计入占地时，地块按修上最好的改良后的产出算（丘陵按矿山、平地按农场等，从游戏规则读），砍伐、收获在建区域前完成，不再算作损失。盖丘陵的代价变大，盖树林、沼泽变小。结果会提示先砍伐或收获，以及收获需要的科技。
-- 别的本方城市的格，能用游戏的“交换地块”换过来的（挨着本城领土、格上没有区域、不在那座城的一环内），也可以放区域。结果写明从哪座城换格，那格的产出算作那座城的损失。
+- 开关“从本方其他城换格”（单城、多城页，默认关闭）：打开后，能在“市民管理”里用“切换”从别的本方城市改归本城的格（挨着本城领土、格上没有区域或奇观、不挨着那座城的市中心）也用来放区域，结果写明从哪座城换，那格的产出算作那座城的损失。真实后期存档上单城相邻加成平均高 13%、多城高 20%；约三成区域要手动切换，多城求解约慢一倍。
 - 住房按每座城的缺口计：到建齐计划区域所需人口为止每点算 1，之后每多一点减半。
 - 选城址页有单独的住房权重，水源的住房不再按食物权重计；计划里有港口时，灯塔、海港的住房计入城址。
 - 日本这类“每挨一个区域加成更多”的文明估计得更准，快速档更常找到最好的摆法。

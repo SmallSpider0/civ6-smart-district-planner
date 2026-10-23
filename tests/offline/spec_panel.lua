@@ -430,6 +430,30 @@ test("the harbor and commercial hub switch on both tabs", function()
   c.MultiApartCheck:Toggle()
 end)
 
+-- The swap switch (issue 54): off by default, sent with the request on both
+-- tabs, toggled through its box.
+test("the swap switch on both tabs", function()
+  SDP_Panel.SelectTab("SINGLE")
+  SDP_Panel.SelectCity(1)
+  local c = UI_Mock.Controls
+  T.eq(SDP_Panel.State().Swap, false, "off by default")
+  T.eq(c.SwapCheck:IsChecked(), false, "unticked")
+  c.SwapCheck:Toggle()
+  T.eq(SDP_Panel.State().Swap, true, "on through the box")
+  c.SwapCheck:Toggle()
+  T.eq(SDP_Panel.State().Swap, false, "off again")
+  SDP_Panel.SelectTab("MULTI")
+  local multi = SDP_Panel.Multi
+  multi.Refresh()
+  multi.SetPlanFor("ALL")
+  multi.ApplyPlan({ "DISTRICT_CAMPUS" })
+  T.eq(multi.Request().Swap, false, "off by default")
+  c.MultiSwapCheck:Toggle()
+  T.eq(multi.Request().Swap, true, "on through the box")
+  c.MultiSwapCheck:Toggle()
+  T.eq(multi.State().Swap, false, "off again")
+end)
+
 -- Through the row's own check box (its handler), as a click would.
 test("several cities tab: the check boxes switch a city-center pin and a city off and on", function()
   SDP_Panel.SelectTab("MULTI")

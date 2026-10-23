@@ -122,6 +122,12 @@
     <Replace Tag="LOC_SDP_LAND" Language="zh_Hans_CN">
       <Text>计入占用地块的产出损失：地块按修上最好的改良后的产出算，砍伐、收获在建区域前完成（食物、地貌权重用于这一项）</Text>
     </Replace>
+    <Replace Tag="LOC_SDP_SWAP_SHORT" Language="zh_Hans_CN">
+      <Text>从本方其他城换格</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SWAP_TOOLTIP" Language="zh_Hans_CN">
+      <Text>从别的本方城市换格：游戏允许在“市民管理”里用“切换”，把别的本方城市的单元格改归这座城，条件是挨着这座城的领土、格上没有区域或奇观、不挨着那座城的市中心。打开后，这些格也用来放区域，结果写明从哪座城换。[NEWLINE][NEWLINE]收益：区域能放进更好的位置。在真实的后期存档上（标准档，只算相邻加成），单城的相邻加成平均高 13%，多城平均高 20%。[NEWLINE][NEWLINE]代价：每一格都要你手动切换，约三成区域需要这样做；那格原来的产出算作原来那座城的损失；多城求解约慢一倍，单城基本不变。默认关闭。</Text>
+    </Replace>
     <Replace Tag="LOC_SDP_LAND_SHORT" Language="zh_Hans_CN">
       <Text>计入占地</Text>
     </Replace>

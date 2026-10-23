@@ -348,7 +348,9 @@ test("a plot another of our cities owns is a candidate when it can be swapped (i
   T.ok(swap ~= nil, "a plot two from each center")
   w:Own(swap:GetX(), swap:GetY(), 0, w:City(2))
   local ring = Map.GetPlotIndex(5, 4) -- next to city 2's center, three from the capital
-  local scan = SDP_City.Scan(0, 1)
+  -- Off by default (the player's switch): the plot stays city 2's.
+  T.eq(SDP_City.Scan(0, 1).Excluded[swap:GetIndex()], "OTHER_CITY", "not swapped unless asked")
+  local scan = SDP_City.Scan(0, 1, { allowSwap = true })
   local found = nil
   for _, c in ipairs(scan.Candidates) do
     if c.Index == swap:GetIndex() then found = c end
@@ -357,7 +359,8 @@ test("a plot another of our cities owns is a candidate when it can be swapped (i
   T.eq(found.Swap, 2, "swapped from city 2")
   T.eq(found.Unowned, nil, "not a plot to buy")
   T.eq(scan.Excluded[ring], "OTHER_CITY", "next to the other city's center: not swappable")
-  local result = SDP_Solver.Solve({ PlayerID = 0, CityID = 1, Weights = ONES, Districts = { "DISTRICT_CAMPUS" }, Land = true })
+  local result = SDP_Solver.Solve({ PlayerID = 0, CityID = 1, Weights = ONES, Districts = { "DISTRICT_CAMPUS" }, Land = true,
+    Swap = true })
   T.ok(result.Ok, tostring(result.Error))
   for _, p in ipairs(result.Plan) do
     T.eq(p.Swap, p.Index == swap:GetIndex() and 2 or nil, "swap note at " .. p.X .. "," .. p.Y)

@@ -139,7 +139,7 @@ end
 -- included), and what a chain reaches from Start (SDP_Multi checks a
 -- layout's chains again, with the other cities' planned districts in the
 -- way, through SDP_Search's Reach).
-local function ReachSets(playerID, cityID, cx, cy, siteRings)
+local function ReachSets(playerID, cityID, cx, cy, siteRings, allowSwap)
   local start, through = {}, {}
   local center = Map.GetPlotIndex(cx, cy)
   start[center], through[center] = true, true
@@ -165,7 +165,7 @@ local function ReachSets(playerID, cityID, cx, cy, siteRings)
   -- territory, no district on it, not next to the other city's center.
   -- { [plot index] = the owning city's ID }.
   local swap = {}
-  if cityID ~= nil then
+  if cityID ~= nil and allowSwap then
     for _, entry in ipairs(SDP_City.PlotsInRange(cx, cy, SDP_City.RADIUS)) do
       local plot = Map.GetPlotByIndex(entry.Index)
       local owningCity = plot:GetOwner() == playerID and Cities.GetPlotPurchaseCity(plot) or nil
@@ -339,10 +339,12 @@ function SDP_City.ScanOptions(request)
     ignore = ignore or {}
     ignore[pin.ID] = true
   end
-  return { allowFeatureRemoval = request.AllowFeatureRemoval, ignorePins = ignore }
+  return { allowFeatureRemoval = request.AllowFeatureRemoval, ignorePins = ignore, allowSwap = request.Swap == true }
 end
 
--- Scan one city. options.allowFeatureRemoval (default true): when false,
+-- Scan one city. options.allowSwap (default false): plots another of the
+-- player's cities owns that this city can swap over are candidates too
+-- (issue 54; the player's switch). options.allowFeatureRemoval (default true): when false,
 -- plots with a feature a district would clear (GameInfo.Features.Removable:
 -- woods, rainforest, marsh) are excluded (requirement constraint 5).
 -- options.ignorePins: { [pin ID] = true } pins treated as absent.
@@ -377,7 +379,7 @@ function SDP_City.Scan(playerID, cityID, options)
   local pinned = {}
   for _, pin in ipairs(scan.Pins) do pinned[pin.Index] = true end
   local siteRings = SiteRings(playerID, nil, options and options.ignorePins)
-  scan.Reach = ReachSets(playerID, cityID, cx, cy, siteRings)
+  scan.Reach = ReachSets(playerID, cityID, cx, cy, siteRings, options and options.allowSwap)
   for _, entry in ipairs(SDP_City.PlotsInRange(cx, cy, SDP_City.RADIUS)) do
     local plot = Map.GetPlotByIndex(entry.Index)
     local reason = ExclusionReason(plot, playerID, cityID, pinned, siteRings, allowFeatureRemoval, scan.Reach)

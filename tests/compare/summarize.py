@@ -209,18 +209,19 @@ def summarize(rows):
                     best_out = s["output"] if best_out is None else max(best_out, s["output"])
         # The exact reference (issue 48): a proven optimum replaces the best
         # known gain; otherwise its upper bound gives the range.
-        optimum, upper = None, None
+        optimum, upper, optimumMissing = None, None, None
         for k in ORACLE_KEYS:
             o = ((runs.get(k) or {}).get("plan") or {}).get("stats", {}).get("oracle")
             if isinstance(o, dict) and not runs[k].get("error"):
                 if o.get("proven"):
                     optimum = o["value"]
+                    optimumMissing = ((runs[k].get("score") or {}).get("missing")) or 0
                 else:
                     upper = o.get("upper")
         if optimum is not None:
             best, exact = optimum, True
         entry = {"reference": best, "exact": exact, "optimum": optimum, "upper": upper, "referenceOutput": best_out,
-                 "runs": {}}
+                 "optimumMissing": optimumMissing, "runs": {}}
         for k, r in runs.items():
             s = r.get("score")
             e = {"seconds": r.get("planSeconds"), "error": r.get("error")}
@@ -327,7 +328,13 @@ def per_planner(scenarios, kind_filter=None):
                 o = e["optimum"]
                 g = r["gain"] if r["legal"] else 0
                 a["ofOptimum"].append(g / o if o > 0 else (1.0 if g >= 0 else 0.0))
-                a["overOptimum"].append(1 if r["legal"] and r["gain"] > e["optimum"] + 1e-9 else 0)
+                # Above the optimum: a check that must stay 0. A plan that
+                # leaves out districts the optimum places solves an easier
+                # problem; it is counted apart (fewerAbove).
+                above = r["legal"] and r["gain"] > e["optimum"] + 1e-9
+                fewer = (r.get("missing") or 0) > (e.get("optimumMissing") or 0)
+                a["overOptimum"].append(1 if above and not fewer else 0)
+                a["fewerAbove"].append(1 if above and fewer else 0)
             if r.get("outputGap") is not None:
                 a["outGap"].append(r["outputGap"])
                 a["outBest"].append(1 if r["legal"] and r["outputGap"] <= 1e-9 else 0)
@@ -352,6 +359,7 @@ def per_planner(scenarios, kind_filter=None):
             "bestShare": statistics.mean(a["best"]) if a["best"] else None,
             "optimalShare": statistics.mean(a["optimal"]) if a["optimal"] else None, "optimalRuns": len(a["optimal"]),
             "overOptimum": sum(a["overOptimum"]),
+            "fewerAbove": sum(a["fewerAbove"]),
             "ofOptimum": share_stats(a["ofOptimum"]),
             "missing": sum(a["missing"]), "missingPlaceable": sum(a["missingPlaceable"]), "secondsMedian": statistics.median(a["seconds"]) if a["seconds"] else None,
             "violations": {kk[2:]: sum(v) for kk, v in a.items() if kk.startswith("v_")},
@@ -401,7 +409,8 @@ def main():
                 so = v["ofOptimum"]
                 print("  %-18s of the optimum (n %d): mean %.1f%% median %.1f%% worst %.1f%%; at 100%% %.0f%%, >=95%% %.0f%%, >=90%% %.0f%%; above the optimum %d" % (
                     "", so["n"], 100 * so["mean"], 100 * so["median"], 100 * so["min"], 100 * so["at100"], 100 * so["at95"],
-                    100 * so["at90"], v["overOptimum"]))
+                    100 * so["at90"], v["overOptimum"]) + (
+                    "; above it with fewer districts placed %d" % v["fewerAbove"] if v.get("fewerAbove") else ""))
             if ob is not None:
                 print("  %-18s output best %.2f gap %.2f" % ("", ob, og))
             sq = v.get("sdpQuality")

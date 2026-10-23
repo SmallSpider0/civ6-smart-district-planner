@@ -72,6 +72,7 @@ local m_weights = {}          -- [YieldType, FEATURE or DISTANCE] = 0..MAX_WEIGH
 for _, column in ipairs(WEIGHT_COLUMNS) do m_weights[column.Key] = column.Default or 1 end
 local m_allowFeatureRemoval = true
 local m_land = true           -- count the land part (design 4.2)
+local m_swap = false          -- plots swapped from another of our cities are candidates (issue 54)
 local m_replace = false       -- plan over this mod's earlier pins for the city and replace them
 local m_remind = true         -- reminder pins on the woods and rainforest the plan relies on (feedback item 5)
 local m_apart = true          -- keep partner districts (harbor, commercial hub) out of one city's picks (SDP_Rules.Apart)
@@ -907,6 +908,14 @@ function SDP_UI.EstimateText(units, atOnce)
   return Locale.Lookup("LOC_SDP_ESTIMATE", Number(math.floor(seconds + 0.5)))
 end
 
+local function SetSwap(on)
+  Controls.SwapCheck:SetCheck(on)
+  if m_swap ~= on then
+    m_swap = on
+    ClearResult()
+  end
+end
+
 local function SetAllowFeatureRemoval(allow)
   Controls.FeatureCheck:SetCheck(allow)
   if m_allowFeatureRemoval ~= allow then
@@ -987,7 +996,7 @@ ShowHeat = function(districtType)
     local weights = {}
     for key, value in pairs(m_weights) do weights[key] = value end
     local spots = SDP_Solver.Heat({ PlayerID = playerID, CityID = m_cityID, District = districtType, Weights = weights,
-      AllowFeatureRemoval = m_allowFeatureRemoval, IgnorePins = m_replace and OwnPins() or nil }) or {}
+      AllowFeatureRemoval = m_allowFeatureRemoval, Swap = m_swap, IgnorePins = m_replace and OwnPins() or nil }) or {}
     local best = spots[1] and spots[1].Gain or 0
     local worst = spots[#spots] and spots[#spots].Gain or 0
     local areas, icons = {}, {}
@@ -1093,6 +1102,7 @@ Refresh = function()
   BuildWeights()
   SDP_UI.PopulateTierPull(Controls.TierPull, m_tier, SetTier)
   Controls.FeatureCheck:SetCheck(m_allowFeatureRemoval)
+  Controls.SwapCheck:SetCheck(m_swap)
   Controls.LandCheck:SetCheck(m_land)
   Controls.ReplaceCheck:SetCheck(m_replace)
   Controls.RemindCheck:SetCheck(m_remind)
@@ -1201,7 +1211,7 @@ Request = function()
     PlayerID = Game.GetLocalPlayer(), CityID = m_cityID, Districts = list.Must, Weights = weights,
     Pool = list.Pool, Count = list.Count, MustSpecialty = list.MustSpecialty, Auto = list.Auto,
     Distance = m_weights.DISTANCE, Remind = m_remind, Apart = m_apart,
-    AllowFeatureRemoval = m_allowFeatureRemoval, Land = m_land, Tier = m_tier,
+    AllowFeatureRemoval = m_allowFeatureRemoval, Land = m_land, Tier = m_tier, Swap = m_swap,
     IgnorePins = m_replace and OwnPins() or nil, Wonders = wonders,
   }
 end
@@ -1214,7 +1224,7 @@ local function WonderRequest(request)
     PlayerID = request.PlayerID, Tier = request.Tier, Districts = request.Districts, Wonders = request.Wonders,
     Pool = request.Pool, Count = request.Count, Auto = request.Auto, Distance = request.Distance, Remind = request.Remind,
     Only = { [request.CityID] = true }, Weights = request.Weights, Land = request.Land, Apart = request.Apart,
-    AllowFeatureRemoval = request.AllowFeatureRemoval, IgnorePins = request.IgnorePins,
+    AllowFeatureRemoval = request.AllowFeatureRemoval, IgnorePins = request.IgnorePins, Swap = request.Swap,
     Plans = { [key] = request.Districts },
   }
 end
@@ -1474,6 +1484,7 @@ SDP_Panel = {
   ShowHeat = function(districtType) ShowHeat(districtType) end,
   Heat = function() return m_heatSpots end,
   SetLand = SetLand,
+  SetSwap = SetSwap,
   SetTier = SetTier,
   Solve = Solve,
   Continue = Continue,
@@ -1497,6 +1508,7 @@ SDP_Panel = {
       SolutionCells = m_solutionCells,
       Count = List().Count, Solution = m_solution, Remind = m_remind, Apart = m_apart,
       Weights = m_weights, AllowFeatureRemoval = m_allowFeatureRemoval, Land = m_land, Tier = m_tier, Replace = m_replace,
+      Swap = m_swap,
       Wonders = SelectedWonders(), HeatDistrict = m_heat,
       Running = SDP_Task.IsRunning(), QualityText = Controls.Quality:GetText(), EstimateText = Controls.Estimate:GetText(),
       PlaceDisabled = Controls.PlaceButton:IsDisabled(), UndoDisabled = Controls.UndoButton:IsDisabled(),
@@ -1517,6 +1529,9 @@ Controls.FeatureCheck:RegisterCheckHandler(function()
 end)
 Controls.LandCheck:RegisterCheckHandler(function()
   SetLand(Controls.LandCheck:IsChecked())
+end)
+Controls.SwapCheck:RegisterCheckHandler(function()
+  SetSwap(Controls.SwapCheck:IsChecked())
 end)
 Controls.RemindCheck:RegisterCheckHandler(function()
   SetRemind(Controls.RemindCheck:IsChecked())

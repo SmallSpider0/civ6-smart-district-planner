@@ -5,6 +5,9 @@
 --   variant FAST | STANDARD | FINE   the tier
 --   variant STANDARD_LAND (any tier + "_LAND")  with the land part on, as the
 --                                    panel has it by default
+--   variant <TIER>_SWAP (before _LAND) the swap switch on: plots another of
+--                                    the player's cities owns are candidates
+--                                    when they can be swapped (issue 54)
 --   variant <TIER>_COV<n>            multi: the coverage part on, weight n
 --                                    (design 19)
 --   variant ORACLE                   the exact reference (cmp_oracle.lua, issue
@@ -91,6 +94,8 @@ function CmpAdapters.sdp(request, variant, w)
     land = true
     variant = variant:gsub("_LAND$", "")
   end
+  local swap = variant:match("_SWAP$") ~= nil
+  variant = variant:gsub("_SWAP$", "")
   LoadSDP()
   w.Events.LoadGameViewStateDone()
   local stats = {}
@@ -116,7 +121,7 @@ function CmpAdapters.sdp(request, variant, w)
     -- SDP_Multi with only this city (SDP_Panel's WonderRequest).
     local id = request.target:GetID()
     local r = SDP_Multi.Solve({ PlayerID = 0, Tier = variant, Districts = request.districts, Wonders = request.wonders,
-      Only = { [id] = true }, Weights = request.weights, Land = land })
+      Only = { [id] = true }, Weights = request.weights, Land = land, Swap = swap })
     if not r.Ok then out.notes[#out.notes + 1] = tostring(r.Error) end
     for _, p in ipairs(r.Plan or {}) do
       out.placements[#out.placements + 1] = { city = id, type = p.Type, x = p.X, y = p.Y, kind = p.Kind }
@@ -126,7 +131,7 @@ function CmpAdapters.sdp(request, variant, w)
     for _, u in ipairs(r.Unplaced or {}) do out.notes[#out.notes + 1] = "unplaced " .. tostring(u.Type) .. " " .. tostring(u.Reason) end
   elseif scn.kind == "single" then
     local r = SDP_Solver.Solve({ PlayerID = 0, CityID = request.target:GetID(), Districts = request.districts,
-      Land = land, Tier = variant, Weights = request.weights })
+      Land = land, Tier = variant, Weights = request.weights, Swap = swap })
     if not r.Ok then out.notes[#out.notes + 1] = tostring(r.Error) end
     Take(r.Plan, request.target:GetID())
     if oracle and r.Ok then
@@ -157,7 +162,7 @@ function CmpAdapters.sdp(request, variant, w)
       for _, city in ipairs(request.cities) do plans["C" .. city:GetID()] = request.plans[city:GetID()] or {} end
     end
     local r = SDP_Multi.Solve({ PlayerID = 0, Tier = variant, Districts = plans and {} or request.districts, Plans = plans,
-      Existing = existing, Land = land, Weights = request.weights, Coverage = coverage })
+      Existing = existing, Land = land, Weights = request.weights, Coverage = coverage, Swap = swap })
     if not r.Ok then out.notes[#out.notes + 1] = tostring(r.Error) end
     local byKey = {}
     for _, c in ipairs(r.Cities or {}) do byKey[c.Key] = c.CityID end

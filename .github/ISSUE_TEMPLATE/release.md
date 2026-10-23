@@ -12,6 +12,7 @@ labels: release
 - [ ] 游戏内 `run_tests.py`：原版、迭起兴衰、风云变幻
 - [ ] 真实点击 `realclick.py`（macOS）
 - [ ] 改了求解器或合法性规则：`compare.mjs -p sdp` 开发集，必要时刷新对比结果
+- [ ] 改了算法、规则或测试集：重跑开关提示里实测数字的那几项对比（出处见 multicity-design.md，如换格开关的第 27.2 节），更新中英文提示和那一节
 - [ ] 后期存档压力测试 `stress.py`，`refresh_stress_md.py` 刷新自测报告
 - [ ] 界面变了：重新截图（`docs/images/`），需要时重做工坊图片（`tools/workshop.py render`）
 - [ ] 打开 `workshop/preview.jpg` 和 `workshop/images/` 看一遍：封面与创意工坊上正在用的一致（换封面要物品主人上传），图上的截图是这一版的

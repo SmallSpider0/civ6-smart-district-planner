@@ -122,6 +122,12 @@
     <Replace Tag="LOC_SDP_LAND" Language="en_US">
       <Text>Count the yields of the tiles the districts take, as the tiles give with their best improvement; chopping and harvesting are done before building (the Food and Chop weights apply here)</Text>
     </Replace>
+    <Replace Tag="LOC_SDP_SWAP_SHORT" Language="en_US">
+      <Text>Swap tiles from my cities</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SWAP_TOOLTIP" Language="en_US">
+      <Text>Swap tiles from your other cities: with Swap in Manage Citizens, the game lets a city take over a tile of another of your cities when the tile is next to its territory, has no district or wonder and is not next to the other City Center. With this on, such tiles are used for districts too, and the plan says which city to swap each from.[NEWLINE][NEWLINE]Gain: districts can take better spots. On real late-game saves (Standard, adjacency only), adjacency was 13% higher on average for one city and 20% higher for several cities.[NEWLINE][NEWLINE]Cost: you swap each tile by hand, which about three in ten districts need; the tile's yields count as a loss of the city it came from; solving several cities takes about twice as long, one city about the same. Off by default.</Text>
+    </Replace>
     <Replace Tag="LOC_SDP_LAND_SHORT" Language="en_US">
       <Text>Land loss</Text>
     </Replace>

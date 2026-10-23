@@ -27,7 +27,7 @@ On every tab:
 - Three effort levels: Fast, Standard and Thorough. Small cases are solved exhaustively; otherwise the result says whether it is the best or how far it may be from an upper bound, and you can keep improving it. The same game state and settings give the same plan every time.
 - Built districts and the tacks you placed yourself are never moved or covered and count as neighbors; districts limited to one per empire (such as the Government Plaza) are never planned twice.
 - Each result row gives the tile and the bonus; hover it for DMT's breakdown.
-- Land loss (on by default): districts pay for the good tiles they take, each valued with its best improvement; chopping and harvesting come first. A tile another of your cities owns can be swapped in.
+- Land loss (on by default): districts pay for the good tiles they take, each valued with its best improvement; chopping and harvesting come first. An optional switch also uses tiles you can swap from your other cities.
 - Neighborhoods get Housing from Appeal, counted by what each city still needs; Preserves count Appeal and the yields they give nearby tiles. An Aqueduct is added when the city lacks fresh water, a Dam when there are enough Floodplains tiles. When a plan takes adjacency from nearby Woods or Rainforest, placing it also puts a "Don't chop" reminder tack on those tiles.
 - Long computations run over several frames, so the game stays responsive, and they finish even if you close the panel. Placed tacks can be undone, also after loading a save. <kbd>Shift</kbd>+<kbd>L</kbd> opens the panel.
 - Base game, Rise and Fall, and Gathering Storm; the panel is in English and Chinese and follows the game's language.
@@ -88,7 +88,7 @@ The development documents are in Chinese; issues and pull requests in English ar
 - 快速、标准、精细三档；规模小时穷举，结果注明是否最优或离上界多远，可以继续优化。同一局面、同样输入，结果每次相同。
 - 已建区域和你自己打的钉不挪、不压，并作为邻居计分；全帝国限量的区域（如市政广场）不会重复规划。
 - 结果行显示坐标和加成，悬停看 DMT 的逐项来源。
-- 计入占地（默认打开）：区域占掉好地块要付出代价，地块按修上最好的改良后的产出算，先砍伐、收获再建；别的本方城市的格可以换过来用。
+- 计入占地（默认打开）：区域占掉好地块要付出代价，地块按修上最好的改良后的产出算，先砍伐、收获再建；可选开关让别的本方城市的格也能换过来用。
 - 社区按魅力计住房，按每座城还缺多少计价值；保护区计魅力和周边产出；缺淡水时自动加水渠，泛滥平原多时自动加堤坝；方案靠旁边的树林、雨林拿加成时，打钉时在这些格上加“勿砍”提醒钉。
 - 耗时长的计算分帧进行，游戏不卡，关掉面板也会算完。可以撤销，撤销记录随存档保存。<kbd>Shift</kbd>+<kbd>L</kbd> 打开面板。
 - 原版、迭起兴衰、风云变幻都能用；界面中英双语，跟随游戏语言。

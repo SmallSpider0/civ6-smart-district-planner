@@ -103,6 +103,12 @@
             <Label Anchor="L,C" Offset="26,0" Style="BodyTextDark14" String="LOC_SDP_REMIND_SHORT"/>
           </Container>
         </Container>
+        <Container Size="480,26">
+          <Container Anchor="L,C" Size="236,26" ToolTip="LOC_SDP_SWAP_TOOLTIP">
+            <CheckBox ID="SwapCheck" Anchor="L,C" Style="MainCheckBox"/>
+            <Label Anchor="L,C" Offset="26,0" Style="BodyTextDark14" String="LOC_SDP_SWAP_SHORT"/>
+          </Container>
+        </Container>
 
         <!-- Tier, estimate, solve / continue (cancel while running) -->
         <Container Size="480,42">
@@ -245,6 +251,12 @@
           <Container Anchor="L,C" Offset="350,0" Size="130,26" ToolTip="LOC_SDP_REMIND_TOOLTIP">
             <CheckBox ID="MultiRemindCheck" Anchor="L,C" Style="MainCheckBox"/>
             <Label Anchor="L,C" Offset="26,0" Style="BodyTextDark14" String="LOC_SDP_REMIND_SHORT"/>
+          </Container>
+        </Container>
+        <Container Size="480,26">
+          <Container Anchor="L,C" Size="236,26" ToolTip="LOC_SDP_SWAP_TOOLTIP">
+            <CheckBox ID="MultiSwapCheck" Anchor="L,C" Style="MainCheckBox"/>
+            <Label Anchor="L,C" Offset="26,0" Style="BodyTextDark14" String="LOC_SDP_SWAP_SHORT"/>
           </Container>
         </Container>
         <Container Size="480,42">
