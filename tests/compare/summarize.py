@@ -29,11 +29,22 @@ SITE_FIELDS = ("siteValue", "tileValue", "districtPotential", "freshWater", "coa
 
 
 def group(sid):
-    """(set, kind) of a scenario id: dev / heldout / real / profile:SCI ... / wonders / sites / coverage."""
+    """(set, kind) of a scenario id: dev / heldout / sealed / real / smallmulti(/heldout, /sealed) /
+    profile:SCI ... (profile:RND/heldout ...) / wonders / sites / coverage."""
     if "~" in sid:
-        return "profile:" + sid.split("~", 1)[1], "single"
+        base, profile = sid.split("~", 1)
+        part = group(base)[0]
+        return "profile:" + profile + ("" if part == "dev" else "/" + part), "single"
     if sid.startswith("OM"):
         return "smallmulti", "multi"
+    if sid.startswith("HOM"):
+        return "smallmulti/heldout", "multi"
+    if sid.startswith("FOM"):
+        return "smallmulti/sealed", "multi"
+    if sid.startswith("FS"):
+        return "sealed", "single"
+    if sid.startswith("FM"):
+        return "sealed", "multi"
     if sid.startswith("RS"):
         return "real", "single"
     if sid.startswith("RM"):

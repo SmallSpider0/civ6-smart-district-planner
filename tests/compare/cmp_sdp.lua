@@ -13,6 +13,9 @@
 --                                    optimum (or a range when cut short);
 --                                    ORACLE_CHECK also tries every layout when
 --                                    there are at most 400000 (stats.oracle.brute)
+--                                    and runs 8 hill climbs that do not use the
+--                                    bound (stats.oracle.climb, never above);
+--                                    "@<n>" sets the node limit to n million
 --   variant CITY_BY_CITY             multi only: each city planned alone with
 --                                    STANDARD, in city order, earlier plans
 --                                    pinned (the baseline a player gets by
@@ -39,13 +42,17 @@ end
 
 -- The exact reference on the session a solve left (inside the overlay).
 -- Returns the oracle's result; `cityOf(m)` gives slot m's city.
-local function Oracle(result, out, cityOf, check)
+local function Oracle(result, out, cityOf, check, weights)
   include("cmp_oracle")
   local search = result.Session.Search
   local o = SDP_Overlay.With(0, CmpOracle.Run, search, search.BestLayout)
   if check then
     local brute, count = SDP_Overlay.With(0, CmpOracle.BruteForce, search, 400000)
     o.Brute, o.BruteCount = brute, count
+    -- Hill climbs over the slots the optimum places (independent of the bound).
+    local active = {}
+    for m = 1, search.K do active[m] = (o.Layout and o.Layout[m] or 0) ~= 0 end
+    o.Climb, o.ClimbEvaluations = SDP_Overlay.With(0, CmpOracle.Climb, search, active, 8, 20261023)
   end
   out.placements = {}
   for m = 1, search.K do
@@ -57,12 +64,22 @@ local function Oracle(result, out, cityOf, check)
   end
   out.stats.sdpGain = o.Value
   out.stats.oracle = { value = o.Value, upper = o.Upper, proven = o.Proven, complete = o.Complete, start = o.Start,
-    nodes = o.Nodes, leaves = o.Leaves, violations = o.Violations, maxExcess = o.MaxExcess, pairs = o.Pairs,
-    brute = o.Brute, bruteLayouts = o.BruteCount }
+    nodes = o.Nodes, leaves = o.Leaves, violations = o.Violations, maxExcess = o.MaxExcess, pairs = o.Pairs, combos = o.Combos,
+    brute = o.Brute, bruteLayouts = o.BruteCount, climb = o.Climb, climbEvaluations = o.ClimbEvaluations,
+    -- The objective the optimum is for (issue 48): the judge's adjacency
+    -- gain with these yield weights, without the land part.
+    objective = { weights = weights, land = false } }
   return o
 end
 
 function CmpAdapters.sdp(request, variant, w)
+  -- "ORACLE", "ORACLE_CHECK", optionally "@<millions>" for the node limit.
+  local base, limit = variant:match("^(ORACLE[_A-Z]*)@(%d+)$")
+  if base ~= nil then
+    include("cmp_oracle")
+    CmpOracle.NODE_LIMIT = tonumber(limit) * 1e6
+    variant = base
+  end
   local oracle = variant == "ORACLE" or variant == "ORACLE_CHECK"
   local check = variant == "ORACLE_CHECK"
   if oracle then variant = "FINE" end
@@ -114,7 +131,7 @@ function CmpAdapters.sdp(request, variant, w)
     Take(r.Plan, request.target:GetID())
     if oracle and r.Ok then
       local id = request.target:GetID()
-      Oracle(r, out, function() return id end, check)
+      Oracle(r, out, function() return id end, check, request.weights)
       stats.method = "oracle"
       return out
     end
@@ -146,7 +163,7 @@ function CmpAdapters.sdp(request, variant, w)
     for _, c in ipairs(r.Cities or {}) do byKey[c.Key] = c.CityID end
     if oracle and r.Ok then
       local search = r.Session.Search
-      Oracle(r, out, function(m) return r.Cities[search.Groups[m]].CityID end, check)
+      Oracle(r, out, function(m) return r.Cities[search.Groups[m]].CityID end, check, request.weights)
       stats.method = "oracle"
       return out
     end

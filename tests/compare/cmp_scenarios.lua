@@ -309,6 +309,82 @@ for n, entry in ipairs(MULTI) do
   })
 end
 
+-- The true-optimum benchmark (issue 48). Every kind of situation comes in
+-- three parts: development (tune on these), held-out (check after each
+-- change) and sealed ("F", new seeds, run only for releases and published
+-- evaluations so that numbers are not tuned to it).
+BuildSet("FS", "FM", 90000, false)
+
+-- More small multi-city situations (see OM01-OM16 above): two to four
+-- cities, six to eight districts in all. OM17-OM32 join the development
+-- set; HOM and FOM are the held-out and sealed parts.
+local SMALL_MULTI_MORE = {
+  { "rome", "coastal", 4 }, { "korea", "temperate", 3 }, { "germany", "highland", 2 }, { "greece", "highland", 3 },
+  { "netherlands", "coastal", 2 }, { "australia", "coastal", 3 }, { "japan", "volcanic", 4 }, { "kongo", "jungle", 2 },
+  { "egypt", "desert", 2 }, { "russia", "tundra", 3 }, { "indonesia", "island", 3 }, { "maya", "jungle", 2 },
+  { "byzantium", "temperate", 4 }, { "mali", "desert", 3 }, { "brazil", "jungle", 4 }, { "gaul", "highland", 3 },
+}
+local function SmallMulti(prefix, first, seed, entries)
+  for x, entry in ipairs(entries) do
+    local n = first + x - 1
+    local civKey, biome, count = entry[1], entry[2], entry[3]
+    seed = seed + 23
+    local civ = CIVS[civKey]
+    local holy = civKey ~= "kongo"
+    local districts
+    if count == 2 then
+      districts = { "DISTRICT_CAMPUS", "DISTRICT_THEATER", n % 2 == 0 and "DISTRICT_INDUSTRIAL_ZONE" or "DISTRICT_COMMERCIAL_HUB" }
+    elseif count == 3 then
+      districts = { "DISTRICT_CAMPUS", n % 2 == 0 and "DISTRICT_INDUSTRIAL_ZONE" or "DISTRICT_COMMERCIAL_HUB" }
+    else
+      districts = { holy and n % 2 == 0 and "DISTRICT_HOLY_SITE" or "DISTRICT_CAMPUS", "DISTRICT_COMMERCIAL_HUB" }
+    end
+    local built = {}
+    for c = 1, count do built[c] = {} end
+    Add({
+      id = string.format("%s%02d-%s-%s-%dc", prefix, n, civKey, biome, count), kind = "multi", title = civ[3] .. "; small",
+      seed = seed, biome = biome, civKey = civKey, civ = civ[1], leader = civ[2], stage = "mid", cities = count,
+      districts = districts, built = built, population = 16, samePopulation = true, set = prefix,
+      runs = Runs("multi", { { planner = "sdp", variant = "ORACLE" } }),
+    })
+  end
+end
+SmallMulti("OM", 17, 71000, SMALL_MULTI_MORE)
+SmallMulti("HOM", 1, 72000, SMALL_MULTI)
+SmallMulti("HOM", 17, 72500, SMALL_MULTI_MORE)
+SmallMulti("FOM", 1, 73000, SMALL_MULTI)
+SmallMulti("FOM", 17, 73500, SMALL_MULTI_MORE)
+
+-- Random weights (issue 48): every development, held-out and sealed
+-- single-city situation once more with each of the five yields weighted
+-- 0-3, from the situation's seed ("S01-...~RND"), so the benchmark is not
+-- tied to one objective. The competitors get the same weights injected.
+local YIELD_ORDER = { "YIELD_SCIENCE", "YIELD_CULTURE", "YIELD_FAITH", "YIELD_GOLD", "YIELD_PRODUCTION" }
+local randomBase = {}
+for _, s in ipairs(list) do
+  if (s.set == "S" or s.set == "HS" or s.set == "FS") and s.kind == "single" and s.weights == nil then
+    randomBase[#randomBase + 1] = s
+  end
+end
+for _, b in ipairs(randomBase) do
+  local s = {}
+  for k, v in pairs(b) do s[k] = v end
+  local weights, total, x = {}, 0, b.seed % 9973
+  for i, y in ipairs(YIELD_ORDER) do
+    x = (x * 31 + 17 * i) % 9973
+    weights[y] = x % 4
+    total = total + weights[y]
+  end
+  if total == 0 then weights.YIELD_SCIENCE = 1 end
+  s.id = b.id .. "~RND"
+  s.weights = weights
+  s.profile = "RND"
+  s.set = "R" .. b.set
+  s.runs = { { planner = "sdp", variant = "FAST" }, { planner = "sdp", variant = "STANDARD" }, { planner = "sdp", variant = "FINE" },
+    { planner = "amt", variant = "" }, { planner = "ep", variant = "" }, { planner = "sdp", variant = "ORACLE" } }
+  Add(s)
+end
+
 CmpScenarios.List = list
 CmpScenarios.ById = byId
 CmpScenarios.Runs = Runs -- for the scenes cmp_lib adds from files
