@@ -151,7 +151,7 @@ python3 -I tools/package.py --release --version v1.1.0    # 输出 dist/SmartDis
 
 ```bash
 python3 -I tools/workshop.py check            # 标题、简介、更新说明的长度，图片大小
-python3 -I tools/workshop.py render           # workshop/src/*.html 渲染成 preview.jpg 和 images/ 里的 6 张图（需要 Chrome 和 Pillow；第 1 张先跑 tests/compare/cmp_workshop_multi.lua）
+python3 -I tools/workshop.py render           # workshop/src/*.html 渲染成 preview.jpg 和 images/ 里的 6 张图（需要 Chrome 和 Pillow；封面和第 1 张先跑 tests/compare/cmp_workshop_multi.lua，画的是同一个一起规划的方案）
 python3 -I tools/workshop.py pack v1.0.0      # dist/SmartDistrictPlanner-v1.0.0-workshop.zip
 python3 -I tools/workshop.py vdf 解压目录      # 在解压后的提交包里写出带本机绝对路径的 item.vdf
 ```
