@@ -1,30 +1,128 @@
 <!doctype html>
-<!-- Workshop preview image, 1024 x 1024. Rendered by tools/workshop.py render. -->
+<!-- Workshop preview image, 1024 x 1024. Rendered by tools/workshop.py render.
+     Drawn, not a screenshot (issue 41), after the classic four-city layout
+     players use for Germany: four city centers at the corners, every city a
+     commercial hub and an industrial zone, the eight districts packed in
+     the middle around a government plaza so every zone touches two hubs.
+     Each city's plots in its own color, in the game's dark blue, teal and
+     gold. -->
 <html lang="en"><head><meta charset="utf-8"><title>Workshop preview</title>
 <style>
   html, body { margin: 0; width: 1024px; height: 1024px; overflow: hidden; background: #0e161b; }
-  .shot { position: absolute; inset: 0; background: url("../../docs/images/v4-map-single-preview.jpg") 58% 30% / auto 118% no-repeat; }
-  .shade { position: absolute; inset: 0; background: linear-gradient(to bottom, rgba(14,22,27,0) 34%, rgba(14,22,27,0.82) 58%, rgba(14,22,27,0.97) 100%); }
-  .text { position: absolute; left: 64px; right: 64px; bottom: 60px; color: #f3f5f6; }
-  .mark { display: flex; align-items: center; gap: 22px; }
-  .mark svg { flex: none; }
-  h1 { margin: 0; font: 700 92px/1.02 Georgia, "Times New Roman", serif; letter-spacing: -0.5px; }
-  h2 { margin: 18px 0 0; font: 600 64px/1.1 "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif; color: #dcae4c; }
-  p { margin: 26px 0 0; font: 400 34px/1.35 "Helvetica Neue", Arial, sans-serif; color: #c9d4da; }
+  svg { position: absolute; inset: 0; }
+  .text { position: absolute; left: 0; right: 0; bottom: 84px; text-align: center; color: #f3f5f6; }
+  h1 { margin: 0; font: 700 84px/1.02 Georgia, "Times New Roman", serif; letter-spacing: -0.5px; }
+  h2 { margin: 14px 0 0; font: 600 56px/1.1 "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif; color: #dcae4c; }
+  p { margin: 22px 0 0; font: 400 30px/1.35 "Helvetica Neue", Arial, sans-serif; color: #c9d4da; }
 </style></head>
 <body>
-  <div class="shot"></div>
-  <div class="shade"></div>
+  <svg width="1024" height="1024" viewBox="0 0 1024 1024" aria-hidden="true">
+    <defs>
+      <!-- A pointy-top hex, radius 66 (width 114.3, row step 99). -->
+      <polygon id="hex" points="0,-66 57.15,-33 57.15,33 0,66 -57.15,33 -57.15,-33"/>
+      <polygon id="star" points="0,-30 9,-9 32,-8 13,6 19,29 0,17 -19,29 -13,6 -32,-8 -9,-9"/>
+      <!-- District markers: commercial hub, industrial zone, government plaza. -->
+      <g id="hub">
+        <circle r="27" fill="#d9a63b" stroke="#f3f5f6" stroke-width="4"/>
+        <polygon points="0,-12 12,0 0,12 -12,0" fill="#f3f5f6"/>
+        <rect x="-31" y="31" width="62" height="32" rx="9" fill="#0e161b" stroke="#dcae4c" stroke-width="2"/>
+        <text y="55" font-family="Georgia, 'Times New Roman', serif" font-weight="700" font-size="25" text-anchor="middle" fill="#f3f5f6">+4</text>
+      </g>
+      <g id="zone">
+        <circle r="27" fill="#c2672a" stroke="#f3f5f6" stroke-width="4"/>
+        <rect x="-11" y="-11" width="22" height="22" fill="#f3f5f6" transform="rotate(45)"/>
+        <rect x="-31" y="31" width="62" height="32" rx="9" fill="#0e161b" stroke="#dcae4c" stroke-width="2"/>
+        <text y="55" font-family="Georgia, 'Times New Roman', serif" font-weight="700" font-size="25" text-anchor="middle" fill="#f3f5f6">+6</text>
+      </g>
+      <g id="plaza">
+        <circle r="27" fill="#5b6b7c" stroke="#f3f5f6" stroke-width="4"/>
+        <polygon points="0,-13 11,-6.5 11,6.5 0,13 -11,6.5 -11,-6.5" fill="#f3f5f6"/>
+      </g>
+      <pattern id="grid" width="114.3" height="198" patternUnits="userSpaceOnUse" patternTransform="translate(54.8 157)">
+        <use href="#hex" x="57.15" y="66" fill="none" stroke="#1d6470" stroke-width="2"/>
+        <use href="#hex" x="0" y="165" fill="none" stroke="#1d6470" stroke-width="2"/>
+        <use href="#hex" x="114.3" y="165" fill="none" stroke="#1d6470" stroke-width="2"/>
+      </pattern>
+      <linearGradient id="band" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#17303a"/>
+        <stop offset="1" stop-color="#0f1d24"/>
+      </linearGradient>
+      <radialGradient id="glow" cx="50%" cy="32%" r="55%">
+        <stop offset="0" stop-color="#1d6470" stop-opacity="0.5"/>
+        <stop offset="1" stop-color="#0e161b" stop-opacity="0"/>
+      </radialGradient>
+    </defs>
+    <rect width="1024" height="1024" fill="url(#glow)"/>
+    <rect width="1024" height="640" fill="url(#grid)" opacity="0.35"/>
+    <!-- The text band: a shade lighter than the map, with a gold rule. -->
+    <rect y="640" width="1024" height="384" fill="url(#band)"/>
+    <rect y="640" width="1024" height="3" fill="#dcae4c" opacity="0.7"/>
+
+    <!-- Centered at (512, 322). Cities: 1 top left (teal), 2 top right
+         (purple), 3 bottom left (blue), 4 bottom right (green). -->
+    <g transform="translate(512 322)">
+      <!-- Plots by city. -->
+      <g fill="#1d6470" stroke="#dcae4c" stroke-width="4">
+        <use href="#hex" x="0" y="-198"/>
+        <use href="#hex" x="-57" y="-99"/>
+        <use href="#hex" x="0" y="0"/>
+      </g>
+      <g fill="#4a3a6e" stroke="#dcae4c" stroke-width="4">
+        <use href="#hex" x="57" y="-99"/>
+        <use href="#hex" x="114" y="0"/>
+      </g>
+      <g fill="#28467d" stroke="#dcae4c" stroke-width="4">
+        <use href="#hex" x="-114" y="0"/>
+        <use href="#hex" x="-57" y="99"/>
+      </g>
+      <g fill="#2f6b4a" stroke="#dcae4c" stroke-width="4">
+        <use href="#hex" x="57" y="99"/>
+        <use href="#hex" x="0" y="198"/>
+      </g>
+      <!-- City centers. -->
+      <use href="#hex" x="-171" y="-99" fill="#2a4a52" stroke="#f3f5f6" stroke-width="4"/>
+      <use href="#star" x="-171" y="-99" fill="#f3f5f6"/>
+      <use href="#hex" x="171" y="-99" fill="#3d3357" stroke="#f3f5f6" stroke-width="4"/>
+      <use href="#star" x="171" y="-99" fill="#f3f5f6"/>
+      <use href="#hex" x="-171" y="99" fill="#2c3f66" stroke="#f3f5f6" stroke-width="4"/>
+      <use href="#star" x="-171" y="99" fill="#f3f5f6"/>
+      <use href="#hex" x="171" y="99" fill="#27503a" stroke="#f3f5f6" stroke-width="4"/>
+      <use href="#star" x="171" y="99" fill="#f3f5f6"/>
+
+      <!-- Adjacency: every zone to its two hubs, every hub and the inner
+           zones to the plaza. -->
+      <g stroke="#dcae4c" stroke-width="4" stroke-dasharray="9 9" stroke-linecap="round" opacity="0.9">
+        <line x1="0" y1="-198" x2="-57" y2="-99"/>
+        <line x1="0" y1="-198" x2="57" y2="-99"/>
+        <line x1="114" y1="0" x2="57" y2="-99"/>
+        <line x1="114" y1="0" x2="57" y2="99"/>
+        <line x1="0" y1="198" x2="-57" y2="99"/>
+        <line x1="0" y1="198" x2="57" y2="99"/>
+        <line x1="-114" y1="0" x2="-57" y2="-99"/>
+        <line x1="-114" y1="0" x2="-57" y2="99"/>
+        <line x1="0" y1="0" x2="-57" y2="-99"/>
+        <line x1="0" y1="0" x2="57" y2="-99"/>
+        <line x1="0" y1="0" x2="114" y2="0"/>
+        <line x1="0" y1="0" x2="57" y2="99"/>
+        <line x1="0" y1="0" x2="-57" y2="99"/>
+        <line x1="0" y1="0" x2="-114" y2="0"/>
+      </g>
+
+      <!-- Markers. -->
+      <use href="#zone" x="0" y="-198"/>
+      <use href="#hub" x="-57" y="-99"/>
+      <use href="#hub" x="57" y="-99"/>
+      <use href="#zone" x="-114" y="0"/>
+      <use href="#plaza" x="0" y="0"/>
+      <use href="#zone" x="114" y="0"/>
+      <use href="#hub" x="-57" y="99"/>
+      <use href="#hub" x="57" y="99"/>
+      <use href="#zone" x="0" y="198"/>
+    </g>
+  </svg>
   <div class="text">
-    <div class="mark">
-      <svg width="112" height="128" viewBox="0 0 112 128" aria-hidden="true">
-        <polygon points="56,4 108,34 108,94 56,124 4,94 4,34" fill="#1d6470" stroke="#dcae4c" stroke-width="6"/>
-        <polygon points="56,34 82,49 82,79 56,94 30,79 30,49" fill="none" stroke="#f3f5f6" stroke-width="5"/>
-        <circle cx="56" cy="64" r="8" fill="#dcae4c"/>
-      </svg>
-      <div><h1>Smart District<br>Planner</h1></div>
-    </div>
+    <h1>Smart District Planner</h1>
     <h2>智能区域规划器</h2>
-    <p>Highest-adjacency district layouts, placed as map tacks · Uses Detailed Map Tacks</p>
+    <p>Districts for several cities at once, placed as map tacks</p>
   </div>
 </body></html>
