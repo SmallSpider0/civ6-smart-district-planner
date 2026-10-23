@@ -1,0 +1,47 @@
+/* Workshop gallery pictures, 1920 x 1080: one point per picture, a game
+   screenshot on one side, the point in English and Chinese on the other.
+   Dark like the game's own panels so the pictures sit well on Steam's page. */
+:root {
+  --bg: #0c1a21; --bg2: #143440; --gold: #d8ad55; --gold-dim: rgba(216, 173, 85, .55);
+  --fg: #f4ecda; --zh: #e2b862; --text: #c9d6dc; --muted: #8fa3ac; --mark: #ffcf4a;
+}
+html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; }
+body {
+  background:
+    radial-gradient(ellipse 70% 90% at 72% 50%, rgba(40, 96, 112, .55), transparent 70%),
+    linear-gradient(135deg, var(--bg) 0%, #0f242d 55%, var(--bg) 100%);
+  color: var(--fg); font-family: "Helvetica Neue", Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+  position: relative;
+}
+/* A faint hex grid, as on the preview picture. */
+body::before {
+  content: ""; position: absolute; inset: 0; opacity: .08;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='104' height='180' viewBox='0 0 104 180'><path d='M52 0 L104 30 L104 90 L52 120 L0 90 L0 30 Z M52 120 L52 180' fill='none' stroke='%23d8ad55' stroke-width='2'/></svg>");
+  background-size: 104px 180px;
+}
+.text { position: absolute; left: 96px; top: 0; bottom: 0; width: 560px; display: flex; flex-direction: column; justify-content: center; }
+.num { font: 700 30px/1 Georgia, serif; color: var(--gold); letter-spacing: 2px; }
+.num::after { content: ""; display: block; width: 64px; height: 3px; background: var(--gold); margin: 18px 0 30px; }
+h1 { margin: 0; font: 700 66px/1.08 Georgia, "Times New Roman", serif; color: var(--fg); }
+h2 { margin: 18px 0 0; font: 600 50px/1.2 "PingFang SC", "Microsoft YaHei", sans-serif; color: var(--zh); }
+.lines { margin-top: 44px; }
+.lines p { margin: 0 0 22px; font-size: 30px; line-height: 1.35; color: var(--text); }
+.lines p span { display: block; margin-top: 6px; font-size: 26px; color: var(--muted); }
+.lines b { color: var(--fg); font-weight: 600; }
+/* The screenshot: right side, framed like a game panel. */
+.shot {
+  position: absolute; right: 72px; top: 50%; transform: translateY(-50%);
+  border: 3px solid var(--gold-dim); border-radius: 14px; overflow: hidden;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, .55), 0 0 0 1px rgba(0, 0, 0, .6);
+  background: #000 center / cover no-repeat;
+}
+.shot img { display: block; width: 100%; height: 100%; object-fit: cover; }
+/* A highlight on the screenshot: box plus a short label. */
+.mark { position: absolute; border: 4px solid var(--mark); border-radius: 10px; box-shadow: 0 0 0 3px rgba(0, 0, 0, .45); }
+.mark i {
+  position: absolute; left: -4px; top: -48px; white-space: nowrap; font: 600 26px/1 "Helvetica Neue", Arial, "PingFang SC", sans-serif;
+  font-style: normal; color: #1a1408; background: var(--mark); padding: 9px 14px; border-radius: 8px 8px 8px 0;
+}
+.mark.below i { top: auto; bottom: -48px; border-radius: 0 8px 8px 8px; }
+.brand { position: absolute; left: 96px; bottom: 52px; font: 600 22px/1 Georgia, serif; color: var(--muted); letter-spacing: 1px; }
+.brand b { color: var(--gold); font-weight: 700; }
