@@ -666,6 +666,8 @@ function CmpRun.Judge(id, planJson)
           Violation("on_resource", p, res.ResourceType)
         end
       end
+      -- Flooded coastal lowland takes no district (issue 44); DMT misses it.
+      if plot.lowland ~= -1 and (plot.flooded or plot.submerged) then Violation("flooded", p) end
     end
   end
 
@@ -732,6 +734,34 @@ function CmpRun.Judge(id, planJson)
       pcall(UpdatePinYields, 0, {})
       local ok, canPlace, reason = pcall(CanPlacePin, 0, Subject(p.type, p.x, p.y))
       if not ok or not canPlace then Violation("dmt_illegal", p, ok and reason or tostring(canPlace)) end
+    end
+  end
+
+  -- A wonder that needs an adjacent district takes only its own city's
+  -- (issue 45): built there, or placed for the same city. DMT counts any.
+  local function Serves(t, required)
+    if t == required then return true end
+    local row = gi.DistrictReplaces[t]
+    return row ~= nil and row.ReplacesDistrictType == required
+  end
+  for _, p in ipairs(placements) do
+    local row = IsWonder(p.type) and gi.Buildings[p.type] or nil
+    local plot = Map.GetPlot(p.x, p.y)
+    if row ~= nil and row.AdjacentDistrict ~= nil and plot ~= nil then
+      local own, other = false, false
+      for _, n in ipairs(w.Neighbours(plot)) do
+        local d = n.district
+        if d ~= nil and Serves(d.typeRow.DistrictType, row.AdjacentDistrict) then
+          if d.city == cities[p.city] then own = true else other = true end
+        end
+      end
+      for _, q in ipairs(placements) do
+        if q ~= p and gi.Districts[q.type] ~= nil and Serves(q.type, row.AdjacentDistrict)
+            and Map.GetPlotDistance(p.x, p.y, q.x, q.y) == 1 then
+          if q.city == p.city then own = true else other = true end
+        end
+      end
+      if other and not own then Violation("wonder_other_city", p) end
     end
   end
 
@@ -838,6 +868,7 @@ function CmpRun.Judge(id, planJson)
           for _ in gi.Resource_Harvests({ ResourceType = res.ResourceType }) do harvest = true end
           blocked = not harvest and Players[0]:GetResources():IsResourceVisible(res.Hash)
         end
+        if plot.lowland ~= -1 and (plot.flooded or plot.submerged) then blocked = true end
         if not blocked then
           pcall(UpdatePinYields, 0, {})
           local ok, can = pcall(CanPlacePin, 0, Subject(t, plot.x, plot.y))

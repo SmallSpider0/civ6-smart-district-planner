@@ -337,6 +337,30 @@ test("wonders: legal places, a required district next to it, unplaceable ones re
   T.eq(reasons.BUILDING_COLOSSEUM, "NEEDS_DISTRICT", "no entertainment complex anywhere")
 end)
 
+test("a wonder counts only its own city's district (issue 45)", function()
+  -- The capital's campus at (7,5), two plots from site A at (9,6).
+  local function Library(existing)
+    local w = NewWorld()
+    w:Own(7, 5, 0, w:City(1))
+    w:AddDistrict(1, "DISTRICT_CAMPUS", 7, 5, true)
+    local result = SDP_Multi.Solve(Request({
+      Districts = { "DISTRICT_THEATER" }, Wonders = { "BUILDING_GREAT_LIBRARY" }, Existing = existing,
+    }))
+    T.ok(result.Ok, tostring(result.Error))
+    T.ok(not result.Stats.Mismatch, "incremental and full evaluation agree")
+    for _, p in ipairs(result.Plan) do
+      if p.Type == "BUILDING_GREAT_LIBRARY" then return p, result end
+    end
+    return nil, result
+  end
+  local library = Library(nil)
+  T.ok(library ~= nil, "with the capital planning: placed")
+  T.eq(Map.GetPlotDistance(library.X, library.Y, 7, 5), 1, "next to the campus")
+  T.ok(Map.GetPlotDistance(library.X, library.Y, 4, 5) <= 3, "where the capital can build it")
+  local alone = Library({ [1] = false, [2] = false })
+  T.eq(alone, nil, "only the sites planning: the capital's campus does not count")
+end)
+
 test("repair: a wonder the search left off goes back in, next to its district", function()
   NewWorld()
   local result = SDP_Overlay.With(0, function()
