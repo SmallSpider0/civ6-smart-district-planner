@@ -142,8 +142,8 @@ include("dmt_yieldcalculator");       -- 尾部会执行 DMT_Initialize()，见�
 | 38 | （2026-10-22 实测）同一个模组 ID 装了两份（Mods 文件夹和创意工坊）时，“额外内容”里两份都列出、可以分别启用，但对局的启用列表（`GameConfiguration.GetEnabledMods()`）只记模组 ID，开局时游戏加载 `Mods.sqlite` 里先登记的那份（`ModRowId` 小），与启用的是哪一份无关：Mods 那份启用、创意工坊那份停用，对局里 `Modding.GetActiveMods()` 给出的仍是创意工坊那份（带 `SubscriptionId`）。哪份先登记取决于安装经过（`deploy.py` 改了文件后，本地那份会重新登记、排到后面），不一定是新的那份。所以只留一份；开发机上测试前确认加载的是 deploy 的那份 |
 | 39 | （2026-10-22 英文界面截图时发现）游戏的 Lua 里带 `^` 锚点的 `string.gsub` 不止替换一次：`("at most"):gsub("^%l", string.upper)` 得到 `"AT most"`，次数 2。标准 Lua（离线测试的 fengari）只替换一次，所以离线测不出。要只改开头，用 `s:sub(1, 1):upper() .. s:sub(2)` 或 `find` 加 `sub` |
 | 40 | （2026-10-23 合作者实测发现）城市只能扩张或购买**挨着自己领土**的格子，三环内被别的城（现有的、城址的一环，或方案里别的城的区域）隔开的格子永远拿不到。DMT 和引擎的可建格都不查这一条（引擎只对已拥有的格给结果）。候选格按“从领土能连到”筛（`SDP_City.Reach`），多城评估布局时再按其他城的区域挡路复查（`SDP_Search.Reachable`） |
-| 41 | （2026-10-23 引擎审计发现，#44）风云变幻里被海平面上升**淹没的沿海低地**（`TerrainManager.GetCoastalLowlandType(plot) ~= -1` 且 `TerrainManager.IsFlooded(plot)`）不能放任何区域，引擎不给原因；DMT 的 `CanPlacePin` 不查。已拥有的格有引擎复核兜着，未拥有的格和城址的格只看 DMT，会被当成候选（v1.2.0 处理） |
-| 42 | （2026-10-23 引擎审计发现，#45）“需相邻某区域”的奇观（`Buildings.AdjacentDistrict`）要求那个区域**属于建奇观的城**：旁边只有别的本方城市的区域时引擎不给可建格，DMT 判可放。本模组多城放奇观只看布局里有没有那种区域，没有要求同城（v1.2.0 处理） |
+| 41 | （2026-10-23 引擎审计发现，#44）风云变幻里被海平面上升**淹没的沿海低地**（`TerrainManager.GetCoastalLowlandType(plot) ~= -1` 且 `TerrainManager.IsFlooded(plot)`）不能放任何区域，引擎不给原因；DMT 的 `CanPlacePin` 不查。已拥有的格有引擎复核兜着，未拥有的格和城址的格只看 DMT，会被当成候选。v1.2.0 起 `SDP_City` 把它们排除（`FLOODED`）。城市修了防洪堤后 `IsFlooded` 立即变为假，引擎恢复可建，排除也随之取消（2026-10-23 实测） |
+| 42 | （2026-10-23 引擎审计发现，#45）“需相邻某区域”的奇观（`Buildings.AdjacentDistrict`）要求那个区域**属于建奇观的城**：旁边只有别的本方城市的区域时引擎不给可建格，DMT 判可放。v1.2.0 起 `SDP_Search` 只认能拥有奇观所在格的城的区域（`Owners`），离线对比的裁判也查（`wonder_other_city`） |
 
 ## 6. 开发环境与工作流
 
