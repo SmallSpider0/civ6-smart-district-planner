@@ -120,7 +120,7 @@
 
     <!-- Tiers, land part, quality, background computation -->
     <Replace Tag="LOC_SDP_LAND" Language="en_US">
-      <Text>Count the yields of the tiles the districts take (the Food and Chop weights apply here)</Text>
+      <Text>Count the yields of the tiles the districts take, as the tiles give with their best improvement; chopping and harvesting are done before building (the Food and Chop weights apply here)</Text>
     </Replace>
     <Replace Tag="LOC_SDP_LAND_SHORT" Language="en_US">
       <Text>Land loss</Text>
@@ -129,7 +129,7 @@
       <Text>Chop</Text>
     </Replace>
     <Replace Tag="LOC_SDP_WEIGHT_FEATURE" Language="en_US">
-      <Text>One-time yields from removing Woods, Rainforest and Marsh and from harvesting Bonus resources</Text>
+      <Text>One-time yields from removing Woods, Rainforest and Marsh and from harvesting Bonus resources (they grow with your technologies and civics); a tile that keeps its feature or resource forgoes them</Text>
     </Replace>
     <Replace Tag="LOC_SDP_TIER" Language="en_US">
       <Text>Effort</Text>
@@ -639,7 +639,7 @@
       <Text>the {1_Building} gives no Trade Route capacity</Text>
     </Replace>
     <Replace Tag="LOC_SDP_WEIGHT_HOUSING" Language="en_US">
-      <Text>Housing: points per Housing. A Neighborhood's or Preserve's Housing depends on the Appeal of its tile. With the Preserve set to Must, the yields its Grove and Sanctuary give to adjacent unimproved tiles count too, with each yield's weight (with Land loss on, only on tiles the city works); when it is picked from the pool they are shown, not scored. The plan changes Appeal: a Holy Site or Theater Square gives adjacent tiles +1, an Industrial Zone or Encampment -1, and removing Woods -1 to the tiles around it.</Text>
+      <Text>Housing: points per Housing. In each city, each Housing up to the population its planned districts need counts 1, each one after it half the one before. A Neighborhood's or Preserve's Housing depends on the Appeal of its tile. With the Preserve set to Must, the yields its Grove and Sanctuary give to adjacent unimproved tiles count too, with each yield's weight (with Land loss on, only on tiles the city works); when it is picked from the pool they are shown, not scored. The plan changes Appeal: a Holy Site or Theater Square gives adjacent tiles +1, an Industrial Zone or Encampment -1, and removing Woods -1 to the tiles around it.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_RESULT_HOUSING" Language="en_US">
       <Text>Housing {1_Housing} (Appeal {2_Appeal})</Text>
