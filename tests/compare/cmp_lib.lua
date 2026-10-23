@@ -629,6 +629,21 @@ function CmpRun.Judge(id, planJson)
   local manualPins = {}
   for _, pin in ipairs(cfg:GetMapPins()) do manualPins[pin:GetHexX() .. "_" .. pin:GetHexY()] = pin:GetIconName() end
 
+  -- A plot another of the player's cities owns can be swapped to the city
+  -- (issue 54; CityCommandTypes.SWAP_TILE_OWNER, measured 2026-10-23 on every
+  -- city of a late save): next to a plot the city owns, no district on it,
+  -- not next to the owning city's center.
+  local function Swappable(plot, city)
+    local owning = plot.city
+    if owning == nil or owning == city or plot:GetDistrictType() ~= -1 or plot:IsCity() then return false end
+    if Map.GetPlotDistance(plot.x, plot.y, owning:GetX(), owning:GetY()) <= 1 then return false end
+    for _, n in ipairs(w.Neighbours(plot)) do
+      if n:GetOwner() == 0 and n.city == city then return true end
+    end
+    return false
+  end
+  local swapped = {}
+
   -- Tile yields the plan gives up (what the plots produce before).
   local tileLoss, featuresCleared = 0, 0
   local occupied = {}
@@ -652,7 +667,9 @@ function CmpRun.Judge(id, planJson)
         if Map.GetPlotDistance(p.x, p.y, city:GetX(), city:GetY()) > 3 then Violation("out_of_range", p) end
         local owner = plot:GetOwner()
         if owner ~= -1 and owner ~= 0 then Violation("foreign_tile", p)
-        elseif owner == 0 and plot.city ~= city then Violation("other_city_tile", p) end
+        elseif owner == 0 and plot.city ~= city then
+          if Swappable(plot, city) then swapped[key] = true else Violation("other_city_tile", p) end
+        end
       end
       if gi.Districts[p.type] == nil and not IsWonder(p.type) then Violation("unknown_type", p) end
       -- The game refuses districts on resources it cannot remove (luxury,
@@ -695,7 +712,7 @@ function CmpRun.Judge(id, planJson)
     for i = 0, w.Width * w.Height - 1 do
       local plot = Map.GetPlotByIndex(i)
       if (plot.city == city or plot:IsCity() and plot.x == cx and plot.y == cy)
-          and Map.GetPlotDistance(plot.x, plot.y, cx, cy) <= 3 then
+          and Map.GetPlotDistance(plot.x, plot.y, cx, cy) <= 3 and not swapped[plot.x .. "_" .. plot.y] then
         reached[plot.x .. "_" .. plot.y] = true
         queue[#queue + 1] = plot
       end
@@ -714,9 +731,13 @@ function CmpRun.Judge(id, planJson)
       end
     end
     for _, p in ipairs(byCity[id]) do
-      if not reached[p.x .. "_" .. p.y] then Violation("unreachable", p) end
+      -- A swapped plot touches the city's own plots.
+      if not reached[p.x .. "_" .. p.y] and not swapped[p.x .. "_" .. p.y] then Violation("unreachable", p) end
     end
   end
+  local swaps = 0
+  for _ in pairs(swapped) do swaps = swaps + 1 end
+  score.swapped = swaps
 
   -- Put the plan on the map as the player would (pins with district or wonder icons).
   for _, p in ipairs(placements) do
