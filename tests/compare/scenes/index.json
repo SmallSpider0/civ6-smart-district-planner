@@ -166,8 +166,7 @@
   "ruleset": "RULESET_EXPANSION_2",
   "plans": [
    [
-    "DISTRICT_HOLY_SITE",
-    "DISTRICT_ENTERTAINMENT_COMPLEX"
+    "DISTRICT_HOLY_SITE"
    ],
    [
     "DISTRICT_HOLY_SITE",
@@ -414,8 +413,7 @@
   "leader": "LEADER_WILHELMINA",
   "title": "Netherlands, continents-gs",
   "districts": [
-   "DISTRICT_HOLY_SITE",
-   "DISTRICT_ENTERTAINMENT_COMPLEX"
+   "DISTRICT_HOLY_SITE"
   ],
   "only": [
    65536

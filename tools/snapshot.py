@@ -119,9 +119,25 @@ def sea_near(spec, city, rings=3):
     return False
 
 
-def wanted_for(spec, city, base_list):
-    built = {UNIQUE_BASE.get(d["type"], d["type"]) for d in city["districts"]}
-    return [d for d in base_list if d not in built and (d != "DISTRICT_HARBOR" or sea_near(spec, city))]
+def exclusive_pairs():
+    """The game's MutuallyExclusiveDistricts (Gathering Storm: the
+    Entertainment Complex and the Water Park), both ways."""
+    pairs = set()
+    code = ("if GameInfo.MutuallyExclusiveDistricts ~= nil then for r in GameInfo.MutuallyExclusiveDistricts() do "
+            "print('SDP_EXCL ' .. r.District .. ' ' .. r.MutuallyExclusiveDistrict) end end")
+    for line in exec_lua("SDP_Panel", code):
+        if line.startswith("SDP_EXCL "):
+            a, b = line.split()[1:3]
+            pairs.add((a, b))
+            pairs.add((b, a))
+    return pairs
+
+
+def wanted_for(spec, city, base_list, exclusive=frozenset()):
+    built = {d["type"] for d in city["districts"]}
+    built |= {UNIQUE_BASE.get(t, t) for t in built}
+    return [d for d in base_list if d not in built and (d != "DISTRICT_HARBOR" or sea_near(spec, city))
+            and not any((d, b) in exclusive for b in built)]
 
 
 def cmd_export(args):
@@ -150,7 +166,8 @@ def cmd_export(args):
     base_list = args.districts.split(",") if args.districts else DEFAULT_DISTRICTS
     chosen.sort()  # the order cmp_lib's Setup lists the cities in (by id)
     by_id = {c["id"]: c for c in spec["cities"] if c["owner"] == 0}
-    plans = [wanted_for(spec, by_id[cid], base_list) for cid in chosen]
+    exclusive = exclusive_pairs()
+    plans = [wanted_for(spec, by_id[cid], base_list, exclusive) for cid in chosen]
     union = [d for d in base_list if any(d in plan for plan in plans)]
     scenario = {
         "id": args.id, "kind": kind, "set": "R", "civ": me["civ"], "leader": me["leader"],

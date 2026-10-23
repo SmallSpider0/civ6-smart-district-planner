@@ -157,10 +157,43 @@ do
   end
 end
 
+-- A late city often has no free district slot for what its scene asks;
+-- the plan is for later, as in the generated scenes, whose population
+-- leaves room. Each planned city gets the population its built and asked
+-- specialty districts need (the judge's slot rule; the city's own
+-- population is kept as savedPopulation).
+local function RoomForPlan(scn, spec)
+  local gi = CmpGame.LoadGameInfo()
+  local function Specialty(t)
+    local row = gi.Districts[t]
+    return row ~= nil and row.RequiresPopulation and not row.CityCenter
+  end
+  local plans = {}
+  for n, id in ipairs(scn.only or {}) do plans[id] = scn.plans and scn.plans[n] or scn.districts end
+  local bonus = scn.civ == "CIVILIZATION_GERMANY" and 1 or 0
+  for _, c in ipairs(spec.cities) do
+    local plan = plans[c.id]
+    if plan ~= nil and c.owner == 0 then
+      local need = 0
+      for _, d in ipairs(c.districts or {}) do
+        if Specialty(d.type) then need = need + 1 end
+      end
+      for _, t in ipairs(plan) do
+        if Specialty(t) then need = need + 1 end
+      end
+      local population = 3 * math.max(0, need - bonus - 1) + 1
+      if (c.population or 1) < population then
+        c.savedPopulation, c.population = c.population, population
+      end
+    end
+  end
+end
+
 local function LoadScene(scn)
   if scn.spec == nil then
     local text = cmp_read_file(scn.path) or error("missing scene file " .. tostring(scn.path))
     scn.spec = Json.Decode(text)
+    RoomForPlan(scn, scn.spec)
   end
   return scn.spec
 end
@@ -776,9 +809,21 @@ function CmpRun.Judge(id, planJson)
     end
     return used < 1 + math.floor((c:GetPopulation() - 1) / 3) + (germany and 1 or 0)
   end
+  -- Districts a city cannot have next to what it has (GS: the entertainment
+  -- complex and the water park).
+  local function ExcludedIn(t, c)
+    if gi.MutuallyExclusiveDistricts == nil then return false end
+    for row in gi.MutuallyExclusiveDistricts() do
+      local other = row.District == t and row.MutuallyExclusiveDistrict
+        or row.MutuallyExclusiveDistrict == t and row.District or nil
+      if other ~= nil and other ~= t and (perCity[c:GetID()][other] or 0) > 0 then return true end
+    end
+    return false
+  end
   local function Placeable(t, c)
     local row = gi.Districts[t]
     if row.RequiresPopulation and not SlotsFree(c) then return false end
+    if ExcludedIn(t, c) then return false end
     for i = 0, w.Width * w.Height - 1 do
       local plot = Map.GetPlotByIndex(i)
       local key = plot.x .. "_" .. plot.y
