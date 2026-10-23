@@ -77,14 +77,18 @@ end
 -- Only improvements every player can build (Buildable, no TraitType, not
 -- needing a river or adjacent resources) that give yields.
 local m_rules, m_rulesFor = nil, nil
+-- Rule columns that are yes/no: some are numbers in the game's database
+-- (Improvements.RequiresRiver is 0 or 1, and `not 0` is false in Lua).
+local function Flag(v) return v == true or (type(v) == "number" and v ~= 0) end
 local function ImprovementRules()
   if m_rules ~= nil and m_rulesFor == GameInfo then return m_rules end
   local rules = { Improvements = {}, FeatureYields = {}, ResourceYields = {} }
   local function Rows(name) return GameInfo[name] ~= nil and GameInfo[name]() or function() return nil end end
   local byType = {}
   for row in Rows("Improvements") do
-    if row.Buildable and row.TraitType == nil and not row.RequiresRiver and not row.RequiresAdjacentBonusOrLuxury
-        and not row.RequiresAdjacentLuxury and (row.ValidAdjacentTerrainAmount or 0) == 0 and row.Workable ~= false then
+    if Flag(row.Buildable) and row.TraitType == nil and not Flag(row.RequiresRiver) and not Flag(row.RequiresAdjacentBonusOrLuxury)
+        and not Flag(row.RequiresAdjacentLuxury) and (row.ValidAdjacentTerrainAmount or 0) == 0
+        and (row.Workable == nil or Flag(row.Workable)) then
       local entry = { Type = row.ImprovementType, Index = row.Index, Sea = row.Domain == "DOMAIN_SEA", Terrains = {}, Features = {}, Resources = {},
         Yields = {}, Bonus = {}, Any = false }
       byType[row.ImprovementType] = entry
@@ -114,7 +118,7 @@ local function ImprovementRules()
   end
   for row in Rows("Improvement_ValidResources") do
     local entry = byType[row.ImprovementType]
-    if entry ~= nil then entry.Resources[row.ResourceType] = row.MustRemoveFeature == true end
+    if entry ~= nil then entry.Resources[row.ResourceType] = Flag(row.MustRemoveFeature) end
   end
   local names = {}
   for name in pairs(byType) do names[#names + 1] = name end
@@ -236,6 +240,18 @@ function SDP_Land.ValidImprovements(ctx, sea, terrain, feature, resource)
   return list
 end
 
+-- Plots no improvement can go on whatever is removed (measured against
+-- ImprovementBuilder.CanHaveImprovement on a late save, 2026-10-23): coastal
+-- lowland the sea has flooded (Gathering Storm) and antiquity sites (a
+-- resource of the artifact class, excavated, never improved).
+local function Unimprovable(plot, resourceRow)
+  if resourceRow ~= nil and resourceRow.ResourceClassType == "RESOURCECLASS_ARTIFACT" then return true end
+  if TerrainManager ~= nil and TerrainManager.GetCoastalLowlandType ~= nil and TerrainManager.IsFlooded ~= nil then
+    return TerrainManager.GetCoastalLowlandType(plot) ~= -1 and TerrainManager.IsFlooded(plot) == true
+  end
+  return false
+end
+
 -- Best weighted gain of those; 0 when none applies.
 local function BestImprovement(ctx, sea, terrain, feature, resource)
   local best = 0
@@ -281,9 +297,9 @@ function SDP_Land.PlotValues(plot, ctx)
     end
   end
   local improved = plot:GetImprovementType() ~= -1
-  if improved then
-    -- The game's yields include the improvement; removing or harvesting
-    -- would undo it.
+  if improved or Unimprovable(plot, resourceRow) then
+    -- The game's yields include the improvement (removing or harvesting
+    -- would undo it), or none can go there.
     return now, featureOnce + resourceOnce
   end
   local sea = plot:IsWater()

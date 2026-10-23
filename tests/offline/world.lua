@@ -380,8 +380,9 @@ function World.New(spec)
   -- (+1 production), mines on copper. Without them no plot has a potential.
   if spec.improvementRules then
     gi.Improvements = Table({
+      -- RequiresRiver is a number in the game's database (0 or 1).
       { ImprovementType = "IMPROVEMENT_FARM", Name = "LOC_IMPROVEMENT_FARM_NAME", Housing = 1, TilesRequired = 2,
-        Buildable = true, Domain = "DOMAIN_LAND" },
+        Buildable = true, Domain = "DOMAIN_LAND", RequiresRiver = 0 },
       { ImprovementType = "IMPROVEMENT_MINE", Name = "LOC_IMPROVEMENT_MINE_NAME", Appeal = -1, Buildable = true,
         Domain = "DOMAIN_LAND" },
       { ImprovementType = "IMPROVEMENT_LUMBER_MILL", Name = "LOC_IMPROVEMENT_LUMBER_MILL_NAME", Buildable = true,
