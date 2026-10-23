@@ -2,13 +2,17 @@
 
 **[English](#english)** · **[中文](#中文)**
 
+<p>
+<img src="workshop/images/01-multi.jpg" width="49%" alt="Several cities planned together: +19 one city at a time, +29 together / 几座城一起规划"> <img src="workshop/images/02-plan.jpg" width="49%" alt="One city: the plan previewed on the map / 单城方案在地图上预览">
+<img src="workshop/images/03-compare.jpg" width="49%" alt="The same city with three planners / 同一座城，三个规划器"> <img src="workshop/images/04-sites.jpg" width="49%" alt="City sites and their tooltip / 选城址与悬停提示">
+<img src="workshop/images/05-reminders.jpg" width="49%" alt="Reminder tacks for woods to keep / 勿砍提醒钉"> <img src="workshop/images/06-panel.jpg" width="49%" alt="The panel's three tabs in English and Chinese / 面板三个页签，中英文界面">
+</p>
+
 ## English
 
 A district planner for Civilization VI: pick a city and the districts you want, and it searches the city's 3 rings for the layout with the highest adjacency bonus and places it as map tacks with district icons in one click. It also chooses sites for new cities and plans several cities together. Placement rules and bonuses all come from [Detailed Map Tacks](https://steamcommunity.com/sharedfiles/filedetails/?id=2428969051) (DMT), so they match the numbers on the tacks.
 
 **[Steam Workshop](https://steamcommunity.com/sharedfiles/filedetails/?id=3824473635)** · **[Download](https://github.com/SmallSpider0/civ6-smart-district-planner/releases/latest)** · **[Overview and evaluation](https://smallspider0.github.io/civ6-smart-district-planner/en/)** · **[Install and use](docs/install-en.md)**
-
-![The One city tab: districts in two grids, three plans in the result](docs/images/v7-en-panel-single.jpg)
 
 ### What it does
 
@@ -69,8 +73,6 @@ The development documents are in Chinese; issues and pull requests in English ar
 《文明6》区域规划模组：选一座城和想建的区域，它在城市三环内找相邻加成最高的摆法，一键打成带区域图标的地图钉；也能给新城选址，让几座城一起规划。合法性和加成全部由 [Detailed Map Tacks](https://steamcommunity.com/sharedfiles/filedetails/?id=2428969051)（DMT）计算，与地图钉上显示的数一致。
 
 **[创意工坊](https://steamcommunity.com/sharedfiles/filedetails/?id=3824473635)** · **[下载](https://github.com/SmallSpider0/civ6-smart-district-planner/releases/latest)** · **[介绍与评测](https://smallspider0.github.io/civ6-smart-district-planner/)** · **[安装与使用](docs/install-and-test.md)**
-
-![单城页签：区域分两组排成网格，结果有三套方案](docs/images/v7-panel-single.jpg)
 
 ### 能做什么
 
