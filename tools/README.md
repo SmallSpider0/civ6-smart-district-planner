@@ -84,6 +84,7 @@ python3 -I tests/compare/export_gameinfo.py        # 一次：从游戏缓存导
 node tools/compare.mjs --list                       # 场景列表
 node tools/compare.mjs -s S04-japan -p sdp,amt,ep -j 4 -v   # 某些场景、某些规划器（-s 是编号的子串）
 node tools/compare.mjs -s '^C\d' -p sdp,ep -j 3            # 以 ^ 开头时按正则匹配（子串 "C" 也会匹配 "~SCI"）
+node tools/compare.mjs -s '^S0[1-4]-' -p sdp --only sdp:ORACLE --add sdp:ORACLE -j 8   # 真最优（#48）：--add 给选中的场景加一个运行；ORACLE_CHECK 另做枚举对照和爬山检查，"@n" 设节点上限 n 百万
 node tools/compare.mjs -j 8 --out tests/compare/results/full.jsonl   # 全部（约 1–2 小时）
 node tools/compare.mjs --only sdp:STANDARD_LAND -j 4 --out tests/compare/results/land.jsonl   # 只跑某个规划器的某个设置
 node tools/compare.mjs --rejudge tests/compare/results/full.jsonl -j 4 --out NEW.jsonl   # 方案不变，用当前裁判重新打分（几分钟）

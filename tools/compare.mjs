@@ -8,7 +8,7 @@
 // database, exported by tests/compare/export_gameinfo.py.
 //
 // Planners: sdp (this mod, Scripts only), amt (Auto Map Tacks Planner r49),
-// ep (Empire Planner). Their sources are read from reference/ (links made by
+// ep (Empire Planner), dwp (District & Wonder Planner). Their sources are read from reference/ (links made by
 // tools/setup_reference.py); nothing of theirs is copied into the repository.
 //
 // Usage:
@@ -47,6 +47,7 @@ const SEARCH = {
   sdp: [join(ROOT, "SmartDistrictPlanner", "Scripts"), join(ROOT, "SmartDistrictPlanner", "UI"), ...COMMON],
   amt: [join(ROOT, "reference", "amt"), ...COMMON],
   ep: [EP_DIR, ...COMMON],
+  dwp: [join(ROOT, "reference", "dwp"), ...COMMON],
 };
 // Game UI files that only build controls; the stubs in game.lua stand in.
 const SKIP = new Set(["InstanceManager", "ToolTipHelper", "Colors", "PortraitSupport", "PopupDialog", "CitySupport"]);
@@ -267,7 +268,7 @@ if (!isMainThread) {
 } else {
   const argv = process.argv.slice(2);
   let filter = null;
-  let planners = ["sdp", "amt", "ep"];
+  let planners = ["sdp", "amt", "ep", "dwp"];
   let jobs = Math.max(1, Math.min(8, (availableParallelism ? availableParallelism() : 4) - 2));
   let out = join(COMPARE, "results", "latest.jsonl");
   let verbose = false;

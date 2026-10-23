@@ -35,6 +35,11 @@ def group(sid):
         base, profile = sid.split("~", 1)
         part = group(base)[0]
         return "profile:" + profile + ("" if part == "dev" else "/" + part), "single"
+    for prefix, name, kind in (("D3", "three", "single"), ("HD3", "three/heldout", "single"),
+                               ("FD3", "three/sealed", "single"), ("DM", "twoeach", "multi"),
+                               ("HDM", "twoeach/heldout", "multi"), ("FDM", "twoeach/sealed", "multi")):
+        if sid.startswith(prefix) and sid[len(prefix):len(prefix) + 1].isdigit():
+            return name, kind
     if sid.startswith("OM"):
         return "smallmulti", "multi"
     if sid.startswith("HOM"):

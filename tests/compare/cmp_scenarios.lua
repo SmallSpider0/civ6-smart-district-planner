@@ -385,6 +385,67 @@ for _, b in ipairs(randomBase) do
   Add(s)
 end
 
+-- Three chosen districts plus an Aqueduct and a Government Plaza (issue 48):
+-- the size District & Wonder Planner plans (at most three districts; it adds
+-- an Aqueduct for every city and one Government Plaza by itself), so every
+-- planner gets the same list. One city at mid game ("D3nn"), and two or three
+-- cities with two chosen districts and an Aqueduct each ("DMnn"); "H" and "F"
+-- in front for the held-out and sealed parts.
+local TRIPLES = {
+  { "DISTRICT_CAMPUS", "DISTRICT_COMMERCIAL_HUB", "DISTRICT_INDUSTRIAL_ZONE" },
+  { "DISTRICT_CAMPUS", "DISTRICT_HOLY_SITE", "DISTRICT_THEATER" },
+  { "DISTRICT_INDUSTRIAL_ZONE", "DISTRICT_COMMERCIAL_HUB", "DISTRICT_THEATER" },
+  { "DISTRICT_CAMPUS", "DISTRICT_THEATER", "DISTRICT_ENTERTAINMENT_COMPLEX" },
+}
+local function DwpRuns(kind)
+  return Runs(kind, { { planner = "dwp", variant = "" }, { planner = "dwp", variant = "DEFAULT" },
+    { planner = "sdp", variant = "ORACLE" } })
+end
+local function ThreeDistricts(prefix, seed)
+  for n, entry in ipairs(SINGLE) do
+    local civKey, biome, extra = entry[1], entry[2], entry[3] or {}
+    seed = seed + 7
+    local civ = CIVS[civKey]
+    local list = {}
+    for _, t in ipairs(TRIPLES[(n - 1) % #TRIPLES + 1]) do
+      if t == "DISTRICT_HOLY_SITE" and civKey == "kongo" then t = "DISTRICT_COMMERCIAL_HUB" end
+      list[#list + 1] = t
+    end
+    list[#list + 1] = "DISTRICT_AQUEDUCT"
+    list[#list + 1] = "DISTRICT_GOVERNMENT"
+    Add({
+      id = string.format("%s%02d-%s-%s", prefix, n, civKey, biome), kind = "single", title = civ[3] .. "; three districts",
+      seed = seed, biome = biome, civKey = civKey, civ = civ[1], leader = civ[2], stage = "mid", cities = 1,
+      districts = list, built = { {} }, population = 10, foreign = extra.foreign, cityState = extra.cityState,
+      naturalWonder = extra.naturalWonder, set = prefix, runs = DwpRuns("single"),
+    })
+  end
+end
+ThreeDistricts("D3", 80000)
+ThreeDistricts("HD3", 81000)
+ThreeDistricts("FD3", 82000)
+local function TwoEachMulti(prefix, seed)
+  for x, entry in ipairs(SMALL_MULTI) do
+    local civKey, biome, count = entry[1], entry[2], entry[3]
+    seed = seed + 23
+    local civ = CIVS[civKey]
+    local pair = x % 2 == 0 and { "DISTRICT_CAMPUS", "DISTRICT_INDUSTRIAL_ZONE" }
+      or { "DISTRICT_CAMPUS", "DISTRICT_COMMERCIAL_HUB" }
+    local districts = { pair[1], pair[2], "DISTRICT_AQUEDUCT" }
+    local built = {}
+    for c = 1, count do built[c] = {} end
+    Add({
+      id = string.format("%s%02d-%s-%s-%dc", prefix, x, civKey, biome, count), kind = "multi",
+      title = civ[3] .. "; two districts and an aqueduct each", seed = seed, biome = biome, civKey = civKey,
+      civ = civ[1], leader = civ[2], stage = "mid", cities = count, districts = districts, built = built,
+      population = 16, samePopulation = true, set = prefix, runs = DwpRuns("multi"),
+    })
+  end
+end
+TwoEachMulti("DM", 83000)
+TwoEachMulti("HDM", 84000)
+TwoEachMulti("FDM", 85000)
+
 CmpScenarios.List = list
 CmpScenarios.ById = byId
 CmpScenarios.Runs = Runs -- for the scenes cmp_lib adds from files

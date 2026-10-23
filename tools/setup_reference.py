@@ -60,8 +60,9 @@ def main():
         ("base-ui", assets and os.path.join(assets, "Base", "Assets", "UI")),
         ("dlc", assets and os.path.join(assets, "DLC")),
         ("dmt", paths.workshop_item(paths.DMT)),
-        ("amt", paths.workshop_item(paths.AMT)),
-        ("ep", paths.workshop_item(paths.EP)),
+        ("amt", paths.reference_item(paths.AMT)),
+        ("ep", paths.reference_item(paths.EP)),
+        ("dwp", paths.reference_item(paths.DWP)),
     ]
     os.makedirs(REFERENCE, exist_ok=True)
     made = [link(name, target) for name, target in sources]
