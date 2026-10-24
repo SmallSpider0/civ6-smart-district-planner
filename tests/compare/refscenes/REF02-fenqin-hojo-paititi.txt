@@ -1,0 +1,78 @@
+# 焚琴煮茶, answer to the Zhihu question "每次布城都杂乱无章……" (2023-11,
+# 159 upvotes), Hojo Tokimune (Japan) on a Paititi (El Dorado) start, GS with
+# the secret societies and corporations modes. Transcribed from two pictures:
+#   picture 3 (v2-276a36ba…, 1038x755): the capital (京都) close up with its
+#     map tacks and DMT's numbers: Holy Site +5 (built by turn 30), Industrial
+#     Zone +4, Theater Square +4, Campus +4, Harbor +5, and a wonder tack
+#     (Kilwa Kisiwani, "规划了一个尼尔瓦的位置") west of the Industrial Zone;
+#   picture 5 (v2-01bf524d…, 1889x908, turn 30): the capital, 高松 (city 2)
+#     and 东京 (city 3) with the author's tacks along the river ("沿河随便钉一下"):
+#     Commercial Hub +5, Campus +5, Holy Site +7, Government Plaza, two
+#     Aqueducts, the "super" Industrial Zone +11 ("凑一个双水渠和政府区搞一个
+#     超级工业区，11锤"), Holy Site +6, Industrial Zone +9, Campus +4,
+#     Commercial Hub +5.
+# The judge (refscene.py verify) gives every number above except the second
+# Industrial Zone: 8, not 9. The missing +1 is probably a strategic resource
+# or an improvement next to it that the picture does not show (the plot west
+# of it has stone, the plot south-west a resource read as Honey).
+# The hex grid was fitted to the territory borders (perspective view) and
+# every plot read from the pictures (terrain colour, trees, tile yields);
+# fogged or unexplored plots (top and far right) and the sea row below the
+# picture are marked guessed.
+# Substitutions (the local rules database lacks this DLC content):
+#   Paititi (3 plots) -> FEATURE_ZHANGYE_DANXIA (another 3-plot natural
+#     wonder; Holy Sites get the same +2, Paititi's tile yields are lost);
+#   Honey (2 plots) -> RESOURCE_COTTON (both luxuries, no district on them).
+# Which of the two Industrial Zones and the Government Plaza belong to which
+# new city is not shown; assigned so that each is within 2 of its city.
+# Populations are set so that the specialty-district slots fit the plan.
+id      REF02-fenqin-hojo-paititi
+title   焚琴煮茶: Hojo three-city river plan with a double-aqueduct Industrial Zone
+source  https://www.zhihu.com/question/397145858/answer/3293261022
+author  焚琴煮茶
+date    2023-11
+ruleset RULESET_EXPANSION_2
+civ     CIVILIZATION_JAPAN LEADER_HOJO
+techs   all
+civics  all
+turn    150
+note    Claimed (DMT tacks): capital HS+5 IZ+4 TH+4 CA+4 HA+5; city 2 CH+5 CA+5 HS+7 IZ+11; city 3 HS+6 IZ+9 CA+4 CH+5.
+note    Kilwa Kisiwani is a planned wonder tack in the picture; here a built wonder. Paititi -> Zhangye Danxia, Honey -> Cotton.
+
+city 1 name=Kyoto pop=13 owns=1 capital
+city 2 name=Takamatsu pop=13 owns=1
+city 3 name=Tokyo pop=10 owns=1
+
+map
+  p?         p?         p?         p?         p+j?       p+j        p+j        p+j        d?         d?         d?         d?         d?
+        p?         p?         p?         p?         p+j        p+j        p+j        p+j        d          d?         d?         d?         d?
+  p?         p?         g?         g?         g          g?         g          d          dh         d          d?         d?         d?
+        p?         p+f?       g?         g          g          g          g          p+f?       dm         d?         d?         d?         d?
+  p?         g?         g?         p?         g          g+f        g          g          g+f        g+f        dh         d?         d?
+        g?         g?         g+f        g          g+m        g:stone?   g          g          g          dh         d:silver   d?         d?
+  c?         g?         g:stone    g+f        g          g+zhangye_danxia g:cotton?  g          g          p?         dh         d?         d?
+        c?         g:cattle   g+f        g          g+zhangye_danxia g+zhangye_danxia g          gm         g+f        p?         d          d?         d?
+  c?         c?         g?         g+f:deer   g          g:stone    g:cotton?  g          g+f        p          d:silver   d?         d?
+        c?         c?         g:rice     g          c          g+f        g?         g?         dh?        d          d?         d?         d?
+  c?         c?         c?         c          c:fish     c          c?         d?         d?         d?         d?         d?         d?
+        c?         c?         c?         c?         c?         c?         d?         d?         d?         d?         d?         d?         d?
+end
+
+layout
+  .          .          .          .          .          .          .          .          .          .          .          .          .
+        .          .          .          .          .          .          .          .          .          .          .          .          .
+  .          .          .          .          .          .          CH2        CA2        .          .          .          .          .
+        .          .          .          .          .          CC2        HS2        GP2        .          .          .          .          .
+  .          .          .          .          .          .          AQ2        IZ2        HS3        .          .          .          .
+        .          .          .          .          .          .          IZ3        AQ3        CH3        .          .          .          .
+  .          .          .          .          .          .          .          CA3        CC3        .          .          .          .
+        .          .          .          *HS1       .          .          .          .          .          .          .          .          .
+  .          .          .          IZ1        CC1        .          .          .          .          .          .          .          .
+        .          .          TH1        CA1        HA1        .          .          .          .          .          .          .          .
+  .          .          .          .          .          .          .          .          .          .          .          .          .
+        .          .          .          .          .          .          .          .          .          .          .          .          .
+end
+
+river Tone 2,2:SE 3,2:SW,SE 4,2:SW,SE 5,2:SW,SE 6,2:SW 5,3:E 6,3:SW 6,4:E 7,4:SW,SE 7,5:NE,E 8,5:SW 8,6:E 9,6:SW 8,7:E 9,7:SW 9,8:E
+
+wonder 2,8 BUILDING_KILWA_KISIWANI city=1

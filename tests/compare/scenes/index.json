@@ -35,6 +35,99 @@
   ]
  },
  {
+  "id": "REF02-fenqin-hojo-paititi",
+  "kind": "multi",
+  "set": "REF",
+  "civ": "CIVILIZATION_JAPAN",
+  "leader": "LEADER_HOJO",
+  "title": "焚琴煮茶: Hojo three-city river plan with a double-aqueduct Industrial Zone",
+  "districts": [
+   "DISTRICT_INDUSTRIAL_ZONE",
+   "DISTRICT_THEATER",
+   "DISTRICT_CAMPUS",
+   "DISTRICT_HARBOR",
+   "DISTRICT_COMMERCIAL_HUB",
+   "DISTRICT_HOLY_SITE",
+   "DISTRICT_GOVERNMENT",
+   "DISTRICT_AQUEDUCT"
+  ],
+  "only": [
+   1,
+   2,
+   3
+  ],
+  "target": 1,
+  "file": "REF02-fenqin-hojo-paititi.json",
+  "turn": 150,
+  "ruleset": "RULESET_EXPANSION_2",
+  "source": "https://www.zhihu.com/question/397145858/answer/3293261022",
+  "author": "焚琴煮茶",
+  "date": "2023-11",
+  "plans": [
+   [
+    "DISTRICT_INDUSTRIAL_ZONE",
+    "DISTRICT_THEATER",
+    "DISTRICT_CAMPUS",
+    "DISTRICT_HARBOR"
+   ],
+   [
+    "DISTRICT_COMMERCIAL_HUB",
+    "DISTRICT_CAMPUS",
+    "DISTRICT_HOLY_SITE",
+    "DISTRICT_GOVERNMENT",
+    "DISTRICT_AQUEDUCT",
+    "DISTRICT_INDUSTRIAL_ZONE"
+   ],
+   [
+    "DISTRICT_HOLY_SITE",
+    "DISTRICT_INDUSTRIAL_ZONE",
+    "DISTRICT_AQUEDUCT",
+    "DISTRICT_COMMERCIAL_HUB",
+    "DISTRICT_CAMPUS"
+   ]
+  ]
+ },
+ {
+  "id": "REF03-luoyuliang-japan-sendai",
+  "kind": "multi",
+  "set": "REF",
+  "civ": "CIVILIZATION_JAPAN",
+  "leader": "LEADER_HOJO",
+  "title": "洛雨凉: Japan four-city plan, Sendai",
+  "districts": [
+   "DISTRICT_HOLY_SITE",
+   "DISTRICT_INDUSTRIAL_ZONE",
+   "DISTRICT_CAMPUS",
+   "DISTRICT_AQUEDUCT",
+   "DISTRICT_COMMERCIAL_HUB",
+   "DISTRICT_GOVERNMENT",
+   "DISTRICT_THEATER"
+  ],
+  "only": [
+   1,
+   2
+  ],
+  "target": 1,
+  "file": "REF03-luoyuliang-japan-sendai.json",
+  "turn": 150,
+  "ruleset": "RULESET_EXPANSION_2",
+  "source": "https://www.bilibili.com/read/cv11098689",
+  "author": "洛雨凉_",
+  "date": "2021-04-30",
+  "plans": [
+   [
+    "DISTRICT_HOLY_SITE",
+    "DISTRICT_INDUSTRIAL_ZONE",
+    "DISTRICT_CAMPUS",
+    "DISTRICT_AQUEDUCT",
+    "DISTRICT_COMMERCIAL_HUB",
+    "DISTRICT_GOVERNMENT",
+    "DISTRICT_THEATER"
+   ],
+   []
+  ]
+ },
+ {
   "id": "RM01-pangaea-japan-3c",
   "kind": "multi",
   "set": "R",
