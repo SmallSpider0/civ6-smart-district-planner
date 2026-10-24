@@ -3,7 +3,7 @@
     python3 -I tools/stress.py prepare NAME [options]   # new game, AI plays N turns, save as SDP_stress_NAME
     python3 -I tools/stress.py load NAME                # back to the main menu if needed, load the save
     python3 -I tools/stress.py run NAME                 # the steps of tests/bench/stress.lua, timed
-    python3 -I tools/stress.py check NAME               # the game builds the appeal plans: appeal and housing as predicted?
+    python3 -I tools/stress.py check NAME               # the game builds the appeal plans: appeal and housing as predicted? (loads the save before each plan)
     python3 -I tools/stress.py all                      # load and run every scenario in SCENARIOS
     python3 -I tools/stress.py summary                  # the results as a table
 
@@ -308,7 +308,9 @@ def read_housing(owner, city, indices):
 
 def cmd_check(args):
     """Build each appeal plan of the last run in the game (the other districts
-    first, then those that give housing) and compare appeal and housing."""
+    first, then those that give housing) and compare appeal and housing. The
+    save is loaded again before each plan after the first, so one city's
+    plan does not change the appeal another's was made for (issue 58)."""
     out = os.path.join(RESULTS, args.name + ".json")
     with open(out, encoding="utf-8") as fh:
         data = json.load(fh)
@@ -318,6 +320,10 @@ def cmd_check(args):
         d = rec["Data"] or {}
         if d.get("Mode") != "APPEAL" or not d.get("Ok") or not d.get("Plan"):
             continue
+        if checks and not args.same_game:
+            if cmd_load(args) != 0:
+                return 2
+            owner = int(exec_lua("InGame", "print(Game.GetLocalPlayer())")[-1])
         housing = {(h["X"], h["Y"]): h for h in d.get("Housing") or []}
         others = [p for p in d["Plan"] if (p["X"], p["Y"]) not in housing]
         homes = [p for p in d["Plan"] if (p["X"], p["Y"]) in housing]
@@ -411,6 +417,7 @@ def main(argv=None):
     rp.add_argument("--cities", type=int, default=6, help="cities solved one by one (most populous first)")
     cp = sub.add_parser("check")
     cp.add_argument("name")
+    cp.add_argument("--same-game", action="store_true", help="build every plan in one game, without loading the save again")
     ap_all = sub.add_parser("all")
     ap_all.add_argument("--cities", type=int, default=6)
     sub.add_parser("summary")
