@@ -144,6 +144,7 @@ include("dmt_yieldcalculator");       -- 尾部会执行 DMT_Initialize()，见�
 | 40 | （2026-10-23 合作者实测发现）城市只能扩张或购买**挨着自己领土**的格子，三环内被别的城（现有的、城址的一环，或方案里别的城的区域）隔开的格子永远拿不到。DMT 和引擎的可建格都不查这一条（引擎只对已拥有的格给结果）。候选格按“从领土能连到”筛（`SDP_City.Reach`），多城评估布局时再按其他城的区域挡路复查（`SDP_Search.Reachable`） |
 | 41 | （2026-10-23 引擎审计发现，#44）风云变幻里被海平面上升**淹没的沿海低地**（`TerrainManager.GetCoastalLowlandType(plot) ~= -1` 且 `TerrainManager.IsFlooded(plot)`）不能放任何区域，引擎不给原因；DMT 的 `CanPlacePin` 不查。已拥有的格有引擎复核兜着，未拥有的格和城址的格只看 DMT，会被当成候选。v1.2.0 起 `SDP_City` 把它们排除（`FLOODED`）。城市修了防洪堤后 `IsFlooded` 立即变为假，引擎恢复可建，排除也随之取消（2026-10-23 实测） |
 | 42 | （2026-10-23 引擎审计发现，#45）“需相邻某区域”的奇观（`Buildings.AdjacentDistrict`）要求那个区域**属于建奇观的城**：旁边只有别的本方城市的区域时引擎不给可建格，DMT 判可放。v1.2.0 起 `SDP_Search` 只认能拥有奇观所在格的城的区域（`Owners`），离线对比的裁判也查（`wonder_other_city`） |
+| 43 | （2026-10-24 引擎探针，#51）“需相邻某改良设施”的奇观（`Buildings.AdjacentImprovement`，只有阿耳忒弥斯神庙：营地）：DMT 只看邻格有没有这种改良（已建的或改良钉），不查改良本身能不能建在那格（`CanPlacePin` 对改良是 TODO）。引擎认**别的本方城市**的营地（与坑 42 的区域不同），不认无主格上的营地。`SDP_Wonders.Support` 按规则表（`Improvement_ValidResources/Features/Terrains`，有自己改良的可见资源只认那些）找营地格，限玩家的格或参与城市能扩张到的无主格；全图与引擎 `ImprovementBuilder.CanHaveImprovement` 逐格一致（界面状态里没有这个接口，只在核心状态可用）。探针 `tests/bench/probe_camp.py` |
 
 ## 6. 开发环境与工作流
 
