@@ -557,6 +557,69 @@ function CmpOracle.Run(search, incumbentLayout, options)
   }
 end
 
+-- A given layout (a reference scene's, compare.mjs --refscore, issue 53)
+-- valued by the same search as the optimum, so the two are on one
+-- objective. `placements`: { { city, type, x, y } }; each takes a free slot
+-- of its type whose city `cityOf(m)` is its city, on the candidate at its
+-- plot. Returns { value, legal, adjacency, missing }: value and adjacency as
+-- Run's Value and Adjacency; missing lists the placements with no such slot
+-- or candidate (value nil then: the layout is outside the search), and
+-- `unplaced` the slots no placement took. A placement of a type the search
+-- has no slot for at all is left out on both sides (listed in `skipped`):
+-- the comparison framework requests no harbor when the only water within
+-- three plots is a lake (cmp_lib.lua's SeaInReach), and neither has one.
+function CmpOracle.ScoreLayout(search, placements, cityOf, options)
+  local land = options ~= nil and options.Land == true
+  local k, n = search.K, search.N
+  -- The board's slots still sit where the last computation left them, but
+  -- on the layer of the overlay that computation had: this one starts
+  -- empty, and Evaluate only puts slots that move. Take them all off first,
+  -- so every slot is put on this layer (else the neighbours of a slot that
+  -- stays are valued without it: REF05 under g05f05 gave 17, not 20).
+  search.Board:Clear()
+  local at = {}
+  for i = 1, n do
+    local c = search.Candidates[i]
+    at[c.X .. "," .. c.Y] = i
+  end
+  local layout, missing, skipped, types = {}, {}, {}, {}
+  for m = 1, k do
+    layout[m] = 0
+    types[search.Types[m]] = true
+  end
+  for _, p in ipairs(placements) do
+    local i = at[p.x .. "," .. p.y]
+    local slot = nil
+    if i ~= nil then
+      for m = 1, k do
+        if layout[m] == 0 and search.Types[m] == p.type and cityOf(m) == p.city then
+          slot = m
+          break
+        end
+      end
+    end
+    if not types[p.type] then
+      skipped[#skipped + 1] = { type = p.type, x = p.x, y = p.y, city = p.city }
+    elseif slot == nil then
+      missing[#missing + 1] = { type = p.type, x = p.x, y = p.y, city = p.city,
+        reason = i == nil and "not a candidate" or "no slot" }
+    else
+      layout[slot] = i
+    end
+  end
+  local unplaced = {}
+  for m = 1, k do
+    if layout[m] == 0 then unplaced[#unplaced + 1] = { type = search.Types[m], city = cityOf(m) } end
+  end
+  local out = { missing = #missing > 0 and missing or nil, unplaced = #unplaced > 0 and unplaced or nil,
+    skipped = #skipped > 0 and skipped or nil }
+  if #missing == 0 then
+    local value, legal, gain = Value(search, layout, land)
+    out.value, out.legal, out.adjacency = value, legal, gain
+  end
+  return out
+end
+
 -- Every layout, for checking Run on small cases: the best legal value, or
 -- nil when there are more than `limit` layouts (or pools: not covered).
 -- `options.Land`: the whole objective, as Run.

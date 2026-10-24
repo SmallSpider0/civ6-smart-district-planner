@@ -251,6 +251,20 @@ test("oracle with land: the optimum of the whole objective equals brute force", 
   local adjacencyOnly = SDP_Overlay.With(0, CmpOracle.BruteForce, search, 1e6)
   T.ok(adjacencyOnly >= o.Adjacency - 1e-9, "adjacency of the land optimum at most the adjacency optimum")
   T.ok(o.Nodes < count, "the bound prunes: " .. o.Nodes .. " nodes for " .. count .. " layouts")
+  -- A given layout (compare.mjs --refscore, issue 53) valued by the same
+  -- search: the optimum's own layout, as placements, gives its value.
+  local placements = {}
+  for m = 1, search.K do
+    local c = search.Candidates[o.Layout[m]]
+    placements[#placements + 1] = { city = 1, type = search.Types[m], x = c.X, y = c.Y }
+  end
+  local scored = SDP_Overlay.With(0, CmpOracle.ScoreLayout, search, placements, function() return 1 end, options)
+  T.near(scored.value, o.Value, 1e-9, "the optimum's layout valued again")
+  T.near(scored.adjacency, o.Adjacency, 1e-9, "its adjacency")
+  T.ok(scored.legal and scored.missing == nil and scored.unplaced == nil, "legal, all placed")
+  placements[1] = { city = 1, type = placements[1].type, x = 0, y = 0 }
+  local outside = SDP_Overlay.With(0, CmpOracle.ScoreLayout, search, placements, function() return 1 end, options)
+  T.ok(outside.value == nil and outside.missing ~= nil and outside.missing[1].reason == "not a candidate", "a plot outside the candidates")
 end)
 
 test("oracle, adjacency only: the optimum equals brute force under whole and fractional weights (issue 53)", function()

@@ -101,6 +101,12 @@ local function Oracle(result, out, cityOf, check, weights, land, lambda)
       out.placements[#out.placements + 1] = { city = cityOf(m), type = search.Types[m], x = c.X, y = c.Y }
     end
   end
+  -- compare.mjs --refscore sets CMP_REFERENCE (the reference layout's plan,
+  -- JSON): value it on the same search, under the optimum's objective.
+  if CMP_REFERENCE ~= nil and CMP_REFERENCE ~= "" then
+    out.stats.reference = SDP_Overlay.With(0, CmpOracle.ScoreLayout, search,
+      CmpRun.Json.Decode(CMP_REFERENCE).placements, cityOf, options)
+  end
   out.stats.sdpGain = o.Adjacency or o.Value
   if land then out.stats.sdpObjective = o.Value end
   out.stats.oracle = { value = o.Value, upper = o.Upper, proven = o.Proven, complete = o.Complete, start = o.Start,

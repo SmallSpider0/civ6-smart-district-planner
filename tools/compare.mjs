@@ -22,9 +22,13 @@
 //   node tools/compare.mjs --dump ID | --snapshot ID
 //   node tools/compare.mjs --refscore [-s REF01] [--weights FILE|SPEC] [--reference-only]
 //       reference scenes (tools/refscene.py): for each weight vector, the
-//       judge's score of the recorded layout and of the optimum (sdp:ORACLE,
-//       or sdp:FINE_LAND when the vector has land=1) under the same weights;
-//       one row per scene and vector (issue 53)
+//       judge's score of the recorded layout and of the optimum under the
+//       same weights; one row per scene and vector (issue 53). Adjacency
+//       only: the optimum is sdp:ORACLE, compared on the judge's gain. With
+//       land (land=1, or lambda=x for the land coefficient): the optimum is
+//       sdp:ORACLE_LAND<nnn>, and the reference layout is valued by the same
+//       search, both on the mod's whole objective (adjacency + lambda x land
+//       part + housing)
 //   node tools/compare.mjs -s ^S -p sdp --only sdp:ORACLE --weights FILE|SPEC [--out FILE]
 //   node tools/compare.mjs --rejudge RESULTS.jsonl --weights FILE|SPEC [--out FILE]
 //       the same runs (or judgings) once per named weight vector, which
@@ -244,13 +248,21 @@ function weightVector(name, fields) {
   for (const k of Object.keys(YIELD_KEYS)) v.yields[YIELD_KEYS[k]] = 1;
   for (const [k, raw] of Object.entries(fields)) {
     if (k === "name") continue;
-    if (k === "land") v.land = raw === true || Number(raw) === 1;
-    else if (k === "oracle") v.oracleLimit = Number(raw); // node limit in millions
+    if (k === "land") {
+      v.land = raw === true || Number(raw) === 1;
+      if (v.land && v.lambda === undefined) v.lambda = 1;
+    } else if (k === "lambda") {
+      // The land coefficient (issue 53): the land part on, scaled by it.
+      const x = Number(raw);
+      if (!(x >= 0 && x <= 9.99)) throw new Error(`lambda=${raw} is not a number from 0 to 9.99`);
+      v.land = true;
+      v.lambda = x;
+    } else if (k === "oracle") v.oracleLimit = Number(raw); // node limit in millions
     else if (YIELD_KEYS[k]) {
       const n = Number(raw);
       if (!Number.isFinite(n)) throw new Error(`weight ${k}=${raw} is not a number`);
       v.yields[YIELD_KEYS[k]] = n;
-    } else throw new Error(`unknown weight ${k} (${Object.keys(YIELD_KEYS).join(", ")}, land, oracle)`);
+    } else throw new Error(`unknown weight ${k} (${Object.keys(YIELD_KEYS).join(", ")}, land, lambda, oracle)`);
   }
   return v;
 }
@@ -293,13 +305,16 @@ function refScore(task) {
   const refJudged = judge(refPlan.slice(5));
   row.reference = refJudged.score ? Object.assign({ plan: JSON.parse(refPlan.slice(5)).placements }, refJudged.score) : null;
   if (refJudged.error) row.error = "reference judge: " + refJudged.error;
-  // The objective the two are compared on: the weighted adjacency gain, or
-  // with land on the gain plus the weighted yields of the worked plots.
-  const objective = v.land ? "outputWeighted" : "gain";
+  // The objective the two are compared on: the judge's weighted adjacency
+  // gain, or with land the mod's whole objective ("sdp": the oracle's value
+  // and the reference layout valued by the same search).
+  const objective = v.land ? "sdp" : "gain";
   row.objective = objective;
   if (task.referenceOnly) return row;
-  const variant = v.land ? "FINE_LAND" : "ORACLE" + (v.oracleLimit ? "@" + v.oracleLimit : "");
-  const plan = runLua("sdp", prefix + `include("cmp_lib")\nCmpRun.Plan(${id}, "sdp", ${luaString(variant)})`, "plan_sdp");
+  const variant = (v.land ? "ORACLE_LAND" + String(Math.round(v.lambda * 100)).padStart(3, "0") : "ORACLE")
+    + (v.oracleLimit ? "@" + v.oracleLimit : "");
+  const plan = runLua("sdp", prefix + `CMP_REFERENCE = ${luaString(refPlan.slice(5))}\n`
+    + `include("cmp_lib")\nCmpRun.Plan(${id}, "sdp", ${luaString(variant)})`, "plan_sdp");
   const planJson = (plan.emits.find((e) => e.startsWith("PLAN ")) || "").slice(5);
   row.optimum = { planner: "sdp", variant, planSeconds: plan.seconds };
   if (plan.error || !planJson) {
@@ -314,11 +329,35 @@ function refScore(task) {
   const optJudged = judge(planJson);
   if (optJudged.score) Object.assign(row.optimum, optJudged.score);
   if (optJudged.error) row.error = "optimum judge: " + optJudged.error;
-  if (row.reference && optJudged.score) {
-    const r = row.reference[objective], o = optJudged.score[objective];
+  const oracle = (parsed.stats && parsed.stats.oracle) || {};
+  const own = (parsed.stats && parsed.stats.reference) || {};
+  if (v.land && (own.missing || own.value === undefined)) {
+    row.error = "reference outside the search: " + JSON.stringify(own.missing || own);
+  }
+  if (row.reference && optJudged.score && (!v.land || own.value !== undefined)) {
+    const r = v.land ? own.value : row.reference[objective];
+    const o = v.land ? oracle.value : optJudged.score[objective];
+    const unweighted = (score) => Object.values(score.byYield || {}).reduce((a, b) => a + b, 0);
     row.summary = { reference: r, optimum: o, gap: o - r, referenceShare: o > 0 ? r / o : null,
       referenceOptimal: r >= o - 1e-9, referenceLegal: row.reference.legal, optimumLegal: optJudged.score.legal,
-      proven: parsed.stats && parsed.stats.oracle ? parsed.stats.oracle.proven === true : null };
+      proven: oracle.proven === undefined ? null : oracle.proven === true,
+      complete: oracle.complete === undefined ? null : oracle.complete === true,
+      // The judge's adjacency of both (with the weights, and all 1).
+      referenceGain: row.reference.gain, optimumGain: optJudged.score.gain,
+      referenceGain1: unweighted(row.reference), optimumGain1: unweighted(optJudged.score) };
+    if (v.land) {
+      // Cut short by the node limit: the optimum lies in [optimum, upper].
+      if (oracle.complete === false) {
+        row.summary.upper = oracle.upper;
+        row.summary.gapUpper = oracle.upper - r;
+      }
+      row.summary.lambda = v.lambda;
+      row.summary.referenceLegalSearch = own.legal;
+      row.summary.referenceAdjacencySearch = own.adjacency;
+      // Placements of a type the search has no slot for (left out on both sides).
+      if (own.skipped) row.summary.referenceSkipped = own.skipped;
+      row.summary.optimumAdjacencySearch = oracle.adjacency;
+    }
   }
   return row;
 }
@@ -540,8 +579,8 @@ if (!isMainThread) {
         const crossText = r.cross ? Object.entries(r.cross).map(([k, v]) => `${k} ${v && v.error ? "ERROR " + String(v.error).split("\n")[0].slice(0, 80) : v && v.gain}`).join(" ") : "";
         const m = r.summary;
         const summary = r.error ? "ERROR " + r.error.split("\n")[0].slice(0, 160)
-          : r.mode === "refscore" ? `[${r.weights.name}] ${r.objective}: reference ${m ? m.reference : r.reference && r.reference[r.objective]}`
-            + (m ? ` optimum ${m.optimum}${m.proven === false ? " (not proven)" : ""} gap ${+m.gap.toFixed(3)}${m.referenceOptimal ? " = optimal" : ""}` : "")
+          : r.mode === "refscore" ? `[${r.weights.name}] ${r.objective}: reference ${m ? +m.reference.toFixed(3) : r.reference && r.reference[r.objective]}`
+            + (m ? ` optimum ${m.optimum}${m.upper !== undefined ? " ~ " + (+m.upper.toFixed(3)) : ""}${m.proven === false ? " (not proven)" : ""} gap ${+m.gap.toFixed(3)}${m.referenceOptimal ? " = optimal" : ""}` : "")
             + (r.reference && !r.reference.legal ? " reference ILLEGAL" : "")
           : crossText ? "cross " + crossText
           : s && s.siteValue !== undefined ? `siteValue ${s.siteValue} tiles ${s.tileValue} districts ${s.districtPotential} legal ${s.legal} violations ${s.violations.length}`
