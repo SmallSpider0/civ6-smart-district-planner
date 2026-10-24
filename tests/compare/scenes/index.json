@@ -1,5 +1,427 @@
 [
  {
+  "id": "RC01-pangaea-japan-kyoto",
+  "kind": "multi",
+  "set": "R",
+  "civ": "CIVILIZATION_JAPAN",
+  "leader": "LEADER_HOJO",
+  "title": "Japan, pangaea-gs",
+  "districts": [
+   "DISTRICT_COMMERCIAL_HUB",
+   "DISTRICT_INDUSTRIAL_ZONE",
+   "DISTRICT_ENTERTAINMENT_COMPLEX",
+   "DISTRICT_HARBOR"
+  ],
+  "only": [
+   65536
+  ],
+  "target": 65536,
+  "file": "RC01-pangaea-japan-kyoto.json",
+  "save": "pangaea-gs",
+  "turn": 201,
+  "ruleset": "RULESET_EXPANSION_2",
+  "plans": [
+   [
+    "DISTRICT_COMMERCIAL_HUB",
+    "DISTRICT_INDUSTRIAL_ZONE",
+    "DISTRICT_ENTERTAINMENT_COMPLEX",
+    "DISTRICT_HARBOR"
+   ]
+  ]
+ },
+ {
+  "id": "RC02-pangaea-japan-nagoya",
+  "kind": "multi",
+  "set": "R",
+  "civ": "CIVILIZATION_JAPAN",
+  "leader": "LEADER_HOJO",
+  "title": "Japan, pangaea-gs",
+  "districts": [
+   "DISTRICT_CAMPUS",
+   "DISTRICT_COMMERCIAL_HUB",
+   "DISTRICT_ENTERTAINMENT_COMPLEX",
+   "DISTRICT_HARBOR"
+  ],
+  "only": [
+   327682
+  ],
+  "target": 327682,
+  "file": "RC02-pangaea-japan-nagoya.json",
+  "save": "pangaea-gs",
+  "turn": 201,
+  "ruleset": "RULESET_EXPANSION_2",
+  "plans": [
+   [
+    "DISTRICT_CAMPUS",
+    "DISTRICT_COMMERCIAL_HUB",
+    "DISTRICT_ENTERTAINMENT_COMPLEX",
+    "DISTRICT_HARBOR"
+   ]
+  ]
+ },
+ {
+  "id": "RC03-pangaea-japan-osaka",
+  "kind": "multi",
+  "set": "R",
+  "civ": "CIVILIZATION_JAPAN",
+  "leader": "LEADER_HOJO",
+  "title": "Japan, pangaea-gs",
+  "districts": [
+   "DISTRICT_CAMPUS",
+   "DISTRICT_COMMERCIAL_HUB",
+   "DISTRICT_INDUSTRIAL_ZONE",
+   "DISTRICT_HARBOR"
+  ],
+  "only": [
+   393219
+  ],
+  "target": 393219,
+  "file": "RC03-pangaea-japan-osaka.json",
+  "save": "pangaea-gs",
+  "turn": 201,
+  "ruleset": "RULESET_EXPANSION_2",
+  "plans": [
+   [
+    "DISTRICT_CAMPUS",
+    "DISTRICT_COMMERCIAL_HUB",
+    "DISTRICT_INDUSTRIAL_ZONE",
+    "DISTRICT_HARBOR"
+   ]
+  ]
+ },
+ {
+  "id": "RC04-pangaea-japan-gifu",
+  "kind": "multi",
+  "set": "R",
+  "civ": "CIVILIZATION_JAPAN",
+  "leader": "LEADER_HOJO",
+  "title": "Japan, pangaea-gs",
+  "districts": [
+   "DISTRICT_CAMPUS",
+   "DISTRICT_HOLY_SITE",
+   "DISTRICT_COMMERCIAL_HUB",
+   "DISTRICT_INDUSTRIAL_ZONE",
+   "DISTRICT_ENTERTAINMENT_COMPLEX"
+  ],
+  "only": [
+   458756
+  ],
+  "target": 458756,
+  "file": "RC04-pangaea-japan-gifu.json",
+  "save": "pangaea-gs",
+  "turn": 201,
+  "ruleset": "RULESET_EXPANSION_2",
+  "plans": [
+   [
+    "DISTRICT_CAMPUS",
+    "DISTRICT_HOLY_SITE",
+    "DISTRICT_COMMERCIAL_HUB",
+    "DISTRICT_INDUSTRIAL_ZONE",
+    "DISTRICT_ENTERTAINMENT_COMPLEX"
+   ]
+  ]
+ },
+ {
+  "id": "RC05-pangaea-japan-okayama",
+  "kind": "multi",
+  "set": "R",
+  "civ": "CIVILIZATION_JAPAN",
+  "leader": "LEADER_HOJO",
+  "title": "Japan, pangaea-gs",
+  "districts": [
+   "DISTRICT_CAMPUS",
+   "DISTRICT_HOLY_SITE",
+   "DISTRICT_COMMERCIAL_HUB",
+   "DISTRICT_THEATER",
+   "DISTRICT_INDUSTRIAL_ZONE",
+   "DISTRICT_ENTERTAINMENT_COMPLEX",
+   "DISTRICT_HARBOR"
+  ],
+  "only": [
+   524289
+  ],
+  "target": 524289,
+  "file": "RC05-pangaea-japan-okayama.json",
+  "save": "pangaea-gs",
+  "turn": 201,
+  "ruleset": "RULESET_EXPANSION_2",
+  "plans": [
+   [
+    "DISTRICT_CAMPUS",
+    "DISTRICT_HOLY_SITE",
+    "DISTRICT_COMMERCIAL_HUB",
+    "DISTRICT_THEATER",
+    "DISTRICT_INDUSTRIAL_ZONE",
+    "DISTRICT_ENTERTAINMENT_COMPLEX",
+    "DISTRICT_HARBOR"
+   ]
+  ]
+ },
+ {
+  "id": "RC06-continents-netherlands-amsterdam",
+  "kind": "multi",
+  "set": "R",
+  "civ": "CIVILIZATION_NETHERLANDS",
+  "leader": "LEADER_WILHELMINA",
+  "title": "Netherlands, continents-gs",
+  "districts": [
+   "DISTRICT_HOLY_SITE"
+  ],
+  "only": [
+   65536
+  ],
+  "target": 65536,
+  "file": "RC06-continents-netherlands-amsterdam.json",
+  "save": "continents-gs",
+  "turn": 221,
+  "ruleset": "RULESET_EXPANSION_2",
+  "plans": [
+   [
+    "DISTRICT_HOLY_SITE"
+   ]
+  ]
+ },
+ {
+  "id": "RC07-continents-netherlands-haag",
+  "kind": "multi",
+  "set": "R",
+  "civ": "CIVILIZATION_NETHERLANDS",
+  "leader": "LEADER_WILHELMINA",
+  "title": "Netherlands, continents-gs",
+  "districts": [
+   "DISTRICT_HOLY_SITE",
+   "DISTRICT_COMMERCIAL_HUB"
+  ],
+  "only": [
+   131073
+  ],
+  "target": 131073,
+  "file": "RC07-continents-netherlands-haag.json",
+  "save": "continents-gs",
+  "turn": 221,
+  "ruleset": "RULESET_EXPANSION_2",
+  "plans": [
+   [
+    "DISTRICT_HOLY_SITE",
+    "DISTRICT_COMMERCIAL_HUB"
+   ]
+  ]
+ },
+ {
+  "id": "RC08-continents-netherlands-rotterdam",
+  "kind": "multi",
+  "set": "R",
+  "civ": "CIVILIZATION_NETHERLANDS",
+  "leader": "LEADER_WILHELMINA",
+  "title": "Netherlands, continents-gs",
+  "districts": [
+   "DISTRICT_HOLY_SITE",
+   "DISTRICT_ENTERTAINMENT_COMPLEX"
+  ],
+  "only": [
+   196610
+  ],
+  "target": 196610,
+  "file": "RC08-continents-netherlands-rotterdam.json",
+  "save": "continents-gs",
+  "turn": 221,
+  "ruleset": "RULESET_EXPANSION_2",
+  "plans": [
+   [
+    "DISTRICT_HOLY_SITE",
+    "DISTRICT_ENTERTAINMENT_COMPLEX"
+   ]
+  ]
+ },
+ {
+  "id": "RC09-continents-netherlands-nijmegen",
+  "kind": "multi",
+  "set": "R",
+  "civ": "CIVILIZATION_NETHERLANDS",
+  "leader": "LEADER_WILHELMINA",
+  "title": "Netherlands, continents-gs",
+  "districts": [
+   "DISTRICT_HOLY_SITE",
+   "DISTRICT_COMMERCIAL_HUB",
+   "DISTRICT_INDUSTRIAL_ZONE"
+  ],
+  "only": [
+   262147
+  ],
+  "target": 262147,
+  "file": "RC09-continents-netherlands-nijmegen.json",
+  "save": "continents-gs",
+  "turn": 221,
+  "ruleset": "RULESET_EXPANSION_2",
+  "plans": [
+   [
+    "DISTRICT_HOLY_SITE",
+    "DISTRICT_COMMERCIAL_HUB",
+    "DISTRICT_INDUSTRIAL_ZONE"
+   ]
+  ]
+ },
+ {
+  "id": "RC10-continents-netherlands-tilburg",
+  "kind": "multi",
+  "set": "R",
+  "civ": "CIVILIZATION_NETHERLANDS",
+  "leader": "LEADER_WILHELMINA",
+  "title": "Netherlands, continents-gs",
+  "districts": [
+   "DISTRICT_HOLY_SITE",
+   "DISTRICT_COMMERCIAL_HUB",
+   "DISTRICT_INDUSTRIAL_ZONE",
+   "DISTRICT_ENTERTAINMENT_COMPLEX"
+  ],
+  "only": [
+   327684
+  ],
+  "target": 327684,
+  "file": "RC10-continents-netherlands-tilburg.json",
+  "save": "continents-gs",
+  "turn": 221,
+  "ruleset": "RULESET_EXPANSION_2",
+  "plans": [
+   [
+    "DISTRICT_HOLY_SITE",
+    "DISTRICT_COMMERCIAL_HUB",
+    "DISTRICT_INDUSTRIAL_ZONE",
+    "DISTRICT_ENTERTAINMENT_COMPLEX"
+   ]
+  ]
+ },
+ {
+  "id": "RC11-continents-netherlands-haarlem",
+  "kind": "multi",
+  "set": "R",
+  "civ": "CIVILIZATION_NETHERLANDS",
+  "leader": "LEADER_WILHELMINA",
+  "title": "Netherlands, continents-gs",
+  "districts": [
+   "DISTRICT_HOLY_SITE",
+   "DISTRICT_COMMERCIAL_HUB",
+   "DISTRICT_INDUSTRIAL_ZONE",
+   "DISTRICT_ENTERTAINMENT_COMPLEX",
+   "DISTRICT_HARBOR"
+  ],
+  "only": [
+   393221
+  ],
+  "target": 393221,
+  "file": "RC11-continents-netherlands-haarlem.json",
+  "save": "continents-gs",
+  "turn": 221,
+  "ruleset": "RULESET_EXPANSION_2",
+  "plans": [
+   [
+    "DISTRICT_HOLY_SITE",
+    "DISTRICT_COMMERCIAL_HUB",
+    "DISTRICT_INDUSTRIAL_ZONE",
+    "DISTRICT_ENTERTAINMENT_COMPLEX",
+    "DISTRICT_HARBOR"
+   ]
+  ]
+ },
+ {
+  "id": "RC12-continents-netherlands-huili",
+  "kind": "multi",
+  "set": "R",
+  "civ": "CIVILIZATION_NETHERLANDS",
+  "leader": "LEADER_WILHELMINA",
+  "title": "Netherlands, continents-gs",
+  "districts": [
+   "DISTRICT_CAMPUS",
+   "DISTRICT_HOLY_SITE",
+   "DISTRICT_COMMERCIAL_HUB",
+   "DISTRICT_INDUSTRIAL_ZONE",
+   "DISTRICT_ENTERTAINMENT_COMPLEX"
+  ],
+  "only": [
+   458758
+  ],
+  "target": 458758,
+  "file": "RC12-continents-netherlands-huili.json",
+  "save": "continents-gs",
+  "turn": 221,
+  "ruleset": "RULESET_EXPANSION_2",
+  "plans": [
+   [
+    "DISTRICT_CAMPUS",
+    "DISTRICT_HOLY_SITE",
+    "DISTRICT_COMMERCIAL_HUB",
+    "DISTRICT_INDUSTRIAL_ZONE",
+    "DISTRICT_ENTERTAINMENT_COMPLEX"
+   ]
+  ]
+ },
+ {
+  "id": "RC13-continents-netherlands-maastricht",
+  "kind": "multi",
+  "set": "R",
+  "civ": "CIVILIZATION_NETHERLANDS",
+  "leader": "LEADER_WILHELMINA",
+  "title": "Netherlands, continents-gs",
+  "districts": [
+   "DISTRICT_CAMPUS",
+   "DISTRICT_HOLY_SITE",
+   "DISTRICT_COMMERCIAL_HUB",
+   "DISTRICT_INDUSTRIAL_ZONE",
+   "DISTRICT_ENTERTAINMENT_COMPLEX"
+  ],
+  "only": [
+   524295
+  ],
+  "target": 524295,
+  "file": "RC13-continents-netherlands-maastricht.json",
+  "save": "continents-gs",
+  "turn": 221,
+  "ruleset": "RULESET_EXPANSION_2",
+  "plans": [
+   [
+    "DISTRICT_CAMPUS",
+    "DISTRICT_HOLY_SITE",
+    "DISTRICT_COMMERCIAL_HUB",
+    "DISTRICT_INDUSTRIAL_ZONE",
+    "DISTRICT_ENTERTAINMENT_COMPLEX"
+   ]
+  ]
+ },
+ {
+  "id": "RC14-continents-netherlands-utrecht",
+  "kind": "multi",
+  "set": "R",
+  "civ": "CIVILIZATION_NETHERLANDS",
+  "leader": "LEADER_WILHELMINA",
+  "title": "Netherlands, continents-gs",
+  "districts": [
+   "DISTRICT_HOLY_SITE",
+   "DISTRICT_COMMERCIAL_HUB",
+   "DISTRICT_THEATER",
+   "DISTRICT_INDUSTRIAL_ZONE",
+   "DISTRICT_ENTERTAINMENT_COMPLEX",
+   "DISTRICT_HARBOR"
+  ],
+  "only": [
+   589832
+  ],
+  "target": 589832,
+  "file": "RC14-continents-netherlands-utrecht.json",
+  "save": "continents-gs",
+  "turn": 221,
+  "ruleset": "RULESET_EXPANSION_2",
+  "plans": [
+   [
+    "DISTRICT_HOLY_SITE",
+    "DISTRICT_COMMERCIAL_HUB",
+    "DISTRICT_THEATER",
+    "DISTRICT_INDUSTRIAL_ZONE",
+    "DISTRICT_ENTERTAINMENT_COMPLEX",
+    "DISTRICT_HARBOR"
+   ]
+  ]
+ },
+ {
   "id": "RM01-pangaea-japan-3c",
   "kind": "multi",
   "set": "R",
