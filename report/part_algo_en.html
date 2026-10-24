@@ -1,0 +1,368 @@
+  <div class="algo">
+  <h3><span class="sn">A.1</span>Incremental, memoized evaluation (SDP_Board)</h3>
+  <p>DMT scores a district only by its own tile and the 6 tiles around it, so the score depends on three things: the district type, the tile, and what is planned on the 6 neighbors. When a district moves, only the districts around its old and new tiles need a new score; each score is looked up in memory first, and DMT is called only when it is not there.</p>
+  <figure>
+    <div class="frame">
+      <svg viewBox="0 0 640 300" role="img" aria-label="After the Campus moves to the center tile, only the districts on that tile and its 6 neighbors need a new score; districts further out keep theirs">
+        {{HEX}}
+        <g transform="translate(372,40)">
+          <polygon class="hx-move" points="10,0 18.7,5 18.7,15 10,20 1.3,15 1.3,5"/>
+          <text class="ax-l" x="28" y="14">District just moved</text>
+          <polygon class="hx-near" points="10,36 18.7,41 18.7,51 10,56 1.3,51 1.3,41"/>
+          <text class="ax-l" x="28" y="50">Neighbors: scored again</text>
+          <text class="ax" x="28" y="68">(memory first, DMT only if missing)</text>
+          <polygon class="hx-far" points="10,86 18.7,91 18.7,101 10,106 1.3,101 1.3,91"/>
+          <text class="ax-l" x="28" y="100">Further out: score kept</text>
+          <text class="ax" x="0" y="146">Ca Campus · HS Holy Site</text>
+          <text class="ax" x="0" y="164">CH Commercial Hub</text>
+          <text class="ax" x="0" y="182">IZ Industrial Zone</text>
+          <text class="ax" x="0" y="200">GP Government Plaza</text>
+          <text class="ax" x="0" y="218">Th Theater Square · Mtn Mountains</text>
+        </g>
+      </svg>
+    </div>
+    <figcaption>One move affects at most 1 + 6 + 6 objects. In the game, solving 8 districts on Standard calls DMT about 3,400 times, and about two thirds of the scores come straight from memory.</figcaption>
+  </figure>
+  <details><summary>Pseudocode</summary>
+<pre class="code"><span class="k">function</span> <span class="f">score</span>(district, tile)
+    <span class="c">-- neighborCode: one digit per direction, the object planned on that neighbor</span>
+    key = (district.type, tile, neighborCode(tile))
+    <span class="k">if</span> memory[key] exists <span class="k">then return</span> memory[key] <span class="k">end</span>
+    lay out this situation on the overlay; clear DMT's tile cache
+    memory[key] = Σ weight[yield] × DMT.GetBonusYields(district)[yield]
+    <span class="k">return</span> memory[key]
+<span class="k">end</span>
+
+<span class="k">function</span> <span class="f">place</span>(slot, newTile)                     <span class="c">-- Board:Put</span>
+    affected = {slot} ∪ objects on the old tile's 6 neighbors
+                      ∪ objects on the new tile's 6 neighbors
+    <span class="k">for</span> obj <span class="k">in</span> affected <span class="k">do</span> total = total − oldScore[obj] + <span class="f">score</span>(obj, obj.tile) <span class="k">end</span>
+<span class="k">end</span></pre>
+  </details>
+  </div>
+
+  <div class="algo">
+  <h3><span class="sn">A.2</span>One-city search (SDP_Search)</h3>
+  <p>First a cheap linear model picks a set of good layouts from a very large range; DMT then scores them exactly; finally local search and “remove a patch and place it again” correct the model's errors. The model only decides where to look; every final score comes from DMT.</p>
+  <figure>
+    <div class="frame scroll">
+      <svg viewBox="0 0 880 274" role="img" aria-label="One-city search: a base table, then exhaustive search when small, otherwise model beam search, exact scoring of a shortlist, local search, perturb and rebuild, result; with no complete plan, solve again with one or two districts fewer">
+        <defs>
+          <marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="d-arrow" d="M0,0 L10,5 L0,10 z"/></marker>
+        </defs>
+        <rect class="d-box" x="10" y="62" width="130" height="88" rx="8"/>
+        <text class="d-title" x="75" y="88" text-anchor="middle">Base table</text>
+        <text class="d-sub" x="75" y="108" text-anchor="middle">each district ×</text>
+        <text class="d-sub" x="75" y="123" text-anchor="middle">each tile: validity,</text>
+        <text class="d-sub" x="75" y="138" text-anchor="middle">score alone</text>
+        <rect class="d-box key" x="158" y="62" width="154" height="88" rx="8"/>
+        <text class="d-title" x="235" y="88" text-anchor="middle">Beam search</text>
+        <text class="d-sub" x="235" y="108" text-anchor="middle">on the model, width</text>
+        <text class="d-sub" x="235" y="123" text-anchor="middle">150 / 400 / 1000;</text>
+        <text class="d-sub" x="235" y="138" text-anchor="middle">most mutual bonus first</text>
+        <rect class="d-box" x="328" y="62" width="120" height="88" rx="8"/>
+        <text class="d-title" x="388" y="88" text-anchor="middle">Shortlist</text>
+        <text class="d-sub" x="388" y="108" text-anchor="middle">the top</text>
+        <text class="d-sub" x="388" y="123" text-anchor="middle">20 / 100 / 200</text>
+        <text class="d-sub" x="388" y="138" text-anchor="middle">scored by DMT</text>
+        <rect class="d-box" x="472" y="62" width="110" height="88" rx="8"/>
+        <text class="d-title" x="527" y="88" text-anchor="middle">Local search</text>
+        <text class="d-sub" x="527" y="108" text-anchor="middle">move, swap,</text>
+        <text class="d-sub" x="527" y="123" text-anchor="middle">shift a group</text>
+        <rect class="d-box" x="606" y="62" width="130" height="88" rx="8"/>
+        <text class="d-title" x="671" y="88" text-anchor="middle">Rebuild</text>
+        <text class="d-sub" x="671" y="108" text-anchor="middle">remove a patch,</text>
+        <text class="d-sub" x="671" y="123" text-anchor="middle">place it again;</text>
+        <text class="d-sub" x="671" y="138" text-anchor="middle">0 / 4 / 24 rounds</text>
+        <rect class="d-box" x="760" y="62" width="110" height="88" rx="8"/>
+        <text class="d-title" x="815" y="88" text-anchor="middle">Result</text>
+        <text class="d-sub" x="815" y="108" text-anchor="middle">+ upper bound</text>
+        <text class="d-sub" x="815" y="123" text-anchor="middle">+ quality note</text>
+        <path class="d-edge" d="M140 106 L154 106" marker-end="url(#ar2)"/>
+        <path class="d-edge" d="M312 106 L324 106" marker-end="url(#ar2)"/>
+        <path class="d-edge" d="M448 106 L468 106" marker-end="url(#ar2)"/>
+        <path class="d-edge" d="M582 106 L602 106" marker-end="url(#ar2)"/>
+        <path class="d-edge" d="M736 106 L756 106" marker-end="url(#ar2)"/>
+        <path class="d-edge" d="M75 62 L75 40 Q75 32 83 32 L807 32 Q815 32 815 40 L815 58" marker-end="url(#ar2)" stroke-dasharray="5 4"/>
+        <text class="d-lab" x="445" y="25" text-anchor="middle">At most 1000 / 3000 / 40000 layouts: exhaustive search → the exact best</text>
+        <path class="d-edge" d="M671 150 L671 174 Q671 182 663 182 L535 182 Q527 182 527 174 L527 154" marker-end="url(#ar2)"/>
+        <text class="d-lab" x="599" y="198" text-anchor="middle">if better, local search again</text>
+        <rect class="d-box ext" x="10" y="212" width="740" height="52" rx="8"/>
+        <text class="d-sub" x="24" y="234">No complete plan at all (several Must districts want the same few tiles): solve again with 1 Must</text>
+        <text class="d-sub" x="24" y="251">left out, then 2, and so on; the plan that places the most wins, and each one left out says why</text>
+        <path class="d-edge" d="M750 238 L807 238 Q815 238 815 230 L815 154" marker-end="url(#ar2)"/>
+      </svg>
+    </div>
+    <figcaption>The three numbers are for Fast / Standard / Thorough. Every budget counts steps (nodes, DMT calls, layouts tried), not time, so the same input gives the same result on any computer.</figcaption>
+  </figure>
+  <p>Model score = each district's score alone + the mutual bonus of each pair of adjacent districts − the loss from taking good tiles; it is used only for ranking. Land loss: k specialty districts need population P = max(population, 3k − 2), the city works its best P tiles, and a tile taken loses its yield minus that of the (P+1)-th best tile.</p>
+  <p><b>Picking from the pool</b>: given a number of districts, the ones beyond the Must ones are picked from the pool.</p>
+  <figure>
+    <div class="frame scroll">
+      <svg viewBox="0 0 880 170" role="img" aria-label="Picking from the pool: list every combination, drop exclusive ones and ones that break keep-apart, sort by optimistic score, rough-solve them in turn, swap types, solve the top three fully, three plans with different combinations">
+        <defs><marker id="ar4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="d-arrow" d="M0,0 L10,5 L0,10 z"/></marker></defs>
+        <rect class="d-box" x="10" y="20" width="150" height="96" rx="8"/>
+        <text class="d-title" x="85" y="46" text-anchor="middle">All combinations</text>
+        <text class="d-sub" x="85" y="66" text-anchor="middle">exclusive ones dropped;</text>
+        <text class="d-sub" x="85" y="82" text-anchor="middle">keep-apart ones only</text>
+        <text class="d-sub" x="85" y="98" text-anchor="middle">when short of the count</text>
+        <rect class="d-box" x="184" y="20" width="130" height="96" rx="8"/>
+        <text class="d-title" x="249" y="46" text-anchor="middle">Optimistic sort</text>
+        <text class="d-sub" x="249" y="66" text-anchor="middle">best scores alone</text>
+        <text class="d-sub" x="249" y="82" text-anchor="middle">+ mutual bonus</text>
+        <text class="d-sub" x="249" y="98" text-anchor="middle">within the set</text>
+        <rect class="d-box key" x="338" y="20" width="160" height="96" rx="8"/>
+        <text class="d-title" x="418" y="46" text-anchor="middle">Rough solves</text>
+        <text class="d-sub" x="418" y="66" text-anchor="middle">3 / 8 / 20 in turn; stop</text>
+        <text class="d-sub" x="418" y="82" text-anchor="middle">when the optimistic score</text>
+        <text class="d-sub" x="418" y="98" text-anchor="middle">≤ the third best's score</text>
+        <rect class="d-box" x="522" y="20" width="120" height="96" rx="8"/>
+        <text class="d-title" x="582" y="46" text-anchor="middle">Swap types</text>
+        <text class="d-sub" x="582" y="66" text-anchor="middle">one pick for</text>
+        <text class="d-sub" x="582" y="82" text-anchor="middle">another, on its</text>
+        <text class="d-sub" x="582" y="98" text-anchor="middle">best free tile</text>
+        <rect class="d-box" x="666" y="20" width="204" height="96" rx="8"/>
+        <text class="d-title" x="768" y="46" text-anchor="middle">Top three, solved fully</text>
+        <text class="d-sub" x="768" y="66" text-anchor="middle">three plans, each picking</text>
+        <text class="d-sub" x="768" y="82" text-anchor="middle">a different combination</text>
+        <path class="d-edge" d="M160 68 L180 68" marker-end="url(#ar4)"/>
+        <path class="d-edge" d="M314 68 L334 68" marker-end="url(#ar4)"/>
+        <path class="d-edge" d="M498 68 L518 68" marker-end="url(#ar4)"/>
+        <path class="d-edge" d="M642 68 L662 68" marker-end="url(#ar4)"/>
+        <text class="d-lab" x="440" y="142" text-anchor="middle">Several cities: each city picks once, and the later local search also tries “a city swaps one pick for another”;</text>
+        <text class="d-lab" x="440" y="158" text-anchor="middle">City sites: each site is scored with 3 districts (adjustable)</text>
+      </svg>
+    </div>
+  </figure>
+  <p><b>Distance cost, automatic districts, reminder tacks</b>: the distance cost is a fixed deduction per candidate tile, added straight into the exact score and the model score. Automatic Aqueducts and Dams are added to the Must ones before solving, according to the city's situation. Reminder tacks are worked out once the plan is settled: DMT computes again without seeing an adjacent Woods or Rainforest tile, and if the bonus drops, that tile gets a reminder.</p>
+  <details><summary>Pseudocode</summary>
+<pre class="code"><span class="k">function</span> <span class="f">solveCity</span>(city, districts, effort)
+    table = baseTable(districts, the city's candidate tiles)
+    <span class="k">if</span> number of layouts ≤ effort.exhaustiveLimit <span class="k">then</span> best = <span class="f">exhaustive</span>(table)
+    <span class="k">else</span>
+        beam = <span class="f">beamSearch</span>(districts by mutual bonus, most first, effort.beamWidth)
+        best = among the effort.shortlist layouts in the beam with the best
+               model scores, the one with the best DMT score
+        <span class="f">localSearch</span> from the first effort.starts of them
+        then effort.rounds rounds of <span class="f">perturbAndRebuild</span>
+    <span class="k">end</span>
+    <span class="k">if</span> no complete plan <span class="k">then</span>                    <span class="c">-- leave out 1, then 2, ...</span>
+        <span class="k">for</span> leftOut = 1, #must − 1 <span class="k">do</span>
+            solve the rest for each way of leaving out that many
+            <span class="k">if</span> found <span class="k">then break end</span>
+        <span class="k">end</span>
+    <span class="k">end</span>
+    <span class="k">return</span> best, quality(best, model upper bound)
+<span class="k">end</span>
+
+<span class="k">function</span> <span class="f">solvePool</span>(must, pool, count, effort)
+    combos = every choice of (count − #must) from the pool, exclusive ones
+             dropped (keep-apart ones only when short of the count),
+             sorted by optimistic score
+    <span class="k">for</span> combo <span class="k">in</span> the first effort.combos of combos <span class="k">do</span>
+        <span class="k">if</span> optimistic(combo) ≤ the third best's real score <span class="k">then break end</span>
+        <span class="f">roughSolve</span>(must + combo)
+    <span class="k">end</span>
+    <span class="f">swapTypes</span>(top three); solve the top three fully at this effort
+    <span class="k">return</span> three plans with different combinations
+<span class="k">end</span></pre>
+  </details>
+  </div>
+
+  <div class="algo">
+  <h3><span class="sn">A.3</span>Several cities together (SDP_Multi)</h3>
+  <p>The cities share one table of candidate tiles: a tile two cities can both use may go to either, but holds only one object; bonuses across cities count as usual. The search reuses the one-city engine in blocks by city: one city is solved again at a time while the others stay fixed. Different starts lead to different local optima, so a fixed set of starts is run and the best result kept.</p>
+  <figure>
+    <div class="frame scroll">
+      <svg viewBox="0 0 880 244" role="img" aria-label="Several cities: a fixed set of starts; from each, the cities are solved block by block, then local search, then each city solved again in turn; the best is kept, then perturbed and rebuilt, missing objects placed, three plans">
+        <defs><marker id="ar5" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="d-arrow" d="M0,0 L10,5 L0,10 z"/></marker></defs>
+        <text class="d-title" x="10" y="20">Starts (Standard)</text>
+        <rect class="d-box" x="10" y="32" width="220" height="28" rx="6"/><text class="d-sub" x="22" y="51">1 City by city, in order</text>
+        <rect class="d-box" x="10" y="66" width="220" height="28" rx="6"/><text class="d-sub" x="22" y="85">2 Joint: all cities in one beam search</text>
+        <rect class="d-box" x="10" y="100" width="220" height="28" rx="6"/><text class="d-sub" x="22" y="119">3–5 narrow beams, reverse order</text>
+        <rect class="d-box" x="10" y="134" width="220" height="28" rx="6"/><text class="d-sub" x="22" y="153">Fast's starts (run first)</text>
+        <rect class="d-box key" x="10" y="168" width="220" height="28" rx="6"/><text class="d-sub" x="22" y="187">Joint start, double beam width</text>
+        <rect class="d-box key" x="272" y="56" width="262" height="116" rx="8"/>
+        <text class="d-title" x="288" y="82">From each start</text>
+        <text class="d-sub" x="288" y="104">city blocks → local search (across cities)</text>
+        <text class="d-sub" x="288" y="121">→ each city solved again, others fixed</text>
+        <text class="d-sub" x="288" y="141">block = the one-city engine: exhaustive</text>
+        <text class="d-sub" x="288" y="158">or beam + shortlist + local search</text>
+        <rect class="d-box" x="560" y="56" width="154" height="116" rx="8"/>
+        <text class="d-title" x="574" y="82">Keep the best</text>
+        <text class="d-sub" x="574" y="102">perturb and rebuild;</text>
+        <text class="d-sub" x="574" y="118">place what is missing:</text>
+        <text class="d-sub" x="574" y="134">try each tile, move</text>
+        <text class="d-sub" x="574" y="150">the districts it needs</text>
+        <text class="d-sub" x="574" y="166">and rearrange them</text>
+        <rect class="d-box" x="740" y="56" width="130" height="116" rx="8"/>
+        <text class="d-title" x="754" y="82">3 plans</text>
+        <text class="d-sub" x="754" y="104">any two put at</text>
+        <text class="d-sub" x="754" y="120">least max(2, 20%)</text>
+        <text class="d-sub" x="754" y="136">objects on</text>
+        <text class="d-sub" x="754" y="152">different tiles</text>
+        <path class="d-edge" d="M230 46 L252 46 Q260 46 260 54 L260 106 Q260 114 268 114" marker-end="url(#ar5)"/>
+        <path class="d-edge" d="M230 80 L252 80"/><path class="d-edge" d="M230 114 L268 114"/>
+        <path class="d-edge" d="M230 148 L252 148"/><path class="d-edge" d="M230 182 L252 182 Q260 182 260 174 L260 114"/>
+        <path class="d-edge" d="M534 114 L556 114" marker-end="url(#ar5)"/>
+        <path class="d-edge" d="M714 114 L736 114" marker-end="url(#ar5)"/>
+        <text class="d-lab" x="440" y="218" text-anchor="middle">A start's result depends only on the input and the parameters, so Standard first runs Fast's starts and Thorough</text>
+        <text class="d-lab" x="440" y="234" text-anchor="middle">first runs Standard's: a heavier effort level is never worse than a lighter one</text>
+      </svg>
+    </div>
+    <figcaption>The joint start with double beam width was added on top: districts of several cities joined into one patch, giving each other bonuses across cities, form a shape the narrow beam often fails to reach. Widening the original joint start instead lost 3 points on one map, so the original starts stay as they were.</figcaption>
+  </figure>
+  <p>The plan takes in every site tack and your existing cities within 7 tiles of a new one, 8 cities at most. An empire-limited district (Government Plaza) gets only the slots still free, on the candidate tiles of each city whose list has it. Coverage (Reach) is off by default; when on, a district whose buildings help the cities around it, such as a Factory or a Zoo, earns the weight for each additional city of yours it covers; the radius is read from the rules.</p>
+  </div>
+
+  <div class="algo">
+  <h3><span class="sn">A.4</span>City sites (SDP_Sites + SDP_SiteSolver)</h3>
+  <p>K sites are picked from a hundred or more candidates: a cheap rough score filters first, then only some sites are scored with a district plan, and finally a combination search runs over the sites scored that way.</p>
+  <figure>
+    <div class="frame scroll">
+      <svg viewBox="0 0 880 166" role="img" aria-label="City site funnel: candidates, rough scores, the top M that link back scored with districts, combinations by branch and bound, three plans">
+        <defs><marker id="ar3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="d-arrow" d="M0,0 L10,5 L0,10 z"/></marker></defs>
+        <rect class="d-box" x="10" y="24" width="130" height="106" rx="8"/>
+        <text class="d-title" x="75" y="50" text-anchor="middle">Candidates</text>
+        <text class="d-sub" x="75" y="70" text-anchor="middle">revealed, a city</text>
+        <text class="d-sub" x="75" y="86" text-anchor="middle">can be founded,</text>
+        <text class="d-sub" x="75" y="102" text-anchor="middle">beyond the minimum</text>
+        <text class="d-sub" x="75" y="118" text-anchor="middle">city distance</text>
+        <rect class="d-box" x="166" y="24" width="130" height="106" rx="8"/>
+        <text class="d-title" x="231" y="50" text-anchor="middle">Rough scores</text>
+        <text class="d-sub" x="231" y="70" text-anchor="middle">worked tiles, water,</text>
+        <text class="d-sub" x="231" y="86" text-anchor="middle">luxury, strategic,</text>
+        <text class="d-sub" x="231" y="102" text-anchor="middle">features, Appeal,</text>
+        <text class="d-sub" x="231" y="118" text-anchor="middle">Loyalty risk</text>
+        <rect class="d-box key" x="322" y="24" width="170" height="106" rx="8"/>
+        <text class="d-title" x="407" y="50" text-anchor="middle">Score the top M</text>
+        <text class="d-sub" x="407" y="70" text-anchor="middle">only sites that link back</text>
+        <text class="d-sub" x="407" y="86" text-anchor="middle">to your cities in a chain</text>
+        <text class="d-sub" x="407" y="102" text-anchor="middle">M = 20 / 40 / 80</text>
+        <rect class="d-box" x="518" y="24" width="190" height="106" rx="8"/>
+        <text class="d-title" x="613" y="50" text-anchor="middle">Branch and bound</text>
+        <text class="d-sub" x="613" y="70" text-anchor="middle">spacing, connection,</text>
+        <text class="d-sub" x="613" y="86" text-anchor="middle">shared tiles; each resource</text>
+        <text class="d-sub" x="613" y="102" text-anchor="middle">counted once</text>
+        <rect class="d-box" x="734" y="24" width="136" height="106" rx="8"/>
+        <text class="d-title" x="802" y="50" text-anchor="middle">3 plans</text>
+        <text class="d-sub" x="802" y="70" text-anchor="middle">preview, then</text>
+        <text class="d-sub" x="802" y="86" text-anchor="middle">place site tacks</text>
+        <path class="d-edge" d="M140 77 L162 77" marker-end="url(#ar3)"/>
+        <path class="d-edge" d="M296 77 L318 77" marker-end="url(#ar3)"/>
+        <path class="d-edge" d="M492 77 L514 77" marker-end="url(#ar3)"/>
+        <path class="d-edge" d="M708 77 L730 77" marker-end="url(#ar3)"/>
+        <text class="d-lab" x="407" y="154" text-anchor="middle">Scoring a site: its districts planned by a smaller one-city search</text>
+      </svg>
+    </div>
+    <figcaption>Only sites that link back in a chain are scored: with much of the map revealed, the sites with the best rough scores may all be too far from your cities to form a connected plan. Combination score = each site's score − tiles two sites could both use (counted against the one that loses more) − repeated luxury and strategic resources.</figcaption>
+  </figure>
+  </div>
+
+  <div class="algo">
+  <h3><span class="sn">A.5</span>Computing over several frames (SDP_Task)</h3>
+  <p>The game's UI Lua has a single thread: a 6-second computation freezes the game for 6 seconds. Long computations run in a coroutine that computes one quota a frame and then yields; the quota adjusts to the length of the last frame. Between frames the hypothetical tacks are put away, so the rest of the game never sees them. The result does not depend on where the work is cut.</p>
+  <figure>
+    <div class="frame scroll">
+      <svg viewBox="0 0 880 96" role="img" aria-label="Over several frames: each frame computes about 30 ms, then lets the game draw, until the work is done">
+        <rect class="d-box key" x="10" y="20" width="120" height="34" rx="4"/><text class="d-sub" x="70" y="42" text-anchor="middle">compute ≈ 30 ms</text>
+        <rect class="d-box ext" x="130" y="20" width="90" height="34" rx="4"/><text class="d-sub" x="175" y="42" text-anchor="middle">game draws</text>
+        <rect class="d-box key" x="230" y="20" width="120" height="34" rx="4"/><text class="d-sub" x="290" y="42" text-anchor="middle">compute</text>
+        <rect class="d-box ext" x="350" y="20" width="90" height="34" rx="4"/><text class="d-sub" x="395" y="42" text-anchor="middle">game draws</text>
+        <rect class="d-box key" x="450" y="20" width="120" height="34" rx="4"/><text class="d-sub" x="510" y="42" text-anchor="middle">compute</text>
+        <rect class="d-box ext" x="570" y="20" width="90" height="34" rx="4"/><text class="d-sub" x="615" y="42" text-anchor="middle">game draws</text>
+        <text class="d-sub" x="690" y="42">… then shows the result</text>
+        <text class="d-lab" x="10" y="80">A frame too long cuts the quota to 3/4, too short raises it to 5/4; closing the panel does not stop the work, and the planner's button gets a mark</text>
+      </svg>
+    </div>
+  </figure>
+  <p class="note">Work units: 1 DMT call = 1, 1 layout evaluation = 0.25, 20 model nodes = 1. Computing in one go, the game does about 20,000 units a second; over several frames, 7,400–9,900 a second for one city and about 15,000 for several cities.</p>
+  </div>
+
+  <div class="algo">
+  <h3><span class="sn">A.6</span>Housing and Appeal (SDP_Appeal)</h3>
+  <p><span class="tag goal">G1</span></p>
+  <p>A Neighborhood gives Housing by its tile's Appeal; a Preserve gives Housing by its own Appeal, and the unimproved tiles around it yield more by their Appeal. Appeal itself changes with the plan, so each tile's Appeal under the plan is worked out first, then the rules tables are looked up.</p>
+  <figure>
+    <div class="frame scroll">
+      <svg viewBox="0 0 880 352" role="img" aria-label="Left: the Neighborhood tile's Appeal is the game's current Appeal, plus 1 for an adjacent Holy Site, minus 1 for an adjacent Industrial Zone, minus 1 for Woods cleared by a district built on them; right: the tiles around a Preserve get yields by Appeal, 4 points when Charming, 12 when Breathtaking, none when improved or Mountains">
+        <g transform="translate(-40,-20) scale(1.35)">
+        <polygon class="hx-move" points="170,95 196,110 196,140 170,155 144,140 144,110"/><text class="hx-t hx-t-move" x="170" y="122" text-anchor="middle" style="font-size:8.5px">Neighbor-</text><text class="hx-t hx-t-move" x="170" y="133" text-anchor="middle" style="font-size:8.5px">hood</text>
+        <polygon class="hx-near" points="222,95 248,110 248,140 222,155 196,140 196,110"/><text class="hx-t" x="222" y="120" text-anchor="middle" style="font-size:8.5px">Holy Site</text><text class="hx-t" x="222" y="134" text-anchor="middle" style="font-size:8.5px">+1</text>
+        <polygon class="hx-near" points="118,95 144,110 144,140 118,155 92,140 92,110"/><text class="hx-t" x="118" y="114" text-anchor="middle" style="font-size:8.5px">Industrial</text><text class="hx-t" x="118" y="126" text-anchor="middle" style="font-size:8.5px">Zone</text><text class="hx-t" x="118" y="139" text-anchor="middle" style="font-size:8.5px">−1</text>
+        <polygon class="hx-near" points="196,50 222,65 222,95 196,110 170,95 170,65"/><text class="hx-t" x="196" y="76" text-anchor="middle" style="font-size:8.5px">Theater</text><text class="hx-t" x="196" y="89" text-anchor="middle" style="font-size:8.5px">on Woods</text>
+        <polygon class="hx-far" points="144,50 170,65 170,95 144,110 118,95 118,65"/>
+        <polygon class="hx-far" points="196,140 222,155 222,185 196,200 170,185 170,155"/><text class="hx-t hx-t-far" x="196" y="173" text-anchor="middle" style="font-size:8.5px">Built</text>
+        <polygon class="hx-far" points="144,140 170,155 170,185 144,200 118,185 118,155"/>
+        <text class="d-sub" x="196" y="40" text-anchor="middle">Theater Square +1, cleared Woods −1</text>
+        </g>
+        <text class="d-title" x="318" y="56" style="font-size:16px">Appeal of the Neighborhood tile</text>
+        <text class="d-sub" x="318" y="80" style="font-size:13px">= the game's current Appeal</text>
+        <text class="d-sub" x="330" y="98" style="font-size:13px">(built districts included)</text>
+        <text class="d-sub" x="318" y="118" style="font-size:13px">+ adjacent planned districts:</text>
+        <text class="d-sub" x="330" y="136" style="font-size:13px">Holy Site +1, Industrial Zone −1</text>
+        <text class="d-sub" x="318" y="156" style="font-size:13px">− Appeal of features and improvements</text>
+        <text class="d-sub" x="330" y="174" style="font-size:13px">cleared on adjacent tiles</text>
+        <text class="d-title" x="318" y="210" style="font-size:16px">Neighborhood Housing</text>
+        <text class="d-sub" x="318" y="234" style="font-size:13px">Appeal ≥ 4: 6 · 2–3: 5 · −1–1: 4</text>
+        <text class="d-sub" x="318" y="252" style="font-size:13px">−3–−2: 3 · lower: 2</text>
+        <text class="d-sub" x="318" y="276" style="font-size:13px">Preserve: base 1, raised or lowered</text>
+        <text class="d-sub" x="318" y="294" style="font-size:13px">by Appeal the same way</text>
+        <g transform="translate(-230,-20) scale(1.35)">
+        <polygon class="hx-move" points="700,95 726,110 726,140 700,155 674,140 674,110"/><text class="hx-t hx-t-move" x="700" y="128" text-anchor="middle" style="font-size:8.5px">Preserve</text>
+        <polygon class="hx-near" points="752,95 778,110 778,140 752,155 726,140 726,110"/><text class="hx-t" x="752" y="114" text-anchor="middle" style="font-size:8.5px">Breath-</text><text class="hx-t" x="752" y="126" text-anchor="middle" style="font-size:8.5px">taking</text><text class="hx-t" x="752" y="139" text-anchor="middle" style="font-size:8.5px">+12</text>
+        <polygon class="hx-near" points="726,50 752,65 752,95 726,110 700,95 700,65"/><text class="hx-t" x="726" y="76" text-anchor="middle" style="font-size:8.5px">Charming</text><text class="hx-t" x="726" y="89" text-anchor="middle" style="font-size:8.5px">+4</text>
+        <polygon class="hx-near" points="674,50 700,65 700,95 674,110 648,95 648,65"/><text class="hx-t" x="674" y="76" text-anchor="middle" style="font-size:8.5px">Charming</text><text class="hx-t" x="674" y="89" text-anchor="middle" style="font-size:8.5px">+4</text>
+        <polygon class="hx-far" points="648,95 674,110 674,140 648,155 622,140 622,110"/><text class="hx-t hx-t-far" x="648" y="120" text-anchor="middle" style="font-size:8.5px">Farm</text><text class="hx-t hx-t-far" x="648" y="134" text-anchor="middle" style="font-size:8.5px">0</text>
+        <polygon class="hx-far" points="674,140 700,155 700,185 674,200 648,185 648,155"/><text class="hx-t hx-t-far" x="674" y="166" text-anchor="middle" style="font-size:8.5px">Mountains</text><text class="hx-t hx-t-far" x="674" y="179" text-anchor="middle" style="font-size:8.5px">0</text>
+        <polygon class="hx-near" points="726,140 752,155 752,185 726,200 700,185 700,155"/><text class="hx-t" x="726" y="166" text-anchor="middle" style="font-size:8.5px">Average</text><text class="hx-t" x="726" y="179" text-anchor="middle" style="font-size:8.5px">0</text>
+        <text class="d-sub" x="700" y="222" text-anchor="middle" style="font-size:9.5px">Grove: Charming +1 Food, Faith;</text>
+        <text class="d-sub" x="700" y="235" text-anchor="middle" style="font-size:9.5px">Breathtaking +2 Food, Faith, Culture</text>
+        <text class="d-sub" x="700" y="251" text-anchor="middle" style="font-size:9.5px">Sanctuary: Charming +1 Gold, Science;</text>
+        <text class="d-sub" x="700" y="264" text-anchor="middle" style="font-size:9.5px">Breathtaking +2 Gold, Science, Production</text>
+        </g>
+      </svg>
+    </div>
+    <figcaption>Left: the plan puts a Holy Site and an Industrial Zone next to the Neighborhood and a Theater Square on Woods; all three change the Neighborhood tile's Appeal. Right: the tiles around a Preserve get the Grove's and Sanctuary's yields by their Appeal, but only unimproved tiles the city can work; with Land loss on, these yields are added to the tile model and count only when the tile gets into the city's best P tiles.</figcaption>
+  </figure>
+  <p>This part = Housing weight × Housing + each yield's weight × the yields around the Preserve, minus the same without the plan (an existing or tacked Neighborhood that drops to a lower Housing level also counts). The yields around a Preserve count only for a Must Preserve: a Preserve picked from the pool counts only its Housing, and its yields are shown in the result, marked “pool pick, not scored”; otherwise late in the game the Preserve would almost always be picked first. When a district takes a tile with an improvement that gives Housing, such as a Farm or a Pasture, the Housing the city loses (the game adds up the per-tile Housing of the whole city and rounds down; a Farm gives 0.5) is shown on its own line in the result and not scored: counting it was tried, and with the panel's default settings both adjacency and city output got worse. For a district built on Woods, the cleared Woods no longer count on its own tile either; clearing a feature with negative Appeal, such as Rainforest or Marsh, leaves the tile unchanged. Every rule is read from the rules tables: <code>AppealHousingChanges</code>, <code>Adjacent_AppealYieldChanges</code>, and the Appeal values of districts and features; clearing a feature for a district needs the player to have the tech that removes it (Mining for Woods), and water tiles keep their Appeal. Calibrated in the game: within 4 tiles of the capital, all 61 tiles have the predicted Appeal; in three late-game saves the game built 9 plans the way a player builds them, and all 17 Neighborhood and Preserve tiles had the predicted Appeal, improvement Housing matched in all 9 plans and district Housing in 8 of 9 (B.8); the yields around Preserves match the rules table tile by tile.</p>
+  </div>
+
+  <div class="algo">
+  <h3><span class="sn">A.7</span>Rules within a city: keep apart, exclusive</h3>
+  <p><span class="tag goal">G3</span></p>
+  <figure>
+    <div class="frame scroll">
+      <svg viewBox="0 0 880 200" role="img" aria-label="Keep apart: a Harbor and a Commercial Hub give 1 more Trade Route in one city and 2 in two cities; exclusive: a city can have only one of an Entertainment Complex and a Water Park">
+        <text class="d-title" x="10" y="22">Keep apart (when possible)</text>
+        <rect class="d-box" x="10" y="36" width="200" height="82" rx="8"/>
+        <text class="d-sub" x="22" y="58">City A: Harbor +</text>
+        <text class="d-sub" x="22" y="74">Commercial Hub; the</text>
+        <text class="d-sub" x="22" y="90">Lighthouse adds no route</text>
+        <text class="d-title" x="22" y="110">+1 Trade Route</text>
+        <rect class="d-box key" x="222" y="36" width="150" height="82" rx="8"/>
+        <text class="d-sub" x="234" y="58">City A: Harbor</text>
+        <text class="d-sub" x="234" y="74">City B: Commercial Hub</text>
+        <text class="d-title" x="234" y="110">+2 Trade Routes</text>
+        <rect class="d-box key" x="384" y="36" width="150" height="82" rx="8"/>
+        <text class="d-sub" x="396" y="58">Cities side by side:</text>
+        <text class="d-sub" x="396" y="74">the Harbor still gives</text>
+        <text class="d-sub" x="396" y="90">the Commercial Hub</text>
+        <text class="d-title" x="396" y="110">+2 Gold</text>
+        <text class="d-sub" x="10" y="142">When picking from the pool, a city gets both only when the count cannot be reached</text>
+        <text class="d-sub" x="10" y="158">otherwise, with a note in the result. Must ones are placed anyway.</text>
+        <text class="d-title" x="554" y="22">Exclusive (always)</text>
+        <rect class="d-box" x="554" y="36" width="316" height="82" rx="8"/>
+        <text class="d-sub" x="566" y="58">Entertainment Complex and Water Park (and the</text>
+        <text class="d-sub" x="566" y="74">specialty districts that replace them): one per city.</text>
+        <text class="d-sub" x="566" y="90">DMT checks only built ones; planned ones the</text>
+        <text class="d-sub" x="566" y="106">planner has to keep apart itself</text>
+        <text class="d-sub" x="554" y="142">Both Must: the one listed first is placed; the</text>
+        <text class="d-sub" x="554" y="158">other says “cannot share a city with the X”.</text>
+        <text class="d-sub" x="554" y="174">Pool combinations never hold both; with one</text>
+        <text class="d-sub" x="554" y="190">built, the other is greyed out.</text>
+      </svg>
+    </div>
+    <figcaption>Both rules are read from the rules data: keeping apart from the requirement “no Market in this city” on the Lighthouse's Trade Route modifier, exclusion from <code>MutuallyExclusiveDistricts</code>. The exclusion was a gap found in the late-game stress test (B.8).</figcaption>
+  </figure>
+  </div>

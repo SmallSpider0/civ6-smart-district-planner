@@ -1,0 +1,95 @@
+  <figure>
+    <div class="frame scroll">
+      <svg viewBox="0 0 880 720" role="img" aria-label="Architecture: the panel calls the three solvers through a task that runs over several frames; the solvers share the search engine, the incremental evaluation and the overlay of hypothetical tacks, which call DMT and the game's data; the overlay also asks the game engine which tiles can be built on">
+        <defs>
+          <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="d-arrow" d="M0,0 L10,5 L0,10 z"/></marker>
+          <marker id="ark" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="d-arrow key" d="M0,0 L10,5 L0,10 z"/></marker>
+        </defs>
+        <!-- Row A: UI -->
+        <rect class="d-box" x="20" y="16" width="430" height="72" rx="8"/>
+        <text class="d-title" x="36" y="42">Panel SDP_Panel</text>
+        <text class="d-sub" x="36" y="62">Three tabs: One city · City sites · Several cities</text>
+        <text class="d-sub" x="36" y="79">Effort, expected time, Improve, Cancel, quality note</text>
+        <rect class="d-box" x="470" y="16" width="185" height="72" rx="8"/>
+        <text class="d-title" x="486" y="42">Map preview</text>
+        <text class="d-mono" x="486" y="62">SDP_Preview</text>
+        <text class="d-sub" x="486" y="79">lens colors, icons, no tacks</text>
+        <rect class="d-box" x="675" y="16" width="185" height="72" rx="8"/>
+        <text class="d-title" x="691" y="42">Place tacks / Undo</text>
+        <text class="d-mono" x="691" y="62">SDP_Pins</text>
+        <text class="d-sub" x="691" y="79">numbered by city; saved</text>
+        <path class="d-edge" d="M450 40 L466 40" marker-end="url(#ar)"/>
+        <path class="d-edge" d="M450 70 L462 70 Q466 70 466 74 L466 96 Q466 100 470 100 L760 100 Q767 100 767 94 L767 92" marker-end="url(#ar)"/>
+        <!-- Row B: task -->
+        <rect class="d-box" x="20" y="124" width="840" height="70" rx="8"/>
+        <text class="d-title" x="36" y="148">Task over frames SDP_Task</text>
+        <text class="d-sub" x="36" y="168">A coroutine computes one quota a frame (aiming at about 30 ms) and yields; between frames the hypothetical tacks are put away</text>
+        <text class="d-sub" x="36" y="185">With the panel closed it still finishes, and puts a mark on the planner's button</text>
+        <path class="d-edge" d="M235 88 L235 120" marker-end="url(#ar)"/>
+        <text class="d-lab" x="243" y="110">Start(job)</text>
+        <!-- Row C: solvers -->
+        <rect class="d-box" x="20" y="230" width="268" height="88" rx="8"/>
+        <text class="d-title" x="36" y="256">One city SDP_Solver</text>
+        <text class="d-sub" x="36" y="276">one city's candidate tiles and districts</text>
+        <text class="d-sub" x="36" y="293">Aqueduct and Dam on Auto</text>
+        <text class="d-sub" x="36" y="310">keep apart, exclusive: SDP_Rules</text>
+        <rect class="d-box" x="306" y="230" width="268" height="88" rx="8"/>
+        <text class="d-title" x="322" y="256">Several cities SDP_Multi</text>
+        <text class="d-sub" x="322" y="276">site tacks + your cities within 7 tiles</text>
+        <text class="d-sub" x="322" y="293">(at most 8 cities)</text>
+        <text class="d-sub" x="322" y="310">wonders SDP_Wonders, empire limits</text>
+        <rect class="d-box" x="592" y="230" width="268" height="88" rx="8"/>
+        <text class="d-title" x="608" y="256">City sites SDP_SiteSolver</text>
+        <text class="d-sub" x="608" y="276">candidates, rough scores SDP_Sites</text>
+        <text class="d-sub" x="608" y="293">branch and bound picks K sites,</text>
+        <text class="d-sub" x="608" y="310">gives 3 plans</text>
+        <path class="d-edge" d="M154 194 L154 226" marker-end="url(#ar)"/>
+        <path class="d-edge" d="M440 194 L440 226" marker-end="url(#ar)"/>
+        <path class="d-edge" d="M726 194 L726 226" marker-end="url(#ar)"/>
+        <text class="d-lab" x="448" y="216">Run · Tick yields</text>
+        <!-- Row D: engine -->
+        <rect class="d-box key" x="20" y="354" width="554" height="88" rx="8"/>
+        <text class="d-title" x="36" y="380">Search engine SDP_Search</text>
+        <text class="d-sub" x="36" y="400">single-district table → exhaustive search or model beam search</text>
+        <text class="d-sub" x="36" y="417">→ shortlist scored exactly → local search → perturb and rebuild</text>
+        <text class="d-sub" x="36" y="434">rest of the objective: land SDP_Land · Housing and Appeal SDP_Appeal · coverage</text>
+        <rect class="d-box" x="592" y="354" width="268" height="88" rx="8"/>
+        <text class="d-title" x="608" y="380">Effort levels SDP_Tiers</text>
+        <text class="d-sub" x="608" y="400">Fast / Standard / Thorough:</text>
+        <text class="d-sub" x="608" y="417">every budget counts steps</text>
+        <text class="d-sub" x="608" y="434">same input, same output on any machine</text>
+        <path class="d-edge" d="M154 318 L154 350" marker-end="url(#ar)"/>
+        <path class="d-edge" d="M440 318 L440 350" marker-end="url(#ar)"/>
+        <path class="d-edge" d="M726 318 L726 332 Q726 336 722 336 L540 336 Q536 336 536 340 L536 350" marker-end="url(#ar)"/>
+        <text class="d-lab" x="162" y="340">slots, candidate tiles</text>
+        <path class="d-edge" d="M574 398 L588 398" marker-end="url(#ar)"/>
+        <!-- Row E: board -->
+        <rect class="d-box key" x="20" y="478" width="554" height="78" rx="8"/>
+        <text class="d-title" x="36" y="503">Incremental, memoized evaluation SDP_Board</text>
+        <text class="d-sub" x="36" y="524">score = f(district, tile, what is planned on its 6 neighbors):</text>
+        <text class="d-sub" x="36" y="541">only tiles near a move are scored again; a known layout comes from memory</text>
+        <path class="d-edge key" d="M297 442 L297 474" marker-end="url(#ark)"/>
+        <text class="d-lab" x="305" y="463">Put(slot, tile) · Total()</text>
+        <!-- Row F: overlay / DMT / game -->
+        <rect class="d-box" x="20" y="594" width="268" height="72" rx="8"/>
+        <text class="d-title" x="36" y="619">Overlay SDP_Overlay</text>
+        <text class="d-sub" x="36" y="639">replaces GetMapPinSubject so DMT sees</text>
+        <text class="d-sub" x="36" y="656">planned districts; real data untouched</text>
+        <rect class="d-box ext" x="306" y="594" width="268" height="72" rx="8"/>
+        <text class="d-title" x="322" y="619">DMT</text>
+        <text class="d-mono" x="322" y="639">CanPlacePin · GetBonusYields</text>
+        <text class="d-sub" x="322" y="656">placement rules, adjacency (+ tooltip)</text>
+        <rect class="d-box ext" x="592" y="594" width="268" height="72" rx="8"/>
+        <text class="d-title" x="608" y="619">Game data</text>
+        <text class="d-mono" x="608" y="639">GameInfo · Map · tacks · engine</text>
+        <text class="d-sub" x="608" y="656">rules read at run time, not hard-coded</text>
+        <path class="d-edge key" d="M154 556 L154 590" marker-end="url(#ark)"/>
+        <text class="d-lab" x="162" y="578">evaluates only what is not cached</text>
+        <path class="d-edge" d="M288 630 L302 630" marker-end="url(#ar)"/>
+        <path class="d-edge" d="M574 630 L588 630" marker-end="url(#ar)"/>
+        <path class="d-edge" d="M154 666 L154 684 Q154 690 160 690 L720 690 Q726 690 726 684 L726 670" marker-end="url(#ar)"/>
+        <text class="d-lab" x="440" y="710" text-anchor="middle">Engine check: on tiles the city owns, the game's list of buildable tiles decides</text>
+      </svg>
+    </div>
+    <figcaption>The two layers with gold borders decide the speed: the search engine decides which layouts to try, and the evaluation layer decides whether trying one really calls DMT. Dashed boxes are dependencies outside this mod (players subscribe to DMT separately). The edge at the bottom: for placement, the planner asks not only DMT but also the game engine which tiles can be built on (see A.8).</figcaption>
+  </figure>
