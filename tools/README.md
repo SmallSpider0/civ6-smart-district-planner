@@ -18,6 +18,7 @@
 | `game.py` | 退出游戏、经 Steam 启动、从主菜单快速开局（可选建首都）；启动时的前台切换仅 macOS | 0 成功；2 超时 |
 | `realclick.py` | 仅 macOS：用系统鼠标事件真实点击面板，每步从面板状态读回核对 | 0 全过；1 有失败；2 环境问题 |
 | `stress.py` | 发布前在后期存档上做压力测试：AI 自动打出存档、逐步计时、魅力复核 | 0 全过；1 有问题步骤；2 环境问题 |
+| `refscene.py` | 手写的参照布局（社区公认布局）转成对比场景，画回文字或图片核对 | 0 成功；1 有错误；2 找不到场景 |
 | `civ6tuner.py` | FireTuner 客户端：收集 Lua 输出、远程执行 Lua | 见下文 |
 
 ## paths.py、setup_reference.py — 位置与参考源码
@@ -93,6 +94,7 @@ python3 -I tests/compare/summarize.py tests/compare/results/full_rejudged.jsonl 
 node tools/compare.mjs --dump S01-rome-temperate-mid       # 场景地图的文字图
 node tools/compare.mjs --snapshot S01-rome-temperate-mid   # 场景地图数据（报告画图用）
 node tools/compare.mjs --probe FILE.lua                    # 在本 mod 的状态里跑一段 Lua（临时探针：先 include("cmp_lib")，CmpRun.Setup(场景) 建好世界）
+node tools/compare.mjs --refscore -s ^REF --weights tests/compare/refscenes/weights.jsonl -j 3 --out tests/compare/results/refscore.jsonl   # 参照布局与最优解，见 refscene.py 一节
 ```
 
 - 不开游戏，在 fengari 里比较本 mod、Auto Map Tacks Planner r49（AMT）和 Empire Planner（EP）的区域规划。**规则是真的**：`GameInfo` 来自游戏写在缓存里的规则数据库 `Cache/DebugGameplay.sqlite`（最后一次加载的对局的规则集，目前是风云变幻；导出文件是 Firaxis 的数据，只放在被忽略的 `.cache/`）。**代码是真的**：DMT、AMT、EP 的 Lua 原样从 `reference/` 和本机创意工坊目录加载，不改一行。**引擎是模拟的**：`tests/compare/cmp_game.lua` 实现地图、城市、地图钉、玩家配置、可见性、河流与泛滥平原、修正系统（`GameEffects`，DMT 从它读文明特性的相邻规则）和 UI 替身。
@@ -104,13 +106,14 @@ node tools/compare.mjs --probe FILE.lua                    # 在本 mod 的状�
   - `W`：24 个中期单城场景，另要两个与地形相符的奇观（`request.wonders`；裁判用 DMT 判奇观合法性，报告 `wondersPlaced`）。
   - `C`：12 个选城址场景（kind `sites`，`request.sites = { count = 2, distance = 8 }`），只比本模组与 EP。裁判 `JudgeSites` 不用任何一方的评分，独立计算合法性与间距、各城址最好 8 块地的产出、淡水、新的奢侈与战略资源种类、区域潜力（城址处打市中心钉后各区域在 DMT 下的最好相邻加成）、重叠格，`siteValue` = 地块产出 + 区域潜力。
   - `V`：12 个覆盖范围场景（multicity-design.md 19.5）：后期 3–4 座城，每座城自己一张清单（`scn.plans`，请求里是 `request.plans[城市 ID]`），只有一两座城要工业区、娱乐中心。本模组跑标准档、精细档各三种覆盖权重（变体 `STANDARD`、`STANDARD_COV1`、`STANDARD_COV3`、`FINE`…；`_COV<n>` 即多城页签的覆盖权重 n），AMT 用同样的逐城清单（它自带覆盖）；EP 不能逐城给清单，不参加。裁判按城检查"没要求的区域"和漏放，并独立计算覆盖：每类基础区域取通用建筑最大的 `RegionalRange`，数玩家城市被覆盖的（城市, 类别）个数，方案前后各一次（`coverageBefore`、`coverage`、`coverageGain`）。
+  - `REF`：参照布局场景（`tools/refscene.py`，见下），没有默认运行，只由 `--refscore`（或 `--add`）跑，不改变其他各组的运行。
   - `RS`/`RM`：真实集，从运行中的对局导出的场景文件（`tests/compare/scenes/<编号>.json`，`index.json` 列出；`tools/snapshot.py`，见下）。单城 `RS` 规划 `target` 那座城，多城 `RM` 只规划 `only` 里的城，每城各自的清单（`plans`）。后期的城人口往往放不下请求的特色区域，加载时把要规划的城的人口提到刚好够（已建加请求的特色区域，与裁判的名额规则相同；原人口记在 `savedPopulation`），和生成场景一样按“为以后规划”比较。只取规则库对应规则集的场景（`--ruleset`，默认 `RULESET_EXPANSION_2`）：迭起兴衰存档导出的 5 个场景用风云变幻的规则库核对，学院、工业区的加成不同，所以默认不参加。
   - 对手各跑两种设置：权重与裁判一致（与场景权重相同）和它们面板的默认设置。
 - 模拟层缺的接口会记在输出的 `missingApi` 里；HavokScript 的类型标注在加载时去掉。AMT 的多城联合很慢（离线一局 3–40 分钟），全量对比建议在机器空闲时跑。每个工作线程的 JS 堆上限默认 1536 MB，AMT 的 4 城联合偶尔会超出（线程被终止，那次运行和同线程排队的一次都没有结果，日志里是 `ERR_WORKER_OUT_OF_MEMORY`）；用环境变量 `CMP_HEAP_MB=6144` 单独补跑缺的运行。
 - 交叉评分（第 18.1 节第 2 条）：`--crossscore` 对结果文件里每个方案，在新的 Lua 状态里调用 `tests/compare/cmp_cross_<打分方>.lua` 的 `CmpCross[打分方](request, plan, w)`，返回该对手自己的目标函数对这个方案的分数（`score`、空方案的 `baseline`、`gain`），写进 `row.cross`；`summarize.py` 以 `cross_amt`、`cross_ep` 字段汇总。
 - `summarize.py` 按场景集分组列表，并给出本模组标准档对每个对手的逐场景配对比较：胜/平/负、平均差及其 95% 自助法置信区间（2000 次确定性重抽样）、符号检验 p 值；城市总产出用本模组的"计入地块"一组比较。覆盖场景另列覆盖与相邻加成两项的帕累托比较（`pareto`：两项都不差且至少一项更好 / 更差 / 相同 / 各有胜负）和各设置的平均值。
 - 结果 JSON lines：方案、裁判分（`gain`、`violations`、`items`、城市总产出 `output = gain + worked`、漏放 `missing` 与其中有位置却没放的 `missingPlaceable`）、耗时、DMT 调用次数。`summarize.py` 以每个场景所有合法方案里的最高加成为参照，算质量、达到最高的比例、合法率、漏放、城市总产出、确定性（"#2" 重复运行与原运行比方案）。
-- 入库的结果（2026-10-20）：开发集 `full_rejudged.jsonl`（588 次运行）与 `land.jsonl`（本 mod 计入地块的 84 次）、留出集 `heldout.jsonl`、三组权重 `profiles_{SCI,PROD,FAITH}.jsonl`、奇观 `wonders_sdp_ep.jsonl` + `wonders_amt.jsonl`（本 mod 加入补放后重跑的是 `wonders_sdp_repair.jsonl`；v1.2.0 加了奇观同城规则后三个规划器重跑、用新裁判重评的是 `wonders_v120.jsonl`）、选城址 `sites.jsonl`，以及交叉评分 `*_cross.jsonl`；覆盖范围 `coverage_sdp.jsonl`、`coverage_amt.jsonl`。汇总时把后者放在后面，同名运行以后面的为准。
+- 入库的结果（2026-10-20）：开发集 `full_rejudged.jsonl`（588 次运行）与 `land.jsonl`（本 mod 计入地块的 84 次）、留出集 `heldout.jsonl`、三组权重 `profiles_{SCI,PROD,FAITH}.jsonl`、奇观 `wonders_sdp_ep.jsonl` + `wonders_amt.jsonl`（本 mod 加入补放后重跑的是 `wonders_sdp_repair.jsonl`；v1.2.0 加了奇观同城规则后三个规划器重跑、用新裁判重评的是 `wonders_v120.jsonl`）、选城址 `sites.jsonl`，以及交叉评分 `*_cross.jsonl`；覆盖范围 `coverage_sdp.jsonl`、`coverage_amt.jsonl`；参照布局 `refscore.jsonl`（`--refscore`，`summarize.py` 不读）。汇总时把后者放在后面，同名运行以后面的为准。
 
 ## snapshot.py — 从真实对局导出对比场景
 
@@ -125,6 +128,59 @@ python3 -I tools/snapshot.py list
 - 请求的区域：开发集的五种加娱乐中心，3 环内有海再加港口，减去该城已建的（特色区域按基础区域算）；多城每城一张清单。
 - `check` 用 `compare.mjs --probe tests/compare/cmp_scene_check.lua --arg <编号>` 在离线世界里重算样本，列出可放置性和加成的差异。
 - 窗口外的城拥有的格会丢掉归属（输出里的 `droppedOwned`）；按构造它们都在所选城市 4 格以外，候选格和相邻格不受影响。
+
+## refscene.py — 手写参照布局（#53）
+
+```bash
+python3 -I tools/refscene.py build                  # tests/compare/refscenes/*.txt → tests/compare/scenes/<编号>.json，并更新 index.json
+python3 -I tools/refscene.py check REF01 --svg out.svg   # 把场景文件写回文字格式（就是地图），--svg 另画一张图，和原图对照
+python3 -I tools/refscene.py verify                 # 往返一致、场景文件是最新的，并让离线对比的裁判给参照布局打分：合法、全部放下
+python3 -I tools/refscene.py list
+node tools/compare.mjs --refscore -s ^REF --weights tests/compare/refscenes/weights.jsonl -j 3 --out tests/compare/results/refscore.jsonl
+```
+
+- 用途：#53 用社区公认的布局反推默认权重。每个布局手写成一个文本文件（`tests/compare/refscenes/<编号>.txt`，编号 `REF01-名字`），`build` 转成与真实集同样格式的场景文件，另带 `reference`（布局里的区域、哪些格是猜的、说明）。场景属于 `REF` 组，没有默认运行，不改变其他各组。
+- `validate.py` 检查每个文本能读、写回再读得到同样的场景、场景文件和 `index.json` 里的条目是最新的（不需要 node）。`verify` 还要游戏规则库（`tests/compare/.cache/`），只在本机跑。
+- 格式（坐标与游戏相同：x 向右，y 向下，第 0 行在最上面，奇数行向右错半格；`#` 后是注释）：
+
+```
+id      REF01-suqin-aqueduct-dam
+title   Su Qin: two-city aqueduct diamond with a dam
+source  https://www.zhihu.com/question/397145858/answer/1784399407
+author  苏秦
+date    2021-03
+ruleset RULESET_EXPANSION_2              # 默认风云变幻
+civ     CIVILIZATION_AMERICA LEADER_T_ROOSEVELT
+techs   all                              # all（默认）、none 或逗号分隔的 TECH_ 名（可省前缀）；civics 同理
+turn    150
+guess   all                              # 整张图都是猜的；单格在格子后加 ?
+note    任意说明，可写多行
+
+city 1 name=A pop=10 owns=1 capital      # 人口、拥有几环（默认 1；城和已建区域的格也归它）
+city 2 name=B pop=10 owns=1
+
+map
+  g    gh   M    g+f  p+fp  c    L
+    g    g:iron  gh@mine  g+j?  ...
+end
+
+layout
+  .    CC1  AQ1  IZ1  *CA1  .    .
+    .    IZ2  AQ2  CC2  ...
+end
+
+river Rhine 3,4:SE,SW 4,4:SW             # 某格的哪几条边有河：NE E SE SW W NW
+wonder 2,2 BUILDING_COLOSSEUM city=1     # 已建的奇观
+```
+
+  - 地形：`g` 草原、`p` 平原、`d` 沙漠、`t` 冻土、`s` 雪地，加 `h` 是丘陵、加 `m` 是山（`M` = 草原山）；`c` 海岸、`o` 海洋、`L` 湖；也可写完整的 `TERRAIN_` 名。
+  - 地貌 `+`：`f` 树林、`j` 雨林、`m` 沼泽、`fp` 泛滥平原（按地形取风云变幻的三种之一）、`oa` 绿洲、`r` 礁石、`vs` 火山土、`vo` 火山、`gf` 地热裂缝、`ice` 冰，其他写 `FEATURE_` 后面的部分。泛滥平原归第一条沿它流过的河，没有河就报错。
+  - 资源 `:名字`（`RESOURCE_` 后面的部分）、改良 `@名字`（`IMPROVEMENT_` 后面的部分），格子后加 `?` 表示是猜的。
+  - 布局：`.` 空，`CC` 市中心，区域用两字母：`CA` 学院、`HS` 圣地、`TH` 剧院、`CH` 商业中心、`HA` 港口、`IZ` 工业区、`EC` 娱乐中心、`WP` 水上乐园、`AQ` 水渠、`DA` 堤坝、`CN` 运河、`EN` 军营、`NB` 社区、`AE` 航空港、`SP` 航天中心、`GP` 政府广场、`DQ` 外交区、`PR` 保护区，或完整的 `DISTRICT_` 名。后面的数字是城的编号（只有一座城时可省）。前面加 `*` 是已建的区域，不加的是参照布局。写基础区域即可，文明的特色区域在加载时换上（与开发集的请求相同）。
+  - 场景请求的区域就是参照布局里每座城的区域；一座城是单城场景，几座城是多城场景（每城一张清单）。
+- `check` 写回的文字用规范写法（如 `M` 写成 `gm`），`build` 和 `validate.py` 都检查写回的文字再读一遍得到同样的场景。`--svg` 的图里橙色是参照布局、灰色是已建区域、白色是市中心，蓝线是河，虚线边框的格是猜的。
+- `compare.mjs --refscore`：每个参照场景、每组权重，裁判给参照布局打分，再求同样权重下的最优解并打分，写一行 JSON：`reference`、`optimum`（裁判的完整打分和方案），`summary` 里是比较的目标值、差距 `gap`、参照布局占最优的比例、参照布局是不是最优、最优是否已证明。只算相邻时最优解用 `sdp:ORACLE`（证明过的真最优，目标是裁判的加权相邻加成 `gain`）；权重组带 `land=1` 时用 `sdp:FINE_LAND`（精细档，计入占地），比较裁判的 `outputWeighted`（加权相邻加成加上按同样权重计的耕作产出变化，粮食也计）。注意本模组的占地按修上改良后的产出算，裁判的耕作产出按地块原样算，两者不同，所以这一项的“最优”不是证明过的。`--reference-only` 只给参照布局打分（`verify` 用它）。
+- 权重组：`--weights` 给 JSON lines 文件（每行 `{"name": "…", "science": 1, "culture": 1, "faith": 0.5, "gold": 0.5, "production": 1, "food": 1, "land": 0}`，没写的产出为 1；`"oracle": n` 把真最优的节点上限设为 n 百万），或直接写 `"all1:;half:gold=0.5,faith=0.5;land:land=1"`。不给时只算全 1。`CMP_WEIGHTS` 同时传给规划器和裁判，替换场景自己的权重。现在还不能单独设地块系数 λ（本模组的占地与相邻共用同一组权重）。
 
 ## deploy.py — 部署
 

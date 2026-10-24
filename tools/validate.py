@@ -14,6 +14,8 @@ restart (AGENTS.md section 5):
   ui         UI XML only uses controls and attributes that appear in the game's
              own UI XML (pitfall 8: an invalid attribute fails silently)
   lua        tools/luacheck.mjs: Lua 5.1 syntax, banned globals, determinism
+  refscene   tests/compare/refscenes/*.txt read back the same and their scene
+             files and index.json entries are current (tools/refscene.py)
 
 Usage: validate.py [--strict] [--mod DIR] [--tests DIR]
 Exit codes: 0 clean, 1 errors (or warnings with --strict), 2 tool missing.
@@ -440,6 +442,18 @@ def check_workshop(report):
         report.error(os.path.join(ROOT, path), 0, "workshop", problem[len(label) + 1:].strip())
 
 
+def check_refscenes(report):
+    """Reference scenes (tools/refscene.py): every source parses, survives
+    the round trip, and its scene file and index.json entry are current."""
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    try:
+        import refscene
+    except ImportError:
+        return
+    for path, message in refscene.problems():
+        report.error(os.path.join(ROOT, path), 0, "refscene", message)
+
+
 def check_lua(report, paths):
     if not paths:
         return True
@@ -483,6 +497,7 @@ def run(mod_dir=MOD_DIR, tests_dir=TESTS_DIR, strict=False, quiet=False):
         check_controls(report, mod_dir, trees)
     if os.path.isdir(os.path.join(ROOT, "workshop")):
         check_workshop(report)
+    check_refscenes(report)
     tool_ok = check_lua(report, [p for p in mod_files + test_files if p.endswith(".lua")])
 
     if not quiet:

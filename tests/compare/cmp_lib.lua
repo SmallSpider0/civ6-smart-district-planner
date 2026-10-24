@@ -149,7 +149,9 @@ do
     local ruleset = CMP_RULESET or "RULESET_EXPANSION_2"
     for _, s in ipairs(Json.Decode(text)) do
       if s.ruleset == nil or s.ruleset == ruleset then
-        s.runs = CmpScenarios.Runs(s.kind)
+        -- Reference scenes (set REF, tools/refscene.py) have no default
+        -- runs: compare.mjs --refscore (or --add) runs them on purpose.
+        s.runs = s.set == "REF" and {} or CmpScenarios.Runs(s.kind)
         s.path = SCENES .. s.file
         CmpScenarios.Add(s)
       end
@@ -193,6 +195,14 @@ local function LoadScene(scn)
   if scn.spec == nil then
     local text = cmp_read_file(scn.path) or error("missing scene file " .. tostring(scn.path))
     scn.spec = Json.Decode(text)
+    if scn.set == "REF" then
+      -- A reference scene names base districts (IZ); built ones become the
+      -- civilization's own, as the requests do in Setup.
+      local unique = CmpMapgen.UniqueFor(CmpGame.LoadGameInfo(), scn.civ, scn.leader)
+      for _, c in ipairs(scn.spec.cities) do
+        for _, d in ipairs(c.districts or {}) do d.type = unique[d.type] or d.type end
+      end
+    end
     RoomForPlan(scn, scn.spec)
   end
   return scn.spec
@@ -290,6 +300,11 @@ function CmpRun.Setup(id)
   local weights = {}
   for row in gi.Yields() do weights[row.YieldType] = 1 end
   for k, v in pairs(scn.weights or {}) do weights[k] = v end
+  -- compare.mjs --refscore sets CMP_WEIGHTS (JSON, { YIELD_x = w }) for the
+  -- planner and the judge alike; it replaces the scenario's own weights.
+  if CMP_WEIGHTS ~= nil and CMP_WEIGHTS ~= "" then
+    for k, v in pairs(Json.Decode(CMP_WEIGHTS)) do weights[k] = v end
+  end
   -- Wonders wanted with the districts (W scenarios), the ones this ruleset has.
   local wonders = {}
   for _, b in ipairs(scn.wantWonders or {}) do
@@ -329,6 +344,22 @@ function CmpRun.Plan(id, planner, variant)
   table.sort(missing)
   out.missingApi = missing
   cmp_emit("PLAN " .. Json.Encode(out))
+end
+
+-- The layout a reference scene records (tools/refscene.py), as a plan the
+-- judge takes: its base districts become the civilization's own, as the
+-- requests do in Setup. Builds no world.
+function CmpRun.ReferencePlan(id)
+  local scn = CmpScenarios.ById[id] or error("unknown scenario " .. tostring(id))
+  local spec = scn.path and LoadScene(scn) or error(id .. " is not a scene file")
+  local ref = spec.reference or error(id .. " has no reference layout")
+  local unique = CmpMapgen.UniqueFor(CmpGame.LoadGameInfo(), scn.civ, scn.leader)
+  local plan = { placements = {}, stats = {}, notes = {} }
+  for _, p in ipairs(ref.placements) do
+    plan.placements[#plan.placements + 1] = { city = p.city, type = unique[p.type] or p.type, x = p.x, y = p.y }
+  end
+  cmp_emit("PLAN " .. Json.Encode(plan))
+  return plan
 end
 
 -- A competitor's own objective for a plan (design 18.1, item 2): the
@@ -600,7 +631,7 @@ function CmpRun.Judge(id, planJson)
   -- `population` tiles (all yields count 1) among the plots it owns or could
   -- grow into (3 rings, not another city's, not a district, wonder or city
   -- center). A plan that puts districts on the best tiles loses here.
-  local function WorkedYield(taken)
+  local function WorkedYield(taken, weights)
     local claimed, total = {}, 0
     for _, c in ipairs(request.cities) do
       local values = {}
@@ -610,7 +641,7 @@ function CmpRun.Judge(id, planJson)
             and not plot:IsCity() and plot:GetDistrictType() == -1 and plot:GetWonderType() == -1
             and (plot:GetOwner() == -1 or plot.city == c) and PlayersVisibility[0]:IsRevealed(i) then
           local v = 0
-          for row in gi.Yields() do v = v + w.BaseYield(plot, row.YieldType) end
+          for row in gi.Yields() do v = v + w.BaseYield(plot, row.YieldType) * (weights and weights[row.YieldType] or 1) end
           values[#values + 1] = { i = i, v = v }
         end
       end
@@ -623,6 +654,7 @@ function CmpRun.Judge(id, planJson)
     return total
   end
   local workedBefore = WorkedYield({})
+  local workedWeightedBefore = WorkedYield({}, request.weights)
 
   local cities = {}
   for _, c in ipairs(request.cities) do cities[c:GetID()] = c end
@@ -961,6 +993,10 @@ function CmpRun.Judge(id, planJson)
   local workedAfter = WorkedYield(taken)
   score.worked = workedAfter - workedBefore
   score.output = score.gain + score.worked
+  -- The same with the yield weights (food too): the land part of an
+  -- objective that weighs yields (compare.mjs --refscore).
+  score.workedWeighted = WorkedYield(taken, request.weights) - workedWeightedBefore
+  score.outputWeighted = score.gain + score.workedWeighted
   score.featuresCleared = featuresCleared
   score.missing = missing
   score.missingPlaceable = missingPlaceable
