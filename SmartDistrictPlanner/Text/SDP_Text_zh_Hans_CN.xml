@@ -232,6 +232,15 @@
     <Replace Tag="LOC_SDP_REASON_NEEDS_DISTRICT" Language="zh_Hans_CN">
       <Text>需要相邻某个区域，但没有城市规划它</Text>
     </Replace>
+    <Replace Tag="LOC_SDP_REASON_NEEDS_IMPROVEMENT" Language="zh_Hans_CN">
+      <Text>需要相邻{1_Improvement}，但附近没有能建它的格</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_SUPPORT" Language="zh_Hans_CN">
+      <Text>供{1_Wonder}相邻</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_SUPPORT_TOOLTIP" Language="zh_Hans_CN">
+      <Text>{1_Wonder}必须与{2_Improvement}相邻。这个钉标出建它的位置，它的产出不计入方案。</Text>
+    </Replace>
     <Replace Tag="LOC_SDP_REASON_NO_FREE_PLOT" Language="zh_Hans_CN">
       <Text>没有剩余的空位</Text>
     </Replace>

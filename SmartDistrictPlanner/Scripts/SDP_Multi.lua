@@ -456,6 +456,14 @@ function SDP_Multi.NewSession(request)
     for _, subject in ipairs(fixed) do
       if subject.Type == "DISTRICT" then Mark(subject.Key) end
     end
+    -- Where the improvement a wonder needs next to it may go (issue 51):
+    -- tiles a participating city can come to own, or the player's own.
+    local ownable, taken = {}, {}
+    for _, part in ipairs(participants) do
+      for index in pairs(part.Scan.Reach.Reached) do ownable[index] = true end
+      for _, pin in ipairs(part.Scan.Pins) do taken[pin.Index] = true end
+    end
+    for _, subject in ipairs(fixed) do taken[Map.GetPlotIndex(subject.X, subject.Y)] = true end
     local seenWonder = {}
     for _, wonderType in ipairs(request.Wonders) do
       local w = byWonder[wonderType]
@@ -468,9 +476,16 @@ function SDP_Multi.NewSession(request)
         elseif w.AdjacentDistrict ~= nil and not present[w.AdjacentDistrict] then
           unplaced[#unplaced + 1] = { City = "WONDERS", Type = wonderType, Reason = "NEEDS_DISTRICT", District = w.AdjacentDistrict }
         else
-          slots[#slots + 1] = { Key = wonderType, Type = "WONDER", Group = wonderGroup, Allowed = everywhere,
-            Requires = w.AdjacentDistrict, Wonder = true }
-          slotCity[#slots] = nil
+          local support = w.AdjacentImprovement and SDP_Wonders.Support(playerID, w.AdjacentImprovement, candidates,
+            everywhere, ownable, taken, fixed) or nil
+          if support ~= nil and not support.Any then
+            unplaced[#unplaced + 1] = { City = "WONDERS", Type = wonderType, Reason = "NEEDS_IMPROVEMENT",
+              Other = w.AdjacentImprovement }
+          else
+            slots[#slots + 1] = { Key = wonderType, Type = "WONDER", Group = wonderGroup, Allowed = everywhere,
+              Requires = w.AdjacentDistrict, Support = support, Wonder = true }
+            slotCity[#slots] = nil
+          end
         end
       end
     end
@@ -958,7 +973,18 @@ function Session:PlanFor(layout)
       out.Unplaced[#out.Unplaced + 1] = { City = part.Key, Type = "POOL", Reason = "POOL_SHORT", Count = short }
     end
   end
-  local final = SDP_Overlay.Evaluate(subjects, self.Fixed, self.Weights)
+  -- The improvements wonders need next to them (issue 51): on the map for
+  -- DMT, not scored, tacked with the wonder.
+  local supportAt, extra = {}, {}
+  local supportPlots = search:SupportPlots(layout)
+  for _, m in ipairs(search.SupportList or {}) do
+    local index = supportPlots[m]
+    if index ~= nil then
+      supportAt[m] = index
+      extra[#extra + 1] = search:SupportSubject(search.SupportOf[m].Type, index)
+    end
+  end
+  local final = SDP_Overlay.Evaluate(subjects, self.Fixed, self.Weights, extra)
   self.ExtraCalls = self.ExtraCalls + 2 * #subjects + #self.Fixed
   local appeal = {}
   if search.AppealModel ~= nil then out.AppealDelta = search:AppealDelta(layout, appeal) end
@@ -981,6 +1007,11 @@ function Session:PlanFor(layout)
       Reach = self.Coverage and self.Coverage:Reach(search.Types[m], c.X, c.Y) or nil,
       Picked = search.Optional[m], Auto = (not spec.Wonder) and self.Participants[p].Auto[search.Types[m]] or nil,
     }
+    if supportAt[m] ~= nil then
+      local support = Map.GetPlotByIndex(supportAt[m])
+      out.Plan[n].Support = { Type = search.SupportOf[m].Type, X = support:GetX(), Y = support:GetY(), Index = supportAt[m],
+        Unowned = support:GetOwner() ~= self.PlayerID or nil }
+    end
     out.Cities[p].Gain = out.Cities[p].Gain + item.Score
     if search.Optional[m] then
       local picked = out.Cities[p].Picked
@@ -1037,7 +1068,10 @@ end
 --                 Plan     { City (participant Key), Type, Kind, X, Y, Index, Yields, ToolTip, Score,
 --                          Reach (keys of the targets it newly covers; coverage on, types with a reach) }
 --                 Unplaced { City, Type, Reason } (NOT_AVAILABLE, BUILT, PINNED, MAX_PER_PLAYER,
---                          NEEDS_DISTRICT, NO_LEGAL_PLOT, NO_FREE_PLOT; City "WONDERS" for wonders)
+--                          NEEDS_DISTRICT, NEEDS_IMPROVEMENT (Other: the improvement), NO_LEGAL_PLOT,
+--                          NO_FREE_PLOT; City "WONDERS" for wonders)
+--                 A wonder's plan entry may carry Support = { Type, X, Y, Index, Unowned }: the
+--                          improvement it needs next to it (issue 51), tacked with it
 --                 Cities   { Key, Kind, Name, X, Y, CityID, SiteNumber, Number (SDP_City city
 --                          number, the pins' name), Plan (types asked), Gain, Picked,
 --                          Together (unless Request.Apart is false: SDP_Rules.Together) }

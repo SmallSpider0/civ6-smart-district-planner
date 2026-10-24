@@ -173,7 +173,7 @@ end
 -- where it may stand (an aqueduct: next to the City Center and to a river,
 -- lake, oasis or mountain).
 local function UnplacedTip(u)
-  if u.Reason ~= "NO_LEGAL_PLOT" then return "" end
+  if u.Reason ~= "NO_LEGAL_PLOT" and u.Reason ~= "NEEDS_IMPROVEMENT" then return "" end
   local row = GameInfo.Districts[u.Type] or GameInfo.Buildings[u.Type]
   return (row ~= nil and row.Description ~= nil) and Locale.Lookup(row.Description) or ""
 end
@@ -575,6 +575,30 @@ function SDP_UI.PlanNote(p)
   return "  " .. table.concat(notes, " ")
 end
 
+-- The improvement a planned wonder needs next to it (issue 51, a Camp for
+-- the Temple of Artemis): a result row after the wonder's (`indent` before
+-- its name), a preview icon, a tack named like the wonder's.
+function SDP_UI.SupportRow(p, add, indent)
+  local s = p.Support
+  if s == nil then return end
+  add("ICON_" .. s.Type, (indent or "") .. TypeName(s.Type) .. "  " .. Where(s.X, s.Y),
+    Locale.Lookup("LOC_SDP_RESULT_SUPPORT", TypeName(p.Type)) .. SDP_UI.PlanNote({ Unowned = s.Unowned }),
+    Locale.Lookup("LOC_SDP_RESULT_SUPPORT_TOOLTIP", TypeName(p.Type), TypeName(s.Type)))
+end
+
+function SDP_UI.SupportIcons(plan, icons)
+  for _, p in ipairs(plan) do
+    local s = p.Support
+    if s ~= nil then icons[#icons + 1] = { X = s.X, Y = s.Y, Icon = "ICON_" .. s.Type, Text = "" } end
+  end
+end
+
+function SDP_UI.SupportEntry(p, name)
+  local s = p.Support
+  if s == nil then return nil end
+  return { Type = s.Type, X = s.X, Y = s.Y, Name = name }
+end
+
 -- The switch for partner districts (SDP_Rules.Apart, 2026-10-21 feedback):
 -- the label names the pair (several pairs: a general label), the tooltip
 -- gives the rule as the game's data states it; hidden when the rules have
@@ -665,6 +689,7 @@ local function Preview(n)
   for _, p in ipairs(solution.Plan) do
     icons[#icons + 1] = { X = p.X, Y = p.Y, Icon = "ICON_" .. p.Type, Text = PinText(p.Yields) }
   end
+  SDP_UI.SupportIcons(solution.Plan, icons)
   for _, r in ipairs(solution.Remind or {}) do
     icons[#icons + 1] = { X = r.X, Y = r.Y, Icon = SDP_Pins.REMIND_ICON, Text = "" }
   end
@@ -728,6 +753,7 @@ local function ShowResult()
       local detail
       detail, toolTip = SDP_UI.CoverageRow(p, SDP_UI.PlanDetail(p), toolTip)
       AddResultRow("ICON_" .. p.Type, TypeName(p.Type) .. "  " .. Where(p.X, p.Y), detail, toolTip)
+      SDP_UI.SupportRow(p, AddResultRow, "  ")
     end
     -- Woods and rainforest the plan relies on (feedback item 5).
     for _, r in ipairs(shown.Remind or {}) do
@@ -1371,7 +1397,10 @@ local function PlacePins()
   local solution = (m_result.Solutions and m_result.Solutions[m_solution]) or m_result
   local number = SDP_City.CityNumbers(playerID)[m_cityID]
   local entries = {}
-  for i, p in ipairs(solution.Plan) do entries[i] = { Type = p.Type, X = p.X, Y = p.Y, Name = tostring(number or "") } end
+  for _, p in ipairs(solution.Plan) do
+    entries[#entries + 1] = { Type = p.Type, X = p.X, Y = p.Y, Name = tostring(number or "") }
+    entries[#entries + 1] = SDP_UI.SupportEntry(p, tostring(number or ""))
+  end
   if m_remind then
     for _, e in ipairs(SDP_UI.RemindEntries(solution.Remind, function() return number end)) do entries[#entries + 1] = e end
   end

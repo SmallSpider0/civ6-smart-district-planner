@@ -232,6 +232,15 @@
     <Replace Tag="LOC_SDP_REASON_NEEDS_DISTRICT" Language="en_US">
       <Text>needs a district next to it that no city plans</Text>
     </Replace>
+    <Replace Tag="LOC_SDP_REASON_NEEDS_IMPROVEMENT" Language="en_US">
+      <Text>needs a {1_Improvement} next to it, and no tile nearby can take one</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_SUPPORT" Language="en_US">
+      <Text>for {1_Wonder}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_SUPPORT_TOOLTIP" Language="en_US">
+      <Text>{1_Wonder} must be next to a {2_Improvement}. The tack marks where to build one; its yields are not counted in the plan.</Text>
+    </Replace>
     <Replace Tag="LOC_SDP_REASON_NO_FREE_PLOT" Language="en_US">
       <Text>no free tile left for it</Text>
     </Replace>

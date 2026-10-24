@@ -380,7 +380,7 @@ details.appx[open] > summary { margin-bottom: 8px; }
 
 <section id="compare"><div class="col">
   <h2 data-n="03">Compared with other planners</h2>
-  <p>Two other Workshop mods plan districts automatically: Auto Map Tacks Planner (AMT, tested at r49) and Empire Planner (EP, tested at version 94). Each does things this mod does not: AMT and EP both plan improvements, and EP plans a whole empire in one go (sites, districts, wonders, improvements). This mod does not plan improvements and does city sites and several cities in two steps. The comparison below covers only what all three do: placing districts and wonders, and choosing city sites (only EP can be compared there).</p>
+  <p>Two other Workshop mods plan districts automatically: Auto Map Tacks Planner (AMT, tested at r49) and Empire Planner (EP, tested at version 94). Each does things this mod does not: AMT and EP both plan improvements, and EP plans a whole empire in one go (sites, districts, wonders, improvements). This mod plans only the improvements a wonder must stand next to (a Camp for the Temple of Artemis) and does city sites and several cities in two steps. The comparison below covers only what all three do: placing districts and wonders, and choosing city sites (only EP can be compared there).</p>
   <h3>How they work</h3>
   <div class="tablewrap">
     <table class="compare">
@@ -454,7 +454,7 @@ details.appx[open] > summary { margin-bottom: 8px; }
 <section id="limits"><div class="col">
   <h2 data-n="05">Known limitations</h2>
   <ul class="tight">
-    <li>It does not plan improvements: a tile is valued by the best improvement it can take, but no improvement tack is placed.</li>
+    <li>The only improvements it plans are the ones a wonder must stand next to (a Camp for the Temple of Artemis, tacked with the temple); for the rest a tile is valued by the best improvement it can take, but no improvement tack is placed.</li>
     <li>The Several cities tab has no switch to forbid removing features: it always allows removing Woods, Rainforest and Marsh.</li>
     <li>Each kind of district is planned once; for several Neighborhoods, solve several times.</li>
     <li><b>Appeal</b>: improvements built later outside the plan are not in the model; a Preserve's yields on the tiles around it assume those tiles stay unimproved; a tacked Preserve counts only its Housing. In the late-game check, 2 of 9 Neighborhood tiles were off by 1 from the game: on one, a Plantation that went gave 1 more; on the other, clearing Woods took 1 off the tile itself in one save (it does not elsewhere). Neither cause is found yet; one of them changed the Housing by 1 (appendix B.8).</li>
@@ -857,7 +857,7 @@ details.appx[open] > summary { margin-bottom: 8px; }
       <li><b>Time</b>: offline times differ from times in the game, so only relative speed counts; measuring by DMT calls instead, which do not depend on the machine, is in the evaluation baseline milestone.</li>
       <li><b>Few real scenarios</b>: the real set is 14 one-city and 5 several-city scenarios of Japan and the Netherlands from two saves, and the percentages in the panel's “Swap tiles from my cities” tooltip come from them; exporting saves of more civilizations is in the evaluation baseline milestone.</li>
       <li><b>Weights</b>: the evaluation uses the default weights, all 1, plus three sets leaning to Science, Production or Faith; what the default weights should be is in the <a href="{{REPO_URL}}/milestone/7">objective and weights</a> milestone.</li>
-      <li><b>Improvements</b>: AMT and EP also plan improvements; this mod only values tiles by their best improvement and places no improvement tacks, so this part is not compared. Planning a wonder together with the improvements it must be next to is in the <a href="{{REPO_URL}}/milestone/8">v1.4.0</a> milestone.</li>
+      <li><b>Improvements</b>: AMT and EP also plan improvements; this mod only values tiles by their best improvement and places no improvement tacks, so this part is not compared. The improvement a wonder must stand next to (a Camp for the Temple of Artemis) is planned with the wonder; the 8 WA scenes of the offline comparison check that the Camp is valid.</li>
     </ul>
     <p><b>Not planned for now</b></p>
     <ul class="tight">

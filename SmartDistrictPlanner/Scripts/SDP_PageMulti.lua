@@ -525,6 +525,7 @@ function P.Preview(n)
   for _, p in ipairs(solution.Plan) do
     icons[#icons + 1] = { X = p.X, Y = p.Y, Icon = "ICON_" .. p.Type, Text = SDP_UI.PinText(p.Yields) }
   end
+  SDP_UI.SupportIcons(solution.Plan, icons)
   for _, r in ipairs(solution.Remind or {}) do
     icons[#icons + 1] = { X = r.X, Y = r.Y, Icon = SDP_Pins.REMIND_ICON, Text = "" }
   end
@@ -630,6 +631,7 @@ function P.Render()
           local detail
           detail, tip = SDP_UI.CoverageRow(p, SDP_UI.PlanDetail(p), tip, label)
           AddRow("ICON_" .. p.Type, "  " .. SDP_UI.TypeName(p.Type) .. "  " .. SDP_UI.Where(p.X, p.Y), detail, tip)
+          SDP_UI.SupportRow(p, AddRow, "    ")
         end
       end
     end
@@ -697,7 +699,9 @@ function P.Place()
   local entries = {}
   for _, p in ipairs(solution.Plan) do
     local city = byKey[p.City]
-    entries[#entries + 1] = { Type = p.Type, X = p.X, Y = p.Y, Name = city and tostring(city.Number or "") or "" }
+    local name = city and tostring(city.Number or "") or ""
+    entries[#entries + 1] = { Type = p.Type, X = p.X, Y = p.Y, Name = name }
+    entries[#entries + 1] = SDP_UI.SupportEntry(p, name)
   end
   if m_remind then
     for _, e in ipairs(SDP_UI.RemindEntries(solution.Remind, function(r)
