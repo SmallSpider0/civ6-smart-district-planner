@@ -128,12 +128,18 @@ python3 -I tools/snapshot.py export RS01-pangaea-japan-kyoto --save pangaea-gs -
 python3 -I tools/snapshot.py export RM01-pangaea-japan-3c --from pangaea-gs --cities 327682,393219,458756   # 已在对局里：只记存档名
 python3 -I tools/snapshot.py check                 # 全部场景：离线世界里 DMT 的判定与游戏里导出的样本逐格比较
 python3 -I tools/snapshot.py list
+python3 -I tools/snapshot.py ref REF05-bh-japan-tokyo-shizuoka --from bh-hojo-276 --cities 196610,327684 \
+    --source URL --author NAME --date 2019-04-17 --title "…"   # 社区存档 → 参照场景（#53），见下
 ```
 
 - 需要游戏开着、Tuner 连通。`tests/bench/export_scene.lua` 在 `SDP_Panel` 状态里跑：取所选城市周围 6 格的窗口（加上在 4 格内拥有格子的城的市中心），按 `cmp_game.lua` 的 spec 格式写出地形、地貌、资源、改良、湖、未揭示、河流边（风云变幻按命名河流带泛滥平原；其他规则集从过河判断收集）、玩家（本地玩家的科技、市政、万神殿）、城市（归属格、已建区域、建筑）、奇观、地图钉，窗口跨地图接缝时重新编号，起始行取偶数行以保持六边形行的奇偶。另带每座所选城市 3 环内已拥有格上每种可规划区域的 DMT 判定与加成（`sample`）和各环的格索引（`rings`，加载时核对几何）。
 - 请求的区域：开发集的五种加娱乐中心，3 环内有海再加港口，减去该城已建的（特色区域按基础区域算）；多城每城一张清单。
 - `check` 用 `compare.mjs --probe tests/compare/cmp_scene_check.lua --arg <编号>` 在离线世界里重算样本，列出可放置性和加成的差异。
 - 窗口外的城拥有的格会丢掉归属（输出里的 `droppedOwned`）；按构造它们都在所选城市 4 格以外，候选格和相邻格不受影响。
+- `ref`：读进社区玩家的存档（`game.py load`，存档放进 `Saves/Single`，文件名以 `SDP_ref_` 开头）后，把所选城市导出成参照场景（`REF` 组，与 `refscene.py` 手写的同格式）：地图是存档里的真实地图，参照布局是作者这几座城已建的学院、圣地、剧院、商业中心、港口、工业区（`--reference built`，默认；特色区域按基础区域记；`--types` 改范围），或作者的区域地图钉（`--reference pins`）。这些区域从城里拿掉（钉从钉表拿掉），最优解可以放在任何地方；其他区域、奇观、钉保持原样。
+  - 每个参照区域在游戏里的相邻加成记在 `reference.claimed`：放置透镜的值（`plot:GetAdjacencyYield`），另记区域自己的值 `withPolicies`（含政策卡翻倍），用来和裁判对照。
+  - 已建区域下面的资源是建成后才揭示的（如煤），游戏让区域留着；场景里去掉它，记一条说明，参照布局才合法。游戏里的 DMT 样本是在这些区域还在的状态下取的，不描述场景，所以不保存（`check` 不适用）。
+  - 迭起兴衰的存档用 `--ruleset RULESET_EXPANSION_2` 按风云变幻的规则核对：原规则集记在 `meta.savedRuleset`，比较用的规则库里没有的科技、市政、万神殿去掉（`meta.dropped`），没有的地形、资源、区域等报错。两版工业区的加成不同，场景说明里写明。
 
 ## refscene.py — 手写参照布局（#53）
 
@@ -317,6 +323,7 @@ python3 -I tools/game.py launch                        # 记下前台应用，op
 python3 -I tools/game.py newgame --state SDP_Panel --capital   # 在对局里先退回主菜单→等主菜单→快速开始→等指定 Lua 状态可用→用开局开拓者建首都
 python3 -I tools/game.py popups --close                # 关掉排队中的游戏弹窗（历史时刻等），规划面板才会显示
 python3 -I tools/game.py newgame --state SDP_Panel --capital --reveal   # 另外揭示首都周围 12 格（城址、多城测试需要）
+python3 -I tools/game.py load SDP_ref_aw-curtin-232        # 读 Saves/Single 里的单人存档（不带扩展名），等对局可用、关掉弹窗；缺内容的存档停在游戏的提示上（超时）
 ```
 
 **不占用户的屏幕**：启动器和游戏窗口出现时会把自己切到前台（`activateIgnoringOtherApps`）。

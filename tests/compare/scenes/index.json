@@ -128,6 +128,272 @@
   ]
  },
  {
+  "id": "REF04-bh-japan-okayama-osaka",
+  "kind": "multi",
+  "set": "REF",
+  "civ": "CIVILIZATION_JAPAN",
+  "leader": "LEADER_HOJO",
+  "title": "BarbarianHunter: Japan, Osaka and Okayama (save, turn 276)",
+  "districts": [
+   "DISTRICT_COMMERCIAL_HUB",
+   "DISTRICT_THEATER"
+  ],
+  "only": [
+   131073,
+   262147
+  ],
+  "target": 131073,
+  "file": "REF04-bh-japan-okayama-osaka.json",
+  "save": "bh-hojo-276",
+  "turn": 276,
+  "ruleset": "RULESET_EXPANSION_2",
+  "source": "https://forums.civfanatics.com/threads/civ-of-the-week-japan.635221/page-2",
+  "author": "BarbarianHunter",
+  "date": "2019-04-17",
+  "plans": [
+   [
+    "DISTRICT_COMMERCIAL_HUB",
+    "DISTRICT_THEATER"
+   ],
+   [
+    "DISTRICT_THEATER",
+    "DISTRICT_COMMERCIAL_HUB"
+   ]
+  ]
+ },
+ {
+  "id": "REF05-bh-japan-tokyo-shizuoka",
+  "kind": "multi",
+  "set": "REF",
+  "civ": "CIVILIZATION_JAPAN",
+  "leader": "LEADER_HOJO",
+  "title": "BarbarianHunter: Japan, Tokyo and Shizuoka (save, turn 276)",
+  "districts": [
+   "DISTRICT_COMMERCIAL_HUB",
+   "DISTRICT_HOLY_SITE",
+   "DISTRICT_THEATER",
+   "DISTRICT_CAMPUS"
+  ],
+  "only": [
+   196610,
+   327684
+  ],
+  "target": 196610,
+  "file": "REF05-bh-japan-tokyo-shizuoka.json",
+  "save": "bh-hojo-276",
+  "turn": 276,
+  "ruleset": "RULESET_EXPANSION_2",
+  "source": "https://forums.civfanatics.com/threads/civ-of-the-week-japan.635221/page-2",
+  "author": "BarbarianHunter",
+  "date": "2019-04-17",
+  "plans": [
+   [
+    "DISTRICT_COMMERCIAL_HUB",
+    "DISTRICT_HOLY_SITE",
+    "DISTRICT_THEATER",
+    "DISTRICT_CAMPUS"
+   ],
+   [
+    "DISTRICT_COMMERCIAL_HUB",
+    "DISTRICT_HOLY_SITE",
+    "DISTRICT_THEATER",
+    "DISTRICT_CAMPUS"
+   ]
+  ]
+ },
+ {
+  "id": "REF06-bh-japan-kyoto",
+  "kind": "single",
+  "set": "REF",
+  "civ": "CIVILIZATION_JAPAN",
+  "leader": "LEADER_HOJO",
+  "title": "BarbarianHunter: Japan, Kyoto (save, turn 276)",
+  "districts": [
+   "DISTRICT_INDUSTRIAL_ZONE",
+   "DISTRICT_HOLY_SITE",
+   "DISTRICT_THEATER"
+  ],
+  "only": [
+   65536
+  ],
+  "target": 65536,
+  "file": "REF06-bh-japan-kyoto.json",
+  "save": "bh-hojo-276",
+  "turn": 276,
+  "ruleset": "RULESET_EXPANSION_2",
+  "source": "https://forums.civfanatics.com/threads/civ-of-the-week-japan.635221/page-2",
+  "author": "BarbarianHunter",
+  "date": "2019-04-17"
+ },
+ {
+  "id": "REF07-aw-australia-canberra-melbourne",
+  "kind": "multi",
+  "set": "REF",
+  "civ": "CIVILIZATION_AUSTRALIA",
+  "leader": "LEADER_JOHN_CURTIN",
+  "title": "Archon_Wing: Australia, Canberra and Melbourne (save, turn 232)",
+  "districts": [
+   "DISTRICT_CAMPUS",
+   "DISTRICT_THEATER",
+   "DISTRICT_COMMERCIAL_HUB",
+   "DISTRICT_HARBOR"
+  ],
+  "only": [
+   65536,
+   196610
+  ],
+  "target": 65536,
+  "file": "REF07-aw-australia-canberra-melbourne.json",
+  "save": "aw-curtin-232",
+  "turn": 232,
+  "ruleset": "RULESET_EXPANSION_2",
+  "source": "https://forums.civfanatics.com/threads/civ-of-the-week-australia.640147/",
+  "author": "Archon_Wing",
+  "date": "2019-01-05",
+  "plans": [
+   [
+    "DISTRICT_CAMPUS",
+    "DISTRICT_THEATER",
+    "DISTRICT_COMMERCIAL_HUB",
+    "DISTRICT_HARBOR"
+   ],
+   [
+    "DISTRICT_CAMPUS",
+    "DISTRICT_THEATER",
+    "DISTRICT_COMMERCIAL_HUB"
+   ]
+  ]
+ },
+ {
+  "id": "REF08-aw-australia-sydney",
+  "kind": "single",
+  "set": "REF",
+  "civ": "CIVILIZATION_AUSTRALIA",
+  "leader": "LEADER_JOHN_CURTIN",
+  "title": "Archon_Wing: Australia, Sydney (save, turn 232)",
+  "districts": [
+   "DISTRICT_CAMPUS",
+   "DISTRICT_COMMERCIAL_HUB",
+   "DISTRICT_THEATER",
+   "DISTRICT_HARBOR"
+  ],
+  "only": [
+   131073
+  ],
+  "target": 131073,
+  "file": "REF08-aw-australia-sydney.json",
+  "save": "aw-curtin-232",
+  "turn": 232,
+  "ruleset": "RULESET_EXPANSION_2",
+  "source": "https://forums.civfanatics.com/threads/civ-of-the-week-australia.640147/",
+  "author": "Archon_Wing",
+  "date": "2019-01-05"
+ },
+ {
+  "id": "REF09-aw-netherlands-amsterdam-haarlem",
+  "kind": "multi",
+  "set": "REF",
+  "civ": "CIVILIZATION_NETHERLANDS",
+  "leader": "LEADER_WILHELMINA",
+  "title": "Archon_Wing: Netherlands, Amsterdam and Haarlem (save, turn 237)",
+  "districts": [
+   "DISTRICT_THEATER",
+   "DISTRICT_INDUSTRIAL_ZONE",
+   "DISTRICT_CAMPUS",
+   "DISTRICT_COMMERCIAL_HUB"
+  ],
+  "only": [
+   65536,
+   131073
+  ],
+  "target": 65536,
+  "file": "REF09-aw-netherlands-amsterdam-haarlem.json",
+  "save": "aw-wilhelmina-237",
+  "turn": 237,
+  "ruleset": "RULESET_EXPANSION_2",
+  "source": "https://forums.civfanatics.com/threads/civ-of-the-week-netherlands.637219/",
+  "author": "Archon_Wing",
+  "date": "2018-10",
+  "plans": [
+   [
+    "DISTRICT_THEATER",
+    "DISTRICT_INDUSTRIAL_ZONE",
+    "DISTRICT_CAMPUS",
+    "DISTRICT_COMMERCIAL_HUB"
+   ],
+   [
+    "DISTRICT_CAMPUS",
+    "DISTRICT_COMMERCIAL_HUB",
+    "DISTRICT_THEATER"
+   ]
+  ]
+ },
+ {
+  "id": "REF10-aw-netherlands-utrecht",
+  "kind": "single",
+  "set": "REF",
+  "civ": "CIVILIZATION_NETHERLANDS",
+  "leader": "LEADER_WILHELMINA",
+  "title": "Archon_Wing: Netherlands, Utrecht (save, turn 237)",
+  "districts": [
+   "DISTRICT_INDUSTRIAL_ZONE",
+   "DISTRICT_CAMPUS",
+   "DISTRICT_THEATER",
+   "DISTRICT_HARBOR"
+  ],
+  "only": [
+   262146
+  ],
+  "target": 262146,
+  "file": "REF10-aw-netherlands-utrecht.json",
+  "save": "aw-wilhelmina-237",
+  "turn": 237,
+  "ruleset": "RULESET_EXPANSION_2",
+  "source": "https://forums.civfanatics.com/threads/civ-of-the-week-netherlands.637219/",
+  "author": "Archon_Wing",
+  "date": "2018-10"
+ },
+ {
+  "id": "REF11-aw-japan-kyoto-tokyo",
+  "kind": "multi",
+  "set": "REF",
+  "civ": "CIVILIZATION_JAPAN",
+  "leader": "LEADER_HOJO",
+  "title": "Archon_Wing: Japan, Kyoto and Tokyo (save, turn 236)",
+  "districts": [
+   "DISTRICT_THEATER",
+   "DISTRICT_CAMPUS",
+   "DISTRICT_INDUSTRIAL_ZONE",
+   "DISTRICT_HARBOR",
+   "DISTRICT_COMMERCIAL_HUB"
+  ],
+  "only": [
+   65536,
+   131073
+  ],
+  "target": 65536,
+  "file": "REF11-aw-japan-kyoto-tokyo.json",
+  "save": "aw-hojo-236",
+  "turn": 236,
+  "ruleset": "RULESET_EXPANSION_2",
+  "source": "https://forums.civfanatics.com/threads/civ-of-the-week-japan.635221/page-2",
+  "author": "Archon_Wing",
+  "date": "2018-08-11",
+  "plans": [
+   [
+    "DISTRICT_THEATER",
+    "DISTRICT_CAMPUS",
+    "DISTRICT_INDUSTRIAL_ZONE",
+    "DISTRICT_HARBOR",
+    "DISTRICT_COMMERCIAL_HUB"
+   ],
+   [
+    "DISTRICT_THEATER",
+    "DISTRICT_CAMPUS"
+   ]
+  ]
+ },
+ {
   "id": "RM01-pangaea-japan-3c",
   "kind": "multi",
   "set": "R",

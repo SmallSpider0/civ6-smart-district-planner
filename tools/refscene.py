@@ -694,9 +694,15 @@ def cmd_check(args):
     except SceneError as e:
         print(e)
         return 2
-    sys.stdout.write(to_text(spec))
-    problem = round_trip_problem(spec)
-    print("# round trip: %s" % (problem or "ok"))
+    if spec["reference"].get("from"):
+        # Exported from a save (tools/snapshot.py ref): ownership and the
+        # other players have no text form; only the picture.
+        problem = None
+        print("# %s: exported from save %s (no text form)" % (spec["scenario"]["id"], spec["scenario"].get("save")))
+    else:
+        sys.stdout.write(to_text(spec))
+        problem = round_trip_problem(spec)
+        print("# round trip: %s" % (problem or "ok"))
     if args.svg:
         with open(args.svg, "w", encoding="utf-8", newline="\n") as f:
             f.write(to_svg(spec))
