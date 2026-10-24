@@ -56,6 +56,8 @@ def group(sid):
         return "real", "multi"
     if sid.startswith("RC"):
         return "coverage/real", "multi"
+    if sid.startswith("RP"):
+        return "coverage/player", "multi"
     if sid.startswith("HS"):
         return "heldout", "single"
     if sid.startswith("HM"):

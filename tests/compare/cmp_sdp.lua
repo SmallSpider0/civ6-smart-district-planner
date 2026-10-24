@@ -161,8 +161,11 @@ function CmpAdapters.sdp(request, variant, w)
       plans = {}
       for _, city in ipairs(request.cities) do plans["C" .. city:GetID()] = request.plans[city:GetID()] or {} end
     end
+    -- One planned city (the coverage scenes RC, RP): exactly that city, as
+    -- the single-city tab would ask; city-center tacks do not take part.
+    local only = #request.cities == 1 and existing or nil
     local r = SDP_Multi.Solve({ PlayerID = 0, Tier = variant, Districts = plans and {} or request.districts, Plans = plans,
-      Existing = existing, Land = land, Weights = request.weights, Coverage = coverage, Swap = swap })
+      Existing = existing, Only = only, Land = land, Weights = request.weights, Coverage = coverage, Swap = swap })
     if not r.Ok then out.notes[#out.notes + 1] = tostring(r.Error) end
     local byKey = {}
     for _, c in ipairs(r.Cities or {}) do byKey[c.Key] = c.CityID end
