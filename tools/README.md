@@ -96,6 +96,9 @@ node tools/compare.mjs --snapshot S01-rome-temperate-mid   # 场景地图数据�
 node tools/compare.mjs --probe FILE.lua                    # 在本 mod 的状态里跑一段 Lua（临时探针：先 include("cmp_lib")，CmpRun.Setup(场景) 建好世界）
 node tools/compare.mjs --refscore -s ^REF --weights tests/compare/refscenes/weights.jsonl -j 3 --out tests/compare/results/refscore.jsonl   # 参照布局与最优解，见 refscene.py 一节
 node tools/compare.mjs -s '^S0[1-4]-' -p sdp --only sdp:ORACLE_LAND_CHECK --add sdp:ORACLE_LAND_CHECK -j 8   # 计入地块时的真最优（#48），带枚举对照和爬山检查
+node tools/compare.mjs -s '^H?S\d\d-[^~]*$' -p sdp --only sdp:ORACLE --add sdp:ORACLE --weights tests/compare/weights/w53.jsonl -j 4 --out W.jsonl   # 每组权重各跑一遍（行里记 weights），见下文“权重组”
+node tools/compare.mjs --rejudge PLANS.jsonl --weights tests/compare/weights/w53.jsonl -j 4 --out CROSS.jsonl   # 每个方案在每组权重下重新打分（行里另记 planWeights）
+python3 -I tests/compare/robust53.py --vectors tests/compare/weights/w53.jsonl --check tests/compare/results/w53_cross.jsonl tests/compare/results/w53_oracle.jsonl   # 默认权重的稳健性（#53，multicity-design.md 第 29 节）
 node tools/compare.mjs --probe tests/compare/probe_land.lua   # 裁判的地块值调成本模组的口径时，与 SDP_Land.PlotValues 逐格相同（默认开发集；--arg 换场景的 Lua 模式）
 ```
 
@@ -194,6 +197,8 @@ wonder 2,2 BUILDING_COLOSSEUM city=1     # 已建的奇观
 - `check` 写回的文字用规范写法（如 `M` 写成 `gm`），`build` 和 `validate.py` 都检查写回的文字再读一遍得到同样的场景。`--svg` 的图里橙色是参照布局、灰色是已建区域、白色是市中心，蓝线是河，虚线边框的格是猜的。
 - `compare.mjs --refscore`：每个参照场景、每组权重，裁判给参照布局打分，再求同样权重下的最优解并打分，写一行 JSON：`reference`、`optimum`（裁判的完整打分和方案），`summary` 里是比较的目标值、差距 `gap`、参照布局占最优的比例、参照布局是不是最优、最优是否已证明。只算相邻时最优解用 `sdp:ORACLE`（证明过的真最优，目标是裁判的加权相邻加成 `gain`）；权重组带 `land=1` 时用 `sdp:FINE_LAND`（精细档，计入占地），比较裁判的 `outputWeighted`（加权相邻加成加上按同样权重计的耕作产出变化，粮食也计）。注意本模组的占地按修上改良后的产出算，裁判的耕作产出按地块原样算，两者不同，所以这一项的“最优”不是证明过的。`--reference-only` 只给参照布局打分（`verify` 用它）。
 - 权重组：`--weights` 给 JSON lines 文件（每行 `{"name": "…", "science": 1, "culture": 1, "faith": 0.5, "gold": 0.5, "production": 1, "food": 1, "land": 0}`，没写的产出为 1；`"oracle": n` 把真最优的节点上限设为 n 百万），或直接写 `"all1:;half:gold=0.5,faith=0.5;land:land=1"`。不给时只算全 1。`CMP_WEIGHTS` 同时传给规划器和裁判，替换场景自己的权重。地块系数 λ 用变体后缀 `_LAND<nnn>` 设（见上），`--refscore` 还没有接上。
+- `--weights` 也可用于普通运行和 `--rejudge`（不和 `--crossscore` 一起用）：每个运行或每次打分对每组权重各做一遍，行里记 `weights`（`name`、`yields`），重新打分的行另记 `planWeights`（方案原来的权重组名，没有时为 null）。场景编号不变，所以 `summarize.py` 不读带 `weights` 的行。权重都是 1/k 的整数倍（k ≤ 100，如 0.25、AMT 的 1.15）时，`sdp:ORACLE` 把界取整到 1/k 的倍数，和整数权重一样快。
+- `robust53.py`：读 `sdp:ORACLE` 的行（带 `weights` 的按其组名；不带的是 `all1`，`~SCI`、`~PROD`、`~FAITH` 场景是 `sci3`、`prod3`、`faith3`），对每个单城场景、每对权重组 (A, B) 算 A 的最优方案在 B 下的损失 1 − score_B(plan_A)/V*_B（裁判的加成对权重是线性的，按方案的 `byYield` 算），报两两损失表、每组作默认时的平均和最坏损失、所有权重给出同一方案的场景比例；`--check` 拿重新打分的文件逐个核对。`--distinct OUT` 写出每个场景互不相同的最优方案各一行，供 `--rejudge --weights` 用。
 
 ## deploy.py — 部署
 

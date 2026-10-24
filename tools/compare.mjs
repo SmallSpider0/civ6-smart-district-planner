@@ -25,6 +25,12 @@
 //       judge's score of the recorded layout and of the optimum (sdp:ORACLE,
 //       or sdp:FINE_LAND when the vector has land=1) under the same weights;
 //       one row per scene and vector (issue 53)
+//   node tools/compare.mjs -s ^S -p sdp --only sdp:ORACLE --weights FILE|SPEC [--out FILE]
+//   node tools/compare.mjs --rejudge RESULTS.jsonl --weights FILE|SPEC [--out FILE]
+//       the same runs (or judgings) once per named weight vector, which
+//       replaces the scenario's own weights for the planner and the judge;
+//       each row carries weights = { name, yields } (and a rejudged row
+//       planWeights, the vector its plan was made for) (issue 53)
 // Results are JSON lines in --out (default tests/compare/results/latest.jsonl).
 
 import { createRequire } from "node:module";
@@ -192,9 +198,17 @@ function luaString(s) {
   });
 }
 
-// Judge a plan again (after the judge changed), keeping the plan and times.
-function rejudge(row) {
-  const judged = runLua("judge", `
+function weightsPrefix(v) {
+  return v ? `CMP_WEIGHTS = ${luaString(JSON.stringify(v.yields))}\n` : "";
+}
+
+// Judge a plan again (after the judge changed), keeping the plan and times;
+// with a weight vector `v`, under those weights (issue 53).
+function rejudge(row, v) {
+  if (v) {
+    row = Object.assign({}, row, { planWeights: row.weights ? row.weights.name : null, weights: { name: v.name, yields: v.yields } });
+  }
+  const judged = runLua("judge", weightsPrefix(v) + `
     include("cmp_lib")
     CmpRun.Judge(${luaString(row.scenario)}, ${luaString(JSON.stringify(row.plan))})
   `, "judge");
@@ -220,7 +234,7 @@ function crossScore(row, scorers) {
   return row;
 }
 
-// Weight vectors for --refscore: a file of JSON lines
+// Weight vectors for --refscore and --weights: a file of JSON lines
 // ({"name": "all1", "science": 1, ..., "land": 0}) or inline
 // "all1:;half:gold=0.5,faith=0.5;land:land=1". Missing yields weigh 1.
 const YIELD_KEYS = { science: "YIELD_SCIENCE", culture: "YIELD_CULTURE", faith: "YIELD_FAITH", gold: "YIELD_GOLD",
@@ -262,7 +276,7 @@ function parseWeights(spec) {
 function refScore(task) {
   const v = task.vector;
   const id = luaString(task.scenario);
-  const prefix = `CMP_WEIGHTS = ${luaString(JSON.stringify(v.yields))}\n`;
+  const prefix = weightsPrefix(v);
   const row = { scenario: task.scenario, mode: "refscore", weights: v };
   const judge = (planJson) => {
     const out = runLua("judge", prefix + `include("cmp_lib")\nCmpRun.Judge(${id}, ${luaString(planJson)})`, "judge");
@@ -313,13 +327,15 @@ function refScore(task) {
 function runTask(task) {
   if (task.keep) return task.keep;
   if (task.vector) return refScore(task);
-  if (task.rejudge) return rejudge(task.rejudge);
+  if (task.rejudge) return rejudge(task.rejudge, task.weights);
   if (task.cross) return crossScore(task.cross, task.scorers);
-  const plan = runLua(task.planner, `
+  const prefix = weightsPrefix(task.weights);
+  const plan = runLua(task.planner, prefix + `
     include("cmp_lib")
     CmpRun.Plan(${luaString(task.scenario)}, ${luaString(task.planner)}, ${luaString(task.variant || "")})
   `, "plan_" + task.planner);
   const result = { scenario: task.scenario, planner: task.planner, variant: task.variant || "", planSeconds: plan.seconds };
+  if (task.weights) result.weights = { name: task.weights.name, yields: task.weights.yields };
   let planJson = null;
   for (const e of plan.emits) {
     if (e.startsWith("PLAN ")) planJson = e.slice(5);
@@ -329,7 +345,7 @@ function runTask(task) {
     result.log = plan.log.slice(-40);
     return result;
   }
-  const judged = runLua("judge", `
+  const judged = runLua("judge", prefix + `
     include("cmp_lib")
     CmpRun.Judge(${luaString(task.scenario)}, ${luaString(planJson)})
   `, "judge");
@@ -407,7 +423,8 @@ if (!isMainThread) {
     else if (a === "--reference-only") referenceOnly = true;
     else {
       console.error("usage: compare.mjs [--list] [-s SUBSTRING] [-p sdp,amt,ep] [--only P:V,...] [--add P:V,...] [-j JOBS] [--out FILE] [--ruleset RULESET_...] [-v]\n"
-        + "       compare.mjs --refscore [-s REF..] [--weights FILE|NAME:KEY=W,...;...] [--reference-only] [-j JOBS] [--out FILE]");
+        + "       compare.mjs --refscore [-s REF..] [--weights FILE|NAME:KEY=W,...;...] [--reference-only] [-j JOBS] [--out FILE]\n"
+        + "       compare.mjs [-s ..] [--only P:V,...] [--rejudge FILE] --weights FILE|NAME:KEY=W,...;... [-j JOBS] [--out FILE]");
       process.exit(2);
     }
   }
@@ -439,6 +456,20 @@ if (!isMainThread) {
     for (const s of scenarios) console.log(s.id + "  " + (s.title || "") + "  [" + (s.planners || []).join(",") + "]");
     process.exit(0);
   }
+  // --weights without --refscore: every run (or judging) once per vector.
+  let runVectors = [null];
+  if (weightsSpec && !refscore) {
+    try {
+      runVectors = parseWeights(weightsSpec);
+    } catch (e) {
+      console.error("--weights: " + e.message);
+      process.exit(2);
+    }
+    if (crossFile) {
+      console.error("--weights does not go with --crossscore");
+      process.exit(2);
+    }
+  }
   const tasks = [];
   if (rejudgeFile || crossFile) {
     for (const line of readFileSync(rejudgeFile || crossFile, "utf8").split("\n")) {
@@ -448,7 +479,9 @@ if (!isMainThread) {
       if (only && !only.includes(row.planner + ":" + (row.variant || ""))) continue;
       // A run that gave no plan has nothing to score but still counts (as 0 %): keep it.
       if (!row.plan) tasks.push({ scenario: row.scenario, planner: row.planner, variant: row.variant, keep: row });
-      else if (rejudgeFile) tasks.push({ scenario: row.scenario, planner: row.planner, variant: row.variant, rejudge: row });
+      else if (rejudgeFile) {
+        for (const weights of runVectors) tasks.push({ scenario: row.scenario, planner: row.planner, variant: row.variant, rejudge: row, weights });
+      }
       else tasks.push({ scenario: row.scenario, planner: row.planner, variant: row.variant, cross: row, scorers });
     }
   }
@@ -472,7 +505,7 @@ if (!isMainThread) {
     for (const run of runs) {
       const key = run.planner + ":" + (run.variant || "");
       if (planners.includes(run.planner) && (!only || only.includes(key)))
-        tasks.push({ scenario: s.id, planner: run.planner, variant: run.variant, verbose });
+        for (const weights of runVectors) tasks.push({ scenario: s.id, planner: run.planner, variant: run.variant, verbose, weights });
     }
   }
   // Longest runs first (AMT's multi-city joint solve, then multi-city), so
@@ -513,7 +546,8 @@ if (!isMainThread) {
           : crossText ? "cross " + crossText
           : s && s.siteValue !== undefined ? `siteValue ${s.siteValue} tiles ${s.tileValue} districts ${s.districtPotential} legal ${s.legal} violations ${s.violations.length}`
           : s ? `gain ${s.gain} output ${s.output} legal ${s.legal} violations ${s.violations.length}` : "no score";
-        const who = r.mode === "refscore" ? (r.optimum ? "sdp:" + r.optimum.variant : "reference") : r.planner + (r.variant ? ":" + r.variant : "");
+        const who = r.mode === "refscore" ? (r.optimum ? "sdp:" + r.optimum.variant : "reference")
+          : r.planner + (r.variant ? ":" + r.variant : "") + (r.weights ? " [" + (r.planWeights !== undefined ? (r.planWeights || "own") + "->" : "") + r.weights.name + "]" : "");
         console.log(`[${done}/${tasks.length}] ${r.scenario} ${who} ${((r.optimum && r.optimum.planSeconds) || r.planSeconds || 0).toFixed(1)}s ${summary}`);
         if ((verbose || r.error || r.judgeError) && r.log) for (const line of r.log.slice(-15)) console.log("    | " + line);
         if (done >= tasks.length) {

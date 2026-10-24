@@ -1,0 +1,17 @@
+# Yield weight vectors for the robustness check of issue 53 (tests/compare/robust53.py).
+# Missing yields weigh 1. Only the ratios matter (an optimum and a loss share do not change when every weight is scaled).
+{"name": "all1"}
+{"name": "g05", "gold": 0.5}
+{"name": "g025", "gold": 0.25}
+{"name": "g05f05", "gold": 0.5, "faith": 0.5}
+{"name": "g025f05", "gold": 0.25, "faith": 0.5}
+{"name": "sc125", "science": 1.25, "culture": 1.25, "gold": 0.5, "faith": 0.5}
+{"name": "sc075", "science": 0.75, "culture": 0.75, "gold": 0.5, "faith": 0.5}
+# Auto Map Tacks Planner r49, DEFAULT_WEIGHTS (amt_autoplanner.lua); relative to production: 2.4, 2, 2.13, 1.53, 1, 0.73
+{"name": "amt", "science": 1.8, "culture": 1.5, "faith": 1.6, "gold": 1.15, "production": 0.75, "food": 0.55}
+# Empire Planner, WEIGHTS.BALANCED (ep_meta.lua); relative to production: 0.62, 0.58, 0.42, 0.31, 1, 0.38
+{"name": "ep", "science": 1.6, "culture": 1.5, "faith": 1.1, "gold": 0.8, "production": 2.6, "food": 1.0}
+# The compare profiles (scenarios ~SCI, ~PROD, ~FAITH: one yield 3, the others 1)
+{"name": "sci3", "science": 3}
+{"name": "prod3", "production": 3}
+{"name": "faith3", "faith": 3}

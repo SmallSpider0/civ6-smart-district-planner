@@ -175,9 +175,13 @@ def load(paths):
                 line = line.strip()
                 if line:
                     rows.append(json.loads(line))
-    # Later files win for the same (scenario, planner, variant).
+    # Later files win for the same (scenario, planner, variant). Runs under
+    # a named weight vector (compare.mjs --weights, issue 53) are for
+    # robust53.py and refscore rows for --refscore: both left out here.
     out = {}
     for r in rows:
+        if "weights" in r or r.get("mode") == "refscore":
+            continue
         out[(r["scenario"], r["planner"], r.get("variant", ""))] = r
     return list(out.values())
 
