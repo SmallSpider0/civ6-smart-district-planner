@@ -560,6 +560,7 @@ local function AddRow(icon, name, detail, toolTip)
   inst.Icon:SetIcon(icon, 32)
   inst.Name:SetText(name)
   inst.Detail:SetText(detail)
+  SDP_UI.FitResultRow(inst)
   inst.Root:SetToolTipString(toolTip or "")
   m_view.Results[#m_view.Results + 1] = { Icon = icon, Name = name, Detail = detail, ToolTip = toolTip }
 end

@@ -344,6 +344,7 @@ function P.Render()
       inst.Icon:SetIcon("ICON_DISTRICT_CITY_CENTER", 32)
       inst.Name:SetText(name)
       inst.Detail:SetText(detail)
+      SDP_UI.FitResultRow(inst)
       inst.Root:SetToolTipString(tip)
       m_view.Results[#m_view.Results + 1] = { Name = name, Detail = detail, ToolTip = tip }
     end

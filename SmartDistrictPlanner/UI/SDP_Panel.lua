@@ -154,8 +154,15 @@ local function TypeName(typeName)
   return row and Locale.Lookup(row.Name) or typeName
 end
 
+-- A result row grows with its detail line: English notes ("clear or harvest
+-- the tile first") run past the row's width and wrap.
+local function FitResultRow(inst)
+  inst.Root:SetSizeY(math.max(40, 23 + inst.Detail:GetSizeY()))
+end
+
 -- Helpers shared with the other tabs (SDP_PageSites, SDP_PageMulti).
 SDP_UI = {
+  FitResultRow = FitResultRow,
   MAX_WEIGHT = MAX_WEIGHT, WEIGHT_COLUMNS = WEIGHT_COLUMNS,
   Number = Number, Signed = Signed, Where = Where, YieldText = YieldText, PinText = PinText, TypeName = TypeName, Join = Join,
 }
@@ -475,6 +482,7 @@ local function AddResultRow(icon, name, detail, toolTip)
   inst.Icon:SetIcon(icon, 32)
   inst.Name:SetText(name)
   inst.Detail:SetText(detail)
+  FitResultRow(inst)
   inst.Root:SetToolTipString(toolTip)
   m_resultRows[#m_resultRows + 1] = { Icon = icon, Name = name, Detail = detail, ToolTip = toolTip }
 end

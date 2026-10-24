@@ -335,7 +335,7 @@
     <Container ID="Root" Size="460,40" ConsumeMouseOver="1">
       <Image ID="Icon" Anchor="L,C" Size="32,32"/>
       <Label ID="Name" Anchor="L,T" Offset="40,2" Style="BodyTextDark16"/>
-      <Label ID="Detail" Anchor="L,T" Offset="40,21" Style="BodyTextDark14"/>
+      <Label ID="Detail" Anchor="L,T" Offset="40,21" Style="BodyTextDark14" WrapWidth="420"/>
     </Container>
   </Instance>
 
