@@ -6,7 +6,7 @@ and finish it (FinishProgress); read the plot's own appeal and its
 neighbours' before and after. A neighborhood has no appeal of its own.
 Changes the game in memory (do not save).
 
-    python3 -I tests/bench/probe_ownplot.py [MAX_PER_KIND]
+    python3 -I tests/bench/probe_ownplot.py [MAX_PER_KIND [MAX_BARE]]   # MAX_BARE: plots with no feature, as a control
 """
 import json
 import os
@@ -28,13 +28,13 @@ def run(state, code, timeout=60):
 PICK = """
 local pid = Game.GetLocalPlayer()
 local hood = GameInfo.Districts["DISTRICT_NEIGHBORHOOD"]
-local left = { FEATURE_FOREST = %(n)d, FEATURE_JUNGLE = %(n)d, FEATURE_MARSH = %(n)d }
+local left = { FEATURE_FOREST = %(n)d, FEATURE_JUNGLE = %(n)d, FEATURE_MARSH = %(n)d, NONE = %(bare)d }
 local out, picked = {}, {}
 for _, city in Players[pid]:GetCities():Members() do
   for dx = -3, 3 do for dy = -3, 3 do
     local p = Map.GetPlotXYWithRangeCheck(city:GetX(), city:GetY(), dx, dy, 3)
     local f = p and p:GetFeatureType() or -1
-    local ft = f ~= -1 and GameInfo.Features[f].FeatureType or nil
+    local ft = (f ~= -1 and GameInfo.Features[f].FeatureType) or (p and not p:IsWater() and not p:IsMountain() and not p:IsCity() and p:GetDistrictType() == -1 and "NONE") or nil
     if ft and left[ft] and left[ft] > 0 and p:GetImprovementType() == -1 then
       local far = true
       for _, q in ipairs(picked) do if Map.GetPlotDistance(q[1], q[2], p:GetX(), p:GetY()) < 3 then far = false end end
@@ -85,7 +85,8 @@ def state(x, y):
 
 def main():
     n = int(sys.argv[1]) if len(sys.argv) > 1 else 3
-    line = next(l for l in run("InGame", PICK % {"n": n}) if l.startswith("PICK "))
+    bare = int(sys.argv[2]) if len(sys.argv) > 2 else 0
+    line = next(l for l in run("InGame", PICK % {"n": n, "bare": bare}) if l.startswith("PICK "))
     for pick in json.loads(line[5:]):
         before = state(pick["X"], pick["Y"])
         run("InGame", ORDER % {"city": pick["City"], "x": pick["X"], "y": pick["Y"]})

@@ -230,7 +230,7 @@ python3 -I tools/realclick.py at 'Controls.SolveButton'   # 点 SDP_Panel 状态
 python3 -I tools/stress.py prepare pangaea-gs     # 主菜单开局（在对局里先退回主菜单），AI 自动打 N 回合，存为 SDP_stress_pangaea-gs
 python3 -I tools/stress.py load pangaea-gs        # 回主菜单读这个存档
 python3 -I tools/stress.py run pangaea-gs         # tests/bench/stress.lua 的各步，逐步计时，结果写 tests/stress/results/
-python3 -I tools/stress.py check pangaea-gs       # 按玩家的建造流程建出"魅力"一步的方案，比较魅力与住房（会改动当前对局，最后跑）
+python3 -I tools/stress.py check pangaea-gs       # 按玩家的建造流程建出"魅力"一步的方案，比较魅力与住房（每套方案前重新读档，免得各城方案互相影响；--same-game 不重读）
 python3 -I tools/refresh_stress_md.py             # 把汇总表写进 docs/self-test-report.md（报告第 5.10 节由 report/build.py 生成）
 python3 -I tools/stress.py summary                # 汇总表
 python3 -I tools/run_tests.py -v tests/bench/audit_engine.lua   # 读存档后：每座城每种区域，引擎可建格与"本模组候选 + DMT"逐格比较（会改对局：全部科技、各城 3 环、人口 25）

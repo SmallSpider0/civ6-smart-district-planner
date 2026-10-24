@@ -1,0 +1,7 @@
+Changes since v1.3.0:
+- Districts a plan cannot place (such as the Aqueduct of a city with no river, lake, oasis or mountain next to its City Center) are listed first in the result. When no tile in range is valid, hovering shows the game's own description of the district, which says where it can go.
+- Neighborhood and Preserve Appeal: a feature a district clears now counts only for the tiles around it, not for the district's own tile (clearing Woods used to take 1 off). Corrected from measurements in several games; in the late-game check 7 of 9 plans now match the game's Appeal and Housing.
+
+自 v1.3.0 以来的变化：
+- 方案放不下的区域（如市中心旁没有河流、湖泊、绿洲或山脉的城的水渠）排在结果列表最前面；范围内没有合法位置时，悬停显示游戏对这个区域的介绍，写明它能建在哪。
+- 社区、保护区的魅力：区域清掉的地貌只影响四周的格，不再让区域所在格自己的魅力少 1（原来清掉树林时扣 1）。按几局实测改正；后期存档复核 9 套方案里 7 套的魅力、住房与游戏相同。

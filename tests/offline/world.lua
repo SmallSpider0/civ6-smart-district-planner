@@ -126,7 +126,8 @@ local function BuildGameInfo()
   }, "CivicType")
 
   local function District(t, extra)
-    local row = { DistrictType = t, Name = "LOC_" .. t .. "_NAME", OnePerCity = true, ReplacesCollection = {} }
+    local row = { DistrictType = t, Name = "LOC_" .. t .. "_NAME", Description = "LOC_" .. t .. "_DESCRIPTION", OnePerCity = true,
+      ReplacesCollection = {} }
     for k, v in pairs(extra or {}) do row[k] = v end
     return row
   end

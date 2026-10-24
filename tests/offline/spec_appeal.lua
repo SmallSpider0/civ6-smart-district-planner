@@ -63,12 +63,9 @@ local function RefHousing(world, plan, weight)
   for _, p in ipairs(plan) do
     if p.Type == HOOD or p.Type == PRESERVE then
       local plot = world:Plot(p.X, p.Y)
-      -- Cleared woods (positive appeal) stop counting for the plot itself;
-      -- cleared rainforest or marsh do not (tests/bench/probe_ownplot.py).
+      -- A cleared feature does not count for the plot itself, only around it
+      -- (issue 58, tests/bench/probe_ownplot.py).
       local appeal = plot:GetAppeal()
-      if plot.feature ~= nil and plot.feature.Removable and (plot.feature.Appeal or 0) > 0 then
-        appeal = appeal - plot.feature.Appeal
-      end
       for dir = 0, 5 do
         local n = Map.GetAdjacentPlot(p.X, p.Y, dir)
         local t = n and at[n:GetX() .. "," .. n:GetY()]
@@ -222,8 +219,8 @@ test("clearing woods lowers the appeal around; an industrial zone next door lowe
   T.eq(HoodAt({ hood, 0, positions["2,3"] }).Appeal, -1, "an industrial zone next door: -1")
   T.eq(HoodAt({ hood, positions["4,3"], positions["2,3"] }).Appeal, -2, "both")
   T.eq(HoodAt({ hood, positions["4,3"], positions["2,3"] }).Housing, 3, "housing follows")
-  -- On the woods itself: they are cleared and stop counting for the plot too.
-  T.eq(HoodAt({ positions["4,3"], 0, 0 }).Appeal, 1 - 1, "on the woods: the game's 1, minus the woods")
+  -- On the woods itself: they are cleared, but the plot keeps its appeal (issue 58).
+  T.eq(HoodAt({ positions["4,3"], 0, 0 }).Appeal, 1, "on the woods: the game's 1")
   local at = model:AppealsUnder({ positions["4,3"], 0, 0 }, { scan.Candidates[positions["4,3"]].Index,
     scan.Candidates[positions["3,3"]].Index })
   T.eq(at[scan.Candidates[positions["3,3"]].Index], -1, "and next to it: -1")
@@ -244,8 +241,7 @@ test("building clears a feature only with its removal tech (Features.RemoveTech)
     -- A campus on the shore: the coast plot next to it keeps its appeal.
     local water = Map.GetPlotIndex(5, 0)
     local onWater = model:AppealsUnder({ 0, positions["5,1"] }, { water })[water]
-    -- On the marsh itself: cleared, but a negative feature never counted for
-    -- its own plot, so the plot keeps the game's appeal.
+    -- On the marsh itself: cleared, and the plot keeps the game's appeal.
     local marsh = scan.Candidates[positions["4,3"]].Index
     local own = model:AppealsUnder({ positions["4,3"], 0 }, { marsh })[marsh]
     T.eq(own, Map.GetPlotByIndex(marsh):GetAppeal(), "a neighborhood on the marsh keeps the plot's appeal")

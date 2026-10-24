@@ -29,7 +29,7 @@ local MAX_WEIGHT = 3
 -- The release, in the launch bar button's tooltip, so that a report says
 -- which copy the game loaded (issue 27). tools/validate.py checks it against
 -- the newest version in CHANGELOG.md.
-local VERSION = "v1.3.0"
+local VERSION = "v1.3.1"
 
 -- The weight row (feedback item 3): the six yields with the game's font
 -- icons, one family (the texture icons cover only some yields: requirements
@@ -160,9 +160,19 @@ local function FitResultRow(inst)
   inst.Root:SetSizeY(math.max(40, 23 + inst.Detail:GetSizeY()))
 end
 
+-- Hover text of an "is left out" row (issue 60): with no legal plot in
+-- range, the game's own description of the district or wonder, which says
+-- where it may stand (an aqueduct: next to the City Center and to a river,
+-- lake, oasis or mountain).
+local function UnplacedTip(u)
+  if u.Reason ~= "NO_LEGAL_PLOT" then return "" end
+  local row = GameInfo.Districts[u.Type] or GameInfo.Buildings[u.Type]
+  return (row ~= nil and row.Description ~= nil) and Locale.Lookup(row.Description) or ""
+end
+
 -- Helpers shared with the other tabs (SDP_PageSites, SDP_PageMulti).
 SDP_UI = {
-  FitResultRow = FitResultRow,
+  FitResultRow = FitResultRow, UnplacedTip = UnplacedTip,
   MAX_WEIGHT = MAX_WEIGHT, WEIGHT_COLUMNS = WEIGHT_COLUMNS,
   Number = Number, Signed = Signed, Where = Where, YieldText = YieldText, PinText = PinText, TypeName = TypeName, Join = Join,
 }
@@ -645,6 +655,13 @@ local function ShowResult()
         end)
       end
     end
+    -- What the plan leaves out comes first, so a long list does not hide it
+    -- (issue 60).
+    for _, u in ipairs(shown.Unplaced or result.Unplaced or {}) do
+      local key = u.Auto and "LOC_SDP_RESULT_UNPLACED_AUTO" or "LOC_SDP_RESULT_UNPLACED"
+      AddResultRow("ICON_" .. u.Type, Locale.Lookup(key, TypeName(u.Type)),
+        Locale.Lookup("LOC_SDP_REASON_" .. u.Reason, u.Other and TypeName(u.Other) or ""), UnplacedTip(u))
+    end
     -- Each planned district: where, its yields, and DMT's own breakdown on hover.
     for _, p in ipairs(shown.Plan) do
       local toolTip = (p.ToolTip ~= nil and p.ToolTip ~= "") and p.ToolTip or Locale.Lookup("LOC_SDP_NO_ADJACENCY")
@@ -662,11 +679,6 @@ local function ShowResult()
       AddResultRow("ICON_" .. s.Key, Locale.Lookup("LOC_SDP_RESULT_NEIGHBOUR", TypeName(s.Key), Where(s.X, s.Y)),
         Locale.Lookup("LOC_SDP_RESULT_NEIGHBOUR_DETAIL", Number(n.Before), Number(n.After)),
         (n.ToolTip ~= nil and n.ToolTip ~= "") and n.ToolTip or Locale.Lookup("LOC_SDP_NO_ADJACENCY"))
-    end
-    for _, u in ipairs(shown.Unplaced or result.Unplaced or {}) do
-      local key = u.Auto and "LOC_SDP_RESULT_UNPLACED_AUTO" or "LOC_SDP_RESULT_UNPLACED"
-      AddResultRow("ICON_" .. u.Type, Locale.Lookup(key, TypeName(u.Type)),
-        Locale.Lookup("LOC_SDP_REASON_" .. u.Reason, u.Other and TypeName(u.Other) or ""), "")
     end
     -- Partner districts left together (required ones, or the count needed them).
     local together = shown.Together

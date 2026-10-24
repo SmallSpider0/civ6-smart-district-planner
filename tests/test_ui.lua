@@ -55,8 +55,9 @@ test("solving from the panel lists the plan with DMT tooltips", function()
   T.ok(result ~= nil and result.Ok, "solve failed")
   local state = SDP_Panel.State()
   T.eq(#state.ResultRows, #result.Plan + #result.Neighbours + #result.Unplaced, "row count")
+  -- What the plan leaves out is listed first (issue 60).
   for i, p in ipairs(result.Plan) do
-    local row = state.ResultRows[i]
+    local row = state.ResultRows[#result.Unplaced + i]
     local expected = p.ToolTip ~= "" and p.ToolTip or Locale.Lookup("LOC_SDP_NO_ADJACENCY")
     T.eq(row.ToolTip, expected, p.Type .. " tooltip")
     T.ok(string.find(row.Name, "(" .. p.X .. ", " .. p.Y .. ")", 1, true) ~= nil, p.Type .. " coordinates")

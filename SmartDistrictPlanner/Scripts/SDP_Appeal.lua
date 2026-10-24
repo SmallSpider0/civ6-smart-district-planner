@@ -6,21 +6,21 @@
 -- Appeal changes with the plan. Building on a plot clears its removable
 -- feature and its improvement, and the district or wonder there adds its own
 -- appeal to the plots around (Districts.Appeal: holy site +1, industrial
--- zone -1, a wonder as DISTRICT_WONDER). Cleared woods (a feature of
--- positive appeal) also stop counting for the plot itself; cleared
--- rainforest or marsh (negative) do not. Measured with neighborhoods
--- ordered and built the normal way (tests/bench/probe_ownplot.py,
--- 2026-10-21): woods, own plot -1 on 6 of 8 plots (the other two read no
--- change, perhaps stale readings); rainforest, own plot unchanged on 2 of 2;
--- marsh not measured. A feature whose Features.RemoveTech the player lacks
--- is not cleared, but the game does not let a district go there either.
+-- zone -1, a wonder as DISTRICT_WONDER). A cleared feature counts only for
+-- the plots around, not for the plot itself (issue 58): neighborhoods
+-- ordered and built the normal way on two late-game saves left their own
+-- plot's appeal unchanged on 9 of 10 woods, 5 of 6 rainforest and 1 marsh
+-- plots, read twice 2 and 8 seconds apart (tests/bench/probe_ownplot.py,
+-- 2026-10-24; the one +1 on woods and on rainforest each had an improvement
+-- that went too). An earlier probe in a game with every technology unlocked
+-- had read -1 on 6 of 8 woods plots. A feature whose Features.RemoveTech
+-- the player lacks is not cleared, but the game does not let a district go
+-- there either.
 -- Water plots keep their appeal. So
 --   appeal(plot) = the game's appeal now (Plot:GetAppeal)
 --                + over the neighbours with a planned or pinned (not built)
 --                  district or wonder: its Appeal - the Appeal of the feature
 --                  and improvement it clears there
---                - with one on the plot itself: the Appeal of the feature it
---                  clears there, when positive
 --   housing part = HOUSING weight x over every district with
 --                  AppealHousingChanges rows (placed, pinned or built):
 --                  Districts.Housing + the change for its plot's appeal;
@@ -157,21 +157,19 @@ local function Neighbours(cache, index)
   return list
 end
 
--- What building on plot `index` takes away from its neighbours' appeal (the
--- Appeal of its removable feature and its improvement) and from its own (the
--- feature's).
+-- What building on plot `index` takes away from its neighbours' appeal: the
+-- Appeal of its removable feature and its improvement.
 local function Cleared(rules, index, techs)
   local plot = Map.GetPlotByIndex(index)
-  local cleared, own = 0, 0
+  local cleared = 0
   local feature = plot:GetFeatureType()
   local tech = feature ~= -1 and rules.RemoveTech[feature] or nil
   if feature ~= -1 and (tech == nil or techs == nil or techs:HasTech(tech)) then
     cleared = cleared + (rules.Feature[feature] or 0)
-    own = math.max(0, rules.Feature[feature] or 0)
   end
   local improvement = plot:GetImprovementType()
   if improvement ~= -1 then cleared = cleared + (rules.Improvement[improvement] or 0) end
-  return cleared, own
+  return cleared
 end
 
 local function OwnAppeal(rules, kind, key)
@@ -254,22 +252,20 @@ function SDP_Appeal.New(spec)
   end
   self.BaseAppeal = Base
   for _, p in ipairs(pinned) do
-    local cleared, own = Cleared(rules, p.Index, techs)
+    local cleared = Cleared(rules, p.Index, techs)
     local effect = OwnAppeal(rules, p.Kind, p.Key) - cleared
     if effect ~= 0 then
       for _, q in ipairs(Neighbours(self.Cache, p.Index)) do self.Base0[q] = Base(q) + effect end
     end
-    if own ~= 0 then self.Base0[p.Index] = Base(p.Index) - own end
   end
-  -- Per candidate: what building there takes off its neighbours' appeal, and
-  -- off its own.
-  self.Cleared, self.OwnCleared = {}, {}
-  for i, c in ipairs(spec.Candidates) do self.Cleared[i], self.OwnCleared[i] = Cleared(rules, c.Index, techs) end
+  -- Per candidate: what building there takes off its neighbours' appeal.
+  self.Cleared = {}
+  for i, c in ipairs(spec.Candidates) do self.Cleared[i] = Cleared(rules, c.Index, techs) end
   self.Water = {}
   self.Own = {}
   for m = 1, self.K do self.Own[m] = OwnAppeal(rules, spec.Kinds[m], spec.Types[m]) end
   self.Improved = {}
-  self.At, self.OwnAt, self.Boosts, self.Sums = {}, {}, {}, {} -- scratch
+  self.At, self.Boosts, self.Sums = {}, {}, {} -- scratch
   -- Per-city housing (issue 55): the city's housing without the districts
   -- counted here (a built one's housing is in the game's figure already).
   if spec.Cities ~= nil then
@@ -310,7 +306,7 @@ function SDP_Appeal:AppealAt(index)
     self.Water[index] = water
   end
   if water then return self.BaseAppeal(index) end
-  local appeal = self.BaseAppeal(index) - (self.OwnAt[index] or 0)
+  local appeal = self.BaseAppeal(index)
   local at = self.At
   for _, q in ipairs(Neighbours(self.Cache, index)) do
     local effect = at[q]
@@ -333,7 +329,6 @@ function SDP_Appeal:Score(layout, detail)
       if i ~= 0 then
         local index = candidates[i].Index
         at[index] = self.Own[m] - self.Cleared[i]
-        if self.OwnCleared[i] ~= 0 then self.OwnAt[index] = self.OwnCleared[i] end
         placedAt[#placedAt + 1] = index
       end
     end
@@ -418,7 +413,6 @@ function SDP_Appeal:Score(layout, detail)
   end
   for _, index in ipairs(placedAt) do
     at[index] = nil
-    self.OwnAt[index] = nil
   end
   return value, boosts
 end
@@ -466,7 +460,6 @@ function SDP_Appeal:AppealsUnder(layout, indices)
     if i ~= 0 then
       local index = self.Candidates[i].Index
       at[index] = self.Own[m] - self.Cleared[i]
-      if self.OwnCleared[i] ~= 0 then self.OwnAt[index] = self.OwnCleared[i] end
       placed[#placed + 1] = index
     end
   end
@@ -474,7 +467,6 @@ function SDP_Appeal:AppealsUnder(layout, indices)
   for _, index in ipairs(indices) do out[index] = self:AppealAt(index) end
   for _, index in ipairs(placed) do
     at[index] = nil
-    self.OwnAt[index] = nil
   end
   return out
 end
