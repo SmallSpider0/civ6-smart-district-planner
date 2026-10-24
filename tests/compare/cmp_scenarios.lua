@@ -157,6 +157,35 @@ end
 BuildSet("S", "M", 1000, true)
 BuildSet("HS", "HM", 50000, false)
 
+-- Small multi-city situations with a provable optimum (issue 48): two or
+-- three cities, six districts in all, none limited to one per empire, so
+-- the exact reference (sdp:ORACLE, cmp_oracle.lua) can search every layout.
+-- Two cities want a campus, a theater square and a commercial hub each;
+-- three cities a campus and a commercial hub (an industrial zone where the
+-- civilization has no holy site rule to show). "OMnn-civ-biome-Nc".
+local SMALL_MULTI = {
+  { "rome", "temperate", 2 }, { "japan", "temperate", 2 }, { "korea", "highland", 2 }, { "germany", "temperate", 3 },
+  { "brazil", "jungle", 2 }, { "netherlands", "temperate", 3 }, { "gaul", "highland", 2 }, { "indonesia", "island", 2 },
+  { "egypt", "desert", 3 }, { "russia", "tundra", 2 }, { "maya", "jungle", 3 }, { "byzantium", "temperate", 2 },
+  { "japan", "coastal", 3 }, { "rome", "volcanic", 2 }, { "mali", "desert", 2 }, { "vietnam", "jungle", 2 },
+}
+local omseed = 70000
+for n, entry in ipairs(SMALL_MULTI) do
+  local civKey, biome, count = entry[1], entry[2], entry[3]
+  omseed = omseed + 23
+  local civ = CIVS[civKey]
+  local districts = count == 2 and { "DISTRICT_CAMPUS", "DISTRICT_THEATER", "DISTRICT_COMMERCIAL_HUB" }
+    or { "DISTRICT_CAMPUS", n % 2 == 0 and "DISTRICT_INDUSTRIAL_ZONE" or "DISTRICT_COMMERCIAL_HUB" }
+  local built = {}
+  for c = 1, count do built[c] = {} end
+  Add({
+    id = string.format("OM%02d-%s-%s-%dc", n, civKey, biome, count), kind = "multi", title = civ[3] .. "; small",
+    seed = omseed, biome = biome, civKey = civKey, civ = civ[1], leader = civ[2], stage = "mid", cities = count,
+    districts = districts, built = built, population = 16, samePopulation = true, set = "OM",
+    runs = Runs("multi", { { planner = "sdp", variant = "ORACLE" } }),
+  })
+end
+
 -- Weight profiles (18.1, item 4): the development single-city situations
 -- with one yield weighted 3 and the others 1 ("S01-...~SCI"); the judge
 -- weighs the same way. The competitors get the same weights injected.
@@ -279,6 +308,143 @@ for n, entry in ipairs(MULTI) do
       { planner = "amt", variant = "" } },
   })
 end
+
+-- The true-optimum benchmark (issue 48). Every kind of situation comes in
+-- three parts: development (tune on these), held-out (check after each
+-- change) and sealed ("F", new seeds, run only for releases and published
+-- evaluations so that numbers are not tuned to it).
+BuildSet("FS", "FM", 90000, false)
+
+-- More small multi-city situations (see OM01-OM16 above): two to four
+-- cities, six to eight districts in all. OM17-OM32 join the development
+-- set; HOM and FOM are the held-out and sealed parts.
+local SMALL_MULTI_MORE = {
+  { "rome", "coastal", 4 }, { "korea", "temperate", 3 }, { "germany", "highland", 2 }, { "greece", "highland", 3 },
+  { "netherlands", "coastal", 2 }, { "australia", "coastal", 3 }, { "japan", "volcanic", 4 }, { "kongo", "jungle", 2 },
+  { "egypt", "desert", 2 }, { "russia", "tundra", 3 }, { "indonesia", "island", 3 }, { "maya", "jungle", 2 },
+  { "byzantium", "temperate", 4 }, { "mali", "desert", 3 }, { "brazil", "jungle", 4 }, { "gaul", "highland", 3 },
+}
+local function SmallMulti(prefix, first, seed, entries)
+  for x, entry in ipairs(entries) do
+    local n = first + x - 1
+    local civKey, biome, count = entry[1], entry[2], entry[3]
+    seed = seed + 23
+    local civ = CIVS[civKey]
+    local holy = civKey ~= "kongo"
+    local districts
+    if count == 2 then
+      districts = { "DISTRICT_CAMPUS", "DISTRICT_THEATER", n % 2 == 0 and "DISTRICT_INDUSTRIAL_ZONE" or "DISTRICT_COMMERCIAL_HUB" }
+    elseif count == 3 then
+      districts = { "DISTRICT_CAMPUS", n % 2 == 0 and "DISTRICT_INDUSTRIAL_ZONE" or "DISTRICT_COMMERCIAL_HUB" }
+    else
+      districts = { holy and n % 2 == 0 and "DISTRICT_HOLY_SITE" or "DISTRICT_CAMPUS", "DISTRICT_COMMERCIAL_HUB" }
+    end
+    local built = {}
+    for c = 1, count do built[c] = {} end
+    Add({
+      id = string.format("%s%02d-%s-%s-%dc", prefix, n, civKey, biome, count), kind = "multi", title = civ[3] .. "; small",
+      seed = seed, biome = biome, civKey = civKey, civ = civ[1], leader = civ[2], stage = "mid", cities = count,
+      districts = districts, built = built, population = 16, samePopulation = true, set = prefix,
+      runs = Runs("multi", { { planner = "sdp", variant = "ORACLE" } }),
+    })
+  end
+end
+SmallMulti("OM", 17, 71000, SMALL_MULTI_MORE)
+SmallMulti("HOM", 1, 72000, SMALL_MULTI)
+SmallMulti("HOM", 17, 72500, SMALL_MULTI_MORE)
+SmallMulti("FOM", 1, 73000, SMALL_MULTI)
+SmallMulti("FOM", 17, 73500, SMALL_MULTI_MORE)
+
+-- Random weights (issue 48): every development, held-out and sealed
+-- single-city situation once more with each of the five yields weighted
+-- 0-3, from the situation's seed ("S01-...~RND"), so the benchmark is not
+-- tied to one objective. The competitors get the same weights injected.
+local YIELD_ORDER = { "YIELD_SCIENCE", "YIELD_CULTURE", "YIELD_FAITH", "YIELD_GOLD", "YIELD_PRODUCTION" }
+local randomBase = {}
+for _, s in ipairs(list) do
+  if (s.set == "S" or s.set == "HS" or s.set == "FS") and s.kind == "single" and s.weights == nil then
+    randomBase[#randomBase + 1] = s
+  end
+end
+for _, b in ipairs(randomBase) do
+  local s = {}
+  for k, v in pairs(b) do s[k] = v end
+  local weights, total, x = {}, 0, b.seed % 9973
+  for i, y in ipairs(YIELD_ORDER) do
+    x = (x * 31 + 17 * i) % 9973
+    weights[y] = x % 4
+    total = total + weights[y]
+  end
+  if total == 0 then weights.YIELD_SCIENCE = 1 end
+  s.id = b.id .. "~RND"
+  s.weights = weights
+  s.profile = "RND"
+  s.set = "R" .. b.set
+  s.runs = { { planner = "sdp", variant = "FAST" }, { planner = "sdp", variant = "STANDARD" }, { planner = "sdp", variant = "FINE" },
+    { planner = "amt", variant = "" }, { planner = "ep", variant = "" }, { planner = "sdp", variant = "ORACLE" } }
+  Add(s)
+end
+
+-- Three chosen districts plus an Aqueduct and a Government Plaza (issue 48):
+-- the size District & Wonder Planner plans (at most three districts; it adds
+-- an Aqueduct for every city and one Government Plaza by itself), so every
+-- planner gets the same list. One city at mid game ("D3nn"), and two or three
+-- cities with two chosen districts and an Aqueduct each ("DMnn"); "H" and "F"
+-- in front for the held-out and sealed parts.
+local TRIPLES = {
+  { "DISTRICT_CAMPUS", "DISTRICT_COMMERCIAL_HUB", "DISTRICT_INDUSTRIAL_ZONE" },
+  { "DISTRICT_CAMPUS", "DISTRICT_HOLY_SITE", "DISTRICT_THEATER" },
+  { "DISTRICT_INDUSTRIAL_ZONE", "DISTRICT_COMMERCIAL_HUB", "DISTRICT_THEATER" },
+  { "DISTRICT_CAMPUS", "DISTRICT_THEATER", "DISTRICT_ENTERTAINMENT_COMPLEX" },
+}
+local function DwpRuns(kind)
+  return Runs(kind, { { planner = "dwp", variant = "" }, { planner = "dwp", variant = "DEFAULT" },
+    { planner = "sdp", variant = "ORACLE" } })
+end
+local function ThreeDistricts(prefix, seed)
+  for n, entry in ipairs(SINGLE) do
+    local civKey, biome, extra = entry[1], entry[2], entry[3] or {}
+    seed = seed + 7
+    local civ = CIVS[civKey]
+    local list = {}
+    for _, t in ipairs(TRIPLES[(n - 1) % #TRIPLES + 1]) do
+      if t == "DISTRICT_HOLY_SITE" and civKey == "kongo" then t = "DISTRICT_COMMERCIAL_HUB" end
+      list[#list + 1] = t
+    end
+    list[#list + 1] = "DISTRICT_AQUEDUCT"
+    list[#list + 1] = "DISTRICT_GOVERNMENT"
+    Add({
+      id = string.format("%s%02d-%s-%s", prefix, n, civKey, biome), kind = "single", title = civ[3] .. "; three districts",
+      seed = seed, biome = biome, civKey = civKey, civ = civ[1], leader = civ[2], stage = "mid", cities = 1,
+      districts = list, built = { {} }, population = 10, foreign = extra.foreign, cityState = extra.cityState,
+      naturalWonder = extra.naturalWonder, set = prefix, runs = DwpRuns("single"),
+    })
+  end
+end
+ThreeDistricts("D3", 80000)
+ThreeDistricts("HD3", 81000)
+ThreeDistricts("FD3", 82000)
+local function TwoEachMulti(prefix, seed)
+  for x, entry in ipairs(SMALL_MULTI) do
+    local civKey, biome, count = entry[1], entry[2], entry[3]
+    seed = seed + 23
+    local civ = CIVS[civKey]
+    local pair = x % 2 == 0 and { "DISTRICT_CAMPUS", "DISTRICT_INDUSTRIAL_ZONE" }
+      or { "DISTRICT_CAMPUS", "DISTRICT_COMMERCIAL_HUB" }
+    local districts = { pair[1], pair[2], "DISTRICT_AQUEDUCT" }
+    local built = {}
+    for c = 1, count do built[c] = {} end
+    Add({
+      id = string.format("%s%02d-%s-%s-%dc", prefix, x, civKey, biome, count), kind = "multi",
+      title = civ[3] .. "; two districts and an aqueduct each", seed = seed, biome = biome, civKey = civKey,
+      civ = civ[1], leader = civ[2], stage = "mid", cities = count, districts = districts, built = built,
+      population = 16, samePopulation = true, set = prefix, runs = DwpRuns("multi"),
+    })
+  end
+end
+TwoEachMulti("DM", 83000)
+TwoEachMulti("HDM", 84000)
+TwoEachMulti("FDM", 85000)
 
 CmpScenarios.List = list
 CmpScenarios.ById = byId

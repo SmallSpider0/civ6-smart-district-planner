@@ -130,12 +130,48 @@ function SDP_Solver.NewSession(request, scan)
   self.Board = SDP_Board.New(playerID, self.Fixed, self.Weights, bases)
   self.ExtraCalls = #self.Fixed -- the baseline evaluation above
 
+  -- The population the plan needs: the land part's worked plots and the
+  -- housing target (issue 55).
+  local population = math.max(scan.Population, SDP_Land.RequiredPopulation(scan.SpecialtyBuilt + requiredSpecialty + pick))
   local lands = {}
   if request.Land then
-    local specialty = requiredSpecialty + pick
-    local population = math.max(scan.Population, SDP_Land.RequiredPopulation(scan.SpecialtyBuilt + specialty))
-    self.Land = SDP_Land.ForScan(scan, self.Fixed, request.Weights, population)
+    -- A plot no city owns yet that another of the player's cities is nearer
+    -- to is that city's to work (issue 54, as on the multi-city tab).
+    local others = {}
+    for _, city in Players[playerID]:GetCities():Members() do
+      if city:GetID() ~= scan.CityID then others[#others + 1] = city end
+    end
+    self.Land = SDP_Land.ForScan(scan, self.Fixed, request.Weights, population, function(index)
+      local plot = Map.GetPlotByIndex(index)
+      if plot:GetOwner() ~= -1 then
+        local owner = Cities.GetPlotPurchaseCity(plot)
+        return owner == nil or owner:GetID() == scan.CityID
+      end
+      local d = Map.GetPlotDistance(scan.X, scan.Y, plot:GetX(), plot:GetY())
+      for _, city in ipairs(others) do
+        if Map.GetPlotDistance(city:GetX(), city:GetY(), plot:GetX(), plot:GetY()) < d then return false end
+      end
+      return true
+    end)
     lands[1] = self.Land
+    -- A plot swapped from another city is that city's loss: its land model,
+    -- over the plots it owns.
+    local swapped, ids = {}, {}
+    for _, c in ipairs(scan.Candidates) do
+      if c.Swap ~= nil and not swapped[c.Swap] then
+        swapped[c.Swap] = true
+        ids[#ids + 1] = c.Swap
+      end
+    end
+    table.sort(ids)
+    for _, id in ipairs(ids) do
+      local other = SDP_City.Scan(playerID, id, SDP_City.ScanOptions(request))
+      if other ~= nil then
+        local otherPopulation = math.max(other.Population, SDP_Land.RequiredPopulation(other.SpecialtyBuilt))
+        lands[#lands + 1] = SDP_Land.ForScan(other, SDP_Overlay.FixedSubjects(other), request.Weights, otherPopulation,
+          function(index) return other.Reach.Start[index] == true end)
+      end
+    end
   end
 
   -- Partner districts kept apart (SDP_Rules.Apart): what the city has already.
@@ -157,7 +193,15 @@ function SDP_Solver.NewSession(request, scan)
     Pools = pick > 0 and { [1] = pick } or nil,
     Costs = SDP_City.DistanceCosts(playerID, scan.Candidates, request.Distance),
     Alternatives = params.Solutions or 3, Apart = apart, Exclusive = SDP_Rules.Exclusive(),
-    Appeal = { Fixed = self.Fixed, Weights = request.Weights, Workable = workable },
+    Appeal = { Fixed = self.Fixed, Weights = request.Weights, Workable = workable,
+      Cities = { [1] = { Housing = SDP_Land.ScanHousing(scan), Target = population } },
+      -- A neighbouring city's district does not count in this city's housing.
+      FixedGroup = function(index)
+        local plot = Map.GetPlotByIndex(index)
+        local owner = plot:GetOwner() == playerID and Cities.GetPlotPurchaseCity(plot) or nil
+        if owner == nil or owner:GetID() == scan.CityID then return 1 end
+        return nil
+      end },
   })
   for _, s in ipairs(self.Search:Singles()) do
     if not slots[s].Optional then
@@ -204,7 +248,7 @@ function Session:PlanFor(layout)
     out.Plan[n] = {
       Type = search.Types[m], X = c.X, Y = c.Y, Index = c.Index,
       Yields = item.Yields, ToolTip = item.ToolTip, Score = item.Score,
-      Unowned = c.Unowned, RemoveTech = c.RemoveTech,
+      Unowned = c.Unowned, RemoveTech = c.RemoveTech, Swap = c.Swap, ClearFirst = c.ClearFirst,
       Auto = self.Auto[search.Types[m]], Picked = search.Optional[m],
       Appeal = a.Appeal, Housing = a.Housing, Tiles = a.Tiles, TilesCounted = a.TilesCounted,
     }

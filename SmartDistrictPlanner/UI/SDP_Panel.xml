@@ -103,6 +103,12 @@
             <Label Anchor="L,C" Offset="26,0" Style="BodyTextDark14" String="LOC_SDP_REMIND_SHORT"/>
           </Container>
         </Container>
+        <Container Size="480,26">
+          <Container Anchor="L,C" Size="236,26" ToolTip="LOC_SDP_SWAP_TOOLTIP">
+            <CheckBox ID="SwapCheck" Anchor="L,C" Style="MainCheckBox"/>
+            <Label Anchor="L,C" Offset="26,0" Style="BodyTextDark14" String="LOC_SDP_SWAP_SHORT"/>
+          </Container>
+        </Container>
 
         <!-- Tier, estimate, solve / continue (cancel while running) -->
         <Container Size="480,42">
@@ -247,6 +253,12 @@
             <Label Anchor="L,C" Offset="26,0" Style="BodyTextDark14" String="LOC_SDP_REMIND_SHORT"/>
           </Container>
         </Container>
+        <Container Size="480,26">
+          <Container Anchor="L,C" Size="236,26" ToolTip="LOC_SDP_SWAP_TOOLTIP">
+            <CheckBox ID="MultiSwapCheck" Anchor="L,C" Style="MainCheckBox"/>
+            <Label Anchor="L,C" Offset="26,0" Style="BodyTextDark14" String="LOC_SDP_SWAP_SHORT"/>
+          </Container>
+        </Container>
         <Container Size="480,42">
           <Stack Anchor="L,C" StackGrowth="Right" StackPadding="6">
             <Label Anchor="L,C" Style="BodyTextDark16" String="LOC_SDP_TIER_SHORT"/>
@@ -323,7 +335,7 @@
     <Container ID="Root" Size="460,40" ConsumeMouseOver="1">
       <Image ID="Icon" Anchor="L,C" Size="32,32"/>
       <Label ID="Name" Anchor="L,T" Offset="40,2" Style="BodyTextDark16"/>
-      <Label ID="Detail" Anchor="L,T" Offset="40,21" Style="BodyTextDark14"/>
+      <Label ID="Detail" Anchor="L,T" Offset="40,21" Style="BodyTextDark14" WrapWidth="420"/>
     </Container>
   </Instance>
 

@@ -13,6 +13,7 @@ macOS 上建符号链接，Windows 上建目录联接。位置由 `tools/paths.p
 | `dmt/` | Detailed Map Tacks（2428969051）——必须复用的引擎 | 写代码时查先例；`compare.mjs` |
 | `amt/` | Auto Map Tacks Planner r49（3771382002）——被改进对象，仅作参考 | `compare.mjs` |
 | `ep/` | Empire Planner（3793348626） | `compare.mjs` |
+| `dwp/` | District & Wonder Planner（3780936549，人机爱丽丝）：只下载不订阅，放在 `~/.sdp-downloads/3780936549`（游戏不扫描；`SDP_DOWNLOADS` 可改位置），下载：`steamcmd +login <账号> +workshop_download_item 289070 3780936549 +quit`，再把它从 Steam 的创意工坊文件夹移过去 | `compare.mjs` |
 | `base-ui/` | 游戏本体 UI（`MapTacks.lua`、`InstanceManager.lua`、`Icons/` 等） | `validate.py`（UI 先例）、`compare.mjs` |
 | `dlc/` | 资料片与 DLC（`Expansion1`=R&F，`Expansion2`=GS） | `validate.py` |
 

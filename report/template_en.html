@@ -2,7 +2,7 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Noto+Sans+SC:wght@400;500;700&family=Noto+Serif+SC:wght@600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Noto+Sans:wght@400;500;700&family=Noto+Serif:wght@600;700&family=Noto+Sans+SC:wght@400;500;700&family=Noto+Serif+SC:wght@600;700&display=swap">
 <style>
 /* One reading column (~46rem) for prose; figures, charts and screenshots widen to ~66rem.
    Palette: map-room ink on cool paper, brass accent; the three planners keep fixed hues. */
@@ -14,8 +14,8 @@
   --good: #1a7f37; --warn: #a35f00; --bad: #c0392b;
   --t-grass: #bcd59a; --t-plains: #dccf98; --t-desert: #efe1b4; --t-tundra: #c9cbb8; --t-snow: #eef1f3;
   --t-coast: #a9d2e3; --t-ocean: #7fb2cf; --t-lake: #9fd0e6; --t-mtn: #8f8f8a; --river: #2a78d6;
-  --font-display: "Noto Serif SC", "Songti SC", "STSong", serif;
-  --font-body: "Noto Sans SC", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
+  --font-display: "Noto Serif", "Noto Serif SC", Georgia, serif;
+  --font-body: "Noto Sans", system-ui, -apple-system, "Segoe UI", "Noto Sans SC", sans-serif;
   --font-mono: "JetBrains Mono", "SFMono-Regular", Menlo, Consolas, monospace;
 }
 @media (prefers-color-scheme: dark) {
@@ -226,7 +226,8 @@ details.appx[open] > summary { margin-bottom: 8px; }
   <li><a href="#speed">Speed</a></li>
   <li><a href="#limits">Known limitations</a></li>
   <li><a href="#feedback">Feedback and updates</a></li>
-  <li class="app"><a href="#appendices">Appendices (in Chinese)</a></li>
+  <li class="app"><a href="#how">Appendix A Technical notes</a></li>
+  <li class="app"><a href="#eval">Appendix B Evaluation method and full data</a></li>
 </ol></div></nav>
 
 <section id="what"><div class="wide">
@@ -237,7 +238,7 @@ details.appx[open] > summary { margin-bottom: 8px; }
     <li><b>Many combinations</b>: a city has about 30 usable tiles within 3 rings; 8 districts can be placed in about 30<sup>8</sup> ≈ 6.6×10<sup>11</sup> ways.</li>
     <li><b>Many rules</b>: many civilizations change them. Japan's districts get +1 from each other; Korea's Seowon loses yield next to other districts; Gaul's specialty districts may not be next to the City Center; Vietnam's specialty districts must be built on Woods, Rainforest or Marsh.</li>
     <li><b>Cities affect each other</b>: neighboring cities can share bonuses and compete for the same tile, and some districts, such as the Government Plaza, are limited to one per empire.</li>
-    <li><b>What exists stays</b>: districts already built, tacks you placed yourself, and luxury and strategic resources are never moved or covered.</li>
+    <li><b>What exists stays</b>: districts already built, tacks you placed yourself, and luxury and strategic resources are never moved or overwritten.</li>
   </ul>
     <p>This mod takes all of that into account. The panel has three tabs: One city, City sites and Several cities. Below is what you set and what you get on each. Items marked <span class="tag from">AMT</span><span class="tag from">EP</span> follow the way those two mods do it (section 3).</p>
 
@@ -250,11 +251,11 @@ details.appx[open] > summary { margin-bottom: 8px; }
         <li>How many specialty districts to plan, Must ones included. Above the number of Must ones, the solver picks the rest from the pool; next to it, your specialty district slots (built, planned now, the current population limit), with a warning only when you go over</li>
         <li>Wonders to place along, as many as you like, shown as tags; the dropdown lists them by era, then by cost <span class="tag from">AMT</span></li>
         <li>Weights: Science, Culture, Faith, Gold, Production (0–3, default 1); Food and Chop (one-time yields) for the land loss; Housing (default 1); and a distance cost (default 0)</li>
-        <li>Switches: count the land loss; allow removing Woods, Rainforest and Marsh; replace this mod's earlier tacks for this city; reminder tacks; keep Harbor and Commercial Hub in different cities (on by default)</li>
+        <li>Switches: count the land loss (each tile valued with its best improvement, chopping and harvesting first; an optional switch, off by default, also uses tiles swapped from your other cities); allow removing Woods, Rainforest and Marsh; replace this mod's earlier tacks for this city; reminder tacks; keep Harbor and Commercial Hub in different cities (on by default)</li>
       </ul></div>
       <div><p class="lbl">You get</p><ul class="tight">
         <li>The weighted gain, split into adjacency, land, distance, and housing and appeal</li>
-        <li>Neighborhood and Preserve: their tile's Appeal and the Housing it gives (such as “Housing 6 (Appeal 4)”); for a Preserve also the yields its Grove and Sanctuary give the tiles around it (scored when it is a Must; picked from the pool it is shown, marked “pool, not scored”). Other districts of the plan change Appeal too (Industrial Zone −1, Holy Site +1, removing Woods…), and that is counted</li>
+        <li>Neighborhood and Preserve: their tile's Appeal and the Housing it gives (such as “Housing 6 (Appeal 4)”); for a Preserve also the yields its Grove and Sanctuary give the tiles around it (scored when it is a Must; picked from the pool it is shown, marked “pool pick, not scored”). Other districts of the plan change Appeal too (Industrial Zone −1, Holy Site +1, removing Woods…), and that is counted</li>
         <li>When picking from the pool: three plans with different districts, each saying which it picked; click one to preview its icons and bonuses on the map</li>
         <li>One row per district and wonder: its tile and bonus (such as “Sci+2 Cul+1”); hover for DMT's breakdown; added and picked districts are marked</li>
         <li>An Aqueduct added when the city lacks fresh water, a Dam when there are 3 or more Floodplains tiles within 3 rings (Gathering Storm); their tiles are solved as usual</li>
@@ -311,7 +312,7 @@ details.appx[open] > summary { margin-bottom: 8px; }
           <tr><td>Same input, same plan</td><td>No random numbers, a fixed order of work, budgets counted in steps rather than seconds: the same game state and settings give the same plan on any computer</td></tr>
           <tr><td>Place what fits</td><td>Every requested district and wonder that has a place gets placed: when the search leaves one out (say, the Great Library with every tile around the Campus taken), it tries each tile and rearranges the district it must touch and the other wonders; plans that place more come first</td></tr>
           <tr><td>Picking from the pool</td><td>Give a number of districts and the ones beyond the Must ones are picked from the pool for the best adjacency: three plans with different picks on the One city tab, a pick per city on the Several cities tab, 3 per site (adjustable) on the City sites tab. Different districts are compared only by the objective; the yields of their buildings are not counted</td></tr>
-          <tr><td>Neighborhood housing and Preserve appeal</td><td>A Neighborhood gives 0–6 Housing by its tile's Appeal; a Preserve gives Housing and yields on the tiles around it by Appeal; both count toward the objective (Housing weight 1 by default, one Housing worth one point of yield). Appeal = the game's current Appeal + the changes the plan's districts and wonders bring, all read from the game's rules</td></tr>
+          <tr><td>Neighborhood housing and Preserve appeal</td><td>A Neighborhood gives 0–6 Housing by its tile's Appeal; a Preserve gives Housing and yields on the tiles around it by Appeal; both count toward the objective (Housing weight 1 by default; in each city, each Housing up to the population its planned districts need is worth one point of yield, each one after it half the one before). Appeal = the game's current Appeal + the changes the plan's districts and wonders bring, all read from the game's rules</td></tr>
           <tr><td>Harbor and Commercial Hub apart</td><td>A Lighthouse gives +1 Trade Route capacity only in a city without a Market, so the two in different cities give 2 more Trade Routes, in one city 1. When picking from the pool the same city avoids taking both unless that is the only way to reach the count, with a note; Must ones are placed anyway. The pairing is read from the rules' modifiers and requirements, so the Royal Navy Dockyard, Cothon and Suguba work the same way</td></tr>
           <tr><td>Distance cost</td><td>Each district and wonder loses “weight × (tiles to your nearest City Center − 1)”; 0 by default, on all three tabs. The game does not charge more for far districts; this is a preference, as its tooltip says</td></tr>
           <tr><td>Automatic Aqueduct and Dam</td><td>An Aqueduct when the city lacks fresh water (its water housing, as the game computes it, is below the 5 a river or lake gives), a Dam when there are 3 or more Floodplains tiles within 3 rings; the kind is read from the rules, so Rome's Bath counts too. Either can be set to Must or Off</td></tr>
@@ -328,7 +329,7 @@ details.appx[open] > summary { margin-bottom: 8px; }
           <tr><td>The game's rules DMT does not check</td><td>No district on a luxury or strategic resource; empire limits (counting placed tacks); the city's 3 rings and ownership; no district twice in a city</td></tr>
           <tr><td>Engine check <span class="tag from">EP</span></td><td>On tiles the city owns, the tiles the game engine allows are checked as well, so tiles the game refuses (such as a Canal that does not connect water) do not enter a plan</td></tr>
           <tr class="grp"><td colspan="2">What exists</td></tr>
-          <tr><td>Never moved, never covered</td><td>Built districts are greyed out; your tacks are never moved or covered and count as neighbors</td></tr>
+          <tr><td>Never moved, never overwritten</td><td>Built districts are greyed out; your tacks are never moved or overwritten and count as neighbors</td></tr>
           <tr class="grp"><td colspan="2">Compatibility and controls</td></tr>
           <tr><td>Rulesets and languages</td><td>Base game, Rise and Fall, and Gathering Storm (Canals and Dams only in Gathering Storm); Chinese and English, following the game's language</td></tr>
           <tr><td>Panel</td><td>Districts in two grids, specialty districts and the others, so the One city tab needs no scrolling; wonders as tags with a dropdown; the five yields and Food use the game's round yield icons, the other weights short words; the switches share one row, hover for what each does</td></tr>
@@ -338,9 +339,9 @@ details.appx[open] > summary { margin-bottom: 8px; }
     </div>
   </div>
   <div class="shots">
-    <figure class="tall"><img src="images/v7-en-panel-single.jpg" alt="The One city tab: districts in two grids, Campus set to Must, 3 districts, three plans in the result" loading="lazy"><figcaption>The One city tab: Campus is a Must, 3 districts, the other specialty districts are in the pool, the Dam and the Bath (Rome's Aqueduct) on Auto, Keep apart ticked. The three plans pick different districts; the Bath is marked as added, the Commercial Hub as picked.</figcaption></figure>
-    <figure class="tall"><img src="images/v7-en-panel-multi.jpg" alt="The Several cities tab: three site tacks take part, a shared list, 4 per city, the Great Library chosen" loading="lazy"><figcaption>The Several cities tab: three site tacks and the capital planned together; in the shared list the Campus, Holy Site, Commercial Hub and Government Plaza are Musts, 4 per city, with the Great Library. Only one Government Plaza per empire: it goes to Site 2, first in the list, and the other three cities take a Pool district instead; 18 districts across the four cities.</figcaption></figure>
-    <figure class="tall"><img src="images/v7-en-panel-sites.jpg" alt="The City sites tab: 5 districts ticked, each site scored with 3, three plans" loading="lazy"><figcaption>The City sites tab: 5 districts ticked, each site scored with 3; 40 of 160 candidate sites scored with districts, three plans.</figcaption></figure>
+    <figure class="tall"><img src="images/v8-en-panel-single.jpg" alt="The One city tab: districts in two grids, Campus set to Must, 3 districts, three plans in the result" loading="lazy"><figcaption>The One city tab: Campus is a Must, 3 districts, the other specialty districts are in the pool, the Dam and the Bath (Rome's Aqueduct) on Auto, Keep apart and Land loss ticked. The weighted gain is split into adjacency and land; the three plans pick different districts; the Bath is marked as added, the Harbor as picked, with the tech each needs first and "clear or harvest the tile first".</figcaption></figure>
+    <figure class="tall"><img src="images/v8-en-panel-multi.jpg" alt="The Several cities tab: three site tacks take part, a shared list, 4 per city, the Great Library chosen" loading="lazy"><figcaption>The Several cities tab: three site tacks and the capital planned together; in the shared list the Campus, Holy Site, Commercial Hub and Government Plaza are Musts, 4 per city, with the Great Library. Only one Government Plaza per empire: it goes to Site 2, first in the list, and the other three cities take a Pool district instead; 19 districts across the four cities, the two Dams and the Bath added automatically among them.</figcaption></figure>
+    <figure class="tall"><img src="images/v8-en-panel-sites.jpg" alt="The City sites tab: 5 districts ticked, each site scored with 3, three plans" loading="lazy"><figcaption>The City sites tab: 5 districts ticked, each site scored with 3; 40 of 160 candidate sites scored with districts, three plans.</figcaption></figure>
     <figure class="span2"><img src="images/v7-en-sites-tooltip.jpg" alt="A site's tooltip: Fresh Water, its distances, Diamonds, Gypsum and Wine, unrevealed tiles, disaster risk, features and districts" loading="lazy"><figcaption>Hovering a site: its water, how far it is from your nearest city and from the plan's other sites, the Luxury resources it gets (Gypsum counts as a new kind there), the natural disaster risk, and its features and districts.</figcaption></figure>
     <figure><img src="images/v3-coverage-tooltip.jpg" alt="Hovering an Industrial Zone row: DMT's breakdown and the cities in its reach" loading="lazy"><figcaption>Hovering a district with a reach: DMT's breakdown, then the cities it covers.</figcaption></figure>
     <figure class="span2"><img src="images/v4-map-reminders.jpg" alt="Reminder tacks: a tack with the Remove Feature icon on each of two Woods tiles" loading="lazy"><figcaption>Reminder tacks: site 3's Holy Site is next to two Woods tiles, so placing the plan also puts a Remove Feature tack on each, saying the Holy Site would lose 1 Faith.</figcaption></figure>
@@ -394,12 +395,12 @@ details.appx[open] > summary { margin-bottom: 8px; }
     </table>
   </div>
   <h3>Measured</h3>
-  <p>Offline, with the game's real rules exported and the three mods' code unchanged, each planned the same situations, and a judge that loads only DMT scored every plan by the numbers the tacks would show (method in appendix B.1 of the Chinese page). {{SUMMARY_COMPARE}}</p>
+  <p>Offline, with the game's real rules exported and the three mods' code unchanged, each planned the same situations, and a judge that loads only DMT scored every plan by the numbers the tacks would show (method in appendix B.1). {{SUMMARY_COMPARE}}</p>
   <figure class="wide-figure">
     <div class="frame scroll hexmap" id="case-hero">{{CASE_HERO}}</div>
     <figcaption id="case-hero-cap">{{CASE_HERO_CAP}}</figcaption>
   </figure>
-  <p>The results of every experiment; each group links to its full data in appendix B of the Chinese page.</p>
+  <p>The results of every experiment; the full data of each row are in the matching part of appendix B.</p>
 </div>
 <div class="col tablewrap" style="margin-inline:auto">{{EVAL_SUMMARY}}</div>
 <div class="col">
@@ -443,7 +444,7 @@ details.appx[open] > summary { margin-bottom: 8px; }
           </tbody>
         </table>
       </div>
-      <p class="note">The Standard tier for several cities has since gained a wide joint start. Measured on another map at the same size on 2026-10-21: Standard 1.6 s without it and 1.7 s with it, about 10% more; Thorough 3.7 s.</p>
+      <p class="note">Standard for several cities has since gained a wide joint start (appendix A.3). Measured on another map at the same size on 2026-10-21: Standard 1.6 s without it and 1.7 s with it, about 10% more; Thorough 3.7 s.</p>
     <figure>
       <div class="frame chart" id="ch-time"></div>
       <figcaption>Median time of one plan offline (seconds, log scale); Fast, Standard and Thorough are this mod's effort levels. The offline Lua machine is 10–20 times slower than the game, so this only compares the three planners with each other.</figcaption>
@@ -453,20 +454,18 @@ details.appx[open] > summary { margin-bottom: 8px; }
 <section id="limits"><div class="col">
   <h2 data-n="05">Known limitations</h2>
   <ul class="tight">
-    <li>It does not plan improvements.</li>
+    <li>It does not plan improvements: a tile is valued by the best improvement it can take, but no improvement tack is placed.</li>
     <li>Coverage counts only on the Several cities tab; the One city tab does not count it yet.</li>
     <li>The Several cities tab has no switch to forbid removing features: it always allows removing Woods, Rainforest and Marsh.</li>
     <li>Each kind of district is planned once; for several Neighborhoods, solve several times.</li>
-    <li><b>Appeal</b>: improvements built later outside the plan are not in the model; a Preserve's yields on the tiles around it assume those tiles stay unimproved; a tacked Preserve counts only its Housing. How a district on Marsh changes its own tile's Appeal has not been measured (it is treated like Rainforest). In the late-game check, one Preserve in Tokyo got 1 more Housing from the game than predicted, for a reason not yet found.</li>
+    <li><b>Appeal</b>: improvements built later outside the plan are not in the model; a Preserve's yields on the tiles around it assume those tiles stay unimproved; a tacked Preserve counts only its Housing. How a district on Marsh changes its own tile's Appeal has not been measured (it is treated like Rainforest). In the late-game check, 2 of 9 Neighborhood tiles had their own Appeal off by 1 from the game (they had Woods or Rainforest; how a district's own tile changes when it clears the feature is not yet clear), and their Housing with it; one more difference came from the check tool (appendix B.8).</li>
     <li><b>A Preserve's yields on the tiles around it count only when it is a Must</b>: with many Breathtaking and Charming tiles they can reach 40–70 points, but they come only with a Grove and a Sanctuary built; counting them when picking from the pool would make the pool almost always pick the Preserve first. So from the pool only its Housing counts, and those yields are shown.</li>
     <li><b>Placing many tacks at once</b>: DMT updates each new tack and the tacks around it, reading and writing its whole tack table each time, so it slows down as tacks add up. With about 100 tacks on the map, placing 80 more keeps the game busy for about 12 seconds; a normal batch of 15 takes about 0.25 seconds.</li>
-    <li>Picking from the pool compares only the objective (adjacency, plus land, coverage and distance when on); the yields of a district's buildings are not counted, so districts without adjacency, such as the Encampment and Aerodrome, are never picked from the pool; set them to Must when you want them.</li>
+    <li>Picking from the pool compares only the objective (adjacency and Housing, plus land, coverage and distance when on); the yields of a district's buildings are not counted, so districts without adjacency, such as the Encampment and Aerodrome, are never picked from the pool; set them to Must when you want them.</li>
     <li>Reminder tacks are only for Woods and Rainforest next to the planned districts; features next to existing districts have nothing to do with this plan.</li>
     <li>City site scores are estimates: tiles, resources and district potential are judged from what is revealed now; the districts are planned exactly in the Several cities step.</li>
     <li><b>Canals</b>: DMT does not check that a Canal connects water. On tiles the city owns, the engine check catches it; on tiles it does not own yet, the game gives no answer, so DMT decides there and a Canal that does not connect water is possible.</li>
     <li><b>Shipwrecks</b>: DMT counts a shipwreck on water as a sea resource, so a Harbor next to one shows 1 Gold more than the game gives; this mod's bonus comes from DMT and counts it too. Shipwrecks become visible late, so the effect is small.</li>
-    <li>Whether a wonder that must be next to a district needs that district in the same city has not been checked in the game; DMT's placement rules are used.</li>
-    <li>Japan's “+1 between districts” comes from a modifier that the linear model used for ranking leaves out (the exact score is still DMT's and includes it). In the offline comparison, Japan's scenarios average 99.6% quality, lowest 95.8%, a little below other civilizations.</li>
     <li>Multiplayer has not been tested.</li>
   </ul>
 </div></section>
@@ -481,12 +480,421 @@ details.appx[open] > summary { margin-bottom: 8px; }
   </ul>
 </div></section>
 
-<section id="appendices" class="appendix"><div class="col">
-  <h2 data-n="A · B">Appendices (in Chinese)</h2>
-  <p>The Chinese page has two more parts: <a href="{{PAGES_URL}}#how">appendix A</a>, the technical notes (design goals, module structure, the objective and each algorithm), and <a href="{{PAGES_URL}}#eval">appendix B</a>, the evaluation method and full data (the scenarios, every chart and table behind the summary above, this mod's own tests and the late-game stress test). The numbers there and on this page come from the same data.</p>
+<section id="how" class="appendix"><div class="wide">
+  <h2 data-n="Appendix A">Technical notes</h2>
+  <p class="col" style="margin-inline:auto">Design goals, module structure, the objective and each algorithm.</p>
+  <details class="appx col" style="margin-inline:auto"><summary>Open appendix A</summary></details>
+  <div class="appx-body" hidden>
+  <div class="col" style="margin-inline:auto">
+    <h3>Design goals</h3>
+    <p>Six design goals. Each algorithm below is marked with the goals it serves, and appendix B tests them.</p>
+  <ul class="goals">
+    <li><b><span>G1</span>The numbers are DMT's</b>The score used in planning and the number on the map tack come from the same DMT code; the mod writes no rules of its own.</li>
+    <li><b><span>G2</span>As close to the best as possible, and say how close</b>Small problems are solved exhaustively; large ones get an upper bound and a quality note, and “Improve” searches further.</li>
+    <li><b><span>G3</span>Only valid plans that can be built</b>Adds the game rules DMT does not check: resources, empire limits, the city's range and ownership.</li>
+    <li><b><span>G4</span>Respect what the player has</b>Built districts and the player's tacks are never moved or overwritten, and count as neighbors; every requested district that fits is placed.</li>
+    <li><b><span>G5</span>Same input, same result</b>No random numbers, a fixed order of work, budgets counted in steps rather than seconds.</li>
+    <li><b><span>G6</span>Never freeze the game</b>Long computations run over several frames, and closing the panel does not stop them.</li>
+  </ul>
+  </div>
+  <p class="col" style="margin-inline:auto">The mod is a pure Lua UI mod and does not touch the game's C++. Placement rules and adjacency bonuses are left to DMT (<span class="tag goal">G1</span>); the planner only searches for which district goes on which tile, and adds the game's rules DMT does not check (<span class="tag goal">G3</span>, see A.7 and A.8). All solvers share one search engine and one evaluation layer.</p>
+{{ARCH}}
+  <div class="col" style="margin-inline:auto">
+  <p>Solvers compare plans by the sum of the parts below. Each part is weighted by the panel's weights (Science, Culture, Faith, Gold and Production, 0–3 each, default 1); the “gain” is the value with the plan minus the value without it.</p>
+  <figure>
+    <div class="frame scroll">
+      <svg viewBox="0 0 880 166" role="img" aria-label="The objective: adjacency, plus land, plus Housing and Appeal, plus coverage, minus the distance cost">
+        <rect class="d-box key" x="10" y="14" width="180" height="100" rx="8"/>
+        <text class="d-title" x="24" y="38">Adjacency</text>
+        <text class="d-sub" x="24" y="58">DMT's weighted adjacency,</text>
+        <text class="d-sub" x="24" y="74">including what existing</text>
+        <text class="d-sub" x="24" y="90">districts gain from the plan</text>
+        <text class="d-lab" x="24" y="106">always counted</text>
+        <text class="d-title" x="197" y="68">+</text>
+        <rect class="d-box" x="214" y="14" width="146" height="100" rx="8"/>
+        <text class="d-title" x="228" y="38">Land</text>
+        <text class="d-sub" x="228" y="58">yields lost on the</text>
+        <text class="d-sub" x="228" y="74">good tiles taken</text>
+        <text class="d-sub" x="228" y="90">(≤ 0)</text>
+        <text class="d-lab" x="228" y="106">on by default</text>
+        <text class="d-title" x="367" y="68">+</text>
+        <rect class="d-box" x="384" y="14" width="168" height="100" rx="8"/>
+        <text class="d-title" x="398" y="38">Housing and Appeal</text>
+        <text class="d-sub" x="398" y="58">Housing of Neighborhoods</text>
+        <text class="d-sub" x="398" y="74">and Preserves; yields</text>
+        <text class="d-sub" x="398" y="90">around a Preserve (A.6)</text>
+        <text class="d-lab" x="398" y="106">with those districts</text>
+        <text class="d-title" x="559" y="68">+</text>
+        <rect class="d-box" x="576" y="14" width="144" height="100" rx="8"/>
+        <text class="d-title" x="590" y="38">Coverage (Reach)</text>
+        <text class="d-sub" x="590" y="58">your cities newly</text>
+        <text class="d-sub" x="590" y="74">covered</text>
+        <text class="d-lab" x="590" y="106">several cities, default 0</text>
+        <text class="d-title" x="727" y="68">−</text>
+        <rect class="d-box" x="744" y="14" width="126" height="100" rx="8"/>
+        <text class="d-title" x="758" y="38">Distance cost</text>
+        <text class="d-sub" x="758" y="58">points lost for</text>
+        <text class="d-sub" x="758" y="74">each tile away from</text>
+        <text class="d-sub" x="758" y="90">the City Center</text>
+        <text class="d-lab" x="758" y="106">default 0</text>
+        <text class="d-sub" x="10" y="138">The yields of a district's buildings are not counted. The exception is what a Must Preserve's Grove and Sanctuary give</text>
+        <text class="d-sub" x="10" y="155">the tiles around it, because that depends on where the Preserve goes.</text>
+      </svg>
+    </div>
+  </figure>
+{{ALGO}}
+  <div class="algo">
+  <h3><span class="sn">A.8</span>Placement: three checks</h3>
+  <p><span class="tag goal">G3</span></p>
+  <p>Whether a district can go on a tile is decided by three checks in turn; failing any of them keeps the tile out of the plan. Every “can it go here” question goes through the same entry of the overlay, <code>CanPlace</code>, so One city, Several cities, the district estimate for City sites and Good places all use the same checks.</p>
+  <ol class="tight">
+    <li><b>Candidate tiles</b> (when the city is scanned): within the city's 3 rings, revealed, not a tile of another civilization or of another of your cities; no City Center, district, wonder, natural wonder or existing tack on it; no luxury or strategic resource that cannot be removed (DMT removes the resource before it evaluates a district tack, so it cannot catch this); with Allow chop off, tiles whose feature would be removed are skipped. Empire-limited districts count the ones built plus the ones tacked.</li>
+    <li><b>DMT's <code>CanPlacePin</code></b>: terrain, features, adjacency requirements, and placement rules from civilization abilities (such as Gaul and Vietnam).</li>
+    <li><b>Engine check</b>: on tiles the city owns, the game engine gives the list of tiles where the district can be built (<code>CityManager.GetOperationTargets</code>, which the game's placement lens uses too); any tile not on the list is refused. When the list is empty (the district is not unlocked, or there is no free slot) or the tile does not belong to the city yet, DMT decides. Each (city, district) pair is asked once per turn.</li>
+  </ol>
+  </div>
+  <div class="algo">
+  <h3><span class="sn">A.9</span>Map tacks: numbers, records, replacing and undo</h3>
+  <p><span class="tag goal">G1</span> <span class="tag goal">G4</span></p>
+  <p>Tacks are made the same way DMT's own popup makes them, so DMT shows their bonuses as usual; a tack is named with its city's number (existing cities 1, 2, … in the order they were founded, new sites after them). Each batch of tacks is recorded in the player's configuration and kept with the save: each tack's ID, tile, icon and name. Only a tack with all four unchanged counts as this mod's; one you changed or deleted is left alone. With “Replace this mod's earlier tacks” ticked, the solve request carries these tacks: the scan does not treat them as locked, and the overlay leaves them out of the copy of the data it gives DMT (the real data stays as it is); placing the new plan deletes the old tacks first, the batch records what it replaced, and undo rebuilds them as they were. The code keeps only tack IDs and fetches the tack again each time it is used: after a new tack is made in the game, a tack object fetched earlier may be invalid, and calling it crashes the game.</p>
+  </div>
+  </div>
+  </div>
+</div></section>
+
+<section id="eval" class="appendix"><div class="wide">
+  <h2 data-n="Appendix B">Evaluation method and full data</h2>
+  <p class="col" style="margin-inline:auto">The method and the data behind each result in section 3 (B.1–B.6), this mod's own tests and the late-game stress test (B.7–B.8), and the limits of the evaluation (B.9). Every comparison with AMT and EP was run offline; the data from the game are the speed measurements, this mod's own tests and the stress test.</p>
+  <details class="appx col" style="margin-inline:auto"><summary>Open appendix B</summary></details>
+  <div class="appx-body" hidden>
+  <div class="col">
+    <h3 id="e-method"><span class="sn">B.1</span>Method</h3>
+    <p>The three planners each make a plan for exactly the same situation, and the same judge scores them all. To be repeatable and to cover many situations, the evaluation runs offline, without starting the game:</p>
+    <ul class="tight">
+      <li><b>Real rules</b>: districts, adjacency, terrain, features, resources, civilization and leader abilities and modifiers all come from the Gathering Storm rules database the game itself exports, not from a simplified version written by hand.</li>
+      <li><b>Real code</b>: the Lua code of DMT, AMT r49 and Empire Planner is loaded as it is, without any change; each planner runs in a Lua state of its own (as each has its own UI context in the game), and its own buttons are clicked as a player would.</li>
+      <li><b>A simulated engine</b>: the map, cities, map tacks, visibility, rivers and Floodplains, and civilization modifiers (GameEffects) are simulated by the test framework; every game function the planners can call is implemented with the game's meaning.</li>
+      <li><b>One judge</b>: once a plan is placed as map tacks, a separate state that loads only DMT scores it; that is, the number the player sees on the tacks. It also checks the game's rules: DMT's placement rules, no district on a resource, the city's range and ownership, one per city, empire limits, population slots, whether a tack of the player is overwritten, and whether every requested district is placed.</li>
+      <li><b>The same request</b>: all three get the same district list and yield weights (all 1, except in “other weights”), and the judge scores with the same weights; for the two rivals this is closer to the scoring than their panels' default settings. Their panels' default settings were run as well, for what players actually get (see each part's full data).</li>
+      <li><b>More than one measure</b>: DMT adjacency is this mod's objective, while AMT and EP also care about tile yields and district priorities, so scoring by it alone is unfair to them. The results are therefore checked against city output, which belongs to none of the planners, and against AMT's and EP's own objectives (cross-scoring).</li>
+    </ul>
+    <figure>
+      <div class="frame scroll">
+        <svg viewBox="0 0 880 170" role="img" aria-label="Evaluation flow: a scenario makes a map, the three planners each make a plan in a state of their own, the plans are placed as map tacks, and a judge that loads only DMT scores them and checks the rules">
+          <defs><marker id="ae" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="d-arrow" d="M0,0 L10,5 L0,10 z"/></marker></defs>
+          <rect class="d-box" x="10" y="50" width="150" height="76" rx="8"/>
+          <text class="d-title" x="85" y="78" text-anchor="middle">Scenario</text>
+          <text class="d-sub" x="85" y="98" text-anchor="middle">civ · terrain · stage</text>
+          <text class="d-sub" x="85" y="114" text-anchor="middle">districts wanted</text>
+          <rect class="d-box ext" x="190" y="50" width="150" height="76" rx="8"/>
+          <text class="d-title" x="265" y="78" text-anchor="middle">Simulated game</text>
+          <text class="d-sub" x="265" y="98" text-anchor="middle">real rules database</text>
+          <text class="d-sub" x="265" y="114" text-anchor="middle">same seed → same map</text>
+          <rect class="d-box key" x="370" y="10" width="170" height="44" rx="8"/>
+          <text class="d-title" x="455" y="37" text-anchor="middle">This mod (3 levels)</text>
+          <rect class="d-box" x="370" y="66" width="170" height="44" rx="8"/>
+          <text class="d-title" x="455" y="93" text-anchor="middle">AMT r49</text>
+          <rect class="d-box" x="370" y="122" width="170" height="44" rx="8"/>
+          <text class="d-title" x="455" y="149" text-anchor="middle">Empire Planner</text>
+          <rect class="d-box key" x="570" y="50" width="140" height="76" rx="8"/>
+          <text class="d-title" x="640" y="78" text-anchor="middle">Judge</text>
+          <text class="d-sub" x="640" y="98" text-anchor="middle">loads only DMT</text>
+          <text class="d-sub" x="640" y="114" text-anchor="middle">+ game rule checks</text>
+          <rect class="d-box" x="740" y="42" width="130" height="92" rx="8"/>
+          <text class="d-title" x="805" y="66" text-anchor="middle">Measures</text>
+          <text class="d-sub" x="805" y="86" text-anchor="middle">adjacency, validity,</text>
+          <text class="d-sub" x="805" y="102" text-anchor="middle">completeness,</text>
+          <text class="d-sub" x="805" y="118" text-anchor="middle">determinism, time</text>
+          <path class="d-edge" d="M160 88 L186 88" marker-end="url(#ae)"/>
+          <path class="d-edge" d="M340 88 L355 88 Q362 88 362 81 L362 39 Q362 32 366 32" marker-end="url(#ae)"/>
+          <path class="d-edge" d="M340 88 L366 88" marker-end="url(#ae)"/>
+          <path class="d-edge" d="M340 88 L355 88 Q362 88 362 95 L362 137 Q362 144 366 144" marker-end="url(#ae)"/>
+          <path class="d-edge" d="M540 32 L553 32 Q560 32 560 39 L560 81 Q560 88 566 88" marker-end="url(#ae)"/>
+          <path class="d-edge" d="M540 88 L566 88" marker-end="url(#ae)"/>
+          <path class="d-edge" d="M540 144 L553 144 Q560 144 560 137 L560 95 Q560 88 566 88" marker-end="url(#ae)"/>
+          <path class="d-edge" d="M710 88 L736 88" marker-end="url(#ae)"/>
+          <text class="d-lab" x="562" y="166">plan = map tacks</text>
+        </svg>
+      </div>
+      <figcaption>Each planner runs in its own Lua state, so they cannot disturb each other; the judge is one more separate state that looks only at the map tacks, the same way DMT shows numbers in the game.</figcaption>
+    </figure>
+    <p>{{N_ALL}} scenarios in all, in six sets:</p>
+  </div>
+  <div class="col tablewrap" style="margin-inline:auto">
+    <table>
+      <thead><tr><th>Set</th><th class="num">Scenarios</th><th>What it holds</th><th>Used for</th></tr></thead>
+      <tbody>
+        <tr><td>Development · one city</td><td class="num">{{N_SINGLE}}</td><td>{{N_CIVS}} civilizations × 8 terrains × early / middle / late game</td><td>Main experiment; changes to the algorithm look only at the development set</td></tr>
+        <tr><td>Development · several cities</td><td class="num">{{N_MULTI}}</td><td>3–4 cities planned together, Government Plaza included</td><td>Main experiment</td></tr>
+        <tr><td>Held-out</td><td class="num">{{N_HS}} + {{N_HM}}</td><td>Built like the development set, with other map seeds</td><td>Check: never looked at while changing the algorithm</td></tr>
+        <tr><td>Other weights</td><td class="num">3 × {{N_SINGLE}}</td><td>The development set's one-city maps with the weight of Science, Production or Faith at 3</td><td>Check: another objective</td></tr>
+        <tr><td>Wonders</td><td class="num">{{N_W}}</td><td>One city in the middle game, 2 wonders + 4–5 districts</td><td>Wonders planned with districts</td></tr>
+        <tr><td>City sites</td><td class="num">{{N_C}}</td><td>A capital in the middle game, 2 new cities, at most 8 tiles away</td><td>City sites (against EP only)</td></tr>
+        <tr><td>Coverage</td><td class="num">{{N_V}}</td><td>3–4 cities in the late game, each with its own list; only one or two cities ask for an Industrial Zone or Entertainment Complex</td><td>Coverage (against AMT only)</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <p>The development set's terrains are a temperate river valley, coast, highland, rainforest, desert Floodplains, tundra, islands and volcanoes; its civilizations include Japan, Korea, Gaul, Vietnam, Brazil, the Netherlands, Greece, Mali, Indonesia, Egypt, Byzantium and others whose abilities change district rules. Some scenarios also have cities of neighboring civilizations, city-states, natural wonders, unexplored tiles, and tacks the player placed by hand beforehand. The early game asks for 2 districts, the middle game for 4–5 (1 already built), the late game for 7–8 (2 already built, an Aqueduct and a Government Plaza among them, and a Dam in the desert).</p>
+    <p><b>Measures</b></p>
+    <ul class="tight">
+      <li><b>Adjacency</b>: once the plan is placed as tacks, the sum of DMT adjacency over all of the player's districts and district tacks (by the scenario's yield weights), minus the same sum before planning.</li>
+      <li><b>Highest / quality</b>: in each scenario the highest adjacency among all planners' valid plans is the reference; a plan that equals it reaches the highest (ties allowed); quality = adjacency ÷ reference. In small scenarios this mod searches exhaustively, so the reference is the true best.</li>
+      <li><b>Violations</b>: DMT says the tile is not valid; on a luxury or strategic resource; beyond the city's 3 rings; on a tile of another civilization or of another of your cities; twice in a city; over the empire limit; over the population slots; a tack of the player overwritten.</li>
+      <li><b>Left out</b>: a requested district missing from the plan (not a violation, but counted in completeness). Whether it was left out although it had a valid tile is decided by the judge: after the plan is placed as tacks, the city still has a free slot, and within its 3 rings there is a tile DMT accepts that breaks none of the rules above.</li>
+      <li><b>Coverage</b>: how many of the player's cities an Industrial Zone and an Entertainment Complex cover (a city counts when its City Center lies within the district's radius; the two kinds counted apart, each kind once per city), taking what the plan adds. The judge computes it on its own from the buildings' radius in the rules data.</li>
+      <li><b>Determinism</b>: whether two runs of the same scenario with the same input give exactly the same plan.</li>
+      <li><b>Paired by scenario</b>: in each scenario, this mod's score on Standard minus the rival's; counted as wins / ties / losses. The mean difference gets a 95% bootstrap confidence interval (2,000 resamples), and p is from a sign test (wins and losses only). “Significant” in the text means the interval does not cross 0.</li>
+    </ul>
+  </div>
+
+  <!-- B.2 single city -->
+  <div class="col">
+    <h3 id="e-single"><span class="sn">B.2</span>One city</h3>
+    <p>The main experiment is the {{N_SINGLE}} scenarios of the development set: adjacency, validity and completeness, with two cases. The last three parts check the result from other sides: other maps and weights, another measure, and scoring by the rivals' own objectives.</p>
+    <p class="exp"><b>Adjacency.</b> {{SINGLE_TEXT}}</p>
+  </div>
+  <div class="twocharts">
+    <figure>
+      <div class="legend" id="lg-best"></div>
+      <div class="frame chart" id="ch-best"></div>
+      <figcaption>Share of scenarios with the highest adjacency, by stage of the game.</figcaption>
+    </figure>
+    <figure>
+      <div class="legend" id="lg-quality"></div>
+      <div class="frame chart" id="ch-quality"></div>
+      <figcaption>Mean quality (adjacency ÷ the scenario's highest), by stage of the game.</figcaption>
+    </figure>
+  </div>
+  <div class="twocharts">
+    <figure>
+      <div class="frame chart" id="ch-scatter-amt"></div>
+      <figcaption id="cap-scatter-amt"></figcaption>
+    </figure>
+    <figure>
+      <div class="frame chart" id="ch-scatter-ep"></div>
+      <figcaption id="cap-scatter-ep"></figcaption>
+    </figure>
+  </div>
+  <div class="col"><details><summary>Full data: each effort level, and the rivals' panel defaults</summary><div class="tablewrap" id="tb-overview"></div></details></div>
+
+  <div class="col">
+    <p class="exp"><b>Valid and complete.</b> {{CORRECT_TEXT}}</p>
+    <figure>
+      <div class="frame chart" id="ch-missing"></div>
+      <figcaption>{{MISSING_CAP}}</figcaption>
+    </figure>
+    <details><summary>Full data: violations, overwritten tacks, districts left out, determinism</summary><div class="tablewrap" id="tb-correct"></div></details>
+  </div>
+
+  <div class="col">
+    <p class="exp"><b>Two cases.</b> The same city and the same district list, with the three planners' plans side by side. The number is the district's own DMT adjacency; a dashed outline is a tack the player already had.</p>
+  </div>
+  {{CASES}}
+
+  <div class="col">
+    <p class="exp"><b>Other maps, other weights.</b> {{ROBUST_TEXT}}</p>
+    <figure>
+      <div class="legend" id="lg-robust"></div>
+      <div class="frame chart" id="ch-robust"></div>
+      <figcaption>Share of scenarios with the highest adjacency. The development set is the one looked at while changing the algorithm; the held-out set has other map seeds; the last three use the development set's maps with one yield's weight at 3.</figcaption>
+    </figure>
+    <details><summary>Full data: paired by scenario</summary><div class="tablewrap" id="tb-robust"></div></details>
+  </div>
+
+  <div class="col">
+    <p class="exp"><b>Another measure: city output.</b> {{OUTPUT_TEXT}}</p>
+    <figure>
+      <div class="frame chart" id="ch-output"></div>
+      <figcaption>Share of scenarios with the highest city output (development set). City output = adjacency + the best tiles the citizens work (as many tiles as the population, each yield weighted 1), computed by the judge on its own.</figcaption>
+    </figure>
+    <details><summary>Full data: with the rivals' defaults, paired by scenario</summary><div class="tablewrap" id="tb-output"></div></details>
+  </div>
+
+  <div class="col">
+    <p class="exp"><b>Scored by the rivals' own objectives.</b> {{CROSS_TEXT}}</p>
+    <figure>
+      <div class="legend" id="lg-forest"></div>
+      <div class="frame chart" id="ch-forest"></div>
+      <figcaption>{{FOREST_CAP}}</figcaption>
+    </figure>
+    <details><summary>Full data: the three planners' mean scores, paired by scenario</summary><div class="tablewrap" id="tb-cross"></div></details>
+  </div>
+
+  <!-- B.3 multi city -->
+  <div class="col">
+    <h3 id="e-multi"><span class="sn">B.3</span>Several cities</h3>
+    <p>The development set has {{N_MULTI}} scenarios, each planning 3–4 cities together (Government Plaza included); the held-out set has {{N_HM}} more; coverage uses {{N_V}} scenarios of its own, in the last part of this section.</p>
+    <p class="exp"><b>Joint planning.</b> {{MULTI_TEXT}}</p>
+    <figure>
+      <div class="frame chart" id="ch-multi"></div>
+      <figcaption>Each dot is a several-city scenario; the x-axis shows the planner's adjacency as a percentage of the scenario's highest, and the vertical line is the mean. “City by city” is planning one city at a time on this mod's One city tab (the earlier cities' tacks stay). Hover for the scenario.</figcaption>
+    </figure>
+  </div>
+
+  <div class="col">
+    <p class="exp"><b>Other maps.</b> {{MULTI_ROBUST_TEXT}}</p>
+    <figure>
+      <div class="legend" id="lg-mrobust"></div>
+      <div class="frame chart" id="ch-mrobust"></div>
+      <figcaption>Share of several-city scenarios with the highest adjacency.</figcaption>
+    </figure>
+    <details><summary>Full data: paired by scenario</summary><div class="tablewrap" id="tb-robust-multi"></div></details>
+  </div>
+
+  <div class="col">
+    <p class="exp"><b>Scored by the rivals' own objectives.</b> {{CROSS_MULTI_TEXT}}</p>
+    <figure>
+      <div class="legend" id="lg-forest-multi"></div>
+      <div class="frame chart" id="ch-forest-multi"></div>
+      <figcaption>{{FOREST_CAP}}</figcaption>
+    </figure>
+    <details><summary>Full data: the three planners' mean scores, paired by scenario</summary><div class="tablewrap" id="tb-cross-multi"></div></details>
+  </div>
+
+  <div class="col">
+    <p class="exp"><b>Coverage.</b> {{COVERAGE_TEXT}}</p>
+    <figure>
+      <div class="legend" id="lg-coverage"></div>
+      <div class="frame chart" id="ch-coverage"></div>
+      <figcaption>Cities covered and adjacency compared together: one row per comparison; the numbers on the bars are scenarios. Hover for what each part means.</figcaption>
+    </figure>
+    <details><summary>Full data: adjacency / cities covered in each scenario (Standard)</summary><div class="tablewrap" id="tb-coverage"></div></details>
+  </div>
+
+  <!-- B.4 wonders -->
+  <div class="col">
+    <h3 id="e-wonders"><span class="sn">B.4</span>Wonders planned with districts</h3>
+    <p>{{WONDER_TEXT}}</p>
+    <figure>
+      <div class="legend" id="lg-wonders"></div>
+      <div class="frame chart" id="ch-wonders"></div>
+      <figcaption>{{N_W}} one-city scenarios in the middle game, each asking for two wonders and 4–5 districts.</figcaption>
+    </figure>
+    <p class="note">The judge places wonders as tacks too, uses DMT for the wonders' placement rules, and counts the bonuses wonders give adjacent districts. Each planner asks for wonders the way its panel does: in AMT the two are clicked on the Wonders tab; in EP only these two are ticked in its wonder list, with a higher limit per city and era, and it places wonders after the districts.</p>
+    <details><summary>Full data</summary><div class="tablewrap" id="tb-wonders"></div></details>
+  </div>
+
+  <!-- B.5 sites -->
+  <div class="col">
+    <h3 id="e-sites"><span class="sn">B.5</span>City sites</h3>
+    <p>{{SITES_TEXT}}</p>
+    <figure>
+      <div class="frame chart" id="ch-sites" style="max-width:480px;margin-inline:auto"></div>
+      <figcaption>Each dot is a scenario: the x-axis shows the site value of the two new cities this mod chose; the y-axis, EP's. A dot below the dashed line means EP's is lower. Site value = the yields of each new city's best 8 tiles + the best DMT adjacency of three districts (district potential), computed by the judge on its own, with neither planner's scoring.</figcaption>
+    </figure>
+    <details><summary>Full data: mean of each part</summary><div class="tablewrap" id="tb-sites"></div></details>
+  </div>
+
+  <!-- B.6 pools -->
+  <div class="col">
+    <h3 id="e-pools"><span class="sn">B.6</span>Picking from the pool</h3>
+    <p>Neither AMT nor EP can take a number and pick the districts themselves, so this part compares only with this mod's own reference. The reference is the best of solving each combination on its own (Standard plus 3 rounds of Improve): a pick that reaches it has both chosen the right combination and placed it well. The scenario is a city of population 10 on a random map, with 7 districts that have adjacency bonuses in the pool; 4 cases with 4 seeds each (<code>tests/offline/bench_pools.lua</code>).</p>
+  </div>
+  <div class="col tablewrap" style="margin-inline:auto">
+    <table>
+      <thead><tr><th>Case</th><th class="num">Fast</th><th class="num">Standard</th><th class="num">Thorough</th></tr></thead>
+      <tbody>
+        <tr><td>3 of 7 (35 combinations)</td><td class="num">100%, 0.11 s</td><td class="num">100%, 0.38 s</td><td class="num">100%, 2.3 s</td></tr>
+        <tr><td>Campus as a Must + 3 of 6 (20)</td><td class="num">100%, 0.14 s</td><td class="num">100%, 0.68 s</td><td class="num">100%, 2.6 s</td></tr>
+        <tr><td>3 Must (Aqueduct included) + 3 of 5 (10)</td><td class="num">98.3% (worst 93%), 0.17 s</td><td class="num">100%, 0.93 s</td><td class="num">100%, 2.8 s</td></tr>
+        <tr><td>5 of 7 (21)</td><td class="num">98.2% (worst 93%), 0.18 s</td><td class="num">100%, 0.99 s</td><td class="num">100%, 4.6 s</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <p class="note">The percentage is the mean share of the reference reached; the time is for computing in one go, converted at the unit cost measured in the game. Picking always computes over several frames, and the game keeps responding. Thorough at first solved every combination exhaustively, about 4.6 s; with the exhaustive limit for rough solves at 3,000 and only the top three solved exhaustively, it dropped to about 2.3 s with the same quality.</p>
+    <p>{{MULTIPOOLS_TEXT}}</p>
+    <p><b>Without picking, the results do not change</b>: a request without the picking, distance and automatic-district fields solves exactly as before. The development set run again with the changed code (every setting of this mod, 352 runs) gave the same plans as the stored results, one by one, so the comparison data in B.2–B.5 still hold. In the game, 7 more tests cover picking and the three plans, the map preview, the distance cost, the automatic Aqueduct and Dam, reminder tacks agreeing with DMT, unticking site tacks, and City sites scoring with a set number of districts (B.7).</p>
+  </div>
+  <!-- B.7 own tests -->
+  <div class="col">
+    <h3 id="e-tests"><span class="sn">B.7</span>This mod's own tests</h3>
+  </div>
+  <div class="col tablewrap" style="margin-inline:auto">
+    <table>
+      <thead><tr><th>Test</th><th>What it covers</th><th>Result</th></tr></thead>
+      <tbody>
+        <tr><td>In the game (assertions in the game's Lua states, through FireTuner)</td><td>103 tests under Gathering Storm (a few fewer under the base game and Rise and Fall, which lack their content), each ruleset run once; 73 of them were also run once as Japan and once as Gaul (2026-10-20, on an account with every DLC): the same best as brute-force enumeration; hypothetical placements matching real DMT tacks item by item; determinism; locked tacks; placing and undoing tacks; computing over frames and closing the panel; valid plans for Several cities and City sites; wonders for one city, placing what is missing, Good places, the record and replacing of tacks, per-city lists and limited districts, coverage, the hotkey; picking from the pool and the three plans, the map preview, the distance cost, the automatic Aqueduct and Dam, reminder tacks agreeing with DMT, unticking site tacks, City sites scoring with a set number of districts; the game's Harbor / Commercial Hub pairing, a pool not putting both in one city, Neighborhood Housing agreeing with the game's Appeal and picked on the valid tile with the highest Appeal, unticking site tacks and replacing earlier tacks leaving City Center tacks alone; a site's first ring kept for the new city, empire-limited districts given to the first cities, the planner's button showing the version in its tooltip; candidate tiles connected to the city's territory, unowned tiles and features that need a tech marked, each city's districts still connected when they go around another city's districts; improvement rules read from the game, an empty tile worth at least its yields now, the Housing of the Granary and of the Harbor buildings</td><td>0 failures (1–6 tests skipped where the ruleset lacks the content or the map does not allow it, such as no Government Plaza in the base game, or the whole map explored)</td></tr>
+        <tr><td>Incremental vs full evaluation</td><td>The memoized incremental evaluation compared item by item with a full evaluation by real DMT</td><td>300 runs, 0 differ</td></tr>
+        <tr><td>Offline logic tests</td><td>119 tests: solvers against brute-force enumeration, incremental bookkeeping, computing over frames, the panel's flow, added rules, the engine check, the record and replacing of tacks, per-city lists, wonders, placing what is missing and Good places, coverage; picking from the pool (the same as brute-force enumeration of every combination, three plans with different combinations), the distance cost, the automatic Aqueduct and Dam, reminder tacks, City sites scoring with a set number of districts, picking city by city on Several cities; the wide joint start for several cities; keeping Harbor and Commercial Hub apart (both settings of the switch, Must ones and placed tacks blocking the pair, letting it through when short, city by city on Several cities); Appeal and Housing (the same as an independently written brute-force enumeration one by one, clearing a feature needing its tech, water unchanged, own tile and adjacent tiles); the panel through the controls' own click callbacks (a round of clicks on every district cell on both tabs, the check boxes, replacing on Several cities after placing site tacks leaving City Center tacks alone); exclusive districts (Entertainment Complex and Water Park), Must districts competing for one tile placing what fits, a crowded city without one valid candidate tile, Housing lost to improvements taken; a site's first ring kept for the new city, empire-limited districts given to the first cities; connection to the territory (tiles cut off by another civilization's territory not chosen, unowned tiles and missing techs marked, layouts where another city's districts surround a city's district not valid, each city's districts connected); tiles valued by their best improvement, Housing by what the city still needs, swapping tiles from your other cities</td><td>All pass</td></tr>
+        <tr><td>Offline comparison self-check</td><td>The adjacency this mod computes for itself against the one the judge computes on its own</td><td>{{SELF_CHECK}}</td></tr>
+        <tr><td>Engine check of buildable tiles (probe)</td><td>With every tech and civic given to the player and the capital owning its 3 rings, each district and tile compared: “this mod's candidate tile + DMT accepts” against the tiles the game engine allows (<code>CityManager.GetOperationTargets</code>); games as Rome, Japan and Gaul</td><td>1,797 of 1,836 pairs agree: Japan 576/576, Gaul 612/612; in Rome 13 pairs are Canals (DMT does not check them) and 26 fall on two tacks left over from a test (by design this mod does not touch the player's tacks; the test that left them has been fixed). Run again in the Rome game with the engine check added: tiles this mod accepts that the engine refuses, 0</td></tr>
+        <tr><td>Real mouse clicks (macOS)</td><td>The game window clicked with system mouse events (<code>tools/realclick.py</code>), each position worked out from where the panel's controls report themselves; after each click the result is read back from the panel's state and checked: the district cells' cycle and Auto cells on both tabs, the site tack check boxes, the two keep-apart switches, the two swap switches, the tabs, Solve, the plan rows, placing tacks, undo, close</td><td>All 34 pass. Control: with only the district cells' selected background switched back to the old way, the same clicks reproduced what the tester had reported, which confirmed why the cells could not be clicked</td></tr>
+        <tr><td>Appeal calibration</td><td>After the game builds a plan (Theater Square, Industrial Zone, Holy Site, Neighborhood, Preserve), the game's own Appeal and Housing compared with the prediction (<code>tests/bench/calibrate_appeal.py</code>)</td><td>All 61 tiles within 4 of the capital have the same Appeal, and the Neighborhood's and Preserve's Housing is the same. The calibration found three rules that went into the model: clearing a feature needs its tech, water keeps its Appeal, a district's own tile loses only the feature it clears. In a game with every tech unlocked at once, a few Woods tiles had 1 more in the game; the late-game check is in B.8</td></tr>
+        <tr><td>Judge calibration</td><td>The adjacency the placement lens (the game engine) shows compared with DMT tile by tile; then a group of adjacent districts built next to the capital and their real bonuses compared; games as Rome, Japan and Gaul (<code>tests/bench/calibrate_judge.lua</code>)</td><td>Of 306 pairs, 0 unexplained differences, 1 a known DMT difference (a Harbor next to a shipwreck, section 5); the 13 districts built match item by item</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- B.8 stress -->
+  <div class="col">
+    <h3 id="e-stress"><span class="sn">B.8</span>Late-game stress test</h3>
+    <p>{{STRESS_TEXT}}</p>
+  </div>
+  <div class="col tablewrap" style="margin-inline:auto">{{STRESS_TABLE}}</div>
+  <div class="shots">
+    <figure class="tall"><img src="images/v5-late-single.jpg" alt="The One city tab in a late-game save: Okayama, Neighborhood and Preserve as Musts, an Entertainment Complex and an Industrial Zone picked, Housing and Appeal +45 in the summary" loading="lazy"><figcaption>Pangaea save, turn 201, Okayama: Neighborhood and Preserve as Musts, 3 districts, an Entertainment Complex and an Industrial Zone picked. The Preserve's row lists the yields of the tiles around it; the map on the right previews the plan.</figcaption></figure>
+    <figure class="tall"><img src="images/v5-late-continents.jpg" alt="The One city tab in the Continents save, turn 221: The Hague, Neighborhood and Preserve as Musts, an Entertainment Complex and a Holy Site picked" loading="lazy"><figcaption>Continents save, turn 221, The Hague: Neighborhood and Preserve as Musts, an Entertainment Complex and a Holy Site picked, “Housing and Appeal” +47.</figcaption></figure>
+    <figure class="tall"><img src="images/v5-late-islands.jpg" alt="The Several cities tab in the Island Plates save, turn 210: two sites planned with Sparta and Corinth" loading="lazy"><figcaption>Island Plates save (Rise and Fall), turn 210: two sites planned with Sparta and Corinth, 12 districts in 4 cities.</figcaption></figure>
+    <figure class="tall"><img src="images/v5-late-multi.jpg" alt="The Several cities tab in a late-game save: two sites planned with Sendai, Campus as a Must, 3 per city" loading="lazy"><figcaption>The Several cities tab in the same save: two new sites planned with Sendai, Campus as a Must, 3 per city. The map shows the two sites' 3 rings and the district preview.</figcaption></figure>
+  </div>
+  <p class="col note" style="margin-inline:auto">These screenshots show the Chinese interface.</p>
+
+  <!-- B.9 limits -->
+  <div class="col">
+    <h3 id="e-limits"><span class="sn">B.9</span>Limits</h3>
+    <p>In three groups: checked already, being planned, and not planned for now.</p>
+    <p><b>Checked already</b></p>
+    <ul class="tight">
+      <li><b>The engine is simulated</b>: map generation, cities, visibility and the modifier system are implemented by the test framework; the rules data and the code of the three planners and DMT are unchanged, and all three see the same simulated world. Two checks: scenarios exported from real saves (RS, RM) compared tile by tile with the game, 0 differences in DMT's verdicts; the in-game engine audit on the Continents save, 1,361 of 1,368 pairs agreeing with the engine, the other 7 all Canals (section 5). The simulated engine gives no buildable tiles, so the offline comparison has no engine check.</li>
+      <li><b>The judge</b>: DMT and the game engine give the same adjacency tile by tile (B.7); the only known difference (shipwrecks) is the same for all three planners.</li>
+    </ul>
+    <p><b>Being planned</b></p>
+    <ul class="tight">
+      <li><b>The reference is the best plan known, not the true best</b>: “highest” and quality in section 3 use the highest valid plan among the planners as the reference. An exact solver has proven the true best for the 144 one-city scenarios of the development and held-out sets and for 16 small several-city scenarios; rewriting the report against the true best is in the <a href="{{REPO_URL}}/milestone/4">evaluation baseline</a> milestone.</li>
+      <li><b>No true best for large several-city scenarios</b>: scenarios with 3–4 cities and 4–6 districts each can only be compared with the best known; giving an upper bound on the true best is also in the evaluation baseline milestone.</li>
+      <li><b>The main measure is adjacency only</b>: the panel's default objective also counts tile potential and missing Housing, and a plan sometimes gives up some adjacency for them: in the 84 development scenarios, the Standard plan with Land loss on has less adjacency than the adjacency-only plan in 31, on average 94% of it and 62% at the lowest. “City output” counts the best tiles the citizens work as they are now, not what they give once improved, so it does not show this either: in the same 84 scenarios the plan with Land loss on has the higher city output in 23 and the lower in 15, about the same on average. Adding tile potential to the judge is also in the evaluation baseline milestone. The true best under the default objective first needs an upper bound for the tile part, also in the evaluation baseline milestone.</li>
+      <li><b>Time</b>: offline times differ from times in the game, so only relative speed counts; measuring by DMT calls instead, which do not depend on the machine, is in the evaluation baseline milestone.</li>
+      <li><b>Few real scenarios</b>: the real set is 14 one-city and 5 several-city scenarios of Japan and the Netherlands from two saves, and the percentages in the panel's “Swap tiles from my cities” tooltip come from them; exporting saves of more civilizations is in the evaluation baseline milestone.</li>
+      <li><b>Weights</b>: the evaluation uses the default weights, all 1, plus three sets leaning to Science, Production or Faith; what the default weights should be is in the <a href="{{REPO_URL}}/milestone/7">objective and weights</a> milestone.</li>
+      <li><b>Improvements</b>: AMT and EP also plan improvements; this mod only values tiles by their best improvement and places no improvement tacks, so this part is not compared. Planning a wonder together with the improvements it must be next to is in the <a href="{{REPO_URL}}/milestone/8">v1.4.0</a> milestone.</li>
+    </ul>
+    <p><b>Not planned for now</b></p>
+    <ul class="tight">
+      <li><b>Rulesets</b>: the offline comparison uses only the Gathering Storm rules database; Rise and Fall and the base game are tested only in the game (all three rulesets once each). The solving code is the same for all three; they differ in the rules data.</li>
+      <li><b>Test setup</b>: the in-game tests run only on one Mac with the maintainer's DLC set (16 DLC missing); on Windows a collaborator tests by hand.</li>
+    </ul>
+    <p><b>Code versions</b>: AMT r49 (2026-09-19), Empire Planner 94, DMT 2024-01-17, the Workshop versions at the time of testing (October 2026).</p>
+  </div>
+  </div>
 </div></section>
 
 <script id="data" type="application/json">{{DATA}}</script>
 <script>
 {{SCRIPT}}
+</script>
+<script>
+// Appendix bodies stay hidden until opened; a link into one (the overview table, a reference) opens it first.
+(function () {
+  function open(sec) {
+    var body = sec.querySelector('.appx-body'), d = sec.querySelector('details.appx');
+    if (body && body.hidden) { body.hidden = false; if (d) d.open = true; }
+  }
+  document.querySelectorAll('details.appx').forEach(function (d) {
+    d.addEventListener('toggle', function () { d.parentNode.querySelector('.appx-body').hidden = !d.open; });
+  });
+  function show(hash) {
+    var el = hash && hash.length > 1 && document.getElementById(decodeURIComponent(hash.slice(1)));
+    if (!el) return;
+    var sec = el.closest('section.appendix');
+    if (sec && sec.querySelector('.appx-body').hidden) { open(sec); el.scrollIntoView(); }
+  }
+  document.addEventListener('click', function (e) {
+    var a = e.target.closest && e.target.closest('a[href^="#"]');
+    if (a) show(a.getAttribute('href'));
+  });
+  window.addEventListener('hashchange', function () { show(location.hash); });
+  show(location.hash);
+})();
 </script>

@@ -104,6 +104,29 @@ test("site factors: water, luxuries, strategic resources", function()
   T.eq(river.Strategic.RESOURCE_IRON, nil, "iron is not visible without its tech")
   T.ok(river.Info.UnknownStrategic, "unknown strategic resources hinted")
   T.eq(river.Parts.Strategic, 2 + 2, "amount plus a new kind")
+
+  -- Housing (issues 55, 56): its own weight, not food's; worth 1 each up to
+  -- the population the plan needs (three specialty districts: 7), half the
+  -- one before after that.
+  local food = SDP_Sites.Context(0, { Districts = PLAN, Weights = { YIELD_FOOD = 3 } })
+  T.eq(SDP_Sites.Coarse(food, { X = 2, Y = 3, Index = Map.GetPlotIndex(2, 3), Unrevealed = 0 }, centers).Parts.Water, 3,
+    "the food weight leaves the water part alone")
+  local housing = SDP_Sites.Context(0, { Districts = PLAN, Weights = { HOUSING = 2 } })
+  T.eq(SDP_Sites.Coarse(housing, { X = 2, Y = 3, Index = Map.GetPlotIndex(2, 3), Unrevealed = 0 }, centers).Parts.Water, 6,
+    "weighted by housing")
+  local small = SDP_Sites.Context(0, { Districts = { "DISTRICT_CAMPUS" } })
+  T.eq(small.Population, 1, "one district needs population 1")
+  -- Housing 2 -> 5 against a target of 1: 0.25 + 0.125 + 0.0625.
+  T.eq(SDP_Sites.Coarse(small, { X = 2, Y = 3, Index = Map.GetPlotIndex(2, 3), Unrevealed = 0 }, centers).Parts.Water,
+    0.4375, "housing past the target is worth less")
+end)
+
+test("housing value: 1 each up to the target, half the one before after it", function()
+  T.eq(SDP_Land.HousingValue(5, 7), 5, "below the target")
+  T.eq(SDP_Land.HousingValue(7, 7), 7, "at the target")
+  T.eq(SDP_Land.HousingValue(8, 7), 7.5, "one past")
+  T.eq(SDP_Land.HousingValue(10, 7), 7.875, "three past")
+  T.ok(math.abs(SDP_Land.HousingValue(7.5, 7) - (8 - 0.5 ^ 0.5)) < 1e-12, "continuous between whole numbers")
 end)
 
 test("combinations: spacing, relay, distinct solutions; deterministic", function()

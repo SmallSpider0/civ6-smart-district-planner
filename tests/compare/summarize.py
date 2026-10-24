@@ -2,10 +2,14 @@
 
     python3 -I tests/compare/summarize.py RESULTS.jsonl [MORE.jsonl ...] [--json OUT]
 
-For every scenario the reference is the best gain any planner reached with
-a legal plan (no rule broken; leaving a requested district out is not a
-broken rule, but it costs gain). Quality = gain / reference. A plan that
-breaks a rule keeps its gain in the tables but is counted as illegal.
+For every scenario the reference is the proven optimum when the exact
+solver (sdp:ORACLE, tests/compare/cmp_oracle.lua) proved one, else the best
+gain any planner reached with a legal plan (no rule broken; leaving a
+requested district out is not a broken rule, but it costs gain); the
+oracle's upper bound is kept for those. Quality = gain / reference;
+"optimal" counts plans that reach a proven optimum. A plan that breaks a
+rule keeps its gain in the tables but is counted as illegal. The oracle's
+own runs are left out of the per-planner tables.
 Repeated runs ("#2" variants) only feed the determinism check.
 """
 import argparse
@@ -25,9 +29,27 @@ SITE_FIELDS = ("siteValue", "tileValue", "districtPotential", "freshWater", "coa
 
 
 def group(sid):
-    """(set, kind) of a scenario id: dev / heldout / real / profile:SCI ... / wonders / sites / coverage."""
+    """(set, kind) of a scenario id: dev / heldout / sealed / real / smallmulti(/heldout, /sealed) /
+    profile:SCI ... (profile:RND/heldout ...) / wonders / sites / coverage."""
     if "~" in sid:
-        return "profile:" + sid.split("~", 1)[1], "single"
+        base, profile = sid.split("~", 1)
+        part = group(base)[0]
+        return "profile:" + profile + ("" if part == "dev" else "/" + part), "single"
+    for prefix, name, kind in (("D3", "three", "single"), ("HD3", "three/heldout", "single"),
+                               ("FD3", "three/sealed", "single"), ("DM", "twoeach", "multi"),
+                               ("HDM", "twoeach/heldout", "multi"), ("FDM", "twoeach/sealed", "multi")):
+        if sid.startswith(prefix) and sid[len(prefix):len(prefix) + 1].isdigit():
+            return name, kind
+    if sid.startswith("OM"):
+        return "smallmulti", "multi"
+    if sid.startswith("HOM"):
+        return "smallmulti/heldout", "multi"
+    if sid.startswith("FOM"):
+        return "smallmulti/sealed", "multi"
+    if sid.startswith("FS"):
+        return "sealed", "single"
+    if sid.startswith("FM"):
+        return "sealed", "multi"
     if sid.startswith("RS"):
         return "real", "single"
     if sid.startswith("RM"):
@@ -132,6 +154,9 @@ def key(r):
     return r["planner"] + (":" + r["variant"] if r.get("variant") else "")
 
 
+ORACLE_KEYS = ("sdp:ORACLE", "sdp:ORACLE_CHECK")
+
+
 def load(paths):
     rows = []
     for p in paths:
@@ -182,7 +207,21 @@ def summarize(rows):
             if s and not r.get("error") and s.get("output") is not None:
                 if not [v for v in s["violations"] if v["kind"] in HARD]:
                     best_out = s["output"] if best_out is None else max(best_out, s["output"])
-        entry = {"reference": best, "exact": exact, "referenceOutput": best_out, "runs": {}}
+        # The exact reference (issue 48): a proven optimum replaces the best
+        # known gain; otherwise its upper bound gives the range.
+        optimum, upper, optimumMissing = None, None, None
+        for k in ORACLE_KEYS:
+            o = ((runs.get(k) or {}).get("plan") or {}).get("stats", {}).get("oracle")
+            if isinstance(o, dict) and not runs[k].get("error"):
+                if o.get("proven"):
+                    optimum = o["value"]
+                    optimumMissing = ((runs[k].get("score") or {}).get("missing")) or 0
+                else:
+                    upper = o.get("upper")
+        if optimum is not None:
+            best, exact = optimum, True
+        entry = {"reference": best, "exact": exact, "optimum": optimum, "upper": upper, "referenceOutput": best_out,
+                 "optimumMissing": optimumMissing, "runs": {}}
         for k, r in runs.items():
             s = r.get("score")
             e = {"seconds": r.get("planSeconds"), "error": r.get("error")}
@@ -247,16 +286,33 @@ def subset(scenarios, set_name=None, kind=None):
     return out
 
 
+def share_stats(values):
+    """Mean, median, worst and how many reach 100 %, 95 %, 90 % of the optimum."""
+    if not values:
+        return None
+    n = len(values)
+    return {"n": n, "mean": statistics.mean(values), "median": statistics.median(values), "min": min(values),
+            "at100": sum(1 for v in values if v >= 1 - 1e-9) / n, "at95": sum(1 for v in values if v >= 0.95 - 1e-9) / n,
+            "at90": sum(1 for v in values if v >= 0.90 - 1e-9) / n}
+
+
 def per_planner(scenarios, kind_filter=None):
     agg = defaultdict(lambda: defaultdict(list))
     for sid, e in scenarios.items():
         if kind_filter and group(sid)[1] != {"S": "single", "M": "multi"}.get(kind_filter, kind_filter):
             continue
         for k, r in e["runs"].items():
+            if k in ORACLE_KEYS:
+                continue
             a = agg[k]
             a["n"].append(1)
             if r.get("error"):
                 a["errors"].append(sid)
+                # A planner that gives no plan reaches 0 % of a proven optimum.
+                if e.get("optimum") is not None:
+                    a["optimal"].append(0)
+                    a["overOptimum"].append(0)
+                    a["ofOptimum"].append(0.0)
                 continue
             if r.get("quality") is not None:
                 a["quality"].append(r["quality"])
@@ -266,6 +322,19 @@ def per_planner(scenarios, kind_filter=None):
             a["seconds"].append(r.get("seconds") or 0)
             if e["reference"] is not None and r.get("gain") is not None:
                 a["best"].append(1 if r["legal"] and r["gain"] >= e["reference"] - 1e-9 else 0)
+            if e.get("optimum") is not None and r.get("gain") is not None:
+                a["optimal"].append(1 if r["legal"] and r["gain"] >= e["optimum"] - 1e-9 else 0)
+                # Share of the optimum: an illegal plan counts 0.
+                o = e["optimum"]
+                g = r["gain"] if r["legal"] else 0
+                a["ofOptimum"].append(g / o if o > 0 else (1.0 if g >= 0 else 0.0))
+                # Above the optimum: a check that must stay 0. A plan that
+                # leaves out districts the optimum places solves an easier
+                # problem; it is counted apart (fewerAbove).
+                above = r["legal"] and r["gain"] > e["optimum"] + 1e-9
+                fewer = (r.get("missing") or 0) > (e.get("optimumMissing") or 0)
+                a["overOptimum"].append(1 if above and not fewer else 0)
+                a["fewerAbove"].append(1 if above and fewer else 0)
             if r.get("outputGap") is not None:
                 a["outGap"].append(r["outputGap"])
                 a["outBest"].append(1 if r["legal"] and r["outputGap"] <= 1e-9 else 0)
@@ -288,6 +357,10 @@ def per_planner(scenarios, kind_filter=None):
             "qualityMean": statistics.mean(q) if q else None, "qualityMin": min(q) if q else None,
             "legalShare": statistics.mean(a["legal"]) if a["legal"] else None,
             "bestShare": statistics.mean(a["best"]) if a["best"] else None,
+            "optimalShare": statistics.mean(a["optimal"]) if a["optimal"] else None, "optimalRuns": len(a["optimal"]),
+            "overOptimum": sum(a["overOptimum"]),
+            "fewerAbove": sum(a["fewerAbove"]),
+            "ofOptimum": share_stats(a["ofOptimum"]),
             "missing": sum(a["missing"]), "missingPlaceable": sum(a["missingPlaceable"]), "secondsMedian": statistics.median(a["seconds"]) if a["seconds"] else None,
             "violations": {kk[2:]: sum(v) for kk, v in a.items() if kk.startswith("v_")},
             "outputBestShare": statistics.mean(a["outBest"]) if a["outBest"] else None,
@@ -317,7 +390,10 @@ def main():
     for set_name, kind in sets:
         name = set_name + "/" + kind
         tables[name] = per_planner(subset(scenarios, set_name, kind))
-        print("==", name)
+        sub_all = subset(scenarios, set_name, kind)
+        proven = sum(1 for e in sub_all.values() if e.get("optimum") is not None)
+        ranged = sum(1 for e in sub_all.values() if e.get("optimum") is None and e.get("upper") is not None)
+        print("==", name, " proven optimum %d/%d, range only %d" % (proven, len(sub_all), ranged))
         t = tables[name]
         for k in sorted(t):
             v = t[k]
@@ -329,6 +405,12 @@ def main():
                 "%.2f" % v["legalShare"] if v["legalShare"] is not None else "-",
                 "%.2f" % v["bestShare"] if v["bestShare"] is not None else "-",
                 v["missing"], v["missingPlaceable"], v["secondsMedian"] or 0, json.dumps(v["violations"])))
+            if v.get("optimalShare") is not None:
+                so = v["ofOptimum"]
+                print("  %-18s of the optimum (n %d): mean %.1f%% median %.1f%% worst %.1f%%; at 100%% %.0f%%, >=95%% %.0f%%, >=90%% %.0f%%; above the optimum %d" % (
+                    "", so["n"], 100 * so["mean"], 100 * so["median"], 100 * so["min"], 100 * so["at100"], 100 * so["at95"],
+                    100 * so["at90"], v["overOptimum"]) + (
+                    "; above it with fewer districts placed %d" % v["fewerAbove"] if v.get("fewerAbove") else ""))
             if ob is not None:
                 print("  %-18s output best %.2f gap %.2f" % ("", ob, og))
             sq = v.get("sdpQuality")

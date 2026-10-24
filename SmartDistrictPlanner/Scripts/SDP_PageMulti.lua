@@ -47,6 +47,7 @@ for _, column in ipairs(COLUMNS) do m_weights[column.Key] = column.Default or 1 
 local m_weightViews = {}
 local m_tier = SDP_Tiers.DEFAULT
 local m_land = true
+local m_swap = false -- plots swapped from another of our cities are candidates (issue 54)
 local m_replace = false -- plan over this mod's earlier pins for the cities and replace them
 local m_remind = true
 local m_apart = true -- partner districts (harbor, commercial hub) not picked into one city (SDP_Rules.Apart)
@@ -125,7 +126,7 @@ function P.Request()
     PlayerID = playerID, Tier = m_tier, Districts = shared.Must, Pool = shared.Pool, Count = shared.Count, Auto = shared.Auto,
     Plans = plans, Pools = pools, Counts = counts, Autos = autos, Wonders = wonders, Sites = sites,
     Existing = existing, Weights = weights, Land = m_land, Coverage = m_weights.COVERAGE, Distance = m_weights.DISTANCE,
-    Remind = m_remind, Apart = m_apart, IgnorePins = m_replace and P.OwnPins() or nil,
+    Remind = m_remind, Apart = m_apart, IgnorePins = m_replace and P.OwnPins() or nil, Swap = m_swap,
   }
 end
 
@@ -299,6 +300,14 @@ function P.SetTier(tier)
   end
   Controls.MultiTierPull:GetButton():SetText(Locale.Lookup("LOC_SDP_TIER_" .. tier))
   UpdateEstimate()
+end
+
+function P.SetSwap(on)
+  Controls.MultiSwapCheck:SetCheck(on)
+  if m_swap ~= on then
+    m_swap = on
+    ClearResult()
+  end
 end
 
 function P.SetLand(on)
@@ -483,6 +492,7 @@ function P.Refresh()
     function(column) return column.Land and not m_land end, P.SetWeight, COLUMN_WIDTH)
   SDP_UI.PopulateTierPull(Controls.MultiTierPull, m_tier, P.SetTier)
   Controls.MultiLandCheck:SetCheck(m_land)
+  Controls.MultiSwapCheck:SetCheck(m_swap)
   Controls.MultiReplaceCheck:SetCheck(m_replace)
   Controls.MultiRemindCheck:SetCheck(m_remind)
   SDP_UI.ShowApart(Controls.MultiApartBox, Controls.MultiApartCheck, Controls.MultiApartLabel, m_apart)
@@ -550,6 +560,7 @@ local function AddRow(icon, name, detail, toolTip)
   inst.Icon:SetIcon(icon, 32)
   inst.Name:SetText(name)
   inst.Detail:SetText(detail)
+  SDP_UI.FitResultRow(inst)
   inst.Root:SetToolTipString(toolTip or "")
   m_view.Results[#m_view.Results + 1] = { Icon = icon, Name = name, Detail = detail, ToolTip = toolTip }
 end
@@ -736,13 +747,14 @@ end
 function P.State()
   return {
     Result = m_result, Solution = m_solution, Tier = m_tier, Land = m_land, Replace = m_replace, Remind = m_remind,
-    Apart = m_apart,
+    Apart = m_apart, Swap = m_swap,
     View = m_view, EstimateText = Controls.MultiEstimate:GetText(), QualityText = Controls.MultiQuality:GetText(),
     PlaceDisabled = Controls.MultiPlaceButton:IsDisabled(), ContinueDisabled = Controls.MultiContinueButton:IsDisabled(),
   }
 end
 
 Controls.MultiLandCheck:RegisterCheckHandler(function() P.SetLand(Controls.MultiLandCheck:IsChecked()) end)
+Controls.MultiSwapCheck:RegisterCheckHandler(function() P.SetSwap(Controls.MultiSwapCheck:IsChecked()) end)
 Controls.MultiReplaceCheck:RegisterCheckHandler(function() P.SetReplace(Controls.MultiReplaceCheck:IsChecked()) end)
 Controls.MultiRemindCheck:RegisterCheckHandler(function() P.SetRemind(Controls.MultiRemindCheck:IsChecked()) end)
 Controls.MultiApartCheck:RegisterCheckHandler(function() P.SetApart(Controls.MultiApartCheck:IsChecked()) end)

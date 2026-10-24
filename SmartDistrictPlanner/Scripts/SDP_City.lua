@@ -139,7 +139,7 @@ end
 -- included), and what a chain reaches from Start (SDP_Multi checks a
 -- layout's chains again, with the other cities' planned districts in the
 -- way, through SDP_Search's Reach).
-local function ReachSets(playerID, cityID, cx, cy, siteRings)
+local function ReachSets(playerID, cityID, cx, cy, siteRings, allowSwap)
   local start, through = {}, {}
   local center = Map.GetPlotIndex(cx, cy)
   start[center], through[center] = true, true
@@ -159,7 +159,30 @@ local function ReachSets(playerID, cityID, cx, cy, siteRings)
       through[entry.Index] = true
     end
   end
-  return { Start = start, Through = through, Reached = SDP_City.Reach(start, through) }
+  -- Plots another of the player's cities owns that this city can take by
+  -- swapping tiles (issue 54; CityCommandTypes.SWAP_TILE_OWNER, measured
+  -- 2026-10-23 on every city of a late save): next to this city's
+  -- territory, no district on it, not next to the other city's center.
+  -- { [plot index] = the owning city's ID }.
+  local swap = {}
+  if cityID ~= nil and allowSwap then
+    for _, entry in ipairs(SDP_City.PlotsInRange(cx, cy, SDP_City.RADIUS)) do
+      local plot = Map.GetPlotByIndex(entry.Index)
+      local owningCity = plot:GetOwner() == playerID and Cities.GetPlotPurchaseCity(plot) or nil
+      if owningCity ~= nil and owningCity:GetID() ~= cityID and not plot:IsCity() and plot:GetDistrictType() == -1
+          and Map.GetPlotDistance(plot:GetX(), plot:GetY(), owningCity:GetX(), owningCity:GetY()) > 1 then
+        local touches = false
+        for _, n in ipairs(SDP_City.PlotsInRange(plot:GetX(), plot:GetY(), 1)) do
+          if start[n.Index] then touches = true end
+        end
+        if touches then
+          swap[entry.Index] = owningCity:GetID()
+          through[entry.Index] = true
+        end
+      end
+    end
+  end
+  return { Start = start, Through = through, Reached = SDP_City.Reach(start, through), Swap = swap }
 end
 
 -- The plots a chain from `start` reaches over `through` (sets of plot
@@ -234,18 +257,44 @@ function SDP_City.SpecialtyCapacity(population)
 end
 
 -- The technology the player still needs before a district can clear the
--- plot's feature (Features.RemoveTech; the game refuses the district until
--- then), or nil.
+-- plot's feature (Features.RemoveTech) or harvest its bonus resource
+-- (Resource_Harvests.PrereqTech; issue 52); the game refuses the district
+-- until then. Nil when none.
 local function MissingRemoveTech(plot, playerID)
-  local feature = plot:GetFeatureType()
-  if feature == -1 then return nil end
-  local row = GameInfo.Features[feature]
-  local tech = row ~= nil and row.Removable and row.RemoveTech and GameInfo.Technologies[row.RemoveTech] or nil
-  if tech == nil then return nil end
   local player = Players[playerID]
   local techs = player ~= nil and player.GetTechs ~= nil and player:GetTechs() or nil
-  if techs ~= nil and techs:HasTech(tech.Index) then return nil end
-  return tech.TechnologyType
+  local function Missing(name)
+    local tech = name and GameInfo.Technologies[name] or nil
+    if tech == nil or (techs ~= nil and techs:HasTech(tech.Index)) then return nil end
+    return tech.TechnologyType
+  end
+  local feature = plot:GetFeatureType()
+  if feature ~= -1 then
+    local row = GameInfo.Features[feature]
+    local missing = row ~= nil and row.Removable and Missing(row.RemoveTech) or nil
+    if missing ~= nil then return missing end
+  end
+  local resource = plot:GetResourceType()
+  local row = resource ~= -1 and GameInfo.Resources[resource] or nil
+  if row ~= nil and player ~= nil and player:GetResources():IsResourceVisible(row.Hash) then
+    for harvest in GameInfo.Resource_Harvests() do
+      if harvest.ResourceType == row.ResourceType then
+        local missing = Missing(harvest.PrereqTech)
+        if missing ~= nil then return missing end
+      end
+    end
+  end
+  return nil
+end
+
+-- Whether building on `plot` removes a feature or a bonus resource the
+-- player should clear or harvest first for its one-time yields (issue 52).
+local function ClearsFirst(plot, playerID)
+  local feature = plot:GetFeatureType()
+  if feature ~= -1 and GameInfo.Features[feature].Removable then return true end
+  local resource = plot:GetResourceType()
+  local row = resource ~= -1 and GameInfo.Resources[resource] or nil
+  return row ~= nil and Harvestable(row.ResourceType) and Players[playerID]:GetResources():IsResourceVisible(row.Hash)
 end
 
 -- Why `plot` cannot take a new district for this city, or nil.
@@ -263,7 +312,7 @@ local function ExclusionReason(plot, playerID, cityID, pinned, siteRings, allowF
   if owner ~= -1 and owner ~= playerID then return E.FOREIGN end
   if owner == playerID then
     local owningCity = Cities.GetPlotPurchaseCity(plot)
-    if owningCity ~= nil and owningCity:GetID() ~= cityID then return E.OTHER_CITY end
+    if owningCity ~= nil and owningCity:GetID() ~= cityID and not reach.Swap[plot:GetIndex()] then return E.OTHER_CITY end
   end
   if owner == -1 and siteRings[plot:GetIndex()] then return E.SITE_RING end
   if owner == -1 and not reach.Reached[plot:GetIndex()] then return E.UNREACHABLE end
@@ -290,20 +339,25 @@ function SDP_City.ScanOptions(request)
     ignore = ignore or {}
     ignore[pin.ID] = true
   end
-  return { allowFeatureRemoval = request.AllowFeatureRemoval, ignorePins = ignore }
+  return { allowFeatureRemoval = request.AllowFeatureRemoval, ignorePins = ignore, allowSwap = request.Swap == true }
 end
 
--- Scan one city. options.allowFeatureRemoval (default true): when false,
+-- Scan one city. options.allowSwap (default false): plots another of the
+-- player's cities owns that this city can swap over are candidates too
+-- (issue 54; the player's switch). options.allowFeatureRemoval (default true): when false,
 -- plots with a feature a district would clear (GameInfo.Features.Removable:
 -- woods, rainforest, marsh) are excluded (requirement constraint 5).
 -- options.ignorePins: { [pin ID] = true } pins treated as absent.
 -- Returns nil when the city does not exist, else:
 --   PlayerID, CityID, Name, X, Y, Population, SpecialtyCapacity, SpecialtyBuilt
 --   Candidates  plots a new district may go on: { Index, X, Y, Ring, Unowned
---               (true when the city does not own the plot yet), RemoveTech
+--               (true when the city does not own the plot yet), Swap (the
+--               ID of the player's city it is swapped from), ClearFirst
+--               (a removable feature or a bonus resource to clear or harvest
+--               before building, issue 52), RemoveTech
 --               (the technology still needed to clear its feature, or nil) }
 --   Excluded    { [plot index] = SDP_City.EXCLUDED reason } for the other plots in range
---   Reach       { Start, Through, Reached } plot index sets (see ReachSets)
+--   Reach       { Start, Through, Reached, Swap } (see ReachSets)
 --   Built       districts placed in this city (complete or not): { Type, X, Y, Index, Complete }
 --   Pins        the player's pins within RADIUS + 1 rings (neighbours of every
 --               candidate): { ID, X, Y, Index, Icon, Name }
@@ -315,7 +369,7 @@ function SDP_City.Scan(playerID, cityID, options)
 
   local scan = {
     PlayerID = playerID, CityID = cityID, Name = city:GetName(), X = cx, Y = cy,
-    Population = city:GetPopulation(),
+    Population = city:GetPopulation(), AllowFeatureRemoval = allowFeatureRemoval,
     Candidates = {}, Excluded = {}, Built = {},
     Pins = SDP_City.PinsInRange(playerID, cx, cy, SDP_City.RADIUS + 1, options and options.ignorePins),
     Ignored = options and options.ignorePins,
@@ -325,18 +379,21 @@ function SDP_City.Scan(playerID, cityID, options)
   local pinned = {}
   for _, pin in ipairs(scan.Pins) do pinned[pin.Index] = true end
   local siteRings = SiteRings(playerID, nil, options and options.ignorePins)
-  scan.Reach = ReachSets(playerID, cityID, cx, cy, siteRings)
+  scan.Reach = ReachSets(playerID, cityID, cx, cy, siteRings, options and options.allowSwap)
   for _, entry in ipairs(SDP_City.PlotsInRange(cx, cy, SDP_City.RADIUS)) do
     local plot = Map.GetPlotByIndex(entry.Index)
     local reason = ExclusionReason(plot, playerID, cityID, pinned, siteRings, allowFeatureRemoval, scan.Reach)
     if reason then
       scan.Excluded[entry.Index] = reason
     else
-      -- Unowned: the city has to grow into or buy the plot first. RemoveTech:
-      -- the technology still needed to clear its feature. Both are shown
-      -- with the plan, neither changes what is legal.
-      entry.Unowned = not scan.Reach.Start[entry.Index] or nil
+      -- Unowned: the city has to grow into or buy the plot first. Swap: the
+      -- ID of the city it has to swap the plot from. RemoveTech: the
+      -- technology still needed to clear its feature. All are shown with the
+      -- plan, none changes what is legal.
+      entry.Swap = scan.Reach.Swap[entry.Index]
+      entry.Unowned = (entry.Swap == nil and not scan.Reach.Start[entry.Index]) or nil
       entry.RemoveTech = MissingRemoveTech(plot, playerID)
+      entry.ClearFirst = ClearsFirst(plot, playerID) or nil
       scan.Candidates[#scan.Candidates + 1] = entry
     end
   end
@@ -369,7 +426,7 @@ function SDP_City.ScanSite(playerID, x, y, options)
   local allowFeatureRemoval = options.allowFeatureRemoval ~= false
   local scan = {
     PlayerID = playerID, CityID = nil, Site = true, Name = options.name or "", X = x, Y = y,
-    Population = options.population or 1, SpecialtyBuilt = 0,
+    Population = options.population or 1, SpecialtyBuilt = 0, AllowFeatureRemoval = allowFeatureRemoval,
     Candidates = {}, Excluded = {}, Built = {},
     Pins = SDP_City.PinsInRange(playerID, x, y, SDP_City.RADIUS + 1, options.ignorePins),
     Ignored = options.ignorePins,
@@ -387,6 +444,7 @@ function SDP_City.ScanSite(playerID, x, y, options)
     else
       entry.Unowned = not scan.Reach.Start[entry.Index] or nil
       entry.RemoveTech = MissingRemoveTech(plot, playerID)
+      entry.ClearFirst = ClearsFirst(plot, playerID) or nil
       scan.Candidates[#scan.Candidates + 1] = entry
     end
   end

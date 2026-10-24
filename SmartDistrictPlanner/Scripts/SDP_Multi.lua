@@ -319,9 +319,11 @@ function SDP_Multi.NewSession(request)
     for _, c in ipairs(part.Scan.Candidates) do
       if at[c.Index] == nil then
         at[c.Index] = true
-        -- A plot one city owns is no candidate of another, so Unowned and
-        -- RemoveTech are the same whichever scan lists the plot.
-        candidates[#candidates + 1] = { Index = c.Index, X = c.X, Y = c.Y, Unowned = c.Unowned, RemoveTech = c.RemoveTech }
+        -- Unowned and RemoveTech are the same whichever scan lists the plot
+        -- (a plot one city owns is a candidate of another only by swapping,
+        -- worked out with the plan).
+        candidates[#candidates + 1] = { Index = c.Index, X = c.X, Y = c.Y, Unowned = c.Unowned, RemoveTech = c.RemoveTech,
+          ClearFirst = c.ClearFirst }
       end
     end
   end
@@ -354,25 +356,38 @@ function SDP_Multi.NewSession(request)
   self.Board = SDP_Board.New(playerID, fixed, self.Weights, bases)
   self.ExtraCalls = #fixed
 
+  -- The population each city's plan needs: its land part's worked plots
+  -- and its housing target (issue 55).
+  for _, part in ipairs(participants) do
+    local specialty = part.Scan.SpecialtyBuilt + part.Pick
+    for _, districtType in ipairs(part.Plan) do
+      if byType[districtType].Specialty then specialty = specialty + 1 end
+    end
+    part.Population = math.max(part.Kind == "CITY" and part.Scan.Population or 1, SDP_Land.RequiredPopulation(specialty))
+  end
+
   -- Land part per city; a plot several cities could work goes to the nearest.
   local lands = {}
   if land then
-    local owner = {}
+    -- A plot a participating city owns stays that city's, also when another
+    -- can swap it (issue 54).
+    local owner, byCity = {}, {}
+    for p, part in ipairs(participants) do
+      if part.CityID ~= nil then byCity[part.CityID] = p end
+    end
     for p, part in ipairs(participants) do
       for _, index in ipairs(SDP_Land.Workable(part.Scan)) do
         local plot = Map.GetPlotByIndex(index)
+        local owningCity = plot:GetOwner() == playerID and Cities.GetPlotPurchaseCity(plot) or nil
+        local holder = owningCity ~= nil and byCity[owningCity:GetID()] or nil
         local d = Map.GetPlotDistance(part.X, part.Y, plot:GetX(), plot:GetY())
+        if holder == p then d = -1 elseif holder ~= nil then d = math.huge end
         local current = owner[index]
         if current == nil or d < current.Distance then owner[index] = { Part = p, Distance = d } end
       end
     end
     for p, part in ipairs(participants) do
-      local specialty = part.Scan.SpecialtyBuilt + part.Pick
-      for _, districtType in ipairs(part.Plan) do
-        if byType[districtType].Specialty then specialty = specialty + 1 end
-      end
-      local population = math.max(part.Kind == "CITY" and part.Scan.Population or 1, SDP_Land.RequiredPopulation(specialty))
-      part.Land = SDP_Land.ForScan(part.Scan, fixed, request.Weights, population, function(index)
+      part.Land = SDP_Land.ForScan(part.Scan, fixed, request.Weights, part.Population, function(index)
         return owner[index] ~= nil and owner[index].Part == p
       end)
       lands[#lands + 1] = part.Land
@@ -493,12 +508,33 @@ function SDP_Multi.NewSession(request)
       owners.Fixed[index] = { Type = subject.Key, Groups = groups }
     end
   end
+  -- Each city's housing (issue 55); a fixed district's housing goes to the
+  -- participant that owns its plot, an unowned one's to the nearest.
+  local housingCities = {}
+  for p, part in ipairs(participants) do
+    housingCities[p] = { Housing = SDP_Land.ScanHousing(part.Scan), Target = part.Population }
+  end
+  local function HousingGroup(index)
+    local plot = Map.GetPlotByIndex(index)
+    local owner = plot:GetOwner() == playerID and Cities.GetPlotPurchaseCity(plot) or nil
+    local best, bestDistance = nil, math.huge
+    for p, part in ipairs(participants) do
+      if owner ~= nil then
+        if part.CityID == owner:GetID() then return p end
+      else
+        local d = Map.GetPlotDistance(part.X, part.Y, plot:GetX(), plot:GetY())
+        if d <= SDP_City.RADIUS and d < bestDistance then best, bestDistance = p, d end
+      end
+    end
+    return best
+  end
   self.Search = SDP_Search.New({
     PlayerID = playerID, Board = self.Board, Weights = self.Weights, Params = params,
     Candidates = candidates, Slots = slots, Lands = lands, Coverage = self.Coverage,
     Pools = pools, Costs = SDP_City.DistanceCosts(playerID, candidates, request.Distance, centers), Apart = apart,
     Exclusive = SDP_Rules.Exclusive(), Reach = reach, Owners = owners,
-    Appeal = { Fixed = fixed, Weights = request.Weights, Workable = workable },
+    Appeal = { Fixed = fixed, Weights = request.Weights, Workable = workable, Cities = housingCities,
+      FixedGroup = HousingGroup },
   })
   for _, s in ipairs(self.Search:Singles()) do
     if not slots[s].Optional then
@@ -926,10 +962,15 @@ function Session:PlanFor(layout)
     local p = self:OwnerOf(m, i)
     local spec = self.SlotSpecs[search.SlotIndex[m]]
     local a = appeal[m] or {}
+    -- A plot another of the player's cities owns is swapped from it (issue 54).
+    local plot = Map.GetPlotByIndex(c.Index)
+    local owningCity = plot:GetOwner() == self.PlayerID and Cities.GetPlotPurchaseCity(plot) or nil
+    local swap = owningCity ~= nil and self.Participants[p].CityID ~= nil and owningCity:GetID() ~= self.Participants[p].CityID
+      and owningCity:GetID() or nil
     out.Plan[n] = {
       City = self.Participants[p].Key, Type = search.Types[m], Kind = search.Kinds[m], X = c.X, Y = c.Y, Index = c.Index,
       Yields = item.Yields, ToolTip = item.ToolTip, Score = item.Score,
-      Unowned = c.Unowned, RemoveTech = c.RemoveTech,
+      Unowned = c.Unowned, RemoveTech = c.RemoveTech, Swap = swap, ClearFirst = c.ClearFirst,
       Appeal = a.Appeal, Housing = a.Housing, Tiles = a.Tiles, TilesCounted = a.TilesCounted,
       Reach = self.Coverage and self.Coverage:Reach(search.Types[m], c.X, c.Y) or nil,
       Picked = search.Optional[m], Auto = (not spec.Wonder) and self.Participants[p].Auto[search.Types[m]] or nil,

@@ -286,6 +286,21 @@ local function BuildGameInfo()
     { RequirementId = "REQUIRES_NO_MARKET", Name = "BuildingType", Value = "BUILDING_MARKET" },
     { RequirementId = "REQUIRES_NO_MARKET", Name = "MustBeFunctioning", Value = "0" },
   })
+  -- The yields of features and resources as the rules list them.
+  local function Changes(rows, key)
+    local out = {}
+    for _, row in ipairs(rows) do
+      for _, y in ipairs(YIELDS) do
+        if (row.Yields[y] or 0) ~= 0 then out[#out + 1] = { [key] = row[key], YieldType = y, YieldChange = row.Yields[y] } end
+      end
+    end
+    return Table(out)
+  end
+  local features, resources = {}, {}
+  for row in gi.Features() do features[#features + 1] = row end
+  for row in gi.Resources() do resources[#resources + 1] = row end
+  gi.Feature_YieldChanges = Changes(features, "FeatureType")
+  gi.Resource_YieldChanges = Changes(resources, "ResourceType")
   return gi
 end
 
@@ -359,6 +374,60 @@ function World.New(spec)
   local w = { Calls = { GetBonusYields = 0, CanPlacePin = 0, ClearCache = 0 }, Turn = spec.turn or 1, Time = 0 }
   local gi = BuildGameInfo()
   w.GameInfo = gi
+  -- Improvement rules (issue 52), on request: farms on grassland, plains and
+  -- floodplains (+1 food), mines on hills (+1 production, +1 more with
+  -- Masonry), lumber mills on woods (+2 production), pastures on horses
+  -- (+1 production), mines on copper. Without them no plot has a potential.
+  if spec.improvementRules then
+    gi.Improvements = Table({
+      -- RequiresRiver is a number in the game's database (0 or 1).
+      { ImprovementType = "IMPROVEMENT_FARM", Name = "LOC_IMPROVEMENT_FARM_NAME", Housing = 1, TilesRequired = 2,
+        Buildable = true, Domain = "DOMAIN_LAND", RequiresRiver = 0 },
+      { ImprovementType = "IMPROVEMENT_MINE", Name = "LOC_IMPROVEMENT_MINE_NAME", Appeal = -1, Buildable = true,
+        Domain = "DOMAIN_LAND" },
+      { ImprovementType = "IMPROVEMENT_LUMBER_MILL", Name = "LOC_IMPROVEMENT_LUMBER_MILL_NAME", Buildable = true,
+        Domain = "DOMAIN_LAND" },
+      { ImprovementType = "IMPROVEMENT_PASTURE", Name = "LOC_IMPROVEMENT_PASTURE_NAME", Buildable = true,
+        Domain = "DOMAIN_LAND" },
+    }, "ImprovementType")
+    gi.Improvement_YieldChanges = Table({
+      { ImprovementType = "IMPROVEMENT_FARM", YieldType = "YIELD_FOOD", YieldChange = 1 },
+      { ImprovementType = "IMPROVEMENT_MINE", YieldType = "YIELD_PRODUCTION", YieldChange = 1 },
+      { ImprovementType = "IMPROVEMENT_LUMBER_MILL", YieldType = "YIELD_PRODUCTION", YieldChange = 2 },
+      { ImprovementType = "IMPROVEMENT_PASTURE", YieldType = "YIELD_PRODUCTION", YieldChange = 1 },
+    })
+    gi.Improvement_BonusYieldChanges = Table({
+      { Id = 1, ImprovementType = "IMPROVEMENT_MINE", YieldType = "YIELD_PRODUCTION", BonusYieldChange = 1, PrereqTech = "TECH_MASONRY" },
+    })
+    gi.Improvement_ValidTerrains = Table({
+      { ImprovementType = "IMPROVEMENT_FARM", TerrainType = "TERRAIN_GRASS" },
+      { ImprovementType = "IMPROVEMENT_FARM", TerrainType = "TERRAIN_PLAINS" },
+      { ImprovementType = "IMPROVEMENT_MINE", TerrainType = "TERRAIN_GRASS_HILLS" },
+      { ImprovementType = "IMPROVEMENT_MINE", TerrainType = "TERRAIN_PLAINS_HILLS" },
+    })
+    gi.Improvement_ValidFeatures = Table({
+      { ImprovementType = "IMPROVEMENT_FARM", FeatureType = "FEATURE_FLOODPLAINS" },
+      { ImprovementType = "IMPROVEMENT_LUMBER_MILL", FeatureType = "FEATURE_FOREST" },
+    })
+    gi.Improvement_ValidResources = Table({
+      { ImprovementType = "IMPROVEMENT_FARM", ResourceType = "RESOURCE_WHEAT" },
+      { ImprovementType = "IMPROVEMENT_MINE", ResourceType = "RESOURCE_COPPER" },
+      { ImprovementType = "IMPROVEMENT_PASTURE", ResourceType = "RESOURCE_HORSES" },
+    })
+  end
+  -- A trait that replaces a table row with a bonus only DMT knows, as
+  -- Japan's: spec.traitNeighbour = { [DistrictType] = { YieldType, Change, YieldChangeId } }
+  -- gives Change per neighbouring district instead of the row YieldChangeId.
+  local traitRows = {}
+  for district, t in pairs(spec.traitNeighbour or {}) do
+    traitRows[#traitRows + 1] = { YieldChangeId = t[3], TraitType = "TRAIT_TEST_NEIGHBOUR", District = district }
+  end
+  if #traitRows > 0 then
+    table.sort(traitRows, function(a, b) return a.District < b.District end)
+    gi.ExcludedAdjacencies = Table(traitRows)
+    spec.traits = spec.traits or {}
+    spec.traits[#spec.traits + 1] = "TRAIT_TEST_NEIGHBOUR"
+  end
   local rows = spec.rows
   local height, width = #rows, #rows[1]
   w.Width, w.Height = width, height
@@ -487,21 +556,25 @@ function World.New(spec)
   end
   -- Housing from water as the game counts it: river, lake or oasis next to
   -- the center 5, coast 3, else 2.
+  -- GetHousing: the city's `housing` when the spec gives one, else that.
   function City:GetGrowth()
     local center = GetPlot(self.x, self.y)
-    return {
-      GetHousingFromWater = function()
-        if center.river then return 5 end
-        local coast = false
-        for dir = 0, 5 do
-          local n = Adjacent(self.x, self.y, dir)
-          if n ~= nil then
-            if n.lake or (n.feature ~= nil and n.feature.AddsFreshWater) then return 5 end
-            if n.terrain.Water then coast = true end
-          end
+    local function Water()
+      if center.river then return 5 end
+      local coast = false
+      for dir = 0, 5 do
+        local n = Adjacent(self.x, self.y, dir)
+        if n ~= nil then
+          if n.lake or (n.feature ~= nil and n.feature.AddsFreshWater) then return 5 end
+          if n.terrain.Water then coast = true end
         end
-        return coast and 3 or 2
-      end,
+      end
+      return coast and 3 or 2
+    end
+    local housing = self.housing
+    return {
+      GetHousingFromWater = function() return Water() end,
+      GetHousing = function() return housing or Water() end,
     }
   end
 
@@ -529,7 +602,7 @@ function World.New(spec)
     local owner = c.owner or 0
     local city = setmetatable({
       id = c.id, owner = owner, x = c.x, y = c.y, name = c.name or ("CITY_" .. c.id),
-      population = c.population or 1, capital = c.capital, districts = {}, buildings = {},
+      population = c.population or 1, capital = c.capital, districts = {}, buildings = {}, housing = c.housing,
     }, City)
     cities[owner .. ":" .. c.id] = city
     cityList[#cityList + 1] = city
@@ -744,8 +817,9 @@ function World.New(spec)
     for _, n in ipairs(Neighbours(subject.X, subject.Y)) do
       around[#around + 1] = GetRealizedPlotFeatures(pid, n, GetMapPinSubject(pid, n.x, n.y)) -- the global, as DMT
     end
+    local trait = (spec.traitNeighbour or {})[subject.Key]
     for link in gi.District_Adjacencies() do
-      if link.DistrictType == subject.Key then
+      if link.DistrictType == subject.Key and not (trait and link.YieldChangeId == trait[3]) then
         local row = gi.Adjacency_YieldChanges[link.YieldChangeId]
         local count = 0
         if row.AdjacentRiver then
@@ -767,6 +841,16 @@ function World.New(spec)
           yields[row.YieldType] = (yields[row.YieldType] or 0) + amount
           tips[#tips + 1] = row.ID .. " " .. amount
         end
+      end
+    end
+    if trait ~= nil then
+      local count = 0
+      for _, f in ipairs(around) do
+        if f.district ~= nil then count = count + 1 end
+      end
+      if count > 0 then
+        yields[trait[1]] = (yields[trait[1]] or 0) + count * trait[2]
+        tips[#tips + 1] = "TRAIT " .. count * trait[2]
       end
     end
     return yields, table.concat(tips, "[NEWLINE]")

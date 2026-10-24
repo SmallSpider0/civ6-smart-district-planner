@@ -138,7 +138,7 @@
  "Steps": [
   {
    "Label": "load steps",
-   "Seconds": 0.071,
+   "Seconds": 0.064,
    "Data": {
     "Step": "Loaded"
    }
@@ -275,7 +275,7 @@
   },
   {
    "Label": "preserves",
-   "Seconds": 0.034,
+   "Seconds": 0.031,
    "Data": {
     "Expected": 0,
     "List": [],
@@ -288,17 +288,17 @@
   },
   {
    "Label": "single 阿姆斯特丹 FAST pool",
-   "Seconds": 0.058,
+   "Seconds": 0.053,
    "Data": {
-    "Adjacency": 1,
-    "Appeal": 0,
+    "Adjacency": 2,
+    "Appeal": 0.00390625,
     "Asked": 2,
-    "Calls": 206,
+    "Calls": 211,
     "City": 65536,
     "EngineBad": 0,
     "Exhaustive": true,
-    "Gain": -8,
-    "Land": -9,
+    "Gain": -7.99609375,
+    "Land": -10,
     "Method": "pools",
     "Mismatch": false,
     "Mode": "POOL",
@@ -318,18 +318,18 @@
   },
   {
    "Label": "single 阿姆斯特丹 STANDARD pool",
-   "Seconds": 0.078,
+   "Seconds": 0.074,
    "Data": {
-    "Adjacency": 1,
-    "Appeal": 0,
+    "Adjacency": 2,
+    "Appeal": 0.00390625,
     "Asked": 2,
-    "Calls": 206,
+    "Calls": 211,
     "City": 65536,
     "Deterministic": true,
     "EngineBad": 0,
     "Exhaustive": true,
-    "Gain": -8,
-    "Land": -9,
+    "Gain": -7.99609375,
+    "Land": -10,
     "Method": "pools",
     "Mismatch": false,
     "Mode": "POOL",
@@ -349,17 +349,17 @@
   },
   {
    "Label": "single 阿姆斯特丹 must",
-   "Seconds": 0.055,
+   "Seconds": 0.051,
    "Data": {
-    "Adjacency": 1,
-    "Appeal": 0,
+    "Adjacency": 2,
+    "Appeal": 0.00390625,
     "Asked": 2,
-    "Calls": 206,
+    "Calls": 211,
     "City": 65536,
     "EngineBad": 0,
     "Exhaustive": true,
-    "Gain": -8,
-    "Land": -9,
+    "Gain": -7.99609375,
+    "Land": -10,
     "Method": "exhaustive",
     "Mismatch": false,
     "Mode": "MUST",
@@ -376,17 +376,17 @@
   },
   {
    "Label": "single 海牙 FAST pool",
-   "Seconds": 0.106,
+   "Seconds": 0.1,
    "Data": {
     "Adjacency": 6,
     "Appeal": 0,
     "Asked": 2,
-    "Calls": 466,
+    "Calls": 480,
     "City": 131073,
     "EngineBad": 0,
     "Exhaustive": true,
-    "Gain": 2,
-    "Land": -4,
+    "Gain": 0,
+    "Land": -6,
     "Method": "pools",
     "Mismatch": false,
     "Mode": "POOL",
@@ -406,18 +406,18 @@
   },
   {
    "Label": "single 海牙 STANDARD pool",
-   "Seconds": 0.215,
+   "Seconds": 0.231,
    "Data": {
     "Adjacency": 6,
     "Appeal": 0,
     "Asked": 2,
-    "Calls": 466,
+    "Calls": 480,
     "City": 131073,
     "Deterministic": true,
     "EngineBad": 0,
     "Exhaustive": true,
-    "Gain": 2,
-    "Land": -4,
+    "Gain": 0,
+    "Land": -6,
     "Method": "pools",
     "Mismatch": false,
     "Mode": "POOL",
@@ -437,17 +437,17 @@
   },
   {
    "Label": "single 海牙 must",
-   "Seconds": 0.118,
+   "Seconds": 0.106,
    "Data": {
     "Adjacency": 7,
     "Appeal": 0,
     "Asked": 4,
-    "Calls": 522,
+    "Calls": 536,
     "City": 131073,
     "EngineBad": 0,
     "Exhaustive": true,
-    "Gain": 1,
-    "Land": -6,
+    "Gain": -2,
+    "Land": -9,
     "Method": "exhaustive",
     "Mismatch": false,
     "Mode": "MUST",
@@ -464,17 +464,17 @@
   },
   {
    "Label": "single 鹿特丹 FAST pool",
-   "Seconds": 0.109,
+   "Seconds": 0.095,
    "Data": {
-    "Adjacency": 9,
+    "Adjacency": 7,
     "Appeal": 0,
     "Asked": 2,
-    "Calls": 553,
+    "Calls": 567,
     "City": 196610,
     "EngineBad": 0,
     "Exhaustive": true,
-    "Gain": 8,
-    "Land": -1,
+    "Gain": 1,
+    "Land": -6,
     "Method": "pools",
     "Mismatch": false,
     "Mode": "POOL",
@@ -488,24 +488,24 @@
     "Step": "Single",
     "Tier": "FAST",
     "Together": 0,
-    "Tries": 69,
+    "Tries": 68,
     "Unplaced": 0
    }
   },
   {
    "Label": "single 鹿特丹 STANDARD pool",
-   "Seconds": 0.198,
+   "Seconds": 0.173,
    "Data": {
-    "Adjacency": 9,
+    "Adjacency": 7,
     "Appeal": 0,
     "Asked": 2,
-    "Calls": 553,
+    "Calls": 567,
     "City": 196610,
     "Deterministic": true,
     "EngineBad": 0,
     "Exhaustive": true,
-    "Gain": 8,
-    "Land": -1,
+    "Gain": 1,
+    "Land": -6,
     "Method": "pools",
     "Mismatch": false,
     "Mode": "POOL",
@@ -519,23 +519,23 @@
     "Step": "Single",
     "Tier": "STANDARD",
     "Together": 0,
-    "Tries": 69,
+    "Tries": 68,
     "Unplaced": 0
    }
   },
   {
    "Label": "single 鹿特丹 must",
-   "Seconds": 0.126,
+   "Seconds": 0.104,
    "Data": {
-    "Adjacency": 9,
+    "Adjacency": 8,
     "Appeal": 0,
     "Asked": 5,
-    "Calls": 592,
+    "Calls": 606,
     "City": 196610,
     "EngineBad": 0,
     "Exhaustive": true,
-    "Gain": 2,
-    "Land": -7,
+    "Gain": -1,
+    "Land": -9,
     "Method": "exhaustive",
     "Mismatch": false,
     "Mode": "MUST",
@@ -552,18 +552,18 @@
   },
   {
    "Label": "single 胡伊利部�� FAST pool",
-   "Seconds": 0.233,
+   "Seconds": 0.228,
    "Data": {
-    "Adjacency": 12,
+    "Adjacency": 13,
     "Appeal": 0,
     "Asked": 3,
-    "Calls": 1359,
+    "Calls": 1532,
     "City": 458758,
     "EngineBad": 0,
     "Exhaustive": false,
-    "Gain": 0,
-    "Gap": 1,
-    "Land": -12,
+    "Gain": 2,
+    "Gap": 0.2,
+    "Land": -11,
     "Method": "pools",
     "Mismatch": false,
     "Mode": "POOL",
@@ -578,25 +578,25 @@
     "Step": "Single",
     "Tier": "FAST",
     "Together": 0,
-    "Tries": 296,
+    "Tries": 294,
     "Unplaced": 0
    }
   },
   {
    "Label": "single 胡伊利部�� STANDARD pool",
-   "Seconds": 0.747,
+   "Seconds": 0.736,
    "Data": {
-    "Adjacency": 12,
+    "Adjacency": 13,
     "Appeal": 0,
     "Asked": 3,
-    "Calls": 2387,
+    "Calls": 2463,
     "City": 458758,
     "Deterministic": true,
     "EngineBad": 0,
     "Exhaustive": false,
-    "Gain": 0,
-    "Gap": 1,
-    "Land": -12,
+    "Gain": 2,
+    "Gap": 0,
+    "Land": -11,
     "Method": "pools",
     "Mismatch": false,
     "Mode": "POOL",
@@ -611,23 +611,23 @@
     "Step": "Single",
     "Tier": "STANDARD",
     "Together": 0,
-    "Tries": 298,
+    "Tries": 294,
     "Unplaced": 0
    }
   },
   {
    "Label": "single 胡伊利部�� must",
-   "Seconds": 0.056,
+   "Seconds": 0.069,
    "Data": {
     "Adjacency": 10,
     "Appeal": 0,
     "Asked": 6,
-    "Calls": 629,
+    "Calls": 713,
     "City": 458758,
     "EngineBad": 0,
     "Exhaustive": false,
-    "Gain": -6,
-    "Land": -16,
+    "Gain": -7,
+    "Land": -17,
     "Method": "shortlist",
     "Mismatch": false,
     "Mode": "MUST",
@@ -638,23 +638,23 @@
     "Step": "Single",
     "Tier": "STANDARD",
     "Together": 0,
-    "Tries": 378,
+    "Tries": 327,
     "Unplaced": 1
    }
   },
   {
    "Label": "single 奈梅亨 FAST pool",
-   "Seconds": 0.029,
+   "Seconds": 0.039,
    "Data": {
-    "Adjacency": 7,
+    "Adjacency": 5,
     "Appeal": 0,
     "Asked": 2,
-    "Calls": 316,
+    "Calls": 335,
     "City": 262147,
     "EngineBad": 0,
     "Exhaustive": false,
-    "Gain": -1,
-    "Land": -8,
+    "Gain": -2,
+    "Land": -7,
     "Method": "pools",
     "Mismatch": false,
     "Mode": "POOL",
@@ -668,24 +668,24 @@
     "Step": "Single",
     "Tier": "FAST",
     "Together": 0,
-    "Tries": 58,
+    "Tries": 63,
     "Unplaced": 0
    }
   },
   {
    "Label": "single 奈梅亨 STANDARD pool",
-   "Seconds": 0.048,
+   "Seconds": 0.066,
    "Data": {
-    "Adjacency": 7,
+    "Adjacency": 5,
     "Appeal": 0,
     "Asked": 2,
-    "Calls": 316,
+    "Calls": 353,
     "City": 262147,
     "Deterministic": true,
     "EngineBad": 0,
     "Exhaustive": false,
-    "Gain": -1,
-    "Land": -8,
+    "Gain": -2,
+    "Land": -7,
     "Method": "pools",
     "Mismatch": false,
     "Mode": "POOL",
@@ -699,23 +699,23 @@
     "Step": "Single",
     "Tier": "STANDARD",
     "Together": 0,
-    "Tries": 58,
+    "Tries": 63,
     "Unplaced": 0
    }
   },
   {
    "Label": "single 奈梅亨 must",
-   "Seconds": 0.033,
+   "Seconds": 0.032,
    "Data": {
     "Adjacency": 10,
     "Appeal": 0,
     "Asked": 6,
-    "Calls": 366,
+    "Calls": 374,
     "City": 262147,
     "EngineBad": 0,
     "Exhaustive": true,
-    "Gain": -9,
-    "Land": -19,
+    "Gain": -14,
+    "Land": -24,
     "Method": "exhaustive",
     "Mismatch": false,
     "Mode": "MUST",
@@ -732,17 +732,17 @@
   },
   {
    "Label": "single �尔堡 FAST pool",
-   "Seconds": 0.059,
+   "Seconds": 0.048,
    "Data": {
     "Adjacency": 6,
     "Asked": 2,
-    "Calls": 533,
+    "Calls": 623,
     "City": 327684,
     "EngineBad": 0,
     "Exhaustive": false,
-    "Gain": 4,
+    "Gain": 6,
     "Gap": 0,
-    "Land": -2,
+    "Land": 0,
     "Method": "pools",
     "Mismatch": false,
     "Mode": "POOL",
@@ -756,24 +756,24 @@
     "Step": "Single",
     "Tier": "FAST",
     "Together": 0,
-    "Tries": 158,
+    "Tries": 166,
     "Unplaced": 0
    }
   },
   {
    "Label": "single �尔堡 STANDARD pool",
-   "Seconds": 0.09,
+   "Seconds": 0.089,
    "Data": {
     "Adjacency": 6,
     "Asked": 2,
-    "Calls": 533,
+    "Calls": 655,
     "City": 327684,
     "Deterministic": true,
     "EngineBad": 0,
     "Exhaustive": false,
-    "Gain": 4,
+    "Gain": 6,
     "Gap": 0,
-    "Land": -2,
+    "Land": 0,
     "Method": "pools",
     "Mismatch": false,
     "Mode": "POOL",
@@ -787,22 +787,22 @@
     "Step": "Single",
     "Tier": "STANDARD",
     "Together": 0,
-    "Tries": 158,
+    "Tries": 156,
     "Unplaced": 0
    }
   },
   {
    "Label": "single �尔堡 must",
-   "Seconds": 0.065,
+   "Seconds": 0.075,
    "Data": {
-    "Adjacency": 11,
+    "Adjacency": 10,
     "Asked": 6,
-    "Calls": 688,
+    "Calls": 656,
     "City": 327684,
     "EngineBad": 0,
     "Exhaustive": false,
-    "Gain": -12,
-    "Land": -23,
+    "Gain": -11,
+    "Land": -21,
     "Method": "shortlist",
     "Mismatch": false,
     "Mode": "MUST",
@@ -813,7 +813,7 @@
     "Step": "Single",
     "Tier": "STANDARD",
     "Together": 1,
-    "Tries": 434,
+    "Tries": 453,
     "Unplaced": 0
    }
   },
@@ -822,25 +822,25 @@
    "Seconds": 0.018,
    "Data": {
     "Adjacency": 0,
-    "Appeal": 4,
+    "Appeal": 0.0004577636719,
     "Asked": 2,
-    "Calls": 108,
+    "Calls": 113,
     "City": 65536,
     "EngineBad": 0,
     "Exhaustive": true,
-    "Gain": 1,
+    "Gain": -3.999542236,
     "Housing": [
      {
-      "Appeal": -1,
+      "Appeal": 1,
       "Housing": 4,
-      "Now": -1,
+      "Now": 1,
       "Type": "DISTRICT_NEIGHBORHOOD",
-      "X": 90,
-      "Y": 30
+      "X": 91,
+      "Y": 29
      }
     ],
-    "ImprovementHousing": 0,
-    "Land": -3,
+    "ImprovementHousing": -1,
+    "Land": -4,
     "Method": "exhaustive",
     "Mismatch": false,
     "Mode": "APPEAL",
@@ -849,10 +849,10 @@
     "Placed": 1,
     "Plan": [
      {
-      "Index": 2970,
+      "Index": 2875,
       "Type": "DISTRICT_NEIGHBORHOOD",
-      "X": 90,
-      "Y": 30
+      "X": 91,
+      "Y": 29
      }
     ],
     "Pool": 0,
@@ -865,17 +865,17 @@
   },
   {
    "Label": "single 阿姆斯特丹 harbor",
-   "Seconds": 0.022,
+   "Seconds": 0.02,
    "Data": {
     "Adjacency": 1,
     "Appeal": 0,
     "Asked": 2,
-    "Calls": 108,
+    "Calls": 113,
     "City": 65536,
     "EngineBad": 0,
     "Exhaustive": true,
-    "Gain": -2,
-    "Land": -3,
+    "Gain": -3,
+    "Land": -4,
     "Method": "pools",
     "Mismatch": false,
     "Mode": "HARBOR",
@@ -894,16 +894,16 @@
   },
   {
    "Label": "single 海牙 appeal",
-   "Seconds": 0.028,
+   "Seconds": 0.033,
    "Data": {
     "Adjacency": 0,
-    "Appeal": 4,
+    "Appeal": 0.003662109375,
     "Asked": 2,
-    "Calls": 92,
+    "Calls": 97,
     "City": 131073,
     "EngineBad": 0,
     "Exhaustive": true,
-    "Gain": 2,
+    "Gain": -2.996337891,
     "Housing": [
      {
       "Appeal": 1,
@@ -915,7 +915,7 @@
      }
     ],
     "ImprovementHousing": 0,
-    "Land": -2,
+    "Land": -3,
     "Method": "exhaustive",
     "Mismatch": false,
     "Mode": "APPEAL",
@@ -940,16 +940,16 @@
   },
   {
    "Label": "single 鹿特丹 appeal",
-   "Seconds": 0.034,
+   "Seconds": 0.033,
    "Data": {
     "Adjacency": 3,
-    "Appeal": 4,
+    "Appeal": 0.0146484375,
     "Asked": 2,
-    "Calls": 79,
+    "Calls": 83,
     "City": 196610,
     "EngineBad": 0,
     "Exhaustive": true,
-    "Gain": 7,
+    "Gain": 3.014648438,
     "Housing": [
      {
       "Appeal": 0,
@@ -986,17 +986,17 @@
   },
   {
    "Label": "single 阿姆斯特丹 fine",
-   "Seconds": 0.036,
+   "Seconds": 0.034,
    "Data": {
-    "Adjacency": 1,
-    "Appeal": 0,
+    "Adjacency": 2,
+    "Appeal": 0.00390625,
     "Asked": 2,
-    "Calls": 206,
+    "Calls": 211,
     "City": 65536,
     "EngineBad": 0,
     "Exhaustive": true,
-    "Gain": -8,
-    "Land": -9,
+    "Gain": -7.99609375,
+    "Land": -10,
     "Method": "pools",
     "Mismatch": false,
     "Mode": "POOL",
@@ -1016,9 +1016,9 @@
   },
   {
    "Label": "sites 3 within 8",
-   "Seconds": 0.475,
+   "Seconds": 0.478,
    "Data": {
-    "Calls": 3658,
+    "Calls": 3919,
     "D": 8,
     "Found": 3,
     "K": 3,
@@ -1030,7 +1030,7 @@
   },
   {
    "Label": "place sites",
-   "Seconds": 0.035,
+   "Seconds": 0.03,
    "Data": {
     "Placed": 3,
     "Step": "PlaceSites"
@@ -1038,17 +1038,17 @@
   },
   {
    "Label": "multi 4 cities standard",
-   "Seconds": 2.548,
+   "Seconds": 2.852,
    "Data": {
-    "Adjacency": 52,
+    "Adjacency": 53,
     "Appeal": 0,
-    "Calls": 4612,
+    "Calls": 4891,
     "Cities": 7,
     "Count": 3,
     "EngineBad": 0,
     "Exhaustive": false,
-    "Gain": 29,
-    "Land": -23,
+    "Gain": 26,
+    "Land": -27,
     "Method": "multi",
     "Mismatch": false,
     "Ok": true,
@@ -1056,13 +1056,13 @@
     "Step": "Multi",
     "Tier": "STANDARD",
     "Together": 0,
-    "Tries": 14524,
+    "Tries": 15811,
     "Unplaced": 2
    }
   },
   {
    "Label": "place multi",
-   "Seconds": 0.043,
+   "Seconds": 0.038,
    "Data": {
     "Placed": 17,
     "Step": "PlaceMulti"
@@ -1070,22 +1070,22 @@
   },
   {
    "Label": "settle after place multi",
-   "Seconds": 0.231,
+   "Seconds": 0.275,
    "Data": null
   },
   {
    "Label": "multi 8 cities standard",
-   "Seconds": 0.924,
+   "Seconds": 1.467,
    "Data": {
-    "Adjacency": 27,
+    "Adjacency": 26,
     "Appeal": 1,
-    "Calls": 2161,
+    "Calls": 2352,
     "Cities": 8,
     "Count": 3,
     "EngineBad": 0,
     "Exhaustive": false,
-    "Gain": 12,
-    "Land": -16,
+    "Gain": 7,
+    "Land": -20,
     "Method": "multi",
     "Mismatch": false,
     "Ok": true,
@@ -1093,23 +1093,23 @@
     "Step": "Multi",
     "Tier": "STANDARD",
     "Together": 0,
-    "Tries": 5319,
+    "Tries": 6469,
     "Unplaced": 3
    }
   },
   {
    "Label": "multi 4 cities fine",
-   "Seconds": 0.969,
+   "Seconds": 1.689,
    "Data": {
     "Adjacency": 18,
     "Appeal": 0,
-    "Calls": 1790,
+    "Calls": 1965,
     "Cities": 7,
     "Count": 3,
     "EngineBad": 0,
     "Exhaustive": false,
-    "Gain": 17,
-    "Land": -1,
+    "Gain": 13,
+    "Land": -5,
     "Method": "multi",
     "Mismatch": false,
     "Ok": true,
@@ -1117,13 +1117,13 @@
     "Step": "Multi",
     "Tier": "FINE",
     "Together": 0,
-    "Tries": 8728,
+    "Tries": 9925,
     "Unplaced": 3
    }
   },
   {
    "Label": "heavy pins",
-   "Seconds": 0.672,
+   "Seconds": 0.828,
    "Data": {
     "Placed": 103,
     "Step": "HeavyPins"
@@ -1131,12 +1131,12 @@
   },
   {
    "Label": "settle after heavy pins",
-   "Seconds": 18.948,
+   "Seconds": 23.116,
    "Data": null
   },
   {
    "Label": "single 阿姆斯特丹 pool, crowded",
-   "Seconds": 0.214,
+   "Seconds": 0.243,
    "Data": {
     "Adjacency": 0,
     "Asked": 2,
@@ -1161,17 +1161,17 @@
   },
   {
    "Label": "multi 4 cities, crowded",
-   "Seconds": 0.638,
+   "Seconds": 0.818,
    "Data": {
     "Adjacency": 18,
     "Appeal": 0,
-    "Calls": 1799,
+    "Calls": 2040,
     "Cities": 7,
     "Count": 3,
     "EngineBad": 0,
     "Exhaustive": false,
-    "Gain": 17,
-    "Land": -1,
+    "Gain": 13,
+    "Land": -5,
     "Method": "multi",
     "Mismatch": false,
     "Ok": true,
@@ -1179,13 +1179,13 @@
     "Step": "Multi",
     "Tier": "STANDARD",
     "Together": 0,
-    "Tries": 3819,
+    "Tries": 4363,
     "Unplaced": 1
    }
   },
   {
    "Label": "panel",
-   "Seconds": 0.053,
+   "Seconds": 0.061,
    "Data": {
     "Ok": true,
     "Step": "Panel"
@@ -1193,12 +1193,74 @@
   },
   {
    "Label": "undo",
-   "Seconds": 0.429,
+   "Seconds": 0.55,
    "Data": {
     "Removed": 123,
     "Step": "UndoAll"
    }
   }
  ],
- "When": "2026-10-23 12:51"
+ "When": "2026-10-24 11:22",
+ "AppealCheck": [
+  {
+   "City": 65536,
+   "Built": "DISTRICT_NEIGHBORHOOD=true",
+   "HousingPredicted": 4,
+   "HousingGame": 5.0,
+   "HousingDistricts": 5.0,
+   "HousingImprovements": 0.0,
+   "ImprovementsPredicted": -1,
+   "Districts": [
+    {
+     "Type": "DISTRICT_NEIGHBORHOOD",
+     "X": 91,
+     "Y": 29,
+     "AppealPredicted": 1,
+     "AppealGame": 2,
+     "Housing": 4
+    }
+   ],
+   "Ok": false
+  },
+  {
+   "City": 131073,
+   "Built": "DISTRICT_NEIGHBORHOOD=true",
+   "HousingPredicted": 4,
+   "HousingGame": 4.0,
+   "HousingDistricts": 4.0,
+   "HousingImprovements": 0.0,
+   "ImprovementsPredicted": 0,
+   "Districts": [
+    {
+     "Type": "DISTRICT_NEIGHBORHOOD",
+     "X": 86,
+     "Y": 28,
+     "AppealPredicted": 1,
+     "AppealGame": 1,
+     "Housing": 4
+    }
+   ],
+   "Ok": true
+  },
+  {
+   "City": 196610,
+   "Built": "DISTRICT_NEIGHBORHOOD=true",
+   "HousingPredicted": 4,
+   "HousingGame": 4.0,
+   "HousingDistricts": 4.0,
+   "HousingImprovements": 0.0,
+   "ImprovementsPredicted": 0,
+   "Districts": [
+    {
+     "Type": "DISTRICT_NEIGHBORHOOD",
+     "X": 82,
+     "Y": 24,
+     "AppealPredicted": 0,
+     "AppealGame": 0,
+     "Housing": 4
+    }
+   ],
+   "Ok": true
+  }
+ ]
 }

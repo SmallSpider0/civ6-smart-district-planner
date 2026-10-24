@@ -120,7 +120,13 @@
 
     <!-- 档位、地块产出、质量、后台计算 -->
     <Replace Tag="LOC_SDP_LAND" Language="zh_Hans_CN">
-      <Text>计入占用地块的产出损失（食物、地貌权重用于这一项）</Text>
+      <Text>计入占用地块的产出损失：地块按修上最好的改良后的产出算，砍伐、收获在建区域前完成（食物、地貌权重用于这一项）</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SWAP_SHORT" Language="zh_Hans_CN">
+      <Text>从本方其他城换格</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SWAP_TOOLTIP" Language="zh_Hans_CN">
+      <Text>让区域也能放在你其他城市的格上：游戏里在“市民管理”点“切换”，就能把这种格划给这座城（格上没有区域或奇观，也不紧挨那座城的市中心）。[NEWLINE][NEWLINE]好处：相邻加成更高，实测单城平均 +13%，多城 +20%。[NEWLINE]代价：约三成区域要你手动切换；原来那座城少了这一格；多城计算慢约一倍。</Text>
     </Replace>
     <Replace Tag="LOC_SDP_LAND_SHORT" Language="zh_Hans_CN">
       <Text>计入占地</Text>
@@ -129,7 +135,7 @@
       <Text>地貌</Text>
     </Replace>
     <Replace Tag="LOC_SDP_WEIGHT_FEATURE" Language="zh_Hans_CN">
-      <Text>砍伐树林、雨林、沼泽和收获加成资源的一次性产出</Text>
+      <Text>砍伐树林、雨林、沼泽和收获加成资源的一次性产出（随科技、市政进度增长）：留着地貌或资源的地块得不到它</Text>
     </Replace>
     <Replace Tag="LOC_SDP_TIER" Language="zh_Hans_CN">
       <Text>求解档位</Text>
@@ -337,6 +343,12 @@
     <Replace Tag="LOC_SDP_SITES_WATER_NONE" Language="zh_Hans_CN">
       <Text>无水源</Text>
     </Replace>
+    <Replace Tag="LOC_SDP_SITES_WEIGHT_HOUSING" Language="zh_Hans_CN">
+      <Text>住房：城址的住房（水源、粮仓；计划里有港口时加上灯塔、海港）比无水城址多出的部分折合多少分。到建齐计划区域所需人口为止，每点住房算 1，之后每多一点减半。</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_HOUSING" Language="zh_Hans_CN">
+      <Text>住房 {1_Housing}</Text>
+    </Replace>
     <Replace Tag="LOC_SDP_SITES_OWN_DISTANCE" Language="zh_Hans_CN">
       <Text>离我方最近的城市或已打的城址钉 {1_Distance} 格</Text>
     </Replace>
@@ -533,6 +545,12 @@
     <Replace Tag="LOC_SDP_RESULT_UNOWNED" Language="zh_Hans_CN">
       <Text>（需先扩张或购买）</Text>
     </Replace>
+    <Replace Tag="LOC_SDP_RESULT_SWAP" Language="zh_Hans_CN">
+      <Text>（需从{1_City}换格）</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_CLEAR_FIRST" Language="zh_Hans_CN">
+      <Text>（先砍伐或收获）</Text>
+    </Replace>
     <Replace Tag="LOC_SDP_RESULT_NEEDS_TECH" Language="zh_Hans_CN">
       <Text>（需先研究{1_Tech}）</Text>
     </Replace>
@@ -627,7 +645,7 @@
       <Text>{1_Building}不增加贸易路线</Text>
     </Replace>
     <Replace Tag="LOC_SDP_WEIGHT_HOUSING" Language="zh_Hans_CN">
-      <Text>住房：1 住房折合多少分。社区、保护区的住房取决于所在格的魅力。保护区设为必建时，它的古树林、避难所给周围未开发地块加的产出也按各产出的权重计（打开“计入占地”时只算城市会耕作的地块）；从候选里挑时只显示不计分。方案会改变魅力：圣地、剧院让相邻格 +1，工业区、军营 -1，砍掉树林让周围格 -1。</Text>
+      <Text>住房：1 住房折合多少分。每座城的住房到建齐计划区域所需人口为止每点算 1，之后每多一点减半。社区、保护区的住房取决于所在格的魅力。保护区设为必建时，它的古树林、避难所给周围未开发地块加的产出也按各产出的权重计（打开“计入占地”时只算城市会耕作的地块）；从候选里挑时只显示不计分。方案会改变魅力：圣地、剧院让相邻格 +1，工业区、军营 -1，砍掉树林让周围格 -1。</Text>
     </Replace>
     <Replace Tag="LOC_SDP_RESULT_HOUSING" Language="zh_Hans_CN">
       <Text>住房{1_Housing}（魅力 {2_Appeal}）</Text>

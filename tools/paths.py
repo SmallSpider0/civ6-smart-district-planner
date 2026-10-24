@@ -32,6 +32,10 @@ WORKSHOP_GAME = "289070"
 DMT = "2428969051"  # Detailed Map Tacks, the mod's dependency
 AMT = "3771382002"  # Auto Map Tacks Planner r49, compared against
 EP = "3793348626"   # Empire Planner, compared against
+DWP = "3780936549"  # District & Wonder Planner, compared against (downloaded, not subscribed)
+# Items downloaded with SteamCMD for reading only (not subscribed): kept out
+# of the Workshop folder, which the game scans (AGENTS.md pitfall 38).
+DOWNLOADS = os.environ.get("SDP_DOWNLOADS") or os.path.expanduser("~/.sdp-downloads")
 
 MAC_SUPPORT = os.path.expanduser("~/Library/Application Support")
 
@@ -98,6 +102,12 @@ def workshop_item(item):
     return _in_libraries("workshop", "content", WORKSHOP_GAME, item)
 
 
+def reference_item(item):
+    """A Workshop item to read: the subscribed copy, else one downloaded to DOWNLOADS/<item>."""
+    path = os.path.join(DOWNLOADS, item)
+    return workshop_item(item) or (path if os.path.isdir(path) else None)
+
+
 def game_docs():
     """The game's user folder: Mods, Saves."""
     if os.environ.get("SDP_GAME_DOCS"):
@@ -161,8 +171,9 @@ def main():
         ("Steam libraries", ", ".join(steam_libraries()) or None),
         ("game data (Base, DLC)", game_assets()),
         ("DMT", workshop_item(DMT)),
-        ("AMT", workshop_item(AMT)),
-        ("Empire Planner", workshop_item(EP)),
+        ("AMT", reference_item(AMT)),
+        ("Empire Planner", reference_item(EP)),
+        ("District & Wonder Planner", reference_item(DWP)),
         ("Mods", mods_dir()),
         ("Saves", saves_dir()),
         ("Logs", logs_dir()),

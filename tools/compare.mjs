@@ -8,7 +8,7 @@
 // database, exported by tests/compare/export_gameinfo.py.
 //
 // Planners: sdp (this mod, Scripts only), amt (Auto Map Tacks Planner r49),
-// ep (Empire Planner). Their sources are read from reference/ (links made by
+// ep (Empire Planner), dwp (District & Wonder Planner). Their sources are read from reference/ (links made by
 // tools/setup_reference.py); nothing of theirs is copied into the repository.
 //
 // Usage:
@@ -47,6 +47,7 @@ const SEARCH = {
   sdp: [join(ROOT, "SmartDistrictPlanner", "Scripts"), join(ROOT, "SmartDistrictPlanner", "UI"), ...COMMON],
   amt: [join(ROOT, "reference", "amt"), ...COMMON],
   ep: [EP_DIR, ...COMMON],
+  dwp: [join(ROOT, "reference", "dwp"), ...COMMON],
 };
 // Game UI files that only build controls; the stubs in game.lua stand in.
 const SKIP = new Set(["InstanceManager", "ToolTipHelper", "Colors", "PortraitSupport", "PopupDialog", "CitySupport"]);
@@ -216,6 +217,7 @@ function crossScore(row, scorers) {
 
 // One task: plan scenario `id` with `planner` (+ its variant), then judge it.
 function runTask(task) {
+  if (task.keep) return task.keep;
   if (task.rejudge) return rejudge(task.rejudge);
   if (task.cross) return crossScore(task.cross, task.scorers);
   const plan = runLua(task.planner, `
@@ -267,7 +269,7 @@ if (!isMainThread) {
 } else {
   const argv = process.argv.slice(2);
   let filter = null;
-  let planners = ["sdp", "amt", "ep"];
+  let planners = ["sdp", "amt", "ep", "dwp"];
   let jobs = Math.max(1, Math.min(8, (availableParallelism ? availableParallelism() : 4) - 2));
   let out = join(COMPARE, "results", "latest.jsonl");
   let verbose = false;
@@ -283,11 +285,13 @@ if (!isMainThread) {
   let crossFile = null;
   let scorers = ["amt", "ep"];
   let only = null; // planner:variant keys
+  let add = []; // planner:variant runs added to every selected scenario
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === "-s") filter = argv[++i];
     else if (a === "-p") planners = argv[++i].split(",");
     else if (a === "--only") only = argv[++i].split(",");
+    else if (a === "--add") add = argv[++i].split(",");
     else if (a === "-j") jobs = parseInt(argv[++i], 10);
     else if (a === "--out") out = resolve(argv[++i]);
     else if (a === "-v") verbose = true;
@@ -301,7 +305,7 @@ if (!isMainThread) {
     else if (a === "--crossscore") crossFile = resolve(argv[++i]);
     else if (a === "--scorers") scorers = argv[++i].split(",");
     else {
-      console.error("usage: compare.mjs [--list] [-s SUBSTRING] [-p sdp,amt,ep] [-j JOBS] [--out FILE] [--ruleset RULESET_...] [-v]");
+      console.error("usage: compare.mjs [--list] [-s SUBSTRING] [-p sdp,amt,ep] [--only P:V,...] [--add P:V,...] [-j JOBS] [--out FILE] [--ruleset RULESET_...] [-v]");
       process.exit(2);
     }
   }
@@ -338,14 +342,17 @@ if (!isMainThread) {
     for (const line of readFileSync(rejudgeFile || crossFile, "utf8").split("\n")) {
       if (!line.trim()) continue;
       const row = JSON.parse(line);
-      if (!row.plan || (filter && !matches(row.scenario, filter))) continue;
+      if (filter && !matches(row.scenario, filter)) continue;
       if (only && !only.includes(row.planner + ":" + (row.variant || ""))) continue;
-      if (rejudgeFile) tasks.push({ scenario: row.scenario, planner: row.planner, variant: row.variant, rejudge: row });
+      // A run that gave no plan has nothing to score but still counts (as 0 %): keep it.
+      if (!row.plan) tasks.push({ scenario: row.scenario, planner: row.planner, variant: row.variant, keep: row });
+      else if (rejudgeFile) tasks.push({ scenario: row.scenario, planner: row.planner, variant: row.variant, rejudge: row });
       else tasks.push({ scenario: row.scenario, planner: row.planner, variant: row.variant, cross: row, scorers });
     }
   }
   for (const s of rejudgeFile || crossFile ? [] : scenarios) {
-    for (const run of s.runs) {
+    const runs = s.runs.concat(add.map((k) => ({ planner: k.split(":")[0], variant: k.split(":").slice(1).join(":") })));
+    for (const run of runs) {
       const key = run.planner + ":" + (run.variant || "");
       if (planners.includes(run.planner) && (!only || only.includes(key)))
         tasks.push({ scenario: s.id, planner: run.planner, variant: run.variant, verbose });

@@ -84,6 +84,7 @@ python3 -I tests/compare/export_gameinfo.py        # 一次：从游戏缓存导
 node tools/compare.mjs --list                       # 场景列表
 node tools/compare.mjs -s S04-japan -p sdp,amt,ep -j 4 -v   # 某些场景、某些规划器（-s 是编号的子串）
 node tools/compare.mjs -s '^C\d' -p sdp,ep -j 3            # 以 ^ 开头时按正则匹配（子串 "C" 也会匹配 "~SCI"）
+node tools/compare.mjs -s '^S0[1-4]-' -p sdp --only sdp:ORACLE --add sdp:ORACLE -j 8   # 真最优（#48）：--add 给选中的场景加一个运行；ORACLE_CHECK 另做枚举对照和爬山检查，"@n" 设节点上限 n 百万
 node tools/compare.mjs -j 8 --out tests/compare/results/full.jsonl   # 全部（约 1–2 小时）
 node tools/compare.mjs --only sdp:STANDARD_LAND -j 4 --out tests/compare/results/land.jsonl   # 只跑某个规划器的某个设置
 node tools/compare.mjs --rejudge tests/compare/results/full.jsonl -j 4 --out NEW.jsonl   # 方案不变，用当前裁判重新打分（几分钟）
@@ -169,7 +170,7 @@ python3 -I report/build.py --version v1.0.0 --site _site   # 另输出 GitHub Pa
 ```
 
 - 页面结构：第 1–6 节写给玩家（能做什么、安装与使用、和其他规划器比、速度、已知限制、反馈与更新），附录 A 技术说明、附录 B 评估方法与完整数据默认折叠；页内链接指向附录时会自动展开。
-- 英文页（Issue #5）：`build(lang="en")` 套 `report/template_en.html`，只有第 1–6 节，附录链接到中文页。由脚本生成的句子、表格和图表文字在 `build.py`、`charts.js` 里中英各一份，数字来自同一份数据。两页顶部互相链接。改了中文页的前 6 节，英文页要同步改。
+- 英文页（Issue #5）：`build(lang="en")` 套 `report/template_en.html`，内容与中文页相同，附录也是英文；附录 A 的结构图、算法和六边形示意图用 `part_arch_en.html`、`part_algo_en.html`、`hexfig_en.svg.txt`。由脚本生成的句子、表格和图表文字（`charts.js` 从 `CHART_WORDS` 取）都在 `build.py` 里中英各一份，数字来自同一份数据。两页顶部互相链接。改了一页就同步改另一页。
 - 读 `tests/compare/results/` 里的对比结果（文件列表见 `RESULTS`），套进 `report/template.html`（附录 A 的结构图和算法来自 `part_arch.html`、`part_algo.html`，图表脚本 `charts.js`，地图案例 `hexmap.py`）。
 - 版本默认是提交号，日期是提交日期；`--version` 以 `v` 开头时，下载按钮指向这个版本的 Release，否则指向最新的 Release。
 - `index.html`、`en/index.html` 不带文档外壳，截图写成 `images/<文件名>`；`report.html`、`report_en.html` 是单文件版，截图内嵌，可直接用浏览器打开，`package.py` 打进压缩包（`REPORT.html`、`REPORT_EN.html`）；`--site DIR` 写出带外壳的 `DIR/index.html`、`DIR/en/index.html` 和用到的截图。

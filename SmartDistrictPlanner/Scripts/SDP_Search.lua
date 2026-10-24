@@ -241,12 +241,14 @@ function Search:Singles()
   self.Types, self.Kinds, self.Groups, self.Single, self.Legal, self.Subjects, self.SlotIndex =
     types, kinds, groups, single, legal, subjects, index
   self.K = #types
+  self:MeasurePairs()
   if self.AppealSpec ~= nil then
     local optional = {}
     for m = 1, self.K do optional[m] = self.SlotSpecs[index[m]].Optional == true end
     self.AppealModel = SDP_Appeal.New({ PlayerID = self.PlayerID, Types = types, Kinds = kinds, Candidates = self.Candidates,
       Fixed = self.AppealSpec.Fixed, Weights = self.AppealSpec.Weights, Lands = self.Lands,
-      Workable = self.AppealSpec.Workable, Optional = optional })
+      Workable = self.AppealSpec.Workable, Optional = optional, Groups = groups, Cities = self.AppealSpec.Cities,
+      FixedGroup = self.AppealSpec.FixedGroup })
   end
   -- Pools: each group's optional and required slots and how many optional
   -- ones to place.
@@ -694,6 +696,69 @@ function Search:Exhaustive(order, base)
   return not stopped, bestLayout, bestGain
 end
 
+-- What two districts next to each other add beyond their values alone,
+-- measured with DMT for each pair of district types (Measured[ta][tb]): the
+-- smallest over a few neighbouring candidate pairs, so a rounding step at
+-- one spot does not count everywhere. Plots with a feature are measured only
+-- when there are no others: clearing it can cost the neighbour a bonus,
+-- which belongs to the spot, not to the pair. Catches what the adjacency
+-- table does not hold, such as a civilization's trait (Japan: +1 per
+-- neighbouring district instead of +1 per two) that DMT applies as a
+-- modifier (issue 36). The board must be empty; run once, after the singles.
+SDP_Search.PAIR_SAMPLES = 3
+SDP_Search.FIXED_CREDIT = true
+function Search:MeasurePairs()
+  local board, k = self.Board, self.K
+  local adjacent = self:Touching()
+  local measured, slotOf, bare = {}, {}, {}
+  for i = 1, self.N do
+    local plot = Map.GetPlotByIndex(self.Candidates[i].Index)
+    bare[i] = plot ~= nil and plot:GetFeatureType() == -1
+  end
+  for m = 1, k do
+    if self.Kinds[m] == "DISTRICT" and slotOf[self.Types[m]] == nil then slotOf[self.Types[m]] = m end
+  end
+  local types = {}
+  for t in pairs(slotOf) do types[#types + 1] = t end
+  table.sort(types)
+  for x, ta in ipairs(types) do
+    measured[ta] = measured[ta] or {}
+    for y = x, #types do
+      local tb = types[y]
+      measured[tb] = measured[tb] or {}
+      local a, b = slotOf[ta], slotOf[tb]
+      local best, samples = nil, 0
+      for pass = 1, 2 do
+        for i = 1, self.N do
+          if samples >= SDP_Search.PAIR_SAMPLES then break end
+          if self.Legal[a][i] and (pass == 2 or bare[i]) then
+            for _, j in ipairs(adjacent[i]) do
+              if samples >= SDP_Search.PAIR_SAMPLES then break end
+              if self.Legal[b][j] and (pass == 2) ~= (bare[i] and bare[j]) then
+                local ci, cj = self.Candidates[i], self.Candidates[j]
+                board:Put(1, { Key = ta, Type = "DISTRICT", X = ci.X, Y = ci.Y })
+                board:Put(2, { Key = tb, Type = "DISTRICT", X = cj.X, Y = cj.Y })
+                local both, legal = board:Total()
+                board:Put(1, nil)
+                board:Put(2, nil)
+                if legal then
+                  local value = both - self.Single[a][i] - self.Single[b][j]
+                  if best == nil or value < best then best = value end
+                  samples = samples + 1
+                end
+              end
+            end
+          end
+        end
+        if samples > 0 then break end
+      end
+      board:Total()
+      measured[ta][tb], measured[tb][ta] = best, best
+    end
+  end
+  self.Measured = measured
+end
+
 -- Model scores (see the header): ModelSingle[m][i] and Pair[a][b].
 -- The model is "unrounded": a row worth YieldChange per TilesRequired
 -- districts counts YieldChange / TilesRequired per neighbour, and for the
@@ -739,6 +804,42 @@ function Search:Model()
       end
     end
   end
+  -- A fixed district with a row that needs TilesRequired neighbours (+1 for
+  -- every two districts, ...) reaches its next step with two new neighbours,
+  -- which no single value shows. Each new neighbour that counts for such a
+  -- row gets the share up to that step, (r + 1) / TilesRequired of the row
+  -- (r: what the fixed district has towards it now), unless one alone
+  -- completes it; the model stays an upper bound (issue 36).
+  local function DistrictAt(q)
+    local f = board.fixedAt[q]
+    if f ~= nil then return f.Subject.Type == "DISTRICT" and f.Subject.Key or nil end
+    local plot = Map.GetPlotByIndex(q)
+    local d = plot and plot:GetDistrictType() or -1
+    local row = d ~= -1 and GameInfo.Districts[d] or nil
+    return row and row.DistrictType ~= "DISTRICT_WONDER" and row.DistrictType or nil
+  end
+  local credit = {}
+  for i = 1, n do
+    local list = {}
+    for _, q in ipairs(board:Neighbours(candidates[i].Index)) do
+      local f = q and board.fixedAt[q]
+      local key = f and f.Subject.Type == "DISTRICT" and f.Subject.Key or nil
+      for _, row in ipairs(key and (adjacency[key] or {}).Rows or {}) do
+        if row.TilesRequired > 1 and (row.Any or row.District) then
+          local count = 0
+          for _, nq in ipairs(board:Neighbours(q)) do
+            local other = nq and DistrictAt(nq)
+            if other ~= nil and (row.Any or Serves(other, row.District)) then count = count + 1 end
+          end
+          local r = count % row.TilesRequired
+          if r + 1 < row.TilesRequired then
+            list[#list + 1] = { Row = row, Value = (weights[row.YieldType] or 0) * row.YieldChange * (r + 1) / row.TilesRequired }
+          end
+        end
+      end
+    end
+    credit[i] = list
+  end
   local single = {}
   for m = 1, k do
     single[m] = {}
@@ -761,6 +862,11 @@ function Search:Model()
           value = value + (weights[row.YieldType] or 0) * row.YieldChange * (count % row.TilesRequired) / row.TilesRequired
         end
       end
+      if self.Kinds[m] == "DISTRICT" and SDP_Search.FIXED_CREDIT then
+        for _, c in ipairs(credit[i]) do
+          if c.Row.Any or Serves(self.Types[m], c.Row.District) then value = value + c.Value end
+        end
+      end
       single[m][i] = value
     end
   end
@@ -771,6 +877,8 @@ function Search:Model()
     for b = 1, k do
       pair[a][b] = SDP_Overlay.Score(SDP_Rules.NeighbourGain(adjacency, self.Types[a], self.Types[b]), weights)
         + SDP_Overlay.Score(SDP_Rules.NeighbourGain(adjacency, self.Types[b], self.Types[a]), weights)
+      local m = self.Measured and self.Measured[self.Types[a]] and self.Measured[self.Types[a]][self.Types[b]]
+      if m ~= nil and m > pair[a][b] then pair[a][b] = m end
       -- A neighbour that raises appeal can lift a housing district one step
       -- (optimistic: the model stays a bound).
       if appeal ~= nil and a ~= b then
