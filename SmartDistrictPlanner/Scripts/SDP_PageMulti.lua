@@ -620,6 +620,19 @@ function P.Render()
       inst.Root:RegisterCallback(Mouse.eLClick, function() P.SelectSolution(n) end)
       m_view.Solutions[n] = { Gain = s.Gain, Selected = n == m_solution }
     end
+    -- What the plan leaves out comes first (issue 60).
+    for _, u in ipairs(solution.Unplaced) do
+      local city = byKey[u.City]
+      local where = city and P.CityLabel(city) or Locale.Lookup("LOC_SDP_MULTI_WONDERS")
+      if u.Reason == "POOL_SHORT" then
+        AddRow("ICON_DISTRICT_CITY_CENTER", Locale.Lookup("LOC_SDP_RESULT_POOL_SHORT", where),
+          Locale.Lookup("LOC_SDP_REASON_POOL_SHORT", u.Count or 1), "")
+      else
+        local key = u.Auto and "LOC_SDP_RESULT_UNPLACED_AUTO" or "LOC_SDP_RESULT_UNPLACED"
+        AddRow("ICON_" .. u.Type, Locale.Lookup(key, SDP_UI.TypeName(u.Type)) .. "  " .. where,
+          Locale.Lookup("LOC_SDP_REASON_" .. u.Reason, u.Other and SDP_UI.TypeName(u.Other) or ""), SDP_UI.UnplacedTip(u))
+      end
+    end
     -- The selected solution, city by city.
     for _, city in ipairs(solution.Cities) do
       AddRow("ICON_DISTRICT_CITY_CENTER", P.CityLabel(city) .. "  " .. SDP_UI.Where(city.X, city.Y),
@@ -642,18 +655,6 @@ function P.Render()
     end
     for _, city in ipairs(solution.Cities) do SDP_UI.TogetherRows(city.Together, P.CityLabel(city), AddRow) end
     SDP_UI.ImprovementHousingRow(solution.ImprovementHousing, AddRow)
-    for _, u in ipairs(solution.Unplaced) do
-      local city = byKey[u.City]
-      local where = city and P.CityLabel(city) or Locale.Lookup("LOC_SDP_MULTI_WONDERS")
-      if u.Reason == "POOL_SHORT" then
-        AddRow("ICON_DISTRICT_CITY_CENTER", Locale.Lookup("LOC_SDP_RESULT_POOL_SHORT", where),
-          Locale.Lookup("LOC_SDP_REASON_POOL_SHORT", u.Count or 1), "")
-      else
-        local key = u.Auto and "LOC_SDP_RESULT_UNPLACED_AUTO" or "LOC_SDP_RESULT_UNPLACED"
-        AddRow("ICON_" .. u.Type, Locale.Lookup(key, SDP_UI.TypeName(u.Type)) .. "  " .. where,
-          Locale.Lookup("LOC_SDP_REASON_" .. u.Reason, u.Other and SDP_UI.TypeName(u.Other) or ""), "")
-      end
-    end
     if not Controls.MultiPage:IsHidden() then P.Preview(m_solution) end
   end
   Controls.MultiSolutionStack:CalculateSize()
