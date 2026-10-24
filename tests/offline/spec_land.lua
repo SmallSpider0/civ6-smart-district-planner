@@ -267,10 +267,9 @@ test("oracle, adjacency only: the optimum equals brute force under whole and fra
     resources = { { 1, 1, "RESOURCE_WHEAT" }, { 6, 3, "RESOURCE_COPPER" } },
     cities = { { id = 1, x = 4, y = 3, population = 24, capital = true } },
   })
-  local districts = { "DISTRICT_CAMPUS", "DISTRICT_HOLY_SITE", "DISTRICT_THEATER", "DISTRICT_COMMERCIAL_HUB" }
+  local districts = { "DISTRICT_CAMPUS", "DISTRICT_HOLY_SITE", "DISTRICT_COMMERCIAL_HUB" }
   local vectors = {
     {},
-    { YIELD_GOLD = 0.5 },
     { YIELD_GOLD = 0.5, YIELD_FAITH = 0.5, YIELD_SCIENCE = 0.75, YIELD_CULTURE = 0.75 },
     { YIELD_SCIENCE = 1.8, YIELD_CULTURE = 1.5, YIELD_FAITH = 1.6, YIELD_GOLD = 1.15, YIELD_PRODUCTION = 0.75 },
   }

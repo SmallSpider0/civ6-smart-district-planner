@@ -88,7 +88,7 @@ def slim_rows(src, dst):
                    "score": {"gain": score.get("gain"), "legal": score.get("legal")}}
             if r.get("judgeError"):
                 row["judgeError"] = r["judgeError"]
-            out.write(json.dumps(row, sort_keys=True) + "\n")
+            out.write(json.dumps(row, sort_keys=True, separators=(",", ":")) + "\n")
             n += 1
     print("%d rows -> %s" % (n, dst))
 
@@ -158,7 +158,9 @@ def main(argv):
             problems.append("%s [%s]: oracle value %s != judge gain %s" % (scene, name, o["value"], s["gain"]))
         if not s.get("legal", True):
             problems.append("%s [%s]: plan not legal" % (scene, name))
-        if o.get("proven") is not True:
+        # Rows marked oracleBound came from the bound before the fix of
+        # 5ba714d: the best layout found, not a proven optimum.
+        if o.get("proven") is not True or r.get("oracleBound"):
             unproven.append("%s [%s]" % (scene, name))
 
     scenes = sorted({s for s, _ in runs})
@@ -291,8 +293,8 @@ def main(argv):
                 pct(statistics.mean(dm.values())) if dm else "-", ("%s (%s)" % (pct(dm[dwb]), dwb)) if dm else "-"))
 
     print("# Robustness of the yield weights (issue 53)")
-    print("\nOptima: %d rows, %d scenes, vectors %s; not proven: %d%s" % (
-        len(runs), len(scenes), ", ".join(names), len(unproven), (" (" + "; ".join(unproven[:10]) + ")") if unproven else ""))
+    print("\nOptima: %d rows, %d scenes, vectors %s; not proven (or found with the old bound): %d%s" % (
+        len(runs), len(scenes), ", ".join(names), len(unproven), (" (" + "; ".join(unproven[:5]) + " ...)") if unproven else ""))
     if check_path:
         print("Rejudged under B and compared with the computed value: %d of %d (scene, A, B), largest difference %g" % (checked, pairs, worst))
     if problems:
