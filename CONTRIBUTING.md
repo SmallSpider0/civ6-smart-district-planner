@@ -63,7 +63,12 @@
 
 `main` 上攒的改动不会直接到玩家手里，玩家只拿到打了 tag 的版本。步骤见发版清单（新建 Issue 时选“发版清单”模板），大致是：
 
-1. 定版本号：修问题改第三位（v1.0.1），加功能改第二位（v1.1.0），大的不兼容改动改第一位。modinfo 的 `version` 每次发版加 1；`SmartDistrictPlanner/UI/SDP_Panel.lua` 的 `VERSION` 改成新版本号，启动栏按钮的悬停提示显示它，`validate.py` 检查它和 CHANGELOG 最新的版本一致。
+1. 定版本号，按玩家照原来的用法得到的方案会不会变来分：
+   - 第三位（v1.0.1）：修问题，以及不改变现有方案和默认值的小改动（文字、提示、显示方式、默认关闭且只动一处界面的选项）；
+   - 第二位（v1.1.0）：求解或计分变了（同样的设置给出不同方案）、默认值变了，或加了一类新能力；
+   - 第一位：大的不兼容改动。
+
+   一版攒几项改动再发，挂在同一个里程碑上，不为单项发版；只有线上版本的严重问题单独发（见下文“其他情况”）。modinfo 的 `version` 每次发版加 1；`SmartDistrictPlanner/UI/SDP_Panel.lua` 的 `VERSION` 改成新版本号，启动栏按钮的悬停提示显示它，`validate.py` 检查它和 CHANGELOG 最新的版本一致。
 2. 发版前测试：三种规则集的游戏内测试、macOS 真实点击、后期存档压力测试（不用在 Windows 上手动测）；改了求解器还要跑离线对比。
 3. 准备文字：CHANGELOG 的“未发布”改成 `vX.Y.Z（日期）`；写 `workshop/changenotes/vX.Y.Z.txt`（英文在前、中文在后）；功能或限制变了，同步 README、`workshop/` 的中英简介（`description.bbcode`、`description_zh.bbcode`）和介绍与评测页。这些和这一轮的修复在同一个 PR 里。
 4. 在 GitHub 发布 Release `vX.Y.Z`，发布说明写给玩家，英文在前、中文在后。`.github/workflows/release.yml` 会：
