@@ -115,13 +115,15 @@ end
 
 -- Sum of Housing / TilesRequired over the improved plots a city owns (its
 -- housing from improvements is this rounded down). Cities own plots up to 5
--- rings out.
+-- rings out. A pillaged improvement gives none (measured 2026-10-25: two
+-- cities with one pillaged plot each read 3 and 2, the sums without it).
 function SDP_Appeal.CityShare(rules, city)
   local total = 0
   for dx = -5, 5 do
     for dy = -5, 5 do
       local plot = Map.GetPlotXYWithRangeCheck(city:GetX(), city:GetY(), dx, dy, 5)
-      if plot ~= nil and plot:GetImprovementType() ~= -1 and rules.Share[plot:GetImprovementType()] ~= nil then
+      if plot ~= nil and plot:GetImprovementType() ~= -1 and rules.Share[plot:GetImprovementType()] ~= nil
+          and not plot:IsImprovementPillaged() then
         local owner = Cities.GetPlotPurchaseCity(plot)
         if owner ~= nil and owner:GetID() == city:GetID() and plot:GetOwner() == city:GetOwner() then
           total = total + rules.Share[plot:GetImprovementType()]
@@ -482,7 +484,7 @@ function SDP_Appeal.ImprovementHousing(playerID, indices)
   for _, index in ipairs(indices) do
     local plot = Map.GetPlotByIndex(index)
     local improvement = plot:GetImprovementType()
-    local share = improvement ~= -1 and rules.Share[improvement] or nil
+    local share = improvement ~= -1 and not plot:IsImprovementPillaged() and rules.Share[improvement] or nil
     local city = share ~= nil and plot:GetOwner() == playerID and Cities.GetPlotPurchaseCity(plot) or nil
     if city ~= nil then
       local id = city:GetID()

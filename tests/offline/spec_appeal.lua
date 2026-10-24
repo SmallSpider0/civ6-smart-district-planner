@@ -398,6 +398,15 @@ test("several cities: housing counts per city, the gain parts add up", function(
     + (result.AppealDelta or 0))) < 1e-9, "parts add up")
 end)
 
+test("a pillaged farm gives no housing, so taking it costs none (issue 58)", function()
+  -- Four farms, one pillaged: the game counts 1.5 (three), rounded down to 1.
+  NewWorld({ appeal = {}, improvements = { { 6, 3, "IMPROVEMENT_FARM" }, { 5, 4, "IMPROVEMENT_FARM" },
+    { 6, 4, "IMPROVEMENT_FARM" }, { 7, 4, "IMPROVEMENT_FARM" } }, pillaged = { "7,4" } })
+  local function At(x, y) return Map.GetPlotIndex(x, y) end
+  T.eq(SDP_Appeal.ImprovementHousing(0, { At(7, 4) }), 0, "the pillaged farm: nothing lost")
+  T.eq(SDP_Appeal.ImprovementHousing(0, { At(6, 3), At(5, 4) }), -1, "two working farms: 1.5 -> 0.5, 1 -> 0")
+end)
+
 test("districts over farms: the city loses housing by its rounded-down total, reported with the plan", function()
   -- Three farms: 1.5 housing, rounded down to 1 (measured in the game).
   NewWorld({ appeal = {}, improvements = { { 6, 3, "IMPROVEMENT_FARM" }, { 5, 4, "IMPROVEMENT_FARM" },
