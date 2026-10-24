@@ -217,6 +217,7 @@ function crossScore(row, scorers) {
 
 // One task: plan scenario `id` with `planner` (+ its variant), then judge it.
 function runTask(task) {
+  if (task.keep) return task.keep;
   if (task.rejudge) return rejudge(task.rejudge);
   if (task.cross) return crossScore(task.cross, task.scorers);
   const plan = runLua(task.planner, `
@@ -341,9 +342,11 @@ if (!isMainThread) {
     for (const line of readFileSync(rejudgeFile || crossFile, "utf8").split("\n")) {
       if (!line.trim()) continue;
       const row = JSON.parse(line);
-      if (!row.plan || (filter && !matches(row.scenario, filter))) continue;
+      if (filter && !matches(row.scenario, filter)) continue;
       if (only && !only.includes(row.planner + ":" + (row.variant || ""))) continue;
-      if (rejudgeFile) tasks.push({ scenario: row.scenario, planner: row.planner, variant: row.variant, rejudge: row });
+      // A run that gave no plan has nothing to score but still counts (as 0 %): keep it.
+      if (!row.plan) tasks.push({ scenario: row.scenario, planner: row.planner, variant: row.variant, keep: row });
+      else if (rejudgeFile) tasks.push({ scenario: row.scenario, planner: row.planner, variant: row.variant, rejudge: row });
       else tasks.push({ scenario: row.scenario, planner: row.planner, variant: row.variant, cross: row, scorers });
     }
   }
