@@ -95,6 +95,8 @@ node tools/compare.mjs --dump S01-rome-temperate-mid       # 场景地图的文�
 node tools/compare.mjs --snapshot S01-rome-temperate-mid   # 场景地图数据（报告画图用）
 node tools/compare.mjs --probe FILE.lua                    # 在本 mod 的状态里跑一段 Lua（临时探针：先 include("cmp_lib")，CmpRun.Setup(场景) 建好世界）
 node tools/compare.mjs --refscore -s ^REF --weights tests/compare/refscenes/weights.jsonl -j 3 --out tests/compare/results/refscore.jsonl   # 参照布局与最优解，见 refscene.py 一节
+node tools/compare.mjs -s '^S0[1-4]-' -p sdp --only sdp:ORACLE_LAND_CHECK --add sdp:ORACLE_LAND_CHECK -j 8   # 计入地块时的真最优（#48），带枚举对照和爬山检查
+node tools/compare.mjs --probe tests/compare/probe_land.lua   # 裁判的地块值调成本模组的口径时，与 SDP_Land.PlotValues 逐格相同（默认开发集；--arg 换场景的 Lua 模式）
 ```
 
 - 不开游戏，在 fengari 里比较本 mod、Auto Map Tacks Planner r49（AMT）和 Empire Planner（EP）的区域规划。**规则是真的**：`GameInfo` 来自游戏写在缓存里的规则数据库 `Cache/DebugGameplay.sqlite`（最后一次加载的对局的规则集，目前是风云变幻；导出文件是 Firaxis 的数据，只放在被忽略的 `.cache/`）。**代码是真的**：DMT、AMT、EP 的 Lua 原样从 `reference/` 和本机创意工坊目录加载，不改一行。**引擎是模拟的**：`tests/compare/cmp_game.lua` 实现地图、城市、地图钉、玩家配置、可见性、河流与泛滥平原、修正系统（`GameEffects`，DMT 从它读文明特性的相邻规则）和 UI 替身。
@@ -111,9 +113,13 @@ node tools/compare.mjs --refscore -s ^REF --weights tests/compare/refscenes/weig
   - 对手各跑两种设置：权重与裁判一致（与场景权重相同）和它们面板的默认设置。
 - 模拟层缺的接口会记在输出的 `missingApi` 里；HavokScript 的类型标注在加载时去掉。AMT 的多城联合很慢（离线一局 3–40 分钟），全量对比建议在机器空闲时跑。每个工作线程的 JS 堆上限默认 1536 MB，AMT 的 4 城联合偶尔会超出（线程被终止，那次运行和同线程排队的一次都没有结果，日志里是 `ERR_WORKER_OUT_OF_MEMORY`）；用环境变量 `CMP_HEAP_MB=6144` 单独补跑缺的运行。
 - 交叉评分（第 18.1 节第 2 条）：`--crossscore` 对结果文件里每个方案，在新的 Lua 状态里调用 `tests/compare/cmp_cross_<打分方>.lua` 的 `CmpCross[打分方](request, plan, w)`，返回该对手自己的目标函数对这个方案的分数（`score`、空方案的 `baseline`、`gain`），写进 `row.cross`；`summarize.py` 以 `cross_amt`、`cross_ep` 字段汇总。
-- `summarize.py` 按场景集分组列表，并给出本模组标准档对每个对手的逐场景配对比较：胜/平/负、平均差及其 95% 自助法置信区间（2000 次确定性重抽样）、符号检验 p 值；城市总产出用本模组的"计入地块"一组比较。覆盖场景另列覆盖与相邻加成两项的帕累托比较（`pareto`：两项都不差且至少一项更好 / 更差 / 相同 / 各有胜负）和各设置的平均值。
+- `summarize.py` 按场景集分组列表，并给出本模组标准档对每个对手的逐场景配对比较：胜/平/负、平均差及其 95% 自助法置信区间（2000 次确定性重抽样）、符号检验 p 值；城市总产出和潜力产出 `outputP` 用本模组的"计入地块"一组比较。另列 `STANDARD_LAND` 对 `STANDARD` 在 `outputP`（及 T + 3、加权两个版本）上的配对比较，和"相邻加成让出与否 × `outputP` 升降"的 2×2 表，逐个列出让出了相邻加成、`outputP` 也降了的场景。有 `sdp:ORACLE_LAND` 时，按 λ 报证明了几个、耗时、枚举对照和爬山检查的异常，以及同样 λ 的各档占地块真最优的比例（真最优 ≤ 0 时只报差距）。`sdp:ORACLE*` 的运行都不进各规划器的表。覆盖场景另列覆盖与相邻加成两项的帕累托比较（`pareto`：两项都不差且至少一项更好 / 更差 / 相同 / 各有胜负）和各设置的平均值。
 - 结果 JSON lines：方案、裁判分（`gain`、`violations`、`items`、城市总产出 `output = gain + worked`、漏放 `missing` 与其中有位置却没放的 `missingPlaceable`）、耗时、DMT 调用次数。`summarize.py` 以每个场景所有合法方案里的最高加成为参照，算质量、达到最高的比例、合法率、漏放、城市总产出、确定性（"#2" 重复运行与原运行比方案）。
-- 入库的结果（2026-10-20）：开发集 `full_rejudged.jsonl`（588 次运行）与 `land.jsonl`（本 mod 计入地块的 84 次）、留出集 `heldout.jsonl`、三组权重 `profiles_{SCI,PROD,FAITH}.jsonl`、奇观 `wonders_sdp_ep.jsonl` + `wonders_amt.jsonl`（本 mod 加入补放后重跑的是 `wonders_sdp_repair.jsonl`；v1.2.0 加了奇观同城规则后三个规划器重跑、用新裁判重评的是 `wonders_v120.jsonl`）、选城址 `sites.jsonl`，以及交叉评分 `*_cross.jsonl`；覆盖范围 `coverage_sdp.jsonl`、`coverage_amt.jsonl`；参照布局 `refscore.jsonl`（`--refscore`，`summarize.py` 不读）。汇总时把后者放在后面，同名运行以后面的为准。
+- 潜力产出（#48）：`output` 按地块现在的产出、城市现在的人口算；裁判另报 `outputP = gain + workedP`：每城耕作最好的 T 格，地块按修上改良后的产出算（`cmp_lib.lua` 的 `CmpLand`，从 `GameInfo` 自己推导，不调用本模组的 `SDP_Land`）。每格取地貌保留或清除、资源收获或不收获里每回合产出最高的一种，加上时代视野内最好的改良：玩家已有的科技、市政，加上到玩家所在时代的下一个时代为止的全部（场景都是全科技，等于全部）。改良包括文明特色改良和需要河流、相邻资源或地形的改良（按格子判断），不算 `OnePerCity` 的改良、改良相邻加成和按魅力给的产出。T = max(人口, 3 × 已建和请求的特色区域数 − 2)，是场景的属性，与方案放了几个区域无关，每城的 T 记在 `potentialTargets`。各产出都按 1；另报 `outputPT3`（T + 3）和 `outputPWeighted`（按场景权重）。一次性产出（砍伐、收获）不计入，方案压掉的格上的一次性产出之和记为 `oneTime`。
+- `probe_land.lua` 把同一段代码调成本模组的口径（现有科技、通用改良、已修改良的格照原样、一次性产出按本模组的增长折合后扣除），核对每个可耕作格都与 `SDP_Land.PlotValues` 相同。
+- 地块系数 λ（#53）：本模组的变体加后缀 `_LAND<nnn>`（如 `STANDARD_LAND050`、`FINE_LAND025`、`ORACLE_LAND075`），地块部分乘以 nnn/100；`_LAND` 即 1。只在离线对比里注入：`cmp_sdp.lua` 把 `SDP_Land.PlotValues` 给出的每格值、一次性值，以及保护区给周边格的产出乘以 λ，模组本身不变。住房部分不乘。计入地块的运行在 `stats.sdpLambda` 记 λ，`stats.sdpObjective` 记本模组自己的目标值（相邻 + λ × 地块 + 住房）。
+- 计入地块时的真最优 `sdp:ORACLE_LAND`（以及 `_LAND<nnn>`、`_CHECK`、`@n`）：对本模组的整个目标（`search:Evaluate`）做分支定界，初始现任解是同样 λ 的精细档方案；界的推导见 `cmp_oracle.lua` 的文件头和 multicity-design.md 第 28 节。`stats.oracle.objective` 为 `{ land = true, lambda }`，`adjacency` 是最优布局的相邻加成，`unproven` 列出不能证明的原因（方案里的保护区、负的地块值）。
+- 入库的结果（2026-10-20）：开发集 `full_rejudged.jsonl`（588 次运行）与 `land.jsonl`（本 mod 计入地块的 84 次）、留出集 `heldout.jsonl`、三组权重 `profiles_{SCI,PROD,FAITH}.jsonl`、奇观 `wonders_sdp_ep.jsonl` + `wonders_amt.jsonl`（本 mod 加入补放后重跑的是 `wonders_sdp_repair.jsonl`；v1.2.0 加了奇观同城规则后三个规划器重跑、用新裁判重评的是 `wonders_v120.jsonl`）、选城址 `sites.jsonl`，以及交叉评分 `*_cross.jsonl`；覆盖范围 `coverage_sdp.jsonl`、`coverage_amt.jsonl`；参照布局 `refscore.jsonl`（`--refscore`，`summarize.py` 不读）。计入地块的真最优试算 `land_oracle_trial.jsonl`（开发集 11 个单城场景，multicity-design.md 28.4）。汇总时把后者放在后面，同名运行以后面的为准。
 
 ## snapshot.py — 从真实对局导出对比场景
 
@@ -180,7 +186,7 @@ wonder 2,2 BUILDING_COLOSSEUM city=1     # 已建的奇观
   - 场景请求的区域就是参照布局里每座城的区域；一座城是单城场景，几座城是多城场景（每城一张清单）。
 - `check` 写回的文字用规范写法（如 `M` 写成 `gm`），`build` 和 `validate.py` 都检查写回的文字再读一遍得到同样的场景。`--svg` 的图里橙色是参照布局、灰色是已建区域、白色是市中心，蓝线是河，虚线边框的格是猜的。
 - `compare.mjs --refscore`：每个参照场景、每组权重，裁判给参照布局打分，再求同样权重下的最优解并打分，写一行 JSON：`reference`、`optimum`（裁判的完整打分和方案），`summary` 里是比较的目标值、差距 `gap`、参照布局占最优的比例、参照布局是不是最优、最优是否已证明。只算相邻时最优解用 `sdp:ORACLE`（证明过的真最优，目标是裁判的加权相邻加成 `gain`）；权重组带 `land=1` 时用 `sdp:FINE_LAND`（精细档，计入占地），比较裁判的 `outputWeighted`（加权相邻加成加上按同样权重计的耕作产出变化，粮食也计）。注意本模组的占地按修上改良后的产出算，裁判的耕作产出按地块原样算，两者不同，所以这一项的“最优”不是证明过的。`--reference-only` 只给参照布局打分（`verify` 用它）。
-- 权重组：`--weights` 给 JSON lines 文件（每行 `{"name": "…", "science": 1, "culture": 1, "faith": 0.5, "gold": 0.5, "production": 1, "food": 1, "land": 0}`，没写的产出为 1；`"oracle": n` 把真最优的节点上限设为 n 百万），或直接写 `"all1:;half:gold=0.5,faith=0.5;land:land=1"`。不给时只算全 1。`CMP_WEIGHTS` 同时传给规划器和裁判，替换场景自己的权重。现在还不能单独设地块系数 λ（本模组的占地与相邻共用同一组权重）。
+- 权重组：`--weights` 给 JSON lines 文件（每行 `{"name": "…", "science": 1, "culture": 1, "faith": 0.5, "gold": 0.5, "production": 1, "food": 1, "land": 0}`，没写的产出为 1；`"oracle": n` 把真最优的节点上限设为 n 百万），或直接写 `"all1:;half:gold=0.5,faith=0.5;land:land=1"`。不给时只算全 1。`CMP_WEIGHTS` 同时传给规划器和裁判，替换场景自己的权重。地块系数 λ 用变体后缀 `_LAND<nnn>` 设（见上），`--refscore` 还没有接上。
 
 ## deploy.py — 部署
 
