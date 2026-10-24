@@ -25,18 +25,64 @@
 --
 -- A run that hits the node limit reports the best layout found (lower) and
 -- the largest bound of what it did not search (upper).
+--
+-- With options.Land (variant sdp:ORACLE_LAND, issue 48) the value is the
+-- search's whole objective (search:Evaluate: DMT gain + the land part of
+-- every land model + the housing of districts that depend on appeal), and
+-- the bound changes:
+--   Land: a city works its best P plots of its model. With the plots S
+--     taken, let c(S) be the (P+1)-th best free plot's value (0 when there
+--     is none); taking one more plot x costs exactly
+--       Delta(x | S) = max(0, t_x - c(S))
+--     and c(S) only falls as S grows, so Delta only rises: the loss is
+--     supermodular. Each placement on the search path takes off its Delta
+--     under the plots placed before it, which adds up to the exact land
+--     part of the leaf (no slack); a slot not yet placed takes off its
+--     Delta under the plots placed so far, a lower bound of what it will
+--     cost. Pairs of districts only lose land together, so the pair bounds
+--     stay as they are. Needs every plot value >= 0.
+--   Housing (SDP_Appeal): a constant at the root, the housing every fixed
+--     neighbourhood would have with the best appeal any placement around it
+--     could give, above what it has now; and for a housing slot on a plot,
+--     its housing at the best appeal there. HousingValue rises with slope
+--     at most 1, so housing points added up are an upper bound.
+--   A preserve placed by the plan raises the land value of the plots
+--     around it (its grove and sanctuary), which breaks the monotonicity:
+--     such runs are not proven (Unproven lists why).
+--   Values are no longer whole numbers: bounds are not rounded down.
 
 CmpOracle = CmpOracle or {}
 
 CmpOracle.NODE_LIMIT = CmpOracle.NODE_LIMIT or 5e7
 local EPS = 1e-6
 
--- The judge's value of `layout` (DMT adjacency gain) and whether the search
--- allows it (DMT, reach, a wonder's own city).
-local function Value(search, layout)
-  local _, legal = search:Evaluate(layout)
+-- The value of `layout` and whether the search allows it (DMT, reach, a
+-- wonder's own city), and its DMT adjacency gain. The value is that gain
+-- (the judge's), or with `land` the search's whole objective.
+local function Value(search, layout, land)
+  local objective, legal = search:Evaluate(layout)
   local gain = search.Board:Total()
-  return gain, legal
+  if land then return objective, legal, gain end
+  return gain, legal, gain
+end
+
+-- What taking one more plot costs a land model (issue 48): with the plots
+-- marked in `taken` ({ [plot index] = true }) taken, the (P+1)-th best free
+-- plot's value (0 when there is none) ...
+function CmpOracle.Cut(model, taken)
+  local count = 0
+  for _, p in ipairs(model.Plots) do
+    if not taken[p.Index] then
+      count = count + 1
+      if count == model.P + 1 then return p.Tile end
+    end
+  end
+  return 0
+end
+
+-- ... and a plot of value `tile` then costs max(0, tile - cut).
+function CmpOracle.Delta(tile, cut)
+  return tile > cut and tile - cut or 0
 end
 
 -- The exact pair interaction of every two district types on every two
@@ -105,10 +151,68 @@ local function PairBounds(search)
   return bound, maxPair, typeOf, measured
 end
 
+-- The housing part's bound (see the header): the constant at the root and,
+-- per slot and plot, the housing at the best appeal there (weighted).
+-- Unproven gets a reason when a placed preserve counts.
+local function HousingBounds(search, unproven)
+  local appeal = search.AppealModel
+  local extra = {}
+  for m = 1, search.K do extra[m] = {} end
+  if appeal == nil then return 0, extra end
+  local rules, candidates, n = appeal.Rules, search.Candidates, search.N
+  for m = 1, search.K do
+    if appeal.Value[m] and rules.Tiles[search.Types[m]] ~= nil and not appeal.Optional[m] then
+      unproven[#unproven + 1] = "preserve tiles: " .. search.Types[m]
+      break
+    end
+  end
+  -- The largest appeal a placement on each candidate adds to its neighbours.
+  local position, lift = {}, {}
+  for i = 1, n do
+    position[candidates[i].Index] = i
+    local best = 0
+    for m = 1, search.K do
+      if search.Legal[m][i] then best = math.max(best, appeal.Own[m] - appeal.Cleared[i]) end
+    end
+    lift[i] = best
+  end
+  local function Best(index, ownCleared)
+    local plot = Map.GetPlotByIndex(index)
+    if plot:IsWater() then return appeal.BaseAppeal(index) end
+    local value = appeal.BaseAppeal(index) - ownCleared
+    for dir = 0, 5 do
+      local q = Map.GetAdjacentPlot(plot:GetX(), plot:GetY(), dir)
+      local i = q and position[q:GetIndex()] or nil
+      if i ~= nil then value = value + lift[i] end
+    end
+    return value
+  end
+  local weight = appeal.HousingWeight
+  local constant = 0
+  for _, f in ipairs(appeal.FixedValue) do
+    local now = SDP_Appeal.Housing(rules, f.Type, appeal.BaseAppeal(f.Index)) or 0
+    local best = SDP_Appeal.Housing(rules, f.Type, Best(f.Index, 0)) or 0
+    if best > now then constant = constant + weight * (best - now) end
+  end
+  for m = 1, search.K do
+    if appeal.Value[m] and rules.Housing[search.Types[m]] ~= nil then
+      for i = 1, n do
+        if search.Legal[m][i] then
+          extra[m][i] = weight * (SDP_Appeal.Housing(rules, search.Types[m], Best(candidates[i].Index, appeal.OwnCleared[i])) or 0)
+        end
+      end
+    end
+  end
+  return constant, extra
+end
+
 -- Run on `search` (inside the overlay). `incumbentLayout`: a layout to start
--- from (the tier's plan), valued again here. Returns
--- { Layout, Value, Upper, Proven, Complete, Nodes, Leaves, Violations, MaxExcess, Pairs }.
-function CmpOracle.Run(search, incumbentLayout)
+-- from (the tier's plan), valued again here. `options.Land`: the search's
+-- whole objective (see the header). Returns { Layout, Value, Adjacency,
+-- Upper, Proven, Complete, Nodes, Leaves, Violations, MaxExcess, Pairs,
+-- Unproven (reasons the bound may not hold) }.
+function CmpOracle.Run(search, incumbentLayout, options)
+  local land = options ~= nil and options.Land == true
   local k, n = search.K, search.N
   for m = 1, k do
     if search.Kinds[m] ~= "DISTRICT" then error("oracle: only district slots") end
@@ -117,14 +221,74 @@ function CmpOracle.Run(search, incumbentLayout)
   local single = search.ModelSingle
   local bound, maxPair, typeOf, measured = PairBounds(search)
   local adjacent = search:Touching()
+  local unproven = {}
 
-  -- Single bound: the model's single, never below the exact single.
+  -- Land models (with land): per candidate, the models that hold its plot
+  -- and its value there; the cut of each model (CmpOracle.Cut).
+  local lands = land and search.Lands or {}
+  local holds, rootLoss = {}, {}
+  for i = 1, n do
+    local index = search.Candidates[i].Index
+    local list, loss = {}, 0
+    for l, model in ipairs(lands) do
+      local p = model.ByIndex[index]
+      if p ~= nil then
+        list[#list + 1] = { L = l, Tile = p.Tile }
+        loss = loss + (model.Loss[index] or 0)
+      end
+    end
+    holds[i], rootLoss[i] = list, loss
+  end
+  local negative = false
+  for _, model in ipairs(lands) do
+    for _, p in ipairs(model.Plots) do
+      if p.Tile < 0 then negative = true end
+    end
+  end
+  if negative then unproven[#unproven + 1] = "negative plot value" end
+  local takenAt, cut = {}, {}
+  for l, model in ipairs(lands) do cut[l] = CmpOracle.Cut(model, takenAt) end
+  local function Delta(i)
+    local d = 0
+    for _, h in ipairs(holds[i]) do d = d + CmpOracle.Delta(h.Tile, cut[h.L]) end
+    return d
+  end
+  local housingConstant, housingExtra = 0, nil
+  if land then housingConstant, housingExtra = HousingBounds(search, unproven) end
+  -- The appeal part of a slot alone on a plot, as the model added it.
+  local appealSingle = nil
+  if land and search.AppealModel ~= nil then
+    appealSingle = {}
+    local layout = search:EmptyLayout()
+    for m = 1, k do
+      appealSingle[m] = {}
+      if search.AppealModel.Value[m] then
+        for i = 1, n do
+          if search.Legal[m][i] then
+            layout[m] = i
+            appealSingle[m][i] = search:AppealDelta(layout)
+            layout[m] = 0
+          end
+        end
+      end
+    end
+  end
+
+  -- Single bound: the model's single, never below the exact single. With
+  -- land: the model's single without its land loss and appeal part (the
+  -- adjacency alone), plus the housing bound; the land is taken off on the
+  -- way (Delta).
   local sb, plots, bestSB = {}, {}, {}
   for m = 1, k do
     sb[m], plots[m] = {}, {}
     for i = 1, n do
       if search.Legal[m][i] then
-        sb[m][i] = math.max(single[m][i], search.Single[m][i])
+        if land then
+          local adjacencyOnly = single[m][i] + rootLoss[i] - ((appealSingle and appealSingle[m][i]) or 0)
+          sb[m][i] = math.max(adjacencyOnly, search.Single[m][i]) + (housingExtra[m][i] or 0)
+        else
+          sb[m][i] = math.max(single[m][i], search.Single[m][i])
+        end
         plots[m][#plots[m] + 1] = i
       end
     end
@@ -166,8 +330,8 @@ function CmpOracle.Run(search, incumbentLayout)
     end
   end
   -- With integer weights every value is an integer, so a bound can be
-  -- rounded down before it is compared.
-  local integral = true
+  -- rounded down before it is compared (not with land: plot values are not).
+  local integral = not land
   for _, w in pairs(search.Weights) do
     if w ~= math.floor(w) then integral = false end
   end
@@ -180,7 +344,7 @@ function CmpOracle.Run(search, incumbentLayout)
   for m = 1, k do layout[m] = 0 end
   local best, bestValue = nil, -math.huge
   if incumbentLayout ~= nil then
-    local value, legal = Value(search, incumbentLayout)
+    local value, legal = Value(search, incumbentLayout, land)
     if legal then
       best, bestValue = {}, value
       for m = 1, k do best[m] = incumbentLayout[m] end
@@ -204,7 +368,7 @@ function CmpOracle.Run(search, incumbentLayout)
       local best = nil
       for _, i in ipairs(plots[m]) do
         if slotAt[i] == nil then
-          local v, free = sb[m][i], 0
+          local v, free = sb[m][i] - Delta(i), 0
           for _, j in ipairs(adjacent[i]) do
             local p = slotAt[j]
             if p ~= nil then
@@ -244,7 +408,7 @@ function CmpOracle.Run(search, incumbentLayout)
     end
     if d > depth then
       if cur <= bestValue + EPS then return end
-      local value, legal = Value(search, layout)
+      local value, legal = Value(search, layout, land)
       stats.Leaves = stats.Leaves + 1
       if value > cur + EPS then
         stats.Violations = stats.Violations + 1
@@ -263,7 +427,7 @@ function CmpOracle.Run(search, incumbentLayout)
     local children = {}
     for _, i in ipairs(plots[m]) do
       if slotAt[i] == nil then
-        local v = sb[m][i]
+        local v = sb[m][i] - Delta(i)
         for _, j in ipairs(adjacent[i]) do
           local p = slotAt[j]
           if p ~= nil then v = v + bound[t][typeOf[p]][i][j] end
@@ -283,7 +447,21 @@ function CmpOracle.Run(search, incumbentLayout)
         break
       end
       layout[m], slotAt[child.I] = child.I, m
+      -- The plot is taken: the cuts of the models that hold it may fall.
+      local list, saved = holds[child.I], nil
+      if #list > 0 then
+        saved = {}
+        takenAt[search.Candidates[child.I].Index] = true
+        for x, h in ipairs(list) do
+          saved[x] = cut[h.L]
+          if h.Tile >= cut[h.L] then cut[h.L] = CmpOracle.Cut(lands[h.L], takenAt) end
+        end
+      end
       Walk(d + 1, cur + child.V)
+      if saved ~= nil then
+        takenAt[search.Candidates[child.I].Index] = nil
+        for x, h in ipairs(list) do cut[h.L] = saved[x] end
+      end
       layout[m], slotAt[child.I] = 0, nil
       if stopped then
         local nextChild = children[c + 1]
@@ -334,7 +512,7 @@ function CmpOracle.Run(search, incumbentLayout)
   for x, active in ipairs(combos) do
     SetActive(active)
     local root = Rest(1)
-    if root ~= nil then ranked[#ranked + 1] = { Active = active, Root = Cap(root), Seq = x } end
+    if root ~= nil then ranked[#ranked + 1] = { Active = active, Root = Cap(root + housingConstant), Seq = x } end
   end
   table.sort(ranked, function(a, b)
     if a.Root ~= b.Root then return a.Root > b.Root end
@@ -346,22 +524,29 @@ function CmpOracle.Run(search, incumbentLayout)
       openMax = math.max(openMax, c.Root)
     else
       SetActive(c.Active)
-      Walk(1, 0)
+      Walk(1, housingConstant)
     end
   end
   stats.Combos = #ranked
   local upper = stopped and math.max(bestValue, openMax) or bestValue
+  local adjacency = nil
+  if best ~= nil then
+    local _, _, gain = Value(search, best, land)
+    adjacency = gain
+  end
   return {
-    Layout = best, Value = bestValue, Upper = upper, Complete = not stopped,
-    Proven = (not stopped) and stats.Violations == 0,
+    Layout = best, Value = bestValue, Adjacency = adjacency, Upper = upper, Complete = not stopped,
+    Proven = (not stopped) and stats.Violations == 0 and #unproven == 0,
     Nodes = stats.Nodes, Leaves = stats.Leaves, Violations = stats.Violations, MaxExcess = stats.MaxExcess,
-    Pairs = measured, Start = startValue, Combos = stats.Combos,
+    Pairs = measured, Start = startValue, Combos = stats.Combos, Unproven = #unproven > 0 and unproven or nil,
   }
 end
 
 -- Every layout, for checking Run on small cases: the best legal value, or
 -- nil when there are more than `limit` layouts (or pools: not covered).
-function CmpOracle.BruteForce(search, limit)
+-- `options.Land`: the whole objective, as Run.
+function CmpOracle.BruteForce(search, limit, options)
+  local land = options ~= nil and options.Land == true
   local k, n = search.K, search.N
   if #(search.PoolGroups or {}) > 0 then return nil end
   local order = {}
@@ -373,7 +558,7 @@ function CmpOracle.BruteForce(search, limit)
   local function Walk(m)
     if m > k then
       count = count + 1
-      local value, legal = Value(search, layout)
+      local value, legal = Value(search, layout, land)
       if legal and (best == nil or value > best) then best = value end
       return
     end
@@ -394,8 +579,10 @@ end
 -- moves one slot to the free legal plot that the exact DMT value likes
 -- best). The best value found must not be above the optimum. A fixed
 -- pseudo-random sequence from `seed` keeps it reproducible. Returns the
--- best value (or nil) and the number of evaluations.
-function CmpOracle.Climb(search, active, starts, seed)
+-- best value (or nil) and the number of evaluations. `options.Land`: the
+-- whole objective, as Run.
+function CmpOracle.Climb(search, active, starts, seed, options)
+  local land = options ~= nil and options.Land == true
   local k = search.K
   local x = (seed % 2147483646) + 1.0
   local function Random(count)
@@ -432,7 +619,7 @@ function CmpOracle.Climb(search, active, starts, seed)
     end
     local value, legal = 0, false
     if ok then
-      value, legal = Value(search, layout)
+      value, legal = Value(search, layout, land)
       evaluations = evaluations + 1
     end
     if legal then
@@ -444,7 +631,7 @@ function CmpOracle.Climb(search, active, starts, seed)
           for _, i in ipairs(legalPlots[m]) do
             if not used[i] then
               layout[m] = i
-              local v, l = Value(search, layout)
+              local v, l = Value(search, layout, land)
               evaluations = evaluations + 1
               if l and v > bestValue + EPS then bestPlot, bestValue = i, v end
             end

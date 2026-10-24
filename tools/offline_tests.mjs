@@ -4,8 +4,9 @@
 // Lua runs in fengari (a Lua 5.3 VM written in JavaScript). Each file gets a
 // fresh state with:
 //   - HavokScript shims: unpack, loadstring;
-//   - include(name): loads SmartDistrictPlanner/Scripts|UI/<name>.lua or
-//     tests/offline/<name>.lua once per state; the game's own files
+//   - include(name): loads SmartDistrictPlanner/Scripts|UI/<name>.lua,
+//     tests/offline/<name>.lua or tests/compare/<name>.lua (the comparison
+//     framework's exact solver, cmp_oracle) once per state; the game's own files
 //     (MapTacks, dmt_yieldcalculator, InstanceManager) are no-ops because
 //     tests/offline/world.lua supplies what the scripts need from them;
 //   - World: tests/offline/world.lua, a small fake game (hex map, cities,
@@ -37,6 +38,7 @@ const SEARCH = [
   join(ROOT, "SmartDistrictPlanner", "Scripts"),
   join(ROOT, "SmartDistrictPlanner", "UI"),
   OFFLINE,
+  join(ROOT, "tests", "compare"),
 ];
 // Game files the scripts include; World provides their globals.
 const GAME_FILES = new Set(["MapTacks", "dmt_yieldcalculator", "dmt_mappinsubjectmanager", "InstanceManager"]);

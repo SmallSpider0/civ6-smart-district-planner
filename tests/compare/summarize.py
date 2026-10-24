@@ -157,6 +157,16 @@ def key(r):
 ORACLE_KEYS = ("sdp:ORACLE", "sdp:ORACLE_CHECK")
 
 
+def is_oracle(k):
+    """Any exact-solver run: the adjacency optimum (ORACLE_KEYS) or the
+    optimum of the mod's whole objective with land on (sdp:ORACLE_LAND...)."""
+    return k.startswith("sdp:ORACLE")
+
+
+def stats_of(r):
+    return ((r or {}).get("plan") or {}).get("stats") or {}
+
+
 def load(paths):
     rows = []
     for p in paths:
@@ -228,8 +238,24 @@ def summarize(rows):
             if s and not r.get("error") and s.get("outputP") is not None:
                 if not [v for v in s["violations"] if v["kind"] in HARD]:
                     best_out_p = s["outputP"] if best_out_p is None else max(best_out_p, s["outputP"])
+        # The optimum of the mod's whole objective with land on (issue 48),
+        # one per land coefficient: { lambda: { value, upper, proven, ... } }.
+        land_optimum = {}
+        for k in sorted(runs):
+            if not k.startswith("sdp:ORACLE_LAND") or runs[k].get("error"):
+                continue
+            o = stats_of(runs[k]).get("oracle")
+            if not isinstance(o, dict) or not (o.get("objective") or {}).get("land"):
+                continue
+            lam = o["objective"].get("lambda", 1)
+            land_optimum[str(lam)] = {"value": o.get("value"), "upper": o.get("upper"), "proven": bool(o.get("proven")),
+                                      "unproven": o.get("unproven"), "seconds": runs[k].get("planSeconds"),
+                                      "nodes": o.get("nodes"), "leaves": o.get("leaves"), "violations": o.get("violations"),
+                                      "brute": o.get("brute"), "climb": o.get("climb"), "start": o.get("start"),
+                                      "outputP": (runs[k].get("score") or {}).get("outputP"), "key": k}
         entry = {"reference": best, "exact": exact, "optimum": optimum, "upper": upper, "referenceOutput": best_out,
-                 "referenceOutputP": best_out_p, "optimumMissing": optimumMissing, "runs": {}}
+                 "referenceOutputP": best_out_p, "optimumMissing": optimumMissing, "landOptimum": land_optimum,
+                 "runs": {}}
         for k, r in runs.items():
             s = r.get("score")
             e = {"seconds": r.get("planSeconds"), "error": r.get("error")}
@@ -268,6 +294,15 @@ def summarize(rows):
                 for f in SITE_FIELDS:
                     if s.get(f) is not None:
                         e[f] = s[f]
+            # The mod's own objective with land on, against its optimum.
+            st = stats_of(r)
+            if st.get("sdpObjective") is not None and st.get("sdpLambda") is not None:
+                e["sdpObjective"], e["sdpLambda"] = st["sdpObjective"], st["sdpLambda"]
+                lo = land_optimum.get(str(st["sdpLambda"]))
+                if lo and lo["proven"] and lo["value"] is not None:
+                    v = lo["value"]
+                    e["landGap"] = v - st["sdpObjective"]
+                    e["ofLandOptimum"] = st["sdpObjective"] / v if v > 0 else None
             # The competitors' own objectives (compare.mjs --crossscore).
             for scorer, c in (r.get("cross") or {}).items():
                 if isinstance(c, dict) and c.get("gain") is not None and not c.get("error"):
@@ -313,7 +348,7 @@ def per_planner(scenarios, kind_filter=None):
         if kind_filter and group(sid)[1] != {"S": "single", "M": "multi"}.get(kind_filter, kind_filter):
             continue
         for k, r in e["runs"].items():
-            if k in ORACLE_KEYS:
+            if is_oracle(k):
                 continue
             a = agg[k]
             a["n"].append(1)
@@ -430,6 +465,41 @@ def land_vs_adjacency(sub, ours="sdp:STANDARD_LAND", base="sdp:STANDARD"):
         print("    gave up adjacency and outputP fell: %-34s adjacency %+.2f outputP %+.2f" % (sid, dg, dp))
 
 
+def land_optimum_report(sub):
+    """The optimum of the mod's whole objective with land on (sdp:ORACLE_LAND,
+    issue 48): how many scenes it proved, its times, and each land run's
+    share of it (ratio when the optimum is above 0, else the gap)."""
+    lambdas = sorted({lam for e in sub.values() for lam in e.get("landOptimum", {})}, key=float)
+    for lam in lambdas:
+        rows = [(sid, e["landOptimum"][lam]) for sid, e in sorted(sub.items()) if lam in e.get("landOptimum", {})]
+        proven = [o for _, o in rows if o["proven"]]
+        secs = sorted(o["seconds"] or 0 for _, o in rows)
+        unproven = sorted({u for _, o in rows for u in (o.get("unproven") or [])})
+        print("  land optimum (lambda %s): proven %d/%d; plan time median %.1fs max %.1fs total %.0fs; violations %d%s" % (
+            lam, len(proven), len(rows), statistics.median(secs), max(secs), sum(secs),
+            sum(o.get("violations") or 0 for _, o in rows),
+            ("; not proven because: " + ", ".join(unproven)) if unproven else ""))
+        for sid, o in rows:
+            if not o["proven"]:
+                print("    not proven: %-34s value %s upper %s nodes %s" % (sid, o["value"], o["upper"], o["nodes"]))
+            if o.get("brute") is not None and abs(o["brute"] - o["value"]) > 1e-6:
+                print("    ENUMERATION DIFFERS: %-28s oracle %s enumeration %s" % (sid, o["value"], o["brute"]))
+            if o.get("climb") is not None and o["climb"] > o["value"] + 1e-6:
+                print("    CLIMB ABOVE: %-34s oracle %s climb %s" % (sid, o["value"], o["climb"]))
+        keys = sorted({k for e in sub.values() for k, r in e["runs"].items()
+                       if r.get("sdpLambda") is not None and str(r["sdpLambda"]) == lam and not is_oracle(k)})
+        for k in keys:
+            shares = [e["runs"][k]["ofLandOptimum"] for e in sub.values()
+                      if k in e["runs"] and e["runs"][k].get("ofLandOptimum") is not None]
+            gaps = [e["runs"][k]["landGap"] for e in sub.values() if k in e["runs"] and e["runs"][k].get("landGap") is not None]
+            if not gaps:
+                continue
+            ss = share_stats(shares)
+            print("  %-18s of the land optimum (n %d): %s; gap mean %.3f max %.3f; at the optimum %d/%d" % (
+                k, len(gaps), ("mean %.1f%% worst %.1f%%" % (100 * ss["mean"], 100 * ss["min"])) if ss else "-",
+                statistics.mean(gaps), max(gaps), sum(1 for g in gaps if g <= 1e-6), len(gaps)))
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("files", nargs="+")
@@ -488,6 +558,7 @@ def main():
                     print("  %-17s vs %-13s %-10s n %3d  W/T/L %d/%d/%d  mean %+.2f  CI [%+.2f, %+.2f]  p %.2g" % (
                         ours, other, field, pr["n"], pr["wins"], pr["ties"], pr["losses"], pr["mean"], lo, hi, pr["p"]))
         land_vs_adjacency(sub)
+        land_optimum_report(sub)
     # Coverage (design 19.5): reach and adjacency, each setting against the
     # same tier without coverage and against AMT.
     cov = subset(scenarios, "coverage", "multi")
