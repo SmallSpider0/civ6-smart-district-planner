@@ -453,20 +453,18 @@ details.appx[open] > summary { margin-bottom: 8px; }
 <section id="limits"><div class="col">
   <h2 data-n="05">Known limitations</h2>
   <ul class="tight">
-    <li>It does not plan improvements.</li>
+    <li>It does not plan improvements: a tile is valued by the best improvement it can take, but no improvement tack is placed.</li>
     <li>Coverage counts only on the Several cities tab; the One city tab does not count it yet.</li>
     <li>The Several cities tab has no switch to forbid removing features: it always allows removing Woods, Rainforest and Marsh.</li>
     <li>Each kind of district is planned once; for several Neighborhoods, solve several times.</li>
     <li><b>Appeal</b>: improvements built later outside the plan are not in the model; a Preserve's yields on the tiles around it assume those tiles stay unimproved; a tacked Preserve counts only its Housing. How a district on Marsh changes its own tile's Appeal has not been measured (it is treated like Rainforest). In the late-game check, one Preserve in Tokyo got 1 more Housing from the game than predicted, for a reason not yet found.</li>
     <li><b>A Preserve's yields on the tiles around it count only when it is a Must</b>: with many Breathtaking and Charming tiles they can reach 40–70 points, but they come only with a Grove and a Sanctuary built; counting them when picking from the pool would make the pool almost always pick the Preserve first. So from the pool only its Housing counts, and those yields are shown.</li>
     <li><b>Placing many tacks at once</b>: DMT updates each new tack and the tacks around it, reading and writing its whole tack table each time, so it slows down as tacks add up. With about 100 tacks on the map, placing 80 more keeps the game busy for about 12 seconds; a normal batch of 15 takes about 0.25 seconds.</li>
-    <li>Picking from the pool compares only the objective (adjacency, plus land, coverage and distance when on); the yields of a district's buildings are not counted, so districts without adjacency, such as the Encampment and Aerodrome, are never picked from the pool; set them to Must when you want them.</li>
+    <li>Picking from the pool compares only the objective (adjacency and Housing, plus land, coverage and distance when on); the yields of a district's buildings are not counted, so districts without adjacency, such as the Encampment and Aerodrome, are never picked from the pool; set them to Must when you want them.</li>
     <li>Reminder tacks are only for Woods and Rainforest next to the planned districts; features next to existing districts have nothing to do with this plan.</li>
     <li>City site scores are estimates: tiles, resources and district potential are judged from what is revealed now; the districts are planned exactly in the Several cities step.</li>
     <li><b>Canals</b>: DMT does not check that a Canal connects water. On tiles the city owns, the engine check catches it; on tiles it does not own yet, the game gives no answer, so DMT decides there and a Canal that does not connect water is possible.</li>
     <li><b>Shipwrecks</b>: DMT counts a shipwreck on water as a sea resource, so a Harbor next to one shows 1 Gold more than the game gives; this mod's bonus comes from DMT and counts it too. Shipwrecks become visible late, so the effect is small.</li>
-    <li>Whether a wonder that must be next to a district needs that district in the same city has not been checked in the game; DMT's placement rules are used.</li>
-    <li>Japan's “+1 between districts” comes from a modifier that the linear model used for ranking leaves out (the exact score is still DMT's and includes it). In the offline comparison, Japan's scenarios average 99.6% quality, lowest 95.8%, a little below other civilizations.</li>
     <li>Multiplayer has not been tested.</li>
   </ul>
 </div></section>
