@@ -125,6 +125,11 @@ function CmpAdapters.sdp(request, variant, w)
     if not r.Ok then out.notes[#out.notes + 1] = tostring(r.Error) end
     for _, p in ipairs(r.Plan or {}) do
       out.placements[#out.placements + 1] = { city = id, type = p.Type, x = p.X, y = p.Y, kind = p.Kind }
+      -- The improvement a wonder needs next to it (issue 51), tacked with it.
+      if p.Support ~= nil then
+        out.placements[#out.placements + 1] = { city = id, type = p.Support.Type, x = p.Support.X, y = p.Support.Y,
+          kind = "IMPROVEMENT" }
+      end
     end
     stats.sdpGain, stats.sdpAppeal = r.Adjacency, r.AppealDelta
     stats.sdpQuality = r.Quality -- design 7.4: Exhaustive, Bound, Gap, Converged, Truncated
