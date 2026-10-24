@@ -252,3 +252,39 @@ test("oracle with land: the optimum of the whole objective equals brute force", 
   T.ok(adjacencyOnly >= o.Adjacency - 1e-9, "adjacency of the land optimum at most the adjacency optimum")
   T.ok(o.Nodes < count, "the bound prunes: " .. o.Nodes .. " nodes for " .. count .. " layouts")
 end)
+
+test("oracle, adjacency only: the optimum equals brute force under whole and fractional weights (issue 53)", function()
+  World.New({
+    rows = {
+      "~~~~~~~~~",
+      "~.fj.h..~",
+      "~.fMp.f.~",
+      "~h..q..j~",
+      "~.p.M.f.~",
+      "~~~~~~~~~",
+    },
+    rivers = { "4,2", "4,3" },
+    resources = { { 1, 1, "RESOURCE_WHEAT" }, { 6, 3, "RESOURCE_COPPER" } },
+    cities = { { id = 1, x = 4, y = 3, population = 24, capital = true } },
+  })
+  local districts = { "DISTRICT_CAMPUS", "DISTRICT_HOLY_SITE", "DISTRICT_THEATER", "DISTRICT_COMMERCIAL_HUB" }
+  local vectors = {
+    {},
+    { YIELD_GOLD = 0.5 },
+    { YIELD_GOLD = 0.5, YIELD_FAITH = 0.5, YIELD_SCIENCE = 0.75, YIELD_CULTURE = 0.75 },
+    { YIELD_SCIENCE = 1.8, YIELD_CULTURE = 1.5, YIELD_FAITH = 1.6, YIELD_GOLD = 1.15, YIELD_PRODUCTION = 0.75 },
+  }
+  for x, w in ipairs(vectors) do
+    local weights = { YIELD_SCIENCE = 1, YIELD_CULTURE = 1, YIELD_FAITH = 1, YIELD_GOLD = 1, YIELD_PRODUCTION = 1, YIELD_FOOD = 1 }
+    for k, v in pairs(w) do weights[k] = v end
+    local result = SDP_Solver.Solve({ PlayerID = 0, CityID = 1, Districts = districts, Weights = weights, Tier = "FAST" })
+    T.ok(result.Ok, tostring(result.Error))
+    local search = result.Session.Search
+    -- No incumbent: the bound alone must lead to the optimum.
+    local o = SDP_Overlay.With(0, CmpOracle.Run, search, nil, {})
+    local brute, count = SDP_Overlay.With(0, CmpOracle.BruteForce, search, 1e6, {})
+    T.ok(count ~= nil and count > 1000, "vector " .. x .. ": layouts tried " .. tostring(count))
+    T.ok(o.Proven, "vector " .. x .. ": proven")
+    T.near(o.Value, brute, 1e-9, "vector " .. x .. ": optimum vs brute force")
+  end
+end)

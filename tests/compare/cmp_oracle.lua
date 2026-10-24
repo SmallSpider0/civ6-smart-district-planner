@@ -50,6 +50,8 @@
 --     around it (its grove and sanctuary), which breaks the monotonicity:
 --     such runs are not proven (Unproven lists why).
 --   Values are no longer whole numbers: bounds are not rounded down.
+-- Without land, bounds are rounded down to a multiple of 1/scale when the
+-- weights are whole multiples of it (see Cap).
 
 CmpOracle = CmpOracle or {}
 
@@ -329,14 +331,22 @@ function CmpOracle.Run(search, incumbentLayout, options)
       pairAt[m][i] = row
     end
   end
-  -- With integer weights every value is an integer, so a bound can be
-  -- rounded down before it is compared (not with land: plot values are not).
-  local integral = not land
-  for _, w in pairs(search.Weights) do
-    if w ~= math.floor(w) then integral = false end
+  -- DMT adjacency yields are whole numbers, so with weights that are whole
+  -- multiples of 1/scale (scale up to 100: 0.25 -> 4, AMT's 1.15 -> 20)
+  -- every value is a multiple of 1/scale and a bound can be rounded down to
+  -- one before it is compared (not with land: plot values are not).
+  local scale = nil
+  if not land then
+    for _, s in ipairs({ 1, 2, 4, 5, 10, 20, 25, 50, 100 }) do
+      local ok = true
+      for _, w in pairs(search.Weights) do
+        if math.abs(w * s - math.floor(w * s + 0.5)) > 1e-9 then ok = false end
+      end
+      if ok then scale = s break end
+    end
   end
   local function Cap(x)
-    if integral then return math.floor(x + EPS) end
+    if scale ~= nil then return math.floor(x * scale + EPS) / scale end
     return x
   end
 
@@ -359,8 +369,13 @@ function CmpOracle.Run(search, incumbentLayout, options)
   -- slots next to that plot, and its largest pairs with the unplaced slots
   -- before it in the order (each pair counted at the later slot), at most
   -- as many as the plot has free neighbours. nil when a slot has no plot.
+  -- `first` (default d): the first slot in the order not placed yet. A node
+  -- at depth d bounds its children with Rest(d + 1, d): the slot it places
+  -- has no plot yet, so its pairs with the later slots count as pairs with
+  -- an unplaced slot (Rest(d + 1) alone left them out, issue 53).
   local gains = {}
-  local function Rest(d)
+  local function Rest(d, first)
+    first = first or d
     local total = 0
     for e = d, depth do
       local m = order[e]
@@ -378,7 +393,7 @@ function CmpOracle.Run(search, incumbentLayout, options)
             end
           end
           local row, count = pairAt[m][i], 0
-          for f = d, e - 1 do
+          for f = first, e - 1 do
             local g = row[typeOf[order[f]]]
             if g ~= nil and g > 0 then
               count = count + 1
@@ -421,7 +436,7 @@ function CmpOracle.Run(search, incumbentLayout, options)
       return
     end
     local m = order[d]
-    local rest = Rest(d + 1)
+    local rest = Rest(d + 1, d)
     if rest == nil then return end
     local t = typeOf[m]
     local children = {}
