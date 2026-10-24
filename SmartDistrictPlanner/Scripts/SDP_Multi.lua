@@ -160,7 +160,8 @@ end
 --   Only                 { [cityID] = true }: exactly these cities (see Participants)
 --   Weights              as for SDP_Solver (five yields; YIELD_FOOD, FEATURE for land)
 --   Land                 count the land part (default true)
---   Coverage             weight 0..3 of the coverage part (default 0: off)
+--   Coverage             weight 0..3 of the coverage part (default 0: off); with
+--                        Only, every city-center pin is a target too
 --   AllowFeatureRemoval  default true
 --   IgnorePins           this mod's earlier pins being replaced (see SDP_Solver)
 --   Apart                false: no keeping partner districts apart (see SDP_Solver)
@@ -398,6 +399,11 @@ function SDP_Multi.NewSession(request)
   -- (no model at all) unless a weight is given.
   if (request.Coverage or 0) > 0 then
     local sites = {}
+    if request.Only then
+      -- The single-city tab (wonders): no new city takes part, every
+      -- city-center pin is a target, as without wonders (SDP_Solver).
+      sites = SDP_Coverage.SiteTargets(playerID)
+    end
     for _, part in ipairs(participants) do
       if part.Kind == "SITE" then sites[#sites + 1] = { Key = part.Key, X = part.X, Y = part.Y, Name = part.Name } end
     end
@@ -1002,19 +1008,7 @@ function Session:PlanFor(layout)
   out.CoverageDelta = search:CoverageDelta(layout)
   if self.Coverage ~= nil then
     -- The newly covered cities by group (base district or wonder).
-    local byGroup, order = {}, {}
-    local newly = search:CoveragePairs(layout)
-    for _, id in ipairs(newly) do
-      local target, group = self.Coverage:Pair(id)
-      if byGroup[group] == nil then
-        byGroup[group] = { Group = group, Keys = {} }
-        order[#order + 1] = group
-      end
-      local keys = byGroup[group].Keys
-      keys[#keys + 1] = target.Key
-    end
-    out.Covered, out.CoveredBy = #newly, {}
-    for _, group in ipairs(order) do out.CoveredBy[#out.CoveredBy + 1] = byGroup[group] end
+    out.Covered, out.CoveredBy = self.Coverage:Summary(search:CoveragePairs(layout))
   end
   out.CostDelta = search:CostDelta(layout)
   out.Gain = out.Adjacency + out.LandDelta + out.CoverageDelta + out.CostDelta + (out.AppealDelta or 0)
@@ -1041,7 +1035,7 @@ end
 --                          (city, group) pairs newly covered, CoveredBy: { Group,
 --                          Keys (target keys) } by group (both nil when coverage is off)
 --                 Plan     { City (participant Key), Type, Kind, X, Y, Index, Yields, ToolTip, Score,
---                          Reach (keys of the targets within reach; coverage on, types with a reach) }
+--                          Reach (keys of the targets it newly covers; coverage on, types with a reach) }
 --                 Unplaced { City, Type, Reason } (NOT_AVAILABLE, BUILT, PINNED, MAX_PER_PLAYER,
 --                          NEEDS_DISTRICT, NO_LEGAL_PLOT, NO_FREE_PLOT; City "WONDERS" for wonders)
 --                 Cities   { Key, Kind, Name, X, Y, CityID, SiteNumber, Number (SDP_City city

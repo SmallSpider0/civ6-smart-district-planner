@@ -52,7 +52,14 @@ local WEIGHT_COLUMNS = {
   -- black square in the game (seen 2026-10-21), as 20.5 found for others.
   { Key = "HOUSING", Glyph = "LOC_SDP_WEIGHT_HOUSING_SHORT", ToolTip = "LOC_SDP_WEIGHT_HOUSING" },
 }
-local WEIGHT_WIDTH = 53 -- nine columns in the 480 wide page
+-- The coverage part (SDP_Coverage, design 19), the last column of the
+-- single-city and multi-city tabs: 0 (off) by default.
+local COVERAGE_COLUMN = { Key = "COVERAGE", Glyph = "LOC_SDP_WEIGHT_COVERAGE_SHORT", ToolTip = "LOC_SDP_WEIGHT_COVERAGE", Default = 0 }
+-- This tab's columns: the shared ones, then coverage.
+local SINGLE_COLUMNS = {}
+for _, column in ipairs(WEIGHT_COLUMNS) do SINGLE_COLUMNS[#SINGLE_COLUMNS + 1] = column end
+SINGLE_COLUMNS[#SINGLE_COLUMNS + 1] = COVERAGE_COLUMN
+local WEIGHT_WIDTH = 50 -- ten columns: a little wider than the 480 rows, inside the page
 
 local m_launchItem = {}     -- SDP_LaunchBarItem instance in the game's launch bar
 local m_launchPin = {}      -- SDP_LaunchBarPin instance next to it
@@ -68,8 +75,8 @@ local m_resultIM = InstanceManager:new("ResultRow", "Root", Controls.ResultStack
 local m_cityID = nil
 local m_states = {}           -- [DistrictType] = "MUST" | "POOL" | "OFF" | "AUTO" (chosen; else SDP_UI.DefaultState)
 local m_count = nil           -- districts that take population to plan (nil: the required ones)
-local m_weights = {}          -- [YieldType, FEATURE or DISTANCE] = 0..MAX_WEIGHT
-for _, column in ipairs(WEIGHT_COLUMNS) do m_weights[column.Key] = column.Default or 1 end
+local m_weights = {}          -- [YieldType, FEATURE, DISTANCE, HOUSING or COVERAGE] = 0..MAX_WEIGHT
+for _, column in ipairs(SINGLE_COLUMNS) do m_weights[column.Key] = column.Default or 1 end
 local m_allowFeatureRemoval = true
 local m_land = true           -- count the land part (design 4.2)
 local m_swap = false          -- plots swapped from another of our cities are candidates (issue 54)
@@ -90,6 +97,7 @@ local m_districtRows = {}     -- what the district grid shows, for tests
 local m_resultRows = {}       -- what the result list shows, for tests
 local m_solutionCells = {}    -- the solution rows' buttons, for real-click tests
 local m_weightViews = {}      -- [key] = function that redraws that weight
+local m_weightCells = {}      -- the weight columns' controls, for tests (SDP_UI.BuildWeights)
 local m_tab = "SINGLE"        -- the open tab: SINGLE, SITES or MULTI
 
 -- ===========================================================================
@@ -173,9 +181,57 @@ end
 -- Helpers shared with the other tabs (SDP_PageSites, SDP_PageMulti).
 SDP_UI = {
   FitResultRow = FitResultRow, UnplacedTip = UnplacedTip,
-  MAX_WEIGHT = MAX_WEIGHT, WEIGHT_COLUMNS = WEIGHT_COLUMNS,
+  MAX_WEIGHT = MAX_WEIGHT, WEIGHT_COLUMNS = WEIGHT_COLUMNS, COVERAGE_COLUMN = COVERAGE_COLUMN,
   Number = Number, Signed = Signed, Where = Where, YieldText = YieldText, PinText = PinText, TypeName = TypeName, Join = Join,
 }
+
+-- How a coverage target (SDP_Coverage key) is called: one of the player's
+-- cities ("C<id>") by its number and name, a city-center pin ("S<plot
+-- index>") as "Site n" with the number SDP_City.SiteNumbers gives it.
+function SDP_UI.TargetLabel(key)
+  local playerID = Game.GetLocalPlayer()
+  local id = tonumber(key:match("^C(%d+)$") or "")
+  if id ~= nil then
+    local city = CityManager.GetCity(playerID, id)
+    if city == nil then return key end
+    return Locale.Lookup("LOC_SDP_CITY_N", SDP_City.CityNumbers(playerID)[id] or 0, Locale.Lookup(city:GetName()))
+  end
+  local index = tonumber(key:match("^S(%d+)$") or "")
+  if index ~= nil then
+    local sites, names = SDP_City.Sites(playerID), {}
+    for s, site in ipairs(sites) do names[s] = site.Name end
+    local numbers = SDP_City.SiteNumbers(playerID, names)
+    for s, site in ipairs(sites) do
+      if site.Index == index then return Locale.Lookup("LOC_SDP_SITE_N", numbers[s]) end
+    end
+  end
+  return key
+end
+
+-- Coverage on a result: label(key) names a target (default SDP_UI.TargetLabel).
+-- The summary's tooltip lines: the newly covered cities by group.
+function SDP_UI.CoverageLines(solution, label)
+  label = label or SDP_UI.TargetLabel
+  local lines = {}
+  for _, entry in ipairs(solution.CoveredBy or {}) do
+    local names = {}
+    for _, key in ipairs(entry.Keys) do names[#names + 1] = label(key) end
+    lines[#lines + 1] = Locale.Lookup("LOC_SDP_COVERAGE_GROUP", TypeName(entry.Group), #entry.Keys, Join(names))
+  end
+  if #lines == 0 then lines[1] = Locale.Lookup("LOC_SDP_COVERAGE_NOTHING") end
+  return lines
+end
+
+-- A plan entry with a reach: "covers N" after `detail` and the cities under
+-- `tip`, counting only the cities it newly covers (none: unchanged).
+function SDP_UI.CoverageRow(p, detail, tip, label)
+  if p.Reach == nil or #p.Reach == 0 then return detail, tip end
+  label = label or SDP_UI.TargetLabel
+  local names = {}
+  for _, key in ipairs(p.Reach) do names[#names + 1] = label(key) end
+  return detail .. "  " .. Locale.Lookup("LOC_SDP_COVERAGE_ROW", #p.Reach),
+    tip .. "[NEWLINE][NEWLINE]" .. Locale.Lookup("LOC_SDP_COVERAGE_TIP", Join(names))
+end
 
 -- ===========================================================================
 -- District states (feedback items 1, 4, 7): every plannable district is
@@ -638,9 +694,13 @@ local function ShowResult()
     Controls.Summary:SetText(SDP_UI.SummaryText(shown, { Land = request.Land,
       Distance = (request.Distance or 0) > 0, Coverage = shown.Covered ~= nil }))
     local stats = result.Stats
-    Controls.Summary:SetToolTipString(Locale.Lookup("LOC_SDP_RESULT_STATS",
+    local statsText = Locale.Lookup("LOC_SDP_RESULT_STATS",
       Locale.Lookup("LOC_SDP_TIER_" .. stats.Tier), stats.Method or "multi", stats.Calls or 0, stats.Tries or 0,
-      stats.Nodes or 0, stats.Continues or 0))
+      stats.Nodes or 0, stats.Continues or 0)
+    if shown.Covered ~= nil then
+      statsText = table.concat(SDP_UI.CoverageLines(shown), "[NEWLINE]") .. "[NEWLINE][NEWLINE]" .. statsText
+    end
+    Controls.Summary:SetToolTipString(statsText)
     Controls.Quality:SetText(QualityText(result))
     -- The solutions (feedback item 1): a click shows one and previews it.
     if #solutions > 1 then
@@ -665,8 +725,9 @@ local function ShowResult()
     -- Each planned district: where, its yields, and DMT's own breakdown on hover.
     for _, p in ipairs(shown.Plan) do
       local toolTip = (p.ToolTip ~= nil and p.ToolTip ~= "") and p.ToolTip or Locale.Lookup("LOC_SDP_NO_ADJACENCY")
-      AddResultRow(p.Kind == "WONDER" and ("ICON_" .. p.Type) or ("ICON_" .. p.Type),
-        TypeName(p.Type) .. "  " .. Where(p.X, p.Y), SDP_UI.PlanDetail(p), toolTip)
+      local detail
+      detail, toolTip = SDP_UI.CoverageRow(p, SDP_UI.PlanDetail(p), toolTip)
+      AddResultRow("ICON_" .. p.Type, TypeName(p.Type) .. "  " .. Where(p.X, p.Y), detail, toolTip)
     end
     -- Woods and rainforest the plan relies on (feedback item 5).
     for _, r in ipairs(shown.Remind or {}) do
@@ -859,10 +920,11 @@ end
 -- tab's table, isOff(column) greys a column out, onChange(key, value),
 -- width (optional) the column width when more columns must fit. A column's
 -- Step (default 1) is how much an arrow changes it.
--- Returns { [key] = redraw function }.
+-- Returns { [key] = redraw function } and the columns' controls in order
+-- ({ Key, Less, More, Value, Root }, for tests).
 function SDP_UI.BuildWeights(im, stack, columns, weights, isOff, onChange, width)
   im:ResetInstances()
-  local views = {}
+  local views, cells = {}, {}
   for _, column in ipairs(columns) do
     local key = column.Key
     local step = column.Step or 1
@@ -881,14 +943,15 @@ function SDP_UI.BuildWeights(im, stack, columns, weights, isOff, onChange, width
     inst.Less:RegisterCallback(Mouse.eLClick, function() onChange(key, math.max(0, weights[key] - step)) end)
     inst.More:RegisterCallback(Mouse.eLClick, function() onChange(key, math.min(MAX_WEIGHT, weights[key] + step)) end)
     views[key] = Show
+    cells[#cells + 1] = { Key = key, Less = inst.Less, More = inst.More, Value = inst.Value, Root = inst.Root }
     Show()
   end
   stack:CalculateSize()
-  return views
+  return views, cells
 end
 
 local function BuildWeights()
-  m_weightViews = SDP_UI.BuildWeights(m_weightIM, Controls.WeightStack, WEIGHT_COLUMNS, m_weights,
+  m_weightViews, m_weightCells = SDP_UI.BuildWeights(m_weightIM, Controls.WeightStack, SINGLE_COLUMNS, m_weights,
     function(column) return column.Land and not m_land end, SetWeight, WEIGHT_WIDTH)
 end
 
@@ -1230,7 +1293,7 @@ Request = function()
   return {
     PlayerID = Game.GetLocalPlayer(), CityID = m_cityID, Districts = list.Must, Weights = weights,
     Pool = list.Pool, Count = list.Count, MustSpecialty = list.MustSpecialty, Auto = list.Auto,
-    Distance = m_weights.DISTANCE, Remind = m_remind, Apart = m_apart,
+    Distance = m_weights.DISTANCE, Coverage = m_weights.COVERAGE, Remind = m_remind, Apart = m_apart,
     AllowFeatureRemoval = m_allowFeatureRemoval, Land = m_land, Tier = m_tier, Swap = m_swap,
     IgnorePins = m_replace and OwnPins() or nil, Wonders = wonders,
   }
@@ -1243,6 +1306,7 @@ local function WonderRequest(request)
   return {
     PlayerID = request.PlayerID, Tier = request.Tier, Districts = request.Districts, Wonders = request.Wonders,
     Pool = request.Pool, Count = request.Count, Auto = request.Auto, Distance = request.Distance, Remind = request.Remind,
+    Coverage = request.Coverage,
     Only = { [request.CityID] = true }, Weights = request.Weights, Land = request.Land, Apart = request.Apart,
     AllowFeatureRemoval = request.AllowFeatureRemoval, IgnorePins = request.IgnorePins, Swap = request.Swap,
     Plans = { [key] = request.Districts },
@@ -1525,7 +1589,7 @@ SDP_Panel = {
   State = function()
     return {
       CityID = m_cityID, Result = m_result, DistrictRows = m_districtRows, ResultRows = m_resultRows,
-      SolutionCells = m_solutionCells,
+      SolutionCells = m_solutionCells, WeightCells = m_weightCells,
       Count = List().Count, Solution = m_solution, Remind = m_remind, Apart = m_apart,
       Weights = m_weights, AllowFeatureRemoval = m_allowFeatureRemoval, Land = m_land, Tier = m_tier, Replace = m_replace,
       Swap = m_swap,

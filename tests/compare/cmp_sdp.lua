@@ -121,7 +121,7 @@ function CmpAdapters.sdp(request, variant, w)
     -- SDP_Multi with only this city (SDP_Panel's WonderRequest).
     local id = request.target:GetID()
     local r = SDP_Multi.Solve({ PlayerID = 0, Tier = variant, Districts = request.districts, Wonders = request.wonders,
-      Only = { [id] = true }, Weights = request.weights, Land = land, Swap = swap })
+      Only = { [id] = true }, Weights = request.weights, Land = land, Swap = swap, Coverage = coverage })
     if not r.Ok then out.notes[#out.notes + 1] = tostring(r.Error) end
     for _, p in ipairs(r.Plan or {}) do
       out.placements[#out.placements + 1] = { city = id, type = p.Type, x = p.X, y = p.Y, kind = p.Kind }
@@ -131,7 +131,7 @@ function CmpAdapters.sdp(request, variant, w)
     for _, u in ipairs(r.Unplaced or {}) do out.notes[#out.notes + 1] = "unplaced " .. tostring(u.Type) .. " " .. tostring(u.Reason) end
   elseif scn.kind == "single" then
     local r = SDP_Solver.Solve({ PlayerID = 0, CityID = request.target:GetID(), Districts = request.districts,
-      Land = land, Tier = variant, Weights = request.weights, Swap = swap })
+      Land = land, Tier = variant, Weights = request.weights, Swap = swap, Coverage = coverage })
     if not r.Ok then out.notes[#out.notes + 1] = tostring(r.Error) end
     Take(r.Plan, request.target:GetID())
     if oracle and r.Ok then

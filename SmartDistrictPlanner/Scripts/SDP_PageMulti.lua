@@ -38,10 +38,10 @@ local m_planFor = "ALL" -- the list the grid edits: "ALL" or a participant Key
 local m_wonders = {}   -- [BuildingType] = true
 local m_existing = {}  -- [cityID] = true | false: switches over the default
 local m_sites = {}     -- [site Key] = false: city-center pins switched off
--- The panel's weight columns plus the coverage part, narrower so that nine fit.
+-- The panel's weight columns plus the coverage part, as on the single-city tab.
 local COLUMNS, COLUMN_WIDTH = {}, 50 -- ten columns: a little wider than the 480 rows, inside the page
 for _, column in ipairs(SDP_UI.WEIGHT_COLUMNS) do COLUMNS[#COLUMNS + 1] = column end
-COLUMNS[#COLUMNS + 1] = { Key = "COVERAGE", Glyph = "LOC_SDP_WEIGHT_COVERAGE_SHORT", ToolTip = "LOC_SDP_WEIGHT_COVERAGE", Default = 0 }
+COLUMNS[#COLUMNS + 1] = SDP_UI.COVERAGE_COLUMN
 local m_weights = {}
 for _, column in ipairs(COLUMNS) do m_weights[column.Key] = column.Default or 1 end
 local m_weightViews = {}
@@ -537,22 +537,14 @@ function P.SelectSolution(n)
   P.Render()
 end
 
--- How a coverage target is called: a participant by its label, another of
--- the player's cities ("C<id>") by its number and name.
-local function TargetLabel(key, byKey)
-  local city = byKey[key]
-  if city ~= nil then return P.CityLabel(city) end
-  local id = tonumber(key:match("^C(%d+)$") or "")
-  local playerID = Game.GetLocalPlayer()
-  local other = id and CityManager.GetCity(playerID, id)
-  if other == nil then return key end
-  return Locale.Lookup("LOC_SDP_CITY_N", SDP_City.CityNumbers(playerID)[id] or 0, Locale.Lookup(other:GetName()))
-end
-
-local function TargetLabels(keys, byKey)
-  local names = {}
-  for _, key in ipairs(keys) do names[#names + 1] = TargetLabel(key, byKey) end
-  return SDP_UI.Join(names)
+-- How a coverage target is called: a participant by its label, else as on
+-- the single-city tab (SDP_UI.TargetLabel).
+local function TargetLabelFor(byKey)
+  return function(key)
+    local city = byKey[key]
+    if city ~= nil then return P.CityLabel(city) end
+    return SDP_UI.TargetLabel(key)
+  end
 end
 
 local function AddRow(icon, name, detail, toolTip)
@@ -597,14 +589,9 @@ function P.Render()
       stats.Cities or 0, stats.Calls, stats.Tries, stats.Continues, SDP_UI.Signed(result.FirstGain or 0))
     Controls.MultiSummary:SetText(SDP_UI.SummaryText(solution, { Land = request.Land ~= false,
       Coverage = solution.Covered ~= nil, Distance = (request.Distance or 0) > 0 }))
+    local label = TargetLabelFor(byKey)
     if solution.Covered ~= nil then
-      local lines = {}
-      for _, entry in ipairs(solution.CoveredBy) do
-        lines[#lines + 1] = Locale.Lookup("LOC_SDP_COVERAGE_GROUP", SDP_UI.TypeName(entry.Group), #entry.Keys,
-          TargetLabels(entry.Keys, byKey))
-      end
-      if #lines == 0 then lines[1] = Locale.Lookup("LOC_SDP_COVERAGE_NOTHING") end
-      statsText = table.concat(lines, "[NEWLINE]") .. "[NEWLINE][NEWLINE]" .. statsText
+      statsText = table.concat(SDP_UI.CoverageLines(solution, label), "[NEWLINE]") .. "[NEWLINE][NEWLINE]" .. statsText
     end
     Controls.MultiSummary:SetToolTipString(statsText)
     Controls.MultiQuality:SetText(SDP_UI.QualityText(result))
@@ -640,11 +627,8 @@ function P.Render()
       for _, p in ipairs(solution.Plan) do
         if p.City == city.Key then
           local tip = (p.ToolTip ~= nil and p.ToolTip ~= "") and p.ToolTip or Locale.Lookup("LOC_SDP_NO_ADJACENCY")
-          local detail = SDP_UI.PlanDetail(p)
-          if p.Reach ~= nil then
-            detail = detail .. "  " .. Locale.Lookup("LOC_SDP_COVERAGE_ROW", #p.Reach)
-            tip = tip .. "[NEWLINE][NEWLINE]" .. Locale.Lookup("LOC_SDP_COVERAGE_TIP", TargetLabels(p.Reach, byKey))
-          end
+          local detail
+          detail, tip = SDP_UI.CoverageRow(p, SDP_UI.PlanDetail(p), tip, label)
           AddRow("ICON_" .. p.Type, "  " .. SDP_UI.TypeName(p.Type) .. "  " .. SDP_UI.Where(p.X, p.Y), detail, tip)
         end
       end

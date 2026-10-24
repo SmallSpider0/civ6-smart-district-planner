@@ -7,7 +7,8 @@
 --             player's own (trait); a wonder's range is its own. Groups: one
 --             per base district, one per wonder. A city reached twice by the
 --             same group counts once (the game does not stack the effect).
---   Targets   every city of the player, then the new cities being planned.
+--   Targets   every city of the player, then the new cities being planned
+--             (the single-city tab: every city-center pin, SiteTargets).
 --   Covered   what the player's built and pinned districts reach already
 --             (pins being replaced do not count).
 -- A layout is worth Weight x the (city, group) pairs it newly covers; the
@@ -58,6 +59,16 @@ function SDP_Coverage.Targets(playerID, sites)
   end
   for _, site in ipairs(sites or {}) do
     list[#list + 1] = { Key = site.Key, X = site.X, Y = site.Y, Name = site.Name }
+  end
+  return list
+end
+
+-- Every city-center pin of the player as a target ({ Key = "S<plot index>",
+-- X, Y, Name }, by plot index): the single-city tab counts all of them.
+function SDP_Coverage.SiteTargets(playerID)
+  local list = {}
+  for _, site in ipairs(SDP_City.Sites(playerID)) do
+    list[#list + 1] = { Key = "S" .. site.Index, X = site.X, Y = site.Y, Name = site.Name }
   end
   return list
 end
@@ -169,12 +180,31 @@ function Model:Pair(id)
   return self.Targets[id - (g - 1) * count], self.Groups[g]
 end
 
--- Keys of the targets within reach of `subjectType` at x, y, in target
--- order (whether covered before or not); nil when the type has no reach.
+-- Keys of the targets `subjectType` at x, y newly covers (within reach and
+-- not covered by a built or pinned district of its group), in target order;
+-- nil when the type has no reach.
 function Model:Reach(subjectType, x, y)
   local ids = self:InReach(subjectType, x, y)
   if ids == nil then return nil end
   local keys = {}
-  for _, id in ipairs(ids) do keys[#keys + 1] = self:Pair(id).Key end
+  for _, id in ipairs(ids) do
+    if not self.Covered[id] then keys[#keys + 1] = self:Pair(id).Key end
+  end
   return keys
+end
+
+-- The newly covered pairs `ids` (sorted) by group, for reports: returns the
+-- count and { { Group, Keys (target keys) } } in order of first appearance.
+function Model:Summary(ids)
+  local byGroup, list = {}, {}
+  for _, id in ipairs(ids) do
+    local target, group = self:Pair(id)
+    if byGroup[group] == nil then
+      byGroup[group] = { Group = group, Keys = {} }
+      list[#list + 1] = byGroup[group]
+    end
+    local keys = byGroup[group].Keys
+    keys[#keys + 1] = target.Key
+  end
+  return #ids, list
 end

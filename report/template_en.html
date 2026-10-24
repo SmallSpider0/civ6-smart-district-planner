@@ -250,11 +250,11 @@ details.appx[open] > summary { margin-bottom: 8px; }
         <li>Districts, in two groups laid out as a grid; a click cycles the state. Specialty districts go Pool → Must → Off; the others (Aqueduct, Dam, Canal, Neighborhood…) go Auto → Must → Off. Built ones are greyed out; ones at the empire limit or not available to your civilization say why</li>
         <li>How many specialty districts to plan, Must ones included. Above the number of Must ones, the solver picks the rest from the pool; next to it, your specialty district slots (built, planned now, the current population limit), with a warning only when you go over</li>
         <li>Wonders to place along, as many as you like, shown as tags; the dropdown lists them by era, then by cost <span class="tag from">AMT</span></li>
-        <li>Weights: Science, Culture, Faith, Gold, Production (0–3, default 1); Food and Chop (one-time yields) for the land loss; Housing (default 1); and a distance cost (default 0)</li>
+        <li>Weights: Science, Culture, Faith, Gold, Production (0–3, default 1); Food and Chop (one-time yields) for the land loss; Housing (default 1); a distance cost (default 0); and Reach (default 0, as on the Several cities tab)</li>
         <li>Switches: count the land loss (each tile valued with its best improvement, chopping and harvesting first; an optional switch, off by default, also uses tiles swapped from your other cities); allow removing Woods, Rainforest and Marsh; replace this mod's earlier tacks for this city; reminder tacks; keep Harbor and Commercial Hub in different cities (on by default)</li>
       </ul></div>
       <div><p class="lbl">You get</p><ul class="tight">
-        <li>The weighted gain, split into adjacency, land, distance, and housing and appeal</li>
+        <li>The weighted gain, split into adjacency, land, distance, reach, and housing and appeal; a district with a reach says how many cities it newly covers</li>
         <li>Neighborhood and Preserve: their tile's Appeal and the Housing it gives (such as “Housing 6 (Appeal 4)”); for a Preserve also the yields its Grove and Sanctuary give the tiles around it (scored when it is a Must; picked from the pool it is shown, marked “pool pick, not scored”). Other districts of the plan change Appeal too (Industrial Zone −1, Holy Site +1, removing Woods…), and that is counted</li>
         <li>When picking from the pool: three plans with different districts, each saying which it picked; click one to preview its icons and bonuses on the map</li>
         <li>One row per district and wonder: its tile and bonus (such as “Sci+2 Cul+1”); hover for DMT's breakdown; added and picked districts are marked</li>
@@ -289,13 +289,13 @@ details.appx[open] > summary { margin-bottom: 8px; }
         <li>District lists: one shared by all cities, or a city's own; the grid is the same as on the One city tab. Per city: above the number of Must ones, the solver picks the rest from the pool for each city. Templates by yield (“Science city”, “Production city”…, worked out from your civilization's adjacency rules) fill a list; it can also be cleared or set back to the shared one <span class="tag from">AMT</span></li>
         <li>Empire-limited districts (Government Plaza and the like): written into one city's list, they go in that city; into several, the solver picks among them <span class="tag from">AMT</span></li>
         <li>Wonders (tags and a dropdown), yield and housing weights, the distance cost; switches: count the land loss, replace this mod's earlier tacks for the cities taking part, reminder tacks, keep Harbor and Commercial Hub apart (city by city)</li>
-        <li>A coverage weight (0–3, default 0, off): Factories, Power Plants, Zoos, Stadiums, Aquariums and wonders such as the Colosseum help your cities within some distance (mostly 6 tiles in the rules); the plan counts the cities it newly covers. It only decides where the chosen districts go and never adds districts to a city <span class="tag from">AMT</span></li>
+        <li>A coverage weight (0–3, default 0, off): Factories, Power Plants, Zoos, Stadiums, Aquariums and wonders such as the Colosseum help your cities within some distance (mostly 6 tiles in the rules); the plan counts the cities it newly covers, also when picking from the pool; the One city tab has the same column <span class="tag from">AMT</span></li>
       </ul></div>
       <div><p class="lbl">You get</p><ul class="tight">
         <li>Three clearly different plans, each with its total, the number of cities, districts and wonders, and each city's weighted adjacency from its new districts</li>
         <li>Bonuses across cities and empire limits counted; a tile two cities could use goes to one of them</li>
         <li>When picking from the pool, each city's picked districts are marked; a city that cannot fit enough from its pool says so; Aqueducts and Dams are added as on the One city tab</li>
-        <li>With a coverage weight: the total lists coverage on its own, and a district or wonder with a reach says how many cities it covers (hover for their names)</li>
+        <li>With a coverage weight: the total lists coverage on its own, and a district or wonder with a reach says how many cities it newly covers (hover for their names)</li>
         <li>A comparison with planning the cities one at a time on the One city tab (in the hover statistics)</li>
         <li>A preview of every district's icon and bonus on the map, then tacks</li>
       </ul></div>
@@ -455,7 +455,6 @@ details.appx[open] > summary { margin-bottom: 8px; }
   <h2 data-n="05">Known limitations</h2>
   <ul class="tight">
     <li>It does not plan improvements: a tile is valued by the best improvement it can take, but no improvement tack is placed.</li>
-    <li>Coverage counts only on the Several cities tab; the One city tab does not count it yet.</li>
     <li>The Several cities tab has no switch to forbid removing features: it always allows removing Woods, Rainforest and Marsh.</li>
     <li>Each kind of district is planned once; for several Neighborhoods, solve several times.</li>
     <li><b>Appeal</b>: improvements built later outside the plan are not in the model; a Preserve's yields on the tiles around it assume those tiles stay unimproved; a tacked Preserve counts only its Housing. In the late-game check, 2 of 9 Neighborhood tiles were off by 1 from the game: on one, a Plantation that went gave 1 more; on the other, clearing Woods took 1 off the tile itself in one save (it does not elsewhere). Neither cause is found yet; one of them changed the Housing by 1 (appendix B.8).</li>

@@ -233,6 +233,12 @@ SDP_Panel.Multi.Refresh()
     s.check("single swap switch on by click", value("SDP_Panel.State().Swap"), "true")
     click_control("Controls.SwapCheck")
     s.check("single swap switch off again", value("SDP_Panel.State().Swap"), "false")
+    # The coverage column, the last of the weight row (issue 61): its arrows.
+    s.check("single coverage column last", value("SDP_Panel.State().WeightCells[10].Key"), "COVERAGE")
+    click_control("SDP_Panel.State().WeightCells[10].More")
+    s.check("single coverage up by click", value("SDP_Panel.State().Weights.COVERAGE == 1"), "true")
+    click_control("SDP_Panel.State().WeightCells[10].Less")
+    s.check("single coverage down by click", value("SDP_Panel.State().Weights.COVERAGE == 0"), "true")
     lua("SDP_Panel.SetState('%s', 'MUST'); SDP_Panel.SetCount(3)" % campus)
     click_control("Controls.SolveButton")
     for _ in range(60):
