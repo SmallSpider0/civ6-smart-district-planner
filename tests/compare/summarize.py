@@ -558,6 +558,7 @@ def main():
                     print("  %-17s vs %-13s %-10s n %3d  W/T/L %d/%d/%d  mean %+.2f  CI [%+.2f, %+.2f]  p %.2g" % (
                         ours, other, field, pr["n"], pr["wins"], pr["ties"], pr["losses"], pr["mean"], lo, hi, pr["p"]))
         land_vs_adjacency(sub)
+        land_vs_adjacency(sub, "sdp:FINE_LAND", "sdp:FINE")
         land_optimum_report(sub)
     # Coverage (design 19.5): reach and adjacency, each setting against the
     # same tier without coverage and against AMT.
