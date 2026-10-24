@@ -70,7 +70,7 @@ local function BuildGameInfo()
 
   gi.Features = Table({
     { FeatureType = "FEATURE_FOREST", Name = "LOC_FEATURE_FOREST", Removable = true, Settlement = true, Yields = Yields(0, 1),
-      Appeal = 1 },
+      Appeal = 1, AddCivic = "CIVIC_CONSERVATION" },
     { FeatureType = "FEATURE_JUNGLE", Name = "LOC_FEATURE_JUNGLE", Removable = true, Settlement = true, Yields = Yields(1),
       Appeal = -1 },
     { FeatureType = "FEATURE_MARSH", Name = "LOC_FEATURE_MARSH", Removable = true, Settlement = true, Yields = Yields(1),
@@ -131,6 +131,7 @@ local function BuildGameInfo()
   gi.Civics = Table({
     { CivicType = "CIVIC_RECORDED_HISTORY", Name = "LOC_CIVIC_RECORDED_HISTORY_NAME", EraType = "ERA_CLASSICAL" },
     { CivicType = "CIVIC_GAMES_RECREATION", Name = "LOC_CIVIC_GAMES_RECREATION_NAME", EraType = "ERA_CLASSICAL" },
+    { CivicType = "CIVIC_CONSERVATION", Name = "LOC_CIVIC_CONSERVATION_NAME", EraType = "ERA_MODERN" },
   }, "CivicType")
 
   local function District(t, extra)
@@ -507,6 +508,8 @@ function World.New(spec)
   function Plot:IsImpassable() return self.terrain.Impassable == true or (self.feature ~= nil and self.feature.Impassable == true) end
   function Plot:GetAppeal() return self.appeal end
   function Plot:GetImprovementType() return self.improvement and self.improvement.Index or -1 end
+  function Plot:IsImprovementPillaged() return self.improvement ~= nil and self.pillaged == true end
+  function Plot:HasFeatureBeenAdded() return self.feature ~= nil and self.planted == true end
   function Plot:IsCoastalLand()
     if self:IsWater() then return false end
     for dir = 0, 5 do
@@ -543,11 +546,13 @@ function World.New(spec)
   for _, s in ipairs(spec.unrevealed or {}) do GetPlot(XY(s)).revealed = false end
   for _, a in ipairs(spec.appeal or {}) do GetPlot(a[1], a[2]).appeal = a[3] end
   for _, a in ipairs(spec.improvements or {}) do GetPlot(a[1], a[2]).improvement = gi.Improvements[a[3]] end
+  for _, s in ipairs(spec.pillaged or {}) do GetPlot(XY(s)).pillaged = true end
+  for _, s in ipairs(spec.planted or {}) do GetPlot(XY(s)).planted = true end
 
   -- Players, cities, districts --------------------------------------------
   local players, cities, cityList = {}, {}, {}
   local function NewPlayer(id)
-    local p = { id = id, cities = {}, techs = {}, resources = {} }
+    local p = { id = id, cities = {}, techs = {}, civics = {}, resources = {} }
     players[id] = p
     return p
   end
@@ -555,6 +560,7 @@ function World.New(spec)
   NewPlayer(1)
   NewPlayer(62) -- a city-state
   for _, t in ipairs(spec.techs or {}) do players[0].techs[gi.Technologies[t].Index] = true end
+  for _, c in ipairs(spec.civics or {}) do players[0].civics[gi.Civics[c].Index] = true end
   for r, amount in pairs(spec.playerResources or {}) do players[0].resources[gi.Resources[r].Index] = amount end
 
   local City = {}
@@ -934,7 +940,7 @@ function World.New(spec)
         return { Members = function() return ipairs(all) end }
       end,
       GetTechs = function() return { HasTech = function(_, i) return p.techs[i] == true end } end,
-      GetCulture = function() return { HasCivic = function() return false end } end,
+      GetCulture = function() return { HasCivic = function(_, i) return p.civics[i] == true end } end,
       GetResources = function()
         return {
           GetResourceAmount = function(_, i) return p.resources[i] or 0 end,

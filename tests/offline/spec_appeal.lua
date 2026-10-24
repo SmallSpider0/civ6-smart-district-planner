@@ -226,6 +226,43 @@ test("clearing woods lowers the appeal around; an industrial zone next door lowe
   T.eq(at[scan.Candidates[positions["3,3"]].Index], -1, "and next to it: -1")
 end)
 
+test("the plot's own appeal: old-growth woods with Features.AddCivic, a pillaged improvement (issue 58)", function()
+  -- Returns the appeal of (4, 3) (woods) and (3, 3) with a neighborhood on
+  -- the woods, and of (6, 4) and (7, 4) with one on (6, 4).
+  local function Under(extra)
+    NewWorld(extra)
+    local scan = SDP_City.Scan(0, 1)
+    local positions = {}
+    for i, c in ipairs(scan.Candidates) do positions[c.X .. "," .. c.Y] = i end
+    local model = SDP_Appeal.New({ PlayerID = 0, Types = { HOOD }, Kinds = { "DISTRICT" }, Candidates = scan.Candidates,
+      Fixed = {}, Weights = {}, Lands = {}, Workable = {} })
+    local woods, west = Map.GetPlotIndex(4, 3), Map.GetPlotIndex(3, 3)
+    local mine, east = Map.GetPlotIndex(6, 4), Map.GetPlotIndex(7, 4)
+    T.ok(positions["4,3"] ~= nil and positions["6,4"] ~= nil, "plots")
+    local a = model:AppealsUnder({ positions["4,3"] }, { woods, west })
+    local b = model:AppealsUnder({ positions["6,4"] }, { mine, east })
+    local detail = {}
+    model:Score({ positions["4,3"] }, detail)
+    T.eq(detail[1].Appeal, a[woods], "Score and AppealsUnder agree")
+    return a[woods] - Map.GetPlotByIndex(woods):GetAppeal(), a[west] - Map.GetPlotByIndex(west):GetAppeal(),
+      b[mine] - Map.GetPlotByIndex(mine):GetAppeal(), b[east] - Map.GetPlotByIndex(east):GetAppeal()
+  end
+  local own, around = Under({})
+  T.eq(own, 0, "woods, no Conservation: the plot keeps its appeal")
+  T.eq(around, -1, "and the plot next to it loses the woods' 1")
+  own, around = Under({ civics = { "CIVIC_CONSERVATION" } })
+  T.eq(own, -1, "old-growth woods, the owner has Conservation: the plot loses its +1")
+  T.eq(around, -1, "around: the same -1")
+  own = Under({ civics = { "CIVIC_CONSERVATION" }, planted = { "4,3" } })
+  T.eq(own, 0, "planted (second-growth) woods: no bonus to lose")
+  local _, _, mineOwn, mineAround = Under({ improvements = { { 6, 4, "IMPROVEMENT_MINE" } } })
+  T.eq(mineOwn, 0, "a mine: its own plot keeps its appeal")
+  T.eq(mineAround, 1, "the mine's -1 goes around")
+  _, _, mineOwn, mineAround = Under({ improvements = { { 6, 4, "IMPROVEMENT_MINE" } }, pillaged = { "6,4" } })
+  T.eq(mineOwn, 1, "a pillaged mine: its plot loses the pillage penalty")
+  T.eq(mineAround, 2, "around: the mine's -1 and the pillage penalty")
+end)
+
 test("building clears a feature only with its removal tech (Features.RemoveTech); water keeps its appeal", function()
   local rows = { "~~~~~~~~~~~~", "~..........~", "~..........~", "~...s......~", "~..........~", "~..........~", "~..........~",
     "~~~~~~~~~~~~" }
