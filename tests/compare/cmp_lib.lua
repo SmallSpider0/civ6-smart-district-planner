@@ -376,6 +376,326 @@ function CmpRun.Cross(id, planJson, scorer)
 end
 
 -- ===========================================================================
+-- Land potential (issue 48): what a plot is worth to the city once improved,
+-- worked out here from GameInfo, not with the mod's SDP_Land, so that a
+-- mistake in reading the rules does not show up on both sides.
+-- ===========================================================================
+-- CmpLand.Context(opts) and CmpLand.PlotValues(plot, ctx) -> tile, once.
+-- opts.mode:
+--   "potential" (the judge's outputP): the best of keeping or clearing the
+--       feature and keeping or harvesting the resource, plus the best
+--       improvement within the era horizon: the technologies and civics
+--       the player has, and every one of the eras up to one after the
+--       latest era the player has reached (the scenes have all of them).
+--       The civilization's own improvements count, and so do those that
+--       need a river, an adjacent resource or adjacent terrain, checked
+--       against the plot; not those a city may have once (OnePerCity).
+--       The plot's improvement now is replaced if another is better.
+--       One-time yields are not counted in the tile value.
+--   "mod" (the consistency probe): this mod's assumptions (SDP_Land): the
+--       technologies the player has, improvements every player can build
+--       and that need nothing next to them, an improved plot as it is, and
+--       one-time yields charged against keeping (opts.oneTimeScale per
+--       one-time yield, weighted).
+-- opts.weights: { [yield] = w } (missing ones 1; nil: all 1);
+-- opts.allowRemoval (default true). `once` is the plot's one-time yields
+-- (clearing its feature, harvesting its resource), weighted, unscaled.
+-- Improvement adjacency (Improvement_Adjacencies) and yields from appeal
+-- are not counted (a later version).
+CmpLand = {}
+CmpLand.YIELDS = { "YIELD_FOOD", "YIELD_PRODUCTION", "YIELD_GOLD", "YIELD_SCIENCE", "YIELD_CULTURE", "YIELD_FAITH" }
+
+local function Truthy(v) return v == true or (type(v) == "number" and v ~= 0) end
+
+local function AddYield(map, key, yieldType, n)
+  local t = map[key] or {}
+  t[yieldType] = (t[yieldType] or 0) + n
+  map[key] = t
+end
+
+function CmpLand.Context(opts)
+  local gi = GameInfo
+  local mode = opts.mode or "potential"
+  local ctx = { Mode = mode, W = {}, AllowRemoval = opts.allowRemoval ~= false, Scale = opts.oneTimeScale or 0 }
+  for _, y in ipairs(CmpLand.YIELDS) do
+    local v = opts.weights and opts.weights[y]
+    ctx.W[y] = v == nil and 1 or v
+  end
+  -- Technologies and civics within reach.
+  local player = Players[0]
+  local techs, culture = player:GetTechs(), player:GetCulture()
+  local chronology, first = {}, math.huge
+  for row in gi.Eras() do
+    chronology[row.EraType] = row.ChronologyIndex
+    first = math.min(first, row.ChronologyIndex)
+  end
+  local era = first
+  for row in gi.Technologies() do
+    if techs:HasTech(row.Index) then era = math.max(era, chronology[row.EraType] or first) end
+  end
+  for row in gi.Civics() do
+    if culture:HasCivic(row.Index) then era = math.max(era, chronology[row.EraType] or first) end
+  end
+  local has = {}
+  for row in gi.Technologies() do
+    has[row.TechnologyType] = techs:HasTech(row.Index)
+      or (mode == "potential" and (chronology[row.EraType] or first) <= era + 1)
+  end
+  for row in gi.Civics() do
+    has[row.CivicType] = culture:HasCivic(row.Index)
+      or (mode == "potential" and (chronology[row.EraType] or first) <= era + 1)
+  end
+  ctx.Has = has
+  ctx.Era = era
+  local function Within(tech, civic)
+    return (tech == nil or has[tech] == true) and (civic == nil or has[civic] == true)
+  end
+  -- The player's traits (civilization and leader).
+  local cfg = PlayerConfigurations[0]
+  local civ, leader = cfg:GetCivilizationTypeName(), cfg:GetLeaderTypeName()
+  local traits = {}
+  for row in gi.CivilizationTraits() do
+    if row.CivilizationType == civ then traits[row.TraitType] = true end
+  end
+  for row in gi.LeaderTraits() do
+    if row.LeaderType == leader then traits[row.TraitType] = true end
+  end
+  ctx.Traits = traits
+  -- A trait that forbids harvesting (the Maori).
+  ctx.Harvest = true
+  for row in gi.TraitModifiers() do
+    if traits[row.TraitType] then
+      local modifier = gi.Modifiers[row.ModifierId]
+      if modifier ~= nil and modifier.ModifierType == "MODIFIER_PLAYER_ADJUST_PREVENT_HARVEST_RESOURCE" then ctx.Harvest = false end
+    end
+  end
+  local resources = player:GetResources()
+  ctx.Visible = function(row)
+    if mode == "mod" then return resources:IsResourceVisible(row.Hash) end
+    return row.PrereqTech == nil or has[row.PrereqTech] == true
+  end
+  -- Yields of terrain, feature, resource; one-time yields.
+  ctx.TerrainYields, ctx.FeatureYields, ctx.ResourceYields = {}, {}, {}
+  for row in gi.Terrain_YieldChanges() do AddYield(ctx.TerrainYields, row.TerrainType, row.YieldType, row.YieldChange) end
+  for row in gi.Feature_YieldChanges() do AddYield(ctx.FeatureYields, row.FeatureType, row.YieldType, row.YieldChange) end
+  for row in gi.Resource_YieldChanges() do AddYield(ctx.ResourceYields, row.ResourceType, row.YieldType, row.YieldChange) end
+  ctx.FeatureOnce, ctx.ResourceOnce = {}, {}
+  for row in gi.Feature_Removes() do AddYield(ctx.FeatureOnce, row.FeatureType, row.YieldType, row.Yield) end
+  for row in gi.Resource_Harvests() do
+    if mode == "mod" or Within(row.PrereqTech, nil) then AddYield(ctx.ResourceOnce, row.ResourceType, row.YieldType, row.Amount) end
+  end
+  -- Improvements.
+  local byType, list = {}, {}
+  for row in gi.Improvements() do
+    local ok = Truthy(row.Buildable) and (row.Workable == nil or Truthy(row.Workable))
+    if ok and mode == "mod" then
+      ok = row.TraitType == nil and not Truthy(row.RequiresRiver) and not Truthy(row.RequiresAdjacentBonusOrLuxury)
+        and not Truthy(row.RequiresAdjacentLuxury) and (row.ValidAdjacentTerrainAmount or 0) == 0
+    elseif ok then
+      ok = (row.TraitType == nil or traits[row.TraitType] == true) and not Truthy(row.OnePerCity)
+        and Within(row.PrereqTech, row.PrereqCivic)
+    end
+    if ok then
+      local entry = { Row = row, Type = row.ImprovementType, Sea = row.Domain == "DOMAIN_SEA", Terrains = {}, Features = {},
+        Resources = {}, AdjacentTerrains = {}, Yields = {}, Gain = 0 }
+      byType[row.ImprovementType] = entry
+      list[#list + 1] = entry
+    end
+  end
+  table.sort(list, function(a, b) return a.Type < b.Type end)
+  for row in gi.Improvement_YieldChanges() do
+    local e = byType[row.ImprovementType]
+    if e ~= nil and (row.YieldChange or 0) ~= 0 then
+      e.Yields[row.YieldType] = (e.Yields[row.YieldType] or 0) + row.YieldChange
+      e.Base = true
+    end
+  end
+  for row in gi.Improvement_BonusYieldChanges() do
+    local e = byType[row.ImprovementType]
+    if e ~= nil and Within(row.PrereqTech, row.PrereqCivic) then
+      e.Yields[row.YieldType] = (e.Yields[row.YieldType] or 0) + (row.BonusYieldChange or 0)
+    end
+  end
+  for row in gi.Improvement_ValidTerrains() do
+    local e = byType[row.ImprovementType]
+    if e ~= nil then e.Terrains[row.TerrainType] = true end
+  end
+  for row in gi.Improvement_ValidFeatures() do
+    local e = byType[row.ImprovementType]
+    if e ~= nil then e.Features[row.FeatureType] = true end
+  end
+  for row in gi.Improvement_ValidResources() do
+    local e = byType[row.ImprovementType]
+    if e ~= nil then e.Resources[row.ResourceType] = Truthy(row.MustRemoveFeature) end
+  end
+  for row in gi.Improvement_ValidAdjacentTerrains() do
+    local e = byType[row.ImprovementType]
+    if e ~= nil then e.AdjacentTerrains[row.TerrainType] = true end
+  end
+  local function Weighted(yields)
+    local total = 0
+    for _, y in ipairs(CmpLand.YIELDS) do total = total + ctx.W[y] * (yields[y] or 0) end
+    return total
+  end
+  ctx.Weighted = Weighted
+  -- The mod lists only improvements with yields of their own; here every
+  -- one counts (a resource's own improvement rules out the others even
+  -- when it gives nothing).
+  ctx.Improvements = {}
+  for _, e in ipairs(list) do
+    if mode ~= "mod" or e.Base then
+      e.Gain = Weighted(e.Yields)
+      ctx.Improvements[#ctx.Improvements + 1] = e
+    end
+  end
+  return ctx
+end
+
+local function Adjacent(plot)
+  local out = {}
+  for dir = 0, 5 do
+    local n = Map.GetAdjacentPlot(plot:GetX(), plot:GetY(), dir)
+    if n ~= nil then out[#out + 1] = n end
+  end
+  return out
+end
+
+-- Whether improvement `e` may go on `plot` for what it needs around it
+-- (potential mode only; the mod's list holds none that need anything).
+local function Surroundings(ctx, e, plot)
+  local row = e.Row
+  if Truthy(row.RequiresRiver) and not plot:IsRiver() then return false end
+  local adjacent = nil
+  local function Around()
+    adjacent = adjacent or Adjacent(plot)
+    return adjacent
+  end
+  if Truthy(row.RequiresAdjacentBonusOrLuxury) or Truthy(row.RequiresAdjacentLuxury) then
+    local found = false
+    for _, n in ipairs(Around()) do
+      local r = n:GetResourceType() ~= -1 and GameInfo.Resources[n:GetResourceType()] or nil
+      if r ~= nil and ctx.Visible(r) then
+        local class = r.ResourceClassType
+        if class == "RESOURCECLASS_LUXURY" or (class == "RESOURCECLASS_BONUS" and not Truthy(row.RequiresAdjacentLuxury)) then found = true end
+      end
+    end
+    if not found then return false end
+  end
+  if (row.ValidAdjacentTerrainAmount or 0) > 0 then
+    local count = 0
+    for _, n in ipairs(Around()) do
+      if e.AdjacentTerrains[GameInfo.Terrains[n:GetTerrainType()].TerrainType] then count = count + 1 end
+    end
+    if count < row.ValidAdjacentTerrainAmount then return false end
+  end
+  if Truthy(row.AdjacentSeaResource) then
+    local found = false
+    for _, n in ipairs(Around()) do
+      local r = n:IsWater() and n:GetResourceType() ~= -1 and GameInfo.Resources[n:GetResourceType()] or nil
+      if r and ctx.Visible(r) then found = true end
+    end
+    if not found then return false end
+  end
+  if Truthy(row.AdjacentToLand) then
+    local found = false
+    for _, n in ipairs(Around()) do
+      if not n:IsWater() then found = true end
+    end
+    if not found then return false end
+  end
+  if Truthy(row.Coast) then
+    local found = false
+    for _, n in ipairs(Around()) do
+      if n:IsWater() and not n:IsLake() then found = true end
+    end
+    if not found then return false end
+  end
+  if row.MinimumAppeal ~= nil and plot:GetAppeal() < row.MinimumAppeal then return false end
+  return true
+end
+
+-- Best weighted gain of the improvements that can go on `plot` with
+-- feature `feature` and resource `resource` left (types or nil); 0 when
+-- none. A resource with improvements of its own takes only those.
+local function BestImprovement(ctx, plot, sea, terrain, feature, resource)
+  local best = 0
+  local own = false
+  if resource ~= nil then
+    for _, e in ipairs(ctx.Improvements) do
+      local must = e.Resources[resource]
+      if must ~= nil then
+        own = true
+        if e.Sea == sea and not (must and feature ~= nil) and (ctx.Mode == "mod" or Surroundings(ctx, e, plot)) then
+          best = math.max(best, e.Gain)
+        end
+      end
+    end
+    if own then return best end
+  end
+  for _, e in ipairs(ctx.Improvements) do
+    if e.Sea == sea then
+      local valid
+      if feature ~= nil then valid = e.Features[feature] == true else valid = e.Terrains[terrain] == true end
+      if valid and (ctx.Mode == "mod" or Surroundings(ctx, e, plot)) then best = math.max(best, e.Gain) end
+    end
+  end
+  return best
+end
+
+-- Flooded coastal lowland and antiquity sites take no improvement.
+local function Unimprovable(plot, resourceRow)
+  if resourceRow ~= nil and resourceRow.ResourceClassType == "RESOURCECLASS_ARTIFACT" then return true end
+  return (plot.lowland or -1) ~= -1 and (plot.flooded == true or plot.submerged == true)
+end
+
+function CmpLand.PlotValues(plot, ctx)
+  local gi = GameInfo
+  local terrain = gi.Terrains[plot:GetTerrainType()].TerrainType
+  local featureRow = plot:GetFeatureType() ~= -1 and gi.Features[plot:GetFeatureType()] or nil
+  local resourceRow = plot:GetResourceType() ~= -1 and gi.Resources[plot:GetResourceType()] or nil
+  if resourceRow ~= nil and not ctx.Visible(resourceRow) then resourceRow = nil end
+  local feature = featureRow and featureRow.FeatureType or nil
+  local resource = resourceRow and resourceRow.ResourceType or nil
+  local terrainYield = ctx.Weighted(ctx.TerrainYields[terrain] or {})
+  local featureYield = feature and ctx.Weighted(ctx.FeatureYields[feature] or {}) or 0
+  local resourceYield = resource and ctx.Weighted(ctx.ResourceYields[resource] or {}) or 0
+  local removable = featureRow ~= nil and Truthy(featureRow.Removable) and ctx.AllowRemoval
+    and (ctx.Mode == "mod" or featureRow.RemoveTech == nil or ctx.Has[featureRow.RemoveTech] == true)
+  local harvestable = resource ~= nil and ctx.ResourceOnce[resource] ~= nil and ctx.Harvest
+  local featureOnce = removable and ctx.Weighted(ctx.FeatureOnce[feature] or {}) or 0
+  local resourceOnce = harvestable and ctx.Weighted(ctx.ResourceOnce[resource]) or 0
+  local once = featureOnce + resourceOnce
+  local improvement = plot:GetImprovementType() ~= -1 and gi.Improvements[plot:GetImprovementType()] or nil
+  if ctx.Mode == "mod" and (improvement ~= nil or Unimprovable(plot, resourceRow)) then
+    -- The mod takes an improved plot as it is (its yields, no bonuses: the
+    -- emulated game's Plot:GetYield).
+    local now = terrainYield + featureYield + resourceYield
+    if improvement ~= nil then
+      local yields = {}
+      for row in gi.Improvement_YieldChanges() do
+        if row.ImprovementType == improvement.ImprovementType then yields[row.YieldType] = (yields[row.YieldType] or 0) + row.YieldChange end
+      end
+      now = now + ctx.Weighted(yields)
+    end
+    return now, once
+  end
+  if Unimprovable(plot, resourceRow) then return terrainYield + featureYield + resourceYield, once end
+  local sea = plot:IsWater()
+  local best = nil
+  for _, clear in ipairs(removable and { false, true } or { false }) do
+    for _, harvest in ipairs(harvestable and { false, true } or { false }) do
+      local value = terrainYield
+      local f, r = feature, resource
+      if clear then f = nil else value = value + featureYield - (ctx.Scale * featureOnce) end
+      if harvest then r = nil else value = value + resourceYield - (ctx.Scale * resourceOnce) end
+      value = value + BestImprovement(ctx, plot, sea, terrain, f, r)
+      if best == nil or value > best then best = value end
+    end
+  end
+  return best, once
+end
+
+-- ===========================================================================
 -- Judge
 -- ===========================================================================
 local function IsWonder(t)
@@ -631,15 +951,18 @@ function CmpRun.Judge(id, planJson)
   -- `population` tiles (all yields count 1) among the plots it owns or could
   -- grow into (3 rings, not another city's, not a district, wonder or city
   -- center). A plan that puts districts on the best tiles loses here.
+  local function Workable(plot, i, c)
+    return Map.GetPlotDistance(plot.x, plot.y, c:GetX(), c:GetY()) <= 3
+      and not plot:IsCity() and plot:GetDistrictType() == -1 and plot:GetWonderType() == -1
+      and (plot:GetOwner() == -1 or plot.city == c) and PlayersVisibility[0]:IsRevealed(i)
+  end
   local function WorkedYield(taken, weights)
     local claimed, total = {}, 0
     for _, c in ipairs(request.cities) do
       local values = {}
       for i = 0, w.Width * w.Height - 1 do
         local plot = Map.GetPlotByIndex(i)
-        if not claimed[i] and not taken[i] and Map.GetPlotDistance(plot.x, plot.y, c:GetX(), c:GetY()) <= 3
-            and not plot:IsCity() and plot:GetDistrictType() == -1 and plot:GetWonderType() == -1
-            and (plot:GetOwner() == -1 or plot.city == c) and PlayersVisibility[0]:IsRevealed(i) then
+        if not claimed[i] and not taken[i] and Workable(plot, i, c) then
           local v = 0
           for row in gi.Yields() do v = v + w.BaseYield(plot, row.YieldType) * (weights and weights[row.YieldType] or 1) end
           values[#values + 1] = { i = i, v = v }
@@ -655,6 +978,74 @@ function CmpRun.Judge(id, planJson)
   end
   local workedBefore = WorkedYield({})
   local workedWeightedBefore = WorkedYield({}, request.weights)
+
+  -- Potential output (issue 48): the same, but each city works its best
+  -- T plots valued as improved (CmpLand "potential": the best of keeping
+  -- or clearing, harvesting or not, plus the best improvement within the
+  -- era horizon; one-time yields apart, as oneTime). T is the population
+  -- the city's built and requested specialty districts need, 3 n - 2 (at
+  -- least its population): a property of the scene, the same for every
+  -- planner whatever it places. Also with T + 3 and with the yield weights.
+  local potentialCtx = { CmpLand.Context({ mode = "potential" }), CmpLand.Context({ mode = "potential", weights = request.weights }) }
+  local potentialCache = { {}, {} }
+  local function Potential(i, which)
+    local cache = potentialCache[which]
+    local v = cache[i]
+    if v == nil then
+      v = { CmpLand.PlotValues(Map.GetPlotByIndex(i), potentialCtx[which]) }
+      cache[i] = v
+    end
+    return v[1], v[2]
+  end
+  local function BaseType(t)
+    local row = gi.DistrictReplaces[t]
+    return row and row.ReplacesDistrictType or t
+  end
+  local function Specialty(t)
+    local row = gi.Districts[t]
+    return row ~= nil and row.RequiresPopulation and not row.CityCenter
+  end
+  local targets = {}
+  for _, c in ipairs(request.cities) do
+    local have, n = {}, 0
+    for _, d in c:GetDistricts():Members() do
+      local t = gi.Districts[d:GetType()].DistrictType
+      if Specialty(t) then n = n + 1 end
+      have[t], have[BaseType(t)] = true, true
+    end
+    local wanted = {}
+    if scn.kind == "multi" then
+      wanted = (request.plans and request.plans[c:GetID()]) or request.districts
+    elseif c == request.target then
+      wanted = request.districts
+    end
+    for _, t in ipairs(wanted) do
+      if Specialty(t) and not have[t] and not have[BaseType(t)] then
+        n = n + 1
+        have[t] = true
+      end
+    end
+    targets[c:GetID()] = math.max(c:GetPopulation(), 3 * n - 2)
+  end
+  local function WorkedPotential(taken, which, extra)
+    local claimed, total = {}, 0
+    for _, c in ipairs(request.cities) do
+      local values = {}
+      for i = 0, w.Width * w.Height - 1 do
+        local plot = Map.GetPlotByIndex(i)
+        if not claimed[i] and not taken[i] and Workable(plot, i, c) then
+          values[#values + 1] = { i = i, v = (Potential(i, which)) }
+        end
+      end
+      table.sort(values, function(a, b) if a.v ~= b.v then return a.v > b.v end return a.i < b.i end)
+      for k = 1, math.min(targets[c:GetID()] + extra, #values) do
+        total = total + values[k].v
+        claimed[values[k].i] = true
+      end
+    end
+    return total
+  end
+  local potentialBefore = { WorkedPotential({}, 1, 0), WorkedPotential({}, 1, 3), WorkedPotential({}, 2, 0) }
 
   local cities = {}
   for _, c in ipairs(request.cities) do cities[c:GetID()] = c end
@@ -997,6 +1388,28 @@ function CmpRun.Judge(id, planJson)
   -- objective that weighs yields (compare.mjs --refscore).
   score.workedWeighted = WorkedYield(taken, request.weights) - workedWeightedBefore
   score.outputWeighted = score.gain + score.workedWeighted
+  -- Potential output (issue 48; see above).
+  score.workedP = WorkedPotential(taken, 1, 0) - potentialBefore[1]
+  score.outputP = score.gain + score.workedP
+  score.workedPT3 = WorkedPotential(taken, 1, 3) - potentialBefore[2]
+  score.outputPT3 = score.gain + score.workedPT3
+  score.workedPWeighted = WorkedPotential(taken, 2, 0) - potentialBefore[3]
+  score.outputPWeighted = score.gain + score.workedPWeighted
+  -- One-time yields on the plots the plan takes (clearing, harvesting), all
+  -- yields 1: not in outputP.
+  local oneTime, seenOnce = 0, {}
+  for _, p in ipairs(placements) do
+    local index = Map.GetPlot(p.x, p.y) and Map.GetPlotIndex(p.x, p.y) or nil
+    if index ~= nil and not seenOnce[index] then
+      seenOnce[index] = true
+      local _, once = Potential(index, 1)
+      oneTime = oneTime + once
+    end
+  end
+  score.oneTime = oneTime
+  local targetList = {}
+  for _, c in ipairs(request.cities) do targetList[#targetList + 1] = { city = c:GetID(), population = targets[c:GetID()] } end
+  score.potentialTargets = targetList
   score.featuresCleared = featuresCleared
   score.missing = missing
   score.missingPlaceable = missingPlaceable

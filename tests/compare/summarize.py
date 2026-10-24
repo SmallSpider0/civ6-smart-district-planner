@@ -220,8 +220,16 @@ def summarize(rows):
                     upper = o.get("upper")
         if optimum is not None:
             best, exact = optimum, True
+        # Potential output (issue 48: the judge's outputP, plots valued as
+        # improved, population the scene's districts need): the best legal.
+        best_out_p = None
+        for k, r in runs.items():
+            s = r.get("score")
+            if s and not r.get("error") and s.get("outputP") is not None:
+                if not [v for v in s["violations"] if v["kind"] in HARD]:
+                    best_out_p = s["outputP"] if best_out_p is None else max(best_out_p, s["outputP"])
         entry = {"reference": best, "exact": exact, "optimum": optimum, "upper": upper, "referenceOutput": best_out,
-                 "optimumMissing": optimumMissing, "runs": {}}
+                 "referenceOutputP": best_out_p, "optimumMissing": optimumMissing, "runs": {}}
         for k, r in runs.items():
             s = r.get("score")
             e = {"seconds": r.get("planSeconds"), "error": r.get("error")}
@@ -239,6 +247,9 @@ def summarize(rows):
                     "dmtCalls": (r.get("plan") or {}).get("stats", {}).get("dmtCalls"),
                     "output": s.get("output"), "worked": s.get("worked"),
                     "outputGap": (best_out - s["output"]) if (best_out is not None and s.get("output") is not None) else None,
+                    "outputP": s.get("outputP"), "workedP": s.get("workedP"), "oneTime": s.get("oneTime"),
+                    "outputPT3": s.get("outputPT3"), "outputPWeighted": s.get("outputPWeighted"),
+                    "outputPGap": (best_out_p - s["outputP"]) if (best_out_p is not None and s.get("outputP") is not None) else None,
                     "notes": (r.get("plan") or {}).get("notes"),
                     "wondersPlaced": s.get("wondersPlaced"), "wondersRequested": s.get("wondersRequested"),
                     # Coverage (design 19.5): (city, kind) pairs newly reached.
@@ -338,6 +349,11 @@ def per_planner(scenarios, kind_filter=None):
             if r.get("outputGap") is not None:
                 a["outGap"].append(r["outputGap"])
                 a["outBest"].append(1 if r["legal"] and r["outputGap"] <= 1e-9 else 0)
+            if r.get("outputPGap") is not None:
+                a["outP"].append(r["outputP"])
+                a["outPGap"].append(r["outputPGap"])
+                a["outPBest"].append(1 if r["legal"] and r["outputPGap"] <= 1e-9 else 0)
+                a["oneTime"].append(r.get("oneTime") or 0)
             for kk, n in (r.get("violations") or {}).items():
                 a["v_" + kk].append(n)
             q = r.get("sdpQuality")
@@ -365,6 +381,10 @@ def per_planner(scenarios, kind_filter=None):
             "violations": {kk[2:]: sum(v) for kk, v in a.items() if kk.startswith("v_")},
             "outputBestShare": statistics.mean(a["outBest"]) if a["outBest"] else None,
             "outputGapMean": statistics.mean(a["outGap"]) if a["outGap"] else None,
+            "outputPMean": statistics.mean(a["outP"]) if a["outP"] else None,
+            "outputPBestShare": statistics.mean(a["outPBest"]) if a["outPBest"] else None,
+            "outputPGapMean": statistics.mean(a["outPGap"]) if a["outPGap"] else None,
+            "oneTimeMean": statistics.mean(a["oneTime"]) if a["oneTime"] else None,
         }
         if a["q_n"]:
             out[k]["sdpQuality"] = {
@@ -376,6 +396,38 @@ def per_planner(scenarios, kind_filter=None):
                 "boundBeaten": sum(a["q_boundBeaten"]),
             }
     return out
+
+
+def land_vs_adjacency(sub, ours="sdp:STANDARD_LAND", base="sdp:STANDARD"):
+    """The land part on against off (issue 48): paired on the potential
+    output, then a 2 x 2 table of whether the land part gave up adjacency
+    and whether the potential output rose or fell, listing the scenes where
+    it gave up adjacency and the potential output fell too."""
+    for field in ("outputP", "outputPT3", "outputPWeighted"):
+        pr = paired(sub, ours, base, field)
+        if pr["n"]:
+            lo, hi = pr["ci"]
+            print("  %-17s vs %-13s %-10s n %3d  W/T/L %d/%d/%d  mean %+.2f  CI [%+.2f, %+.2f]  p %.2g" % (
+                ours, base, field, pr["n"], pr["wins"], pr["ties"], pr["losses"], pr["mean"], lo, hi, pr["p"]))
+    cells = defaultdict(list)
+    for sid in sorted(sub):
+        ra, rb = sub[sid]["runs"].get(ours), sub[sid]["runs"].get(base)
+        if not ra or not rb or ra.get("error") or rb.get("error"):
+            continue
+        if None in (ra.get("gain"), rb.get("gain"), ra.get("outputP"), rb.get("outputP")):
+            continue
+        gave = "gave up adjacency" if ra["gain"] < rb["gain"] - 1e-9 else "kept adjacency"
+        d = ra["outputP"] - rb["outputP"]
+        move = "outputP up" if d > 1e-9 else "outputP down" if d < -1e-9 else "outputP same"
+        cells[(gave, move)].append((sid, ra["gain"] - rb["gain"], d))
+    if not cells:
+        return
+    print("  %s vs %s: adjacency given up x potential output" % (ours, base))
+    for gave in ("gave up adjacency", "kept adjacency"):
+        print("    %-18s " % gave + "  ".join("%s %3d" % (move, len(cells[(gave, move)]))
+                                            for move in ("outputP up", "outputP same", "outputP down")))
+    for sid, dg, dp in cells[("gave up adjacency", "outputP down")]:
+        print("    gave up adjacency and outputP fell: %-34s adjacency %+.2f outputP %+.2f" % (sid, dg, dp))
 
 
 def main():
@@ -413,6 +465,9 @@ def main():
                     "; above it with fewer districts placed %d" % v["fewerAbove"] if v.get("fewerAbove") else ""))
             if ob is not None:
                 print("  %-18s output best %.2f gap %.2f" % ("", ob, og))
+            if v.get("outputPMean") is not None:
+                print("  %-18s potential output (outputP) mean %.2f, best %.2f, gap %.2f; one-time yields taken mean %.1f" % (
+                    "", v["outputPMean"], v["outputPBestShare"], v["outputPGapMean"], v["oneTimeMean"]))
             sq = v.get("sdpQuality")
             if sq:
                 print("  %-18s self-reported: exhaustive %d/%d, gap to the model's bound mean %s max %s (n %d), truncated %d, not converged %d, bound beaten by the reference %d" % (
@@ -425,13 +480,14 @@ def main():
         # Adjacency and the competitors' objectives with the standard tier;
         # city output with the panel's default (land part on).
         for other in ("amt", "ep", "amt:DEFAULTW", "ep:DEFAULT"):
-            for ours, field in (("sdp:STANDARD", "gain"), ("sdp:STANDARD_LAND", "output"),
+            for ours, field in (("sdp:STANDARD", "gain"), ("sdp:STANDARD_LAND", "output"), ("sdp:STANDARD_LAND", "outputP"),
                                 ("sdp:STANDARD", "cross_amt"), ("sdp:STANDARD", "cross_ep")):
                 pr = paired(sub, ours, other, field)
                 if pr["n"]:
                     lo, hi = pr["ci"]
                     print("  %-17s vs %-13s %-10s n %3d  W/T/L %d/%d/%d  mean %+.2f  CI [%+.2f, %+.2f]  p %.2g" % (
                         ours, other, field, pr["n"], pr["wins"], pr["ties"], pr["losses"], pr["mean"], lo, hi, pr["p"]))
+        land_vs_adjacency(sub)
     # Coverage (design 19.5): reach and adjacency, each setting against the
     # same tier without coverage and against AMT.
     cov = subset(scenarios, "coverage", "multi")
