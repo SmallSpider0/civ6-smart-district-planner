@@ -21,7 +21,8 @@ reports them as the "real" group.
 `ref` exports a reference scene (set REF, tools/refscene.py) from a loaded
 community save (tools/game.py load): the real map, and as the reference
 layout the author's built districts of the chosen cities (--reference
-built, the default) or their district map tacks (--reference pins). Those
+built, the default), their district map tacks (--reference pins), or
+both (--reference both; a tack's placement is marked "pin": true). Those
 districts leave the cities (the tacks leave the pin list), so the optimum
 may put them anywhere; every other district, wonder and tack stays. For
 each built reference district the game's adjacency is kept as
@@ -302,11 +303,13 @@ def settle_reference(spec):
     revealed late) and is dropped too, with a note, so the reference stays
     legal as the game let it stand."""
     ref = spec["reference"]
-    if ref.get("from") != "built":
+    if ref.get("from") not in ("built", "both"):
         return
     spec["sample"] = []
     width = spec["width"]
     for p in ref["placements"]:
+        if p.get("pin"):
+            continue
         plot = spec["plots"][p["y"] * width + p["x"]]
         if plot.get("r"):
             note = "%s under the built %s at %d,%d left out (revealed after it was built)" % (
@@ -342,7 +345,7 @@ def cmd_ref(args):
     by_id = {c["id"]: c for c in spec["cities"] if c["owner"] == 0}
     claims = claimed_adjacency(lua_cities, spec["meta"])
     placements, claimed = [], []
-    if args.reference == "built":
+    if args.reference in ("built", "both"):
         for cid in chosen:
             city, keep = by_id[cid], []
             for d in city["districts"]:
@@ -356,11 +359,14 @@ def cmd_ref(args):
                 else:
                     keep.append(d)
             city["districts"] = keep
-    else:
+    if args.reference in ("pins", "both"):
         # District tacks within 3 of a chosen city, not on a city or a built
         # district: to the chosen city owning the plot, else the nearest one
-        # (lower ID on a tie).
+        # (lower ID on a tie), skipping a city that has that district
+        # already (a city has one of each); a tack no city can take stays a
+        # tack.
         built = {(d["x"], d["y"]) for c in spec["cities"] for d in c["districts"]}
+        built |= {(p["x"], p["y"]) for p in placements}
         built |= {(c["x"], c["y"]) for c in spec["cities"]}
         owner = {i: c["id"] for c in spec["cities"] if c["owner"] == 0 for i in c["plots"]}
         kept = []
@@ -370,9 +376,15 @@ def cmd_ref(args):
             near = sorted((hex_distance(pin["x"], pin["y"], by_id[c]["x"], by_id[c]["y"]), c) for c in chosen)
             near = [(dist, c) for dist, c in near if dist <= 3]
             if dtype in types and near and (pin["x"], pin["y"]) not in built:
-                cid = owner.get(pin["y"] * width + pin["x"])
-                cid = cid if cid in chosen else near[0][1]
-                placements.append({"city": cid, "type": dtype, "x": pin["x"], "y": pin["y"]})
+                first = owner.get(pin["y"] * width + pin["x"])
+                order = ([first] if first in chosen else []) + [c for _, c in near if c != first]
+                has = lambda c: any(p["city"] == c and p["type"] == dtype for p in placements)  # noqa: E731
+                cid = next((c for c in order if not has(c)), None)
+                if cid is None:
+                    kept.append(pin)
+                    print("tack %s at %d,%d left as a tack: every city in reach has one" % (dtype, pin["x"], pin["y"]))
+                    continue
+                placements.append({"city": cid, "type": dtype, "x": pin["x"], "y": pin["y"], "pin": True})
             else:
                 kept.append(pin)
         spec["pins"] = kept
@@ -462,8 +474,8 @@ def main(argv=None):
     rp.add_argument("--cities", required=True, help="city IDs, comma-separated")
     rp.add_argument("--save", help="load this stress-test save first (name as in tools/stress.py)")
     rp.add_argument("--from", dest="from_save", help="record this save name (already loaded)")
-    rp.add_argument("--reference", choices=("built", "pins"), default="built",
-                    help="the author's built districts (default) or district map tacks")
+    rp.add_argument("--reference", choices=("built", "pins", "both"), default="built",
+                    help="the author's built districts (default), district map tacks, or both")
     rp.add_argument("--types", help="base district types in the reference (default: %s)"
                     % ",".join(t[9:] for t in REF_TYPES).lower())
     rp.add_argument("--ruleset", help="judge under this ruleset (default the save's)")

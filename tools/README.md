@@ -136,8 +136,9 @@ python3 -I tools/snapshot.py ref REF05-bh-japan-tokyo-shizuoka --from bh-hojo-27
 - 请求的区域：开发集的五种加娱乐中心，3 环内有海再加港口，减去该城已建的（特色区域按基础区域算）；多城每城一张清单。
 - `check` 用 `compare.mjs --probe tests/compare/cmp_scene_check.lua --arg <编号>` 在离线世界里重算样本，列出可放置性和加成的差异。
 - 窗口外的城拥有的格会丢掉归属（输出里的 `droppedOwned`）；按构造它们都在所选城市 4 格以外，候选格和相邻格不受影响。
-- `ref`：读进社区玩家的存档（`game.py load`，存档放进 `Saves/Single`，文件名以 `SDP_ref_` 开头）后，把所选城市导出成参照场景（`REF` 组，与 `refscene.py` 手写的同格式）：地图是存档里的真实地图，参照布局是作者这几座城已建的学院、圣地、剧院、商业中心、港口、工业区（`--reference built`，默认；特色区域按基础区域记；`--types` 改范围），或作者的区域地图钉（`--reference pins`）。这些区域从城里拿掉（钉从钉表拿掉），最优解可以放在任何地方；其他区域、奇观、钉保持原样。
+- `ref`：读进社区玩家的存档（`game.py load`，存档放进 `Saves/Single`，文件名以 `SDP_ref_` 开头）后，把所选城市导出成参照场景（`REF` 组，与 `refscene.py` 手写的同格式）：地图是存档里的真实地图，参照布局是作者这几座城已建的学院、圣地、剧院、商业中心、港口、工业区（`--reference built`，默认；特色区域按基础区域记；`--types` 改范围），或作者的区域地图钉（`--reference pins`），或两者都要（`--reference both`，钉来的记 `"pin": true`）。钉归拥有那一格的城，否则归最近的城；那座城已有同种区域时归下一座，都有就留作普通的钉。这些区域从城里拿掉（钉从钉表拿掉），最优解可以放在任何地方；其他区域、奇观、钉保持原样。
   - 每个参照区域在游戏里的相邻加成记在 `reference.claimed`：放置透镜的值（`plot:GetAdjacencyYield`），另记区域自己的值 `withPolicies`（含政策卡翻倍），用来和裁判对照。
+  - 场景记作者（`scenario.author`）和来源，按作者分开发集、核对集时用。
   - 已建区域下面的资源是建成后才揭示的（如煤），游戏让区域留着；场景里去掉它，记一条说明，参照布局才合法。游戏里的 DMT 样本是在这些区域还在的状态下取的，不描述场景，所以不保存（`check` 不适用）。
   - 迭起兴衰的存档用 `--ruleset RULESET_EXPANSION_2` 按风云变幻的规则核对：原规则集记在 `meta.savedRuleset`，比较用的规则库里没有的科技、市政、万神殿去掉（`meta.dropped`），没有的地形、资源、区域等报错。两版工业区的加成不同，场景说明里写明。
 

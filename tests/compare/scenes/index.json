@@ -394,6 +394,278 @@
   ]
  },
  {
+  "id": "REF12-dq-china-xian-occ",
+  "kind": "single",
+  "set": "REF",
+  "civ": "CIVILIZATION_CHINA",
+  "leader": "LEADER_QIN",
+  "title": "DanQuayle: China, one-city challenge, Xi'an (save, turn 145)",
+  "districts": [
+   "DISTRICT_HOLY_SITE",
+   "DISTRICT_THEATER",
+   "DISTRICT_CAMPUS"
+  ],
+  "only": [
+   65536
+  ],
+  "target": 65536,
+  "file": "REF12-dq-china-xian-occ.json",
+  "save": "dq-qin-145",
+  "turn": 145,
+  "ruleset": "RULESET_EXPANSION_2",
+  "source": "https://forums.civfanatics.com/threads/the-solo-city-challenge.645236/",
+  "author": "DanQuayle",
+  "date": "2019-05-01"
+ },
+ {
+  "id": "REF13-pk-china-xian-occ",
+  "kind": "single",
+  "set": "REF",
+  "civ": "CIVILIZATION_CHINA",
+  "leader": "LEADER_QIN",
+  "title": "pahakuutti: China, one-city challenge, Xi'an (save, turn 150)",
+  "districts": [
+   "DISTRICT_HOLY_SITE",
+   "DISTRICT_COMMERCIAL_HUB",
+   "DISTRICT_THEATER",
+   "DISTRICT_CAMPUS"
+  ],
+  "only": [
+   65536
+  ],
+  "target": 65536,
+  "file": "REF13-pk-china-xian-occ.json",
+  "save": "pk-qin-150",
+  "turn": 150,
+  "ruleset": "RULESET_EXPANSION_2",
+  "source": "https://forums.civfanatics.com/threads/the-solo-city-challenge.645236/",
+  "author": "pahakuutti",
+  "date": "2019-04-30"
+ },
+ {
+  "id": "REF14-ca-poland-krakow-bydgoszcz",
+  "kind": "multi",
+  "set": "REF",
+  "civ": "CIVILIZATION_POLAND",
+  "leader": "LEADER_JADWIGA",
+  "title": "_Calyx: Poland, Krakow and Bydgoszcz (save, turn 100; two Industrial Zones tacked)",
+  "districts": [
+   "DISTRICT_COMMERCIAL_HUB",
+   "DISTRICT_CAMPUS",
+   "DISTRICT_INDUSTRIAL_ZONE"
+  ],
+  "only": [
+   65536,
+   131073
+  ],
+  "target": 65536,
+  "file": "REF14-ca-poland-krakow-bydgoszcz.json",
+  "save": "ca-jadwiga-100",
+  "turn": 100,
+  "ruleset": "RULESET_EXPANSION_2",
+  "source": "https://forums.civfanatics.com/threads/the-jump-up-to-immortal.657854/",
+  "author": "_Calyx",
+  "date": "2020-05-13",
+  "plans": [
+   [
+    "DISTRICT_COMMERCIAL_HUB",
+    "DISTRICT_CAMPUS",
+    "DISTRICT_INDUSTRIAL_ZONE"
+   ],
+   [
+    "DISTRICT_COMMERCIAL_HUB",
+    "DISTRICT_INDUSTRIAL_ZONE"
+   ]
+  ]
+ },
+ {
+  "id": "REF15-sk-hungary-buda-szeged-miskolc",
+  "kind": "multi",
+  "set": "REF",
+  "civ": "CIVILIZATION_HUNGARY",
+  "leader": "LEADER_MATTHIAS_CORVINUS",
+  "title": "Sklez: Hungary, Buda, Szeged and Miskolc (save, turn 58; districts placed and tacked)",
+  "districts": [
+   "DISTRICT_CAMPUS",
+   "DISTRICT_THEATER",
+   "DISTRICT_COMMERCIAL_HUB"
+  ],
+  "only": [
+   65536,
+   131073,
+   196610
+  ],
+  "target": 65536,
+  "file": "REF15-sk-hungary-buda-szeged-miskolc.json",
+  "save": "sk-matthias-58",
+  "turn": 58,
+  "ruleset": "RULESET_EXPANSION_2",
+  "source": "https://forums.civfanatics.com/threads/sv-discussion-for-gathering-storm.642304/",
+  "author": "Sklez",
+  "date": "2019-02-19",
+  "plans": [
+   [
+    "DISTRICT_CAMPUS",
+    "DISTRICT_THEATER",
+    "DISTRICT_COMMERCIAL_HUB"
+   ],
+   [
+    "DISTRICT_CAMPUS",
+    "DISTRICT_THEATER"
+   ],
+   [
+    "DISTRICT_CAMPUS",
+    "DISTRICT_COMMERCIAL_HUB",
+    "DISTRICT_THEATER"
+   ]
+  ]
+ },
+ {
+  "id": "REF16-vi-maori-south-3c",
+  "kind": "multi",
+  "set": "REF",
+  "civ": "CIVILIZATION_MAORI",
+  "leader": "LEADER_KUPE",
+  "title": "Victoria: Maori, three southern cities (save, turn 100)",
+  "districts": [
+   "DISTRICT_HARBOR",
+   "DISTRICT_COMMERCIAL_HUB",
+   "DISTRICT_CAMPUS",
+   "DISTRICT_THEATER"
+  ],
+  "only": [
+   196610,
+   262147,
+   458758
+  ],
+  "target": 196610,
+  "file": "REF16-vi-maori-south-3c.json",
+  "save": "vi-kupe-100",
+  "turn": 100,
+  "ruleset": "RULESET_EXPANSION_2",
+  "source": "https://forums.civfanatics.com/threads/whats-your-earliest-victory.654421/",
+  "author": "Victoria",
+  "date": "2020-04-25",
+  "plans": [
+   [
+    "DISTRICT_HARBOR",
+    "DISTRICT_COMMERCIAL_HUB",
+    "DISTRICT_CAMPUS"
+   ],
+   [
+    "DISTRICT_CAMPUS",
+    "DISTRICT_THEATER"
+   ],
+   [
+    "DISTRICT_HARBOR",
+    "DISTRICT_COMMERCIAL_HUB"
+   ]
+  ]
+ },
+ {
+  "id": "REF17-vi-maori-kaiapoi",
+  "kind": "single",
+  "set": "REF",
+  "civ": "CIVILIZATION_MAORI",
+  "leader": "LEADER_KUPE",
+  "title": "Victoria: Maori, Kaiapoi (save, turn 100)",
+  "districts": [
+   "DISTRICT_HARBOR",
+   "DISTRICT_THEATER",
+   "DISTRICT_HOLY_SITE"
+  ],
+  "only": [
+   131073
+  ],
+  "target": 131073,
+  "file": "REF17-vi-maori-kaiapoi.json",
+  "save": "vi-kupe-100",
+  "turn": 100,
+  "ruleset": "RULESET_EXPANSION_2",
+  "source": "https://forums.civfanatics.com/threads/whats-your-earliest-victory.654421/",
+  "author": "Victoria",
+  "date": "2020-04-25"
+ },
+ {
+  "id": "REF18-vi-maori-capital",
+  "kind": "single",
+  "set": "REF",
+  "civ": "CIVILIZATION_MAORI",
+  "leader": "LEADER_KUPE",
+  "title": "Victoria: Maori, capital (save, turn 100)",
+  "districts": [
+   "DISTRICT_HARBOR",
+   "DISTRICT_THEATER"
+  ],
+  "only": [
+   65536
+  ],
+  "target": 65536,
+  "file": "REF18-vi-maori-capital.json",
+  "save": "vi-kupe-100",
+  "turn": 100,
+  "ruleset": "RULESET_EXPANSION_2",
+  "source": "https://forums.civfanatics.com/threads/whats-your-earliest-victory.654421/",
+  "author": "Victoria",
+  "date": "2020-04-25"
+ },
+ {
+  "id": "REF19-ga-rome-rome-mediolanum",
+  "kind": "multi",
+  "set": "REF",
+  "civ": "CIVILIZATION_ROME",
+  "leader": "LEADER_TRAJAN",
+  "title": "Gaonac'h: Rome, Rome and Mediolanum (save, turn 156)",
+  "districts": [
+   "DISTRICT_CAMPUS",
+   "DISTRICT_INDUSTRIAL_ZONE"
+  ],
+  "only": [
+   65536,
+   131073
+  ],
+  "target": 65536,
+  "file": "REF19-ga-rome-rome-mediolanum.json",
+  "save": "ga-trajan-156",
+  "turn": 156,
+  "ruleset": "RULESET_EXPANSION_2",
+  "source": "https://forums.civfanatics.com/threads/science-in-the-new-patch-and-trajan-the-beast.647077/",
+  "author": "Gaonac'h",
+  "date": "2019-07-02",
+  "plans": [
+   [
+    "DISTRICT_CAMPUS"
+   ],
+   [
+    "DISTRICT_CAMPUS",
+    "DISTRICT_INDUSTRIAL_ZONE"
+   ]
+  ]
+ },
+ {
+  "id": "REF20-ga-rome-puteoli",
+  "kind": "single",
+  "set": "REF",
+  "civ": "CIVILIZATION_ROME",
+  "leader": "LEADER_TRAJAN",
+  "title": "Gaonac'h: Rome, Puteoli (save, turn 156)",
+  "districts": [
+   "DISTRICT_CAMPUS",
+   "DISTRICT_HARBOR"
+  ],
+  "only": [
+   262147
+  ],
+  "target": 262147,
+  "file": "REF20-ga-rome-puteoli.json",
+  "save": "ga-trajan-156",
+  "turn": 156,
+  "ruleset": "RULESET_EXPANSION_2",
+  "source": "https://forums.civfanatics.com/threads/science-in-the-new-patch-and-trajan-the-beast.647077/",
+  "author": "Gaonac'h",
+  "date": "2019-07-02"
+ },
+ {
   "id": "RM01-pangaea-japan-3c",
   "kind": "multi",
   "set": "R",
