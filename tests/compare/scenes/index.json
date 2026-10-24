@@ -1,5 +1,40 @@
 [
  {
+  "id": "REF01-suqin-aqueduct-dam",
+  "kind": "multi",
+  "set": "REF",
+  "civ": "CIVILIZATION_AMERICA",
+  "leader": "LEADER_T_ROOSEVELT",
+  "title": "Su Qin: two-city aqueduct diamond with a dam",
+  "districts": [
+   "DISTRICT_AQUEDUCT",
+   "DISTRICT_INDUSTRIAL_ZONE",
+   "DISTRICT_DAM"
+  ],
+  "only": [
+   1,
+   2
+  ],
+  "target": 1,
+  "file": "REF01-suqin-aqueduct-dam.json",
+  "turn": 150,
+  "ruleset": "RULESET_EXPANSION_2",
+  "source": "https://www.zhihu.com/question/397145858/answer/1784399407",
+  "author": "苏秦",
+  "date": "2021-03",
+  "plans": [
+   [
+    "DISTRICT_AQUEDUCT",
+    "DISTRICT_INDUSTRIAL_ZONE"
+   ],
+   [
+    "DISTRICT_DAM",
+    "DISTRICT_INDUSTRIAL_ZONE",
+    "DISTRICT_AQUEDUCT"
+   ]
+  ]
+ },
+ {
   "id": "RM01-pangaea-japan-3c",
   "kind": "multi",
   "set": "R",
