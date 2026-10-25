@@ -70,7 +70,25 @@
 
 括号里是正好达到真最优的场景数（每组 32 个）。
 
-**大城、多城**：（大城开发集、留出集和多城长跑跑完后填写。）
+**大城**（`large.jsonl`、`large_heldout.jsonl`，真最优的节点上限 500 万，`sdp:ORACLE@5`）：
+
+| 区域数 | 开发集 `L` 证明 | 留出集 `HL` 证明 |
+|---|---|---|
+| 9 | 6 / 6 | 5 / 6 |
+| 10 | 1 / 6 | 1 / 6 |
+| 11 | 1 / 6 | 1 / 6 |
+| 12 | 0 / 6 | 0 / 6 |
+
+没证明的给范围：下端是已知最好的方案（各规划器和分支定界找到的最好一个），上端是分支定界没搜完的部分里最大的上界，平均是下端的 1.43 倍（开发集）、1.47 倍（留出集）。各规划器占上端 / 占下端的平均比例（真最优的比例在两者之间，`tests/compare/ranges.py` 算）：
+
+| 场景集 | 快速档 | 标准档 | 精细档 | AMT | EP |
+|---|---|---|---|---|---|
+| `L` 开发 | 71.1% / 95.8% | 73.5% / 99.1% | 73.8% / 99.4% | 49.0% / 65.9% | 60.5% / 81.4% |
+| `HL` 留出 | 69.9% / 96.8% | 70.9% / 98.2% | 71.6% / 99.3% | 50.2% / 69.4% | 62.5% / 86.8% |
+
+上端离下端还远，占上端的比例只是下限。两组里证明了的 15 个场景（多是 9 个区域）上，平均达到真最优的比例和正好达到的场景数：快速档 96.6%（6）、标准档 98.8%（11）、精细档 99.3%（13）、AMT 67.6%（0）、EP 83.3%（3）。把界再收紧、证明更多 10–12 个区域的场景没有做。
+
+**多城**：（多城长跑跑完后填写。）
 
 ## 5. 命令与结果文件
 
@@ -78,6 +96,9 @@
 node tools/compare.mjs -s '^(H?S[0-9][0-9]-[^~]*|S[0-9][0-9]-.*~(SCI|PROD|FAITH)|RS[0-9][0-9]-.*)$' -p sdp --only sdp:ORACLE --add sdp:ORACLE -j 3 --out tests/compare/results/oracle_single.jsonl
 node tools/compare.mjs -s '^H?[PW][0-9][0-9]-' --add sdp:ORACLE_CHECK -j 2 --out tests/compare/results/pools_wonders.jsonl
 node tools/compare.mjs -s '^H?OM[0-9][0-9]-' -j 2 --out tests/compare/results/smallmulti.jsonl
+node tools/compare.mjs -s '^L[0-9][0-9]-' --add sdp:ORACLE@5 -j 3 --out tests/compare/results/large.jsonl
+node tools/compare.mjs -s '^HL[0-9][0-9]-' --add sdp:ORACLE@5 -j 3 --out tests/compare/results/large_heldout.jsonl
+python3 -I tests/compare/ranges.py tests/compare/results/large.jsonl tests/compare/results/large_heldout.jsonl --sets large/single,large/heldout/single
 python3 -I tests/compare/summarize.py tests/compare/results/pools_wonders.jsonl
 python3 -I report/build.py
 ```

@@ -67,7 +67,7 @@ RESULTS = ["tests/compare/results/" + f + ".jsonl" for f in (
     "wonders_sdp_ep", "wonders_amt", "wonders_cross", "wonders_sdp_repair", "wonders_v120",
     "coverage_sdp", "coverage_amt",
     # The true optimum and the sets that need it (issue 48).
-    "oracle_hs_om", "oracle_check", "oracle_single", "pools_wonders", "smallmulti")]
+    "oracle_hs_om", "oracle_check", "oracle_single", "pools_wonders", "smallmulti", "large", "large_heldout")]
 
 PLANNERS = {
     "sdp:FAST": {"label": "本模组 快速档", "color": "--s1"},
@@ -1240,11 +1240,11 @@ def build(files=None, make_snapshots=True, version=None, date=None, lang="zh"):
     n_all = sum(d["n"] for d in opt_data.values())
     texts["OPTIMUM_TEXT"] = L(
         "下表把每类场景里各规划器的加成和真最优比：平均达到真最优的百分之几，以及正好是真最优的场景数。%d 个场景里 %d 个的真最优已证明；"
-        "没证明的（10 个以上区域的大城、3–4 座城的多城）给的是范围：前一个数按真最优的上界算，是比例的下限，后一个数按已知最好的方案算。"
+        "没证明的（多是 10–12 个区域的大城，以及 3–4 座城的多城）给的是范围：前一个数按真最优的上界算，是比例的下限，后一个数按已知最好的方案算。"
         "%s",
         "The table sets each planner's adjacency against the true optimum in every kind of scenario: the mean share of the "
         "optimum and the number of scenarios at the optimum itself. Of %d scenarios, %d have a proven optimum; for the others "
-        "(large cities of 10 or more districts, 3–4 cities together) the table gives a range: the first number is against the "
+        "(mostly large cities of 10–12 districts, and 3–4 cities together) the table gives a range: the first number is against the "
         "optimum's upper bound, a floor of the share, the second against the best plan known. %s") % (
         n_all, proven_all,
         (L("把要求的区域和奇观都放下的合法方案，没有一个超过证明过的真最优",
