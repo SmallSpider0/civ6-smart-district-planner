@@ -29,6 +29,11 @@ test("the launch bar button's tooltip names the version (issue 27)", function()
   T.ok(not SDP_Panel.State().LaunchMark, "the result mark stayed after opening the panel")
   local tip = button:GetToolTipString()
   T.ok(tip:find("v%d+%.%d+%.%d+") ~= nil, "no version in the tooltip: " .. tip)
+  -- The key that opens the panel, as the game shows the player's binding (issue 67).
+  local key = Input.GetGestureDisplayString(Input.GetActionId("SDP_OpenPlanner"), 0)
+  if key ~= nil and key ~= false and key ~= "" then
+    T.ok(tip:find(key, 1, true) ~= nil, "no key " .. tostring(key) .. " in the tooltip: " .. tip)
+  end
 end)
 
 test("open and close through the popup queue", function()

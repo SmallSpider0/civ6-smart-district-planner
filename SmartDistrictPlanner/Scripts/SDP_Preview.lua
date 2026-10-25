@@ -106,8 +106,3 @@ function SDP_Preview.Show(playerID, areas, icons)
   end
   m_shown = true
 end
-
--- Move the camera to a plot.
-function SDP_Preview.Focus(x, y)
-  UI.LookAtPlot(x, y)
-end

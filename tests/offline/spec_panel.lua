@@ -622,3 +622,87 @@ test("a result that ends while the panel is closed leaves no preview on the map"
   T.ok((UI_Mock.Lenses.hexes[SDP_Preview.LAYER] or 0) > 0, "preview back when the tab opens")
   SDP_Panel.Close()
 end)
+
+-- Issue 67: Solve greyed with nothing to plan, cells without tooltips, the
+-- camera beside the panel on a new result or another solution only, result
+-- rows that move the camera, summary tooltips without the search's counts,
+-- city numbers on the several cities tab's preview pins.
+test("issue 67: what to do first, the camera, clickable rows, plain tooltips", function()
+  SDP_Panel.Open()
+  SDP_Panel.SelectTab("SINGLE")
+  SDP_Panel.SelectCity(1)
+  for _, row in ipairs(SDP_Panel.State().DistrictRows) do
+    SDP_Panel.SetState(row.Type, "OFF")
+  end
+  SDP_Panel.SetCount(0)
+  local state = SDP_Panel.State()
+  T.ok(state.SolveDisabled, "Solve greyed with nothing to plan")
+  T.eq(state.SummaryText, "LOC_SDP_RESULT_NONE", "the summary says what to do")
+  for _, row in ipairs(state.DistrictRows) do
+    T.eq(row.Cell:GetToolTipString(), "", "no tooltip on " .. row.Type)
+  end
+  -- A required district through the cell's own click: Solve comes back.
+  local campus = nil
+  for _, row in ipairs(SDP_Panel.State().DistrictRows) do
+    if row.Type == "DISTRICT_CAMPUS" then campus = row end
+  end
+  campus.Cell:Click() -- OFF -> POOL
+  campus.Cell:Click() -- POOL -> MUST
+  state = SDP_Panel.State()
+  T.ok(not state.SolveDisabled, "Solve back with a required district")
+  T.eq(state.SummaryText, "LOC_SDP_RESULT_READY", "the summary says to press Solve")
+
+  local looks = #UI_Mock.Looks
+  local result = SDP_Panel.Solve()
+  T.ok(result and result.Ok, "solve")
+  T.eq(#UI_Mock.Looks, looks + 1, "the camera moves once for the new result")
+  local look = UI_Mock.Looks[#UI_Mock.Looks]
+  T.eq(look.X .. "," .. look.Y, "4,5", "to the city")
+  T.ok(look.ScreenX > 0.5, "right of the panel")
+  T.ok(SDP_Panel.State().SummaryToolTip:find("LOC_SDP_RESULT_STATS", 1, true) == nil, "no search counts")
+  -- Reopening shows the same result without moving the camera.
+  SDP_Panel.Close()
+  SDP_Panel.Open()
+  T.eq(#UI_Mock.Looks, looks + 1, "reopening keeps the camera")
+  -- A planned district's row: a click moves the camera to its plot.
+  local row = nil
+  for _, r in ipairs(SDP_Panel.State().ResultRows) do
+    if r.X ~= nil and row == nil then row = r end
+  end
+  T.ok(row ~= nil, "a row with a plot")
+  row.Row:Click()
+  look = UI_Mock.Looks[#UI_Mock.Looks]
+  T.eq(look.X .. "," .. look.Y, row.X .. "," .. row.Y, "the row's plot")
+
+  -- Several cities: pins carry the city's number, the camera goes to the cities.
+  SDP_Panel.SelectTab("MULTI")
+  local multi = SDP_Panel.Multi
+  multi.Refresh()
+  multi.SetSelected("DISTRICT_CAMPUS", true)
+  multi.SetTier("FAST")
+  looks = #UI_Mock.Looks
+  T.ok(not multi.State().SolveDisabled, "Solve on with something to plan")
+  T.ok(multi.Solve(), "started")
+  SDP_Panel.RunTask(500)
+  local mresult = multi.State().Result
+  T.ok(mresult and mresult.Ok, "multi result: " .. tostring(mresult and mresult.Error))
+  T.eq(#UI_Mock.Looks, looks + 1, "the camera moves once for the new result")
+  T.ok(multi.State().SummaryToolTip:find("LOC_SDP_MULTI_STATS", 1, true) == nil, "no search counts")
+  local numbers = {}
+  for _, c in ipairs(mresult.Cities) do numbers[c.Key] = tostring(c.Number) end
+  local byPlot = {}
+  for _, p in ipairs(mresult.Plan) do byPlot[p.X .. "," .. p.Y] = numbers[p.City] end
+  local checked = 0
+  for _, icon in ipairs(multi.State().View.PreviewIcons) do
+    local want = byPlot[icon.X .. "," .. icon.Y]
+    if want ~= nil and icon.Icon ~= "ICON_DISTRICT_CITY_CENTER" then
+      T.ok(icon.Text == want or icon.Text:find("LOC_SDP_PREVIEW_CITY", 1, true) ~= nil, "pin text " .. icon.Text)
+      checked = checked + 1
+    end
+  end
+  T.ok(checked > 0, "district pins checked")
+  multi.SelectSolution(1)
+  T.eq(#UI_Mock.Looks, looks + 2, "another solution moves the camera too")
+  SDP_Panel.SelectTab("SINGLE")
+  SDP_Panel.Close()
+end)

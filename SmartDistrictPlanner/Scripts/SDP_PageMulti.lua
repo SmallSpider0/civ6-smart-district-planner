@@ -60,6 +60,7 @@ local m_apart = true -- partner districts (harbor, commercial hub) not picked in
 local m_result = nil
 local m_solution = 1
 local m_view = { Cities = {}, Districts = {}, Wonders = {}, Solutions = {}, Results = {}, Plans = {}, Templates = {} } -- for tests
+local m_lookNext = false -- move the camera to the cities when the next result shows (issue 67)
 
 -- How a participant is called: its number (the name its pins get, see
 -- SDP_City.CityNumbers) and the city's name, or "Site n" for a planned city.
@@ -222,6 +223,11 @@ end
 
 local function UpdateEstimate()
   local request = P.Request()
+  -- Whether there is something to plan may have changed (issue 67).
+  P.UpdateButtons()
+  if m_result == nil and not SDP_Task.IsRunning() then
+    Controls.MultiSummary:SetText(Locale.Lookup(request == nil and "LOC_SDP_MULTI_NONE" or "LOC_SDP_RESULT_READY"))
+  end
   if request == nil then
     Controls.MultiEstimate:SetText("")
     return
@@ -553,8 +559,9 @@ function P.RefreshLists()
       elseif #planners > 1 then
         status = status .. " " .. Locale.Lookup("LOC_SDP_MULTI_LIMITED_AUTO", #planners)
       end
-      row.Cell:SetToolTipString(Locale.Lookup("LOC_SDP_CELL_TOOLTIP", row.Name,
-        Locale.Lookup("LOC_SDP_STATE_" .. row.State)) .. "[NEWLINE]" .. status)
+      -- The only tooltip of a district cell (issue 67): which city may take
+      -- it is not written on the cell.
+      row.Cell:SetToolTipString(status)
     end
     m_view.Districts[#m_view.Districts + 1] = { Type = row.Type, State = row.State, Status = status, Group = row.Group,
       Cell = row.Cell }
@@ -661,19 +668,37 @@ function P.Preview(n)
     areas[#areas + 1] = { Plots = plots, Color = c }
     if city.Kind == "SITE" then icons[#icons + 1] = { X = city.X, Y = city.Y, Icon = "ICON_DISTRICT_CITY_CENTER", Text = P.CityLabel(city) } end
   end
+  -- Each pin starts with its city's number (the name its map tack gets), so
+  -- the cities' districts can be told apart where their rings overlap (issue 67).
+  local byKey = CityByKey(solution)
   for _, p in ipairs(solution.Plan) do
-    icons[#icons + 1] = { X = p.X, Y = p.Y, Icon = "ICON_" .. p.Type, Text = SDP_UI.PinText(p.Yields) }
+    local city = byKey[p.City]
+    local text = SDP_UI.PinText(p.Yields)
+    if city ~= nil and city.Number ~= nil then
+      text = text == "" and tostring(city.Number) or Locale.Lookup("LOC_SDP_PREVIEW_CITY", city.Number, text)
+    end
+    icons[#icons + 1] = { X = p.X, Y = p.Y, Icon = "ICON_" .. p.Type, Text = text }
   end
   SDP_UI.SupportIcons(solution.Plan, icons)
   for _, r in ipairs(solution.Remind or {}) do
     icons[#icons + 1] = { X = r.X, Y = r.Y, Icon = SDP_Pins.REMIND_ICON, Text = "" }
   end
+  m_view.PreviewIcons = icons
   SDP_Preview.Show(Game.GetLocalPlayer(), areas, icons)
+  -- A new result or another solution: the cities' middle beside the panel
+  -- (issue 67), not on reopening the tab.
+  if m_lookNext and SDP_UI.IsOpen() and #solution.Cities > 0 then
+    m_lookNext = false
+    local x, y = 0, 0
+    for _, city in ipairs(solution.Cities) do x, y = x + city.X, y + city.Y end
+    SDP_UI.LookAt(math.floor(x / #solution.Cities + 0.5), math.floor(y / #solution.Cities + 0.5))
+  end
 end
 
 function P.SelectSolution(n)
   if m_result == nil or not m_result.Ok or m_result.Solutions[n] == nil then return end
   m_solution = n
+  m_lookNext = true
   P.Render()
 end
 
@@ -687,14 +712,8 @@ local function TargetLabelFor(byKey)
   end
 end
 
-local function AddRow(icon, name, detail, toolTip)
-  local inst = m_resultIM:GetInstance()
-  inst.Icon:SetIcon(icon, 32)
-  inst.Name:SetText(name)
-  inst.Detail:SetText(detail)
-  SDP_UI.FitResultRow(inst)
-  inst.Root:SetToolTipString(toolTip or "")
-  m_view.Results[#m_view.Results + 1] = { Icon = icon, Name = name, Detail = detail, ToolTip = toolTip }
+local function AddRow(icon, name, detail, toolTip, x, y)
+  m_view.Results[#m_view.Results + 1] = SDP_UI.ResultRow(m_resultIM:GetInstance(), icon, name, detail, toolTip, x, y)
 end
 
 -- The city a reminder belongs to: the one of the first district it serves.
@@ -713,7 +732,7 @@ function P.Render()
   Controls.MultiQuality:SetText("")
   local result = m_result
   if result == nil then
-    Controls.MultiSummary:SetText(Locale.Lookup("LOC_SDP_MULTI_NONE"))
+    Controls.MultiSummary:SetText(Locale.Lookup(P.Request() == nil and "LOC_SDP_MULTI_NONE" or "LOC_SDP_RESULT_READY"))
     Controls.MultiSummary:SetToolTipString("")
   elseif not result.Ok then
     local key = "LOC_SDP_RESULT_" .. tostring(result.Error)
@@ -723,10 +742,10 @@ function P.Render()
   else
     local solution = result.Solutions[m_solution] or result.Solutions[1]
     local byKey = CityByKey(solution)
-    local stats = result.Stats
     local request = result.Session and result.Session.Request or {}
-    local statsText = Locale.Lookup("LOC_SDP_MULTI_STATS", Locale.Lookup("LOC_SDP_TIER_" .. stats.Tier),
-      stats.Cities or 0, stats.Calls, stats.Tries, stats.Continues, SDP_UI.Signed(result.FirstGain or 0))
+    -- Planning the cities one after another gave this (it tells what planning
+    -- them together adds); the search's counts are for tests (issue 67).
+    local statsText = Locale.Lookup("LOC_SDP_MULTI_FIRST", SDP_UI.Signed(result.FirstGain or 0))
     Controls.MultiSummary:SetText(SDP_UI.SummaryText(solution, { Land = request.Land ~= false,
       Coverage = solution.Covered ~= nil, Distance = (request.Distance or 0) > 0 }))
     local label = TargetLabelFor(byKey)
@@ -763,20 +782,20 @@ function P.Render()
     -- The selected solution, city by city.
     for _, city in ipairs(solution.Cities) do
       AddRow("ICON_DISTRICT_CITY_CENTER", P.CityLabel(city) .. "  " .. SDP_UI.Where(city.X, city.Y),
-        Locale.Lookup("LOC_SDP_MULTI_CITY_GAIN", SDP_UI.Signed(city.Gain)), "")
+        Locale.Lookup("LOC_SDP_MULTI_CITY_GAIN", SDP_UI.Signed(city.Gain)), "", city.X, city.Y)
       for _, p in ipairs(solution.Plan) do
         if p.City == city.Key then
           local tip = (p.ToolTip ~= nil and p.ToolTip ~= "") and p.ToolTip or Locale.Lookup("LOC_SDP_NO_ADJACENCY")
           local detail
           detail, tip = SDP_UI.CoverageRow(p, SDP_UI.PlanDetail(p), tip, label)
-          AddRow("ICON_" .. p.Type, "  " .. SDP_UI.TypeName(p.Type) .. "  " .. SDP_UI.Where(p.X, p.Y), detail, tip)
+          AddRow("ICON_" .. p.Type, "  " .. SDP_UI.TypeName(p.Type) .. "  " .. SDP_UI.Where(p.X, p.Y), detail, tip, p.X, p.Y)
           SDP_UI.SupportRow(p, AddRow, "    ")
         end
       end
     end
     for _, r in ipairs(solution.Remind or {}) do
       AddRow(SDP_Pins.REMIND_ICON, Locale.Lookup("LOC_SDP_RESULT_REMIND", SDP_UI.TypeName(r.Feature), SDP_UI.Where(r.X, r.Y)),
-        SDP_UI.RemindText(r), Locale.Lookup("LOC_SDP_REMIND_TOOLTIP"))
+        SDP_UI.RemindText(r), Locale.Lookup("LOC_SDP_REMIND_TOOLTIP"), r.X, r.Y)
     end
     for _, city in ipairs(solution.Cities) do SDP_UI.TogetherRows(city.Together, P.CityLabel(city), AddRow) end
     SDP_UI.ImprovementHousingRow(solution.ImprovementHousing, AddRow)
@@ -800,7 +819,7 @@ end
 function P.UpdateButtons()
   local running = SDP_Task.IsRunning()
   local ok = m_result ~= nil and m_result.Ok
-  Controls.MultiSolveButton:SetDisabled(running)
+  Controls.MultiSolveButton:SetDisabled(running or P.Request() == nil)
   Controls.MultiContinueButton:SetDisabled(running or not ok or not m_result.Quality.CanContinue or m_result.Placed == true)
   Controls.MultiContinueButton:SetHide(running)
   Controls.MultiCancelButton:SetHide(not running)
@@ -817,6 +836,7 @@ function P.Solve()
   if request == nil then return false end
   local params = SDP_Tiers.Params(SDP_Tiers.Multi, m_tier)
   m_result, m_solution = nil, 1
+  m_lookNext = true
   SDP_Preview.Clear()
   return SDP_UI.StartTask(function() return SDP_Multi.SolveNow(request) end, Estimate(request, params),
     function(result) m_result, m_solution = result, 1 end, P)
@@ -824,6 +844,7 @@ end
 
 function P.Continue()
   if SDP_Task.IsRunning() or m_result == nil or not m_result.Ok or not m_result.Quality.CanContinue then return false end
+  m_lookNext = true
   local session = m_result.Session
   return SDP_UI.StartTask(function()
     session:Continue()
@@ -878,6 +899,8 @@ function P.State()
     Apart = m_apart, Swap = m_swap,
     View = m_view, EstimateText = Controls.MultiEstimate:GetText(), QualityText = Controls.MultiQuality:GetText(),
     PlaceDisabled = Controls.MultiPlaceButton:IsDisabled(), ContinueDisabled = Controls.MultiContinueButton:IsDisabled(),
+    SolveDisabled = Controls.MultiSolveButton:IsDisabled(), SummaryText = Controls.MultiSummary:GetText(),
+    SummaryToolTip = Controls.MultiSummary:GetToolTipString(),
   }
 end
 

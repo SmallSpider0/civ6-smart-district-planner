@@ -1,15 +1,18 @@
 ---
 name: sdp-release
-description: Release a version of the Smart District Planner (civ6mod) — tests, screenshots, version numbers, change notes, the self-test report, the PR, the GitHub release and the Steam Workshop update, in order. Use when the maintainer says to release, or when a milestone's issues are done (to prepare it and report it ready).
+description: Release a version of the Smart District Planner (civ6mod) — tests, screenshots, version numbers, change notes, the self-test report, the PR, the GitHub release and the Steam Workshop update, in order. Use when the maintainer says to release, when a bug-fix milestone is due (released without asking), or when a milestone's issues are done (to prepare it and report it ready).
 ---
 
 # Releasing vX.Y.Z
 
-A release happens only when the maintainer says so in Claude Code ("发 v1.4.1"); a GitHub comment or the status page is not that word. Until then:
+Who decides (maintainer, 2026-10-25):
 
-- When a milestone's issues are done, do §1 steps 0–6: tests, screenshots, version, notes, report. Then add a status page entry (`decisions`, title "vX.Y.Z 可以发了"): what is in it, what the tests showed, what is left. Don't wait idle for the answer; go on with other work.
-- After the word: §1 step 7 and §2. That is the PR (about 10 minutes of CI), the release and the Workshop.
-- The live version badly broken: the same, with a push notification to the maintainer; still wait for the word.
+- **Bug fixes only: release without asking.** A patch milestone that holds only bug fixes (issues from the maintainer, the collaborator or the agent; text and document fixes count with them) is released when one of these holds:
+  - three ordinary bug fixes are merged and not released;
+  - seven days have passed since the first unreleased bug fix was merged;
+  - a critical bug is fixed: the live version crashes the game, the panel cannot be used, or plans break the game's rules for ordinary setups. Release as soon as it is fixed and tested, and send the maintainer a push notification.
+  Run the whole of §1 and §2 as for any release, then tell the maintainer what went out. If fixing a bug raises a question the maintainer must settle (a default, a requirement, a trade-off), it waits like a feature: a status page entry, and no release of that fix until they answer.
+- **Anything else waits for the maintainer's word** in Claude Code ("发 v1.4.1"): a milestone with a feature or an optimisation, any second- or first-digit version. A GitHub comment or the status page is not that word. Until then: when its issues are done, do §1 steps 0–6 (tests, screenshots, version, notes, report), add a status page entry (`decisions`, title "vX.Y.Z 可以发了": what is in it, what the tests showed, what is left), and go on with other work. After the word: §1 step 7 and §2 (the PR, about 10 minutes of CI, the release and the Workshop).
 
 Bug-fix PRs merge into `main` as usual in the meantime: `main` reaches no player. Windows is not tested before a release. The checklist template (.github/ISSUE_TEMPLATE/release.md) lists the same items.
 

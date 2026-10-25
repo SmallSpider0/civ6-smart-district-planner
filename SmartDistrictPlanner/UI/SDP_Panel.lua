@@ -99,6 +99,7 @@ local m_solutionCells = {}    -- the solution rows' buttons, for real-click test
 local m_weightViews = {}      -- [key] = function that redraws that weight
 local m_weightCells = {}      -- the weight columns' controls, for tests (SDP_UI.BuildWeights)
 local m_tab = "SINGLE"        -- the open tab: SINGLE, SITES or MULTI
+local m_lookNext = false      -- move the camera to the city when the next result shows (a solve, a continue)
 
 -- ===========================================================================
 -- Formatting
@@ -178,8 +179,18 @@ local function UnplacedTip(u)
   return (row ~= nil and row.Description ~= nil) and Locale.Lookup(row.Description) or ""
 end
 
+-- Move the camera so that a plot sits right of the panel (issue 67), as the
+-- game's TradeOverview puts a unit beside its own panel.
+local LOOK_X = 0.65
+local function LookAt(x, y)
+  if x == nil or y == nil then return end
+  UI.LookAtPlotScreenPosition(x, y, LOOK_X, 0.5)
+  SDP_UI.LastLook = x .. "," .. y -- for tests: the game's UI table cannot be wrapped
+end
+
 -- Helpers shared with the other tabs (SDP_PageSites, SDP_PageMulti).
 SDP_UI = {
+  LookAt = LookAt,
   FitResultRow = FitResultRow, UnplacedTip = UnplacedTip,
   MAX_WEIGHT = MAX_WEIGHT, WEIGHT_COLUMNS = WEIGHT_COLUMNS, COVERAGE_COLUMN = COVERAGE_COLUMN,
   Number = Number, Signed = Signed, Where = Where, YieldText = YieldText, PinText = PinText, TypeName = TypeName, Join = Join,
@@ -325,7 +336,9 @@ function SDP_UI.ShowCell(inst, d, state, status)
   inst.StateDark:SetHide(not selected)
   inst.Root:SetDisabled(status ~= nil)
   inst.Root:SetAlpha((status ~= nil or state == "OFF") and 0.55 or 1)
-  inst.Root:SetToolTipString(Locale.Lookup("LOC_SDP_CELL_TOOLTIP", name, label))
+  -- No tooltip (issue 67): it repeated the name and state the cell shows and
+  -- covered the cells below.
+  inst.Root:SetToolTipString("")
 end
 
 -- Fill the two district grids (districts that take population, the others)
@@ -449,9 +462,23 @@ local UpdateEstimate -- defined below
 
 -- The launch bar button's tooltip (progress of a background computation)
 -- and the mark that a result is ready.
+-- The key that opens the panel as the game shows it, following the
+-- player's binding (Options.lua does the same); nil when there is none.
+local function OpenKey()
+  if Input == nil or Input.GetActionId == nil or Input.GetGestureDisplayString == nil then return nil end
+  local key = Input.GetGestureDisplayString(Input.GetActionId("SDP_OpenPlanner"), 0)
+  if key == nil or key == false or key == "" then return nil end
+  return key
+end
+
 local function LaunchToolTip(text)
   if m_launchItem.LaunchItemButton ~= nil then
-    m_launchItem.LaunchItemButton:SetToolTipString(text or Locale.Lookup("LOC_SDP_LAUNCHBAR_TOOLTIP", VERSION))
+    if text == nil then
+      text = Locale.Lookup("LOC_SDP_LAUNCHBAR_TOOLTIP", VERSION)
+      local key = OpenKey()
+      if key ~= nil then text = text .. "[NEWLINE]" .. Locale.Lookup("LOC_SDP_LAUNCHBAR_KEY", key) end
+    end
+    m_launchItem.LaunchItemButton:SetToolTipString(text)
   end
 end
 
@@ -464,6 +491,7 @@ end
 local function IsOpen()
   return UIManager:IsInPopupQueue(ContextPtr)
 end
+SDP_UI.IsOpen = IsOpen
 
 local SelectTab -- defined below (tabs)
 
@@ -519,10 +547,14 @@ local function CanContinue()
     and not m_result.Placed
 end
 
+local Request -- defined below
+
 local function UpdateButtons()
   local plan = m_result and m_result.Ok and m_result.Plan or {}
   local running = SDP_Task.IsRunning()
-  Controls.SolveButton:SetDisabled(m_cityID == nil or running)
+  -- Nothing to plan (no required district, the count 0, no wonder): greyed
+  -- out, and the summary says what to do (issue 67).
+  Controls.SolveButton:SetDisabled(m_cityID == nil or running or Request() == nil)
   Controls.ContinueButton:SetDisabled(running or not CanContinue())
   Controls.ContinueButton:SetHide(running)
   Controls.CancelButton:SetHide(not running)
@@ -551,14 +583,25 @@ local function QualityText(result)
 end
 SDP_UI.QualityText = QualityText
 
-local function AddResultRow(icon, name, detail, toolTip)
-  local inst = m_resultIM:GetInstance()
+-- A result row (ResultRow instance); with x, y a click moves the camera to
+-- that plot (issue 67). Shared with the other tabs, which keep their rows.
+function SDP_UI.ResultRow(inst, icon, name, detail, toolTip, x, y)
   inst.Icon:SetIcon(icon, 32)
   inst.Name:SetText(name)
   inst.Detail:SetText(detail)
   FitResultRow(inst)
-  inst.Root:SetToolTipString(toolTip)
-  m_resultRows[#m_resultRows + 1] = { Icon = icon, Name = name, Detail = detail, ToolTip = toolTip }
+  inst.Root:SetToolTipString(toolTip or "")
+  inst.Root:RegisterCallback(Mouse.eLClick, function()
+    if x ~= nil then
+      LookAt(x, y)
+      UI.PlaySound("Play_UI_Click")
+    end
+  end)
+  return { Icon = icon, Name = name, Detail = detail, ToolTip = toolTip, X = x, Y = y, Row = inst.Root }
+end
+
+local function AddResultRow(icon, name, detail, toolTip, x, y)
+  m_resultRows[#m_resultRows + 1] = SDP_UI.ResultRow(m_resultIM:GetInstance(), icon, name, detail, toolTip, x, y)
 end
 
 -- What a plan entry is beyond its yields: added by itself, picked from the
@@ -591,7 +634,7 @@ function SDP_UI.SupportRow(p, add, indent)
   if s == nil then return end
   add("ICON_" .. s.Type, (indent or "") .. TypeName(s.Type) .. "  " .. Where(s.X, s.Y),
     Locale.Lookup("LOC_SDP_RESULT_SUPPORT", TypeName(p.Type)) .. SDP_UI.PlanNote({ Unowned = s.Unowned }),
-    Locale.Lookup("LOC_SDP_RESULT_SUPPORT_TOOLTIP", TypeName(p.Type), TypeName(s.Type)))
+    Locale.Lookup("LOC_SDP_RESULT_SUPPORT_TOOLTIP", TypeName(p.Type), TypeName(s.Type)), s.X, s.Y)
 end
 
 function SDP_UI.SupportIcons(plan, icons)
@@ -711,7 +754,8 @@ local function ShowResult()
   local result = m_result
   Controls.Quality:SetText("")
   if result == nil then
-    Controls.Summary:SetText(Locale.Lookup("LOC_SDP_RESULT_NONE"))
+    -- What to do next: something to plan first, or press Solve (issue 67).
+    Controls.Summary:SetText(Locale.Lookup(Request() == nil and "LOC_SDP_RESULT_NONE" or "LOC_SDP_RESULT_READY"))
     Controls.Summary:SetToolTipString("")
   elseif not result.Ok then
     local key = "LOC_SDP_RESULT_" .. tostring(result.Error)
@@ -726,14 +770,9 @@ local function ShowResult()
     local request = result.Session and result.Session.Request or {}
     Controls.Summary:SetText(SDP_UI.SummaryText(shown, { Land = request.Land,
       Distance = (request.Distance or 0) > 0, Coverage = shown.Covered ~= nil }))
-    local stats = result.Stats
-    local statsText = Locale.Lookup("LOC_SDP_RESULT_STATS",
-      Locale.Lookup("LOC_SDP_TIER_" .. stats.Tier), stats.Method or "multi", stats.Calls or 0, stats.Tries or 0,
-      stats.Nodes or 0, stats.Continues or 0)
-    if shown.Covered ~= nil then
-      statsText = table.concat(SDP_UI.CoverageLines(shown), "[NEWLINE]") .. "[NEWLINE][NEWLINE]" .. statsText
-    end
-    Controls.Summary:SetToolTipString(statsText)
+    -- The cities the plan covers; the search's counts (result.Stats) are for
+    -- tests, not the player (issue 67).
+    Controls.Summary:SetToolTipString(shown.Covered ~= nil and table.concat(SDP_UI.CoverageLines(shown), "[NEWLINE]") or "")
     Controls.Quality:SetText(QualityText(result))
     -- The solutions (feedback item 1): a click shows one and previews it.
     if #solutions > 1 then
@@ -744,6 +783,7 @@ local function ShowResult()
           n == m_solution)
         inst.Root:RegisterCallback(Mouse.eLClick, function()
           m_solution = n
+          m_lookNext = true
           ShowResult()
         end)
       end
@@ -760,20 +800,20 @@ local function ShowResult()
       local toolTip = (p.ToolTip ~= nil and p.ToolTip ~= "") and p.ToolTip or Locale.Lookup("LOC_SDP_NO_ADJACENCY")
       local detail
       detail, toolTip = SDP_UI.CoverageRow(p, SDP_UI.PlanDetail(p), toolTip)
-      AddResultRow("ICON_" .. p.Type, TypeName(p.Type) .. "  " .. Where(p.X, p.Y), detail, toolTip)
+      AddResultRow("ICON_" .. p.Type, TypeName(p.Type) .. "  " .. Where(p.X, p.Y), detail, toolTip, p.X, p.Y)
       SDP_UI.SupportRow(p, AddResultRow, "  ")
     end
     -- Woods and rainforest the plan relies on (feedback item 5).
     for _, r in ipairs(shown.Remind or {}) do
       AddResultRow(SDP_Pins.REMIND_ICON, Locale.Lookup("LOC_SDP_RESULT_REMIND", TypeName(r.Feature), Where(r.X, r.Y)),
-        SDP_UI.RemindText(r), Locale.Lookup("LOC_SDP_REMIND_TOOLTIP"))
+        SDP_UI.RemindText(r), Locale.Lookup("LOC_SDP_REMIND_TOOLTIP"), r.X, r.Y)
     end
     -- Districts and locked pins whose adjacency the plan changes.
     for _, n in ipairs(shown.Neighbours or {}) do
       local s = n.Subject
       AddResultRow("ICON_" .. s.Key, Locale.Lookup("LOC_SDP_RESULT_NEIGHBOUR", TypeName(s.Key), Where(s.X, s.Y)),
         Locale.Lookup("LOC_SDP_RESULT_NEIGHBOUR_DETAIL", Number(n.Before), Number(n.After)),
-        (n.ToolTip ~= nil and n.ToolTip ~= "") and n.ToolTip or Locale.Lookup("LOC_SDP_NO_ADJACENCY"))
+        (n.ToolTip ~= nil and n.ToolTip ~= "") and n.ToolTip or Locale.Lookup("LOC_SDP_NO_ADJACENCY"), s.X, s.Y)
     end
     -- Partner districts left together (required ones, or the count needed them).
     local together = shown.Together
@@ -781,6 +821,12 @@ local function ShowResult()
     SDP_UI.TogetherRows(together, nil, AddResultRow)
     SDP_UI.ImprovementHousingRow(shown.ImprovementHousing, AddResultRow)
     Preview(m_solution)
+    -- A new result or another solution: the city beside the panel (issue
+    -- 67); not on reopening the panel or changing a setting.
+    if m_lookNext and IsOpen() and m_scan ~= nil then
+      m_lookNext = false
+      LookAt(m_scan.X, m_scan.Y)
+    end
   end
   Controls.SolutionStack:CalculateSize()
   Controls.ResultStack:CalculateSize()
@@ -1205,8 +1251,6 @@ local function Sliced(request)
     or (request.Count or 0) > (request.MustSpecialty or 0)
 end
 
-local Request -- defined below
-
 -- Expected work of a request (time estimate, progress).
 local function EstimateFor(request)
   local params = SDP_Tiers.Params(SDP_Tiers.Single, request.Tier)
@@ -1222,6 +1266,11 @@ end
 -- "About X s" for the selected tier and districts (design 7.5).
 UpdateEstimate = function()
   local request = m_scan and Request() or nil
+  -- Whether there is something to plan may have changed (issue 67).
+  UpdateButtons()
+  if m_result == nil and not SDP_Task.IsRunning() then
+    Controls.Summary:SetText(Locale.Lookup(Request() == nil and "LOC_SDP_RESULT_NONE" or "LOC_SDP_RESULT_READY"))
+  end
   if request == nil then
     Controls.Estimate:SetText("")
     return
@@ -1370,6 +1419,7 @@ local function Solve()
   local request = Request()
   if m_heat ~= nil then ShowHeat(nil) end
   m_solution = 1
+  m_lookNext = true
   if request ~= nil and #request.Wonders > 0 then
     local multi = WonderRequest(request)
     m_result = nil
@@ -1393,6 +1443,7 @@ end
 -- One more batch on the shown result (design 7.3).
 local function Continue()
   if SDP_Task.IsRunning() or not CanContinue() then return nil end
+  m_lookNext = true
   local session = m_result.Session
   if session.Params.Sliced or session.Pick ~= nil and session.Pick > 0 or session.Participants ~= nil then
     -- A continue runs SINGLE_CONTINUE_STARTS local searches; the first run
@@ -1611,6 +1662,7 @@ SDP_Panel = {
   SelectSolution = function(n)
     if m_result ~= nil and m_result.Ok and m_result.Solutions and m_result.Solutions[n] then
       m_solution = n
+      m_lookNext = true
       ShowResult()
     end
   end,
@@ -1650,6 +1702,9 @@ SDP_Panel = {
       Running = SDP_Task.IsRunning(), QualityText = Controls.Quality:GetText(), EstimateText = Controls.Estimate:GetText(),
       PlaceDisabled = Controls.PlaceButton:IsDisabled(), UndoDisabled = Controls.UndoButton:IsDisabled(),
       ContinueDisabled = Controls.ContinueButton:IsDisabled(), LaunchMark = m_launchDone,
+      SolveDisabled = Controls.SolveButton:IsDisabled(), SummaryText = Controls.Summary:GetText(),
+      SummaryToolTip = Controls.Summary:GetToolTipString(),
+      LaunchToolTip = m_launchItem.LaunchItemButton and m_launchItem.LaunchItemButton:GetToolTipString() or nil,
     }
   end,
 }

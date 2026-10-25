@@ -16,6 +16,9 @@
     <Replace Tag="LOC_SDP_LAUNCHBAR_TOOLTIP" Language="zh_Hans_CN">
       <Text>智能区域规划器 {1_Version}</Text>
     </Replace>
+    <Replace Tag="LOC_SDP_LAUNCHBAR_KEY" Language="zh_Hans_CN">
+      <Text>快捷键：{1_Key}</Text>
+    </Replace>
     <Replace Tag="LOC_SDP_PANEL_TITLE" Language="zh_Hans_CN">
       <Text>智能区域规划器</Text>
     </Replace>
@@ -55,13 +58,13 @@
       <Text>求解</Text>
     </Replace>
     <Replace Tag="LOC_SDP_RESULT_NONE" Language="zh_Hans_CN">
-      <Text>勾选要规划的区域后点击“求解”。</Text>
+      <Text>把区域点成“必建”，或调高“区域数量”，再点击“求解”。</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_READY" Language="zh_Hans_CN">
+      <Text>点击“求解”开始规划。</Text>
     </Replace>
     <Replace Tag="LOC_SDP_RESULT_SUMMARY" Language="zh_Hans_CN">
       <Text>加权相邻加成提升：{1_Gain}</Text>
-    </Replace>
-    <Replace Tag="LOC_SDP_RESULT_STATS" Language="zh_Hans_CN">
-      <Text>档位：{1_Tier}；方法：{2_Method}；DMT 调用 {3_Calls} 次；尝试布局 {4_Tries} 个；搜索节点 {5_Nodes} 个；继续优化 {6_Continues} 次</Text>
     </Replace>
     <Replace Tag="LOC_SDP_RESULT_TRUNCATED" Language="zh_Hans_CN">
       <Text>已达搜索预算上限，方案可能不是最优。</Text>
@@ -132,7 +135,7 @@
       <Text>计入占地</Text>
     </Replace>
     <Replace Tag="LOC_SDP_WEIGHT_FEATURE_SHORT" Language="zh_Hans_CN">
-      <Text>地貌</Text>
+      <Text>收获</Text>
     </Replace>
     <Replace Tag="LOC_SDP_WEIGHT_FEATURE" Language="zh_Hans_CN">
       <Text>砍伐树林、雨林、沼泽和收获加成资源的一次性产出（随科技、市政进度增长）：留着地貌或资源的地块得不到它</Text>
@@ -150,13 +153,13 @@
       <Text>精细</Text>
     </Replace>
     <Replace Tag="LOC_SDP_TIER_FAST_TOOLTIP" Language="zh_Hans_CN">
-      <Text>计算量最少，结果可能稍差。</Text>
+      <Text>计算量最少。离线基准上单城挑区域约 0.1–0.2 秒，平均达到最好方案的 98%（最差 93%）；多城 4 座约 0.5 秒。</Text>
     </Replace>
     <Replace Tag="LOC_SDP_TIER_STANDARD_TOOLTIP" Language="zh_Hans_CN">
-      <Text>默认，兼顾耗时与质量。</Text>
+      <Text>默认。离线基准上单城挑区域约 0.4–1 秒，都达到最好方案；多城 4 座约 2–6 秒。</Text>
     </Replace>
     <Replace Tag="LOC_SDP_TIER_FINE_TOOLTIP" Language="zh_Hans_CN">
-      <Text>计算量最多，分帧进行；计算期间可以继续操作或关闭面板。</Text>
+      <Text>计算量最多，分帧进行，计算期间可以继续操作或关闭面板。单城约 2–5 秒，多城 4 座约 2–7 秒、8 座 25–60 秒。离线基准上与标准档一样都达到最好方案；标准档提示“可能还有提升”时再用。</Text>
     </Replace>
     <Replace Tag="LOC_SDP_ESTIMATE" Language="zh_Hans_CN">
       <Text>预计约 {1_Seconds} 秒</Text>
@@ -308,16 +311,19 @@
       <Text>全帝国限 {1_Max}</Text>
     </Replace>
     <Replace Tag="LOC_SDP_MULTI_NONE" Language="zh_Hans_CN">
-      <Text>在新城位置放市中心地图钉（或用“选城址”），勾选区域和奇观后点击“求解”。</Text>
+      <Text>选上参与的城（新城可以先放市中心地图钉，或用“选城址”），把区域点成“必建”或调高“每城数量”，再点击“求解”。</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_MULTI_FIRST" Language="zh_Hans_CN">
+      <Text>逐城依次规划时加权提升为 {1_First}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_PREVIEW_CITY" Language="zh_Hans_CN">
+      <Text>{1_N} {2_Text}</Text>
     </Replace>
     <Replace Tag="LOC_SDP_MULTI_SOLUTION_DETAIL" Language="zh_Hans_CN">
       <Text>{1_Cities} 座城、{2_Districts} 个区域、{3_Wonders} 个奇观</Text>
     </Replace>
     <Replace Tag="LOC_SDP_MULTI_CITY_GAIN" Language="zh_Hans_CN">
       <Text>新区域加权相邻 {1_Gain}</Text>
-    </Replace>
-    <Replace Tag="LOC_SDP_MULTI_STATS" Language="zh_Hans_CN">
-      <Text>档位：{1_Tier}；{2_Cities} 座城；DMT 调用 {3_Calls} 次；尝试布局 {4_Tries} 个；继续优化 {5_Continues} 次；逐城依次规划为 {6_First}</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SITES_COUNT" Language="zh_Hans_CN">
       <Text>新城数量</Text>
@@ -550,9 +556,6 @@
     </Replace>
     <Replace Tag="LOC_SDP_STATE_AUTO" Language="zh_Hans_CN">
       <Text>自动</Text>
-    </Replace>
-    <Replace Tag="LOC_SDP_CELL_TOOLTIP" Language="zh_Hans_CN">
-      <Text>{1_Name}：{2_State}（点一下切换）</Text>
     </Replace>
     <Replace Tag="LOC_SDP_FEATURE_SHORT" Language="zh_Hans_CN">
       <Text>允许砍伐</Text>

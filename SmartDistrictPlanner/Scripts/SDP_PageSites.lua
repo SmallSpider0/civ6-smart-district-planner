@@ -52,6 +52,7 @@ local m_tier = SDP_Tiers.DEFAULT
 local m_result = nil
 local m_solution = 1
 local m_view = { Districts = {}, Solutions = {}, Results = {} }
+local m_lookNext = false -- move the camera to the first site when the next result shows (issue 67)
 
 local function ClearResult()
   local job = SDP_Task.Current()
@@ -298,12 +299,17 @@ function P.Preview(n)
     for _, d in ipairs(site.Districts or {}) do icons[#icons + 1] = { X = d.X, Y = d.Y, Icon = "ICON_" .. d.Type } end
   end
   SDP_Preview.Show(Game.GetLocalPlayer(), areas, icons)
-  SDP_Preview.Focus(solution.Sites[1].X, solution.Sites[1].Y)
+  -- Only for a new result or another solution, not on reopening the tab (issue 67).
+  if m_lookNext and SDP_UI.IsOpen() then
+    m_lookNext = false
+    SDP_UI.LookAt(solution.Sites[1].X, solution.Sites[1].Y)
+  end
 end
 
 function P.SelectSolution(n)
   if m_result == nil or not m_result.Ok or m_result.Solutions[n] == nil then return end
   m_solution = n
+  m_lookNext = true
   P.Render()
 end
 
@@ -336,17 +342,10 @@ function P.Render()
     end
     local numbers = SiteNumbers(solution)
     for s, site in ipairs(solution.Sites) do
-      local inst = m_resultIM:GetInstance()
       local name = Locale.Lookup("LOC_SDP_SITE_N", numbers[s]) .. "  " .. SDP_UI.Where(site.X, site.Y) .. "  "
         .. SDP_UI.Number(math.floor(site.Value * 10 + 0.5) / 10)
-      local detail = SiteDetail(site)
-      local tip = SiteToolTip(site)
-      inst.Icon:SetIcon("ICON_DISTRICT_CITY_CENTER", 32)
-      inst.Name:SetText(name)
-      inst.Detail:SetText(detail)
-      SDP_UI.FitResultRow(inst)
-      inst.Root:SetToolTipString(tip)
-      m_view.Results[#m_view.Results + 1] = { Name = name, Detail = detail, ToolTip = tip }
+      m_view.Results[#m_view.Results + 1] = SDP_UI.ResultRow(m_resultIM:GetInstance(), "ICON_DISTRICT_CITY_CENTER", name,
+        SiteDetail(site), SiteToolTip(site), site.X, site.Y)
     end
     if not Controls.SitesPage:IsHidden() then P.Preview(m_solution) end
   end
@@ -384,6 +383,7 @@ function P.Solve()
   local request = P.Request()
   local params = SDP_Tiers.Params(SDP_Tiers.Sites, m_tier)
   m_result, m_solution = nil, 1
+  m_lookNext = true
   SDP_Preview.Clear()
   return SDP_UI.StartTask(function() return SDP_SiteSolver.SolveNow(request) end,
     SDP_SiteSolver.EstimateUnits(#request.Districts, request.K, params, false, request.PlanCount),
@@ -392,6 +392,7 @@ end
 
 function P.Continue()
   if SDP_Task.IsRunning() or m_result == nil or not m_result.Ok or not m_result.Quality.CanContinue then return false end
+  m_lookNext = true
   local session = m_result.Session
   return SDP_UI.StartTask(function()
     session:Continue()

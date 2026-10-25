@@ -17,7 +17,8 @@ units, scaled to the window), so no screenshot coordinates are guessed.
 The suite opens the panel and goes through what only a real click shows:
 district cells round their states on both tabs (the 2026-10-21 bug: the
 selected look took the mouse), the city chips and the clear all / default
-buttons on the multi-city tab, the harbor / commercial hub switch, tabs, solve, a solution
+buttons on the multi-city tab, the harbor / commercial hub switch, tabs, solve (the
+camera goes to the city), a result row (the camera goes to its plot), a solution
 row, place and undo, the close button. Each check reads the state back.
 """
 import os
@@ -249,12 +250,22 @@ SDP_Panel.Multi.Refresh()
     click_control("SDP_Panel.State().WeightCells[10].Less")
     s.check("single coverage down by click", value("SDP_Panel.State().Weights.COVERAGE == 0"), "true")
     lua("SDP_Panel.SetState('%s', 'MUST'); SDP_Panel.SetCount(3)" % campus)
+    # Camera moves (issue 67): the panel records the last one (the game's UI table is read-only).
+    lua("SDP_UI.LastLook = nil")
     click_control("Controls.SolveButton")
     for _ in range(60):
         if value("SDP_Panel.State().Running") == "false" and value("SDP_Panel.State().Result ~= nil") == "true":
             break
         time.sleep(0.5)
     s.check("solve by click", value("SDP_Panel.State().Result and SDP_Panel.State().Result.Ok"), "true")
+    capital = value("(function() local c = Players[Game.GetLocalPlayer()]:GetCities():GetCapitalCity() "
+                    "return c:GetX() .. ',' .. c:GetY() end)()")
+    s.check("the camera goes to the city", value("SDP_UI.LastLook"), capital)
+    # A result row with a plot (issue 67): a click moves the camera there.
+    row = "(function() for _, r in ipairs(SDP_Panel.State().ResultRows) do if r.X ~= nil then return r end end end)()"
+    lua("SDP_UI.LastLook = nil")
+    click_control(row + ".Row")
+    s.check("result row by click", value("SDP_UI.LastLook"), value(row + ".X .. ',' .. " + row + ".Y"))
     rows = int(value("#(SDP_Panel.State().Result.Solutions or {})") or 0)
     if rows > 1:
         click_control("SDP_Panel.State().SolutionCells[2]")

@@ -146,10 +146,10 @@ AI 自动打出 3 张后期存档，每张跑同一组求解步骤（`tools/stre
 
 | 画面 | 文件 |
 |------|------|
-| 单城页签：学院必建、区域数量 3，权重行有“覆盖”列，三套方案 | ![single](images/v9-panel-single.jpg) |
-| 多城页签：首都和三个城址钉排成格子，奇观选阿耳忒弥斯神庙，结果里有它要的营地 | ![multi](images/v9-panel-multi.jpg) |
+| 单城页签：学院必建、区域数量 3，权重行有“覆盖”列，三套方案；“收获”列，预计耗时一行写完 | ![single](images/v10-panel-single.jpg) |
+| 多城页签：首都和三个城址钉排成格子，奇观选阿耳忒弥斯神庙，结果里有它要的营地 | ![multi](images/v10-panel-multi.jpg) |
 | 选城址页签：5 个区域，每个城址按 3 个估分 | ![sites](images/v8-panel-sites.jpg) |
-| 英文界面：单城、多城、选城址、城址悬停提示 | `v9-en-panel-single.jpg`、`v9-en-panel-multi.jpg`、`v8-en-panel-sites.jpg`、`v7-en-sites-tooltip.jpg` |
+| 英文界面：单城、多城、选城址、城址悬停提示 | `v10-en-panel-single.jpg`、`v10-en-panel-multi.jpg`、`v8-en-panel-sites.jpg`、`v7-en-sites-tooltip.jpg` |
 | 悬停工业区一行：DMT 的加成来源和覆盖范围内的城市 | ![coverage](images/v3-coverage-tooltip.jpg) |
 | 提醒钉：城址 3 的圣地旁两片树林上的“3 勿砍：圣地 信-1” | ![reminders](images/v4-map-reminders.jpg) |
 | 单城方案的地图预览 | ![single preview](images/v4-map-single-preview.jpg) |
