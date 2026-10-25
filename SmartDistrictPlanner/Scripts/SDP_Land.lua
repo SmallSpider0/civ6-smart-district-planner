@@ -57,7 +57,8 @@ end
 
 -- Weights for valuing plots: the six tile yields (missing ones weigh 1) and
 -- FEATURE, the weight of one-time yields (default 1). The district planner
--- passes PLOT_WEIGHTS; the site scores pass the sites tab's own weights.
+-- passes PLOT_WEIGHTS times its land weight; the site scores PLOT_WEIGHTS
+-- times the sites tab's weights (SDP_Sites.PlotWeights).
 function SDP_Land.Weights(weights)
   local out = {}
   for _, yieldType in ipairs(SDP_Land.TILE_YIELDS) do
