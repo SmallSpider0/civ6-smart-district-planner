@@ -29,7 +29,7 @@ local MAX_WEIGHT = 3
 -- The release, in the launch bar button's tooltip, so that a report says
 -- which copy the game loaded (issue 27). tools/validate.py checks it against
 -- the newest version in CHANGELOG.md.
-local VERSION = "v1.3.1"
+local VERSION = "v1.4.0"
 
 -- The weight row (feedback item 3): the six yields with the game's font
 -- icons, one family (the texture icons cover only some yields: requirements
@@ -52,7 +52,14 @@ local WEIGHT_COLUMNS = {
   -- black square in the game (seen 2026-10-21), as 20.5 found for others.
   { Key = "HOUSING", Glyph = "LOC_SDP_WEIGHT_HOUSING_SHORT", ToolTip = "LOC_SDP_WEIGHT_HOUSING" },
 }
-local WEIGHT_WIDTH = 53 -- nine columns in the 480 wide page
+-- The coverage part (SDP_Coverage, design 19), the last column of the
+-- single-city and multi-city tabs: 0 (off) by default.
+local COVERAGE_COLUMN = { Key = "COVERAGE", Glyph = "LOC_SDP_WEIGHT_COVERAGE_SHORT", ToolTip = "LOC_SDP_WEIGHT_COVERAGE", Default = 0 }
+-- This tab's columns: the shared ones, then coverage.
+local SINGLE_COLUMNS = {}
+for _, column in ipairs(WEIGHT_COLUMNS) do SINGLE_COLUMNS[#SINGLE_COLUMNS + 1] = column end
+SINGLE_COLUMNS[#SINGLE_COLUMNS + 1] = COVERAGE_COLUMN
+local WEIGHT_WIDTH = 50 -- ten columns: a little wider than the 480 rows, inside the page
 
 local m_launchItem = {}     -- SDP_LaunchBarItem instance in the game's launch bar
 local m_launchPin = {}      -- SDP_LaunchBarPin instance next to it
@@ -68,8 +75,8 @@ local m_resultIM = InstanceManager:new("ResultRow", "Root", Controls.ResultStack
 local m_cityID = nil
 local m_states = {}           -- [DistrictType] = "MUST" | "POOL" | "OFF" | "AUTO" (chosen; else SDP_UI.DefaultState)
 local m_count = nil           -- districts that take population to plan (nil: the required ones)
-local m_weights = {}          -- [YieldType, FEATURE or DISTANCE] = 0..MAX_WEIGHT
-for _, column in ipairs(WEIGHT_COLUMNS) do m_weights[column.Key] = column.Default or 1 end
+local m_weights = {}          -- [YieldType, FEATURE, DISTANCE, HOUSING or COVERAGE] = 0..MAX_WEIGHT
+for _, column in ipairs(SINGLE_COLUMNS) do m_weights[column.Key] = column.Default or 1 end
 local m_allowFeatureRemoval = true
 local m_land = true           -- count the land part (design 4.2)
 local m_swap = false          -- plots swapped from another of our cities are candidates (issue 54)
@@ -90,6 +97,7 @@ local m_districtRows = {}     -- what the district grid shows, for tests
 local m_resultRows = {}       -- what the result list shows, for tests
 local m_solutionCells = {}    -- the solution rows' buttons, for real-click tests
 local m_weightViews = {}      -- [key] = function that redraws that weight
+local m_weightCells = {}      -- the weight columns' controls, for tests (SDP_UI.BuildWeights)
 local m_tab = "SINGLE"        -- the open tab: SINGLE, SITES or MULTI
 
 -- ===========================================================================
@@ -165,7 +173,7 @@ end
 -- where it may stand (an aqueduct: next to the City Center and to a river,
 -- lake, oasis or mountain).
 local function UnplacedTip(u)
-  if u.Reason ~= "NO_LEGAL_PLOT" then return "" end
+  if u.Reason ~= "NO_LEGAL_PLOT" and u.Reason ~= "NEEDS_IMPROVEMENT" then return "" end
   local row = GameInfo.Districts[u.Type] or GameInfo.Buildings[u.Type]
   return (row ~= nil and row.Description ~= nil) and Locale.Lookup(row.Description) or ""
 end
@@ -173,9 +181,57 @@ end
 -- Helpers shared with the other tabs (SDP_PageSites, SDP_PageMulti).
 SDP_UI = {
   FitResultRow = FitResultRow, UnplacedTip = UnplacedTip,
-  MAX_WEIGHT = MAX_WEIGHT, WEIGHT_COLUMNS = WEIGHT_COLUMNS,
+  MAX_WEIGHT = MAX_WEIGHT, WEIGHT_COLUMNS = WEIGHT_COLUMNS, COVERAGE_COLUMN = COVERAGE_COLUMN,
   Number = Number, Signed = Signed, Where = Where, YieldText = YieldText, PinText = PinText, TypeName = TypeName, Join = Join,
 }
+
+-- How a coverage target (SDP_Coverage key) is called: one of the player's
+-- cities ("C<id>") by its number and name, a city-center pin ("S<plot
+-- index>") as "Site n" with the number SDP_City.SiteNumbers gives it.
+function SDP_UI.TargetLabel(key)
+  local playerID = Game.GetLocalPlayer()
+  local id = tonumber(key:match("^C(%d+)$") or "")
+  if id ~= nil then
+    local city = CityManager.GetCity(playerID, id)
+    if city == nil then return key end
+    return Locale.Lookup("LOC_SDP_CITY_N", SDP_City.CityNumbers(playerID)[id] or 0, Locale.Lookup(city:GetName()))
+  end
+  local index = tonumber(key:match("^S(%d+)$") or "")
+  if index ~= nil then
+    local sites, names = SDP_City.Sites(playerID), {}
+    for s, site in ipairs(sites) do names[s] = site.Name end
+    local numbers = SDP_City.SiteNumbers(playerID, names)
+    for s, site in ipairs(sites) do
+      if site.Index == index then return Locale.Lookup("LOC_SDP_SITE_N", numbers[s]) end
+    end
+  end
+  return key
+end
+
+-- Coverage on a result: label(key) names a target (default SDP_UI.TargetLabel).
+-- The summary's tooltip lines: the newly covered cities by group.
+function SDP_UI.CoverageLines(solution, label)
+  label = label or SDP_UI.TargetLabel
+  local lines = {}
+  for _, entry in ipairs(solution.CoveredBy or {}) do
+    local names = {}
+    for _, key in ipairs(entry.Keys) do names[#names + 1] = label(key) end
+    lines[#lines + 1] = Locale.Lookup("LOC_SDP_COVERAGE_GROUP", TypeName(entry.Group), #entry.Keys, Join(names))
+  end
+  if #lines == 0 then lines[1] = Locale.Lookup("LOC_SDP_COVERAGE_NOTHING") end
+  return lines
+end
+
+-- A plan entry with a reach: "covers N" after `detail` and the cities under
+-- `tip`, counting only the cities it newly covers (none: unchanged).
+function SDP_UI.CoverageRow(p, detail, tip, label)
+  if p.Reach == nil or #p.Reach == 0 then return detail, tip end
+  label = label or SDP_UI.TargetLabel
+  local names = {}
+  for _, key in ipairs(p.Reach) do names[#names + 1] = label(key) end
+  return detail .. "  " .. Locale.Lookup("LOC_SDP_COVERAGE_ROW", #p.Reach),
+    tip .. "[NEWLINE][NEWLINE]" .. Locale.Lookup("LOC_SDP_COVERAGE_TIP", Join(names))
+end
 
 -- ===========================================================================
 -- District states (feedback items 1, 4, 7): every plannable district is
@@ -426,9 +482,17 @@ local function KeepRunningHidden(on)
   end
 end
 
+-- Follow the city selected on the map (issue 63): a city selected since the
+-- panel last opened becomes the single-city tab's city and the centre of
+-- the Several cities tab's default group. Not while a computation runs (its
+-- result would go); that selection is then passed over, not kept for later.
+local m_followed = nil -- the selected city (ID) when the panel last opened
+local FollowSelection -- defined below (after SelectCity)
+
 local function Open()
   if IsOpen() then return end
   if m_launchDone then SetLaunchMark(false) end
+  FollowSelection()
   SelectTab(m_tab)
   Controls.DropShadow:SetHide(false)
   UIManager:QueuePopup(ContextPtr, PopupPriority.Low)
@@ -517,6 +581,30 @@ function SDP_UI.PlanNote(p)
   if p.ClearFirst then notes[#notes + 1] = Locale.Lookup("LOC_SDP_RESULT_CLEAR_FIRST") end
   if #notes == 0 then return "" end
   return "  " .. table.concat(notes, " ")
+end
+
+-- The improvement a planned wonder needs next to it (issue 51, a Camp for
+-- the Temple of Artemis): a result row after the wonder's (`indent` before
+-- its name), a preview icon, a tack named like the wonder's.
+function SDP_UI.SupportRow(p, add, indent)
+  local s = p.Support
+  if s == nil then return end
+  add("ICON_" .. s.Type, (indent or "") .. TypeName(s.Type) .. "  " .. Where(s.X, s.Y),
+    Locale.Lookup("LOC_SDP_RESULT_SUPPORT", TypeName(p.Type)) .. SDP_UI.PlanNote({ Unowned = s.Unowned }),
+    Locale.Lookup("LOC_SDP_RESULT_SUPPORT_TOOLTIP", TypeName(p.Type), TypeName(s.Type)))
+end
+
+function SDP_UI.SupportIcons(plan, icons)
+  for _, p in ipairs(plan) do
+    local s = p.Support
+    if s ~= nil then icons[#icons + 1] = { X = s.X, Y = s.Y, Icon = "ICON_" .. s.Type, Text = "" } end
+  end
+end
+
+function SDP_UI.SupportEntry(p, name)
+  local s = p.Support
+  if s == nil then return nil end
+  return { Type = s.Type, X = s.X, Y = s.Y, Name = name }
 end
 
 -- The switch for partner districts (SDP_Rules.Apart, 2026-10-21 feedback):
@@ -609,6 +697,7 @@ local function Preview(n)
   for _, p in ipairs(solution.Plan) do
     icons[#icons + 1] = { X = p.X, Y = p.Y, Icon = "ICON_" .. p.Type, Text = PinText(p.Yields) }
   end
+  SDP_UI.SupportIcons(solution.Plan, icons)
   for _, r in ipairs(solution.Remind or {}) do
     icons[#icons + 1] = { X = r.X, Y = r.Y, Icon = SDP_Pins.REMIND_ICON, Text = "" }
   end
@@ -638,9 +727,13 @@ local function ShowResult()
     Controls.Summary:SetText(SDP_UI.SummaryText(shown, { Land = request.Land,
       Distance = (request.Distance or 0) > 0, Coverage = shown.Covered ~= nil }))
     local stats = result.Stats
-    Controls.Summary:SetToolTipString(Locale.Lookup("LOC_SDP_RESULT_STATS",
+    local statsText = Locale.Lookup("LOC_SDP_RESULT_STATS",
       Locale.Lookup("LOC_SDP_TIER_" .. stats.Tier), stats.Method or "multi", stats.Calls or 0, stats.Tries or 0,
-      stats.Nodes or 0, stats.Continues or 0))
+      stats.Nodes or 0, stats.Continues or 0)
+    if shown.Covered ~= nil then
+      statsText = table.concat(SDP_UI.CoverageLines(shown), "[NEWLINE]") .. "[NEWLINE][NEWLINE]" .. statsText
+    end
+    Controls.Summary:SetToolTipString(statsText)
     Controls.Quality:SetText(QualityText(result))
     -- The solutions (feedback item 1): a click shows one and previews it.
     if #solutions > 1 then
@@ -665,8 +758,10 @@ local function ShowResult()
     -- Each planned district: where, its yields, and DMT's own breakdown on hover.
     for _, p in ipairs(shown.Plan) do
       local toolTip = (p.ToolTip ~= nil and p.ToolTip ~= "") and p.ToolTip or Locale.Lookup("LOC_SDP_NO_ADJACENCY")
-      AddResultRow(p.Kind == "WONDER" and ("ICON_" .. p.Type) or ("ICON_" .. p.Type),
-        TypeName(p.Type) .. "  " .. Where(p.X, p.Y), SDP_UI.PlanDetail(p), toolTip)
+      local detail
+      detail, toolTip = SDP_UI.CoverageRow(p, SDP_UI.PlanDetail(p), toolTip)
+      AddResultRow("ICON_" .. p.Type, TypeName(p.Type) .. "  " .. Where(p.X, p.Y), detail, toolTip)
+      SDP_UI.SupportRow(p, AddResultRow, "  ")
     end
     -- Woods and rainforest the plan relies on (feedback item 5).
     for _, r in ipairs(shown.Remind or {}) do
@@ -846,6 +941,22 @@ SelectCity = function(cityID)
   UpdateButtons()
 end
 
+FollowSelection = function()
+  local playerID = Game.GetLocalPlayer()
+  local selected = UI.GetHeadSelectedCity()
+  local cityID = nil
+  if selected ~= nil and selected:GetOwner() == playerID then cityID = selected:GetID() end
+  if cityID == m_followed then return end
+  m_followed = cityID
+  if cityID == nil or SDP_Task.IsRunning() then return end
+  if cityID ~= m_cityID then
+    m_cityID = cityID
+    ClearResult()
+    if m_heat ~= nil then ShowHeat(nil) end
+  end
+  SDP_PageMulti.SetCenter(cityID)
+end
+
 local function SetWeight(key, value)
   value = math.max(0, math.min(MAX_WEIGHT, value))
   if m_weights[key] ~= value then
@@ -859,10 +970,11 @@ end
 -- tab's table, isOff(column) greys a column out, onChange(key, value),
 -- width (optional) the column width when more columns must fit. A column's
 -- Step (default 1) is how much an arrow changes it.
--- Returns { [key] = redraw function }.
+-- Returns { [key] = redraw function } and the columns' controls in order
+-- ({ Key, Less, More, Value, Root }, for tests).
 function SDP_UI.BuildWeights(im, stack, columns, weights, isOff, onChange, width)
   im:ResetInstances()
-  local views = {}
+  local views, cells = {}, {}
   for _, column in ipairs(columns) do
     local key = column.Key
     local step = column.Step or 1
@@ -881,14 +993,15 @@ function SDP_UI.BuildWeights(im, stack, columns, weights, isOff, onChange, width
     inst.Less:RegisterCallback(Mouse.eLClick, function() onChange(key, math.max(0, weights[key] - step)) end)
     inst.More:RegisterCallback(Mouse.eLClick, function() onChange(key, math.min(MAX_WEIGHT, weights[key] + step)) end)
     views[key] = Show
+    cells[#cells + 1] = { Key = key, Less = inst.Less, More = inst.More, Value = inst.Value, Root = inst.Root }
     Show()
   end
   stack:CalculateSize()
-  return views
+  return views, cells
 end
 
 local function BuildWeights()
-  m_weightViews = SDP_UI.BuildWeights(m_weightIM, Controls.WeightStack, WEIGHT_COLUMNS, m_weights,
+  m_weightViews, m_weightCells = SDP_UI.BuildWeights(m_weightIM, Controls.WeightStack, SINGLE_COLUMNS, m_weights,
     function(column) return column.Land and not m_land end, SetWeight, WEIGHT_WIDTH)
 end
 
@@ -1230,7 +1343,7 @@ Request = function()
   return {
     PlayerID = Game.GetLocalPlayer(), CityID = m_cityID, Districts = list.Must, Weights = weights,
     Pool = list.Pool, Count = list.Count, MustSpecialty = list.MustSpecialty, Auto = list.Auto,
-    Distance = m_weights.DISTANCE, Remind = m_remind, Apart = m_apart,
+    Distance = m_weights.DISTANCE, Coverage = m_weights.COVERAGE, Remind = m_remind, Apart = m_apart,
     AllowFeatureRemoval = m_allowFeatureRemoval, Land = m_land, Tier = m_tier, Swap = m_swap,
     IgnorePins = m_replace and OwnPins() or nil, Wonders = wonders,
   }
@@ -1243,6 +1356,7 @@ local function WonderRequest(request)
   return {
     PlayerID = request.PlayerID, Tier = request.Tier, Districts = request.Districts, Wonders = request.Wonders,
     Pool = request.Pool, Count = request.Count, Auto = request.Auto, Distance = request.Distance, Remind = request.Remind,
+    Coverage = request.Coverage,
     Only = { [request.CityID] = true }, Weights = request.Weights, Land = request.Land, Apart = request.Apart,
     AllowFeatureRemoval = request.AllowFeatureRemoval, IgnorePins = request.IgnorePins, Swap = request.Swap,
     Plans = { [key] = request.Districts },
@@ -1307,7 +1421,10 @@ local function PlacePins()
   local solution = (m_result.Solutions and m_result.Solutions[m_solution]) or m_result
   local number = SDP_City.CityNumbers(playerID)[m_cityID]
   local entries = {}
-  for i, p in ipairs(solution.Plan) do entries[i] = { Type = p.Type, X = p.X, Y = p.Y, Name = tostring(number or "") } end
+  for _, p in ipairs(solution.Plan) do
+    entries[#entries + 1] = { Type = p.Type, X = p.X, Y = p.Y, Name = tostring(number or "") }
+    entries[#entries + 1] = SDP_UI.SupportEntry(p, tostring(number or ""))
+  end
   if m_remind then
     for _, e in ipairs(SDP_UI.RemindEntries(solution.Remind, function() return number end)) do entries[#entries + 1] = e end
   end
@@ -1525,7 +1642,7 @@ SDP_Panel = {
   State = function()
     return {
       CityID = m_cityID, Result = m_result, DistrictRows = m_districtRows, ResultRows = m_resultRows,
-      SolutionCells = m_solutionCells,
+      SolutionCells = m_solutionCells, WeightCells = m_weightCells,
       Count = List().Count, Solution = m_solution, Remind = m_remind, Apart = m_apart,
       Weights = m_weights, AllowFeatureRemoval = m_allowFeatureRemoval, Land = m_land, Tier = m_tier, Replace = m_replace,
       Swap = m_swap,

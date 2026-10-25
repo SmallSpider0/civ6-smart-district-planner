@@ -1,0 +1,759 @@
+{
+ "Name": "pangaea-gs clusters",
+ "Order": {
+  "Distances": [
+   [
+    0,
+    4,
+    5,
+    7,
+    8,
+    13,
+    14,
+    15
+   ],
+   [
+    4,
+    0,
+    5,
+    4,
+    4,
+    9,
+    10,
+    11
+   ],
+   [
+    5,
+    5,
+    0,
+    4,
+    8,
+    14,
+    11,
+    11
+   ],
+   [
+    7,
+    4,
+    4,
+    0,
+    4,
+    10,
+    7,
+    8
+   ],
+   [
+    8,
+    4,
+    8,
+    4,
+    0,
+    6,
+    6,
+    9
+   ],
+   [
+    13,
+    9,
+    14,
+    10,
+    6,
+    0,
+    4,
+    10
+   ],
+   [
+    14,
+    10,
+    11,
+    7,
+    6,
+    4,
+    0,
+    6
+   ],
+   [
+    15,
+    11,
+    11,
+    8,
+    9,
+    10,
+    6,
+    0
+   ]
+  ],
+  "List": [
+   {
+    "Distance": 0,
+    "ID": 65536,
+    "Key": "C65536",
+    "Kind": "CITY",
+    "Name": "京都",
+    "X": 27,
+    "Y": 22
+   },
+   {
+    "Distance": 4,
+    "ID": 327682,
+    "Key": "C327682",
+    "Kind": "CITY",
+    "Name": "���屋",
+    "X": 29,
+    "Y": 18
+   },
+   {
+    "Distance": 5,
+    "Key": "S1536",
+    "Kind": "SITE",
+    "Name": "site",
+    "X": 24,
+    "Y": 18
+   },
+   {
+    "Distance": 7,
+    "ID": 458756,
+    "Key": "C458756",
+    "Kind": "CITY",
+    "Name": "�阜",
+    "X": 26,
+    "Y": 15
+   },
+   {
+    "Distance": 8,
+    "ID": 393219,
+    "Key": "C393219",
+    "Kind": "CITY",
+    "Name": "大阪",
+    "X": 30,
+    "Y": 14
+   },
+   {
+    "Distance": 13,
+    "ID": 524289,
+    "Key": "C524289",
+    "Kind": "CITY",
+    "Name": "冈山",
+    "X": 33,
+    "Y": 9
+   },
+   {
+    "Distance": 14,
+    "Key": "S702",
+    "Kind": "SITE",
+    "Name": "site",
+    "X": 30,
+    "Y": 8
+   },
+   {
+    "Distance": 15,
+    "Key": "S612",
+    "Kind": "SITE",
+    "Name": "site",
+    "X": 24,
+    "Y": 7
+   }
+  ],
+  "Step": "Order"
+ },
+ "Runs": [
+  {
+   "Adjacency": 90,
+   "Calls": 5724,
+   "Cities": 5,
+   "CityXY": {
+    "C327682": {
+     "X": 29,
+     "Y": 18
+    },
+    "C393219": {
+     "X": 30,
+     "Y": 14
+    },
+    "C458756": {
+     "X": 26,
+     "Y": 15
+    },
+    "C65536": {
+     "X": 27,
+     "Y": 22
+    },
+    "S1536": {
+     "X": 24,
+     "Y": 18
+    }
+   },
+   "Cross": [
+    {
+     "A": "S1536",
+     "B": "C458756",
+     "Distance": 4
+    },
+    {
+     "A": "S1536",
+     "B": "C458756",
+     "Distance": 4
+    },
+    {
+     "A": "S1536",
+     "B": "C458756",
+     "Distance": 4
+    },
+    {
+     "A": "S1536",
+     "B": "C458756",
+     "Distance": 4
+    },
+    {
+     "A": "C65536",
+     "B": "C327682",
+     "Distance": 4
+    },
+    {
+     "A": "C327682",
+     "B": "C393219",
+     "Distance": 4
+    },
+    {
+     "A": "C327682",
+     "B": "C458756",
+     "Distance": 4
+    },
+    {
+     "A": "C327682",
+     "B": "C393219",
+     "Distance": 4
+    }
+   ],
+   "Estimate": {
+    "Seconds": 18.40767904,
+    "Speed": 11000,
+    "Units": 202484.4694
+   },
+   "Exhaustive": false,
+   "Gain": 74,
+   "Label": "STANDARD 1-5",
+   "Land": -17,
+   "Ok": true,
+   "Placed": 16,
+   "Plan": [
+    {
+     "City": "S1536",
+     "Type": "DISTRICT_AQUEDUCT",
+     "X": 24,
+     "Y": 17
+    },
+    {
+     "City": "S1536",
+     "Type": "DISTRICT_HARBOR",
+     "X": 23,
+     "Y": 19
+    },
+    {
+     "City": "S1536",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 25,
+     "Y": 18
+    },
+    {
+     "City": "S1536",
+     "Type": "DISTRICT_INDUSTRIAL_ZONE",
+     "X": 23,
+     "Y": 17
+    },
+    {
+     "City": "C65536",
+     "Type": "DISTRICT_ENTERTAINMENT_COMPLEX",
+     "X": 27,
+     "Y": 20
+    },
+    {
+     "City": "C65536",
+     "Type": "DISTRICT_HARBOR",
+     "X": 26,
+     "Y": 21
+    },
+    {
+     "City": "C65536",
+     "Type": "DISTRICT_INDUSTRIAL_ZONE",
+     "X": 28,
+     "Y": 22
+    },
+    {
+     "City": "C327682",
+     "Type": "DISTRICT_CAMPUS",
+     "X": 28,
+     "Y": 16
+    },
+    {
+     "City": "C327682",
+     "Type": "DISTRICT_COMMERCIAL_HUB",
+     "X": 29,
+     "Y": 16
+    },
+    {
+     "City": "C327682",
+     "Type": "DISTRICT_ENTERTAINMENT_COMPLEX",
+     "X": 27,
+     "Y": 19
+    },
+    {
+     "City": "C393219",
+     "Type": "DISTRICT_CAMPUS",
+     "X": 28,
+     "Y": 14
+    },
+    {
+     "City": "C393219",
+     "Type": "DISTRICT_COMMERCIAL_HUB",
+     "X": 29,
+     "Y": 14
+    },
+    {
+     "City": "C393219",
+     "Type": "DISTRICT_INDUSTRIAL_ZONE",
+     "X": 28,
+     "Y": 15
+    },
+    {
+     "City": "C458756",
+     "Type": "DISTRICT_CAMPUS",
+     "X": 24,
+     "Y": 16
+    },
+    {
+     "City": "C458756",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 25,
+     "Y": 17
+    },
+    {
+     "City": "C458756",
+     "Type": "DISTRICT_INDUSTRIAL_ZONE",
+     "X": 27,
+     "Y": 16
+    }
+   ],
+   "Selected": [
+    "S1536",
+    "C65536",
+    "C327682",
+    "C393219",
+    "C458756"
+   ],
+   "Step": "Solve",
+   "Tries": 14015,
+   "Unplaced": 1,
+   "Wait": 5.58,
+   "AtOnce": true,
+   "Tier": "STANDARD",
+   "From": 1,
+   "To": 5
+  },
+  {
+   "Adjacency": 31,
+   "Calls": 4661,
+   "Cities": 3,
+   "CityXY": {
+    "C524289": {
+     "X": 33,
+     "Y": 9
+    },
+    "S612": {
+     "X": 24,
+     "Y": 7
+    },
+    "S702": {
+     "X": 30,
+     "Y": 8
+    }
+   },
+   "Cross": [],
+   "Estimate": {
+    "Seconds": 9.316780868,
+    "Speed": 11000,
+    "Units": 102484.5895
+   },
+   "Exhaustive": false,
+   "Gain": 31,
+   "Label": "STANDARD 6-8",
+   "Land": 0,
+   "Ok": true,
+   "Placed": 10,
+   "Plan": [
+    {
+     "City": "S612",
+     "Type": "DISTRICT_AQUEDUCT",
+     "X": 25,
+     "Y": 7
+    },
+    {
+     "City": "S612",
+     "Type": "DISTRICT_HARBOR",
+     "X": 24,
+     "Y": 5
+    },
+    {
+     "City": "S612",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 24,
+     "Y": 6
+    },
+    {
+     "City": "S612",
+     "Type": "DISTRICT_INDUSTRIAL_ZONE",
+     "X": 25,
+     "Y": 6
+    },
+    {
+     "City": "S702",
+     "Type": "DISTRICT_CAMPUS",
+     "X": 28,
+     "Y": 8
+    },
+    {
+     "City": "S702",
+     "Type": "DISTRICT_COMMERCIAL_HUB",
+     "X": 28,
+     "Y": 9
+    },
+    {
+     "City": "S702",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 29,
+     "Y": 8
+    },
+    {
+     "City": "C524289",
+     "Type": "DISTRICT_HARBOR",
+     "X": 35,
+     "Y": 9
+    },
+    {
+     "City": "C524289",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 34,
+     "Y": 9
+    },
+    {
+     "City": "C524289",
+     "Type": "DISTRICT_INDUSTRIAL_ZONE",
+     "X": 35,
+     "Y": 10
+    }
+   ],
+   "Selected": [
+    "S612",
+    "S702",
+    "C524289"
+   ],
+   "Step": "Solve",
+   "Tries": 18724,
+   "Unplaced": 2,
+   "Wait": 2.83,
+   "AtOnce": true,
+   "Tier": "STANDARD",
+   "From": 6,
+   "To": 8
+  },
+  {
+   "Adjacency": 90,
+   "Calls": 8741,
+   "Cities": 5,
+   "CityXY": {
+    "C327682": {
+     "X": 29,
+     "Y": 18
+    },
+    "C393219": {
+     "X": 30,
+     "Y": 14
+    },
+    "C458756": {
+     "X": 26,
+     "Y": 15
+    },
+    "C65536": {
+     "X": 27,
+     "Y": 22
+    },
+    "S1536": {
+     "X": 24,
+     "Y": 18
+    }
+   },
+   "Cross": [
+    {
+     "A": "S1536",
+     "B": "C458756",
+     "Distance": 4
+    },
+    {
+     "A": "S1536",
+     "B": "C458756",
+     "Distance": 4
+    },
+    {
+     "A": "S1536",
+     "B": "C458756",
+     "Distance": 4
+    },
+    {
+     "A": "S1536",
+     "B": "C458756",
+     "Distance": 4
+    },
+    {
+     "A": "C65536",
+     "B": "C327682",
+     "Distance": 4
+    },
+    {
+     "A": "C327682",
+     "B": "C393219",
+     "Distance": 4
+    },
+    {
+     "A": "C327682",
+     "B": "C458756",
+     "Distance": 4
+    },
+    {
+     "A": "C327682",
+     "B": "C393219",
+     "Distance": 4
+    }
+   ],
+   "Estimate": {
+    "Seconds": 42.49493928,
+    "Speed": 11000,
+    "Units": 467444.3321
+   },
+   "Exhaustive": false,
+   "Gain": 74,
+   "Label": "FINE 1-5",
+   "Land": -17,
+   "Ok": true,
+   "Placed": 16,
+   "Plan": [
+    {
+     "City": "S1536",
+     "Type": "DISTRICT_AQUEDUCT",
+     "X": 24,
+     "Y": 17
+    },
+    {
+     "City": "S1536",
+     "Type": "DISTRICT_HARBOR",
+     "X": 23,
+     "Y": 19
+    },
+    {
+     "City": "S1536",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 25,
+     "Y": 18
+    },
+    {
+     "City": "S1536",
+     "Type": "DISTRICT_INDUSTRIAL_ZONE",
+     "X": 23,
+     "Y": 17
+    },
+    {
+     "City": "C65536",
+     "Type": "DISTRICT_ENTERTAINMENT_COMPLEX",
+     "X": 27,
+     "Y": 20
+    },
+    {
+     "City": "C65536",
+     "Type": "DISTRICT_HARBOR",
+     "X": 26,
+     "Y": 21
+    },
+    {
+     "City": "C65536",
+     "Type": "DISTRICT_INDUSTRIAL_ZONE",
+     "X": 28,
+     "Y": 22
+    },
+    {
+     "City": "C327682",
+     "Type": "DISTRICT_CAMPUS",
+     "X": 28,
+     "Y": 16
+    },
+    {
+     "City": "C327682",
+     "Type": "DISTRICT_COMMERCIAL_HUB",
+     "X": 29,
+     "Y": 16
+    },
+    {
+     "City": "C327682",
+     "Type": "DISTRICT_ENTERTAINMENT_COMPLEX",
+     "X": 27,
+     "Y": 19
+    },
+    {
+     "City": "C393219",
+     "Type": "DISTRICT_CAMPUS",
+     "X": 28,
+     "Y": 14
+    },
+    {
+     "City": "C393219",
+     "Type": "DISTRICT_COMMERCIAL_HUB",
+     "X": 29,
+     "Y": 14
+    },
+    {
+     "City": "C393219",
+     "Type": "DISTRICT_INDUSTRIAL_ZONE",
+     "X": 28,
+     "Y": 15
+    },
+    {
+     "City": "C458756",
+     "Type": "DISTRICT_CAMPUS",
+     "X": 24,
+     "Y": 16
+    },
+    {
+     "City": "C458756",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 25,
+     "Y": 17
+    },
+    {
+     "City": "C458756",
+     "Type": "DISTRICT_INDUSTRIAL_ZONE",
+     "X": 27,
+     "Y": 16
+    }
+   ],
+   "Selected": [
+    "S1536",
+    "C65536",
+    "C327682",
+    "C393219",
+    "C458756"
+   ],
+   "Step": "Solve",
+   "Tries": 30028,
+   "Unplaced": 1,
+   "Wait": 13.76,
+   "AtOnce": true,
+   "Tier": "FINE",
+   "From": 1,
+   "To": 5
+  },
+  {
+   "Adjacency": 31,
+   "Calls": 8035,
+   "Cities": 3,
+   "CityXY": {
+    "C524289": {
+     "X": 33,
+     "Y": 9
+    },
+    "S612": {
+     "X": 24,
+     "Y": 7
+    },
+    "S702": {
+     "X": 30,
+     "Y": 8
+    }
+   },
+   "Cross": [],
+   "Estimate": {
+    "Seconds": 21.44321665,
+    "Speed": 11000,
+    "Units": 235875.3832
+   },
+   "Exhaustive": false,
+   "Gain": 31,
+   "Label": "FINE 6-8",
+   "Land": 0,
+   "Ok": true,
+   "Placed": 10,
+   "Plan": [
+    {
+     "City": "S612",
+     "Type": "DISTRICT_AQUEDUCT",
+     "X": 25,
+     "Y": 7
+    },
+    {
+     "City": "S612",
+     "Type": "DISTRICT_HARBOR",
+     "X": 24,
+     "Y": 5
+    },
+    {
+     "City": "S612",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 24,
+     "Y": 6
+    },
+    {
+     "City": "S612",
+     "Type": "DISTRICT_INDUSTRIAL_ZONE",
+     "X": 25,
+     "Y": 6
+    },
+    {
+     "City": "S702",
+     "Type": "DISTRICT_CAMPUS",
+     "X": 28,
+     "Y": 8
+    },
+    {
+     "City": "S702",
+     "Type": "DISTRICT_COMMERCIAL_HUB",
+     "X": 28,
+     "Y": 9
+    },
+    {
+     "City": "S702",
+     "Type": "DISTRICT_INDUSTRIAL_ZONE",
+     "X": 29,
+     "Y": 8
+    },
+    {
+     "City": "C524289",
+     "Type": "DISTRICT_HARBOR",
+     "X": 35,
+     "Y": 9
+    },
+    {
+     "City": "C524289",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 34,
+     "Y": 9
+    },
+    {
+     "City": "C524289",
+     "Type": "DISTRICT_INDUSTRIAL_ZONE",
+     "X": 35,
+     "Y": 10
+    }
+   ],
+   "Selected": [
+    "S612",
+    "S702",
+    "C524289"
+   ],
+   "Step": "Solve",
+   "Tries": 40375,
+   "Unplaced": 2,
+   "Wait": 8.37,
+   "AtOnce": true,
+   "Tier": "FINE",
+   "From": 6,
+   "To": 8
+  }
+ ]
+}

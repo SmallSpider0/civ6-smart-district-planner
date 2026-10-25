@@ -1,0 +1,4427 @@
+{
+ "Name": "continents-gs",
+ "Count": 3,
+ "Order": {
+  "Distances": [
+   [
+    0,
+    4,
+    4,
+    5,
+    6,
+    8,
+    9,
+    10,
+    11
+   ],
+   [
+    4,
+    0,
+    4,
+    7,
+    4,
+    6,
+    7,
+    7,
+    9
+   ],
+   [
+    4,
+    4,
+    0,
+    4,
+    8,
+    4,
+    11,
+    8,
+    13
+   ],
+   [
+    5,
+    7,
+    4,
+    0,
+    11,
+    7,
+    14,
+    12,
+    16
+   ],
+   [
+    6,
+    4,
+    8,
+    11,
+    0,
+    10,
+    4,
+    11,
+    5
+   ],
+   [
+    8,
+    6,
+    4,
+    7,
+    10,
+    0,
+    12,
+    5,
+    14
+   ],
+   [
+    9,
+    7,
+    11,
+    14,
+    4,
+    12,
+    0,
+    10,
+    4
+   ],
+   [
+    10,
+    7,
+    8,
+    12,
+    11,
+    5,
+    10,
+    0,
+    14
+   ],
+   [
+    11,
+    9,
+    13,
+    16,
+    5,
+    14,
+    4,
+    14,
+    0
+   ]
+  ],
+  "List": [
+   {
+    "Distance": 0,
+    "ID": 65536,
+    "Key": "C65536",
+    "Kind": "CITY",
+    "Name": "阿姆斯特丹",
+    "X": 90,
+    "Y": 27
+   },
+   {
+    "Distance": 4,
+    "ID": 131073,
+    "Key": "C131073",
+    "Kind": "CITY",
+    "Name": "海牙",
+    "X": 87,
+    "Y": 29
+   },
+   {
+    "Distance": 4,
+    "ID": 262147,
+    "Key": "C262147",
+    "Kind": "CITY",
+    "Name": "奈梅亨",
+    "X": 87,
+    "Y": 25
+   },
+   {
+    "Distance": 5,
+    "ID": 393221,
+    "Key": "C393221",
+    "Kind": "CITY",
+    "Name": "哈勒姆",
+    "X": 90,
+    "Y": 22
+   },
+   {
+    "Distance": 6,
+    "ID": 327684,
+    "Key": "C327684",
+    "Kind": "CITY",
+    "Name": "�尔堡",
+    "X": 89,
+    "Y": 33
+   },
+   {
+    "Distance": 8,
+    "ID": 196610,
+    "Key": "C196610",
+    "Kind": "CITY",
+    "Name": "鹿特丹",
+    "X": 84,
+    "Y": 24
+   },
+   {
+    "Distance": 9,
+    "ID": 524295,
+    "Key": "C524295",
+    "Kind": "CITY",
+    "Name": "马斯特里赫特",
+    "X": 87,
+    "Y": 36
+   },
+   {
+    "Distance": 10,
+    "ID": 458758,
+    "Key": "C458758",
+    "Kind": "CITY",
+    "Name": "胡伊利部��",
+    "X": 81,
+    "Y": 28
+   },
+   {
+    "Distance": 11,
+    "ID": 589832,
+    "Key": "C589832",
+    "Kind": "CITY",
+    "Name": "乌得勒支",
+    "X": 90,
+    "Y": 38
+   }
+  ],
+  "Step": "Order"
+ },
+ "Grid": [
+  {
+   "Adjacency": 9,
+   "Calls": 470,
+   "Cities": 2,
+   "CityXY": {
+    "C131073": {
+     "X": 87,
+     "Y": 29
+    },
+    "C65536": {
+     "X": 90,
+     "Y": 27
+    }
+   },
+   "Cross": [],
+   "Estimate": {
+    "Seconds": 0.8509090909,
+    "Speed": 11000,
+    "Units": 9360
+   },
+   "Exhaustive": false,
+   "Gain": -9.99609375,
+   "Label": "FAST n=2",
+   "Land": -19,
+   "Ok": true,
+   "Placed": 5,
+   "Plan": [
+    {
+     "City": "C65536",
+     "Type": "DISTRICT_AERODROME",
+     "X": 91,
+     "Y": 29
+    },
+    {
+     "City": "C65536",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 89,
+     "Y": 25
+    },
+    {
+     "City": "C131073",
+     "Type": "DISTRICT_AERODROME",
+     "X": 86,
+     "Y": 28
+    },
+    {
+     "City": "C131073",
+     "Type": "DISTRICT_COMMERCIAL_HUB",
+     "X": 86,
+     "Y": 30
+    },
+    {
+     "City": "C131073",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 87,
+     "Y": 28
+    }
+   ],
+   "Selected": [
+    "C65536",
+    "C131073"
+   ],
+   "Step": "Solve",
+   "Tries": 216,
+   "Unplaced": 0,
+   "Wait": 0.22,
+   "AtOnce": true,
+   "Tier": "FAST",
+   "N": 2
+  },
+  {
+   "Adjacency": 18,
+   "Calls": 835,
+   "Cities": 3,
+   "CityXY": {
+    "C131073": {
+     "X": 87,
+     "Y": 29
+    },
+    "C262147": {
+     "X": 87,
+     "Y": 25
+    },
+    "C65536": {
+     "X": 90,
+     "Y": 27
+    }
+   },
+   "Cross": [],
+   "Estimate": {
+    "Seconds": 1.433552669,
+    "Speed": 11000,
+    "Units": 15769.07936
+   },
+   "Exhaustive": false,
+   "Gain": -14.99609375,
+   "Label": "FAST n=3",
+   "Land": -33,
+   "Ok": true,
+   "Placed": 8,
+   "Plan": [
+    {
+     "City": "C65536",
+     "Type": "DISTRICT_AERODROME",
+     "X": 91,
+     "Y": 29
+    },
+    {
+     "City": "C65536",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 89,
+     "Y": 25
+    },
+    {
+     "City": "C131073",
+     "Type": "DISTRICT_AERODROME",
+     "X": 86,
+     "Y": 28
+    },
+    {
+     "City": "C131073",
+     "Type": "DISTRICT_COMMERCIAL_HUB",
+     "X": 86,
+     "Y": 30
+    },
+    {
+     "City": "C131073",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 87,
+     "Y": 28
+    },
+    {
+     "City": "C262147",
+     "Type": "DISTRICT_COMMERCIAL_HUB",
+     "X": 87,
+     "Y": 22
+    },
+    {
+     "City": "C262147",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 87,
+     "Y": 23
+    },
+    {
+     "City": "C262147",
+     "Type": "DISTRICT_INDUSTRIAL_ZONE",
+     "X": 88,
+     "Y": 24
+    }
+   ],
+   "Selected": [
+    "C65536",
+    "C131073",
+    "C262147"
+   ],
+   "Step": "Solve",
+   "Tries": 335,
+   "Unplaced": 1,
+   "Wait": 0.3,
+   "AtOnce": true,
+   "Tier": "FAST",
+   "N": 3
+  },
+  {
+   "Adjacency": 22,
+   "Calls": 1460,
+   "Cities": 4,
+   "CityXY": {
+    "C131073": {
+     "X": 87,
+     "Y": 29
+    },
+    "C262147": {
+     "X": 87,
+     "Y": 25
+    },
+    "C393221": {
+     "X": 90,
+     "Y": 22
+    },
+    "C65536": {
+     "X": 90,
+     "Y": 27
+    }
+   },
+   "Cross": [],
+   "Estimate": {
+    "Seconds": 2.079214244,
+    "Speed": 11000,
+    "Units": 22871.35669
+   },
+   "Exhaustive": false,
+   "Gain": -16.99609375,
+   "Label": "FAST n=4",
+   "Land": -40,
+   "Ok": true,
+   "Placed": 11,
+   "Plan": [
+    {
+     "City": "C65536",
+     "Type": "DISTRICT_AERODROME",
+     "X": 91,
+     "Y": 29
+    },
+    {
+     "City": "C65536",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 89,
+     "Y": 25
+    },
+    {
+     "City": "C131073",
+     "Type": "DISTRICT_AERODROME",
+     "X": 86,
+     "Y": 28
+    },
+    {
+     "City": "C131073",
+     "Type": "DISTRICT_COMMERCIAL_HUB",
+     "X": 86,
+     "Y": 30
+    },
+    {
+     "City": "C131073",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 87,
+     "Y": 28
+    },
+    {
+     "City": "C262147",
+     "Type": "DISTRICT_COMMERCIAL_HUB",
+     "X": 87,
+     "Y": 22
+    },
+    {
+     "City": "C262147",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 87,
+     "Y": 23
+    },
+    {
+     "City": "C262147",
+     "Type": "DISTRICT_INDUSTRIAL_ZONE",
+     "X": 88,
+     "Y": 24
+    },
+    {
+     "City": "C393221",
+     "Type": "DISTRICT_HARBOR",
+     "X": 91,
+     "Y": 19
+    },
+    {
+     "City": "C393221",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 89,
+     "Y": 20
+    },
+    {
+     "City": "C393221",
+     "Type": "DISTRICT_WATER_ENTERTAINMENT_COMPLEX",
+     "X": 92,
+     "Y": 20
+    }
+   ],
+   "Selected": [
+    "C65536",
+    "C131073",
+    "C262147",
+    "C393221"
+   ],
+   "Step": "Solve",
+   "Tries": 711,
+   "Unplaced": 1,
+   "Wait": 0.45,
+   "AtOnce": true,
+   "Tier": "FAST",
+   "N": 4
+  },
+  {
+   "Adjacency": 28,
+   "Calls": 1824,
+   "Cities": 5,
+   "CityXY": {
+    "C131073": {
+     "X": 87,
+     "Y": 29
+    },
+    "C262147": {
+     "X": 87,
+     "Y": 25
+    },
+    "C327684": {
+     "X": 89,
+     "Y": 33
+    },
+    "C393221": {
+     "X": 90,
+     "Y": 22
+    },
+    "C65536": {
+     "X": 90,
+     "Y": 27
+    }
+   },
+   "Cross": [],
+   "Estimate": {
+    "Seconds": 2.776907842,
+    "Speed": 11000,
+    "Units": 30545.98627
+   },
+   "Exhaustive": false,
+   "Gain": -10.99609375,
+   "Label": "FAST n=5",
+   "Land": -40,
+   "Ok": true,
+   "Placed": 14,
+   "Plan": [
+    {
+     "City": "C65536",
+     "Type": "DISTRICT_AERODROME",
+     "X": 91,
+     "Y": 29
+    },
+    {
+     "City": "C65536",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 89,
+     "Y": 25
+    },
+    {
+     "City": "C131073",
+     "Type": "DISTRICT_AERODROME",
+     "X": 86,
+     "Y": 28
+    },
+    {
+     "City": "C131073",
+     "Type": "DISTRICT_COMMERCIAL_HUB",
+     "X": 86,
+     "Y": 30
+    },
+    {
+     "City": "C131073",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 87,
+     "Y": 28
+    },
+    {
+     "City": "C262147",
+     "Type": "DISTRICT_COMMERCIAL_HUB",
+     "X": 87,
+     "Y": 22
+    },
+    {
+     "City": "C262147",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 87,
+     "Y": 23
+    },
+    {
+     "City": "C262147",
+     "Type": "DISTRICT_INDUSTRIAL_ZONE",
+     "X": 88,
+     "Y": 24
+    },
+    {
+     "City": "C327684",
+     "Type": "DISTRICT_ENCAMPMENT",
+     "X": 90,
+     "Y": 31
+    },
+    {
+     "City": "C327684",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 90,
+     "Y": 36
+    },
+    {
+     "City": "C327684",
+     "Type": "DISTRICT_INDUSTRIAL_ZONE",
+     "X": 89,
+     "Y": 35
+    },
+    {
+     "City": "C393221",
+     "Type": "DISTRICT_HARBOR",
+     "X": 91,
+     "Y": 19
+    },
+    {
+     "City": "C393221",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 89,
+     "Y": 20
+    },
+    {
+     "City": "C393221",
+     "Type": "DISTRICT_WATER_ENTERTAINMENT_COMPLEX",
+     "X": 92,
+     "Y": 20
+    }
+   ],
+   "Selected": [
+    "C65536",
+    "C131073",
+    "C262147",
+    "C327684",
+    "C393221"
+   ],
+   "Step": "Solve",
+   "Tries": 1299,
+   "Unplaced": 1,
+   "Wait": 0.63,
+   "AtOnce": true,
+   "Tier": "FAST",
+   "N": 5
+  },
+  {
+   "Adjacency": 36,
+   "Calls": 2259,
+   "Cities": 6,
+   "CityXY": {
+    "C131073": {
+     "X": 87,
+     "Y": 29
+    },
+    "C196610": {
+     "X": 84,
+     "Y": 24
+    },
+    "C262147": {
+     "X": 87,
+     "Y": 25
+    },
+    "C327684": {
+     "X": 89,
+     "Y": 33
+    },
+    "C393221": {
+     "X": 90,
+     "Y": 22
+    },
+    "C65536": {
+     "X": 90,
+     "Y": 27
+    }
+   },
+   "Cross": [
+    {
+     "A": "C196610",
+     "B": "C262147",
+     "Distance": 4
+    }
+   ],
+   "Estimate": {
+    "Seconds": 3.519515271,
+    "Speed": 11000,
+    "Units": 38714.66798
+   },
+   "Exhaustive": false,
+   "Gain": -11.99609375,
+   "Label": "FAST n=6",
+   "Land": -49,
+   "Ok": true,
+   "Placed": 17,
+   "Plan": [
+    {
+     "City": "C65536",
+     "Type": "DISTRICT_AERODROME",
+     "X": 91,
+     "Y": 29
+    },
+    {
+     "City": "C65536",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 89,
+     "Y": 25
+    },
+    {
+     "City": "C131073",
+     "Type": "DISTRICT_AERODROME",
+     "X": 86,
+     "Y": 28
+    },
+    {
+     "City": "C131073",
+     "Type": "DISTRICT_COMMERCIAL_HUB",
+     "X": 86,
+     "Y": 30
+    },
+    {
+     "City": "C131073",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 87,
+     "Y": 28
+    },
+    {
+     "City": "C196610",
+     "Type": "DISTRICT_AERODROME",
+     "X": 81,
+     "Y": 23
+    },
+    {
+     "City": "C196610",
+     "Type": "DISTRICT_ENTERTAINMENT_COMPLEX",
+     "X": 82,
+     "Y": 24
+    },
+    {
+     "City": "C196610",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 85,
+     "Y": 26
+    },
+    {
+     "City": "C262147",
+     "Type": "DISTRICT_COMMERCIAL_HUB",
+     "X": 88,
+     "Y": 24
+    },
+    {
+     "City": "C262147",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 87,
+     "Y": 23
+    },
+    {
+     "City": "C262147",
+     "Type": "DISTRICT_INDUSTRIAL_ZONE",
+     "X": 86,
+     "Y": 26
+    },
+    {
+     "City": "C327684",
+     "Type": "DISTRICT_AERODROME",
+     "X": 90,
+     "Y": 31
+    },
+    {
+     "City": "C327684",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 90,
+     "Y": 36
+    },
+    {
+     "City": "C327684",
+     "Type": "DISTRICT_INDUSTRIAL_ZONE",
+     "X": 89,
+     "Y": 35
+    },
+    {
+     "City": "C393221",
+     "Type": "DISTRICT_HARBOR",
+     "X": 92,
+     "Y": 20
+    },
+    {
+     "City": "C393221",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 89,
+     "Y": 20
+    },
+    {
+     "City": "C393221",
+     "Type": "DISTRICT_WATER_ENTERTAINMENT_COMPLEX",
+     "X": 91,
+     "Y": 19
+    }
+   ],
+   "Selected": [
+    "C65536",
+    "C131073",
+    "C196610",
+    "C262147",
+    "C327684",
+    "C393221"
+   ],
+   "Step": "Solve",
+   "Tries": 1604,
+   "Unplaced": 1,
+   "Wait": 0.77,
+   "AtOnce": true,
+   "Tier": "FAST",
+   "N": 6
+  },
+  {
+   "Adjacency": 44,
+   "Calls": 3126,
+   "Cities": 7,
+   "CityXY": {
+    "C131073": {
+     "X": 87,
+     "Y": 29
+    },
+    "C196610": {
+     "X": 84,
+     "Y": 24
+    },
+    "C262147": {
+     "X": 87,
+     "Y": 25
+    },
+    "C327684": {
+     "X": 89,
+     "Y": 33
+    },
+    "C393221": {
+     "X": 90,
+     "Y": 22
+    },
+    "C524295": {
+     "X": 87,
+     "Y": 36
+    },
+    "C65536": {
+     "X": 90,
+     "Y": 27
+    }
+   },
+   "Cross": [
+    {
+     "A": "C196610",
+     "B": "C262147",
+     "Distance": 4
+    }
+   ],
+   "Estimate": {
+    "Seconds": 4.301972737,
+    "Speed": 11000,
+    "Units": 47321.70011
+   },
+   "Exhaustive": false,
+   "Gain": -4.99609375,
+   "Label": "FAST n=7",
+   "Land": -50,
+   "Ok": true,
+   "Placed": 20,
+   "Plan": [
+    {
+     "City": "C65536",
+     "Type": "DISTRICT_AERODROME",
+     "X": 91,
+     "Y": 29
+    },
+    {
+     "City": "C65536",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 89,
+     "Y": 25
+    },
+    {
+     "City": "C131073",
+     "Type": "DISTRICT_AERODROME",
+     "X": 86,
+     "Y": 28
+    },
+    {
+     "City": "C131073",
+     "Type": "DISTRICT_COMMERCIAL_HUB",
+     "X": 86,
+     "Y": 30
+    },
+    {
+     "City": "C131073",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 87,
+     "Y": 28
+    },
+    {
+     "City": "C196610",
+     "Type": "DISTRICT_AERODROME",
+     "X": 81,
+     "Y": 23
+    },
+    {
+     "City": "C196610",
+     "Type": "DISTRICT_ENTERTAINMENT_COMPLEX",
+     "X": 82,
+     "Y": 24
+    },
+    {
+     "City": "C196610",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 85,
+     "Y": 26
+    },
+    {
+     "City": "C262147",
+     "Type": "DISTRICT_COMMERCIAL_HUB",
+     "X": 88,
+     "Y": 24
+    },
+    {
+     "City": "C262147",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 87,
+     "Y": 23
+    },
+    {
+     "City": "C262147",
+     "Type": "DISTRICT_INDUSTRIAL_ZONE",
+     "X": 86,
+     "Y": 26
+    },
+    {
+     "City": "C327684",
+     "Type": "DISTRICT_AERODROME",
+     "X": 90,
+     "Y": 31
+    },
+    {
+     "City": "C327684",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 90,
+     "Y": 36
+    },
+    {
+     "City": "C327684",
+     "Type": "DISTRICT_INDUSTRIAL_ZONE",
+     "X": 89,
+     "Y": 35
+    },
+    {
+     "City": "C393221",
+     "Type": "DISTRICT_HARBOR",
+     "X": 91,
+     "Y": 19
+    },
+    {
+     "City": "C393221",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 89,
+     "Y": 20
+    },
+    {
+     "City": "C393221",
+     "Type": "DISTRICT_WATER_ENTERTAINMENT_COMPLEX",
+     "X": 92,
+     "Y": 20
+    },
+    {
+     "City": "C524295",
+     "Type": "DISTRICT_CAMPUS",
+     "X": 87,
+     "Y": 38
+    },
+    {
+     "City": "C524295",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 86,
+     "Y": 37
+    },
+    {
+     "City": "C524295",
+     "Type": "DISTRICT_WATER_ENTERTAINMENT_COMPLEX",
+     "X": 85,
+     "Y": 35
+    }
+   ],
+   "Selected": [
+    "C65536",
+    "C131073",
+    "C196610",
+    "C262147",
+    "C327684",
+    "C393221",
+    "C524295"
+   ],
+   "Step": "Solve",
+   "Tries": 2753,
+   "Unplaced": 2,
+   "Wait": 1.23,
+   "AtOnce": true,
+   "Tier": "FAST",
+   "N": 7
+  },
+  {
+   "Adjacency": 59,
+   "Calls": 3931,
+   "Cities": 8,
+   "CityXY": {
+    "C131073": {
+     "X": 87,
+     "Y": 29
+    },
+    "C196610": {
+     "X": 84,
+     "Y": 24
+    },
+    "C262147": {
+     "X": 87,
+     "Y": 25
+    },
+    "C327684": {
+     "X": 89,
+     "Y": 33
+    },
+    "C393221": {
+     "X": 90,
+     "Y": 22
+    },
+    "C458758": {
+     "X": 81,
+     "Y": 28
+    },
+    "C524295": {
+     "X": 87,
+     "Y": 36
+    },
+    "C65536": {
+     "X": 90,
+     "Y": 27
+    }
+   },
+   "Cross": [
+    {
+     "A": "C196610",
+     "B": "C458758",
+     "Distance": 5
+    },
+    {
+     "A": "C196610",
+     "B": "C458758",
+     "Distance": 5
+    }
+   ],
+   "Estimate": {
+    "Seconds": 5.120456812,
+    "Speed": 11000,
+    "Units": 56325.02493
+   },
+   "Exhaustive": false,
+   "Gain": -0.99609375,
+   "Label": "FAST n=8",
+   "Land": -61,
+   "Ok": true,
+   "Placed": 23,
+   "Plan": [
+    {
+     "City": "C65536",
+     "Type": "DISTRICT_AERODROME",
+     "X": 91,
+     "Y": 29
+    },
+    {
+     "City": "C65536",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 89,
+     "Y": 25
+    },
+    {
+     "City": "C131073",
+     "Type": "DISTRICT_AERODROME",
+     "X": 86,
+     "Y": 28
+    },
+    {
+     "City": "C131073",
+     "Type": "DISTRICT_COMMERCIAL_HUB",
+     "X": 86,
+     "Y": 30
+    },
+    {
+     "City": "C131073",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 87,
+     "Y": 28
+    },
+    {
+     "City": "C196610",
+     "Type": "DISTRICT_AERODROME",
+     "X": 83,
+     "Y": 26
+    },
+    {
+     "City": "C196610",
+     "Type": "DISTRICT_ENTERTAINMENT_COMPLEX",
+     "X": 82,
+     "Y": 24
+    },
+    {
+     "City": "C196610",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 82,
+     "Y": 26
+    },
+    {
+     "City": "C262147",
+     "Type": "DISTRICT_COMMERCIAL_HUB",
+     "X": 87,
+     "Y": 22
+    },
+    {
+     "City": "C262147",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 87,
+     "Y": 23
+    },
+    {
+     "City": "C262147",
+     "Type": "DISTRICT_INDUSTRIAL_ZONE",
+     "X": 88,
+     "Y": 24
+    },
+    {
+     "City": "C327684",
+     "Type": "DISTRICT_ENCAMPMENT",
+     "X": 90,
+     "Y": 31
+    },
+    {
+     "City": "C327684",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 90,
+     "Y": 36
+    },
+    {
+     "City": "C327684",
+     "Type": "DISTRICT_INDUSTRIAL_ZONE",
+     "X": 89,
+     "Y": 35
+    },
+    {
+     "City": "C393221",
+     "Type": "DISTRICT_HARBOR",
+     "X": 91,
+     "Y": 19
+    },
+    {
+     "City": "C393221",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 89,
+     "Y": 20
+    },
+    {
+     "City": "C393221",
+     "Type": "DISTRICT_WATER_ENTERTAINMENT_COMPLEX",
+     "X": 92,
+     "Y": 20
+    },
+    {
+     "City": "C458758",
+     "Type": "DISTRICT_CAMPUS",
+     "X": 81,
+     "Y": 26
+    },
+    {
+     "City": "C458758",
+     "Type": "DISTRICT_COMMERCIAL_HUB",
+     "X": 81,
+     "Y": 27
+    },
+    {
+     "City": "C458758",
+     "Type": "DISTRICT_INDUSTRIAL_ZONE",
+     "X": 81,
+     "Y": 30
+    },
+    {
+     "City": "C524295",
+     "Type": "DISTRICT_CAMPUS",
+     "X": 86,
+     "Y": 35
+    },
+    {
+     "City": "C524295",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 86,
+     "Y": 37
+    },
+    {
+     "City": "C524295",
+     "Type": "DISTRICT_WATER_ENTERTAINMENT_COMPLEX",
+     "X": 85,
+     "Y": 37
+    }
+   ],
+   "Selected": [
+    "C65536",
+    "C131073",
+    "C196610",
+    "C262147",
+    "C327684",
+    "C393221",
+    "C458758",
+    "C524295"
+   ],
+   "Step": "Solve",
+   "Tries": 4701,
+   "Unplaced": 3,
+   "Wait": 1.7,
+   "AtOnce": true,
+   "Tier": "FAST",
+   "N": 8
+  },
+  {
+   "Adjacency": 9,
+   "Calls": 649,
+   "Cities": 2,
+   "CityXY": {
+    "C131073": {
+     "X": 87,
+     "Y": 29
+    },
+    "C65536": {
+     "X": 90,
+     "Y": 27
+    }
+   },
+   "Cross": [],
+   "Estimate": {
+    "Seconds": 5.432727273,
+    "Speed": 11000,
+    "Units": 59760
+   },
+   "Exhaustive": false,
+   "Gain": -9.99609375,
+   "Label": "STANDARD n=2",
+   "Land": -19,
+   "Ok": true,
+   "Placed": 5,
+   "Plan": [
+    {
+     "City": "C65536",
+     "Type": "DISTRICT_AERODROME",
+     "X": 91,
+     "Y": 29
+    },
+    {
+     "City": "C65536",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 89,
+     "Y": 25
+    },
+    {
+     "City": "C131073",
+     "Type": "DISTRICT_AERODROME",
+     "X": 86,
+     "Y": 28
+    },
+    {
+     "City": "C131073",
+     "Type": "DISTRICT_COMMERCIAL_HUB",
+     "X": 86,
+     "Y": 30
+    },
+    {
+     "City": "C131073",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 87,
+     "Y": 28
+    }
+   ],
+   "Selected": [
+    "C65536",
+    "C131073"
+   ],
+   "Step": "Solve",
+   "Tries": 2174,
+   "Unplaced": 0,
+   "Wait": 0.5,
+   "AtOnce": true,
+   "Tier": "STANDARD",
+   "N": 2
+  },
+  {
+   "Adjacency": 18,
+   "Calls": 1058,
+   "Cities": 3,
+   "CityXY": {
+    "C131073": {
+     "X": 87,
+     "Y": 29
+    },
+    "C262147": {
+     "X": 87,
+     "Y": 25
+    },
+    "C65536": {
+     "X": 90,
+     "Y": 27
+    }
+   },
+   "Cross": [],
+   "Estimate": {
+    "Seconds": 9.316780868,
+    "Speed": 11000,
+    "Units": 102484.5895
+   },
+   "Exhaustive": false,
+   "Gain": -14.99609375,
+   "Label": "STANDARD n=3",
+   "Land": -33,
+   "Ok": true,
+   "Placed": 8,
+   "Plan": [
+    {
+     "City": "C65536",
+     "Type": "DISTRICT_AERODROME",
+     "X": 91,
+     "Y": 29
+    },
+    {
+     "City": "C65536",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 89,
+     "Y": 25
+    },
+    {
+     "City": "C131073",
+     "Type": "DISTRICT_AERODROME",
+     "X": 86,
+     "Y": 28
+    },
+    {
+     "City": "C131073",
+     "Type": "DISTRICT_COMMERCIAL_HUB",
+     "X": 86,
+     "Y": 30
+    },
+    {
+     "City": "C131073",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 87,
+     "Y": 28
+    },
+    {
+     "City": "C262147",
+     "Type": "DISTRICT_COMMERCIAL_HUB",
+     "X": 87,
+     "Y": 22
+    },
+    {
+     "City": "C262147",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 87,
+     "Y": 23
+    },
+    {
+     "City": "C262147",
+     "Type": "DISTRICT_INDUSTRIAL_ZONE",
+     "X": 88,
+     "Y": 24
+    }
+   ],
+   "Selected": [
+    "C65536",
+    "C131073",
+    "C262147"
+   ],
+   "Step": "Solve",
+   "Tries": 3217,
+   "Unplaced": 1,
+   "Wait": 0.92,
+   "AtOnce": true,
+   "Tier": "STANDARD",
+   "N": 3
+  },
+  {
+   "Adjacency": 22,
+   "Calls": 1711,
+   "Cities": 4,
+   "CityXY": {
+    "C131073": {
+     "X": 87,
+     "Y": 29
+    },
+    "C262147": {
+     "X": 87,
+     "Y": 25
+    },
+    "C393221": {
+     "X": 90,
+     "Y": 22
+    },
+    "C65536": {
+     "X": 90,
+     "Y": 27
+    }
+   },
+   "Cross": [],
+   "Estimate": {
+    "Seconds": 13.66896815,
+    "Speed": 11000,
+    "Units": 150358.6497
+   },
+   "Exhaustive": false,
+   "Gain": -16.99609375,
+   "Label": "STANDARD n=4",
+   "Land": -40,
+   "Ok": true,
+   "Placed": 11,
+   "Plan": [
+    {
+     "City": "C65536",
+     "Type": "DISTRICT_AERODROME",
+     "X": 91,
+     "Y": 29
+    },
+    {
+     "City": "C65536",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 89,
+     "Y": 25
+    },
+    {
+     "City": "C131073",
+     "Type": "DISTRICT_AERODROME",
+     "X": 86,
+     "Y": 28
+    },
+    {
+     "City": "C131073",
+     "Type": "DISTRICT_COMMERCIAL_HUB",
+     "X": 86,
+     "Y": 30
+    },
+    {
+     "City": "C131073",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 87,
+     "Y": 28
+    },
+    {
+     "City": "C262147",
+     "Type": "DISTRICT_COMMERCIAL_HUB",
+     "X": 87,
+     "Y": 22
+    },
+    {
+     "City": "C262147",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 87,
+     "Y": 23
+    },
+    {
+     "City": "C262147",
+     "Type": "DISTRICT_INDUSTRIAL_ZONE",
+     "X": 88,
+     "Y": 24
+    },
+    {
+     "City": "C393221",
+     "Type": "DISTRICT_HARBOR",
+     "X": 91,
+     "Y": 19
+    },
+    {
+     "City": "C393221",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 89,
+     "Y": 20
+    },
+    {
+     "City": "C393221",
+     "Type": "DISTRICT_WATER_ENTERTAINMENT_COMPLEX",
+     "X": 92,
+     "Y": 20
+    }
+   ],
+   "Selected": [
+    "C65536",
+    "C131073",
+    "C262147",
+    "C393221"
+   ],
+   "Step": "Solve",
+   "Tries": 5024,
+   "Unplaced": 1,
+   "Wait": 1.5,
+   "AtOnce": true,
+   "Tier": "STANDARD",
+   "N": 4
+  },
+  {
+   "Adjacency": 28,
+   "Calls": 2405,
+   "Cities": 5,
+   "CityXY": {
+    "C131073": {
+     "X": 87,
+     "Y": 29
+    },
+    "C262147": {
+     "X": 87,
+     "Y": 25
+    },
+    "C327684": {
+     "X": 89,
+     "Y": 33
+    },
+    "C393221": {
+     "X": 90,
+     "Y": 22
+    },
+    "C65536": {
+     "X": 90,
+     "Y": 27
+    }
+   },
+   "Cross": [],
+   "Estimate": {
+    "Seconds": 18.40767904,
+    "Speed": 11000,
+    "Units": 202484.4694
+   },
+   "Exhaustive": false,
+   "Gain": -10.99609375,
+   "Label": "STANDARD n=5",
+   "Land": -40,
+   "Ok": true,
+   "Placed": 14,
+   "Plan": [
+    {
+     "City": "C65536",
+     "Type": "DISTRICT_AERODROME",
+     "X": 91,
+     "Y": 29
+    },
+    {
+     "City": "C65536",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 89,
+     "Y": 25
+    },
+    {
+     "City": "C131073",
+     "Type": "DISTRICT_AERODROME",
+     "X": 86,
+     "Y": 28
+    },
+    {
+     "City": "C131073",
+     "Type": "DISTRICT_COMMERCIAL_HUB",
+     "X": 86,
+     "Y": 30
+    },
+    {
+     "City": "C131073",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 87,
+     "Y": 28
+    },
+    {
+     "City": "C262147",
+     "Type": "DISTRICT_COMMERCIAL_HUB",
+     "X": 87,
+     "Y": 22
+    },
+    {
+     "City": "C262147",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 87,
+     "Y": 23
+    },
+    {
+     "City": "C262147",
+     "Type": "DISTRICT_INDUSTRIAL_ZONE",
+     "X": 88,
+     "Y": 24
+    },
+    {
+     "City": "C327684",
+     "Type": "DISTRICT_ENTERTAINMENT_COMPLEX",
+     "X": 90,
+     "Y": 31
+    },
+    {
+     "City": "C327684",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 90,
+     "Y": 36
+    },
+    {
+     "City": "C327684",
+     "Type": "DISTRICT_INDUSTRIAL_ZONE",
+     "X": 89,
+     "Y": 35
+    },
+    {
+     "City": "C393221",
+     "Type": "DISTRICT_HARBOR",
+     "X": 91,
+     "Y": 19
+    },
+    {
+     "City": "C393221",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 89,
+     "Y": 20
+    },
+    {
+     "City": "C393221",
+     "Type": "DISTRICT_WATER_ENTERTAINMENT_COMPLEX",
+     "X": 92,
+     "Y": 20
+    }
+   ],
+   "Selected": [
+    "C65536",
+    "C131073",
+    "C262147",
+    "C327684",
+    "C393221"
+   ],
+   "Step": "Solve",
+   "Tries": 7638,
+   "Unplaced": 1,
+   "Wait": 2.67,
+   "AtOnce": true,
+   "Tier": "STANDARD",
+   "N": 5
+  },
+  {
+   "Adjacency": 36,
+   "Calls": 3121,
+   "Cities": 6,
+   "CityXY": {
+    "C131073": {
+     "X": 87,
+     "Y": 29
+    },
+    "C196610": {
+     "X": 84,
+     "Y": 24
+    },
+    "C262147": {
+     "X": 87,
+     "Y": 25
+    },
+    "C327684": {
+     "X": 89,
+     "Y": 33
+    },
+    "C393221": {
+     "X": 90,
+     "Y": 22
+    },
+    "C65536": {
+     "X": 90,
+     "Y": 27
+    }
+   },
+   "Cross": [
+    {
+     "A": "C196610",
+     "B": "C262147",
+     "Distance": 4
+    }
+   ],
+   "Estimate": {
+    "Seconds": 23.48003552,
+    "Speed": 11000,
+    "Units": 258280.3907
+   },
+   "Exhaustive": false,
+   "Gain": -11.99609375,
+   "Label": "STANDARD n=6",
+   "Land": -49,
+   "Ok": true,
+   "Placed": 17,
+   "Plan": [
+    {
+     "City": "C65536",
+     "Type": "DISTRICT_AERODROME",
+     "X": 91,
+     "Y": 29
+    },
+    {
+     "City": "C65536",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 89,
+     "Y": 25
+    },
+    {
+     "City": "C131073",
+     "Type": "DISTRICT_AERODROME",
+     "X": 86,
+     "Y": 28
+    },
+    {
+     "City": "C131073",
+     "Type": "DISTRICT_COMMERCIAL_HUB",
+     "X": 86,
+     "Y": 30
+    },
+    {
+     "City": "C131073",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 87,
+     "Y": 28
+    },
+    {
+     "City": "C196610",
+     "Type": "DISTRICT_AERODROME",
+     "X": 81,
+     "Y": 23
+    },
+    {
+     "City": "C196610",
+     "Type": "DISTRICT_ENTERTAINMENT_COMPLEX",
+     "X": 82,
+     "Y": 24
+    },
+    {
+     "City": "C196610",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 85,
+     "Y": 26
+    },
+    {
+     "City": "C262147",
+     "Type": "DISTRICT_COMMERCIAL_HUB",
+     "X": 88,
+     "Y": 24
+    },
+    {
+     "City": "C262147",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 87,
+     "Y": 23
+    },
+    {
+     "City": "C262147",
+     "Type": "DISTRICT_INDUSTRIAL_ZONE",
+     "X": 86,
+     "Y": 26
+    },
+    {
+     "City": "C327684",
+     "Type": "DISTRICT_AERODROME",
+     "X": 90,
+     "Y": 31
+    },
+    {
+     "City": "C327684",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 90,
+     "Y": 36
+    },
+    {
+     "City": "C327684",
+     "Type": "DISTRICT_INDUSTRIAL_ZONE",
+     "X": 89,
+     "Y": 35
+    },
+    {
+     "City": "C393221",
+     "Type": "DISTRICT_HARBOR",
+     "X": 91,
+     "Y": 19
+    },
+    {
+     "City": "C393221",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 89,
+     "Y": 20
+    },
+    {
+     "City": "C393221",
+     "Type": "DISTRICT_WATER_ENTERTAINMENT_COMPLEX",
+     "X": 92,
+     "Y": 20
+    }
+   ],
+   "Selected": [
+    "C65536",
+    "C131073",
+    "C196610",
+    "C262147",
+    "C327684",
+    "C393221"
+   ],
+   "Step": "Solve",
+   "Tries": 10631,
+   "Unplaced": 1,
+   "Wait": 4.24,
+   "AtOnce": true,
+   "Tier": "STANDARD",
+   "N": 6
+  },
+  {
+   "Adjacency": 44,
+   "Calls": 4114,
+   "Cities": 7,
+   "CityXY": {
+    "C131073": {
+     "X": 87,
+     "Y": 29
+    },
+    "C196610": {
+     "X": 84,
+     "Y": 24
+    },
+    "C262147": {
+     "X": 87,
+     "Y": 25
+    },
+    "C327684": {
+     "X": 89,
+     "Y": 33
+    },
+    "C393221": {
+     "X": 90,
+     "Y": 22
+    },
+    "C524295": {
+     "X": 87,
+     "Y": 36
+    },
+    "C65536": {
+     "X": 90,
+     "Y": 27
+    }
+   },
+   "Cross": [
+    {
+     "A": "C196610",
+     "B": "C262147",
+     "Distance": 4
+    }
+   ],
+   "Estimate": {
+    "Seconds": 28.84842085,
+    "Speed": 11000,
+    "Units": 317332.6294
+   },
+   "Exhaustive": false,
+   "Gain": -4.99609375,
+   "Label": "STANDARD n=7",
+   "Land": -50,
+   "Ok": true,
+   "Placed": 20,
+   "Plan": [
+    {
+     "City": "C65536",
+     "Type": "DISTRICT_AERODROME",
+     "X": 91,
+     "Y": 29
+    },
+    {
+     "City": "C65536",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 89,
+     "Y": 25
+    },
+    {
+     "City": "C131073",
+     "Type": "DISTRICT_AERODROME",
+     "X": 86,
+     "Y": 28
+    },
+    {
+     "City": "C131073",
+     "Type": "DISTRICT_COMMERCIAL_HUB",
+     "X": 86,
+     "Y": 30
+    },
+    {
+     "City": "C131073",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 87,
+     "Y": 28
+    },
+    {
+     "City": "C196610",
+     "Type": "DISTRICT_AERODROME",
+     "X": 81,
+     "Y": 23
+    },
+    {
+     "City": "C196610",
+     "Type": "DISTRICT_ENTERTAINMENT_COMPLEX",
+     "X": 82,
+     "Y": 24
+    },
+    {
+     "City": "C196610",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 85,
+     "Y": 26
+    },
+    {
+     "City": "C262147",
+     "Type": "DISTRICT_COMMERCIAL_HUB",
+     "X": 88,
+     "Y": 24
+    },
+    {
+     "City": "C262147",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 87,
+     "Y": 23
+    },
+    {
+     "City": "C262147",
+     "Type": "DISTRICT_INDUSTRIAL_ZONE",
+     "X": 86,
+     "Y": 26
+    },
+    {
+     "City": "C327684",
+     "Type": "DISTRICT_AERODROME",
+     "X": 90,
+     "Y": 31
+    },
+    {
+     "City": "C327684",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 90,
+     "Y": 36
+    },
+    {
+     "City": "C327684",
+     "Type": "DISTRICT_INDUSTRIAL_ZONE",
+     "X": 89,
+     "Y": 35
+    },
+    {
+     "City": "C393221",
+     "Type": "DISTRICT_HARBOR",
+     "X": 91,
+     "Y": 19
+    },
+    {
+     "City": "C393221",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 89,
+     "Y": 20
+    },
+    {
+     "City": "C393221",
+     "Type": "DISTRICT_WATER_ENTERTAINMENT_COMPLEX",
+     "X": 92,
+     "Y": 20
+    },
+    {
+     "City": "C524295",
+     "Type": "DISTRICT_CAMPUS",
+     "X": 86,
+     "Y": 37
+    },
+    {
+     "City": "C524295",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 87,
+     "Y": 38
+    },
+    {
+     "City": "C524295",
+     "Type": "DISTRICT_WATER_ENTERTAINMENT_COMPLEX",
+     "X": 85,
+     "Y": 35
+    }
+   ],
+   "Selected": [
+    "C65536",
+    "C131073",
+    "C196610",
+    "C262147",
+    "C327684",
+    "C393221",
+    "C524295"
+   ],
+   "Step": "Solve",
+   "Tries": 14483,
+   "Unplaced": 2,
+   "Wait": 5.71,
+   "AtOnce": true,
+   "Tier": "STANDARD",
+   "N": 7
+  },
+  {
+   "Adjacency": 59,
+   "Calls": 5932,
+   "Cities": 8,
+   "CityXY": {
+    "C131073": {
+     "X": 87,
+     "Y": 29
+    },
+    "C196610": {
+     "X": 84,
+     "Y": 24
+    },
+    "C262147": {
+     "X": 87,
+     "Y": 25
+    },
+    "C327684": {
+     "X": 89,
+     "Y": 33
+    },
+    "C393221": {
+     "X": 90,
+     "Y": 22
+    },
+    "C458758": {
+     "X": 81,
+     "Y": 28
+    },
+    "C524295": {
+     "X": 87,
+     "Y": 36
+    },
+    "C65536": {
+     "X": 90,
+     "Y": 27
+    }
+   },
+   "Cross": [
+    {
+     "A": "C196610",
+     "B": "C458758",
+     "Distance": 5
+    },
+    {
+     "A": "C196610",
+     "B": "C458758",
+     "Distance": 5
+    }
+   ],
+   "Estimate": {
+    "Seconds": 34.48443242,
+    "Speed": 11000,
+    "Units": 379328.7566
+   },
+   "Exhaustive": false,
+   "Gain": -0.99609375,
+   "Label": "STANDARD n=8",
+   "Land": -61,
+   "Ok": true,
+   "Placed": 23,
+   "Plan": [
+    {
+     "City": "C65536",
+     "Type": "DISTRICT_AERODROME",
+     "X": 91,
+     "Y": 29
+    },
+    {
+     "City": "C65536",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 89,
+     "Y": 25
+    },
+    {
+     "City": "C131073",
+     "Type": "DISTRICT_AERODROME",
+     "X": 86,
+     "Y": 28
+    },
+    {
+     "City": "C131073",
+     "Type": "DISTRICT_COMMERCIAL_HUB",
+     "X": 86,
+     "Y": 30
+    },
+    {
+     "City": "C131073",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 87,
+     "Y": 28
+    },
+    {
+     "City": "C196610",
+     "Type": "DISTRICT_AERODROME",
+     "X": 83,
+     "Y": 26
+    },
+    {
+     "City": "C196610",
+     "Type": "DISTRICT_ENTERTAINMENT_COMPLEX",
+     "X": 82,
+     "Y": 24
+    },
+    {
+     "City": "C196610",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 82,
+     "Y": 26
+    },
+    {
+     "City": "C262147",
+     "Type": "DISTRICT_COMMERCIAL_HUB",
+     "X": 87,
+     "Y": 22
+    },
+    {
+     "City": "C262147",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 87,
+     "Y": 23
+    },
+    {
+     "City": "C262147",
+     "Type": "DISTRICT_INDUSTRIAL_ZONE",
+     "X": 88,
+     "Y": 24
+    },
+    {
+     "City": "C327684",
+     "Type": "DISTRICT_ENTERTAINMENT_COMPLEX",
+     "X": 90,
+     "Y": 31
+    },
+    {
+     "City": "C327684",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 90,
+     "Y": 36
+    },
+    {
+     "City": "C327684",
+     "Type": "DISTRICT_INDUSTRIAL_ZONE",
+     "X": 89,
+     "Y": 35
+    },
+    {
+     "City": "C393221",
+     "Type": "DISTRICT_HARBOR",
+     "X": 91,
+     "Y": 19
+    },
+    {
+     "City": "C393221",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 89,
+     "Y": 20
+    },
+    {
+     "City": "C393221",
+     "Type": "DISTRICT_WATER_ENTERTAINMENT_COMPLEX",
+     "X": 92,
+     "Y": 20
+    },
+    {
+     "City": "C458758",
+     "Type": "DISTRICT_CAMPUS",
+     "X": 81,
+     "Y": 26
+    },
+    {
+     "City": "C458758",
+     "Type": "DISTRICT_COMMERCIAL_HUB",
+     "X": 81,
+     "Y": 27
+    },
+    {
+     "City": "C458758",
+     "Type": "DISTRICT_INDUSTRIAL_ZONE",
+     "X": 81,
+     "Y": 30
+    },
+    {
+     "City": "C524295",
+     "Type": "DISTRICT_CAMPUS",
+     "X": 86,
+     "Y": 35
+    },
+    {
+     "City": "C524295",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 86,
+     "Y": 37
+    },
+    {
+     "City": "C524295",
+     "Type": "DISTRICT_WATER_ENTERTAINMENT_COMPLEX",
+     "X": 85,
+     "Y": 37
+    }
+   ],
+   "Selected": [
+    "C65536",
+    "C131073",
+    "C196610",
+    "C262147",
+    "C327684",
+    "C393221",
+    "C458758",
+    "C524295"
+   ],
+   "Step": "Solve",
+   "Tries": 20368,
+   "Unplaced": 3,
+   "Wait": 9.22,
+   "AtOnce": true,
+   "Tier": "STANDARD",
+   "N": 8
+  },
+  {
+   "Adjacency": 9,
+   "Calls": 649,
+   "Cities": 2,
+   "CityXY": {
+    "C131073": {
+     "X": 87,
+     "Y": 29
+    },
+    "C65536": {
+     "X": 90,
+     "Y": 27
+    }
+   },
+   "Cross": [],
+   "Estimate": {
+    "Seconds": 12.46909091,
+    "Speed": 11000,
+    "Units": 137160
+   },
+   "Exhaustive": false,
+   "Gain": -9.99609375,
+   "Label": "FINE n=2",
+   "Land": -19,
+   "Ok": true,
+   "Placed": 5,
+   "Plan": [
+    {
+     "City": "C65536",
+     "Type": "DISTRICT_AERODROME",
+     "X": 91,
+     "Y": 29
+    },
+    {
+     "City": "C65536",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 89,
+     "Y": 25
+    },
+    {
+     "City": "C131073",
+     "Type": "DISTRICT_AERODROME",
+     "X": 86,
+     "Y": 28
+    },
+    {
+     "City": "C131073",
+     "Type": "DISTRICT_COMMERCIAL_HUB",
+     "X": 86,
+     "Y": 30
+    },
+    {
+     "City": "C131073",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 87,
+     "Y": 28
+    }
+   ],
+   "Selected": [
+    "C65536",
+    "C131073"
+   ],
+   "Step": "Solve",
+   "Tries": 4970,
+   "Unplaced": 0,
+   "Wait": 0.78,
+   "AtOnce": true,
+   "Tier": "FINE",
+   "N": 2
+  },
+  {
+   "Adjacency": 18,
+   "Calls": 1101,
+   "Cities": 3,
+   "CityXY": {
+    "C131073": {
+     "X": 87,
+     "Y": 29
+    },
+    "C262147": {
+     "X": 87,
+     "Y": 25
+    },
+    "C65536": {
+     "X": 90,
+     "Y": 27
+    }
+   },
+   "Cross": [],
+   "Estimate": {
+    "Seconds": 21.44321665,
+    "Speed": 11000,
+    "Units": 235875.3832
+   },
+   "Exhaustive": false,
+   "Gain": -14.99609375,
+   "Label": "FINE n=3",
+   "Land": -33,
+   "Ok": true,
+   "Placed": 8,
+   "Plan": [
+    {
+     "City": "C65536",
+     "Type": "DISTRICT_AERODROME",
+     "X": 91,
+     "Y": 29
+    },
+    {
+     "City": "C65536",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 89,
+     "Y": 25
+    },
+    {
+     "City": "C131073",
+     "Type": "DISTRICT_AERODROME",
+     "X": 86,
+     "Y": 28
+    },
+    {
+     "City": "C131073",
+     "Type": "DISTRICT_COMMERCIAL_HUB",
+     "X": 86,
+     "Y": 30
+    },
+    {
+     "City": "C131073",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 87,
+     "Y": 28
+    },
+    {
+     "City": "C262147",
+     "Type": "DISTRICT_COMMERCIAL_HUB",
+     "X": 87,
+     "Y": 22
+    },
+    {
+     "City": "C262147",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 87,
+     "Y": 23
+    },
+    {
+     "City": "C262147",
+     "Type": "DISTRICT_INDUSTRIAL_ZONE",
+     "X": 88,
+     "Y": 24
+    }
+   ],
+   "Selected": [
+    "C65536",
+    "C131073",
+    "C262147"
+   ],
+   "Step": "Solve",
+   "Tries": 7728,
+   "Unplaced": 1,
+   "Wait": 1.42,
+   "AtOnce": true,
+   "Tier": "FINE",
+   "N": 3
+  },
+  {
+   "Adjacency": 22,
+   "Calls": 1802,
+   "Cities": 4,
+   "CityXY": {
+    "C131073": {
+     "X": 87,
+     "Y": 29
+    },
+    "C262147": {
+     "X": 87,
+     "Y": 25
+    },
+    "C393221": {
+     "X": 90,
+     "Y": 22
+    },
+    "C65536": {
+     "X": 90,
+     "Y": 27
+    }
+   },
+   "Cross": [],
+   "Estimate": {
+    "Seconds": 31.51565605,
+    "Speed": 11000,
+    "Units": 346672.2165
+   },
+   "Exhaustive": false,
+   "Gain": -16.99609375,
+   "Label": "FINE n=4",
+   "Land": -40,
+   "Ok": true,
+   "Placed": 11,
+   "Plan": [
+    {
+     "City": "C65536",
+     "Type": "DISTRICT_AERODROME",
+     "X": 91,
+     "Y": 29
+    },
+    {
+     "City": "C65536",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 89,
+     "Y": 25
+    },
+    {
+     "City": "C131073",
+     "Type": "DISTRICT_AERODROME",
+     "X": 86,
+     "Y": 28
+    },
+    {
+     "City": "C131073",
+     "Type": "DISTRICT_COMMERCIAL_HUB",
+     "X": 86,
+     "Y": 30
+    },
+    {
+     "City": "C131073",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 87,
+     "Y": 28
+    },
+    {
+     "City": "C262147",
+     "Type": "DISTRICT_COMMERCIAL_HUB",
+     "X": 87,
+     "Y": 22
+    },
+    {
+     "City": "C262147",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 87,
+     "Y": 23
+    },
+    {
+     "City": "C262147",
+     "Type": "DISTRICT_INDUSTRIAL_ZONE",
+     "X": 88,
+     "Y": 24
+    },
+    {
+     "City": "C393221",
+     "Type": "DISTRICT_HARBOR",
+     "X": 91,
+     "Y": 19
+    },
+    {
+     "City": "C393221",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 89,
+     "Y": 20
+    },
+    {
+     "City": "C393221",
+     "Type": "DISTRICT_WATER_ENTERTAINMENT_COMPLEX",
+     "X": 92,
+     "Y": 20
+    }
+   ],
+   "Selected": [
+    "C65536",
+    "C131073",
+    "C262147",
+    "C393221"
+   ],
+   "Step": "Solve",
+   "Tries": 10859,
+   "Unplaced": 1,
+   "Wait": 2.41,
+   "AtOnce": true,
+   "Tier": "FINE",
+   "N": 4
+  },
+  {
+   "Adjacency": 28,
+   "Calls": 2600,
+   "Cities": 5,
+   "CityXY": {
+    "C131073": {
+     "X": 87,
+     "Y": 29
+    },
+    "C262147": {
+     "X": 87,
+     "Y": 25
+    },
+    "C327684": {
+     "X": 89,
+     "Y": 33
+    },
+    "C393221": {
+     "X": 90,
+     "Y": 22
+    },
+    "C65536": {
+     "X": 90,
+     "Y": 27
+    }
+   },
+   "Cross": [],
+   "Estimate": {
+    "Seconds": 42.49493928,
+    "Speed": 11000,
+    "Units": 467444.3321
+   },
+   "Exhaustive": false,
+   "Gain": -10.99609375,
+   "Label": "FINE n=5",
+   "Land": -40,
+   "Ok": true,
+   "Placed": 14,
+   "Plan": [
+    {
+     "City": "C65536",
+     "Type": "DISTRICT_AERODROME",
+     "X": 91,
+     "Y": 29
+    },
+    {
+     "City": "C65536",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 89,
+     "Y": 25
+    },
+    {
+     "City": "C131073",
+     "Type": "DISTRICT_AERODROME",
+     "X": 86,
+     "Y": 28
+    },
+    {
+     "City": "C131073",
+     "Type": "DISTRICT_COMMERCIAL_HUB",
+     "X": 86,
+     "Y": 30
+    },
+    {
+     "City": "C131073",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 87,
+     "Y": 28
+    },
+    {
+     "City": "C262147",
+     "Type": "DISTRICT_COMMERCIAL_HUB",
+     "X": 87,
+     "Y": 22
+    },
+    {
+     "City": "C262147",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 87,
+     "Y": 23
+    },
+    {
+     "City": "C262147",
+     "Type": "DISTRICT_INDUSTRIAL_ZONE",
+     "X": 88,
+     "Y": 24
+    },
+    {
+     "City": "C327684",
+     "Type": "DISTRICT_ENTERTAINMENT_COMPLEX",
+     "X": 90,
+     "Y": 31
+    },
+    {
+     "City": "C327684",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 90,
+     "Y": 36
+    },
+    {
+     "City": "C327684",
+     "Type": "DISTRICT_INDUSTRIAL_ZONE",
+     "X": 89,
+     "Y": 35
+    },
+    {
+     "City": "C393221",
+     "Type": "DISTRICT_HARBOR",
+     "X": 91,
+     "Y": 19
+    },
+    {
+     "City": "C393221",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 89,
+     "Y": 20
+    },
+    {
+     "City": "C393221",
+     "Type": "DISTRICT_WATER_ENTERTAINMENT_COMPLEX",
+     "X": 92,
+     "Y": 20
+    }
+   ],
+   "Selected": [
+    "C65536",
+    "C131073",
+    "C262147",
+    "C327684",
+    "C393221"
+   ],
+   "Step": "Solve",
+   "Tries": 16089,
+   "Unplaced": 1,
+   "Wait": 4.6,
+   "AtOnce": true,
+   "Tier": "FINE",
+   "N": 5
+  },
+  {
+   "Adjacency": 36,
+   "Calls": 3241,
+   "Cities": 6,
+   "CityXY": {
+    "C131073": {
+     "X": 87,
+     "Y": 29
+    },
+    "C196610": {
+     "X": 84,
+     "Y": 24
+    },
+    "C262147": {
+     "X": 87,
+     "Y": 25
+    },
+    "C327684": {
+     "X": 89,
+     "Y": 33
+    },
+    "C393221": {
+     "X": 90,
+     "Y": 22
+    },
+    "C65536": {
+     "X": 90,
+     "Y": 27
+    }
+   },
+   "Cross": [
+    {
+     "A": "C196610",
+     "B": "C262147",
+     "Distance": 4
+    }
+   ],
+   "Estimate": {
+    "Seconds": 54.25700641,
+    "Speed": 11000,
+    "Units": 596827.0705
+   },
+   "Exhaustive": false,
+   "Gain": -11.99609375,
+   "Label": "FINE n=6",
+   "Land": -49,
+   "Ok": true,
+   "Placed": 17,
+   "Plan": [
+    {
+     "City": "C65536",
+     "Type": "DISTRICT_AERODROME",
+     "X": 91,
+     "Y": 29
+    },
+    {
+     "City": "C65536",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 89,
+     "Y": 25
+    },
+    {
+     "City": "C131073",
+     "Type": "DISTRICT_AERODROME",
+     "X": 86,
+     "Y": 28
+    },
+    {
+     "City": "C131073",
+     "Type": "DISTRICT_COMMERCIAL_HUB",
+     "X": 86,
+     "Y": 30
+    },
+    {
+     "City": "C131073",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 87,
+     "Y": 28
+    },
+    {
+     "City": "C196610",
+     "Type": "DISTRICT_AERODROME",
+     "X": 81,
+     "Y": 23
+    },
+    {
+     "City": "C196610",
+     "Type": "DISTRICT_ENTERTAINMENT_COMPLEX",
+     "X": 82,
+     "Y": 24
+    },
+    {
+     "City": "C196610",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 85,
+     "Y": 26
+    },
+    {
+     "City": "C262147",
+     "Type": "DISTRICT_COMMERCIAL_HUB",
+     "X": 88,
+     "Y": 24
+    },
+    {
+     "City": "C262147",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 87,
+     "Y": 23
+    },
+    {
+     "City": "C262147",
+     "Type": "DISTRICT_INDUSTRIAL_ZONE",
+     "X": 86,
+     "Y": 26
+    },
+    {
+     "City": "C327684",
+     "Type": "DISTRICT_AERODROME",
+     "X": 90,
+     "Y": 31
+    },
+    {
+     "City": "C327684",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 90,
+     "Y": 36
+    },
+    {
+     "City": "C327684",
+     "Type": "DISTRICT_INDUSTRIAL_ZONE",
+     "X": 89,
+     "Y": 35
+    },
+    {
+     "City": "C393221",
+     "Type": "DISTRICT_HARBOR",
+     "X": 91,
+     "Y": 19
+    },
+    {
+     "City": "C393221",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 89,
+     "Y": 20
+    },
+    {
+     "City": "C393221",
+     "Type": "DISTRICT_WATER_ENTERTAINMENT_COMPLEX",
+     "X": 92,
+     "Y": 20
+    }
+   ],
+   "Selected": [
+    "C65536",
+    "C131073",
+    "C196610",
+    "C262147",
+    "C327684",
+    "C393221"
+   ],
+   "Step": "Solve",
+   "Tries": 21367,
+   "Unplaced": 1,
+   "Wait": 7.28,
+   "AtOnce": true,
+   "Tier": "FINE",
+   "N": 6
+  },
+  {
+   "Adjacency": 44,
+   "Calls": 4277,
+   "Cities": 7,
+   "CityXY": {
+    "C131073": {
+     "X": 87,
+     "Y": 29
+    },
+    "C196610": {
+     "X": 84,
+     "Y": 24
+    },
+    "C262147": {
+     "X": 87,
+     "Y": 25
+    },
+    "C327684": {
+     "X": 89,
+     "Y": 33
+    },
+    "C393221": {
+     "X": 90,
+     "Y": 22
+    },
+    "C524295": {
+     "X": 87,
+     "Y": 36
+    },
+    "C65536": {
+     "X": 90,
+     "Y": 27
+    }
+   },
+   "Cross": [
+    {
+     "A": "C196610",
+     "B": "C262147",
+     "Distance": 4
+    }
+   ],
+   "Estimate": {
+    "Seconds": 66.71360277,
+    "Speed": 11000,
+    "Units": 733849.6305
+   },
+   "Exhaustive": false,
+   "Gain": -4.99609375,
+   "Label": "FINE n=7",
+   "Land": -50,
+   "Ok": true,
+   "Placed": 20,
+   "Plan": [
+    {
+     "City": "C65536",
+     "Type": "DISTRICT_AERODROME",
+     "X": 91,
+     "Y": 29
+    },
+    {
+     "City": "C65536",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 89,
+     "Y": 25
+    },
+    {
+     "City": "C131073",
+     "Type": "DISTRICT_AERODROME",
+     "X": 86,
+     "Y": 28
+    },
+    {
+     "City": "C131073",
+     "Type": "DISTRICT_COMMERCIAL_HUB",
+     "X": 86,
+     "Y": 30
+    },
+    {
+     "City": "C131073",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 87,
+     "Y": 28
+    },
+    {
+     "City": "C196610",
+     "Type": "DISTRICT_AERODROME",
+     "X": 81,
+     "Y": 23
+    },
+    {
+     "City": "C196610",
+     "Type": "DISTRICT_ENTERTAINMENT_COMPLEX",
+     "X": 82,
+     "Y": 24
+    },
+    {
+     "City": "C196610",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 85,
+     "Y": 26
+    },
+    {
+     "City": "C262147",
+     "Type": "DISTRICT_COMMERCIAL_HUB",
+     "X": 88,
+     "Y": 24
+    },
+    {
+     "City": "C262147",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 87,
+     "Y": 23
+    },
+    {
+     "City": "C262147",
+     "Type": "DISTRICT_INDUSTRIAL_ZONE",
+     "X": 86,
+     "Y": 26
+    },
+    {
+     "City": "C327684",
+     "Type": "DISTRICT_AERODROME",
+     "X": 90,
+     "Y": 31
+    },
+    {
+     "City": "C327684",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 90,
+     "Y": 36
+    },
+    {
+     "City": "C327684",
+     "Type": "DISTRICT_INDUSTRIAL_ZONE",
+     "X": 89,
+     "Y": 35
+    },
+    {
+     "City": "C393221",
+     "Type": "DISTRICT_HARBOR",
+     "X": 91,
+     "Y": 19
+    },
+    {
+     "City": "C393221",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 89,
+     "Y": 20
+    },
+    {
+     "City": "C393221",
+     "Type": "DISTRICT_WATER_ENTERTAINMENT_COMPLEX",
+     "X": 92,
+     "Y": 20
+    },
+    {
+     "City": "C524295",
+     "Type": "DISTRICT_CAMPUS",
+     "X": 86,
+     "Y": 35
+    },
+    {
+     "City": "C524295",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 86,
+     "Y": 37
+    },
+    {
+     "City": "C524295",
+     "Type": "DISTRICT_WATER_ENTERTAINMENT_COMPLEX",
+     "X": 85,
+     "Y": 37
+    }
+   ],
+   "Selected": [
+    "C65536",
+    "C131073",
+    "C196610",
+    "C262147",
+    "C327684",
+    "C393221",
+    "C524295"
+   ],
+   "Step": "Solve",
+   "Tries": 25578,
+   "Unplaced": 2,
+   "Wait": 9.73,
+   "AtOnce": true,
+   "Tier": "FINE",
+   "N": 7
+  },
+  {
+   "Adjacency": 59,
+   "Calls": 6417,
+   "Cities": 8,
+   "CityXY": {
+    "C131073": {
+     "X": 87,
+     "Y": 29
+    },
+    "C196610": {
+     "X": 84,
+     "Y": 24
+    },
+    "C262147": {
+     "X": 87,
+     "Y": 25
+    },
+    "C327684": {
+     "X": 89,
+     "Y": 33
+    },
+    "C393221": {
+     "X": 90,
+     "Y": 22
+    },
+    "C458758": {
+     "X": 81,
+     "Y": 28
+    },
+    "C524295": {
+     "X": 87,
+     "Y": 36
+    },
+    "C65536": {
+     "X": 90,
+     "Y": 27
+    }
+   },
+   "Cross": [
+    {
+     "A": "C196610",
+     "B": "C458758",
+     "Distance": 5
+    },
+    {
+     "A": "C196610",
+     "B": "C458758",
+     "Distance": 5
+    }
+   ],
+   "Estimate": {
+    "Seconds": 79.79809145,
+    "Speed": 11000,
+    "Units": 877779.006
+   },
+   "Exhaustive": false,
+   "Gain": -0.99609375,
+   "Label": "FINE n=8",
+   "Land": -61,
+   "Ok": true,
+   "Placed": 23,
+   "Plan": [
+    {
+     "City": "C65536",
+     "Type": "DISTRICT_AERODROME",
+     "X": 91,
+     "Y": 29
+    },
+    {
+     "City": "C65536",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 89,
+     "Y": 25
+    },
+    {
+     "City": "C131073",
+     "Type": "DISTRICT_AERODROME",
+     "X": 86,
+     "Y": 28
+    },
+    {
+     "City": "C131073",
+     "Type": "DISTRICT_COMMERCIAL_HUB",
+     "X": 86,
+     "Y": 30
+    },
+    {
+     "City": "C131073",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 87,
+     "Y": 28
+    },
+    {
+     "City": "C196610",
+     "Type": "DISTRICT_AERODROME",
+     "X": 83,
+     "Y": 26
+    },
+    {
+     "City": "C196610",
+     "Type": "DISTRICT_ENTERTAINMENT_COMPLEX",
+     "X": 82,
+     "Y": 24
+    },
+    {
+     "City": "C196610",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 82,
+     "Y": 26
+    },
+    {
+     "City": "C262147",
+     "Type": "DISTRICT_COMMERCIAL_HUB",
+     "X": 87,
+     "Y": 22
+    },
+    {
+     "City": "C262147",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 87,
+     "Y": 23
+    },
+    {
+     "City": "C262147",
+     "Type": "DISTRICT_INDUSTRIAL_ZONE",
+     "X": 88,
+     "Y": 24
+    },
+    {
+     "City": "C327684",
+     "Type": "DISTRICT_ENTERTAINMENT_COMPLEX",
+     "X": 90,
+     "Y": 31
+    },
+    {
+     "City": "C327684",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 90,
+     "Y": 36
+    },
+    {
+     "City": "C327684",
+     "Type": "DISTRICT_INDUSTRIAL_ZONE",
+     "X": 89,
+     "Y": 35
+    },
+    {
+     "City": "C393221",
+     "Type": "DISTRICT_HARBOR",
+     "X": 91,
+     "Y": 19
+    },
+    {
+     "City": "C393221",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 89,
+     "Y": 20
+    },
+    {
+     "City": "C393221",
+     "Type": "DISTRICT_WATER_ENTERTAINMENT_COMPLEX",
+     "X": 92,
+     "Y": 20
+    },
+    {
+     "City": "C458758",
+     "Type": "DISTRICT_CAMPUS",
+     "X": 81,
+     "Y": 26
+    },
+    {
+     "City": "C458758",
+     "Type": "DISTRICT_COMMERCIAL_HUB",
+     "X": 81,
+     "Y": 27
+    },
+    {
+     "City": "C458758",
+     "Type": "DISTRICT_INDUSTRIAL_ZONE",
+     "X": 81,
+     "Y": 30
+    },
+    {
+     "City": "C524295",
+     "Type": "DISTRICT_CAMPUS",
+     "X": 86,
+     "Y": 35
+    },
+    {
+     "City": "C524295",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 86,
+     "Y": 37
+    },
+    {
+     "City": "C524295",
+     "Type": "DISTRICT_WATER_ENTERTAINMENT_COMPLEX",
+     "X": 85,
+     "Y": 37
+    }
+   ],
+   "Selected": [
+    "C65536",
+    "C131073",
+    "C196610",
+    "C262147",
+    "C327684",
+    "C393221",
+    "C458758",
+    "C524295"
+   ],
+   "Step": "Solve",
+   "Tries": 37035,
+   "Unplaced": 3,
+   "Wait": 16.67,
+   "AtOnce": true,
+   "Tier": "FINE",
+   "N": 8
+  }
+ ],
+ "Groups": [
+  {
+   "Tier": "STANDARD",
+   "Size": 8,
+   "N": 8,
+   "Total": {
+    "Adjacency": 59,
+    "Gain": -0.99609375,
+    "Land": -61,
+    "Placed": 23,
+    "Wait": 9.33
+   },
+   "Runs": [
+    {
+     "Adjacency": 59,
+     "Calls": 5932,
+     "Cities": 8,
+     "CityXY": {
+      "C131073": {
+       "X": 87,
+       "Y": 29
+      },
+      "C196610": {
+       "X": 84,
+       "Y": 24
+      },
+      "C262147": {
+       "X": 87,
+       "Y": 25
+      },
+      "C327684": {
+       "X": 89,
+       "Y": 33
+      },
+      "C393221": {
+       "X": 90,
+       "Y": 22
+      },
+      "C458758": {
+       "X": 81,
+       "Y": 28
+      },
+      "C524295": {
+       "X": 87,
+       "Y": 36
+      },
+      "C65536": {
+       "X": 90,
+       "Y": 27
+      }
+     },
+     "Cross": [
+      {
+       "A": "C196610",
+       "B": "C458758",
+       "Distance": 5
+      },
+      {
+       "A": "C196610",
+       "B": "C458758",
+       "Distance": 5
+      }
+     ],
+     "Estimate": {
+      "Seconds": 34.48443242,
+      "Speed": 11000,
+      "Units": 379328.7566
+     },
+     "Exhaustive": false,
+     "Gain": -0.99609375,
+     "Label": "STANDARD g=8 1-8",
+     "Land": -61,
+     "Ok": true,
+     "Placed": 23,
+     "Plan": [
+      {
+       "City": "C65536",
+       "Type": "DISTRICT_AERODROME",
+       "X": 91,
+       "Y": 29
+      },
+      {
+       "City": "C65536",
+       "Type": "DISTRICT_HOLY_SITE",
+       "X": 89,
+       "Y": 25
+      },
+      {
+       "City": "C131073",
+       "Type": "DISTRICT_AERODROME",
+       "X": 86,
+       "Y": 28
+      },
+      {
+       "City": "C131073",
+       "Type": "DISTRICT_COMMERCIAL_HUB",
+       "X": 86,
+       "Y": 30
+      },
+      {
+       "City": "C131073",
+       "Type": "DISTRICT_HOLY_SITE",
+       "X": 87,
+       "Y": 28
+      },
+      {
+       "City": "C196610",
+       "Type": "DISTRICT_AERODROME",
+       "X": 83,
+       "Y": 26
+      },
+      {
+       "City": "C196610",
+       "Type": "DISTRICT_ENTERTAINMENT_COMPLEX",
+       "X": 82,
+       "Y": 24
+      },
+      {
+       "City": "C196610",
+       "Type": "DISTRICT_HOLY_SITE",
+       "X": 82,
+       "Y": 26
+      },
+      {
+       "City": "C262147",
+       "Type": "DISTRICT_COMMERCIAL_HUB",
+       "X": 87,
+       "Y": 22
+      },
+      {
+       "City": "C262147",
+       "Type": "DISTRICT_HOLY_SITE",
+       "X": 87,
+       "Y": 23
+      },
+      {
+       "City": "C262147",
+       "Type": "DISTRICT_INDUSTRIAL_ZONE",
+       "X": 88,
+       "Y": 24
+      },
+      {
+       "City": "C327684",
+       "Type": "DISTRICT_ENTERTAINMENT_COMPLEX",
+       "X": 90,
+       "Y": 31
+      },
+      {
+       "City": "C327684",
+       "Type": "DISTRICT_HOLY_SITE",
+       "X": 90,
+       "Y": 36
+      },
+      {
+       "City": "C327684",
+       "Type": "DISTRICT_INDUSTRIAL_ZONE",
+       "X": 89,
+       "Y": 35
+      },
+      {
+       "City": "C393221",
+       "Type": "DISTRICT_HARBOR",
+       "X": 91,
+       "Y": 19
+      },
+      {
+       "City": "C393221",
+       "Type": "DISTRICT_HOLY_SITE",
+       "X": 89,
+       "Y": 20
+      },
+      {
+       "City": "C393221",
+       "Type": "DISTRICT_WATER_ENTERTAINMENT_COMPLEX",
+       "X": 92,
+       "Y": 20
+      },
+      {
+       "City": "C458758",
+       "Type": "DISTRICT_CAMPUS",
+       "X": 81,
+       "Y": 26
+      },
+      {
+       "City": "C458758",
+       "Type": "DISTRICT_COMMERCIAL_HUB",
+       "X": 81,
+       "Y": 27
+      },
+      {
+       "City": "C458758",
+       "Type": "DISTRICT_INDUSTRIAL_ZONE",
+       "X": 81,
+       "Y": 30
+      },
+      {
+       "City": "C524295",
+       "Type": "DISTRICT_CAMPUS",
+       "X": 86,
+       "Y": 35
+      },
+      {
+       "City": "C524295",
+       "Type": "DISTRICT_HOLY_SITE",
+       "X": 86,
+       "Y": 37
+      },
+      {
+       "City": "C524295",
+       "Type": "DISTRICT_WATER_ENTERTAINMENT_COMPLEX",
+       "X": 85,
+       "Y": 37
+      }
+     ],
+     "Selected": [
+      "C65536",
+      "C131073",
+      "C196610",
+      "C262147",
+      "C327684",
+      "C393221",
+      "C458758",
+      "C524295"
+     ],
+     "Step": "Solve",
+     "Tries": 20368,
+     "Unplaced": 3,
+     "Wait": 9.33,
+     "AtOnce": true,
+     "Tier": "STANDARD",
+     "Size": 8,
+     "From": 1,
+     "To": 8,
+     "Tacked": true
+    }
+   ]
+  },
+  {
+   "Tier": "STANDARD",
+   "Size": 4,
+   "N": 8,
+   "Total": {
+    "Adjacency": 53,
+    "Gain": 2.00390625,
+    "Land": -52,
+    "Placed": 21,
+    "Wait": 4.51
+   },
+   "Runs": [
+    {
+     "Adjacency": 22,
+     "Calls": 1711,
+     "Cities": 4,
+     "CityXY": {
+      "C131073": {
+       "X": 87,
+       "Y": 29
+      },
+      "C262147": {
+       "X": 87,
+       "Y": 25
+      },
+      "C393221": {
+       "X": 90,
+       "Y": 22
+      },
+      "C65536": {
+       "X": 90,
+       "Y": 27
+      }
+     },
+     "Cross": [],
+     "Estimate": {
+      "Seconds": 13.66896815,
+      "Speed": 11000,
+      "Units": 150358.6497
+     },
+     "Exhaustive": false,
+     "Gain": -16.99609375,
+     "Label": "STANDARD g=4 1-4",
+     "Land": -40,
+     "Ok": true,
+     "Placed": 11,
+     "Plan": [
+      {
+       "City": "C65536",
+       "Type": "DISTRICT_AERODROME",
+       "X": 91,
+       "Y": 29
+      },
+      {
+       "City": "C65536",
+       "Type": "DISTRICT_HOLY_SITE",
+       "X": 89,
+       "Y": 25
+      },
+      {
+       "City": "C131073",
+       "Type": "DISTRICT_AERODROME",
+       "X": 86,
+       "Y": 28
+      },
+      {
+       "City": "C131073",
+       "Type": "DISTRICT_COMMERCIAL_HUB",
+       "X": 86,
+       "Y": 30
+      },
+      {
+       "City": "C131073",
+       "Type": "DISTRICT_HOLY_SITE",
+       "X": 87,
+       "Y": 28
+      },
+      {
+       "City": "C262147",
+       "Type": "DISTRICT_COMMERCIAL_HUB",
+       "X": 87,
+       "Y": 22
+      },
+      {
+       "City": "C262147",
+       "Type": "DISTRICT_HOLY_SITE",
+       "X": 87,
+       "Y": 23
+      },
+      {
+       "City": "C262147",
+       "Type": "DISTRICT_INDUSTRIAL_ZONE",
+       "X": 88,
+       "Y": 24
+      },
+      {
+       "City": "C393221",
+       "Type": "DISTRICT_HARBOR",
+       "X": 91,
+       "Y": 19
+      },
+      {
+       "City": "C393221",
+       "Type": "DISTRICT_HOLY_SITE",
+       "X": 89,
+       "Y": 20
+      },
+      {
+       "City": "C393221",
+       "Type": "DISTRICT_WATER_ENTERTAINMENT_COMPLEX",
+       "X": 92,
+       "Y": 20
+      }
+     ],
+     "Selected": [
+      "C65536",
+      "C131073",
+      "C262147",
+      "C393221"
+     ],
+     "Step": "Solve",
+     "Tries": 5024,
+     "Unplaced": 1,
+     "Wait": 1.45,
+     "AtOnce": true,
+     "Tier": "STANDARD",
+     "Size": 4,
+     "From": 1,
+     "To": 4,
+     "Tacked": true
+    },
+    {
+     "Adjacency": 31,
+     "Calls": 3406,
+     "Cities": 4,
+     "CityXY": {
+      "C196610": {
+       "X": 84,
+       "Y": 24
+      },
+      "C327684": {
+       "X": 89,
+       "Y": 33
+      },
+      "C458758": {
+       "X": 81,
+       "Y": 28
+      },
+      "C524295": {
+       "X": 87,
+       "Y": 36
+      }
+     },
+     "Cross": [],
+     "Estimate": {
+      "Seconds": 13.66896815,
+      "Speed": 11000,
+      "Units": 150358.6497
+     },
+     "Exhaustive": false,
+     "Gain": 19,
+     "Label": "STANDARD g=4 5-8",
+     "Land": -12,
+     "Ok": true,
+     "Placed": 10,
+     "Plan": [
+      {
+       "City": "C196610",
+       "Type": "DISTRICT_ENTERTAINMENT_COMPLEX",
+       "X": 82,
+       "Y": 24
+      },
+      {
+       "City": "C327684",
+       "Type": "DISTRICT_ENTERTAINMENT_COMPLEX",
+       "X": 90,
+       "Y": 31
+      },
+      {
+       "City": "C327684",
+       "Type": "DISTRICT_HOLY_SITE",
+       "X": 90,
+       "Y": 36
+      },
+      {
+       "City": "C327684",
+       "Type": "DISTRICT_INDUSTRIAL_ZONE",
+       "X": 89,
+       "Y": 35
+      },
+      {
+       "City": "C458758",
+       "Type": "DISTRICT_CAMPUS",
+       "X": 81,
+       "Y": 26
+      },
+      {
+       "City": "C458758",
+       "Type": "DISTRICT_COMMERCIAL_HUB",
+       "X": 81,
+       "Y": 27
+      },
+      {
+       "City": "C458758",
+       "Type": "DISTRICT_INDUSTRIAL_ZONE",
+       "X": 81,
+       "Y": 30
+      },
+      {
+       "City": "C524295",
+       "Type": "DISTRICT_CAMPUS",
+       "X": 86,
+       "Y": 35
+      },
+      {
+       "City": "C524295",
+       "Type": "DISTRICT_HOLY_SITE",
+       "X": 86,
+       "Y": 37
+      },
+      {
+       "City": "C524295",
+       "Type": "DISTRICT_WATER_ENTERTAINMENT_COMPLEX",
+       "X": 85,
+       "Y": 37
+      }
+     ],
+     "Selected": [
+      "C196610",
+      "C327684",
+      "C458758",
+      "C524295"
+     ],
+     "Step": "Solve",
+     "Tries": 10360,
+     "Unplaced": 3,
+     "Wait": 3.06,
+     "AtOnce": true,
+     "Tier": "STANDARD",
+     "Size": 4,
+     "From": 5,
+     "To": 8,
+     "Tacked": true
+    }
+   ]
+  },
+  {
+   "Tier": "STANDARD",
+   "Size": 2,
+   "N": 8,
+   "Total": {
+    "Adjacency": 49,
+    "Gain": -5.99609375,
+    "Land": -55,
+    "Placed": 22,
+    "Wait": 3.3400000000000003
+   },
+   "Runs": [
+    {
+     "Adjacency": 9,
+     "Calls": 649,
+     "Cities": 2,
+     "CityXY": {
+      "C131073": {
+       "X": 87,
+       "Y": 29
+      },
+      "C65536": {
+       "X": 90,
+       "Y": 27
+      }
+     },
+     "Cross": [],
+     "Estimate": {
+      "Seconds": 5.432727273,
+      "Speed": 11000,
+      "Units": 59760
+     },
+     "Exhaustive": false,
+     "Gain": -9.99609375,
+     "Label": "STANDARD g=2 1-2",
+     "Land": -19,
+     "Ok": true,
+     "Placed": 5,
+     "Plan": [
+      {
+       "City": "C65536",
+       "Type": "DISTRICT_AERODROME",
+       "X": 91,
+       "Y": 29
+      },
+      {
+       "City": "C65536",
+       "Type": "DISTRICT_HOLY_SITE",
+       "X": 89,
+       "Y": 25
+      },
+      {
+       "City": "C131073",
+       "Type": "DISTRICT_AERODROME",
+       "X": 86,
+       "Y": 28
+      },
+      {
+       "City": "C131073",
+       "Type": "DISTRICT_COMMERCIAL_HUB",
+       "X": 86,
+       "Y": 30
+      },
+      {
+       "City": "C131073",
+       "Type": "DISTRICT_HOLY_SITE",
+       "X": 87,
+       "Y": 28
+      }
+     ],
+     "Selected": [
+      "C65536",
+      "C131073"
+     ],
+     "Step": "Solve",
+     "Tries": 2174,
+     "Unplaced": 0,
+     "Wait": 0.54,
+     "AtOnce": true,
+     "Tier": "STANDARD",
+     "Size": 2,
+     "From": 1,
+     "To": 2,
+     "Tacked": true
+    },
+    {
+     "Adjacency": 7,
+     "Calls": 750,
+     "Cities": 2,
+     "CityXY": {
+      "C262147": {
+       "X": 87,
+       "Y": 25
+      },
+      "C393221": {
+       "X": 90,
+       "Y": 22
+      }
+     },
+     "Cross": [],
+     "Estimate": {
+      "Seconds": 5.432727273,
+      "Speed": 11000,
+      "Units": 59760
+     },
+     "Exhaustive": false,
+     "Gain": -11,
+     "Label": "STANDARD g=2 3-4",
+     "Land": -18,
+     "Ok": true,
+     "Placed": 6,
+     "Plan": [
+      {
+       "City": "C262147",
+       "Type": "DISTRICT_COMMERCIAL_HUB",
+       "X": 88,
+       "Y": 24
+      },
+      {
+       "City": "C262147",
+       "Type": "DISTRICT_ENCAMPMENT",
+       "X": 87,
+       "Y": 22
+      },
+      {
+       "City": "C262147",
+       "Type": "DISTRICT_INDUSTRIAL_ZONE",
+       "X": 86,
+       "Y": 26
+      },
+      {
+       "City": "C393221",
+       "Type": "DISTRICT_HARBOR",
+       "X": 91,
+       "Y": 19
+      },
+      {
+       "City": "C393221",
+       "Type": "DISTRICT_INDUSTRIAL_ZONE",
+       "X": 89,
+       "Y": 20
+      },
+      {
+       "City": "C393221",
+       "Type": "DISTRICT_WATER_ENTERTAINMENT_COMPLEX",
+       "X": 92,
+       "Y": 20
+      }
+     ],
+     "Selected": [
+      "C262147",
+      "C393221"
+     ],
+     "Step": "Solve",
+     "Tries": 2503,
+     "Unplaced": 1,
+     "Wait": 0.53,
+     "AtOnce": true,
+     "Tier": "STANDARD",
+     "Size": 2,
+     "From": 3,
+     "To": 4,
+     "Tacked": true
+    },
+    {
+     "Adjacency": 14,
+     "Calls": 1061,
+     "Cities": 2,
+     "CityXY": {
+      "C196610": {
+       "X": 84,
+       "Y": 24
+      },
+      "C327684": {
+       "X": 89,
+       "Y": 33
+      }
+     },
+     "Cross": [],
+     "Estimate": {
+      "Seconds": 5.432727273,
+      "Speed": 11000,
+      "Units": 59760
+     },
+     "Exhaustive": false,
+     "Gain": 8,
+     "Label": "STANDARD g=2 5-6",
+     "Land": -6,
+     "Ok": true,
+     "Placed": 5,
+     "Plan": [
+      {
+       "City": "C196610",
+       "Type": "DISTRICT_ENTERTAINMENT_COMPLEX",
+       "X": 82,
+       "Y": 24
+      },
+      {
+       "City": "C196610",
+       "Type": "DISTRICT_HOLY_SITE",
+       "X": 85,
+       "Y": 26
+      },
+      {
+       "City": "C327684",
+       "Type": "DISTRICT_ENTERTAINMENT_COMPLEX",
+       "X": 90,
+       "Y": 31
+      },
+      {
+       "City": "C327684",
+       "Type": "DISTRICT_HOLY_SITE",
+       "X": 90,
+       "Y": 36
+      },
+      {
+       "City": "C327684",
+       "Type": "DISTRICT_INDUSTRIAL_ZONE",
+       "X": 89,
+       "Y": 35
+      }
+     ],
+     "Selected": [
+      "C196610",
+      "C327684"
+     ],
+     "Step": "Solve",
+     "Tries": 4744,
+     "Unplaced": 1,
+     "Wait": 1.0,
+     "AtOnce": true,
+     "Tier": "STANDARD",
+     "Size": 2,
+     "From": 5,
+     "To": 6,
+     "Tacked": true
+    },
+    {
+     "Adjacency": 19,
+     "Calls": 1983,
+     "Cities": 2,
+     "CityXY": {
+      "C458758": {
+       "X": 81,
+       "Y": 28
+      },
+      "C524295": {
+       "X": 87,
+       "Y": 36
+      }
+     },
+     "Cross": [],
+     "Estimate": {
+      "Seconds": 5.432727273,
+      "Speed": 11000,
+      "Units": 59760
+     },
+     "Exhaustive": false,
+     "Gain": 7,
+     "Label": "STANDARD g=2 7-8",
+     "Land": -12,
+     "Ok": true,
+     "Placed": 6,
+     "Plan": [
+      {
+       "City": "C458758",
+       "Type": "DISTRICT_CAMPUS",
+       "X": 81,
+       "Y": 26
+      },
+      {
+       "City": "C458758",
+       "Type": "DISTRICT_COMMERCIAL_HUB",
+       "X": 81,
+       "Y": 27
+      },
+      {
+       "City": "C458758",
+       "Type": "DISTRICT_INDUSTRIAL_ZONE",
+       "X": 81,
+       "Y": 30
+      },
+      {
+       "City": "C524295",
+       "Type": "DISTRICT_AERODROME",
+       "X": 86,
+       "Y": 35
+      },
+      {
+       "City": "C524295",
+       "Type": "DISTRICT_CAMPUS",
+       "X": 86,
+       "Y": 37
+      },
+      {
+       "City": "C524295",
+       "Type": "DISTRICT_WATER_ENTERTAINMENT_COMPLEX",
+       "X": 85,
+       "Y": 37
+      }
+     ],
+     "Selected": [
+      "C458758",
+      "C524295"
+     ],
+     "Step": "Solve",
+     "Tries": 4387,
+     "Unplaced": 2,
+     "Wait": 1.27,
+     "AtOnce": true,
+     "Tier": "STANDARD",
+     "Size": 2,
+     "From": 7,
+     "To": 8,
+     "Tacked": true
+    }
+   ]
+  },
+  {
+   "Tier": "STANDARD",
+   "Size": 1,
+   "N": 8,
+   "Total": {
+    "Adjacency": 45,
+    "Gain": -6.99609375,
+    "Land": -52,
+    "Placed": 21,
+    "Wait": 3.2500000000000004
+   },
+   "Runs": [
+    {
+     "Adjacency": 2,
+     "Calls": 188,
+     "Cities": 1,
+     "CityXY": {
+      "C65536": {
+       "X": 90,
+       "Y": 27
+      }
+     },
+     "Cross": [],
+     "Estimate": {
+      "Seconds": 2.307272727,
+      "Speed": 11000,
+      "Units": 25380
+     },
+     "Exhaustive": false,
+     "Gain": -7.99609375,
+     "Label": "STANDARD g=1 1-1",
+     "Land": -10,
+     "Ok": true,
+     "Placed": 2,
+     "Plan": [
+      {
+       "City": "C65536",
+       "Type": "DISTRICT_AERODROME",
+       "X": 91,
+       "Y": 29
+      },
+      {
+       "City": "C65536",
+       "Type": "DISTRICT_HOLY_SITE",
+       "X": 89,
+       "Y": 25
+      }
+     ],
+     "Selected": [
+      "C65536"
+     ],
+     "Step": "Solve",
+     "Tries": 495,
+     "Unplaced": 0,
+     "Wait": 0.14,
+     "AtOnce": true,
+     "Tier": "STANDARD",
+     "Size": 1,
+     "From": 1,
+     "To": 1,
+     "Tacked": true
+    },
+    {
+     "Adjacency": 3,
+     "Calls": 147,
+     "Cities": 1,
+     "CityXY": {
+      "C131073": {
+       "X": 87,
+       "Y": 29
+      }
+     },
+     "Cross": [],
+     "Estimate": {
+      "Seconds": 2.307272727,
+      "Speed": 11000,
+      "Units": 25380
+     },
+     "Exhaustive": false,
+     "Gain": 0,
+     "Label": "STANDARD g=1 2-2",
+     "Land": -3,
+     "Ok": true,
+     "Placed": 1,
+     "Plan": [
+      {
+       "City": "C131073",
+       "Type": "DISTRICT_COMMERCIAL_HUB",
+       "X": 86,
+       "Y": 30
+      }
+     ],
+     "Selected": [
+      "C131073"
+     ],
+     "Step": "Solve",
+     "Tries": 916,
+     "Unplaced": 1,
+     "Wait": 0.15,
+     "AtOnce": true,
+     "Tier": "STANDARD",
+     "Size": 1,
+     "From": 2,
+     "To": 2,
+     "Tacked": true
+    },
+    {
+     "Adjacency": 3,
+     "Calls": 308,
+     "Cities": 1,
+     "CityXY": {
+      "C262147": {
+       "X": 87,
+       "Y": 25
+      }
+     },
+     "Cross": [],
+     "Estimate": {
+      "Seconds": 2.307272727,
+      "Speed": 11000,
+      "Units": 25380
+     },
+     "Exhaustive": false,
+     "Gain": -8,
+     "Label": "STANDARD g=1 3-3",
+     "Land": -11,
+     "Ok": true,
+     "Placed": 3,
+     "Plan": [
+      {
+       "City": "C262147",
+       "Type": "DISTRICT_COMMERCIAL_HUB",
+       "X": 88,
+       "Y": 24
+      },
+      {
+       "City": "C262147",
+       "Type": "DISTRICT_ENCAMPMENT",
+       "X": 87,
+       "Y": 22
+      },
+      {
+       "City": "C262147",
+       "Type": "DISTRICT_INDUSTRIAL_ZONE",
+       "X": 86,
+       "Y": 26
+      }
+     ],
+     "Selected": [
+      "C262147"
+     ],
+     "Step": "Solve",
+     "Tries": 1195,
+     "Unplaced": 1,
+     "Wait": 0.26,
+     "AtOnce": true,
+     "Tier": "STANDARD",
+     "Size": 1,
+     "From": 3,
+     "To": 3,
+     "Tacked": true
+    },
+    {
+     "Adjacency": 4,
+     "Calls": 394,
+     "Cities": 1,
+     "CityXY": {
+      "C393221": {
+       "X": 90,
+       "Y": 22
+      }
+     },
+     "Cross": [],
+     "Estimate": {
+      "Seconds": 2.307272727,
+      "Speed": 11000,
+      "Units": 25380
+     },
+     "Exhaustive": false,
+     "Gain": -3,
+     "Label": "STANDARD g=1 4-4",
+     "Land": -7,
+     "Ok": true,
+     "Placed": 3,
+     "Plan": [
+      {
+       "City": "C393221",
+       "Type": "DISTRICT_HARBOR",
+       "X": 91,
+       "Y": 19
+      },
+      {
+       "City": "C393221",
+       "Type": "DISTRICT_INDUSTRIAL_ZONE",
+       "X": 89,
+       "Y": 20
+      },
+      {
+       "City": "C393221",
+       "Type": "DISTRICT_WATER_ENTERTAINMENT_COMPLEX",
+       "X": 92,
+       "Y": 20
+      }
+     ],
+     "Selected": [
+      "C393221"
+     ],
+     "Step": "Solve",
+     "Tries": 1342,
+     "Unplaced": 0,
+     "Wait": 0.28,
+     "AtOnce": true,
+     "Tier": "STANDARD",
+     "Size": 1,
+     "From": 4,
+     "To": 4,
+     "Tacked": true
+    },
+    {
+     "Adjacency": 6,
+     "Calls": 687,
+     "Cities": 1,
+     "CityXY": {
+      "C327684": {
+       "X": 89,
+       "Y": 33
+      }
+     },
+     "Cross": [],
+     "Estimate": {
+      "Seconds": 2.307272727,
+      "Speed": 11000,
+      "Units": 25380
+     },
+     "Exhaustive": false,
+     "Gain": 6,
+     "Label": "STANDARD g=1 5-5",
+     "Land": 0,
+     "Ok": true,
+     "Placed": 3,
+     "Plan": [
+      {
+       "City": "C327684",
+       "Type": "DISTRICT_ENTERTAINMENT_COMPLEX",
+       "X": 90,
+       "Y": 31
+      },
+      {
+       "City": "C327684",
+       "Type": "DISTRICT_HOLY_SITE",
+       "X": 90,
+       "Y": 36
+      },
+      {
+       "City": "C327684",
+       "Type": "DISTRICT_INDUSTRIAL_ZONE",
+       "X": 89,
+       "Y": 35
+      }
+     ],
+     "Selected": [
+      "C327684"
+     ],
+     "Step": "Solve",
+     "Tries": 2456,
+     "Unplaced": 0,
+     "Wait": 0.49,
+     "AtOnce": true,
+     "Tier": "STANDARD",
+     "Size": 1,
+     "From": 5,
+     "To": 5,
+     "Tacked": true
+    },
+    {
+     "Adjacency": 8,
+     "Calls": 634,
+     "Cities": 1,
+     "CityXY": {
+      "C196610": {
+       "X": 84,
+       "Y": 24
+      }
+     },
+     "Cross": [],
+     "Estimate": {
+      "Seconds": 2.307272727,
+      "Speed": 11000,
+      "Units": 25380
+     },
+     "Exhaustive": false,
+     "Gain": -1,
+     "Label": "STANDARD g=1 6-6",
+     "Land": -9,
+     "Ok": true,
+     "Placed": 3,
+     "Plan": [
+      {
+       "City": "C196610",
+       "Type": "DISTRICT_AERODROME",
+       "X": 81,
+       "Y": 23
+      },
+      {
+       "City": "C196610",
+       "Type": "DISTRICT_ENTERTAINMENT_COMPLEX",
+       "X": 82,
+       "Y": 24
+      },
+      {
+       "City": "C196610",
+       "Type": "DISTRICT_HOLY_SITE",
+       "X": 85,
+       "Y": 26
+      }
+     ],
+     "Selected": [
+      "C196610"
+     ],
+     "Step": "Solve",
+     "Tries": 2809,
+     "Unplaced": 0,
+     "Wait": 0.71,
+     "AtOnce": true,
+     "Tier": "STANDARD",
+     "Size": 1,
+     "From": 6,
+     "To": 6,
+     "Tacked": true
+    },
+    {
+     "Adjacency": 7,
+     "Calls": 673,
+     "Cities": 1,
+     "CityXY": {
+      "C524295": {
+       "X": 87,
+       "Y": 36
+      }
+     },
+     "Cross": [],
+     "Estimate": {
+      "Seconds": 2.307272727,
+      "Speed": 11000,
+      "Units": 25380
+     },
+     "Exhaustive": false,
+     "Gain": 6,
+     "Label": "STANDARD g=1 7-7",
+     "Land": -1,
+     "Ok": true,
+     "Placed": 3,
+     "Plan": [
+      {
+       "City": "C524295",
+       "Type": "DISTRICT_AERODROME",
+       "X": 86,
+       "Y": 35
+      },
+      {
+       "City": "C524295",
+       "Type": "DISTRICT_CAMPUS",
+       "X": 86,
+       "Y": 37
+      },
+      {
+       "City": "C524295",
+       "Type": "DISTRICT_WATER_ENTERTAINMENT_COMPLEX",
+       "X": 85,
+       "Y": 37
+      }
+     ],
+     "Selected": [
+      "C524295"
+     ],
+     "Step": "Solve",
+     "Tries": 1490,
+     "Unplaced": 1,
+     "Wait": 0.31,
+     "AtOnce": true,
+     "Tier": "STANDARD",
+     "Size": 1,
+     "From": 7,
+     "To": 7,
+     "Tacked": true
+    },
+    {
+     "Adjacency": 12,
+     "Calls": 1352,
+     "Cities": 1,
+     "CityXY": {
+      "C458758": {
+       "X": 81,
+       "Y": 28
+      }
+     },
+     "Cross": [],
+     "Estimate": {
+      "Seconds": 2.307272727,
+      "Speed": 11000,
+      "Units": 25380
+     },
+     "Exhaustive": false,
+     "Gain": 1,
+     "Label": "STANDARD g=1 8-8",
+     "Land": -11,
+     "Ok": true,
+     "Placed": 3,
+     "Plan": [
+      {
+       "City": "C458758",
+       "Type": "DISTRICT_CAMPUS",
+       "X": 81,
+       "Y": 26
+      },
+      {
+       "City": "C458758",
+       "Type": "DISTRICT_COMMERCIAL_HUB",
+       "X": 81,
+       "Y": 27
+      },
+      {
+       "City": "C458758",
+       "Type": "DISTRICT_INDUSTRIAL_ZONE",
+       "X": 81,
+       "Y": 30
+      }
+     ],
+     "Selected": [
+      "C458758"
+     ],
+     "Step": "Solve",
+     "Tries": 2940,
+     "Unplaced": 1,
+     "Wait": 0.91,
+     "AtOnce": true,
+     "Tier": "STANDARD",
+     "Size": 1,
+     "From": 8,
+     "To": 8,
+     "Tacked": true
+    }
+   ]
+  }
+ ]
+}

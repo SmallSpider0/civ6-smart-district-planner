@@ -1,0 +1,17 @@
+Changes since v1.3.1:
+- The panel follows the city selected on the map: the One city tab switches to it, and the Several cities tab centres on it (not while a computation is running).
+- Several cities: by default only the centre city (the capital when no city is selected) and the nearest cities and site tacks that form one group with it, each within 7 tiles of another, take part, at most 4. The list is now a grid of chips, 3 per row; click a whole chip to switch it, and use “Clear all” or “Default”. The title's tooltip gives the measured waits and how much planning cities together adds.
+- Several cities with a shared list: a city no longer takes a neighbour's district tacks as its own. Only the tacks this mod placed for the city, and tacks on its tiles or on unowned tiles nearest to it, count; a district skipped because the city already has a tack for it is listed with that reason. Before, a city planned after its neighbour could quietly leave out a Campus or Theater Square.
+- Temple of Artemis (Rise and Fall, Gathering Storm): when no Camp is next to it, the plan puts one on a nearby Deer, Furs, Ivory or Truffles tile. It shows in the result and on the map, and is tacked and undone with the wonder. When no tile nearby can take a Camp, the result says so.
+- One city: the weights row has a Reach column (default 0, as on the Several cities tab). Above 0, districts such as the Industrial Zone and Entertainment Complex go where they newly cover more of your cities and City Center tacks. On both tabs, “covers N more” in a result counts only cities not already covered by the same kind of district.
+- Neighborhood and Preserve Appeal follow two more game rules: after Conservation, Woods that were never cut give their own tile +1 Appeal, which the tile loses when a district clears them; a pillaged improvement takes 1 Appeal off its tile and the tiles around it, which they get back when a district replaces it. A pillaged improvement also gives no Housing. In the late-game check, all 9 plans now match the game's Appeal and Housing.
+- When the game itself runs slowly (for example while the computer is busy with something else), a computation running over frames no longer nearly stops, and the time estimate afterwards no longer shows thousands of seconds.
+
+自 v1.3.1 以来的变化：
+- 打开面板时跟随地图上选中的本方城市：单城页签切到这座城，多城页签以它为中心（后台正在计算时不切）。
+- 多城页签默认只勾选中心城市（没有选中时是首都）和离它最近、连成一片（相邻两座不超过 7 格）的城市与城址钉，最多 4 座。城市列表改成每行 3 个的格子，点整个格子切换，加“全部取消”“恢复默认”；标题的悬停提示写了实测的耗时和联合规划多得的相邻加成。
+- 多城页签用共用清单时，一座城不再把邻城的区域钉当成自己的：只有本模组为这座城打的钉，以及在它的格上、或离它最近的无主格上的钉才算；因已有钉跳过的区域在结果里写明原因。原来先规划邻城再规划这座城时，可能悄悄少放学院、剧院广场这类区域。
+- 阿耳忒弥斯神庙（迭起兴衰、风云变幻）旁边还没有营地时，方案在附近的鹿、皮草、象牙或松露上放一个营地，结果和地图预览里都有，和神庙一起打钉、一起撤销；附近没有能建营地的格时写明原因。
+- 单城页签的权重行加“覆盖”列（默认 0，与多城页签相同）：大于 0 时，工业区、娱乐中心等放在能新覆盖更多本方城市和城址钉的格上。两个页签结果里的“新覆盖 N 城”只数以前没被同类区域覆盖的城。
+- 社区、保护区的魅力再补两条游戏规则：学了“自然保护”后，从没砍过的树林给所在格 +1 魅力，区域清掉它时这格少 1；被掠夺的改良设施让所在格和四周各 -1 魅力，区域拆掉它时这些格各回升 1。被掠夺的改良设施也不给住房。后期存档复核 9 套方案的魅力、住房全部与游戏相同。
+- 游戏本身变慢时（例如电脑同时在忙别的），分帧计算不再几乎停住，算完后显示的预计耗时也不再变成几千秒。

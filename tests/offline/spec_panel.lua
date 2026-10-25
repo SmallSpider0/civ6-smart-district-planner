@@ -454,36 +454,97 @@ test("the swap switch on both tabs", function()
   T.eq(multi.State().Swap, false, "off again")
 end)
 
--- Through the row's own check box (its handler), as a click would.
-test("several cities tab: the check boxes switch a city-center pin and a city off and on", function()
+-- Issue 61: the coverage column on the single-city tab, through its arrows'
+-- own click handlers; the solve, the rows and the wonder path carry it.
+test("single-city tab: the coverage column", function()
+  SDP_Panel.SelectTab("SINGLE")
+  SDP_Panel.SelectCity(1)
+  local IZ = "DISTRICT_INDUSTRIAL_ZONE"
+  for _, d in ipairs(SDP_Rules.PlannableDistricts(0)) do SDP_Panel.SetState(d.Type, SDP_UI.DefaultState(d)) end
+  SDP_Panel.SetState(IZ, "MUST")
+  SDP_Panel.SetState("DISTRICT_AQUEDUCT", "OFF")
+  SDP_Panel.SetTier("FAST")
+  local cells = SDP_Panel.State().WeightCells
+  T.eq(#cells, 10, "ten columns")
+  local cell = cells[10]
+  T.eq(cell.Key, "COVERAGE", "coverage last")
+  T.eq(cell.Root:GetToolTipString(), "LOC_SDP_WEIGHT_COVERAGE", "the same tooltip as the several cities tab")
+  T.eq(SDP_Panel.State().Weights.COVERAGE, 0, "off by default")
+  T.eq(cell.Value:GetText(), "0", "shows 0")
+  T.ok(cell.Less:IsDisabled(), "cannot go below 0")
+  local off = SDP_Panel.Solve()
+  T.ok(off and off.Ok, "solved: " .. tostring(off and off.Error))
+  T.eq(off.Session.Request.Coverage, 0, "weight 0 in the request")
+  T.eq(off.Covered, nil, "no coverage figures at 0")
+  for _ = 1, 4 do cell.More:Click() end
+  T.eq(SDP_Panel.State().Weights.COVERAGE, SDP_UI.MAX_WEIGHT, "up by the arrow, capped")
+  T.ok(cell.More:IsDisabled(), "the arrow stops at the cap")
+  cell.Less:Click()
+  T.eq(SDP_Panel.State().Weights.COVERAGE, SDP_UI.MAX_WEIGHT - 1, "down by the arrow")
+  T.eq(cell.Value:GetText(), tostring(SDP_UI.MAX_WEIGHT - 1), "shown")
+  T.eq(SDP_Panel.State().Result, nil, "a weight change clears the result")
+  local on = SDP_Panel.Solve()
+  T.ok(on and on.Ok, "solved: " .. tostring(on and on.Error))
+  T.eq(on.Session.Request.Coverage, SDP_UI.MAX_WEIGHT - 1, "the weight is sent")
+  T.ok(on.Covered ~= nil and on.Covered >= 1, "the zone covers its own city at least")
+  T.near(on.CoverageDelta, (SDP_UI.MAX_WEIGHT - 1) * on.Covered, 1e-9, "weight x newly covered cities")
+  local rows = 0
+  for _, row in ipairs(SDP_Panel.State().ResultRows) do
+    if row.Detail:find("LOC_SDP_COVERAGE_ROW", 1, true) then
+      rows = rows + 1
+      T.ok(row.ToolTip:find("LOC_SDP_COVERAGE_TIP", 1, true) ~= nil, "the row's tooltip names the cities")
+    end
+  end
+  T.eq(rows, 1, "the industrial zone's row")
+  T.ok(UI_Mock.Controls.Summary:GetToolTipString():find("LOC_SDP_COVERAGE_GROUP", 1, true) ~= nil,
+    "the summary's tooltip lists the newly covered cities")
+  -- With a wonder the city goes to SDP_Multi: the weight goes with it.
+  SDP_Panel.SetWonder("BUILDING_STONEHENGE", true)
+  T.eq(SDP_Panel.Solve(), nil, "a task")
+  local wonder = SDP_Panel.RunTask(500)
+  T.ok(wonder and wonder.Ok, "result: " .. tostring(wonder and wonder.Error))
+  T.eq(wonder.Session.Request.Coverage, SDP_UI.MAX_WEIGHT - 1, "the weight goes with the wonder request")
+  T.ok(wonder.Covered ~= nil, "coverage figures")
+  local keys = {}
+  for _, target in ipairs(wonder.Session.Coverage.Targets) do keys[#keys + 1] = target.Key end
+  local want = { "C1" }
+  for _, site in ipairs(SDP_Coverage.SiteTargets(0)) do want[#want + 1] = site.Key end
+  T.ok(#want >= 2, "city-center pins on the map")
+  T.same(keys, want, "the city and every city-center pin are cities to cover")
+  SDP_Panel.SetWonder("BUILDING_STONEHENGE", false)
+  for _ = 1, 3 do cell.Less:Click() end
+  T.eq(SDP_Panel.State().Weights.COVERAGE, 0, "back to 0")
+  for _, d in ipairs(SDP_Rules.PlannableDistricts(0)) do SDP_Panel.SetState(d.Type, SDP_UI.DefaultState(d)) end
+  SDP_Panel.SetTier("STANDARD")
+end)
+
+-- Through the chip's own callback, as a click would.
+test("several cities tab: a click on a chip switches a city-center pin and a city off and on", function()
   SDP_Panel.SelectTab("MULTI")
   local multi = SDP_Panel.Multi
   multi.Refresh()
-  local function Row(kind)
-    for _, c in ipairs(multi.State().View.Cities) do
-      if c.Kind == kind then return c end
-    end
-  end
-  local site = Row("SITE")
-  T.ok(site and site.Included, "a city-center pin, on")
-  local key = site.Key
-  site.Check:Toggle()
   local function Find(k)
     for _, c in ipairs(multi.State().View.Cities) do
       if c.Key == k then return c end
     end
   end
-  T.eq(Find(key).Included, false, "unticked: off")
-  T.eq(Find(key).Check:IsChecked(), false, "the box stays unticked")
+  local site = nil
+  for _, c in ipairs(multi.State().View.Cities) do
+    if c.Kind == "SITE" and c.Included and site == nil then site = c end
+  end
+  T.ok(site ~= nil, "a city-center pin, on")
+  local key = site.Key
+  site.Chip:Click()
+  T.eq(Find(key).Included, false, "clicked: off")
   for _, part in ipairs(multi.Participants()) do T.ok(part.Key ~= key, "takes no part") end
-  Find(key).Check:Toggle()
-  T.eq(Find(key).Included, true, "ticked again: on")
-  local city = Row("CITY")
-  local on = city.On
-  city.Check:Toggle()
-  T.eq(Row("CITY").On, not on, "a city switched")
-  Row("CITY").Check:Toggle()
-  T.eq(Row("CITY").On, on, "and back")
+  Find(key).Chip:Click()
+  T.eq(Find(key).Included, true, "clicked again: on")
+  local city = Find("C1")
+  local on = city.Included
+  city.Chip:Click()
+  T.eq(Find("C1").Included, not on, "a city switched")
+  Find("C1").Chip:Click()
+  T.eq(Find("C1").Included, on, "and back")
 end)
 
 -- City-center pins from the sites tab are named with their numbers like

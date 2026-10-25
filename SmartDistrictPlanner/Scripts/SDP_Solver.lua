@@ -5,7 +5,8 @@
 -- (optimal), otherwise a model-ranked shortlist, local search and kicks;
 -- every value is exact DMT through SDP_Board.
 -- Include order: MapTacks, SDP_Rules, SDP_City, SDP_Overlay, SDP_Tiers,
--- SDP_Task, SDP_Board, SDP_Land, SDP_Search, SDP_Solver.
+-- SDP_Task, SDP_Board, SDP_Land, SDP_Appeal, SDP_Coverage, SDP_Search,
+-- SDP_Solver.
 
 SDP_Solver = {}
 
@@ -36,6 +37,9 @@ Session.__index = Session
 --                        itself when the city needs them (SDP_City.NeedsAuto:
 --                        an aqueduct without fresh water, a dam on floodplains)
 --   Distance             distance cost weight (0 or nil: off; SDP_City.DistanceCosts)
+--   Coverage             weight 0..3 of the coverage part (SDP_Coverage, design
+--                        19.7): the player's other cities and every city-center
+--                        pin; 0 or nil: off, no model at all
 --   Remind               find the woods and rainforest each solution's
 --                        districts take adjacency from (SDP_Remind)
 --   Weights              { [yield] = 0..3 } for the five adjacency yields; YIELD_FOOD
@@ -85,9 +89,9 @@ function SDP_Solver.NewSession(request, scan)
       end
     end
   end
-  -- Districts the city needs (feedback item 4), unless built or pinned.
-  local pinned = {}
-  for _, pin in ipairs(scan.Pins) do pinned[(pin.Icon or ""):gsub("^ICON_", "")] = true end
+  -- Districts the city needs (feedback item 4), unless built or pinned for
+  -- it (a neighbour's pin is not this city's, issue 64).
+  local pinned = SDP_City.TackedDistricts(scan)
   self.Auto = {}
   for _, d in ipairs(plannable) do
     if request.Auto and request.Auto[d.Type] and not seen[d.Type] and not status[d.Type] and not pinned[d.Type]
@@ -184,6 +188,12 @@ function SDP_Solver.NewSession(request, scan)
   local workable = {}
   for _, index in ipairs(SDP_Land.Workable(scan)) do workable[index] = true end
 
+  -- Coverage part (design 19.7): off (no model at all) unless a weight is given.
+  if (request.Coverage or 0) > 0 then
+    self.Coverage = SDP_Coverage.New({ PlayerID = playerID, Weight = request.Coverage,
+      Sites = SDP_Coverage.SiteTargets(playerID), IgnorePins = SDP_City.ScanOptions(request).ignorePins })
+  end
+
   local slots = {}
   for s, districtType in ipairs(districts) do slots[s] = { Key = districtType, Type = "DISTRICT", Group = 1 } end
   for _, districtType in ipairs(pool) do slots[#slots + 1] = { Key = districtType, Type = "DISTRICT", Group = 1, Optional = true } end
@@ -191,7 +201,7 @@ function SDP_Solver.NewSession(request, scan)
     PlayerID = playerID, Board = self.Board, Weights = self.Weights, Params = params,
     Candidates = scan.Candidates, Slots = slots, Lands = lands,
     Pools = pick > 0 and { [1] = pick } or nil,
-    Costs = SDP_City.DistanceCosts(playerID, scan.Candidates, request.Distance),
+    Costs = SDP_City.DistanceCosts(playerID, scan.Candidates, request.Distance), Coverage = self.Coverage,
     Alternatives = params.Solutions or 3, Apart = apart, Exclusive = SDP_Rules.Exclusive(),
     Appeal = { Fixed = self.Fixed, Weights = request.Weights, Workable = workable,
       Cities = { [1] = { Housing = SDP_Land.ScanHousing(scan), Target = population } },
@@ -251,6 +261,7 @@ function Session:PlanFor(layout)
       Unowned = c.Unowned, RemoveTech = c.RemoveTech, Swap = c.Swap, ClearFirst = c.ClearFirst,
       Auto = self.Auto[search.Types[m]], Picked = search.Optional[m],
       Appeal = a.Appeal, Housing = a.Housing, Tiles = a.Tiles, TilesCounted = a.TilesCounted,
+      Reach = self.Coverage and self.Coverage:Reach(search.Types[m], c.X, c.Y) or nil,
     }
     if search.Optional[m] then out.Picked[#out.Picked + 1] = search.Types[m] end
   end
@@ -274,7 +285,11 @@ function Session:PlanFor(layout)
   out.Adjacency = final.Total - base.Total
   out.LandDelta = search:LandDelta(layout)
   out.CostDelta = search:CostDelta(layout)
-  out.Gain = out.Adjacency + out.LandDelta + out.CostDelta + (out.AppealDelta or 0)
+  out.CoverageDelta = search:CoverageDelta(layout)
+  if self.Coverage ~= nil then
+    out.Covered, out.CoveredBy = self.Coverage:Summary(search:CoveragePairs(layout))
+  end
+  out.Gain = out.Adjacency + out.LandDelta + out.CostDelta + out.CoverageDelta + (out.AppealDelta or 0)
   if self.Request.Remind then
     local plan = {}
     for n, p in ipairs(out.Plan) do plan[n] = { Type = p.Type, Kind = "DISTRICT", X = p.X, Y = p.Y } end
@@ -289,9 +304,12 @@ end
 -- Returns {
 --   Ok, Error,
 --   Solutions   best first, each { Plan, Neighbours, Picked (types chosen from
---               the pool), Gain, Adjacency, LandDelta, CostDelta, AppealDelta, Total, Remind, Together }
+--               the pool), Gain, Adjacency, LandDelta, CostDelta, CoverageDelta,
+--               Covered, CoveredBy, AppealDelta, Total, Remind, Together }
 --   and the best solution's fields at the top level:
---   Plan        { Type, X, Y, Index, Yields, ToolTip, Score, Auto, Picked, and for a
+--   Plan        { Type, X, Y, Index, Yields, ToolTip, Score, Auto, Picked, Reach
+--               (coverage on, a type with a reach: keys of the targets it newly
+--               covers, "C<city ID>" or "S<plot index>"), and for a
 --               district that depends on appeal: Appeal (of its plot), Housing,
 --               Tiles (a preserve's yields on the workable plots around it) }
 --   Unplaced    { Type, Reason, Auto, Other }: NOT_AVAILABLE (not this civ's), BUILT,
@@ -300,9 +318,11 @@ end
 --               the district it excludes), NO_LEGAL_PLOT, or NO_FREE_PLOT
 --               (the others took its plots: no layout places them all)
 --   Gain        adjacency gain over the baseline plus the land part (<= 0)
---               plus the distance cost (<= 0) plus the appeal part
+--               plus the distance cost (<= 0) plus the coverage part plus the appeal part
 --   Adjacency   adjacency gain alone; LandDelta, CostDelta: the land part and
---               the distance cost (0 when off); AppealDelta: the appeal part
+--               the distance cost (0 when off); CoverageDelta: the coverage part
+--               (0 when off), Covered, CoveredBy: as for SDP_Multi (nil when off);
+--               AppealDelta: the appeal part
 --               (SDP_Appeal; nil when no district depends on appeal)
 --   ImprovementHousing  housing the city loses to districts built over its
 --               farms, pastures ... (SDP_Appeal.ImprovementHousing; negative,
@@ -324,7 +344,8 @@ function Session:Result()
   local base = self.Base
   local result = {
     Ok = true, Plan = {}, Unplaced = self.Unplaced, Neighbours = {}, Session = self, Solutions = {},
-    Baseline = base.Total, Total = base.Total, Gain = 0, Adjacency = 0, LandDelta = 0, CostDelta = 0, Stats = stats,
+    Baseline = base.Total, Total = base.Total, Gain = 0, Adjacency = 0, LandDelta = 0, CostDelta = 0, CoverageDelta = 0,
+    Stats = stats,
   }
   if search.K > 0 and search.BestLayout == nil then
     result.Ok, result.Error = false, "NO_LEGAL_LAYOUT"
@@ -334,8 +355,8 @@ function Session:Result()
       result.Solutions[#result.Solutions + 1] = self:PlanFor(entry.Layout)
     end
     local best = result.Solutions[1]
-    for _, key in ipairs({ "Plan", "Neighbours", "Total", "Adjacency", "LandDelta", "CostDelta", "AppealDelta", "ImprovementHousing", "Gain", "Remind",
-      "Picked", "Together" }) do
+    for _, key in ipairs({ "Plan", "Neighbours", "Total", "Adjacency", "LandDelta", "CostDelta", "CoverageDelta", "Covered",
+      "CoveredBy", "AppealDelta", "ImprovementHousing", "Gain", "Remind", "Picked", "Together" }) do
       result[key] = best[key]
     end
     -- Required slots the best layout leaves out (Search:PlaceWhatFits; the

@@ -1,5 +1,5 @@
--- Offline: SDP_Coverage, the coverage part of the multi-city objective
--- (docs/multicity-design.md section 19).
+-- Offline: SDP_Coverage, the coverage part of the multi-city and
+-- single-city objective (docs/multicity-design.md section 19).
 local test, T = ...
 
 include("SDP_Rules")
@@ -217,7 +217,10 @@ test("several cities tab: the coverage weight is off by default and goes into th
   SDP_Panel.SelectTab("MULTI")
   local multi = SDP_Panel.Multi
   multi.Refresh()
+  -- The capital alone (the default group would take cities 2 and 3 too).
   multi.SetExisting(1, true)
+  multi.SetExisting(2, false)
+  multi.SetExisting(3, false)
   multi.SetSelected(IZ, true)
   T.eq(multi.Request().Coverage, 0, "off by default")
   multi.SetWeight("COVERAGE", 2)
@@ -235,4 +238,110 @@ test("several cities tab: the coverage weight is off by default and goes into th
     if row.Detail:find("LOC_SDP_COVERAGE_ROW", 1, true) then rows = rows + 1 end
   end
   T.eq(rows, 1, "the industrial zone's row shows its reach")
+end)
+
+-- The single-city tab (issue 61, design 19.7): SDP_Solver with the same model.
+local function SingleRequest(coverage, extra)
+  local r = { PlayerID = 0, CityID = 1, Tier = "STANDARD", Weights = ONES, Land = false,
+    Districts = { IZ, "DISTRICT_CAMPUS" }, Coverage = coverage }
+  for k, v in pairs(extra or {}) do r[k] = v end
+  return r
+end
+
+test("single city: weight 0 or none gives exactly the plan without the coverage part", function()
+  NewWorld()
+  local none = SDP_Solver.Solve(SingleRequest(nil))
+  NewWorld()
+  local zero = SDP_Solver.Solve(SingleRequest(0))
+  T.ok(none.Ok and zero.Ok, "solved")
+  T.eq(#zero.Solutions, #none.Solutions, "as many solutions")
+  for n, s in ipairs(none.Solutions) do
+    T.same(zero.Solutions[n].Plan, s.Plan, "same plan, solution " .. n)
+    T.eq(zero.Solutions[n].Gain, s.Gain, "same gain, solution " .. n)
+  end
+  T.eq(zero.Stats.Calls, none.Stats.Calls, "same DMT calls")
+  T.eq(zero.Covered, nil, "no coverage figures when off")
+  T.eq(zero.CoverageDelta, 0, "no coverage part")
+  T.eq(Find(zero, IZ).Reach, nil, "no reach on the rows when off")
+end)
+
+test("single city: the coverage part moves the industrial zone towards the other city", function()
+  NewWorld()
+  local off = SDP_Solver.Solve(SingleRequest(nil))
+  NewWorld()
+  local on = SDP_Solver.Solve(SingleRequest(3))
+  T.ok(off.Ok and on.Ok, "solved: " .. tostring(off.Error) .. " " .. tostring(on.Error))
+  T.ok(not on.Stats.Mismatch, "board and full evaluation agree")
+  T.near(on.Gain, on.Adjacency + on.LandDelta + on.CoverageDelta + on.CostDelta + (on.AppealDelta or 0), 1e-9,
+    "the gain adds up")
+  T.eq(on.CoverageDelta, 3 * on.Covered, "weight x newly covered cities")
+  local model = SDP_Coverage.New({ PlayerID = 0, Weight = 3 })
+  local offZone, onZone = Find(off, IZ), Find(on, IZ)
+  local offCovered = #model:List(IZ, offZone.Index, offZone.X, offZone.Y)
+  print(("single, without coverage: zone at %d,%d covers %d; weight 3: %d,%d covers %d, adjacency %+g -> %+g"):format(
+    offZone.X, offZone.Y, offCovered, onZone.X, onZone.Y, on.Covered, off.Adjacency, on.Adjacency))
+  T.ok(Map.GetPlotDistance(offZone.X, offZone.Y, 11, 5) > 6, "without coverage the zone does not reach city 2")
+  T.ok(Map.GetPlotDistance(onZone.X, onZone.Y, 11, 5) <= 6, "with it, it does: " .. onZone.X .. "," .. onZone.Y)
+  T.ok(on.Gain >= off.Adjacency + 3 * offCovered - 1e-9, "at least as good under its own objective")
+  T.same(onZone.Reach, Within(model, onZone.X, onZone.Y, 6), "the row lists the newly covered cities")
+  T.eq(Find(on, "DISTRICT_CAMPUS").Reach, nil, "a campus has no reach")
+  T.eq(on.CoveredBy[1].Group, IZ, "by group")
+  T.eq(#on.CoveredBy[1].Keys, on.Covered, "the newly covered cities")
+  for _, s in ipairs(on.Solutions) do
+    T.near(s.Gain, s.Adjacency + s.LandDelta + s.CoverageDelta + s.CostDelta + (s.AppealDelta or 0), 1e-9,
+      "every solution adds up")
+  end
+  NewWorld()
+  T.same(SDP_Solver.Solve(SingleRequest(3)).Plan, on.Plan, "deterministic")
+end)
+
+test("single city: city-center pins count, cities covered already do not, rows count only new ones", function()
+  local w = NewWorld({ pins = { { 8, 9, "ICON_DISTRICT_CITY_CENTER", "A" } } })
+  local site = "S" .. Map.GetPlotIndex(8, 9)
+  local model = SDP_Coverage.New({ PlayerID = 0, Weight = 1, Sites = SDP_Coverage.SiteTargets(0) })
+  local keys = {}
+  for _, target in ipairs(model.Targets) do keys[#keys + 1] = target.Key end
+  T.same(keys, { "C1", "C2", "C3", site }, "every city, then every city-center pin")
+  local r = SDP_Solver.Solve(SingleRequest(3))
+  T.ok(r.Ok, tostring(r.Error))
+  local zone = Find(r, IZ)
+  local listed = false
+  for _, key in ipairs(zone.Reach) do
+    if key == site then listed = true end
+  end
+  T.eq(listed, Map.GetPlotDistance(zone.X, zone.Y, 8, 9) <= 6, "the pin is a city to cover when in reach")
+  -- City 2 builds an industrial zone: covered already, neither counted nor listed.
+  w:AddDistrict(2, IZ, 12, 5, true)
+  local r2 = SDP_Solver.Solve(SingleRequest(3))
+  local zone2 = Find(r2, IZ)
+  for _, key in ipairs(zone2.Reach) do T.ok(key ~= "C2", "city 2 is not listed on the row") end
+  for _, key in ipairs(r2.CoveredBy[1] and r2.CoveredBy[1].Keys or {}) do T.ok(key ~= "C2", "nor counted") end
+  local m2 = SDP_Coverage.New({ PlayerID = 0, Weight = 1, Sites = SDP_Coverage.SiteTargets(0) })
+  local before = {}
+  for _, key in ipairs(Within(m2, 12, 5, 6)) do before[key] = true end
+  T.ok(before.C2, "the built zone covers city 2")
+  T.same(m2:Reach(IZ, 7, 5), Within(m2, 7, 5, 6, before), "Reach: within range and not covered before")
+end)
+
+test("single city: picking from the pool counts coverage too", function()
+  -- Count 1 from { campus, industrial zone }: the pick is the best under the
+  -- whole objective, coverage included.
+  local function Pick(coverage)
+    NewWorld()
+    return SDP_Solver.Solve(SingleRequest(coverage, { Districts = {}, Pool = { "DISTRICT_CAMPUS", IZ }, Count = 1 }))
+  end
+  local function Must(districtType, coverage)
+    NewWorld()
+    return SDP_Solver.Solve(SingleRequest(coverage, { Districts = { districtType } }))
+  end
+  local campus, zone, zoneOff = Must("DISTRICT_CAMPUS", 3), Must(IZ, 3), Must(IZ, nil)
+  local picked, pickedOff = Pick(3), Pick(nil)
+  T.ok(picked.Ok and pickedOff.Ok, "solved")
+  T.ok(zone.Covered > 0, "an industrial zone covers a city")
+  local best = math.max(campus.Gain, zone.Gain)
+  T.near(picked.Gain, best, 1e-9, "the pick is the better of the two under the coverage objective")
+  T.near(pickedOff.Gain, math.max(campus.Gain, zoneOff.Gain), 1e-9, "and without it, the better by adjacency")
+  T.eq(picked.Picked[1], zone.Gain > campus.Gain and IZ or "DISTRICT_CAMPUS", "the one picked")
+  print(("pick: campus %+g, industrial zone %+g (%+g with coverage 3): picked %s, without coverage %s"):format(
+    campus.Gain, zoneOff.Gain, zone.Gain, picked.Picked[1], pickedOff.Picked[1]))
 end)

@@ -70,7 +70,7 @@ local function BuildGameInfo()
 
   gi.Features = Table({
     { FeatureType = "FEATURE_FOREST", Name = "LOC_FEATURE_FOREST", Removable = true, Settlement = true, Yields = Yields(0, 1),
-      Appeal = 1 },
+      Appeal = 1, AddCivic = "CIVIC_CONSERVATION" },
     { FeatureType = "FEATURE_JUNGLE", Name = "LOC_FEATURE_JUNGLE", Removable = true, Settlement = true, Yields = Yields(1),
       Appeal = -1 },
     { FeatureType = "FEATURE_MARSH", Name = "LOC_FEATURE_MARSH", Removable = true, Settlement = true, Yields = Yields(1),
@@ -97,11 +97,15 @@ local function BuildGameInfo()
       PrereqTech = "TECH_BRONZE_WORKING", Yields = Yields(0, 0, 0, 1) },
     { ResourceType = "RESOURCE_HORSES", Name = "LOC_RESOURCE_HORSES", ResourceClassType = "RESOURCECLASS_STRATEGIC", Happiness = 0,
       Yields = Yields(1, 1) },
+    -- Camps (issue 51): deer take only a camp.
+    { ResourceType = "RESOURCE_DEER", Name = "LOC_RESOURCE_DEER", ResourceClassType = "RESOURCECLASS_BONUS", Happiness = 0,
+      Yields = Yields(0, 1) },
   }, "ResourceType")
   gi.Resource_Harvests = Table({
     { ResourceType = "RESOURCE_WHEAT", YieldType = "YIELD_FOOD", Amount = 20 },
     { ResourceType = "RESOURCE_COPPER", YieldType = "YIELD_GOLD", Amount = 40 },
     { ResourceType = "RESOURCE_STONE", YieldType = "YIELD_PRODUCTION", Amount = 20 },
+    { ResourceType = "RESOURCE_DEER", YieldType = "YIELD_PRODUCTION", Amount = 20 },
   })
   gi.Resource_Consumption = Table({
     { ResourceType = "RESOURCE_IRON", ImprovedExtractionRate = 2 },
@@ -119,10 +123,15 @@ local function BuildGameInfo()
   gi.Improvements = Table({
     { ImprovementType = "IMPROVEMENT_FARM", Name = "LOC_IMPROVEMENT_FARM_NAME", Housing = 1, TilesRequired = 2 },
     { ImprovementType = "IMPROVEMENT_MINE", Name = "LOC_IMPROVEMENT_MINE_NAME", Appeal = -1 },
+    { ImprovementType = "IMPROVEMENT_CAMP", Name = "LOC_IMPROVEMENT_CAMP_NAME", Buildable = true, Domain = "DOMAIN_LAND" },
   }, "ImprovementType")
+  gi.Improvement_ValidResources = Table({
+    { ImprovementType = "IMPROVEMENT_CAMP", ResourceType = "RESOURCE_DEER" },
+  })
   gi.Civics = Table({
     { CivicType = "CIVIC_RECORDED_HISTORY", Name = "LOC_CIVIC_RECORDED_HISTORY_NAME", EraType = "ERA_CLASSICAL" },
     { CivicType = "CIVIC_GAMES_RECREATION", Name = "LOC_CIVIC_GAMES_RECREATION_NAME", EraType = "ERA_CLASSICAL" },
+    { CivicType = "CIVIC_CONSERVATION", Name = "LOC_CIVIC_CONSERVATION_NAME", EraType = "ERA_MODERN" },
   }, "CivicType")
 
   local function District(t, extra)
@@ -390,6 +399,7 @@ function World.New(spec)
         Domain = "DOMAIN_LAND" },
       { ImprovementType = "IMPROVEMENT_PASTURE", Name = "LOC_IMPROVEMENT_PASTURE_NAME", Buildable = true,
         Domain = "DOMAIN_LAND" },
+      { ImprovementType = "IMPROVEMENT_CAMP", Name = "LOC_IMPROVEMENT_CAMP_NAME", Buildable = true, Domain = "DOMAIN_LAND" },
     }, "ImprovementType")
     gi.Improvement_YieldChanges = Table({
       { ImprovementType = "IMPROVEMENT_FARM", YieldType = "YIELD_FOOD", YieldChange = 1 },
@@ -414,7 +424,17 @@ function World.New(spec)
       { ImprovementType = "IMPROVEMENT_FARM", ResourceType = "RESOURCE_WHEAT" },
       { ImprovementType = "IMPROVEMENT_MINE", ResourceType = "RESOURCE_COPPER" },
       { ImprovementType = "IMPROVEMENT_PASTURE", ResourceType = "RESOURCE_HORSES" },
+      { ImprovementType = "IMPROVEMENT_CAMP", ResourceType = "RESOURCE_DEER" },
     })
+  end
+  -- A wonder that must be next to a camp, as the Temple of Artemis (issue
+  -- 51), on request: added last, so the other rows keep their indices.
+  if spec.campWonder then
+    local rows = {}
+    for row in gi.Buildings() do rows[#rows + 1] = row end
+    rows[#rows + 1] = { BuildingType = "BUILDING_TEMPLE_ARTEMIS", Name = "LOC_BUILDING_TEMPLE_ARTEMIS_NAME", IsWonder = true,
+      Cost = 180, PrereqTech = "TECH_IRRIGATION", AdjacentImprovement = "IMPROVEMENT_CAMP" }
+    gi.Buildings = Table(rows, "BuildingType")
   end
   -- A trait that replaces a table row with a bonus only DMT knows, as
   -- Japan's: spec.traitNeighbour = { [DistrictType] = { YieldType, Change, YieldChangeId } }
@@ -488,6 +508,8 @@ function World.New(spec)
   function Plot:IsImpassable() return self.terrain.Impassable == true or (self.feature ~= nil and self.feature.Impassable == true) end
   function Plot:GetAppeal() return self.appeal end
   function Plot:GetImprovementType() return self.improvement and self.improvement.Index or -1 end
+  function Plot:IsImprovementPillaged() return self.improvement ~= nil and self.pillaged == true end
+  function Plot:HasFeatureBeenAdded() return self.feature ~= nil and self.planted == true end
   function Plot:IsCoastalLand()
     if self:IsWater() then return false end
     for dir = 0, 5 do
@@ -524,11 +546,13 @@ function World.New(spec)
   for _, s in ipairs(spec.unrevealed or {}) do GetPlot(XY(s)).revealed = false end
   for _, a in ipairs(spec.appeal or {}) do GetPlot(a[1], a[2]).appeal = a[3] end
   for _, a in ipairs(spec.improvements or {}) do GetPlot(a[1], a[2]).improvement = gi.Improvements[a[3]] end
+  for _, s in ipairs(spec.pillaged or {}) do GetPlot(XY(s)).pillaged = true end
+  for _, s in ipairs(spec.planted or {}) do GetPlot(XY(s)).planted = true end
 
   -- Players, cities, districts --------------------------------------------
   local players, cities, cityList = {}, {}, {}
   local function NewPlayer(id)
-    local p = { id = id, cities = {}, techs = {}, resources = {} }
+    local p = { id = id, cities = {}, techs = {}, civics = {}, resources = {} }
     players[id] = p
     return p
   end
@@ -536,6 +560,7 @@ function World.New(spec)
   NewPlayer(1)
   NewPlayer(62) -- a city-state
   for _, t in ipairs(spec.techs or {}) do players[0].techs[gi.Technologies[t].Index] = true end
+  for _, c in ipairs(spec.civics or {}) do players[0].civics[gi.Civics[c].Index] = true end
   for r, amount in pairs(spec.playerResources or {}) do players[0].resources[gi.Resources[r].Index] = amount end
 
   local City = {}
@@ -722,6 +747,8 @@ function World.New(spec)
     elseif subject ~= nil and subject.Type == "DISTRICT" then f.district = subject.Key
     elseif subject ~= nil and subject.Type == "WONDER" then f.wonder = subject.Key
     end
+    if subject ~= nil and subject.Type == "IMPROVEMENT" then f.improvement = subject.Key
+    elseif plot.improvement ~= nil then f.improvement = plot.improvement.ImprovementType end
     if plot.feature ~= nil and plot.feature.NaturalWonder then f.naturalWonder = plot.feature.FeatureType
     elseif plot.feature ~= nil and f.district == nil and f.wonder == nil then f.feature = plot.feature.FeatureType
     end
@@ -805,6 +832,13 @@ function World.New(spec)
       if row.FlatOnly and plot.terrain.Hills then return false, "hills" end
       if row.RequiresRiver and not plot.river then return false, "river" end
       if row.AdjacentDistrict and not AdjacentTo(pid, plot.x, plot.y, row.AdjacentDistrict) then return false, "adjacent district" end
+      if row.AdjacentImprovement then
+        local found = false
+        for _, n in ipairs(Neighbours(plot.x, plot.y)) do
+          if Realized(pid, n).improvement == row.AdjacentImprovement then found = true end
+        end
+        if not found then return false, "adjacent improvement" end
+      end
     end
     return true, ""
   end
@@ -906,7 +940,7 @@ function World.New(spec)
         return { Members = function() return ipairs(all) end }
       end,
       GetTechs = function() return { HasTech = function(_, i) return p.techs[i] == true end } end,
-      GetCulture = function() return { HasCivic = function() return false end } end,
+      GetCulture = function() return { HasCivic = function(_, i) return p.civics[i] == true end } end,
       GetResources = function()
         return {
           GetResourceAmount = function(_, i) return p.resources[i] or 0 end,

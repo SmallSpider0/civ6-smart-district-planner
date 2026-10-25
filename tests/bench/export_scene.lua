@@ -275,7 +275,8 @@ function E.Scene(opts)
   local pins = {}
   for _, pin in ipairs(PlayerConfigurations[pid]:GetMapPins()) do
     local plot = Map.GetPlot(pin:GetHexX(), pin:GetHexY())
-    local lx, ly = plot and Local(plot)
+    local lx, ly = nil, nil
+    if plot ~= nil then lx, ly = Local(plot) end -- not "plot and Local(plot)": that keeps one value
     if lx ~= nil then pins[#pins + 1] = { x = lx, y = ly, icon = pin:GetIconName(), name = pin:GetName() } end
   end
 

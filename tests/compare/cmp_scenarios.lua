@@ -186,6 +186,33 @@ for n, entry in ipairs(SMALL_MULTI) do
   })
 end
 
+-- A wonder that must stand next to an improvement (issue 51): the Temple of
+-- Artemis next to a Camp. One city, mid game, camp resources (deer, furs,
+-- ivory, truffles as the biome allows) placed near the city and no camp
+-- built yet, so a planner has to plan one with the wonder; half the scenes
+-- also want the Great Library (next to a campus). "WAnn-civ-biome".
+local ARTEMIS = {
+  { "rome", "temperate", 2 }, { "russia", "tundra", 2 }, { "brazil", "jungle", 1 }, { "germany", "temperate", 1 },
+  { "japan", "coastal", 2 }, { "korea", "highland", 1 }, { "maya", "jungle", 2 }, { "netherlands", "temperate", 1 },
+}
+local aseed = 90000
+for n, entry in ipairs(ARTEMIS) do
+  local civKey, biome, camps = entry[1], entry[2], entry[3]
+  aseed = aseed + 17
+  local civ = CIVS[civKey]
+  local req = Request("mid", biome, civKey)
+  local wonders = { "BUILDING_TEMPLE_ARTEMIS" }
+  if n % 2 == 0 then wonders[#wonders + 1] = "BUILDING_GREAT_LIBRARY" end
+  Add({
+    id = string.format("WA%02d-%s-%s", n, civKey, biome), kind = "single", title = civ[3] .. "; Temple of Artemis",
+    seed = aseed, biome = biome, civKey = civKey, civ = civ[1], leader = civ[2], stage = "mid", cities = 1,
+    districts = req.districts, built = { req.built }, population = req.population, wantWonders = wonders,
+    campResources = camps, set = "WA",
+    runs = { { planner = "sdp", variant = "STANDARD" }, { planner = "sdp", variant = "STANDARD_LAND" },
+      { planner = "amt", variant = "" }, { planner = "ep", variant = "" } },
+  })
+end
+
 -- Weight profiles (18.1, item 4): the development single-city situations
 -- with one yield weighted 3 and the others 1 ("S01-...~SCI"); the judge
 -- weighs the same way. The competitors get the same weights injected.

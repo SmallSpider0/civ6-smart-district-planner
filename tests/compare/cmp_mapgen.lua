@@ -715,6 +715,52 @@ function CmpMapgen.Generate(scn)
     end
   end
 
+  -- Camp resources near the first city, no camp built near it (issue 51:
+  -- the Temple of Artemis scenes, scn.campResources tiles two or three
+  -- rings out). Only these scenes draw from the generator here.
+  if scn.campResources then
+    local camp = {}
+    for row in gi.Improvement_ValidResources() do
+      if row.ImprovementType == "IMPROVEMENT_CAMP" then camp[#camp + 1] = row.ResourceType end
+    end
+    table.sort(camp)
+    local function Fits(r, p)
+      if p.f ~= nil then
+        for row in gi.Resource_ValidFeatures({ ResourceType = r }) do
+          if row.FeatureType == p.f then return true end
+        end
+        return false
+      end
+      for row in gi.Resource_ValidTerrains({ ResourceType = r }) do
+        if row.TerrainType == p.t then return true end
+      end
+      return false
+    end
+    local c = cities[1]
+    local cIdx = Idx(c.x, c.y)
+    for i = 0, W * H - 1 do
+      local p = spec.plots[i + 1]
+      if p.imp == "IMPROVEMENT_CAMP" and Dist(i, cIdx) <= 5 then p.imp = nil end
+    end
+    local placed = 0
+    for i = 0, W * H - 1 do
+      local p = spec.plots[i + 1]
+      local d = Dist(i, cIdx)
+      if placed < scn.campResources and (d == 2 or d == 3) and IsLand(p) and not IsMountain(p) and not occupied[i]
+          and p.r == nil and p.imp == nil and not (p.f and gi.Features[p.f] and gi.Features[p.f].NaturalWonder) then
+        local options = {}
+        for _, r in ipairs(camp) do
+          if Fits(r, p) then options[#options + 1] = r end
+        end
+        if #options > 0 and rng() < 0.3 then
+          p.r = options[rng(#options)]
+          p.rc = 1
+          placed = placed + 1
+        end
+      end
+    end
+  end
+
   -- Unexplored tiles: far tiles the player has not seen yet.
   if scn.hidden then
     for i = 0, W * H - 1 do

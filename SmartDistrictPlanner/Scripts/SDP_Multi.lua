@@ -31,6 +31,7 @@ SDP_Multi = {}
 
 SDP_Multi.MAX_CITIES = 8 -- participants, new and existing
 SDP_Multi.NEAR = 7       -- existing cities this close to a new city take part by default
+SDP_Multi.DEFAULT_CITIES = 4 -- the Several cities tab's default group (DefaultGroup, issue 63)
 
 local Copy = SDP_Search.Copy
 
@@ -46,6 +47,73 @@ end
 -- The planned cities: SDP_City.Sites.
 function SDP_Multi.Sites(playerID)
   return SDP_City.Sites(playerID)
+end
+
+-- The Several cities tab's default group around a city (issue 63): the
+-- player's cities and city-center pins, ordered by distance from the centre
+-- (ties: cities first, then by city ID or plot index). Starting from the
+-- centre, the nearest one within NEAR plots of a member joins, until
+-- DEFAULT_CITIES take part or nobody is that close. centerID: a city of the
+-- player; nil or not the player's: the capital (else the first city, else
+-- the first city-center pin). Returns { Center = entry or nil, Order =
+-- entries, Cities = { [cityID] = true }, Sites = { [site Key] = true } };
+-- an entry is { Kind = "CITY" | "SITE", Key, CityID, X, Y, Distance }.
+function SDP_Multi.DefaultGroup(playerID, centerID)
+  local entries = {}
+  local player = Players[playerID]
+  local capital = player:GetCities():GetCapitalCity()
+  local cities = {}
+  for _, city in player:GetCities():Members() do cities[#cities + 1] = city end
+  table.sort(cities, function(a, b) return a:GetID() < b:GetID() end)
+  local center = nil
+  for _, city in ipairs(cities) do
+    local e = { Kind = "CITY", Key = "C" .. city:GetID(), CityID = city:GetID(), X = city:GetX(), Y = city:GetY(),
+      Order = city:GetID() }
+    entries[#entries + 1] = e
+    if centerID ~= nil and city:GetID() == centerID then center = e end
+  end
+  if center == nil and capital ~= nil then
+    for _, e in ipairs(entries) do
+      if e.CityID == capital:GetID() then center = e end
+    end
+  end
+  for _, site in ipairs(SDP_Multi.Sites(playerID)) do
+    entries[#entries + 1] = { Kind = "SITE", Key = "S" .. site.Index, X = site.X, Y = site.Y, Order = site.Index }
+  end
+  if center == nil then center = entries[1] end
+  local group = { Center = center, Order = {}, Cities = {}, Sites = {} }
+  if center == nil then return group end
+  for _, e in ipairs(entries) do
+    e.Distance = Map.GetPlotDistance(center.X, center.Y, e.X, e.Y)
+    e.Rank = (e == center) and -1 or e.Distance -- the centre first, even with a pin on it
+  end
+  local order = {}
+  for _, e in ipairs(entries) do order[#order + 1] = e end
+  table.sort(order, function(a, b)
+    if a.Rank ~= b.Rank then return a.Rank < b.Rank end
+    if a.Kind ~= b.Kind then return a.Kind == "CITY" end
+    return a.Order < b.Order
+  end)
+  group.Order = order
+  local members = { center }
+  local taken = { [center.Key] = true }
+  while #members < SDP_Multi.DEFAULT_CITIES do
+    local found = nil
+    for _, e in ipairs(order) do
+      if found == nil and not taken[e.Key] then
+        for _, m in ipairs(members) do
+          if Map.GetPlotDistance(m.X, m.Y, e.X, e.Y) <= SDP_Multi.NEAR then found = e end
+        end
+      end
+    end
+    if found == nil then break end
+    members[#members + 1] = found
+    taken[found.Key] = true
+  end
+  for _, m in ipairs(members) do
+    if m.Kind == "CITY" then group.Cities[m.CityID] = true else group.Sites[m.Key] = true end
+  end
+  return group
 end
 
 -- Who takes part. options.Existing = { [cityID] = true | false } overrides
@@ -131,16 +199,6 @@ end
 local Session = {}
 Session.__index = Session
 
--- Districts of the player's type with an icon pin within a scan's range.
-local function PinnedDistricts(scan)
-  local pinned = {}
-  for _, pin in ipairs(scan.Pins) do
-    local key = (pin.Icon or ""):gsub("^ICON_", "")
-    pinned[key] = true
-  end
-  return pinned
-end
-
 -- Request = {
 --   PlayerID, Tier, Params (overrides, tests)
 --   Districts            default plan of every new city, and of existing cities
@@ -160,7 +218,8 @@ end
 --   Only                 { [cityID] = true }: exactly these cities (see Participants)
 --   Weights              as for SDP_Solver (five yields; YIELD_FOOD, FEATURE for land)
 --   Land                 count the land part (default true)
---   Coverage             weight 0..3 of the coverage part (default 0: off)
+--   Coverage             weight 0..3 of the coverage part (default 0: off); with
+--                        Only, every city-center pin is a target too
 --   AllowFeatureRemoval  default true
 --   IgnorePins           this mod's earlier pins being replaced (see SDP_Solver)
 --   Apart                false: no keeping partner districts apart (see SDP_Solver)
@@ -216,7 +275,10 @@ function SDP_Multi.NewSession(request)
     end
     local status = SDP_City.DistrictStatus(part.Scan, plannable)
     part.Present = SDP_City.PresentDistricts(part.Scan)
-    local pinned = (part.Kind == "CITY" and not (request.Plans and request.Plans[part.Key])) and PinnedDistricts(part.Scan) or {}
+    -- With the shared list an existing city skips what it has pinned
+    -- already; pins of other cities are only neighbours (issue 64).
+    local pinnedHere = SDP_City.TackedDistricts(part.Scan)
+    local pinned = (part.Kind == "CITY" and not (request.Plans and request.Plans[part.Key])) and pinnedHere or {}
     local plan, seen, kept = {}, {}, {}
     for _, districtType in ipairs(wanted) do
       if not seen[districtType] then
@@ -232,7 +294,10 @@ function SDP_Multi.NewSession(request)
         elseif excluded ~= nil then
           -- Two required districts one city cannot have: the first one asked stays.
           unplaced[#unplaced + 1] = { City = part.Key, Type = districtType, Reason = "EXCLUSIVE", Other = excluded }
-        elseif not pinned[districtType] then
+        elseif pinned[districtType] then
+          -- Shown as LOC_SDP_REASON_TACKED.
+          unplaced[#unplaced + 1] = { City = part.Key, Type = districtType, Reason = "TACKED" }
+        else
           plan[#plan + 1] = districtType
           kept[districtType] = true
         end
@@ -240,7 +305,6 @@ function SDP_Multi.NewSession(request)
     end
     -- Districts the city needs (feedback item 4), unless built or pinned.
     local auto = (request.Autos and request.Autos[part.Key]) or request.Auto or {}
-    local pinnedHere = PinnedDistricts(part.Scan)
     part.Auto = {}
     for _, d in ipairs(plannable) do
       if auto[d.Type] and not seen[d.Type] and not status[d.Type] and not pinnedHere[d.Type]
@@ -398,6 +462,11 @@ function SDP_Multi.NewSession(request)
   -- (no model at all) unless a weight is given.
   if (request.Coverage or 0) > 0 then
     local sites = {}
+    if request.Only then
+      -- The single-city tab (wonders): no new city takes part, every
+      -- city-center pin is a target, as without wonders (SDP_Solver).
+      sites = SDP_Coverage.SiteTargets(playerID)
+    end
     for _, part in ipairs(participants) do
       if part.Kind == "SITE" then sites[#sites + 1] = { Key = part.Key, X = part.X, Y = part.Y, Name = part.Name } end
     end
@@ -450,6 +519,14 @@ function SDP_Multi.NewSession(request)
     for _, subject in ipairs(fixed) do
       if subject.Type == "DISTRICT" then Mark(subject.Key) end
     end
+    -- Where the improvement a wonder needs next to it may go (issue 51):
+    -- tiles a participating city can come to own, or the player's own.
+    local ownable, taken = {}, {}
+    for _, part in ipairs(participants) do
+      for index in pairs(part.Scan.Reach.Reached) do ownable[index] = true end
+      for _, pin in ipairs(part.Scan.Pins) do taken[pin.Index] = true end
+    end
+    for _, subject in ipairs(fixed) do taken[Map.GetPlotIndex(subject.X, subject.Y)] = true end
     local seenWonder = {}
     for _, wonderType in ipairs(request.Wonders) do
       local w = byWonder[wonderType]
@@ -462,9 +539,16 @@ function SDP_Multi.NewSession(request)
         elseif w.AdjacentDistrict ~= nil and not present[w.AdjacentDistrict] then
           unplaced[#unplaced + 1] = { City = "WONDERS", Type = wonderType, Reason = "NEEDS_DISTRICT", District = w.AdjacentDistrict }
         else
-          slots[#slots + 1] = { Key = wonderType, Type = "WONDER", Group = wonderGroup, Allowed = everywhere,
-            Requires = w.AdjacentDistrict, Wonder = true }
-          slotCity[#slots] = nil
+          local support = w.AdjacentImprovement and SDP_Wonders.Support(playerID, w.AdjacentImprovement, candidates,
+            everywhere, ownable, taken, fixed) or nil
+          if support ~= nil and not support.Any then
+            unplaced[#unplaced + 1] = { City = "WONDERS", Type = wonderType, Reason = "NEEDS_IMPROVEMENT",
+              Other = w.AdjacentImprovement }
+          else
+            slots[#slots + 1] = { Key = wonderType, Type = "WONDER", Group = wonderGroup, Allowed = everywhere,
+              Requires = w.AdjacentDistrict, Support = support, Wonder = true }
+            slotCity[#slots] = nil
+          end
         end
       end
     end
@@ -952,7 +1036,18 @@ function Session:PlanFor(layout)
       out.Unplaced[#out.Unplaced + 1] = { City = part.Key, Type = "POOL", Reason = "POOL_SHORT", Count = short }
     end
   end
-  local final = SDP_Overlay.Evaluate(subjects, self.Fixed, self.Weights)
+  -- The improvements wonders need next to them (issue 51): on the map for
+  -- DMT, not scored, tacked with the wonder.
+  local supportAt, extra = {}, {}
+  local supportPlots = search:SupportPlots(layout)
+  for _, m in ipairs(search.SupportList or {}) do
+    local index = supportPlots[m]
+    if index ~= nil then
+      supportAt[m] = index
+      extra[#extra + 1] = search:SupportSubject(search.SupportOf[m].Type, index)
+    end
+  end
+  local final = SDP_Overlay.Evaluate(subjects, self.Fixed, self.Weights, extra)
   self.ExtraCalls = self.ExtraCalls + 2 * #subjects + #self.Fixed
   local appeal = {}
   if search.AppealModel ~= nil then out.AppealDelta = search:AppealDelta(layout, appeal) end
@@ -975,6 +1070,11 @@ function Session:PlanFor(layout)
       Reach = self.Coverage and self.Coverage:Reach(search.Types[m], c.X, c.Y) or nil,
       Picked = search.Optional[m], Auto = (not spec.Wonder) and self.Participants[p].Auto[search.Types[m]] or nil,
     }
+    if supportAt[m] ~= nil then
+      local support = Map.GetPlotByIndex(supportAt[m])
+      out.Plan[n].Support = { Type = search.SupportOf[m].Type, X = support:GetX(), Y = support:GetY(), Index = supportAt[m],
+        Unowned = support:GetOwner() ~= self.PlayerID or nil }
+    end
     out.Cities[p].Gain = out.Cities[p].Gain + item.Score
     if search.Optional[m] then
       local picked = out.Cities[p].Picked
@@ -1002,19 +1102,7 @@ function Session:PlanFor(layout)
   out.CoverageDelta = search:CoverageDelta(layout)
   if self.Coverage ~= nil then
     -- The newly covered cities by group (base district or wonder).
-    local byGroup, order = {}, {}
-    local newly = search:CoveragePairs(layout)
-    for _, id in ipairs(newly) do
-      local target, group = self.Coverage:Pair(id)
-      if byGroup[group] == nil then
-        byGroup[group] = { Group = group, Keys = {} }
-        order[#order + 1] = group
-      end
-      local keys = byGroup[group].Keys
-      keys[#keys + 1] = target.Key
-    end
-    out.Covered, out.CoveredBy = #newly, {}
-    for _, group in ipairs(order) do out.CoveredBy[#out.CoveredBy + 1] = byGroup[group] end
+    out.Covered, out.CoveredBy = self.Coverage:Summary(search:CoveragePairs(layout))
   end
   out.CostDelta = search:CostDelta(layout)
   out.Gain = out.Adjacency + out.LandDelta + out.CoverageDelta + out.CostDelta + (out.AppealDelta or 0)
@@ -1041,9 +1129,13 @@ end
 --                          (city, group) pairs newly covered, CoveredBy: { Group,
 --                          Keys (target keys) } by group (both nil when coverage is off)
 --                 Plan     { City (participant Key), Type, Kind, X, Y, Index, Yields, ToolTip, Score,
---                          Reach (keys of the targets within reach; coverage on, types with a reach) }
---                 Unplaced { City, Type, Reason } (NOT_AVAILABLE, BUILT, PINNED, MAX_PER_PLAYER,
---                          NEEDS_DISTRICT, NO_LEGAL_PLOT, NO_FREE_PLOT; City "WONDERS" for wonders)
+--                          Reach (keys of the targets it newly covers; coverage on, types with a reach) }
+--                 Unplaced { City, Type, Reason } (NOT_AVAILABLE, BUILT, PINNED, TACKED (an existing
+--                          city with the shared list has a pin of it, SDP_City.OwnPins), MAX_PER_PLAYER,
+--                          NEEDS_DISTRICT, NEEDS_IMPROVEMENT (Other: the improvement), NO_LEGAL_PLOT,
+--                          NO_FREE_PLOT; City "WONDERS" for wonders)
+--                 A wonder's plan entry may carry Support = { Type, X, Y, Index, Unowned }: the
+--                          improvement it needs next to it (issue 51), tacked with it
 --                 Cities   { Key, Kind, Name, X, Y, CityID, SiteNumber, Number (SDP_City city
 --                          number, the pins' name), Plan (types asked), Gain, Picked,
 --                          Together (unless Request.Apart is false: SDP_Rules.Together) }

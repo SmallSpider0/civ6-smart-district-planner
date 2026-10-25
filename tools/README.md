@@ -102,21 +102,25 @@ node tools/compare.mjs --probe FILE.lua                    # 在本 mod 的状�
   - `HS`/`HM`：留出集，同样的设计、新的种子（50000 起），改算法时不看，只用来复核结论（第 18.1 节第 5 条）。
   - `S…~SCI`、`~PROD`、`~FAITH`：开发集单城场景换一组产出权重（该项 ×3，其余 1），规划器和裁判都用这组权重（第 4 条）。
   - `W`：24 个中期单城场景，另要两个与地形相符的奇观（`request.wonders`；裁判用 DMT 判奇观合法性，报告 `wondersPlaced`）。
+  - `WA`：8 个中期单城场景，要阿耳忒弥斯神庙（需相邻营地，#51；双号场景另要大图书馆）。生成地图时在城市 2–3 环放一两个营地能建的资源（鹿、皮草、象牙、松露里地形允许的），附近不预建营地，规划器要把营地和神庙一起规划。方案里的改良设施（`placements` 里类型是改良的项）由裁判按规则表检查：资源可见且属于这种改良（有自己改良的资源只认那些），否则按地貌、地形；格上没有区域、奇观、改良、钉；是玩家的格（哪座城都行，引擎认别的本方城市的营地，`tests/bench/probe_camp.py`），或在某座城 3 环内的无主格。违规记作 `improvement_illegal`、`improvement_out_of_reach`、`occupied` 等；改良设施不计入 `placed`、地块损失和相邻加成。`summarize.py` 分组为 `wonders/improvement`。
   - `C`：12 个选城址场景（kind `sites`，`request.sites = { count = 2, distance = 8 }`），只比本模组与 EP。裁判 `JudgeSites` 不用任何一方的评分，独立计算合法性与间距、各城址最好 8 块地的产出、淡水、新的奢侈与战略资源种类、区域潜力（城址处打市中心钉后各区域在 DMT 下的最好相邻加成）、重叠格，`siteValue` = 地块产出 + 区域潜力。
   - `V`：12 个覆盖范围场景（multicity-design.md 19.5）：后期 3–4 座城，每座城自己一张清单（`scn.plans`，请求里是 `request.plans[城市 ID]`），只有一两座城要工业区、娱乐中心。本模组跑标准档、精细档各三种覆盖权重（变体 `STANDARD`、`STANDARD_COV1`、`STANDARD_COV3`、`FINE`…；`_COV<n>` 即多城页签的覆盖权重 n），AMT 用同样的逐城清单（它自带覆盖）；EP 不能逐城给清单，不参加。裁判按城检查"没要求的区域"和漏放，并独立计算覆盖：每类基础区域取通用建筑最大的 `RegionalRange`，数玩家城市被覆盖的（城市, 类别）个数，方案前后各一次（`coverageBefore`、`coverage`、`coverageGain`）。
   - `RS`/`RM`：真实集，从运行中的对局导出的场景文件（`tests/compare/scenes/<编号>.json`，`index.json` 列出；`tools/snapshot.py`，见下）。单城 `RS` 规划 `target` 那座城，多城 `RM` 只规划 `only` 里的城，每城各自的清单（`plans`）。后期的城人口往往放不下请求的特色区域，加载时把要规划的城的人口提到刚好够（已建加请求的特色区域，与裁判的名额规则相同；原人口记在 `savedPopulation`），和生成场景一样按“为以后规划”比较。只取规则库对应规则集的场景（`--ruleset`，默认 `RULESET_EXPANSION_2`）：迭起兴衰存档导出的 5 个场景用风云变幻的规则库核对，学院、工业区的加成不同，所以默认不参加。
+  - `RC`：真实集的覆盖范围版（#61）：与 `RS01`–`RS14` 同一座城、同一张清单，但用多城求解器只规划这一座城（`only` 只有它），窗口取 15 格（`--radius 15`），使工业区、娱乐中心能够到的 9 格内的本方城市，以及已经覆盖它们的区域都在场景里（导出时与游戏内逐城核对过原有覆盖）。跑 `STANDARD`、`STANDARD_COV1`、`STANDARD_COV3`：`node tools/compare.mjs -s '^RC' -p sdp --only sdp:STANDARD,sdp:STANDARD_COV1,sdp:STANDARD_COV3 --add sdp:STANDARD_COV1,sdp:STANDARD_COV3 -j 3 --out tests/compare/results/coverage_single.jsonl`。
+  - `RP`：玩家布局的覆盖范围版（#61）：`mac/baseline2` 上 `REF04`–`REF20` 参照场景里的每座参照城一个场景，从同一存档以 15 格窗口重新导出（`tools/covscene.py`，见下），只规划这一座城，清单是作者这座城的参照区域（已建的和地图钉），这些区域从城里拿掉、记在 `reference`；别的城（包括同一参照场景里的另一座）保持存档里的样子。迭起兴衰的存档按风云变幻的规则评判。结果在 `coverage_player.jsonl`，跑法同 `RC`（`-s '^RP'`）；作者布局的裁判分是其中 `ref:AUTHOR` 的行（`--rejudge` 打分）。只规划一座城的多城场景（`RC`、`RP`）在 `cmp_sdp.lua` 里按单城页签的做法传 `Only`，城市中心的地图钉不当作新城参加。
   - 对手各跑两种设置：权重与裁判一致（与场景权重相同）和它们面板的默认设置。
 - 模拟层缺的接口会记在输出的 `missingApi` 里；HavokScript 的类型标注在加载时去掉。AMT 的多城联合很慢（离线一局 3–40 分钟），全量对比建议在机器空闲时跑。每个工作线程的 JS 堆上限默认 1536 MB，AMT 的 4 城联合偶尔会超出（线程被终止，那次运行和同线程排队的一次都没有结果，日志里是 `ERR_WORKER_OUT_OF_MEMORY`）；用环境变量 `CMP_HEAP_MB=6144` 单独补跑缺的运行。
 - 交叉评分（第 18.1 节第 2 条）：`--crossscore` 对结果文件里每个方案，在新的 Lua 状态里调用 `tests/compare/cmp_cross_<打分方>.lua` 的 `CmpCross[打分方](request, plan, w)`，返回该对手自己的目标函数对这个方案的分数（`score`、空方案的 `baseline`、`gain`），写进 `row.cross`；`summarize.py` 以 `cross_amt`、`cross_ep` 字段汇总。
 - `summarize.py` 按场景集分组列表，并给出本模组标准档对每个对手的逐场景配对比较：胜/平/负、平均差及其 95% 自助法置信区间（2000 次确定性重抽样）、符号检验 p 值；城市总产出用本模组的"计入地块"一组比较。覆盖场景另列覆盖与相邻加成两项的帕累托比较（`pareto`：两项都不差且至少一项更好 / 更差 / 相同 / 各有胜负）和各设置的平均值。
 - 结果 JSON lines：方案、裁判分（`gain`、`violations`、`items`、城市总产出 `output = gain + worked`、漏放 `missing` 与其中有位置却没放的 `missingPlaceable`）、耗时、DMT 调用次数。`summarize.py` 以每个场景所有合法方案里的最高加成为参照，算质量、达到最高的比例、合法率、漏放、城市总产出、确定性（"#2" 重复运行与原运行比方案）。
-- 入库的结果（2026-10-20）：开发集 `full_rejudged.jsonl`（588 次运行）与 `land.jsonl`（本 mod 计入地块的 84 次）、留出集 `heldout.jsonl`、三组权重 `profiles_{SCI,PROD,FAITH}.jsonl`、奇观 `wonders_sdp_ep.jsonl` + `wonders_amt.jsonl`（本 mod 加入补放后重跑的是 `wonders_sdp_repair.jsonl`；v1.2.0 加了奇观同城规则后三个规划器重跑、用新裁判重评的是 `wonders_v120.jsonl`）、选城址 `sites.jsonl`，以及交叉评分 `*_cross.jsonl`；覆盖范围 `coverage_sdp.jsonl`、`coverage_amt.jsonl`。汇总时把后者放在后面，同名运行以后面的为准。
+- 入库的结果（2026-10-20）：开发集 `full_rejudged.jsonl`（588 次运行）与 `land.jsonl`（本 mod 计入地块的 84 次）、留出集 `heldout.jsonl`、三组权重 `profiles_{SCI,PROD,FAITH}.jsonl`、奇观 `wonders_sdp_ep.jsonl` + `wonders_amt.jsonl`（本 mod 加入补放后重跑的是 `wonders_sdp_repair.jsonl`；v1.2.0 加了奇观同城规则后三个规划器重跑、用新裁判重评的是 `wonders_v120.jsonl`）、选城址 `sites.jsonl`，以及交叉评分 `*_cross.jsonl`；覆盖范围 `coverage_sdp.jsonl`、`coverage_amt.jsonl`，真实场景的单城覆盖 `coverage_single.jsonl`（`RC`）。阿耳忒弥斯神庙场景 `wonders_artemis.jsonl`（`WA`，三个规划器，`node tools/compare.mjs -s '^WA' -j 2`）。汇总时把后者放在后面，同名运行以后面的为准。
 
 ## snapshot.py — 从真实对局导出对比场景
 
 ```bash
 python3 -I tools/snapshot.py export RS01-pangaea-japan-kyoto --save pangaea-gs --cities 65536   # 读存档后导出一座城的场景
 python3 -I tools/snapshot.py export RM01-pangaea-japan-3c --from pangaea-gs --cities 327682,393219,458756   # 已在对局里：只记存档名
+python3 -I tools/snapshot.py export RC01-pangaea-japan-kyoto --from pangaea-gs --cities 65536 --radius 15   # 覆盖版：一座城、多城求解器、大窗口
 python3 -I tools/snapshot.py check                 # 全部场景：离线世界里 DMT 的判定与游戏里导出的样本逐格比较
 python3 -I tools/snapshot.py list
 ```
@@ -125,6 +129,16 @@ python3 -I tools/snapshot.py list
 - 请求的区域：开发集的五种加娱乐中心，3 环内有海再加港口，减去该城已建的（特色区域按基础区域算）；多城每城一张清单。
 - `check` 用 `compare.mjs --probe tests/compare/cmp_scene_check.lua --arg <编号>` 在离线世界里重算样本，列出可放置性和加成的差异。
 - 窗口外的城拥有的格会丢掉归属（输出里的 `droppedOwned`）；按构造它们都在所选城市 4 格以外，候选格和相邻格不受影响。
+
+## covscene.py — 玩家布局的覆盖范围场景（#61）
+
+```bash
+python3 -I tools/covscene.py export RP01-ref04-bh-japan-131073 --save SDP_ref_bh-hojo-276 --ref REF04-bh-japan-okayama-osaka.json --city 131073
+python3 -I tools/covscene.py export RP02-ref04-bh-japan-262147 --from SDP_ref_bh-hojo-276 --ref REF04-bh-japan-okayama-osaka.json --city 262147
+```
+
+- `--ref` 是参照场景文件（`git show mac/baseline2:tests/compare/scenes/REF04-….json` 取出），取其中这座城的参照区域，按全图坐标换到新窗口；`--save` 先读 `Saves/Single/<名>.Civ6Save`，`--from` 只记存档名。
+- 不取游戏里的 DMT 样本（参照区域拿掉后，带着它们取的样本不再对应场景），所以 `snapshot.py check` 对这些场景没有可比的格。已建参照区域下的资源去掉（同 `snapshot.py ref`）；存档规则集不同时（`--ruleset`，默认风云变幻）去掉规则库里没有的科技、市政、万神殿（`meta.dropped`）。
 
 ## deploy.py — 部署
 
