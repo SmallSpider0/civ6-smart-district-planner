@@ -103,9 +103,24 @@ function CmpOracle.Delta(tile, cut)
   return tile > cut and tile - cut or 0
 end
 
--- The exact pair interaction of every two district types on every two
--- neighbouring candidate plots, as Bound[ta][tb][i][j] (with the unrounded
--- table and 0 folded in), and its maximum over plots MaxPair[ta][tb].
+-- The pair bound of every two slot types on every two neighbouring
+-- candidate plots, as Bound[ta][tb][i][j], and its maximum over plots
+-- MaxPair[ta][tb]; and Own[t][i], what a slot of type t on plot i gets
+-- once, whatever its neighbours (issue 48).
+--
+-- A table row that needs TilesRequired = T district neighbours (+1 for
+-- every two districts) gives a district with F such neighbours already
+-- floor(F / T) steps; k more give floor((F + k) / T) - floor(F / T), at
+-- most (F mod T) / T + k / T steps. So the district gets (F mod T) / T of
+-- the row once (Own: the model's single holds it, the exact single gets it
+-- added) and each neighbour the unrounded 1 / T share (the table). Measuring the pair on two plots and
+-- counting it on every edge (as before) counted the step a neighbour
+-- completes on each of the district's six edges: with nine or more
+-- districts the bound was twice the optimum. What the exact pair has
+-- beyond the table rounded at those plots (both together minus each alone,
+-- minus the table's rows with the step completed or not: Japan's trait,
+-- other modifiers) still counts in full. A count F that differs from DMT's
+-- only makes the bound larger.
 local function PairBounds(search)
   local board, n, k = search.Board, search.N, search.K
   local adjacent = search:Touching()
@@ -127,6 +142,57 @@ local function PairBounds(search)
   table.sort(types)
   for m = 1, k do board:Put(m, nil) end
   board:Total()
+  -- The step rows of each type on each plot, with F counted exactly as
+  -- SDP_Search's model counts it for its singles (fixed district subjects
+  -- next to the plot; the row's district by type, as the table), so that
+  -- the share the model's single holds and the step a pair completes here
+  -- agree.
+  local fixedNear = {}
+  for i = 1, n do
+    local list = {}
+    for _, q in ipairs(board:Neighbours(search.Candidates[i].Index)) do
+      local f = q and board.fixedAt[q]
+      if f and f.Subject.Type == "DISTRICT" then list[#list + 1] = f.Subject.Key end
+    end
+    fixedNear[i] = list
+  end
+  local steps, own = {}, {}
+  for _, t in ipairs(types) do
+    steps[t], own[t] = {}, {}
+    local rows = (adjacency[t] or {}).Rows or {}
+    for i = 1, n do
+      if legal[t][i] then
+        local list, share = {}, 0
+        for _, row in ipairs(rows) do
+          if row.TilesRequired > 1 and (row.Any or row.District) then
+            local count = 0
+            for _, key in ipairs(fixedNear[i]) do
+              if row.Any or key == row.District then count = count + 1 end
+            end
+            local value = (search.Weights[row.YieldType] or 0) * row.YieldChange
+            list[#list + 1] = { Row = row, F = count, Value = value }
+            share = share + value * (count % row.TilesRequired) / row.TilesRequired
+          end
+        end
+        steps[t][i], own[t][i] = list, share
+      end
+    end
+  end
+  -- Side ta on plot i, one more neighbour of type tb: the step rows'
+  -- part rounded (the step completed or not) and unrounded.
+  local function StepParts(ta, i, tb)
+    local rounded, unrounded = 0, 0
+    if kindOf[tb] ~= "DISTRICT" then return 0, 0 end
+    for _, step in ipairs(steps[ta][i]) do
+      local row = step.Row
+      if row.Any or row.District == tb then
+        local T = row.TilesRequired
+        rounded = rounded + step.Value * (math.floor((step.F + 1) / T) - math.floor(step.F / T))
+        unrounded = unrounded + step.Value / T
+      end
+    end
+    return rounded, unrounded
+  end
   local bound, maxPair, measured = {}, {}, 0
   for _, ta in ipairs(types) do
     bound[ta], maxPair[ta] = bound[ta] or {}, maxPair[ta] or {}
@@ -148,7 +214,13 @@ local function PairBounds(search)
                 board:Put(2, nil)
                 measured = measured + 1
                 local value = floor
-                if ok then value = math.max(floor, both - single[ta][i] - single[tb][j]) end
+                if ok then
+                  local ra, ua = StepParts(ta, i, tb)
+                  local rb, ub = StepParts(tb, j, ta)
+                  local rounded = tableValue - ua - ub + ra + rb
+                  local excess = both - single[ta][i] - single[tb][j] - rounded
+                  if excess > 0 then value = math.max(floor, tableValue + excess) end
+                end
                 ab[i] = ab[i] or {}
                 ab[i][j] = value
                 ba[j] = ba[j] or {}
@@ -166,7 +238,7 @@ local function PairBounds(search)
       end
     end
   end
-  return bound, maxPair, typeOf, measured
+  return bound, maxPair, typeOf, measured, own
 end
 
 -- The housing part's bound (see the header): the constant at the root and,
@@ -241,7 +313,7 @@ function CmpOracle.Run(search, incumbentLayout, options)
   end
   search:Model()
   local single = search.ModelSingle
-  local bound, maxPair, typeOf, measured = PairBounds(search)
+  local bound, maxPair, typeOf, measured, own = PairBounds(search)
   local adjacent = search:Touching()
   local unproven = {}
 
@@ -305,11 +377,14 @@ function CmpOracle.Run(search, incumbentLayout, options)
     sb[m], plots[m] = {}, {}
     for i = 1, n do
       if search.Legal[m][i] then
+        -- The exact single with its share of started steps (Own; the
+        -- model's single holds it too).
+        local exact = search.Single[m][i] + (own[typeOf[m]][i] or 0)
         if land then
           local adjacencyOnly = single[m][i] + rootLoss[i] - ((appealSingle and appealSingle[m][i]) or 0)
-          sb[m][i] = math.max(adjacencyOnly, search.Single[m][i]) + (housingExtra[m][i] or 0)
+          sb[m][i] = math.max(adjacencyOnly, exact) + (housingExtra[m][i] or 0)
         else
-          sb[m][i] = math.max(single[m][i], search.Single[m][i])
+          sb[m][i] = math.max(single[m][i], exact)
         end
         plots[m][#plots[m] + 1] = i
       end
@@ -393,14 +468,39 @@ function CmpOracle.Run(search, incumbentLayout, options)
   -- at depth d bounds its children with Rest(d + 1, d): the slot it places
   -- has no plot yet, so its pairs with the later slots count as pairs with
   -- an unplaced slot (Rest(d + 1) alone left them out, issue 53).
-  local gains = {}
+  --
+  -- A second bound, the smaller of the two counts (issue 48: with nine or
+  -- more districts the first counts each slot's pairs with every earlier
+  -- unplaced one, up to six each, far more pairs than the plots can hold):
+  -- each slot's best plot without its pairs with unplaced slots, plus the
+  -- largest pair maxima among the unplaced slots, no more of them than
+  -- EdgeCap(u): the most edges u cells of the hexagonal grid can have
+  -- among themselves, floor(3u - sqrt(12u - 3)) (Harary and Harborth 1976),
+  -- and no more than half of what each slot's six best pairs with the other
+  -- unplaced slots give (every edge has two ends, each with six neighbours).
+  local gains, unplacedPairs, incident = {}, {}, {}
+  local function EdgeCap(u)
+    if u < 2 then return 0 end
+    return math.floor(3 * u - math.sqrt(12 * u - 3) + EPS)
+  end
   local function Rest(d, first)
     first = first or d
-    local total = 0
+    local total, alone = 0, 0
+    local pairCount = 0
+    for e = d, depth do
+      local tm = typeOf[order[e]]
+      for f = first, e - 1 do
+        local g = maxPair[tm][typeOf[order[f]]]
+        if g ~= nil and g > 0 then
+          pairCount = pairCount + 1
+          unplacedPairs[pairCount] = g
+        end
+      end
+    end
     for e = d, depth do
       local m = order[e]
       local tm = typeOf[m]
-      local best = nil
+      local best, bestAlone = nil, nil
       for _, i in ipairs(plots[m]) do
         if slotAt[i] == nil then
           local v, free = sb[m][i] - Delta(i), 0
@@ -412,6 +512,7 @@ function CmpOracle.Run(search, incumbentLayout, options)
               free = free + 1
             end
           end
+          if bestAlone == nil or v > bestAlone then bestAlone = v end
           local row, count = pairAt[m][i], 0
           for f = first, e - 1 do
             local g = row[typeOf[order[f]]]
@@ -429,9 +530,30 @@ function CmpOracle.Run(search, incumbentLayout, options)
         end
       end
       if best == nil then return nil end
-      total = total + best
+      total, alone = total + best, alone + bestAlone
     end
-    return total
+    local cap = EdgeCap(depth - first + 1)
+    if pairCount > cap then
+      for x = pairCount + 1, #unplacedPairs do unplacedPairs[x] = nil end
+      table.sort(unplacedPairs, function(a, b) return a > b end)
+    end
+    local byEdges = 0
+    for x = 1, math.min(cap, pairCount) do byEdges = byEdges + unplacedPairs[x] end
+    local byEnds = 0
+    for e = first, depth do
+      local te, count = typeOf[order[e]], 0
+      for f = first, depth do
+        local g = f ~= e and maxPair[te][typeOf[order[f]]] or nil
+        if g ~= nil and g > 0 then
+          count = count + 1
+          incident[count] = g
+        end
+      end
+      for x = count + 1, #incident do incident[x] = nil end
+      if count > 6 then table.sort(incident, function(a, b) return a > b end) end
+      for x = 1, math.min(6, count) do byEnds = byEnds + incident[x] / 2 end
+    end
+    return math.min(total, alone + math.min(byEdges, byEnds))
   end
 
   local function Walk(d, cur)

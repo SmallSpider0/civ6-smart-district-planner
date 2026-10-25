@@ -168,10 +168,19 @@ def key(r):
 ORACLE_KEYS = ("sdp:ORACLE", "sdp:ORACLE_CHECK")
 
 
+def is_adjacency_reference(k):
+    """A run that gives the adjacency reference (issues 48, 40): the oracle
+    (ORACLE_KEYS, also with a node limit "@n") or the long-run reference
+    sdp:LONGRUN[@n], whose oracle stats hold the range [value, upper]."""
+    base = k.split("@", 1)[0]
+    return base in ORACLE_KEYS or base == "sdp:LONGRUN"
+
+
 def is_oracle(k):
-    """Any exact-solver run: the adjacency optimum (ORACLE_KEYS) or the
-    optimum of the mod's whole objective with land on (sdp:ORACLE_LAND...)."""
-    return k.startswith("sdp:ORACLE")
+    """Any reference run, left out of the planners' tables: the adjacency
+    references above or the optimum of the mod's whole objective with land
+    on (sdp:ORACLE_LAND...)."""
+    return k.startswith("sdp:ORACLE") or k.startswith("sdp:LONGRUN")
 
 
 def stats_of(r):
@@ -234,17 +243,26 @@ def summarize(rows):
                     best_out = s["output"] if best_out is None else max(best_out, s["output"])
         # The exact reference (issue 48): a proven optimum replaces the best
         # known gain; otherwise its upper bound gives the range.
-        optimum, upper, optimumMissing = None, None, None
-        for k in ORACLE_KEYS:
+        # Several runs (oracles with different node limits, the long run):
+        # the smallest upper end and the best value found.
+        optimum, upper, optimumMissing, lower = None, None, None, None
+        for k in sorted(runs):
+            if not is_adjacency_reference(k):
+                continue
             o = ((runs.get(k) or {}).get("plan") or {}).get("stats", {}).get("oracle")
             if isinstance(o, dict) and not runs[k].get("error"):
                 if o.get("proven"):
                     optimum = o["value"]
                     optimumMissing = ((runs[k].get("score") or {}).get("missing")) or 0
                 else:
-                    upper = o.get("upper")
+                    if o.get("upper") is not None:
+                        upper = o["upper"] if upper is None else min(upper, o["upper"])
+                    if o.get("value") is not None:
+                        lower = o["value"] if lower is None else max(lower, o["value"])
         if optimum is not None:
-            best, exact = optimum, True
+            best, exact, upper = optimum, True, None
+        elif lower is not None and (best is None or lower > best):
+            best = lower
         # Potential output (issue 48: the judge's outputP, plots valued as
         # improved, population the scene's districts need): the best legal.
         best_out_p = None

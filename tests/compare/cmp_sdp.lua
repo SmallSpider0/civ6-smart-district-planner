@@ -130,10 +130,11 @@ local function Oracle(result, out, cityOf, check, weights, land, lambda)
 end
 
 -- The long-run reference (cmp_longrun.lua, issue 40) on a fine solve's
--- result: 20 continues, annealing from the best layout, the two-slot check
--- of the fine plan and of the final layout, then the oracle from the best
--- layout (Oracle above) for the upper end.
-local function LongRun(result, out, cityOf, request)
+-- result: 20 continues (`again`: SDP_Multi.Continue or SDP_Solver.Continue),
+-- annealing from the best layout, the two-slot check of the fine plan and
+-- of the final layout, then the oracle from the best layout (Oracle above)
+-- for the upper end.
+local function LongRun(result, out, cityOf, request, again)
   local search = result.Session.Search
   local k = search.K
   local function Gain(layout)
@@ -148,7 +149,7 @@ local function LongRun(result, out, cityOf, request)
   local fineGain = Gain(fine)
   local fineTwo = SDP_Overlay.With(0, CmpLongrun.TwoSlot, search, fine)
   for _ = 1, 20 do
-    local nextResult = SDP_Multi.Continue(result)
+    local nextResult = again(result)
     if not nextResult.Ok then break end
     result = nextResult
   end
@@ -258,6 +259,12 @@ function CmpAdapters.sdp(request, variant, w)
       Land = land, Tier = variant, Weights = request.weights, Swap = swap, Coverage = coverage })
     if not r.Ok then out.notes[#out.notes + 1] = tostring(r.Error) end
     Take(r.Plan, request.target:GetID())
+    if longrun and r.Ok then
+      local id = request.target:GetID()
+      LongRun(r, out, function() return id end, request, SDP_Solver.Continue)
+      stats.method = "longrun"
+      return out
+    end
     if oracle and r.Ok then
       local id = request.target:GetID()
       Oracle(r, out, function() return id end, check, request.weights, land, lambda)
@@ -326,7 +333,7 @@ function CmpAdapters.sdp(request, variant, w)
     local byKey = {}
     for _, c in ipairs(r.Cities or {}) do byKey[c.Key] = c.CityID end
     if longrun and r.Ok then
-      LongRun(r, out, function(m) return r.Cities[r.Session.Search.Groups[m]].CityID end, request)
+      LongRun(r, out, function(m) return r.Cities[r.Session.Search.Groups[m]].CityID end, request, SDP_Multi.Continue)
       stats.method = "longrun"
       return out
     end
