@@ -279,6 +279,9 @@ test("several cities tab: the new site tacks take part; solve; solutions; place"
   SDP_Panel.SelectTab("MULTI")
   local multi = SDP_Panel.Multi
   multi.Refresh()
+  T.eq(multi.State().View.Count, SDP_UI.DEFAULT_COUNT, "three districts a city by default (issue 71)")
+  -- These tests plan the required districts only: picking makes them slow.
+  multi.SetCount(0)
   local sites = 0
   for _, c in ipairs(multi.State().View.Cities) do
     if c.Kind == "SITE" then sites = sites + 1 end
@@ -467,8 +470,13 @@ test("single-city tab: the coverage column", function()
   SDP_Panel.SetState("DISTRICT_AQUEDUCT", "OFF")
   SDP_Panel.SetTier("FAST")
   local cells = SDP_Panel.State().WeightCells
-  T.eq(#cells, 8, "eight columns: no food or harvest column (issue 53)")
-  local cell = cells[8]
+  -- Issue 53: no food or harvest column; one land column instead of the switch.
+  local keys = {}
+  for i, c in ipairs(cells) do keys[i] = c.Key end
+  T.same(keys, { "YIELD_SCIENCE", "YIELD_CULTURE", "YIELD_FAITH", "YIELD_GOLD", "YIELD_PRODUCTION", "LAND", "DISTANCE",
+    "HOUSING", "COVERAGE" }, "the columns")
+  T.eq(cells[6].Root:GetToolTipString(), "LOC_SDP_LAND", "the land column explains the fixed plot weights")
+  local cell = cells[9]
   T.eq(cell.Key, "COVERAGE", "coverage last")
   T.eq(cell.Root:GetToolTipString(), "LOC_SDP_WEIGHT_COVERAGE", "the same tooltip as the several cities tab")
   T.eq(SDP_Panel.State().Weights.COVERAGE, 0, "off by default")
@@ -478,9 +486,13 @@ test("single-city tab: the coverage column", function()
   T.ok(off and off.Ok, "solved: " .. tostring(off and off.Error))
   T.eq(off.Session.Request.Coverage, 0, "weight 0 in the request")
   T.eq(off.Covered, nil, "no coverage figures at 0")
-  for _ = 1, 4 do cell.More:Click() end
+  cell.More:Click()
+  T.eq(SDP_Panel.State().Weights.COVERAGE, 0.5, "up by 0.5 (issue 53)")
+  T.eq(cell.Value:GetText(), "0.5", "shown")
+  for _ = 1, 7 do cell.More:Click() end
   T.eq(SDP_Panel.State().Weights.COVERAGE, SDP_UI.MAX_WEIGHT, "up by the arrow, capped")
   T.ok(cell.More:IsDisabled(), "the arrow stops at the cap")
+  cell.Less:Click()
   cell.Less:Click()
   T.eq(SDP_Panel.State().Weights.COVERAGE, SDP_UI.MAX_WEIGHT - 1, "down by the arrow")
   T.eq(cell.Value:GetText(), tostring(SDP_UI.MAX_WEIGHT - 1), "shown")
@@ -514,7 +526,7 @@ test("single-city tab: the coverage column", function()
   T.ok(#want >= 2, "city-center pins on the map")
   T.same(keys, want, "the city and every city-center pin are cities to cover")
   SDP_Panel.SetWonder("BUILDING_STONEHENGE", false)
-  for _ = 1, 3 do cell.Less:Click() end
+  for _ = 1, 4 do cell.Less:Click() end
   T.eq(SDP_Panel.State().Weights.COVERAGE, 0, "back to 0")
   for _, d in ipairs(SDP_Rules.PlannableDistricts(0)) do SDP_Panel.SetState(d.Type, SDP_UI.DefaultState(d)) end
   SDP_Panel.SetTier("STANDARD")
@@ -737,6 +749,8 @@ test("issue 71: the settings fold after a solve and a click unfolds them; kept i
   SDP_Panel.SelectTab("SINGLE")
   SDP_Panel.SelectCity(1)
   local c = UI_Mock.Controls
+  for _, column in ipairs(SDP_UI.WEIGHT_COLUMNS) do SDP_Panel.SetWeight(column.Key, column.Default or 1) end
+  SDP_Panel.SetWeight("COVERAGE", 0)
   SDP_Panel.SetFold(false)
   T.eq(c.SettingsStack:IsHidden(), false, "unfolded")
   T.eq(c.FoldAction:GetText(), "LOC_SDP_FOLD_HIDE", "the line offers to hide")
@@ -812,6 +826,8 @@ test("issue 71: the solutions are buttons in one row, their districts in the too
   SDP_Panel.SelectTab("SINGLE")
   SDP_Panel.SelectCity(1)
   SDP_Panel.SetTier("FAST")
+  for _, d in ipairs(SDP_Rules.PlannableDistricts(0)) do SDP_Panel.SetState(d.Type, SDP_UI.DefaultState(d)) end
+  SDP_Panel.SetState("DISTRICT_CAMPUS", "MUST")
   SDP_Panel.SetCount(3)
   T.eq(SDP_Panel.Solve(), nil, "picking runs as a task")
   local result = SDP_Panel.RunTask(200)

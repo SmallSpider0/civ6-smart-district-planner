@@ -96,26 +96,20 @@
         <Stack ID="WonderChipStack" StackGrowth="Right" WrapWidth="480" WrapGrowth="Bottom" StackPadding="4"/>
 
         <!-- Weights, one icon family (feedback 3), and the distance cost (feedback 9) -->
-        <Container Size="480,52">
-          <Label Anchor="L,C" Style="BodyTextDark14" WrapWidth="76" String="LOC_SDP_WEIGHTS_TITLE" ToolTip="LOC_SDP_WEIGHTS_TOOLTIP"/>
-          <Stack ID="WeightStack" Anchor="R,T" StackGrowth="Right" StackPadding="0"/>
-        </Container>
+        <Label Style="BodyTextDark14" String="LOC_SDP_WEIGHTS_TITLE" ToolTip="LOC_SDP_WEIGHTS_TOOLTIP"/>
+        <Stack ID="WeightStack" Anchor="C,T" StackGrowth="Right" StackPadding="0"/>
 
         <!-- Switches in one row; the full meaning is in each tooltip -->
         <Container Size="480,26">
-          <Container Anchor="L,C" Size="116,26" ToolTip="LOC_SDP_LAND">
-            <CheckBox ID="LandCheck" Anchor="L,C" Style="MainCheckBox"/>
-            <Label Anchor="L,C" Offset="26,0" Style="BodyTextDark14" String="LOC_SDP_LAND_SHORT"/>
-          </Container>
-          <Container Anchor="L,C" Offset="120,0" Size="116,26" ToolTip="LOC_SDP_ALLOW_FEATURE_REMOVAL">
+          <Container Anchor="L,C" Size="116,26" ToolTip="LOC_SDP_ALLOW_FEATURE_REMOVAL">
             <CheckBox ID="FeatureCheck" Anchor="L,C" Style="MainCheckBox"/>
             <Label Anchor="L,C" Offset="26,0" Style="BodyTextDark14" String="LOC_SDP_FEATURE_SHORT"/>
           </Container>
-          <Container Anchor="L,C" Offset="240,0" Size="120,26" ToolTip="LOC_SDP_REPLACE_OWN_TOOLTIP">
+          <Container Anchor="L,C" Offset="120,0" Size="120,26" ToolTip="LOC_SDP_REPLACE_OWN_TOOLTIP">
             <CheckBox ID="ReplaceCheck" Anchor="L,C" Style="MainCheckBox"/>
             <Label ID="ReplaceLabel" Anchor="L,C" Offset="26,0" Style="BodyTextDark14"/>
           </Container>
-          <Container Anchor="L,C" Offset="364,0" Size="116,26" ToolTip="LOC_SDP_REMIND_TOOLTIP">
+          <Container Anchor="L,C" Offset="244,0" Size="116,26" ToolTip="LOC_SDP_REMIND_TOOLTIP">
             <CheckBox ID="RemindCheck" Anchor="L,C" Style="MainCheckBox"/>
             <Label Anchor="L,C" Offset="26,0" Style="BodyTextDark14" String="LOC_SDP_REMIND_SHORT"/>
           </Container>
@@ -282,20 +276,14 @@
           </Stack>
         </Container>
         <Stack ID="MultiWonderChipStack" StackGrowth="Right" WrapWidth="480" WrapGrowth="Bottom" StackPadding="4"/>
-        <Container Size="480,52">
-          <Label Anchor="L,C" Style="BodyTextDark14" WrapWidth="76" String="LOC_SDP_WEIGHTS_TITLE" ToolTip="LOC_SDP_WEIGHTS_TOOLTIP"/>
-          <Stack ID="MultiWeightStack" Anchor="R,T" StackGrowth="Right" StackPadding="0"/>
-        </Container>
+        <Label Style="BodyTextDark14" String="LOC_SDP_WEIGHTS_TITLE" ToolTip="LOC_SDP_WEIGHTS_TOOLTIP"/>
+        <Stack ID="MultiWeightStack" Anchor="C,T" StackGrowth="Right" StackPadding="0"/>
         <Container Size="480,26">
-          <Container Anchor="L,C" Size="150,26" ToolTip="LOC_SDP_LAND">
-            <CheckBox ID="MultiLandCheck" Anchor="L,C" Style="MainCheckBox"/>
-            <Label Anchor="L,C" Offset="26,0" Style="BodyTextDark14" String="LOC_SDP_LAND_SHORT"/>
-          </Container>
-          <Container Anchor="L,C" Offset="160,0" Size="180,26" ToolTip="LOC_SDP_REPLACE_OWN_MULTI_TOOLTIP">
+          <Container Anchor="L,C" Size="180,26" ToolTip="LOC_SDP_REPLACE_OWN_MULTI_TOOLTIP">
             <CheckBox ID="MultiReplaceCheck" Anchor="L,C" Style="MainCheckBox"/>
             <Label ID="MultiReplaceLabel" Anchor="L,C" Offset="26,0" Style="BodyTextDark14"/>
           </Container>
-          <Container Anchor="L,C" Offset="350,0" Size="130,26" ToolTip="LOC_SDP_REMIND_TOOLTIP">
+          <Container Anchor="L,C" Offset="190,0" Size="130,26" ToolTip="LOC_SDP_REMIND_TOOLTIP">
             <CheckBox ID="MultiRemindCheck" Anchor="L,C" Style="MainCheckBox"/>
             <Label Anchor="L,C" Offset="26,0" Style="BodyTextDark14" String="LOC_SDP_REMIND_SHORT"/>
           </Container>

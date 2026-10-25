@@ -231,7 +231,8 @@ end
 --   Candidates     { Index, X, Y } by position
 --   Fixed          SDP_Overlay.FixedSubjects of every city (built and pinned)
 --   Weights        the request's weights: HOUSING (default 1); the tile
---                  yields weigh as in the land part (SDP_Land.PLOT_WEIGHTS)
+--                  yields weigh as in the land part (SDP_Land.PLOT_WEIGHTS,
+--                  times LAND when the land part is on: they raise its plots)
 --   Lands          the search's land models (nil or empty: land part off)
 --   Workable       { [plot index] = true } plots a city can work (the tile
 --                  part's plots when the land part is off)
@@ -284,8 +285,8 @@ function SDP_Appeal.New(spec)
   local techs = player ~= nil and player:GetTechs() or nil
   local weights = spec.Weights or {}
   self.HousingWeight = weights.HOUSING == nil and 1 or weights.HOUSING
-  self.TileWeights = SDP_Land.Weights(SDP_Land.PLOT_WEIGHTS)
   self.Lands = spec.Lands or {}
+  self.TileWeights = SDP_Land.Weights(SDP_Land.PlotWeights(#self.Lands > 0 and SDP_Land.Scale(weights) or 1))
   self.Workable = spec.Workable or {}
   -- Appeal before the plan: the game's, plus what the pinned districts and
   -- wonders will do to their neighbours once built.

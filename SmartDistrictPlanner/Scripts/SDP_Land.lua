@@ -39,6 +39,22 @@ local WORKABLE_EXCLUSIONS = { FEATURE = true, NATURAL_WONDER = true, PIN = true,
 SDP_Land.PLOT_WEIGHTS = { YIELD_FOOD = 1, YIELD_PRODUCTION = 1, YIELD_GOLD = 1 / 4, YIELD_SCIENCE = 5 / 6,
   YIELD_CULTURE = 5 / 6, YIELD_FAITH = 1 / 2, FEATURE = 1 }
 
+-- The player's one land weight (the request's Weights.LAND, default 1; 0:
+-- the land part is off) scales the whole land part (issue 53, decided
+-- 2026-10-25): PLOT_WEIGHTS times it, so the one-time yields scale too.
+function SDP_Land.Scale(weights)
+  local scale = weights and weights.LAND
+  if scale == nil then scale = 1 end
+  return scale
+end
+
+function SDP_Land.PlotWeights(scale)
+  local out = {}
+  for key, value in pairs(SDP_Land.PLOT_WEIGHTS) do out[key] = value end
+  for _, yieldType in ipairs(SDP_Land.TILE_YIELDS) do out[yieldType] = out[yieldType] * (scale or 1) end
+  return out
+end
+
 -- Weights for valuing plots: the six tile yields (missing ones weigh 1) and
 -- FEATURE, the weight of one-time yields (default 1). The district planner
 -- passes PLOT_WEIGHTS; the site scores pass the sites tab's own weights.

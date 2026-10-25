@@ -45,14 +45,13 @@ local m_center = nil   -- the city the default group is around (nil: the capital
 local m_existing = {}  -- [cityID] = true | false: switches over the default group
 local m_sites = {}     -- [site Key] = true | false: city-center pins switched over the default group
 -- The panel's weight columns plus the coverage part, as on the single-city tab.
-local COLUMNS, COLUMN_WIDTH = {}, 50 -- eight columns, as on the single-city tab
+local COLUMNS, COLUMN_WIDTH = {}, 50 -- nine columns, as on the single-city tab
 for _, column in ipairs(SDP_UI.WEIGHT_COLUMNS) do COLUMNS[#COLUMNS + 1] = column end
 COLUMNS[#COLUMNS + 1] = SDP_UI.COVERAGE_COLUMN
 local m_weights = {}
 for _, column in ipairs(COLUMNS) do m_weights[column.Key] = column.Default or 1 end
 local m_weightViews = {}
 local m_tier = SDP_Tiers.DEFAULT
-local m_land = true
 local m_swap = false -- plots swapped from another of our cities are candidates (issue 54)
 local m_replace = false -- plan over this mod's earlier pins for the cities and replace them
 local m_remind = true
@@ -65,7 +64,6 @@ local m_preset = SDP_Settings.PRESET_ORDER[1] -- the weights and switches starte
 
 -- The weights, these switches and the tier, kept in the save (issue 57).
 local SWITCHES = {
-  { Key = "LAND", Default = true, Get = function() return m_land end, Put = function(v) m_land = v end },
   { Key = "SWAP", Default = false, Get = function() return m_swap end, Put = function(v) m_swap = v end },
   { Key = "REPLACE", Default = false, Get = function() return m_replace end, Put = function(v) m_replace = v end },
   { Key = "REMIND", Default = true, Get = function() return m_remind end, Put = function(v) m_remind = v end },
@@ -175,7 +173,7 @@ function P.Request()
   return {
     PlayerID = playerID, Tier = m_tier, Districts = shared.Must, Pool = shared.Pool, Count = shared.Count, Auto = shared.Auto,
     Plans = plans, Pools = pools, Counts = counts, Autos = autos, Wonders = wonders, Sites = sites,
-    Existing = existing, Weights = weights, Land = m_land, Coverage = m_weights.COVERAGE, Distance = m_weights.DISTANCE,
+    Existing = existing, Weights = weights, Land = m_weights.LAND > 0, Coverage = m_weights.COVERAGE, Distance = m_weights.DISTANCE,
     Remind = m_remind, Apart = m_apart, IgnorePins = m_replace and P.OwnPins() or nil, Swap = m_swap,
   }
 end
@@ -310,7 +308,8 @@ end
 -- Make the edited list require `types` (a template), everything else at its
 -- default; nil on a city: back to the shared list.
 function P.ApplyPlan(types)
-  local list = { States = {}, Count = nil }
+  -- A template replaces the districts; the count stays as the player set it.
+  local list = { States = {}, Count = EditedList().Count }
   for _, t in ipairs(types or {}) do list.States[t] = "MUST" end
   if m_planFor == "ALL" then
     m_shared = list
@@ -407,12 +406,12 @@ function P.SetSwap(on)
   end
 end
 
+-- Tests: the land part on (weight 1 unless it is set) or off (0).
 function P.SetLand(on)
-  Controls.MultiLandCheck:SetCheck(on)
-  if m_land ~= on then
-    m_land = on
-    ClearResult()
-    Remember()
+  if on then
+    if m_weights.LAND == 0 then P.SetWeight("LAND", 1) end
+  else
+    P.SetWeight("LAND", 0)
   end
 end
 
@@ -455,7 +454,7 @@ P.FitPage = FitPage
 -- The fold line (issue 71): the preset, then what is not as usual.
 UpdateFold = function()
   local parts = {}
-  if not m_land then parts[#parts + 1] = Locale.Lookup("LOC_SDP_FOLD_LAND_OFF") end
+  if m_weights.LAND == 0 then parts[#parts + 1] = Locale.Lookup("LOC_SDP_FOLD_LAND_OFF") end
   if m_swap then parts[#parts + 1] = Locale.Lookup("LOC_SDP_FOLD_SWAP") end
   if m_replace then parts[#parts + 1] = Locale.Lookup("LOC_SDP_FOLD_REPLACE") end
   local wonders = #WonderTypes()
@@ -676,7 +675,6 @@ function P.Refresh()
   m_weightViews = SDP_UI.BuildWeights(m_weightIM, Controls.MultiWeightStack, COLUMNS, m_weights, nil,
     P.SetWeight, COLUMN_WIDTH)
   SDP_UI.PopulateTierPull(Controls.MultiTierPull, m_tier, P.SetTier)
-  Controls.MultiLandCheck:SetCheck(m_land)
   Controls.MultiSwapCheck:SetCheck(m_swap)
   Controls.MultiReplaceCheck:SetCheck(m_replace)
   Controls.MultiRemindCheck:SetCheck(m_remind)
@@ -936,7 +934,7 @@ end
 -- Tests drive the tab through these.
 function P.State()
   return {
-    Result = m_result, Solution = m_solution, Tier = m_tier, Land = m_land, Replace = m_replace, Remind = m_remind,
+    Result = m_result, Solution = m_solution, Tier = m_tier, Land = m_weights.LAND > 0, Replace = m_replace, Remind = m_remind,
     Apart = m_apart, Swap = m_swap, Weights = m_weights, Preset = m_preset, Fold = m_fold,
     FoldText = Controls.MultiFoldText:GetText(), ResultHeight = Controls.MultiResultScroll:GetSizeY(),
     View = m_view, EstimateText = Controls.MultiEstimate:GetText(), QualityText = Controls.MultiQuality:GetText(),
@@ -948,7 +946,6 @@ end
 
 Controls.MultiCityClear:RegisterCallback(Mouse.eLClick, function() P.ClearCities() end)
 Controls.MultiCityDefault:RegisterCallback(Mouse.eLClick, function() P.DefaultCities() end)
-Controls.MultiLandCheck:RegisterCheckHandler(function() P.SetLand(Controls.MultiLandCheck:IsChecked()) end)
 Controls.MultiSwapCheck:RegisterCheckHandler(function() P.SetSwap(Controls.MultiSwapCheck:IsChecked()) end)
 Controls.MultiReplaceCheck:RegisterCheckHandler(function() P.SetReplace(Controls.MultiReplaceCheck:IsChecked()) end)
 Controls.MultiRemindCheck:RegisterCheckHandler(function() P.SetRemind(Controls.MultiRemindCheck:IsChecked()) end)

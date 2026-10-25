@@ -99,7 +99,7 @@ local function BruteForceLand(districts, weights)
     local fixed = SDP_Overlay.FixedSubjects(scan)
     local baseline = SDP_Overlay.Evaluate({}, fixed, weights).Total
     local specialty = #districts
-    local land = SDP_Land.ForScan(scan, fixed, SDP_Land.PLOT_WEIGHTS, math.max(scan.Population, SDP_Land.RequiredPopulation(specialty)))
+    local land = SDP_Land.ForScan(scan, fixed, SDP_Land.PlotWeights(SDP_Land.Scale(weights)), math.max(scan.Population, SDP_Land.RequiredPopulation(specialty)))
     local best = nil
     for _, p in ipairs(scan.Candidates) do
       for _, q in ipairs(scan.Candidates) do
@@ -132,6 +132,14 @@ test("with the land part: exhaustive equals brute force", function()
     Weights = { YIELD_SCIENCE = 1, YIELD_CULTURE = 1, YIELD_FAITH = 1, YIELD_GOLD = 1, YIELD_PRODUCTION = 1 } })
   T.same(plain.Plan, result.Plan, "same plan without the food and harvest weights")
   T.near(plain.LandDelta, result.LandDelta, 1e-9, "same land part")
+  -- The land weight scales the whole land part (issue 53).
+  local heavy = { YIELD_SCIENCE = 1, YIELD_CULTURE = 1, YIELD_FAITH = 1, YIELD_GOLD = 1, YIELD_PRODUCTION = 1, LAND = 2.5 }
+  local scaled = SDP_Solver.Solve({ PlayerID = 0, CityID = 1, Districts = districts, Weights = heavy, Land = true })
+  T.near(scaled.Gain, BruteForceLand(districts, heavy), 1e-9, "land weight 2.5: gain vs brute force")
+  T.ok(scaled.LandDelta >= 2.5 * result.LandDelta - 1e-9 or scaled.Adjacency < result.Adjacency,
+    "a heavier land part costs more, or moves the plan")
+  T.eq(SDP_Land.PlotWeights(2.5).YIELD_GOLD, 2.5 / 4, "gold: 1/4 of the land weight")
+  T.eq(SDP_Land.PlotWeights(2.5).FEATURE, 1, "one-time yields scale with the yields, not twice")
   local off = SDP_Solver.Solve({ PlayerID = 0, CityID = 1, Districts = districts, Weights = weights })
   T.eq(off.LandDelta, 0, "land part off")
   T.ok(off.Adjacency >= result.Adjacency, "without land losses adjacency can only be higher")

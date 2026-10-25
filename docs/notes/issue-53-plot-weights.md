@@ -17,17 +17,22 @@
   金币、信仰与购买价一致（1 生产力 = 4 金币 = 2 信仰，`GOLD_PURCHASE_MULTIPLIER`、`GOLD_EQUIVALENT_OTHER_YIELDS`）。
 - 砍伐、收获的一次性产出也按这组倍数计（一次性产出本身的系数 `FEATURE` = 1）。
 - 权重行去掉只用于地块的“食物”“收获”两列。
-- 地块系数 λ 保持 1。
+- 补充决定（同日）：玩家可以设一个整体的“地块”权重，放在去掉的两列的位置，乘在整个地块损失上，默认 1（地块系数 λ 默认仍是 1），0 表示不计；“计入占地”开关和它重复，去掉。
+- 补充决定（同日）：所有权重的步长改为 0.5，范围仍是 0–3。
 
 ## 代码
 
 | 位置 | 改动 |
 |---|---|
 | `SDP_Land.PLOT_WEIGHTS` | 上表，加 `FEATURE = 1` |
-| `SDP_Solver`（本城和换格来源城的地块模型）、`SDP_Multi`（每座城的地块模型） | `SDP_Land.ForScan` 传 `PLOT_WEIGHTS`，不再传请求的权重 |
-| `SDP_Appeal` | 保护区给周围格的产出（`TileWeights`）按 `PLOT_WEIGHTS` 计：这些产出落在被耕作的格上，属于地块 |
-| `SDP_Panel.lua` 的 `WEIGHT_COLUMNS` | 去掉 `YIELD_FOOD`、`FEATURE` 两列；单城、多城页从 10 列变 8 列，列宽仍是 50；“地块列在计入占地关掉时变灰”的逻辑随之去掉 |
-| `LOC_SDP_LAND`（计入占地的悬停提示） | 写明地块按固定倍数折算 |
+| `SDP_Land.Scale`、`SDP_Land.PlotWeights` | 请求权重里的 `LAND`（缺省 1）；`PLOT_WEIGHTS` 的六种产出乘以它（一次性产出由产出权重算出，跟着一起乘，`FEATURE` 不再乘） |
+| `SDP_Solver`（本城和换格来源城的地块模型）、`SDP_Multi`（每座城的地块模型） | `SDP_Land.ForScan` 传 `PlotWeights(Scale(request.Weights))`，不再传请求的产出权重 |
+| `SDP_Appeal` | 保护区给周围格的产出（`TileWeights`）按 `PLOT_WEIGHTS` 计：这些产出落在被耕作的格上，属于地块。计入地块时再乘 `LAND`（它们抬高的是地块模型里的格）；地块权重为 0（不计地块）时照原样全额计 |
+| `SDP_Panel.lua` 的 `WEIGHT_COLUMNS` | 去掉 `YIELD_FOOD`、`FEATURE` 两列，在产能后面加 `LAND`；单城、多城页 9 列，列宽 50。去掉“计入占地”开关（`LandCheck`、`MultiLandCheck`），请求的 `Land` = `LAND` > 0。`SetLand` 只留给测试：开 = 1（已设过就不动），关 = 0 |
+| `SDP_UI.BuildWeights` | 每列的步长默认 0.5（原来 1，距离列原来就是 0.5） |
+| `LOC_SDP_LAND` | 原来是开关的提示，现在是“地块”列的提示，写明各项产出的固定倍数 |
+
+存档里 #57 记下的 `LAND=0`（原来的开关关掉）读回来就是地块权重 0，意思不变。
 
 `SDP_Land.Weights`、`SDP_Land.Context` 的参数不变：它们按传进来的权重给格子估值，缺的按 1。区域规划传 `PLOT_WEIGHTS`。
 
@@ -41,6 +46,6 @@
 
 ## 测试
 
-- 离线：`spec_land.lua` 检查倍数表和一块铜矿荒漠的估值；`spec_solver.lua` 检查请求里多给的食物、收获权重不改变方案和地块部分；`spec_appeal.lua` 检查保护区给周围格的产出按固定倍数计、不随产出权重变；`spec_panel.lua` 检查权重行是 8 列。
+- 离线：`spec_land.lua` 检查倍数表和一块铜矿荒漠的估值；`spec_solver.lua` 检查请求里多给的食物、收获权重不改变方案和地块部分，地块权重 2.5 时穷举结果与暴力枚举一致；`spec_appeal.lua` 检查保护区给周围格的产出按固定倍数计、不随产出权重变；`spec_panel.lua` 检查权重行的 9 列和步长 0.5。
 - 游戏内：`test_ui.lua`、`test_tiers.lua` 跟着改了调用。
 - 方案变化的范围：发版前 `refresh_results.py --check` 对比存下的结果（记在 PR 里）。

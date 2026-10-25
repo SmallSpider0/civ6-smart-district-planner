@@ -38,14 +38,17 @@ local VERSION = "v1.4.0"
 -- icons that would fit them (terrain, movement, range) are drawn in another
 -- style, dark squares. The land part weighs plots with fixed numbers
 -- (SDP_Land.PLOT_WEIGHTS, issue 53), so food and the one-time yields of
--- clearing and harvesting have no column here. DISTANCE is the distance
--- cost weight (feedback item 9), in steps of 0.5, 0 (off) by default.
+-- clearing and harvesting have no column here; LAND weighs the whole land
+-- part (0: off, in place of the switch it had). DISTANCE is the distance
+-- cost weight (feedback item 9), 0 (off) by default. Every weight steps by
+-- 0.5 (issue 53).
 local WEIGHT_COLUMNS = {
   { Key = "YIELD_SCIENCE", Glyph = "[ICON_Science]" },
   { Key = "YIELD_CULTURE", Glyph = "[ICON_Culture]" },
   { Key = "YIELD_FAITH", Glyph = "[ICON_Faith]" },
   { Key = "YIELD_GOLD", Glyph = "[ICON_Gold]" },
   { Key = "YIELD_PRODUCTION", Glyph = "[ICON_Production]" },
+  { Key = "LAND", Glyph = "LOC_SDP_WEIGHT_LAND_SHORT", ToolTip = "LOC_SDP_LAND" },
   { Key = "DISTANCE", Glyph = "LOC_SDP_WEIGHT_DISTANCE_SHORT", ToolTip = "LOC_SDP_WEIGHT_DISTANCE", Step = 0.5, Default = 0 },
   -- Housing of districts that depend on appeal (neighborhood, preserve; SDP_Appeal).
   -- Short text like the other non-yield columns: [ICON_Housing] is a
@@ -59,7 +62,7 @@ local COVERAGE_COLUMN = { Key = "COVERAGE", Glyph = "LOC_SDP_WEIGHT_COVERAGE_SHO
 local SINGLE_COLUMNS = {}
 for _, column in ipairs(WEIGHT_COLUMNS) do SINGLE_COLUMNS[#SINGLE_COLUMNS + 1] = column end
 SINGLE_COLUMNS[#SINGLE_COLUMNS + 1] = COVERAGE_COLUMN
-local WEIGHT_WIDTH = 50 -- eight columns, as wide as before the food and harvest columns went (issue 53)
+local WEIGHT_WIDTH = 50 -- nine columns: a little narrower than the 520 page
 
 local m_launchItem = {}     -- SDP_LaunchBarItem instance in the game's launch bar
 local m_launchPin = {}      -- SDP_LaunchBarPin instance next to it
@@ -78,7 +81,6 @@ local m_count = nil           -- districts that take population to plan (nil: SD
 local m_weights = {}          -- [YieldType, DISTANCE, HOUSING or COVERAGE] = 0..MAX_WEIGHT
 for _, column in ipairs(SINGLE_COLUMNS) do m_weights[column.Key] = column.Default or 1 end
 local m_allowFeatureRemoval = true
-local m_land = true           -- count the land part (design 4.2)
 local m_swap = false          -- plots swapped from another of our cities are candidates (issue 54)
 local m_replace = false       -- plan over this mod's earlier pins for the city and replace them
 local m_remind = true         -- reminder pins on the woods and rainforest the plan relies on (feedback item 5)
@@ -108,7 +110,6 @@ local m_peek = false          -- the window hidden to look at the map (issue 71)
 local SINGLE_SWITCHES = {
   { Key = "ALLOW_REMOVAL", Default = true, Get = function() return m_allowFeatureRemoval end,
     Put = function(v) m_allowFeatureRemoval = v end },
-  { Key = "LAND", Default = true, Get = function() return m_land end, Put = function(v) m_land = v end },
   { Key = "SWAP", Default = false, Get = function() return m_swap end, Put = function(v) m_swap = v end },
   { Key = "REPLACE", Default = false, Get = function() return m_replace end, Put = function(v) m_replace = v end },
   { Key = "REMIND", Default = true, Get = function() return m_remind end, Put = function(v) m_remind = v end },
@@ -1182,7 +1183,7 @@ function SDP_UI.BuildWeights(im, stack, columns, weights, isOff, onChange, width
   local views, cells = {}, {}
   for _, column in ipairs(columns) do
     local key = column.Key
-    local step = column.Step or 1
+    local step = column.Step or 0.5
     local inst = im:GetInstance()
     if width ~= nil then inst.Root:SetSizeX(width) end
     local function Show()
@@ -1331,7 +1332,7 @@ end
 -- clearing off, swaps, replacing, wonders, the good places shown).
 UpdateFold = function()
   local parts = {}
-  if not m_land then parts[#parts + 1] = Locale.Lookup("LOC_SDP_FOLD_LAND_OFF") end
+  if m_weights.LAND == 0 then parts[#parts + 1] = Locale.Lookup("LOC_SDP_FOLD_LAND_OFF") end
   if not m_allowFeatureRemoval then parts[#parts + 1] = Locale.Lookup("LOC_SDP_FOLD_NO_REMOVAL") end
   if m_swap then parts[#parts + 1] = Locale.Lookup("LOC_SDP_FOLD_SWAP") end
   if m_replace then parts[#parts + 1] = Locale.Lookup("LOC_SDP_FOLD_REPLACE") end
@@ -1406,12 +1407,12 @@ PopulateHeat = function()
   pull:GetButton():SetText(m_heat and TypeName(m_heat) or Locale.Lookup("LOC_SDP_HEAT_OFF"))
 end
 
+-- Tests and older callers: the land part on (weight 1 unless it is set) or off (0).
 local function SetLand(on)
-  Controls.LandCheck:SetCheck(on)
-  if m_land ~= on then
-    m_land = on
-    ClearResult()
-    Remember()
+  if on then
+    if m_weights.LAND == 0 then SetWeight("LAND", 1) end
+  else
+    SetWeight("LAND", 0)
   end
 end
 
@@ -1474,7 +1475,6 @@ Refresh = function()
   SDP_UI.PopulateTierPull(Controls.TierPull, m_tier, SetTier)
   Controls.FeatureCheck:SetCheck(m_allowFeatureRemoval)
   Controls.SwapCheck:SetCheck(m_swap)
-  Controls.LandCheck:SetCheck(m_land)
   Controls.ReplaceCheck:SetCheck(m_replace)
   Controls.RemindCheck:SetCheck(m_remind)
   SDP_UI.ShowApart(Controls.ApartBox, Controls.ApartCheck, Controls.ApartLabel, m_apart)
@@ -1583,7 +1583,7 @@ Request = function()
     PlayerID = Game.GetLocalPlayer(), CityID = m_cityID, Districts = list.Must, Weights = weights,
     Pool = list.Pool, Count = list.Count, MustSpecialty = list.MustSpecialty, Auto = list.Auto,
     Distance = m_weights.DISTANCE, Coverage = m_weights.COVERAGE, Remind = m_remind, Apart = m_apart,
-    AllowFeatureRemoval = m_allowFeatureRemoval, Land = m_land, Tier = m_tier, Swap = m_swap,
+    AllowFeatureRemoval = m_allowFeatureRemoval, Land = m_weights.LAND > 0, Tier = m_tier, Swap = m_swap,
     IgnorePins = m_replace and OwnPins() or nil, Wonders = wonders,
   }
 end
@@ -1903,7 +1903,7 @@ SDP_Panel = {
       CityID = m_cityID, Result = m_result, DistrictRows = m_districtRows, ResultRows = m_resultRows,
       SolutionCells = m_solutionCells, WeightCells = m_weightCells,
       Count = List().Count, Solution = m_solution, Remind = m_remind, Apart = m_apart,
-      Weights = m_weights, AllowFeatureRemoval = m_allowFeatureRemoval, Land = m_land, Tier = m_tier, Replace = m_replace,
+      Weights = m_weights, AllowFeatureRemoval = m_allowFeatureRemoval, Land = m_weights.LAND > 0, Tier = m_tier, Replace = m_replace,
       Swap = m_swap,
       Wonders = SelectedWonders(), HeatDistrict = m_heat,
       Running = SDP_Task.IsRunning(), QualityText = Controls.Quality:GetText(), EstimateText = Controls.Estimate:GetText(),
@@ -1930,9 +1930,6 @@ Controls.ReplaceCheck:RegisterCheckHandler(function()
 end)
 Controls.FeatureCheck:RegisterCheckHandler(function()
   SetAllowFeatureRemoval(Controls.FeatureCheck:IsChecked())
-end)
-Controls.LandCheck:RegisterCheckHandler(function()
-  SetLand(Controls.LandCheck:IsChecked())
 end)
 Controls.SwapCheck:RegisterCheckHandler(function()
   SetSwap(Controls.SwapCheck:IsChecked())

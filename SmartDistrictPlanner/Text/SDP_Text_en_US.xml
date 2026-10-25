@@ -123,16 +123,13 @@
 
     <!-- Tiers, land part, quality, background computation -->
     <Replace Tag="LOC_SDP_LAND" Language="en_US">
-      <Text>Count the yields of the tiles the districts take, as the tiles give with their best improvement; chopping and harvesting are done before building. Tile yields are weighed by fixed numbers, not by the weights above: Food and Production 1, Science and Culture 5/6, Faith 1/2, Gold 1/4 (1 Production = 4 Gold = 2 Faith), and the same for the one-time yields of chopping and harvesting.</Text>
+      <Text>Tiles: what the tiles the districts take would have given, times this weight; 0 leaves it out. A tile counts what it gives with its best improvement; chopping and harvesting are done before building. Its yields are weighed by fixed numbers, not by the weights to the left: Food and Production 1, Science and Culture 5/6, Faith 1/2, Gold 1/4 (1 Production = 4 Gold = 2 Faith), and the same for the one-time yields of chopping and harvesting.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SWAP_SHORT" Language="en_US">
       <Text>Swap tiles from my cities</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SWAP_TOOLTIP" Language="en_US">
       <Text>Let districts go on tiles of your other cities: in Manage Citizens, Swap gives such a tile to this city (no district or wonder on it, not next to that city's center).[NEWLINE][NEWLINE]Gain: more adjacency, measured at +13% on average for one city and +20% for several.[NEWLINE]Cost: about three in ten districts need a swap by hand; the other city loses that tile; several cities take about twice as long to plan.</Text>
-    </Replace>
-    <Replace Tag="LOC_SDP_LAND_SHORT" Language="en_US">
-      <Text>Land loss</Text>
     </Replace>
     <Replace Tag="LOC_SDP_WEIGHT_FEATURE_SHORT" Language="en_US">
       <Text>Harv.</Text>
@@ -719,7 +716,7 @@
       <Text>Weights (0–3)</Text>
     </Replace>
     <Replace Tag="LOC_SDP_WEIGHTS_TOOLTIP" Language="en_US">
-      <Text>Each yield of the adjacency bonuses is multiplied by its weight and the results added up; 0 leaves that yield out. What the tiles the districts take would have given is weighed by fixed numbers, not by these weights (see Land loss).</Text>
+      <Text>Each yield of the adjacency bonuses is multiplied by its weight and the results added up; 0 leaves it out. The Tiles column weighs what the tiles the districts take would have given, its yields by fixed numbers (see its tooltip).</Text>
     </Replace>
     <Replace Tag="LOC_SDP_PEEK" Language="en_US">
       <Text>View map</Text>
@@ -768,6 +765,9 @@
     </Replace>
     <Replace Tag="LOC_SDP_FOLD_HEAT" Language="en_US">
       <Text>good places: {1_District}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_WEIGHT_LAND_SHORT" Language="en_US">
+      <Text>Tiles</Text>
     </Replace>
   </LocalizedText>
 </GameData>
