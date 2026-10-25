@@ -30,14 +30,19 @@ SITE_FIELDS = ("siteValue", "tileValue", "districtPotential", "freshWater", "coa
 
 def group(sid):
     """(set, kind) of a scenario id: dev / heldout / sealed / real / smallmulti(/heldout, /sealed) /
-    profile:SCI ... (profile:RND/heldout ...) / wonders (/improvement) / sites / coverage (/real)."""
+    large, pools (/heldout, /sealed) / profile:SCI ... (profile:RND/heldout ...) /
+    wonders (/heldout, /sealed, /improvement) / sites / coverage (/real)."""
     if "~" in sid:
         base, profile = sid.split("~", 1)
         part = group(base)[0]
         return "profile:" + profile + ("" if part == "dev" else "/" + part), "single"
     for prefix, name, kind in (("D3", "three", "single"), ("HD3", "three/heldout", "single"),
                                ("FD3", "three/sealed", "single"), ("DM", "twoeach", "multi"),
-                               ("HDM", "twoeach/heldout", "multi"), ("FDM", "twoeach/sealed", "multi")):
+                               ("HDM", "twoeach/heldout", "multi"), ("FDM", "twoeach/sealed", "multi"),
+                               ("L", "large", "single"), ("HL", "large/heldout", "single"),
+                               ("FL", "large/sealed", "single"), ("P", "pools", "single"),
+                               ("HP", "pools/heldout", "single"), ("FP", "pools/sealed", "single"),
+                               ("HW", "wonders/heldout", "single"), ("FW", "wonders/sealed", "single")):
         if sid.startswith(prefix) and sid[len(prefix):len(prefix) + 1].isdigit():
             return name, kind
     if sid.startswith("OM"):

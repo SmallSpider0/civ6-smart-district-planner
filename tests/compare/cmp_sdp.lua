@@ -106,7 +106,8 @@ local function Oracle(result, out, cityOf, check, weights, land, lambda)
     local i = o.Layout and o.Layout[m] or 0
     if i ~= 0 then
       local c = search.Candidates[i]
-      out.placements[#out.placements + 1] = { city = cityOf(m), type = search.Types[m], x = c.X, y = c.Y }
+      out.placements[#out.placements + 1] = { city = cityOf(m), type = search.Types[m], x = c.X, y = c.Y,
+        kind = search.Kinds[m] }
     end
   end
   -- compare.mjs --refscore sets CMP_REFERENCE (the reference layout's plan,
@@ -193,12 +194,18 @@ function CmpAdapters.sdp(request, variant, w)
           kind = "IMPROVEMENT" }
       end
     end
+    if oracle and r.Ok then
+      Oracle(r, out, function() return id end, check, request.weights, land, lambda)
+      stats.method = "oracle"
+      return out
+    end
     stats.sdpGain, stats.sdpAppeal = r.Adjacency, r.AppealDelta
     if land then stats.sdpObjective = r.Gain end
     stats.sdpQuality = r.Quality -- design 7.4: Exhaustive, Bound, Gap, Converged, Truncated
     for _, u in ipairs(r.Unplaced or {}) do out.notes[#out.notes + 1] = "unplaced " .. tostring(u.Type) .. " " .. tostring(u.Reason) end
   elseif scn.kind == "single" then
     local r = SDP_Solver.Solve({ PlayerID = 0, CityID = request.target:GetID(), Districts = request.districts,
+      Pool = request.pool, Count = request.count,
       Land = land, Tier = variant, Weights = request.weights, Swap = swap, Coverage = coverage })
     if not r.Ok then out.notes[#out.notes + 1] = tostring(r.Error) end
     Take(r.Plan, request.target:GetID())

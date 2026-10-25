@@ -3,10 +3,13 @@
 -- Branch and bound over every slot of the search the mod's own solver built
 -- (same candidates, legal plots, single values and exact evaluation), so the
 -- optimum is over exactly the layouts the mod may choose, judged by the same
--- DMT. Only for district slots (no wonders). With pools ("pick N from these
--- candidates") every allowed combination of each group is searched in turn
--- (SDP_Search's Clashes and Excluded rules), best optimistic value first,
--- all sharing one incumbent.
+-- DMT. District and wonder slots (issue 48: a wonder is a slot like a
+-- district, its value what it adds to its neighbours; its own rules, such
+-- as the district it must be next to, are the search's legality, checked
+-- at the leaves); not wonders that need an improvement next to them. With
+-- pools ("pick N from these candidates") every allowed combination of each
+-- group is searched in turn (SDP_Search's Clashes and Excluded rules), best
+-- optimistic value first, all sharing one incumbent.
 -- The value is the DMT adjacency gain alone (the judge's gain): the search's
 -- own objective may add parts the judge does not count (the housing a
 -- pinned neighbourhood gets from appeal), so it only decides legality.
@@ -107,10 +110,10 @@ local function PairBounds(search)
   local board, n, k = search.Board, search.N, search.K
   local adjacent = search:Touching()
   local adjacency = SDP_Rules.AdjacencyTable(search.PlayerID)
-  local types, typeOf, single, legal = {}, {}, {}, {}
+  local types, typeOf, single, legal, kindOf = {}, {}, {}, {}, {}
   for m = 1, k do
     local t = search.Types[m]
-    typeOf[m] = t
+    typeOf[m], kindOf[t] = t, search.Kinds[m]
     if single[t] == nil then
       types[#types + 1] = t
       single[t], legal[t] = {}, {}
@@ -138,8 +141,8 @@ local function PairBounds(search)
             for _, j in ipairs(adjacent[i]) do
               if legal[tb][j] then
                 local ci, cj = search.Candidates[i], search.Candidates[j]
-                board:Put(1, { Key = ta, Type = "DISTRICT", X = ci.X, Y = ci.Y })
-                board:Put(2, { Key = tb, Type = "DISTRICT", X = cj.X, Y = cj.Y })
+                board:Put(1, { Key = ta, Type = kindOf[ta], X = ci.X, Y = ci.Y })
+                board:Put(2, { Key = tb, Type = kindOf[tb], X = cj.X, Y = cj.Y })
                 local both, ok = board:Total()
                 board:Put(1, nil)
                 board:Put(2, nil)
@@ -230,7 +233,11 @@ function CmpOracle.Run(search, incumbentLayout, options)
   local land = options ~= nil and options.Land == true
   local k, n = search.K, search.N
   for m = 1, k do
-    if search.Kinds[m] ~= "DISTRICT" then error("oracle: only district slots") end
+    local kind, spec = search.Kinds[m], search.SlotSpecs and search.SlotSpecs[search.SlotIndex[m]] or {}
+    if kind ~= "DISTRICT" and kind ~= "WONDER" then error("oracle: only district and wonder slots") end
+    -- The improvement a wonder needs next to it (issue 51) is placed by
+    -- Evaluate with the wonder, outside the pair bounds: not covered.
+    if spec.Support ~= nil then error("oracle: a wonder that needs an improvement next to it") end
   end
   search:Model()
   local single = search.ModelSingle

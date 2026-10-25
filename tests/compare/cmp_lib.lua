@@ -286,6 +286,15 @@ function CmpRun.Setup(id)
   for _, base in ipairs(scn.districts) do
     if base ~= "DISTRICT_HARBOR" or SeaInReach(target) then districts[#districts + 1] = unique[base] or base end
   end
+  -- Districts to pick from (P scenarios, issue 48): `count` specialty
+  -- districts in all, the required ones included (SDP_Solver Pool, Count).
+  local pool = nil
+  if scn.pool ~= nil then
+    pool = {}
+    for _, base in ipairs(scn.pool) do
+      if base ~= "DISTRICT_HARBOR" or SeaInReach(target) then pool[#pool + 1] = unique[base] or base end
+    end
+  end
   -- A list per city (V scenarios): { [city ID] = district types }, by city order.
   local plans = nil
   if scn.plans then
@@ -311,7 +320,7 @@ function CmpRun.Setup(id)
     if gi.Buildings[b] ~= nil then wonders[#wonders + 1] = b end
   end
   local request = { playerID = 0, scenario = scn, cities = cities, districts = districts, weights = weights,
-    target = target, wonders = wonders, sites = scn.sites, plans = plans }
+    target = target, wonders = wonders, sites = scn.sites, plans = plans, pool = pool, count = scn.count }
   return scn, w, request
 end
 
@@ -1290,6 +1299,7 @@ function CmpRun.Judge(id, planJson)
   -- Rules DMT does not check: one per city, empire limits, district slots.
   local requested = {}
   for _, t in ipairs(request.districts) do requested[t] = true end
+  for _, t in ipairs(request.pool or {}) do requested[t] = true end
   local perCity, perPlayer = {}, {}
   for _, c in ipairs(request.cities) do
     perCity[c:GetID()] = {}
@@ -1422,6 +1432,21 @@ function CmpRun.Judge(id, planJson)
       end
     end
   else
+    if request.pool ~= nil then
+      -- Picking from a pool: the specialty districts short of `count`
+      -- (the required ones are counted below), each named by the first
+      -- pool type the city does not have.
+      local have, open = 0, {}
+      for _, t in ipairs(request.districts) do
+        local row = gi.Districts[t]
+        if row.RequiresPopulation and not row.CityCenter then have = have + 1 end
+      end
+      local c = request.target
+      for _, t in ipairs(request.pool) do
+        if (perCity[c:GetID()][t] or 0) > (builtPerCity[c:GetID()][t] or 0) then have = have + 1 else open[#open + 1] = t end
+      end
+      for x = 1, math.min(#open, (request.count or 0) - have) do Missing(open[x], { c }, c:GetID()) end
+    end
     for _, t in ipairs(request.districts) do
       local row = gi.Districts[t]
       if (row.MaxPerPlayer or -1) >= 0 then
@@ -1492,6 +1517,15 @@ function CmpRun.Judge(id, planJson)
   score.missing = missing
   score.missingPlaceable = missingPlaceable
   score.requested = #request.districts
+  if request.pool ~= nil then
+    -- Plus the districts to pick: count less the required specialty ones.
+    local required = 0
+    for _, t in ipairs(request.districts) do
+      local row = gi.Districts[t]
+      if row.RequiresPopulation and not row.CityCenter then required = required + 1 end
+    end
+    score.requested = score.requested + math.max(0, (request.count or 0) - required)
+  end
 
   -- Coverage (design 19.5): the (city, kind) pairs the player's regional
   -- districts reach, before and with the plan. Worked out here from the
