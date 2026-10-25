@@ -67,7 +67,7 @@ RESULTS = ["tests/compare/results/" + f + ".jsonl" for f in (
     "wonders_sdp_ep", "wonders_amt", "wonders_cross", "wonders_sdp_repair", "wonders_v120",
     "coverage_sdp", "coverage_amt",
     # The true optimum and the sets that need it (issue 48).
-    "oracle_hs_om", "oracle_check", "oracle_single", "pools_wonders", "smallmulti", "large", "large_heldout")]
+    "oracle_hs_om", "oracle_check", "oracle_single", "pools_wonders", "smallmulti", "large", "large_heldout", "longrun_multi")]
 
 PLANNERS = {
     "sdp:FAST": {"label": "本模组 快速档", "color": "--s1"},
