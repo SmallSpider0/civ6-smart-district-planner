@@ -16,15 +16,19 @@
 --
 -- Upper bound of a layout: the sum over its slots of the model's single value
 -- (the exact value alone, plus the share of each TilesRequired step the
--- fixed neighbours have started) and over its pairs of neighbouring slots of
---   max(exact pair interaction at those two plots, unrounded table pair, 0)
--- The exact pair interaction (both together minus each alone, with DMT)
--- holds what the table does not (Japan's trait); the unrounded table holds
--- the TilesRequired steps three districts complete together; negative
--- interactions count 0, so rounding cannot make them count twice. This is an
--- upper bound for the rules the game has, but not provably for every DMT
--- modifier, so every exactly evaluated layout is checked against its bound:
--- a layout worth more than its bound makes the result "not proven".
+-- fixed neighbours and the slot's own fixed neighbours have started) and
+-- over its pairs of neighbouring slots of
+--   max(unrounded table pair + what the exact pair has beyond the table
+--       rounded at those two plots, unrounded table pair, 0)
+-- (PairBounds). The exact pair interaction (both together minus each
+-- alone, with DMT) holds what the table does not (Japan's trait); the
+-- unrounded table holds the TilesRequired steps districts complete
+-- together; negative interactions count 0. The pairs among the slots not
+-- placed yet are also capped by how many edges that many hexagons can have
+-- (Rest). This is an upper bound for the rules the game has, but not
+-- provably for every DMT modifier, so every exactly evaluated layout is
+-- checked against its bound: a layout worth more than its bound makes the
+-- result "not proven".
 --
 -- A run that hits the node limit reports the best layout found (lower) and
 -- the largest bound of what it did not search (upper).
