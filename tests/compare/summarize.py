@@ -168,6 +168,13 @@ def key(r):
 ORACLE_KEYS = ("sdp:ORACLE", "sdp:ORACLE_CHECK")
 
 
+def left_out(score):
+    """Districts and wonders the plan does not place: the missing districts
+    plus the wonders asked for and not placed."""
+    score = score or {}
+    return (score.get("missing") or 0) + max(0, (score.get("wondersRequested") or 0) - (score.get("wondersPlaced") or 0))
+
+
 def is_adjacency_reference(k):
     """A run that gives the adjacency reference (issues 48, 40): the oracle
     (ORACLE_KEYS, also with a node limit "@n") or the long-run reference
@@ -253,7 +260,7 @@ def summarize(rows):
             if isinstance(o, dict) and not runs[k].get("error"):
                 if o.get("proven"):
                     optimum = o["value"]
-                    optimumMissing = ((runs[k].get("score") or {}).get("missing")) or 0
+                    optimumMissing = left_out(runs[k].get("score"))
                 else:
                     if o.get("upper") is not None:
                         upper = o["upper"] if upper is None else min(upper, o["upper"])
@@ -299,7 +306,7 @@ def summarize(rows):
                 hard = sum(n for kk, n in kinds.items() if kk in HARD)
                 g = metric(s)
                 e.update({
-                    "gain": g, "legal": hard == 0, "violations": dict(kinds), "missing": s.get("missing", 0),
+                    "gain": g, "legal": hard == 0, "violations": dict(kinds), "missing": s.get("missing", 0), "leftOut": left_out(s),
                     "missingPlaceable": s.get("missingPlaceable"),
                     "tileLoss": s.get("tileLoss"), "placed": s.get("placed"),
                     "quality": (g / best) if best and best > 0 else (1.0 if best == 0 and g is not None and g >= 0 else None),
@@ -409,9 +416,10 @@ def per_planner(scenarios, kind_filter=None):
                 a["ofOptimum"].append(g / o if o > 0 else (1.0 if g >= 0 else 0.0))
                 # Above the optimum: a check that must stay 0. A plan that
                 # leaves out districts the optimum places solves an easier
-                # problem; it is counted apart (fewerAbove).
+                # problem; it is counted apart (fewerAbove). Wonders left out
+                # count as well (an easier problem the same way).
                 above = r["legal"] and r["gain"] > e["optimum"] + 1e-9
-                fewer = (r.get("missing") or 0) > (e.get("optimumMissing") or 0)
+                fewer = (r.get("leftOut") or 0) > (e.get("optimumMissing") or 0)
                 a["overOptimum"].append(1 if above and not fewer else 0)
                 a["fewerAbove"].append(1 if above and fewer else 0)
             if r.get("outputGap") is not None:
@@ -565,7 +573,7 @@ def main():
                 print("  %-18s of the optimum (n %d): mean %.1f%% median %.1f%% worst %.1f%%; at 100%% %.0f%%, >=95%% %.0f%%, >=90%% %.0f%%; above the optimum %d" % (
                     "", so["n"], 100 * so["mean"], 100 * so["median"], 100 * so["min"], 100 * so["at100"], 100 * so["at95"],
                     100 * so["at90"], v["overOptimum"]) + (
-                    "; above it with fewer districts placed %d" % v["fewerAbove"] if v.get("fewerAbove") else ""))
+                    "; above it with fewer districts or wonders placed %d" % v["fewerAbove"] if v.get("fewerAbove") else ""))
             if ob is not None:
                 print("  %-18s output best %.2f gap %.2f" % ("", ob, og))
             if v.get("outputPMean") is not None:

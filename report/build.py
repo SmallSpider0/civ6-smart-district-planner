@@ -65,7 +65,9 @@ RESULTS = ["tests/compare/results/" + f + ".jsonl" for f in (
     "full_rejudged", "land", "full_cross", "heldout", "heldout_cross",
     "profiles_SCI", "profiles_PROD", "profiles_FAITH", "sites",
     "wonders_sdp_ep", "wonders_amt", "wonders_cross", "wonders_sdp_repair", "wonders_v120",
-    "coverage_sdp", "coverage_amt")]
+    "coverage_sdp", "coverage_amt",
+    # The true optimum and the sets that need it (issue 48).
+    "oracle_hs_om", "oracle_check", "oracle_single", "pools_wonders")]
 
 PLANNERS = {
     "sdp:FAST": {"label": "本模组 快速档", "color": "--s1"},
@@ -1119,7 +1121,7 @@ def build(files=None, make_snapshots=True, version=None, date=None, lang="zh"):
 
     def optimum_stats(sub, k):
         """Shares of the reference for planner k over the scenes of `sub` that have a reference."""
-        low, known, hit, n, over = [], [], 0, 0, 0
+        low, known, hit, n, over, fewer = [], [], 0, 0, 0, 0
         for sid, e in sorted(sub.items()):
             r = e["runs"].get(k)
             best = e.get("reference")
@@ -1133,11 +1135,14 @@ def build(files=None, make_snapshots=True, version=None, date=None, lang="zh"):
             known.append(g / best if best > 0 else (1.0 if g >= 0 else 0.0))
             if e.get("optimum") is not None and g >= e["optimum"] - 1e-9:
                 hit += 1
-            if e.get("optimum") is not None and g > e["optimum"] + 1e-9 and (r.get("missing") or 0) <= (e.get("optimumMissing") or 0):
-                over += 1
+            if e.get("optimum") is not None and g > e["optimum"] + 1e-9:
+                if (r.get("leftOut") or 0) <= (e.get("optimumMissing") or 0):
+                    over += 1
+                else:
+                    fewer += 1
         if not n:
             return None
-        return {"n": n, "low": statistics.mean(low), "known": statistics.mean(known), "worst": min(low), "hit": hit, "over": over}
+        return {"n": n, "low": statistics.mean(low), "known": statistics.mean(known), "worst": min(low), "hit": hit, "over": over, "fewer": fewer}
 
     opt_rows, opt_data = [], {}
     for set_name, kind, zh, en, planners in OPT_SETS:
@@ -1156,6 +1161,8 @@ def build(files=None, make_snapshots=True, version=None, date=None, lang="zh"):
                 cells.append(L("%s · %d 个最优", "%s · %d optimal") % (pct(st["low"], 1), st["hit"]))
             else:
                 cells.append(L("%s–%s", "%s–%s") % (pct(st["low"], 0), pct(st["known"], 0)))
+        if all(v is None for v in data.values()):
+            continue
         opt_data[(set_name, kind)] = {"n": len(sub), "proven": proven, "planners": data}
         label = L(zh, en)
         prov = L("%d / %d", "%d / %d") % (proven, len(sub))
@@ -1168,6 +1175,7 @@ def build(files=None, make_snapshots=True, version=None, date=None, lang="zh"):
             "".join(opt_rows))) if opt_rows else ""
     over_total = sum((st or {}).get("over", 0) for d in opt_data.values() for st in d["planners"].values())
     texts["OPTIMUM_OVER"] = str(over_total)
+    fewer_total = sum((st or {}).get("fewer", 0) for d in opt_data.values() for st in d["planners"].values())
     # The oracle's own checks over every reference run (cmp_oracle.lua).
     ref_runs = viol = brute_n = brute_ok = climb_n = climb_above = 0
     for r in rows:
@@ -1233,12 +1241,21 @@ def build(files=None, make_snapshots=True, version=None, date=None, lang="zh"):
     texts["OPTIMUM_TEXT"] = L(
         "下表把每类场景里各规划器的加成和真最优比：平均达到真最优的百分之几，以及正好是真最优的场景数。%d 个场景里 %d 个的真最优已证明；"
         "没证明的（10 个以上区域的大城、3–4 座城的多城）给的是范围：前一个数按真最优的上界算，是比例的下限，后一个数按已知最好的方案算。"
-        "任何规划器的合法方案都没有超过证明过的真最优（超过的次数：%s）。",
+        "%s",
         "The table sets each planner's adjacency against the true optimum in every kind of scenario: the mean share of the "
         "optimum and the number of scenarios at the optimum itself. Of %d scenarios, %d have a proven optimum; for the others "
         "(large cities of 10 or more districts, 3–4 cities together) the table gives a range: the first number is against the "
-        "optimum's upper bound, a floor of the share, the second against the best plan known. No valid plan of any planner "
-        "is above a proven optimum (times it was: %s).") % (n_all, proven_all, texts["OPTIMUM_OVER"])
+        "optimum's upper bound, a floor of the share, the second against the best plan known. %s") % (
+        n_all, proven_all,
+        (L("把要求的区域和奇观都放下的合法方案，没有一个超过证明过的真最优",
+           "No valid plan that places all the districts and wonders asked for is above a proven optimum")
+         if over_total == 0 else
+         L("把要求的区域和奇观都放下的合法方案超过证明过的真最优 %d 次",
+           "Valid plans that place all the districts and wonders asked for are above a proven optimum %d times") % over_total)
+        + ((L("；少放了奇观或区域的方案有 %d 个高于它（解的是更容易的问题，表里按实际加成计）。",
+              "; plans that leave out a wonder or a district are above it in %d scenario%s (an easier problem; the table "
+              "counts their actual adjacency).") % ((fewer_total, "" if fewer_total == 1 else "s") if EN else (fewer_total,)))
+           if fewer_total else L("。", ".")))
     texts["OPTIMUM_NOTE"] = L(
         "真最优的求法：在本模组搜索用的候选格和合法性上做分支定界，上界 = 每个区域单独的值 + 相邻区域两两的配对值，配对值取 DMT "
         "在那两格上的实测和查表里大的一个，凑满几个邻居才给加成的规则按份额计。每个算过的方案都检查不超过它的上界，超过就不算证明；"
