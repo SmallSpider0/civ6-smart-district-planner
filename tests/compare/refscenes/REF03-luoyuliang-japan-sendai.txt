@@ -1,0 +1,70 @@
+# 洛雨凉_, Bilibili article cv11098689 "【文明6-NFP战报】这波是强行理性主义——日本4城
+# 精铺试飞183T" (2021-04-30, GS with the April 2021 update, Deity, standard
+# speed, huge Lakes map). Turn 55 picture (93f1df32…, 3204x1867): all four
+# cities planned with map tacks ("初步规划如图标示"). The article's claims
+# (from the research notes; the article page itself was rate-limited when
+# this was transcribed): every Campus +5 or more, Theater Squares and
+# Industrial Zones as high as possible; cities moved so that no luxury sits
+# next to a city center. The tacks carry no numbers in this picture.
+# This scene is the second city, 仙台 (Sendai, city 1), with its own tacks as
+# the reference: Holy Site, Industrial Zone, Aqueduct, Campus, Commercial Hub,
+# Theater Square and a purple tack read as the Government Plaza; the pagoda
+# wonder tack south of the center is a built wonder here (its type is not
+# readable; Forbidden City stands in, any wonder gives the Theater +2).
+# 东京 (Tokyo, city 2) is included only for its tacks next to Sendai, as
+# built districts (Aqueduct, Industrial Zone, Dam, Campus, Holy Site,
+# Theater, Harbor), and is not planned. 京都 and 大阪 are left out (their
+# tacks are more than 4 plots from Sendai).
+# The grid was fitted to the tack positions and checked against the
+# territory borders and the river (perspective view). Plots in the fog
+# (sepia, south-west and the bottom row), under the city banners and outside
+# the picture are marked guessed. Purple-flower pockets read as Spices,
+# white gems as Diamonds, from their icons.
+# The judge (refscene.py verify) gives Holy Site 5, Industrial Zone 5,
+# Campus 5 (the claim: +5 or more), Commercial Hub 3, Theater Square 5.
+id      REF03-luoyuliang-japan-sendai
+title   洛雨凉: Japan four-city plan, Sendai
+source  https://www.bilibili.com/read/cv11098689
+author  洛雨凉_
+date    2021-04-30
+ruleset RULESET_EXPANSION_2
+civ     CIVILIZATION_JAPAN LEADER_HOJO
+techs   all
+civics  all
+turn    150
+note    Claimed: every Campus +5 or more. Tokyo's tacks next to Sendai are built districts; Kyoto and Osaka left out.
+note    Leader not named in the article's picture; Hojo is Japan's only leader in the local rules.
+
+city 1 name=Sendai pop=16 owns=1 capital
+city 2 name=Tokyo pop=13 owns=1
+
+map
+  gm?         g?          p?          g?          p?          p?          gm?         g           g?          g?          g?
+        p           g           g?          g?          gm          p           g+f         g:spices?   p           gm          gm
+  p?          g+f         g           g+fp?       g?          gm          p:iron?     gm          g+f         p           dm
+        g?          g           g           g           gm          g           g           gm          gm          p?          p+f?
+  c?          gm          gh:diamonds gm          g           gm          gm          g           g:spices    L           g+f
+        p?          p?          p+f?        p+j         g           g+f:stone?  g           g+f         gm          L           g
+  p?          p?          p?          p+f?        p+f?        gm          g           g+f         g+j         g?          g
+        p?          p?          p?          p?          p?          g           p+j:diamonds? gm          g+j?        g?          g?
+  p?          p?          p?          p?          p?          p?          g+m         g+j         g?          g?          g?
+        p?          p?          p?          p?          p?          p?          p?          p?          p?          p?          p?
+end
+
+layout
+  .           .           .           *TH2        .           .           .           .           .           .           .
+        .           CC2         *AQ2        *IZ2        .           .           .           .           .           .           .
+  .           .           .           *DA2        *CA2        .           .           .           .           .           .
+        .           .           .           *HS2        .           HS1         IZ1         .           .           .           .
+  *HA2        .           .           .           CA1         .           .           AQ1         .           .           .
+        .           .           .           .           CH1         .           CC1         GP1         .           .           .
+  .           .           .           .           .           .           .           TH1         .           .           .
+        .           .           .           .           .           .           .           .           .           .           .
+  .           .           .           .           .           .           .           .           .           .           .
+        .           .           .           .           .           .           .           .           .           .           .
+end
+
+river Sumida 2,1:E,SE 3,2:W,SW 2,3:E
+river Tenryu 2,5:E 3,5:SW,SE 4,5:SW 4,6:E,SE,SW
+river Kitakami 5,4:E,SE 5,5:W,SW,SE 6,5:SW,SE 7,5:SW 7,6:E 8,6:SW
+wonder 6,6 BUILDING_FORBIDDEN_CITY city=1

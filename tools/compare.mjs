@@ -20,10 +20,26 @@
 //       (tests/compare/cmp_cross_<scorer>.lua, CmpCross[scorer]); adds
 //       row.cross[scorer] = { score, baseline, gain, ... } (design 18.1, item 2)
 //   node tools/compare.mjs --dump ID | --snapshot ID
+//   node tools/compare.mjs --refscore [-s REF01] [--weights FILE|SPEC] [--reference-only]
+//       reference scenes (tools/refscene.py): for each weight vector, the
+//       judge's score of the recorded layout and of the optimum under the
+//       same weights; one row per scene and vector (issue 53). Adjacency
+//       only: the optimum is sdp:ORACLE, compared on the judge's gain. With
+//       land (land=1, or lambda=x for the land coefficient): the optimum is
+//       sdp:ORACLE_LAND<nnn>, and the reference layout is valued by the same
+//       search, both on the mod's whole objective (adjacency + lambda x land
+//       part + housing)
+//   node tools/compare.mjs -s ^S -p sdp --only sdp:ORACLE --weights FILE|SPEC [--out FILE]
+//   node tools/compare.mjs --rejudge RESULTS.jsonl --weights FILE|SPEC [--out FILE]
+//       the same runs (or judgings) once per named weight vector, which
+//       replaces the scenario's own weights for the planner and the judge;
+//       each row carries weights = { name, yields } (and a rejudged row
+//       planWeights, the vector its plan was made for) (issue 53)
 // Results are JSON lines in --out (default tests/compare/results/latest.jsonl).
 
 import { createRequire } from "node:module";
-import { readFileSync, existsSync, writeFileSync, mkdirSync, appendFileSync } from "node:fs";
+import { readFileSync, existsSync, writeFileSync, mkdirSync, appendFileSync, readdirSync, statSync } from "node:fs";
+import { createHash } from "node:crypto";
 import { join, resolve, dirname, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { performance } from "node:perf_hooks";
@@ -82,6 +98,41 @@ do
   end
 end
 `;
+
+// What a result was computed with (issue 48), recorded in every row as
+// "env": the rules database exported from the game (.cache/gameinfo.lua),
+// DMT's Lua files, and this mod's and the comparison's Lua files, each as
+// the first 12 hex digits of a SHA-1 over the files' paths and contents in
+// path order (the same on any machine; no git needed there). A row whose
+// "code" differs from the current one was made by other legality rules or
+// another solver and may need recomputing.
+function treeHash(dirs, pattern) {
+  const files = [];
+  const walk = (dir) => {
+    if (!existsSync(dir)) return;
+    for (const name of readdirSync(dir).sort()) {
+      if (name.startsWith(".")) continue; // .cache: the rules, hashed apart
+      const path = join(dir, name);
+      if (statSync(path).isDirectory()) walk(path);
+      else if (pattern.test(name)) files.push(path);
+    }
+  };
+  for (const d of dirs) walk(d);
+  const h = createHash("sha1");
+  for (const f of files.sort()) h.update(display(f) + "\0").update(readFileSync(f)).update("\0");
+  return files.length ? h.digest("hex").slice(0, 12) : null;
+}
+let ENV = null;
+function environment() {
+  if (ENV === null) {
+    ENV = {
+      rules: existsSync(GAMEINFO) ? createHash("sha1").update(readFileSync(GAMEINFO)).digest("hex").slice(0, 12) : null,
+      dmt: treeHash([join(ROOT, "reference", "dmt")], /\.lua$/i),
+      code: treeHash([join(ROOT, "SmartDistrictPlanner"), COMPARE], /\.lua$/),
+    };
+  }
+  return ENV;
+}
 
 function display(path) {
   return relative(ROOT, path).split("\\").join("/");
@@ -187,9 +238,17 @@ function luaString(s) {
   });
 }
 
-// Judge a plan again (after the judge changed), keeping the plan and times.
-function rejudge(row) {
-  const judged = runLua("judge", `
+function weightsPrefix(v) {
+  return v ? `CMP_WEIGHTS = ${luaString(JSON.stringify(v.yields))}\n` : "";
+}
+
+// Judge a plan again (after the judge changed), keeping the plan and times;
+// with a weight vector `v`, under those weights (issue 53).
+function rejudge(row, v) {
+  if (v) {
+    row = Object.assign({}, row, { planWeights: row.weights ? row.weights.name : null, weights: { name: v.name, yields: v.yields } });
+  }
+  const judged = runLua("judge", weightsPrefix(v) + `
     include("cmp_lib")
     CmpRun.Judge(${luaString(row.scenario)}, ${luaString(JSON.stringify(row.plan))})
   `, "judge");
@@ -215,16 +274,143 @@ function crossScore(row, scorers) {
   return row;
 }
 
+// Weight vectors for --refscore and --weights: a file of JSON lines
+// ({"name": "all1", "science": 1, ..., "land": 0}) or inline
+// "all1:;half:gold=0.5,faith=0.5;land:land=1". Missing yields weigh 1.
+const YIELD_KEYS = { science: "YIELD_SCIENCE", culture: "YIELD_CULTURE", faith: "YIELD_FAITH", gold: "YIELD_GOLD",
+  production: "YIELD_PRODUCTION", food: "YIELD_FOOD" };
+function weightVector(name, fields) {
+  const v = { name, yields: {}, land: false, oracleLimit: null };
+  for (const k of Object.keys(YIELD_KEYS)) v.yields[YIELD_KEYS[k]] = 1;
+  for (const [k, raw] of Object.entries(fields)) {
+    if (k === "name") continue;
+    if (k === "land") {
+      v.land = raw === true || Number(raw) === 1;
+      if (v.land && v.lambda === undefined) v.lambda = 1;
+    } else if (k === "lambda") {
+      // The land coefficient (issue 53): the land part on, scaled by it.
+      const x = Number(raw);
+      if (!(x >= 0 && x <= 9.99)) throw new Error(`lambda=${raw} is not a number from 0 to 9.99`);
+      v.land = true;
+      v.lambda = x;
+    } else if (k === "oracle") v.oracleLimit = Number(raw); // node limit in millions
+    else if (YIELD_KEYS[k]) {
+      const n = Number(raw);
+      if (!Number.isFinite(n)) throw new Error(`weight ${k}=${raw} is not a number`);
+      v.yields[YIELD_KEYS[k]] = n;
+    } else throw new Error(`unknown weight ${k} (${Object.keys(YIELD_KEYS).join(", ")}, land, lambda, oracle)`);
+  }
+  return v;
+}
+function parseWeights(spec) {
+  if (!spec) return [weightVector("all1", {})];
+  if (existsSync(spec)) {
+    return readFileSync(spec, "utf8").split("\n").filter((l) => l.trim() && !l.trim().startsWith("#"))
+      .map((l, i) => { const o = JSON.parse(l); return weightVector(o.name || "w" + (i + 1), o); });
+  }
+  return spec.split(";").filter((p) => p.trim()).map((part, i) => {
+    const [name, rest] = part.includes(":") ? part.split(/:(.*)/s) : ["w" + (i + 1), part];
+    const fields = {};
+    for (const kv of (rest || "").split(",").filter((x) => x.trim())) {
+      const [k, val] = kv.split("=");
+      fields[k.trim()] = val === undefined ? "1" : val.trim();
+    }
+    return weightVector(name.trim(), fields);
+  });
+}
+
+// --refscore: the recorded layout of a reference scene and the optimum,
+// both judged under one weight vector (CMP_WEIGHTS in every state).
+function refScore(task) {
+  const v = task.vector;
+  const id = luaString(task.scenario);
+  const prefix = weightsPrefix(v);
+  const row = { scenario: task.scenario, mode: "refscore", weights: v };
+  const judge = (planJson) => {
+    const out = runLua("judge", prefix + `include("cmp_lib")\nCmpRun.Judge(${id}, ${luaString(planJson)})`, "judge");
+    let score = null;
+    for (const e of out.emits) if (e.startsWith("SCORE ")) score = JSON.parse(e.slice(6));
+    return { score, error: out.error, log: out.log.slice(-20) };
+  };
+  const refOut = runLua("judge", `include("cmp_lib")\nCmpRun.ReferencePlan(${id})`, "reference");
+  const refPlan = refOut.emits.find((e) => e.startsWith("PLAN "));
+  if (refOut.error || !refPlan) {
+    row.error = refOut.error || "no reference layout";
+    return row;
+  }
+  const refJudged = judge(refPlan.slice(5));
+  row.reference = refJudged.score ? Object.assign({ plan: JSON.parse(refPlan.slice(5)).placements }, refJudged.score) : null;
+  if (refJudged.error) row.error = "reference judge: " + refJudged.error;
+  // The objective the two are compared on: the judge's weighted adjacency
+  // gain, or with land the mod's whole objective ("sdp": the oracle's value
+  // and the reference layout valued by the same search).
+  const objective = v.land ? "sdp" : "gain";
+  row.objective = objective;
+  if (task.referenceOnly) return row;
+  const variant = (v.land ? "ORACLE_LAND" + String(Math.round(v.lambda * 100)).padStart(3, "0") : "ORACLE")
+    + (v.oracleLimit ? "@" + v.oracleLimit : "");
+  const plan = runLua("sdp", prefix + `CMP_REFERENCE = ${luaString(refPlan.slice(5))}\n`
+    + `include("cmp_lib")\nCmpRun.Plan(${id}, "sdp", ${luaString(variant)})`, "plan_sdp");
+  const planJson = (plan.emits.find((e) => e.startsWith("PLAN ")) || "").slice(5);
+  row.optimum = { planner: "sdp", variant, planSeconds: plan.seconds };
+  if (plan.error || !planJson) {
+    row.error = "optimum: " + (plan.error || "no plan emitted");
+    row.log = plan.log.slice(-40);
+    return row;
+  }
+  const parsed = JSON.parse(planJson);
+  row.optimum.plan = parsed.placements;
+  row.optimum.stats = parsed.stats;
+  row.optimum.notes = parsed.notes;
+  const optJudged = judge(planJson);
+  if (optJudged.score) Object.assign(row.optimum, optJudged.score);
+  if (optJudged.error) row.error = "optimum judge: " + optJudged.error;
+  const oracle = (parsed.stats && parsed.stats.oracle) || {};
+  const own = (parsed.stats && parsed.stats.reference) || {};
+  if (v.land && (own.missing || own.value === undefined)) {
+    row.error = "reference outside the search: " + JSON.stringify(own.missing || own);
+  }
+  if (row.reference && optJudged.score && (!v.land || own.value !== undefined)) {
+    const r = v.land ? own.value : row.reference[objective];
+    const o = v.land ? oracle.value : optJudged.score[objective];
+    const unweighted = (score) => Object.values(score.byYield || {}).reduce((a, b) => a + b, 0);
+    row.summary = { reference: r, optimum: o, gap: o - r, referenceShare: o > 0 ? r / o : null,
+      referenceOptimal: r >= o - 1e-9, referenceLegal: row.reference.legal, optimumLegal: optJudged.score.legal,
+      proven: oracle.proven === undefined ? null : oracle.proven === true,
+      complete: oracle.complete === undefined ? null : oracle.complete === true,
+      // The judge's adjacency of both (with the weights, and all 1).
+      referenceGain: row.reference.gain, optimumGain: optJudged.score.gain,
+      referenceGain1: unweighted(row.reference), optimumGain1: unweighted(optJudged.score) };
+    if (v.land) {
+      // Cut short by the node limit: the optimum lies in [optimum, upper].
+      if (oracle.complete === false) {
+        row.summary.upper = oracle.upper;
+        row.summary.gapUpper = oracle.upper - r;
+      }
+      row.summary.lambda = v.lambda;
+      row.summary.referenceLegalSearch = own.legal;
+      row.summary.referenceAdjacencySearch = own.adjacency;
+      // Placements of a type the search has no slot for (left out on both sides).
+      if (own.skipped) row.summary.referenceSkipped = own.skipped;
+      row.summary.optimumAdjacencySearch = oracle.adjacency;
+    }
+  }
+  return row;
+}
+
 // One task: plan scenario `id` with `planner` (+ its variant), then judge it.
 function runTask(task) {
   if (task.keep) return task.keep;
-  if (task.rejudge) return rejudge(task.rejudge);
+  if (task.vector) return refScore(task);
+  if (task.rejudge) return rejudge(task.rejudge, task.weights);
   if (task.cross) return crossScore(task.cross, task.scorers);
-  const plan = runLua(task.planner, `
+  const prefix = weightsPrefix(task.weights);
+  const plan = runLua(task.planner, prefix + `
     include("cmp_lib")
     CmpRun.Plan(${luaString(task.scenario)}, ${luaString(task.planner)}, ${luaString(task.variant || "")})
   `, "plan_" + task.planner);
   const result = { scenario: task.scenario, planner: task.planner, variant: task.variant || "", planSeconds: plan.seconds };
+  if (task.weights) result.weights = { name: task.weights.name, yields: task.weights.yields };
   let planJson = null;
   for (const e of plan.emits) {
     if (e.startsWith("PLAN ")) planJson = e.slice(5);
@@ -234,7 +420,7 @@ function runTask(task) {
     result.log = plan.log.slice(-40);
     return result;
   }
-  const judged = runLua("judge", `
+  const judged = runLua("judge", prefix + `
     include("cmp_lib")
     CmpRun.Judge(${luaString(task.scenario)}, ${luaString(planJson)})
   `, "judge");
@@ -287,6 +473,9 @@ if (!isMainThread) {
   let rejudgeFile = null;
   let crossFile = null;
   let scorers = ["amt", "ep"];
+  let refscore = false; // reference scenes against the optimum (issue 53)
+  let weightsSpec = null;
+  let referenceOnly = false;
   let only = null; // planner:variant keys
   let add = []; // planner:variant runs added to every selected scenario
   for (let i = 0; i < argv.length; i++) {
@@ -307,8 +496,13 @@ if (!isMainThread) {
     else if (a === "--rejudge") rejudgeFile = resolve(argv[++i]);
     else if (a === "--crossscore") crossFile = resolve(argv[++i]);
     else if (a === "--scorers") scorers = argv[++i].split(",");
+    else if (a === "--refscore") refscore = true;
+    else if (a === "--weights") weightsSpec = argv[++i];
+    else if (a === "--reference-only") referenceOnly = true;
     else {
-      console.error("usage: compare.mjs [--list] [-s SUBSTRING] [-p sdp,amt,ep] [--only P:V,...] [--add P:V,...] [-j JOBS] [--out FILE] [--ruleset RULESET_...] [-v]");
+      console.error("usage: compare.mjs [--list] [-s SUBSTRING] [-p sdp,amt,ep] [--only P:V,...] [--add P:V,...] [-j JOBS] [--out FILE] [--ruleset RULESET_...] [-v]\n"
+        + "       compare.mjs --refscore [-s REF..] [--weights FILE|NAME:KEY=W,...;...] [--reference-only] [-j JOBS] [--out FILE]\n"
+        + "       compare.mjs [-s ..] [--only P:V,...] [--rejudge FILE] --weights FILE|NAME:KEY=W,...;... [-j JOBS] [--out FILE]");
       process.exit(2);
     }
   }
@@ -340,6 +534,20 @@ if (!isMainThread) {
     for (const s of scenarios) console.log(s.id + "  " + (s.title || "") + "  [" + (s.planners || []).join(",") + "]");
     process.exit(0);
   }
+  // --weights without --refscore: every run (or judging) once per vector.
+  let runVectors = [null];
+  if (weightsSpec && !refscore) {
+    try {
+      runVectors = parseWeights(weightsSpec);
+    } catch (e) {
+      console.error("--weights: " + e.message);
+      process.exit(2);
+    }
+    if (crossFile) {
+      console.error("--weights does not go with --crossscore");
+      process.exit(2);
+    }
+  }
   const tasks = [];
   if (rejudgeFile || crossFile) {
     for (const line of readFileSync(rejudgeFile || crossFile, "utf8").split("\n")) {
@@ -349,16 +557,33 @@ if (!isMainThread) {
       if (only && !only.includes(row.planner + ":" + (row.variant || ""))) continue;
       // A run that gave no plan has nothing to score but still counts (as 0 %): keep it.
       if (!row.plan) tasks.push({ scenario: row.scenario, planner: row.planner, variant: row.variant, keep: row });
-      else if (rejudgeFile) tasks.push({ scenario: row.scenario, planner: row.planner, variant: row.variant, rejudge: row });
+      else if (rejudgeFile) {
+        for (const weights of runVectors) tasks.push({ scenario: row.scenario, planner: row.planner, variant: row.variant, rejudge: row, weights });
+      }
       else tasks.push({ scenario: row.scenario, planner: row.planner, variant: row.variant, cross: row, scorers });
     }
   }
-  for (const s of rejudgeFile || crossFile ? [] : scenarios) {
+  if (refscore) {
+    let vectors;
+    try {
+      vectors = parseWeights(weightsSpec);
+    } catch (e) {
+      console.error("--weights: " + e.message);
+      process.exit(2);
+    }
+    const refs = scenarios.filter((s) => s.id.startsWith("REF"));
+    if (refs.length === 0) {
+      console.error("no reference scenes" + (filter ? " match " + filter : "") + " (tools/refscene.py build)");
+      process.exit(2);
+    }
+    for (const s of refs) for (const vector of vectors) tasks.push({ scenario: s.id, vector, referenceOnly });
+  }
+  for (const s of rejudgeFile || crossFile || refscore ? [] : scenarios) {
     const runs = s.runs.concat(add.map((k) => ({ planner: k.split(":")[0], variant: k.split(":").slice(1).join(":") })));
     for (const run of runs) {
       const key = run.planner + ":" + (run.variant || "");
       if (planners.includes(run.planner) && (!only || only.includes(key)))
-        tasks.push({ scenario: s.id, planner: run.planner, variant: run.variant, verbose });
+        for (const weights of runVectors) tasks.push({ scenario: s.id, planner: run.planner, variant: run.variant, verbose, weights });
     }
   }
   // Longest runs first (AMT's multi-city joint solve, then multi-city), so
@@ -388,14 +613,21 @@ if (!isMainThread) {
       w.on("message", (r) => {
         done++;
         if (r.error || r.judgeError || Object.values(r.cross || {}).some((c) => !c || c.error)) failed++;
+        r.env = environment();
         appendFileSync(out, JSON.stringify(r) + "\n");
         const s = r.score;
         const crossText = r.cross ? Object.entries(r.cross).map(([k, v]) => `${k} ${v && v.error ? "ERROR " + String(v.error).split("\n")[0].slice(0, 80) : v && v.gain}`).join(" ") : "";
+        const m = r.summary;
         const summary = r.error ? "ERROR " + r.error.split("\n")[0].slice(0, 160)
+          : r.mode === "refscore" ? `[${r.weights.name}] ${r.objective}: reference ${m ? +m.reference.toFixed(3) : r.reference && r.reference[r.objective]}`
+            + (m ? ` optimum ${m.optimum}${m.upper !== undefined ? " ~ " + (+m.upper.toFixed(3)) : ""}${m.proven === false ? " (not proven)" : ""} gap ${+m.gap.toFixed(3)}${m.referenceOptimal ? " = optimal" : ""}` : "")
+            + (r.reference && !r.reference.legal ? " reference ILLEGAL" : "")
           : crossText ? "cross " + crossText
           : s && s.siteValue !== undefined ? `siteValue ${s.siteValue} tiles ${s.tileValue} districts ${s.districtPotential} legal ${s.legal} violations ${s.violations.length}`
           : s ? `gain ${s.gain} output ${s.output} legal ${s.legal} violations ${s.violations.length}` : "no score";
-        console.log(`[${done}/${tasks.length}] ${r.scenario} ${r.planner}${r.variant ? ":" + r.variant : ""} ${(r.planSeconds || 0).toFixed(1)}s ${summary}`);
+        const who = r.mode === "refscore" ? (r.optimum ? "sdp:" + r.optimum.variant : "reference")
+          : r.planner + (r.variant ? ":" + r.variant : "") + (r.weights ? " [" + (r.planWeights !== undefined ? (r.planWeights || "own") + "->" : "") + r.weights.name + "]" : "");
+        console.log(`[${done}/${tasks.length}] ${r.scenario} ${who} ${((r.optimum && r.optimum.planSeconds) || r.planSeconds || 0).toFixed(1)}s ${summary}`);
         if ((verbose || r.error || r.judgeError) && r.log) for (const line of r.log.slice(-15)) console.log("    | " + line);
         if (done >= tasks.length) {
           for (const x of workers) x.terminate();

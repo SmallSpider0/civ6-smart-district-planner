@@ -1,7 +1,7 @@
 """Own-plot appeal when a district clears a feature, by the normal flow.
 
 For woods, rainforest and marsh plots across the player's cities (three
-plots or more apart), order a neighborhood there (CityOperationTypes.BUILD)
+plots or more apart; improved plots too, with river, improvement and resource noted), order a neighborhood there (CityOperationTypes.BUILD)
 and finish it (FinishProgress); read the plot's own appeal and its
 neighbours' before and after. A neighborhood has no appeal of its own.
 Changes the game in memory (do not save).
@@ -35,7 +35,7 @@ for _, city in Players[pid]:GetCities():Members() do
     local p = Map.GetPlotXYWithRangeCheck(city:GetX(), city:GetY(), dx, dy, 3)
     local f = p and p:GetFeatureType() or -1
     local ft = (f ~= -1 and GameInfo.Features[f].FeatureType) or (p and not p:IsWater() and not p:IsMountain() and not p:IsCity() and p:GetDistrictType() == -1 and "NONE") or nil
-    if ft and left[ft] and left[ft] > 0 and p:GetImprovementType() == -1 then
+    if ft and left[ft] and left[ft] > 0 then
       local far = true
       for _, q in ipairs(picked) do if Map.GetPlotDistance(q[1], q[2], p:GetX(), p:GetY()) < 3 then far = false end end
       local t = {}
@@ -44,7 +44,8 @@ for _, city in Players[pid]:GetCities():Members() do
       if far and CityManager.CanStartOperation(city, CityOperationTypes.BUILD, t) then
         left[ft] = left[ft] - 1
         picked[#picked + 1] = { p:GetX(), p:GetY() }
-        out[#out + 1] = string.format('{"City":%%d,"X":%%d,"Y":%%d,"Feature":"%%s"}', city:GetID(), p:GetX(), p:GetY(), ft)
+        out[#out + 1] = string.format('{"City":%%d,"X":%%d,"Y":%%d,"Feature":"%%s","River":%%s,"Improvement":%%d,"Resource":%%d}',
+          city:GetID(), p:GetX(), p:GetY(), ft, tostring(p:IsRiver()), p:GetImprovementType(), p:GetResourceType())
       end
     end
   end end
@@ -94,10 +95,14 @@ def main():
         run("GameCore_Tuner", FINISH % {"city": pick["City"]})
         time.sleep(2)
         after = state(pick["X"], pick["Y"])
+        time.sleep(6)
+        later = state(pick["X"], pick["Y"])
         dn = ["%s %+d" % (k, a - b) for a, b, k in zip(after["Neighbours"], before["Neighbours"], before["Kinds"])]
-        print("%-15s (%d,%d): built %s, feature %d -> %d; own %d -> %d (%+d); neighbours %s" % (
-            pick["Feature"], pick["X"], pick["Y"], after["District"] != -1, before["Feature"], after["Feature"],
-            before["Appeal"], after["Appeal"], after["Appeal"] - before["Appeal"], ", ".join(dn)))
+        extra = "%s%s%s" % (" river" if pick["River"] else "", " improved" if pick["Improvement"] != -1 else "",
+                            " resource" if pick["Resource"] != -1 else "")
+        print("%-15s (%d,%d)%s: built %s, feature %d -> %d; own %d -> %d (%+d), 8 s later %d; neighbours %s" % (
+            pick["Feature"], pick["X"], pick["Y"], extra, after["District"] != -1, before["Feature"], after["Feature"],
+            before["Appeal"], after["Appeal"], after["Appeal"] - before["Appeal"], later["Appeal"], ", ".join(dn)))
     return 0
 
 

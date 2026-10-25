@@ -1,0 +1,90 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="920" height="324" viewBox="0 0 920 324" font-family="'Noto Sans SC','PingFang SC','Microsoft YaHei','Hiragino Sans GB',sans-serif">
+<rect width="100%" height="100%" fill="#ffffff"/>
+<defs><pattern id="foreign" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="6" stroke="#ffffff" stroke-width="2.2" stroke-opacity="0.75"/></pattern></defs>
+<text x="10.0" y="26.5" font-size="12" font-weight="700" fill="#946510" text-anchor="start">地形</text>
+<polygon points="84.0,14.5 84.0,29.5 71.0,37.0 58.0,29.5 58.0,14.5 71.0,7.0" fill="#a9d07c" stroke="#6b6b6b" stroke-width="0.7"/>
+<text x="91.0" y="26.5" font-size="12" font-weight="400" fill="#14202a" text-anchor="start">草原</text>
+<polygon points="158.4,14.5 158.4,29.5 145.4,37.0 132.4,29.5 132.4,14.5 145.4,7.0" fill="#dccd80" stroke="#6b6b6b" stroke-width="0.7"/>
+<text x="165.4" y="26.5" font-size="12" font-weight="400" fill="#14202a" text-anchor="start">平原</text>
+<polygon points="232.8,14.5 232.8,29.5 219.8,37.0 206.8,29.5 206.8,14.5 219.8,7.0" fill="#efe1ad" stroke="#6b6b6b" stroke-width="0.7"/>
+<text x="239.8" y="26.5" font-size="12" font-weight="400" fill="#14202a" text-anchor="start">沙漠</text>
+<polygon points="307.2,14.5 307.2,29.5 294.2,37.0 281.2,29.5 281.2,14.5 294.2,7.0" fill="#bdb8a0" stroke="#6b6b6b" stroke-width="0.7"/>
+<text x="314.2" y="26.5" font-size="12" font-weight="400" fill="#14202a" text-anchor="start">冻土</text>
+<polygon points="381.6,14.5 381.6,29.5 368.6,37.0 355.6,29.5 355.6,14.5 368.6,7.0" fill="#8ab45a" stroke="#6b6b6b" stroke-width="0.7"/><path d="M363.6,31.0 q5,-3.5 10,0" fill="none" stroke="#4d3f22" stroke-width="1.3"/>
+<text x="388.6" y="26.5" font-size="12" font-weight="400" fill="#14202a" text-anchor="start">丘陵（颜色深一档、底部弧线）</text>
+<polygon points="602.4,14.5 602.4,29.5 589.4,37.0 576.4,29.5 576.4,14.5 589.4,7.0" fill="#8a8077" stroke="#6b6b6b" stroke-width="0.7"/><text x="589.4" y="26.5" font-size="12" font-weight="700" fill="#3d362f" text-anchor="middle">▲</text>
+<text x="609.4" y="26.5" font-size="12" font-weight="400" fill="#14202a" text-anchor="start">山脉</text>
+<polygon points="84.0,50.5 84.0,65.5 71.0,73.0 58.0,65.5 58.0,50.5 71.0,43.0" fill="#a6d4ec" stroke="#6b6b6b" stroke-width="0.7"/>
+<text x="91.0" y="62.5" font-size="12" font-weight="400" fill="#14202a" text-anchor="start">海岸</text>
+<polygon points="158.4,50.5 158.4,65.5 145.4,73.0 132.4,65.5 132.4,50.5 145.4,43.0" fill="#6198c6" stroke="#6b6b6b" stroke-width="0.7"/>
+<text x="165.4" y="62.5" font-size="12" font-weight="400" fill="#14202a" text-anchor="start">海洋</text>
+<polygon points="232.8,50.5 232.8,65.5 219.8,73.0 206.8,65.5 206.8,50.5 219.8,43.0" fill="#5fb3c4" stroke="#6b6b6b" stroke-width="0.7"/>
+<text x="239.8" y="62.5" font-size="12" font-weight="400" fill="#14202a" text-anchor="start">湖泊</text>
+<polygon points="307.2,50.5 307.2,65.5 294.2,73.0 281.2,65.5 281.2,50.5 294.2,43.0" fill="#5a5a5a" stroke="#6b6b6b" stroke-width="0.7"/><text x="294.2" y="62.5" font-size="12" font-weight="700" fill="#dddddd" text-anchor="middle">?</text>
+<text x="314.2" y="62.5" font-size="12" font-weight="400" fill="#14202a" text-anchor="start">未揭示</text>
+<line x1="368.8" y1="58.0" x2="392.8" y2="58.0" stroke="#1f62c9" stroke-width="4.2" stroke-linecap="round"/>
+<text x="400.8" y="62.5" font-size="12" font-weight="400" fill="#14202a" text-anchor="start">河流</text>
+<line x1="443.2" y1="58.0" x2="467.2" y2="58.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<text x="475.2" y="62.5" font-size="12" font-weight="400" fill="#14202a" text-anchor="start">所选城市的领土边界</text>
+<text x="10.0" y="98.5" font-size="12" font-weight="700" fill="#946510" text-anchor="start">地貌</text>
+<polygon points="84.0,86.5 84.0,101.5 71.0,109.0 58.0,101.5 58.0,86.5 71.0,79.0" fill="#a9d07c" stroke="#6b6b6b" stroke-width="0.7"/><text x="71.0" y="98.5" font-size="12" font-weight="700" fill="#1f6b2a" text-anchor="middle">林</text>
+<text x="91.0" y="98.5" font-size="12" font-weight="400" fill="#14202a" text-anchor="start">树林</text>
+<polygon points="158.4,86.5 158.4,101.5 145.4,109.0 132.4,101.5 132.4,86.5 145.4,79.0" fill="#a9d07c" stroke="#6b6b6b" stroke-width="0.7"/><text x="145.4" y="98.5" font-size="12" font-weight="700" fill="#0f4f2e" text-anchor="middle">雨</text>
+<text x="165.4" y="98.5" font-size="12" font-weight="400" fill="#14202a" text-anchor="start">雨林</text>
+<polygon points="232.8,86.5 232.8,101.5 219.8,109.0 206.8,101.5 206.8,86.5 219.8,79.0" fill="#a9d07c" stroke="#6b6b6b" stroke-width="0.7"/><text x="219.8" y="98.5" font-size="12" font-weight="700" fill="#2c6f73" text-anchor="middle">沼</text>
+<text x="239.8" y="98.5" font-size="12" font-weight="400" fill="#14202a" text-anchor="start">沼泽</text>
+<polygon points="307.2,86.5 307.2,101.5 294.2,109.0 281.2,101.5 281.2,86.5 294.2,79.0" fill="#a9d07c" stroke="#6b6b6b" stroke-width="0.7"/><text x="294.2" y="98.5" font-size="12" font-weight="700" fill="#7a5a1e" text-anchor="middle">泛</text>
+<text x="314.2" y="98.5" font-size="12" font-weight="400" fill="#14202a" text-anchor="start">泛滥平原</text>
+<polygon points="406.0,86.5 406.0,101.5 393.0,109.0 380.0,101.5 380.0,86.5 393.0,79.0" fill="#a6d4ec" stroke="#6b6b6b" stroke-width="0.7"/><text x="393.0" y="98.5" font-size="12" font-weight="700" fill="#b0457a" text-anchor="middle">礁</text>
+<text x="413.0" y="98.5" font-size="12" font-weight="400" fill="#14202a" text-anchor="start">礁石</text>
+<polygon points="480.4,86.5 480.4,101.5 467.4,109.0 454.4,101.5 454.4,86.5 467.4,79.0" fill="#a9d07c" stroke="#6b6b6b" stroke-width="0.7"/><text x="467.4" y="98.5" font-size="12" font-weight="700" fill="#6b3a2a" text-anchor="middle">土</text>
+<text x="487.4" y="98.5" font-size="12" font-weight="400" fill="#14202a" text-anchor="start">火山土</text>
+<polygon points="567.0,86.5 567.0,101.5 554.0,109.0 541.0,101.5 541.0,86.5 554.0,79.0" fill="#8a8077" stroke="#6b6b6b" stroke-width="0.7"/><text x="554.0" y="98.5" font-size="12" font-weight="700" fill="#b3261e" text-anchor="middle">火</text>
+<text x="574.0" y="98.5" font-size="12" font-weight="400" fill="#14202a" text-anchor="start">火山</text>
+<polygon points="641.4,86.5 641.4,101.5 628.4,109.0 615.4,101.5 615.4,86.5 628.4,79.0" fill="#a9d07c" stroke="#6b6b6b" stroke-width="0.7"/><text x="628.4" y="98.5" font-size="12" font-weight="700" fill="#b3261e" text-anchor="middle">热</text>
+<text x="648.4" y="98.5" font-size="12" font-weight="400" fill="#14202a" text-anchor="start">地热裂缝</text>
+<polygon points="740.2,86.5 740.2,101.5 727.2,109.0 714.2,101.5 714.2,86.5 727.2,79.0" fill="#a9d07c" stroke="#6b6b6b" stroke-width="0.7"/><text x="727.2" y="98.5" font-size="12" font-weight="700" fill="#7a2f8f" text-anchor="middle">景</text>
+<text x="747.2" y="98.5" font-size="12" font-weight="400" fill="#14202a" text-anchor="start">自然奇观</text>
+<text x="10.0" y="134.5" font-size="12" font-weight="700" fill="#946510" text-anchor="start">资源</text>
+<polygon points="84.0,122.5 84.0,137.5 71.0,145.0 58.0,137.5 58.0,122.5 71.0,115.0" fill="#a9d07c" stroke="#6b6b6b" stroke-width="0.7"/><text x="71.0" y="134.5" font-size="10" font-weight="700" fill="#1b3a4b" text-anchor="middle">鱼</text>
+<text x="91.0" y="134.5" font-size="12" font-weight="400" fill="#14202a" text-anchor="start">加成资源</text>
+<polygon points="182.8,122.5 182.8,137.5 169.8,145.0 156.8,137.5 156.8,122.5 169.8,115.0" fill="#a9d07c" stroke="#6b6b6b" stroke-width="0.7"/><text x="169.8" y="134.5" font-size="10" font-weight="700" fill="#5b2a86" text-anchor="middle">染</text>
+<text x="189.8" y="134.5" font-size="12" font-weight="400" fill="#14202a" text-anchor="start">奢侈品</text>
+<polygon points="269.4,122.5 269.4,137.5 256.4,145.0 243.4,137.5 243.4,122.5 256.4,115.0" fill="#a9d07c" stroke="#6b6b6b" stroke-width="0.7"/><text x="256.4" y="134.5" font-size="10" font-weight="700" fill="#8a1c1c" text-anchor="middle">铁</text>
+<text x="276.4" y="134.5" font-size="12" font-weight="400" fill="#14202a" text-anchor="start">战略资源（格子上方的小字）</text>
+<text x="10.0" y="170.5" font-size="12" font-weight="700" fill="#946510" text-anchor="start">固定</text>
+<polygon points="84.0,158.5 84.0,173.5 71.0,181.0 58.0,173.5 58.0,158.5 71.0,151.0" fill="#a9d07c" stroke="#6b6b6b" stroke-width="0.7"/><polygon points="81.0,160.2 81.0,171.8 71.0,177.5 61.0,171.8 61.0,160.2 71.0,154.5" fill="#ffffff" stroke="#1a1a1a" stroke-width="2.0"/><text x="71.0" y="170.5" font-size="10.5" font-weight="700" fill="#111111" text-anchor="middle">城1</text>
+<text x="91.0" y="170.5" font-size="12" font-weight="400" fill="#14202a" text-anchor="start">所选城市的市中心（多城时带编号）</text>
+<polygon points="329.2,158.5 329.2,173.5 316.2,181.0 303.2,173.5 303.2,158.5 316.2,151.0" fill="#a9d07c" stroke="#6b6b6b" stroke-width="0.7"/><polygon points="326.2,160.2 326.2,171.8 316.2,177.5 306.2,171.8 306.2,160.2 316.2,154.5" fill="#e6e6e6" stroke="#555555" stroke-width="1.2"/><text x="316.2" y="170.5" font-size="12" font-weight="700" fill="#333333" text-anchor="middle">城</text>
+<text x="336.2" y="170.5" font-size="12" font-weight="400" fill="#14202a" text-anchor="start">本方其他城市</text>
+<polygon points="452.4,158.5 452.4,173.5 439.4,181.0 426.4,173.5 426.4,158.5 439.4,151.0" fill="#a9d07c" stroke="#6b6b6b" stroke-width="0.7"/><polygon points="449.4,160.2 449.4,171.8 439.4,177.5 429.4,171.8 429.4,160.2 439.4,154.5" fill="#e6e6e6" stroke="#555555" stroke-width="1.2"/><text x="439.4" y="170.5" font-size="12" font-weight="700" fill="#333333" text-anchor="middle">外</text>
+<text x="459.4" y="170.5" font-size="12" font-weight="400" fill="#14202a" text-anchor="start">外国城市</text>
+<polygon points="551.2,158.5 551.2,173.5 538.2,181.0 525.2,173.5 525.2,158.5 538.2,151.0" fill="#a9d07c" stroke="#6b6b6b" stroke-width="0.7"/><polygon points="548.2,160.2 548.2,171.8 538.2,177.5 528.2,171.8 528.2,160.2 538.2,154.5" fill="#cfcfcf" stroke="#555555" stroke-width="1.0"/><text x="538.2" y="170.5" font-size="12" font-weight="700" fill="#333333" text-anchor="middle">政</text>
+<text x="558.2" y="170.5" font-size="12" font-weight="400" fill="#14202a" text-anchor="start">已建的其他区域、奇观（奇）</text>
+<polygon points="84.0,194.5 84.0,209.5 71.0,217.0 58.0,209.5 58.0,194.5 71.0,187.0" fill="#a9d07c" stroke="#6b6b6b" stroke-width="0.7"/><polygon points="81.0,196.2 81.0,207.8 71.0,213.5 61.0,207.8 61.0,196.2 71.0,190.5" fill="#ffffff00" stroke="#333333" stroke-width="1.2" stroke-dasharray="2,2"/><text x="71.0" y="206.5" font-size="12" font-weight="700" fill="#333333" text-anchor="middle">钉</text>
+<text x="91.0" y="206.5" font-size="12" font-weight="400" fill="#14202a" text-anchor="start">留在图上的地图钉</text>
+<polygon points="231.6,194.5 231.6,209.5 218.6,217.0 205.6,209.5 205.6,194.5 218.6,187.0" fill="#a9d07c" stroke="#6b6b6b" stroke-width="0.7"/><polygon points="231.2,194.7 231.2,209.3 218.6,216.6 206.0,209.3 206.0,194.7 218.6,187.4" fill="#ffffff" fill-opacity="0.5"/>
+<text x="238.6" y="206.5" font-size="12" font-weight="400" fill="#14202a" text-anchor="start">其他城市的领土</text>
+<polygon points="367.0,194.5 367.0,209.5 354.0,217.0 341.0,209.5 341.0,194.5 354.0,187.0" fill="#a9d07c" stroke="#6b6b6b" stroke-width="0.7"/><polygon points="366.6,194.7 366.6,209.3 354.0,216.6 341.4,209.3 341.4,194.7 354.0,187.4" fill="#ffffff" fill-opacity="0.5"/><polygon points="366.6,194.7 366.6,209.3 354.0,216.6 341.4,209.3 341.4,194.7 354.0,187.4" fill="url(#foreign)"/>
+<text x="374.0" y="206.5" font-size="12" font-weight="400" fill="#14202a" text-anchor="start">外国领土</text>
+<text x="10.0" y="242.5" font-size="12" font-weight="700" fill="#946510" text-anchor="start">布局</text>
+<polygon points="84.0,230.5 84.0,245.5 71.0,253.0 58.0,245.5 58.0,230.5 71.0,223.0" fill="#a9d07c" stroke="#6b6b6b" stroke-width="0.7"/><polygon points="81.0,232.2 81.0,243.8 71.0,249.5 61.0,243.8 61.0,232.2 71.0,226.5" fill="#3d7fd9" stroke="#1a1a1a" stroke-width="1.2"/><text x="71.0" y="242.5" font-size="12" font-weight="700" fill="#ffffff" text-anchor="middle">学</text>
+<text x="91.0" y="242.5" font-size="12" font-weight="400" fill="#14202a" text-anchor="start">学院</text>
+<polygon points="158.4,230.5 158.4,245.5 145.4,253.0 132.4,245.5 132.4,230.5 145.4,223.0" fill="#a9d07c" stroke="#6b6b6b" stroke-width="0.7"/><polygon points="155.4,232.2 155.4,243.8 145.4,249.5 135.4,243.8 135.4,232.2 145.4,226.5" fill="#f1e3a0" stroke="#1a1a1a" stroke-width="1.2"/><text x="145.4" y="242.5" font-size="12" font-weight="700" fill="#3a3000" text-anchor="middle">圣</text>
+<text x="165.4" y="242.5" font-size="12" font-weight="400" fill="#14202a" text-anchor="start">圣地</text>
+<polygon points="232.8,230.5 232.8,245.5 219.8,253.0 206.8,245.5 206.8,230.5 219.8,223.0" fill="#a9d07c" stroke="#6b6b6b" stroke-width="0.7"/><polygon points="229.8,232.2 229.8,243.8 219.8,249.5 209.8,243.8 209.8,232.2 219.8,226.5" fill="#9457b5" stroke="#1a1a1a" stroke-width="1.2"/><text x="219.8" y="242.5" font-size="12" font-weight="700" fill="#ffffff" text-anchor="middle">剧</text>
+<text x="239.8" y="242.5" font-size="12" font-weight="400" fill="#14202a" text-anchor="start">剧院广场</text>
+<polygon points="331.6,230.5 331.6,245.5 318.6,253.0 305.6,245.5 305.6,230.5 318.6,223.0" fill="#a9d07c" stroke="#6b6b6b" stroke-width="0.7"/><polygon points="328.6,232.2 328.6,243.8 318.6,249.5 308.6,243.8 308.6,232.2 318.6,226.5" fill="#e3a41f" stroke="#1a1a1a" stroke-width="1.2"/><text x="318.6" y="242.5" font-size="12" font-weight="700" fill="#2a1d00" text-anchor="middle">商</text>
+<text x="338.6" y="242.5" font-size="12" font-weight="400" fill="#14202a" text-anchor="start">商业中心</text>
+<polygon points="430.4,230.5 430.4,245.5 417.4,253.0 404.4,245.5 404.4,230.5 417.4,223.0" fill="#a9d07c" stroke="#6b6b6b" stroke-width="0.7"/><polygon points="427.4,232.2 427.4,243.8 417.4,249.5 407.4,243.8 407.4,232.2 417.4,226.5" fill="#178fa6" stroke="#1a1a1a" stroke-width="1.2"/><text x="417.4" y="242.5" font-size="12" font-weight="700" fill="#ffffff" text-anchor="middle">港</text>
+<text x="437.4" y="242.5" font-size="12" font-weight="400" fill="#14202a" text-anchor="start">港口</text>
+<polygon points="504.8,230.5 504.8,245.5 491.8,253.0 478.8,245.5 478.8,230.5 491.8,223.0" fill="#a9d07c" stroke="#6b6b6b" stroke-width="0.7"/><polygon points="501.8,232.2 501.8,243.8 491.8,249.5 481.8,243.8 481.8,232.2 491.8,226.5" fill="#c5622a" stroke="#1a1a1a" stroke-width="1.2"/><text x="491.8" y="242.5" font-size="12" font-weight="700" fill="#ffffff" text-anchor="middle">工</text>
+<text x="511.8" y="242.5" font-size="12" font-weight="400" fill="#14202a" text-anchor="start">工业区</text>
+<polygon points="84.0,266.5 84.0,281.5 71.0,289.0 58.0,281.5 58.0,266.5 71.0,259.0" fill="#a9d07c" stroke="#6b6b6b" stroke-width="0.7"/><polygon points="81.0,268.2 81.0,279.8 71.0,285.5 61.0,279.8 61.0,268.2 71.0,262.5" fill="#3d7fd9" stroke="#1a1a1a" stroke-width="1.2"/><text x="71.0" y="278.5" font-size="10.5" font-weight="700" fill="#ffffff" text-anchor="middle">学2</text>
+<text x="91.0" y="278.5" font-size="12" font-weight="400" fill="#14202a" text-anchor="start">区域后的数字：属于几号城</text>
+<polygon points="280.4,266.5 280.4,281.5 267.4,289.0 254.4,281.5 254.4,266.5 267.4,259.0" fill="#a9d07c" stroke="#6b6b6b" stroke-width="0.7"/><polygon points="277.4,268.2 277.4,279.8 267.4,285.5 257.4,279.8 257.4,268.2 267.4,262.5" fill="#3d7fd9" stroke="#1a1a1a" stroke-width="2.0" stroke-dasharray="4,2.5" fill-opacity="0.55"/><text x="267.4" y="278.5" font-size="12" font-weight="700" fill="#ffffff" text-anchor="middle">学</text>
+<text x="287.4" y="278.5" font-size="12" font-weight="400" fill="#14202a" text-anchor="start">作者打的钉（未建）</text>
+<polygon points="440.2,266.5 440.2,281.5 427.2,289.0 414.2,281.5 414.2,266.5 427.2,259.0" fill="#a9d07c" stroke="#6b6b6b" stroke-width="0.7"/><polygon points="437.2,268.2 437.2,279.8 427.2,285.5 417.2,279.8 417.2,268.2 427.2,262.5" fill="#3d7fd9" stroke="#d0021b" stroke-width="2.6"/><text x="427.2" y="278.5" font-size="12" font-weight="700" fill="#ffffff" text-anchor="middle">学</text>
+<text x="447.2" y="278.5" font-size="12" font-weight="400" fill="#14202a" text-anchor="start">与作者布局不同</text>
+<text x="10.0" y="312.0" font-size="12" font-weight="400" fill="#444444" text-anchor="start">区域下方的数字是裁判（DMT）给的相邻加成；“不计”：对比框架不请求这个区域（见正文）。北在上。</text>
+</svg>

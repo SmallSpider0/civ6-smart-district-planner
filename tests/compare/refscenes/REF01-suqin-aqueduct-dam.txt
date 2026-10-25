@@ -1,0 +1,56 @@
+# Su Qin (苏秦), answer to the Zhihu question "每次布城都杂乱无章……" (2021-03,
+# 2632 upvotes, the question's top answer), pictures 1 and 2. Picture 1: two
+# cities four plots apart; city center A, aqueduct A and industrial zone A in
+# one row, industrial zone B, aqueduct B and city center B in the next row,
+# shifted so both industrial zones touch each other and both aqueducts
+# (each +5). Picture 2 adds a dam next to one industrial zone: "+8 without
+# buildings" (裸 +8).
+# The pictures are schematic hexes with no terrain (rated A for the plot
+# positions in research/milestone_zhihu.md, Z1). Everything else is made up
+# and marked guessed: flat grassland, a river along the row between the two
+# rows of the layout (fresh water for both aqueducts, two river edges for
+# the dam), floodplains on three plots of that river. The civilization is
+# one with no unique district or adjacency trait (the answer is general).
+id      REF01-suqin-aqueduct-dam
+title   Su Qin: two-city aqueduct diamond with a dam
+source  https://www.zhihu.com/question/397145858/answer/1784399407
+author  苏秦
+date    2021-03
+ruleset RULESET_EXPANSION_2
+civ     CIVILIZATION_AMERICA LEADER_T_ROOSEVELT
+techs   all
+civics  all
+turn    150
+guess   all
+note    Dam placed by the author next to industrial zone A; it belongs to city B (next to its center).
+
+city 1 name=A pop=10 owns=1 capital
+city 2 name=B pop=10 owns=1
+
+map
+  g    g    g    g    g    g    g    g    g    g    g    g
+    g    g    g    g    g    g    g    g    g    g    g    g
+  g    g    g    g    g    g    g    g    g    g    g    g
+    g    g    g    g    g    g    g    g    g    g    g    g
+  g    g    g    g    g    g    g+fp g+fp g+fp g    g    g
+    g    g    g    g    g    g    g    g    g    g    g    g
+  g    g    g    g    g    g    g    g    g    g    g    g
+    g    g    g    g    g    g    g    g    g    g    g    g
+  g    g    g    g    g    g    g    g    g    g    g    g
+    g    g    g    g    g    g    g    g    g    g    g    g
+end
+
+layout
+  .    .    .    .    .    .    .    .    .    .    .    .
+    .    .    .    .    .    .    .    .    .    .    .    .
+  .    .    .    .    .    .    .    .    .    .    .    .
+    .    .    .    .    .    .    .    .    .    .    .    .
+  .    .    .    CC1  AQ1  IZ1  DA2  .    .    .    .    .
+    .    .    .    .    IZ2  AQ2  CC2  .    .    .    .    .
+  .    .    .    .    .    .    .    .    .    .    .    .
+    .    .    .    .    .    .    .    .    .    .    .    .
+  .    .    .    .    .    .    .    .    .    .    .    .
+    .    .    .    .    .    .    .    .    .    .    .    .
+end
+
+river Rhine 0,4:SE 1,4:SW,SE 2,4:SW,SE 3,4:SW,SE 4,4:SW,SE 5,4:SW,SE 6,4:SW,SE 7,4:SW,SE 8,4:SW,SE 9,4:SW,SE 10,4:SW,SE 11,4:SW,SE

@@ -4,7 +4,14 @@
 -- weights 1 and, by default, adjacency only (the judge's gain).
 --   variant FAST | STANDARD | FINE   the tier
 --   variant STANDARD_LAND (any tier + "_LAND")  with the land part on, as the
---                                    panel has it by default
+--                                    panel has it by default; "_LAND<nnn>"
+--                                    scales the land part by nnn / 100 (the
+--                                    land coefficient, issue 53: _LAND050 is
+--                                    0.5; _LAND is 1). Only here, not in the
+--                                    mod: every plot value SDP_Land gives (and
+--                                    a preserve's yields on the plots around
+--                                    it) is multiplied, so the land models the
+--                                    solvers and the oracle read are scaled
 --   variant <TIER>_SWAP (before _LAND) the swap switch on: plots another of
 --                                    the player's cities owns are candidates
 --                                    when they can be swapped (issue 54)
@@ -18,7 +25,11 @@
 --                                    there are at most 400000 (stats.oracle.brute)
 --                                    and runs 8 hill climbs that do not use the
 --                                    bound (stats.oracle.climb, never above);
---                                    "@<n>" sets the node limit to n million
+--                                    "@<n>" sets the node limit to n million;
+--                                    ORACLE_LAND[nnn] (and _CHECK): the same
+--                                    for the mod's whole objective with the
+--                                    land part on (scaled as above), starting
+--                                    from FINE_LAND[nnn]'s plan
 --   variant CITY_BY_CITY             multi only: each city planned alone with
 --                                    STANDARD, in city order, earlier plans
 --                                    pinned (the baseline a player gets by
@@ -51,56 +62,143 @@ local function Pin(type, x, y)
   real(0, x, y, subject)
 end
 
+-- Scale the land part by `lambda` (variants "_LAND<nnn>"): every plot value
+-- and one-time value SDP_Land gives, and a preserve's yields on the plots
+-- around it (the boosts SDP_Land.ScoreTaken adds), so the land models are
+-- built scaled. Each run has its own Lua state: nothing to undo.
+local function ScaleLand(lambda)
+  if lambda == 1 then return end
+  local values = SDP_Land.PlotValues
+  SDP_Land.PlotValues = function(plot, ctx)
+    local tile, once = values(plot, ctx)
+    return lambda * tile, lambda * once
+  end
+  local scoreTaken = SDP_Land.ScoreTaken
+  SDP_Land.ScoreTaken = function(model, taken, count, mark, boost)
+    if boost ~= nil then
+      local scaled = {}
+      for index, extra in pairs(boost) do scaled[index] = lambda * extra end
+      boost = scaled
+    end
+    return scoreTaken(model, taken, count, mark, boost)
+  end
+end
+
 -- The exact reference on the session a solve left (inside the overlay).
--- Returns the oracle's result; `cityOf(m)` gives slot m's city.
-local function Oracle(result, out, cityOf, check, weights)
+-- Returns the oracle's result; `cityOf(m)` gives slot m's city. `land`:
+-- the oracle is for the mod's whole objective (land part on, scaled by
+-- `lambda`), else for the adjacency gain alone.
+local function Oracle(result, out, cityOf, check, weights, land, lambda)
   include("cmp_oracle")
   local search = result.Session.Search
-  local o = SDP_Overlay.With(0, CmpOracle.Run, search, search.BestLayout)
+  local options = { Land = land }
+  local o = SDP_Overlay.With(0, CmpOracle.Run, search, search.BestLayout, options)
   if check then
-    local brute, count = SDP_Overlay.With(0, CmpOracle.BruteForce, search, 400000)
+    local brute, count = SDP_Overlay.With(0, CmpOracle.BruteForce, search, 400000, options)
     o.Brute, o.BruteCount = brute, count
     -- Hill climbs over the slots the optimum places (independent of the bound).
     local active = {}
     for m = 1, search.K do active[m] = (o.Layout and o.Layout[m] or 0) ~= 0 end
-    o.Climb, o.ClimbEvaluations = SDP_Overlay.With(0, CmpOracle.Climb, search, active, 8, 20261023)
+    o.Climb, o.ClimbEvaluations = SDP_Overlay.With(0, CmpOracle.Climb, search, active, 8, 20261023, options)
   end
   out.placements = {}
   for m = 1, search.K do
     local i = o.Layout and o.Layout[m] or 0
     if i ~= 0 then
       local c = search.Candidates[i]
-      out.placements[#out.placements + 1] = { city = cityOf(m), type = search.Types[m], x = c.X, y = c.Y }
+      out.placements[#out.placements + 1] = { city = cityOf(m), type = search.Types[m], x = c.X, y = c.Y,
+        kind = search.Kinds[m] }
     end
   end
-  out.stats.sdpGain = o.Value
+  -- compare.mjs --refscore sets CMP_REFERENCE (the reference layout's plan,
+  -- JSON): value it on the same search, under the optimum's objective.
+  if CMP_REFERENCE ~= nil and CMP_REFERENCE ~= "" then
+    out.stats.reference = SDP_Overlay.With(0, CmpOracle.ScoreLayout, search,
+      CmpRun.Json.Decode(CMP_REFERENCE).placements, cityOf, options)
+  end
+  out.stats.sdpGain = o.Adjacency or o.Value
+  if land then out.stats.sdpObjective = o.Value end
   out.stats.oracle = { value = o.Value, upper = o.Upper, proven = o.Proven, complete = o.Complete, start = o.Start,
     nodes = o.Nodes, leaves = o.Leaves, violations = o.Violations, maxExcess = o.MaxExcess, pairs = o.Pairs, combos = o.Combos,
     brute = o.Brute, bruteLayouts = o.BruteCount, climb = o.Climb, climbEvaluations = o.ClimbEvaluations,
+    adjacency = o.Adjacency, unproven = o.Unproven,
     -- The objective the optimum is for (issue 48): the judge's adjacency
-    -- gain with these yield weights, without the land part.
-    objective = { weights = weights, land = false } }
+    -- gain with these yield weights, or with land on the mod's whole
+    -- objective (adjacency + lambda x land part + housing).
+    objective = { weights = weights, land = land == true, lambda = land and lambda or nil } }
+  return o
+end
+
+-- The long-run reference (cmp_longrun.lua, issue 40) on a fine solve's
+-- result: 20 continues (`again`: SDP_Multi.Continue or SDP_Solver.Continue),
+-- annealing from the best layout, the two-slot check of the fine plan
+-- (issue 40), then the oracle from the best layout (Oracle above) for the
+-- upper end.
+local function LongRun(result, out, cityOf, request, again)
+  local search = result.Session.Search
+  local k = search.K
+  local function Gain(layout)
+    return SDP_Overlay.With(0, function()
+      search.Board:Clear()
+      search:Evaluate(layout)
+      return search.Board:Total()
+    end)
+  end
+  local fine = {}
+  for m = 1, k do fine[m] = search.BestLayout[m] end
+  local fineGain = Gain(fine)
+  local fineTwo = SDP_Overlay.With(0, CmpLongrun.TwoSlot, search, fine)
+  for _ = 1, 20 do
+    local nextResult = again(result)
+    if not nextResult.Ok then break end
+    result = nextResult
+  end
+  local continued = {}
+  for m = 1, k do continued[m] = search.BestLayout[m] end
+  local continuedGain = Gain(continued)
+  local annealed, layout, evaluations = SDP_Overlay.With(0, CmpLongrun.Anneal, search, continued, 200000, 20261025)
+  search.BestLayout = layout
+  local o = Oracle(result, out, cityOf, false, request.weights, false, nil)
+  out.stats.longrun = {
+    fine = fineGain, fineTwoSlot = { improving = fineTwo.improving, best = fineTwo.best, evaluations = fineTwo.evaluations },
+    continued = continuedGain, annealed = annealed, annealEvaluations = evaluations,
+    value = o.Value, upper = o.Upper, proven = o.Proven, complete = o.Complete,
+  }
   return o
 end
 
 function CmpAdapters.sdp(request, variant, w)
-  -- "ORACLE", "ORACLE_CHECK", optionally "@<millions>" for the node limit.
-  local base, limit = variant:match("^(ORACLE[_A-Z]*)@(%d+)$")
+  -- "ORACLE", "ORACLE_CHECK", "ORACLE_LAND[nnn]", "ORACLE_LAND[nnn]_CHECK",
+  -- optionally "@<millions>" for the node limit.
+  local base, limit = variant:match("^(ORACLE[_A-Z0-9]*)@(%d+)$")
   if base ~= nil then
     include("cmp_oracle")
     CmpOracle.NODE_LIMIT = tonumber(limit) * 1e6
     variant = base
   end
-  local oracle = variant == "ORACLE" or variant == "ORACLE_CHECK"
-  local check = variant == "ORACLE_CHECK"
-  if oracle then variant = "FINE" end
-  -- "<TIER>_LAND": the land part on (the panel's default), else adjacency only.
+  -- "LONGRUN[@<millions>]" (issue 40): the fine tier, 20 continues,
+  -- annealing, then the oracle from there to its node limit (default 1
+  -- million): a range [value, upper] where the optimum cannot be proven.
+  local longrun = variant:match("^LONGRUN") ~= nil
+  if longrun then
+    include("cmp_oracle")
+    include("cmp_longrun")
+    CmpOracle.NODE_LIMIT = tonumber(variant:match("@(%d+)$") or "1") * 1e6
+    variant = "FINE"
+  end
+  local oracle = variant:match("^ORACLE") ~= nil
+  local check = oracle and variant:match("_CHECK$") ~= nil
+  if oracle then variant = "FINE" .. variant:gsub("_CHECK$", ""):gsub("^ORACLE", "") end
+  -- "<TIER>_LAND[nnn]": the land part on (the panel's default), scaled by
+  -- nnn / 100; else adjacency only.
   local coverage = tonumber(variant:match("_COV(%d)$") or "")
   variant = variant:gsub("_COV%d$", "")
-  local land = false
-  if variant:match("_LAND$") then
+  local land, lambda = false, nil
+  local digits = variant:match("_LAND(%d*)$")
+  if digits ~= nil then
     land = true
-    variant = variant:gsub("_LAND$", "")
+    lambda = digits == "" and 1 or tonumber(digits) / 100
+    variant = variant:gsub("_LAND%d*$", "")
   end
   local swap = variant:match("_SWAP$") ~= nil
   variant = variant:gsub("_SWAP$", "")
@@ -108,8 +206,10 @@ function CmpAdapters.sdp(request, variant, w)
   local sharedList = variant:match("_GROUP%d+S$") ~= nil
   variant = variant:gsub("_GROUP%d+S?$", "")
   LoadSDP()
+  if land then ScaleLand(lambda) end
   w.Events.LoadGameViewStateDone()
   local stats = {}
+  if land then stats.sdpLambda = lambda end
   CmpRun.CountDMT(stats)
   local scn = request.scenario
   local out = { placements = {}, stats = stats, notes = {} }
@@ -142,21 +242,37 @@ function CmpAdapters.sdp(request, variant, w)
           kind = "IMPROVEMENT" }
       end
     end
-    stats.sdpGain, stats.sdpAppeal = r.Adjacency, r.AppealDelta
-    stats.sdpQuality = r.Quality -- design 7.4: Exhaustive, Bound, Gap, Converged, Truncated
-    for _, u in ipairs(r.Unplaced or {}) do out.notes[#out.notes + 1] = "unplaced " .. tostring(u.Type) .. " " .. tostring(u.Reason) end
-  elseif scn.kind == "single" then
-    local r = SDP_Solver.Solve({ PlayerID = 0, CityID = request.target:GetID(), Districts = request.districts,
-      Land = land, Tier = variant, Weights = request.weights, Swap = swap, Coverage = coverage })
-    if not r.Ok then out.notes[#out.notes + 1] = tostring(r.Error) end
-    Take(r.Plan, request.target:GetID())
     if oracle and r.Ok then
-      local id = request.target:GetID()
-      Oracle(r, out, function() return id end, check, request.weights)
+      Oracle(r, out, function() return id end, check, request.weights, land, lambda)
       stats.method = "oracle"
       return out
     end
     stats.sdpGain, stats.sdpAppeal = r.Adjacency, r.AppealDelta
+    if land then stats.sdpObjective = r.Gain end
+    stats.sdpQuality = r.Quality -- design 7.4: Exhaustive, Bound, Gap, Converged, Truncated
+    for _, u in ipairs(r.Unplaced or {}) do out.notes[#out.notes + 1] = "unplaced " .. tostring(u.Type) .. " " .. tostring(u.Reason) end
+  elseif scn.kind == "single" then
+    local r = SDP_Solver.Solve({ PlayerID = 0, CityID = request.target:GetID(), Districts = request.districts,
+      Pool = request.pool, Count = request.count,
+      Land = land, Tier = variant, Weights = request.weights, Swap = swap, Coverage = coverage })
+    if not r.Ok then out.notes[#out.notes + 1] = tostring(r.Error) end
+    Take(r.Plan, request.target:GetID())
+    if longrun and r.Ok then
+      local id = request.target:GetID()
+      LongRun(r, out, function() return id end, request, SDP_Solver.Continue)
+      stats.method = "longrun"
+      return out
+    end
+    if oracle and r.Ok then
+      local id = request.target:GetID()
+      Oracle(r, out, function() return id end, check, request.weights, land, lambda)
+      stats.method = "oracle"
+      return out
+    end
+    stats.sdpGain, stats.sdpAppeal = r.Adjacency, r.AppealDelta
+    -- The mod's own objective of its plan (with land on: adjacency + lambda x
+    -- land part + housing), to set against ORACLE_LAND's optimum.
+    if land then stats.sdpObjective = r.Gain end
     stats.sdpQuality = r.Quality -- design 7.4: Exhaustive, Bound, Gap, Converged, Truncated
     stats.method = r.Stats and r.Stats.Method
     for _, u in ipairs(r.Unplaced or {}) do out.notes[#out.notes + 1] = "unplaced " .. u.Type .. " " .. tostring(u.Reason) end
@@ -214,9 +330,14 @@ function CmpAdapters.sdp(request, variant, w)
     if not r.Ok then out.notes[#out.notes + 1] = tostring(r.Error) end
     local byKey = {}
     for _, c in ipairs(r.Cities or {}) do byKey[c.Key] = c.CityID end
+    if longrun and r.Ok then
+      LongRun(r, out, function(m) return r.Cities[r.Session.Search.Groups[m]].CityID end, request, SDP_Multi.Continue)
+      stats.method = "longrun"
+      return out
+    end
     if oracle and r.Ok then
       local search = r.Session.Search
-      Oracle(r, out, function(m) return r.Cities[search.Groups[m]].CityID end, check, request.weights)
+      Oracle(r, out, function(m) return r.Cities[search.Groups[m]].CityID end, check, request.weights, land, lambda)
       stats.method = "oracle"
       return out
     end
@@ -226,6 +347,7 @@ function CmpAdapters.sdp(request, variant, w)
       end
     end
     stats.sdpGain, stats.sdpAppeal = r.Adjacency, r.AppealDelta
+    if land then stats.sdpObjective = r.Gain end
     stats.sdpQuality = r.Quality -- design 7.4: Exhaustive, Bound, Gap, Converged, Truncated
     stats.sdpCovered = r.Covered
     for _, u in ipairs(r.Unplaced or {}) do out.notes[#out.notes + 1] = "unplaced " .. tostring(u.Type) .. " " .. tostring(u.Reason) end

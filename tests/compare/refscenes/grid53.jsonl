@@ -1,0 +1,15 @@
+{"name": "all1-L000", "lambda": 0, "oracle": 2}
+{"name": "all1-L025", "lambda": 0.25, "oracle": 2}
+{"name": "all1-L050", "lambda": 0.5, "oracle": 2}
+{"name": "all1-L075", "lambda": 0.75, "oracle": 2}
+{"name": "all1-L100", "lambda": 1, "oracle": 2}
+{"name": "g05f05-L000", "gold": 0.5, "faith": 0.5, "lambda": 0, "oracle": 2}
+{"name": "g05f05-L025", "gold": 0.5, "faith": 0.5, "lambda": 0.25, "oracle": 2}
+{"name": "g05f05-L050", "gold": 0.5, "faith": 0.5, "lambda": 0.5, "oracle": 2}
+{"name": "g05f05-L075", "gold": 0.5, "faith": 0.5, "lambda": 0.75, "oracle": 2}
+{"name": "g05f05-L100", "gold": 0.5, "faith": 0.5, "lambda": 1, "oracle": 2}
+{"name": "g05-L000", "gold": 0.5, "lambda": 0, "oracle": 2}
+{"name": "g05-L025", "gold": 0.5, "lambda": 0.25, "oracle": 2}
+{"name": "g05-L050", "gold": 0.5, "lambda": 0.5, "oracle": 2}
+{"name": "g05-L075", "gold": 0.5, "lambda": 0.75, "oracle": 2}
+{"name": "g05-L100", "gold": 0.5, "lambda": 1, "oracle": 2}
