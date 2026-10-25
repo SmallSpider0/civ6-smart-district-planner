@@ -82,6 +82,9 @@
         <Stack ID="WonderChipStack" StackGrowth="Right" WrapWidth="480" WrapGrowth="Bottom" StackPadding="4"/>
 
         <!-- Weights, one icon family (feedback 3), and the distance cost (feedback 9) -->
+        <Container Size="480,18">
+          <Label Anchor="L,C" Style="BodyTextDark16" String="LOC_SDP_WEIGHTS" ToolTip="LOC_SDP_WEIGHTS_TOOLTIP"/>
+        </Container>
         <Stack ID="WeightStack" Anchor="C,T" StackGrowth="Right" StackPadding="0"/>
 
         <!-- Switches in one row; the full meaning is in each tooltip -->
@@ -115,7 +118,7 @@
           <Stack Anchor="L,C" StackGrowth="Right" StackPadding="6">
             <Label Anchor="L,C" Style="BodyTextDark16" String="LOC_SDP_TIER_SHORT"/>
             <PullDown ID="TierPull" Anchor="L,C" Style="PullDownBlue" Size="100,24"/>
-            <Label ID="Estimate" Anchor="L,C" Style="BodyTextDark14" WrapWidth="76"/>
+            <Label ID="Estimate" Anchor="L,C" Style="BodyTextDark14" WrapWidth="96"/>
           </Stack>
           <Stack Anchor="R,C" StackGrowth="Right" StackPadding="4">
             <GridButton ID="SolveButton" Size="110,41" Style="MainButton" String="LOC_SDP_SOLVE"/>
@@ -175,7 +178,7 @@
           <Stack Anchor="L,C" StackGrowth="Right" StackPadding="6">
             <Label Anchor="L,C" Style="BodyTextDark16" String="LOC_SDP_TIER_SHORT"/>
             <PullDown ID="SitesTierPull" Anchor="L,C" Style="PullDownBlue" Size="100,24"/>
-            <Label ID="SitesEstimate" Anchor="L,C" Style="BodyTextDark14" WrapWidth="76"/>
+            <Label ID="SitesEstimate" Anchor="L,C" Style="BodyTextDark14" WrapWidth="96"/>
           </Stack>
           <Stack Anchor="R,C" StackGrowth="Right" StackPadding="4">
             <GridButton ID="SitesSolveButton" Size="110,41" Style="MainButton" String="LOC_SDP_SOLVE"/>
@@ -249,6 +252,9 @@
           </Stack>
         </Container>
         <Stack ID="MultiWonderChipStack" StackGrowth="Right" WrapWidth="480" WrapGrowth="Bottom" StackPadding="4"/>
+        <Container Size="480,18">
+          <Label Anchor="L,C" Style="BodyTextDark16" String="LOC_SDP_WEIGHTS" ToolTip="LOC_SDP_WEIGHTS_TOOLTIP"/>
+        </Container>
         <Stack ID="MultiWeightStack" Anchor="C,T" StackGrowth="Right" StackPadding="0"/>
         <Container Size="480,26">
           <Container Anchor="L,C" Size="150,26" ToolTip="LOC_SDP_LAND">
@@ -274,7 +280,7 @@
           <Stack Anchor="L,C" StackGrowth="Right" StackPadding="6">
             <Label Anchor="L,C" Style="BodyTextDark16" String="LOC_SDP_TIER_SHORT"/>
             <PullDown ID="MultiTierPull" Anchor="L,C" Style="PullDownBlue" Size="100,24"/>
-            <Label ID="MultiEstimate" Anchor="L,C" Style="BodyTextDark14" WrapWidth="76"/>
+            <Label ID="MultiEstimate" Anchor="L,C" Style="BodyTextDark14" WrapWidth="96"/>
           </Stack>
           <Stack Anchor="R,C" StackGrowth="Right" StackPadding="4">
             <GridButton ID="MultiSolveButton" Size="110,41" Style="MainButton" String="LOC_SDP_SOLVE"/>
@@ -311,8 +317,8 @@
       <Image ID="Icon" Anchor="L,C" Offset="2,0" Size="26,26"/>
       <Label ID="Name" Anchor="L,C" Offset="30,0" Style="FontNormal14" TruncateWidth="80" TruncatedTooltip="1"/>
       <Label ID="NameDark" Anchor="L,C" Offset="30,0" Style="BodyTextDark14" TruncateWidth="80" TruncatedTooltip="1" Hidden="1"/>
-      <Label ID="State" Anchor="R,C" Offset="9,0" Style="FontNormal14"/>
-      <Label ID="StateDark" Anchor="R,C" Offset="9,0" Style="BodyTextDark14" Hidden="1"/>
+      <Label ID="State" Anchor="R,C" Offset="12,0" Style="FontNormal14"/>
+      <Label ID="StateDark" Anchor="R,C" Offset="12,0" Style="BodyTextDark14" Hidden="1"/>
     </GridButton>
   </Instance>
 
@@ -342,12 +348,15 @@
     </Container>
   </Instance>
 
+  <!-- A row with a plot moves the camera there when clicked (issue 67): a
+       plain Button, no look of its own, over nothing that takes the mouse
+       (pitfall 31). -->
   <Instance Name="ResultRow">
-    <Container ID="Root" Size="460,40" ConsumeMouseOver="1">
+    <Button ID="Root" Size="460,40">
       <Image ID="Icon" Anchor="L,C" Size="32,32"/>
       <Label ID="Name" Anchor="L,T" Offset="40,2" Style="BodyTextDark16"/>
       <Label ID="Detail" Anchor="L,T" Offset="40,21" Style="BodyTextDark14" WrapWidth="420"/>
-    </Container>
+    </Button>
   </Instance>
 
   <!-- A city or city-center pin on the Several cities tab: a click switches
