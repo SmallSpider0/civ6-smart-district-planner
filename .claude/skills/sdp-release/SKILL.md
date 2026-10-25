@@ -1,13 +1,19 @@
 ---
 name: sdp-release
-description: Release a version of the Smart District Planner (civ6mod) — tests, screenshots, version numbers, change notes, the self-test report, the PR, the GitHub release and the Steam Workshop update, in order. Use when a milestone's issues are done or the maintainer asks to release.
+description: Release a version of the Smart District Planner (civ6mod) — tests, screenshots, version numbers, change notes, the self-test report, the PR, the GitHub release and the Steam Workshop update, in order. Use when the maintainer says to release, or when a milestone's issues are done (to prepare it and report it ready).
 ---
 
 # Releasing vX.Y.Z
 
-Releases and Workshop updates need no extra approval. Windows is not tested before a release. The checklist template (.github/ISSUE_TEMPLATE/release.md) lists the same items.
+A release happens only when the maintainer says so in Claude Code ("发 v1.4.1"); a GitHub comment or the status page is not that word. Until then:
 
-## 1. Before the PR (on the batch's branch)
+- When a milestone's issues are done, do §1 steps 0–6: tests, screenshots, version, notes, report. Then add a status page entry (`decisions`, title "vX.Y.Z 可以发了"): what is in it, what the tests showed, what is left. Don't wait idle for the answer; go on with other work.
+- After the word: §1 step 7 and §2. That is the PR (about 10 minutes of CI), the release and the Workshop.
+- The live version badly broken: the same, with a push notification to the maintainer; still wait for the word.
+
+Bug-fix PRs merge into `main` as usual in the meantime: `main` reaches no player. Windows is not tested before a release. The checklist template (.github/ISSUE_TEMPLATE/release.md) lists the same items.
+
+## 1. Before the PR (on the batch's branch, or a release branch when the fixes are already merged)
 
 0. Keep the screen from locking from the start of the release work (sdp-game-test, Before 1): it runs for hours and touches the game.
 1. Every issue of the milestone is closed by this PR or moved on. Version digit: sdp-issue §3.
@@ -33,4 +39,4 @@ Releases and Workshop updates need no extra approval. Windows is not tested befo
    - Simplified Chinese title and description: the built-in browser (Steam is signed in there), `https://steamcommunity.com/sharedfiles/itemedittext/?id=ITEM&language=6`, set `#description` to `description_zh.txt`, check the diff is only the intended lines, `ValidateForm()`, reload and check.
    - Pictures: Chrome (Claude in Chrome; start Chrome if the extension is not connected), `managepreviews/?id=ITEM`: `file_upload` the new file on the file input, click 上传, delete the old picture (`#preview_<id> a.btn_grey_black`; tiles are identified by the hash in the image URL, which matches the file name's suffix), click 文件名, 保存并继续, then check the item page's order.
    - A new preview image needs the item's owner (DracoYus).
-5. Close the milestone, `python3 -I tools/worktree.py prune`, update the status page (the maintainer's artifact), tell the maintainer: the release link, what was checked, what was not.
+5. Close the milestone, `python3 -I tools/worktree.py prune`, update the status page (the release, the milestone, the release entry in `decisions` to `done`), tell the maintainer: the release link, what was checked, what was not.
