@@ -1,0 +1,27 @@
+Changes since v1.4.1:
+- Tile yields are weighed by fixed numbers, no longer by the yield weights: Food and Production 1, Science and Culture 5/6, Faith 1/2, Gold 1/4 (1 Production = 4 Gold = 2 Faith); the same for the one-time yields of chopping and harvesting and for what Preserves give nearby tiles. Tiles with Gold or Faith now cost less to build on. The weights row drops the Food and Chop columns for one Tiles weight (default 1) that multiplies the whole land loss; 0 leaves it out, so the Land loss switch is gone. The City sites tab scores a site's tiles with the same numbers times its own weight for each yield (Growth first still doubles Food).
+- Every weight moves 0.5 a click, still from 0 to 3.
+- Presets on the One city and Several cities tabs: Balanced, Science (Science 1.5), Culture (Culture 3), Religion (Faith 3), Half Gold and Faith (0.5 each). Picking one sets the weights and switches; after a change it reads “(changed)”, and Reset brings it back. The factors come from proven best layouts: the smallest that gives plans clearly different from Balanced.
+- Each tab keeps its switches, weights and Effort in the save, so a loaded game opens with your last settings. Nothing is sent to other players.
+- A wonder that needs a district next to it (such as the Colosseum and the Entertainment Complex) gets that district when the city has none: on the One city tab its cell shows “Wonder” and its result row “(next to …)”, and it counts towards Districts; the Several cities tab gives it to the first city in the list that can take it and says which. Set the district to Off and it is not added.
+- Districts defaults to 3 on the One city and Several cities tabs, so a solve right after opening picks 3 districts from the pool.
+- The window fits the screen's height; the result list takes what is left.
+- Wonders, good places, weights and switches fold into one line that names the preset and what differs from the usual. They fold after each solve; click the line to open them. The City sites tab folds its preset and weights the same way.
+- View map, in the title bar, hides the window and keeps the plan on the map; Back to planner or Esc returns.
+- The three plans are a row of buttons; hover one for the districts it picked. The weights row has the title “Weights (0–3)”.
+- City sites: click the selected plan again to move the camera to its next site, after the last back to the first; while viewing the map, Next site does the same. Result rows with a tile light up under the mouse, and their tooltip starts with “Click: move the camera here”.
+- Select another of your cities on the map and open the panel, and it opens on the One city tab; with no city selected, or the same one, it opens on the tab you left.
+
+自 v1.4.1 以来的变化：
+- 地块的各项产出按固定倍数折算，不再用产出权重：食物、生产力 1，科技、文化 5/6，信仰 1/2，金币 1/4（1 生产力 = 4 金币 = 2 信仰），砍伐、收获的一次性产出和保护区给周围格的产出也一样；带金币、信仰的格被区域占掉的代价变小了。权重行去掉“食物”“收获”两列，换成一列“地块”权重（默认 1），乘在整个地块损失上，设成 0 就不计，“计入占地”开关去掉了。选城址页的地块也按这组倍数，再乘页签上同一产出的权重（“成长优先”照样让食物格加倍）。
+- 所有权重每点一下改 0.5，范围仍是 0–3。
+- 单城、多城页的预设：均衡、科技（科学 1.5）、文化（文化 3）、宗教（信仰 3）、金币信仰减半（各 0.5），选一个就把权重和开关设好；改过后显示“（已改）”，点“恢复”回到预设。倍数按真最优实验取：和均衡分得开的最小值。
+- 三个页签各自把开关、权重和档位记在存档里，读档后还是上次的设置；不发给其他玩家。
+- 需要相邻某个区域的奇观（如罗马斗兽场要挨着娱乐中心），城里没有这个区域时求解会补上：单城页这一格写“随奇观”，结果行写“供罗马斗兽场相邻”，算在区域数量里；多城页补给列表里第一座能放下的城并写明是哪座。把这个区域设为“不建”就不补。
+- 单城、多城页的“区域数量”默认 3：打开面板直接求解，就从候选里挑 3 个区域。
+- 窗口高度跟着屏幕，多出的高度给结果列表。
+- 奇观、好位置、权重和开关收进一行摘要（写着预设名和改过的设置），求解后自动收起，点这一行展开。选城址页的预设和权重同样收起。
+- 标题栏的“看地图”收起窗口、留着地图上的预览，点“返回规划器”或按 Esc 回来。
+- 三套方案排成一行按钮，挑出的区域放进悬停提示；权重行加标题“权重（0–3）”。
+- 选城址页再点一次已选中的方案，镜头移到它的下一个城址，最后一个之后回到第一个；“看地图”时有“下一个城址”。结果列表里带坐标的行悬停时高亮，提示第一行写“点击：镜头移到这里”。
+- 在地图上选中另一座本方城市再打开面板，打开的是单城页；没选城市或还是上次那座城时，照旧是上次的页签。
