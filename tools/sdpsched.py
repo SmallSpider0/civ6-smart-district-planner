@@ -5,15 +5,23 @@ tools/remote.py copies this file to ~/sdp-runs/bin/ there and starts jobs
 through it; it is not run on this machine.
 
     python3 sdpsched.py run NAME --slots N [--exclusive] [--owner WHO] [--tree T] -- CMD ...
-    python3 sdpsched.py status            # every job: who, slots, queued / running / exit, last log line
+    python3 sdpsched.py status            # every job: who, slots, queued (in line order) / running / exit, last log line
     python3 sdpsched.py check NAME        # exit 1 when a job of that name is queued or running
     python3 sdpsched.py prune             # drop snapshots of jobs that ended over a week ago
 
 The machine has SDP_SLOTS slots (default: its cores minus two, left for the
 system). A job asks for N slots (its compare.mjs workers; 0 = all) and starts
-when it is first in line and N slots are free; an exclusive job (timings that
-get reported) waits for an empty machine and keeps it empty. compare.mjs
+when N slots are free after the jobs ahead of it in line have taken theirs.
+Backfill: when a job ahead does not fit, a later job that fits starts first,
+so free slots are not left idle. A job that later jobs have passed this way
+MAX_PASSED times keeps its place: nothing behind it starts until it has
+started, so a large job is not starved by a stream of small ones (jobs carry
+no expected duration, so the bound is a count, not a time). An exclusive job
+(timings that get reported) waits for an empty machine and keeps it empty;
+nothing behind a queued exclusive job starts before it. compare.mjs
 processes started some other way count with their -j (all slots without one).
+Each queued job's `run` checks every POLL seconds with the code it started
+with, so a new rule applies to jobs queued after this file is replaced.
 `run` keeps going until the job ends: start it under nohup with its output in
 ~/sdp-runs/NAME.log; it writes the exit code to ~/sdp-runs/NAME.exit, as
 tools/remote.py wait expects. The child gets SDP_JOBS=N.
@@ -35,6 +43,7 @@ SLOTS = int(os.environ.get("SDP_SLOTS") or max(1, (os.cpu_count() or 4) - 2))
 POLL = 15
 LEGACY_FRESH = 2 * 3600  # a log without a job record or exit file, written this recently, is a running job
 KEEP = 7 * 86400
+MAX_PASSED = 3  # later jobs that may start ahead of a waiting job; after that it keeps its place
 
 
 def jobs_dir():
@@ -129,18 +138,41 @@ def ps_lines():
     return done.stdout.splitlines()
 
 
-def decide(jobs, other_slots=0, capacity=SLOTS, alive=pid_alive):
-    """The queued job that may start now (first in line, if it fits), else None."""
+def line_order(job):
+    return job["queued_at"], job["name"]
+
+
+def passed(job, jobs):
+    """Later jobs that have started while this one waited (any later job that started did)."""
+    return sum(1 for j in jobs if j.get("started_at") and line_order(j) > line_order(job))
+
+
+def startable(jobs, other_slots=0, capacity=SLOTS, alive=pid_alive):
+    """The queued jobs that may start now, in line order.
+
+    Walk the line with the slots that are free: a job that fits takes its slots;
+    one that does not is stepped over (backfill), unless it is exclusive or has
+    been passed MAX_PASSED times, which ends the walk so nothing behind it starts.
+    """
     active = [j for j in jobs if live(j, alive)]
     running = [j for j in active if j["state"] == "running"]
-    queued = sorted((j for j in active if j["state"] == "queued"), key=lambda j: (j["queued_at"], j["name"]))
-    if not queued or any(j.get("exclusive") for j in running):
-        return None
-    used = sum(j["slots"] for j in running) + other_slots
-    first = queued[0]
-    if first.get("exclusive"):
-        return first["name"] if used == 0 else None
-    return first["name"] if used + min(first["slots"], capacity) <= capacity else None
+    queued = sorted((j for j in active if j["state"] == "queued"), key=line_order)
+    if any(j.get("exclusive") for j in running):
+        return []
+    free = capacity - sum(j["slots"] for j in running) - other_slots
+    out = []
+    for job in queued:
+        if job.get("exclusive"):
+            if free == capacity and not out:
+                out.append(job["name"])
+            break
+        need = min(job["slots"], capacity)
+        if need <= free:
+            out.append(job["name"])
+            free -= need
+        elif passed(job, jobs) >= MAX_PASSED:
+            break
+    return out
 
 
 def usage(jobs):
@@ -178,14 +210,17 @@ def cmd_run(args):
             with locked():
                 jobs = load_jobs()
                 mine, other = usage(jobs)
-                if decide(jobs, other) == name:
+                if name in startable(jobs, other, SLOTS):
+                    ahead = sum(1 for j in jobs if live(j) and j["state"] == "queued"
+                                and line_order(j) < line_order(job))
                     child = subprocess.Popen(args.command, start_new_session=True,
                                              env=dict(os.environ, SDP_JOBS=str(slots)))
                     job.update(state="running", pid=child.pid, started_at=time.time())
                     write_json(job_path(name), job)
-                    print("%s started (%d slot(s)%s): %s" % (time.strftime("%H:%M"), slots,
-                                                           ", exclusive" if args.exclusive else "",
-                                                           " ".join(args.command)), flush=True)
+                    print("%s started (%d slot(s)%s%s): %s" % (
+                        time.strftime("%H:%M"), slots, ", exclusive" if args.exclusive else "",
+                        ", ahead of %d waiting job(s) that do not fit" % ahead if ahead else "",
+                        " ".join(args.command)), flush=True)
                     break
             line = "queued: %d of %d slots in use%s" % (mine + other, SLOTS, " (%d by jobs not started here)"
                                                          % other if other else "")
@@ -236,7 +271,9 @@ def cmd_status(_args):
     print("slots in use: %d of %d%s" % (mine + other, SLOTS, " (%d by compare.mjs not started here)" % other
                                          if other else ""))
     rows = []
-    for j in sorted(jobs, key=lambda j: (j["state"] != "running", j["state"] != "queued", -j.get("queued_at", 0))):
+    # running, then queued in line order, then the rest newest first
+    for j in sorted(jobs, key=lambda j: (j["state"] != "running", j["state"] != "queued",
+                                         j.get("queued_at", 0) * (1 if j["state"] == "queued" else -1))):
         if j["state"] == "done" and t - j.get("ended_at", t) > 86400:
             continue
         state = j["state"] if live(j) else ("exit %s" % j.get("exit") if j["state"] == "done" else "lost")

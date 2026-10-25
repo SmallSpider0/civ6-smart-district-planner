@@ -22,9 +22,11 @@ running job, and starts the command there under nohup (it keeps running when
 ssh drops) through tools/sdpsched.py, the machine's one queue for all
 sessions: its cores minus two slots ("remote_slots" in the local config to
 change), a job takes --slots N (default: the command's -j, else all slots;
-a larger -j is lowered to N) and starts when it is first in line and N slots
-are free; --exclusive waits for an empty machine and keeps it (runs whose
-seconds get reported). A name already queued or running is refused. Output
+a larger -j is lowered to N) and starts when N slots are free after the jobs
+ahead of it have taken theirs; a later job that fits may start ahead of one
+that does not, at most three times per waiting job (see sdpsched.py);
+--exclusive waits for an empty machine and keeps it (runs whose seconds get
+reported). A name already queued or running is refused. Output
 goes to ~/sdp-runs/NAME.log and the exit code to ~/sdp-runs/NAME.exit when it
 ends. `status` lists every session's jobs and the slots in use; look before
 starting a heavy job anywhere. `wait` and `fetch --job` copy results back
