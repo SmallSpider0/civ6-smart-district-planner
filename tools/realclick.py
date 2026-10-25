@@ -274,15 +274,28 @@ def at(args):
     return 0
 
 
-def build(_args):
-    """Build ~/Applications/SDPClick.app (a rebuild may need the Accessibility grant again)."""
+def build(args):
+    """Build ~/Applications/SDPClick.app. Every rebuild changes the ad hoc signature, and macOS then
+    drops the app's Accessibility and Screen Recording grants (they must be given again), so it
+    only rebuilds when the Swift source changed (or with --force)."""
+    import hashlib
     macos = os.path.join(APP, "Contents", "MacOS")
+    stamp = os.path.join(APP, "Contents", "source.sha256")
+    digest = hashlib.sha256(open(SOURCE, "rb").read()).hexdigest()
+    if not getattr(args, "force", False) and os.path.exists(os.path.join(macos, "sdp-click")) \
+            and os.path.exists(stamp) and open(stamp).read().strip() == digest:
+        print("SDPClick.app is up to date (source unchanged); --force rebuilds (and needs the grants again)")
+        print(run_click("trusted")[1])
+        return 0
     os.makedirs(macos, exist_ok=True)
     with open(os.path.join(APP, "Contents", "Info.plist"), "w", encoding="utf-8") as fh:
         fh.write(INFO_PLIST)
     subprocess.run(["swiftc", "-O", SOURCE, "-o", os.path.join(macos, "sdp-click")], check=True)
     subprocess.run(["xattr", "-cr", APP], check=True)
+    with open(stamp, "w") as fh:
+        fh.write(digest + "\n")
     subprocess.run(["codesign", "-s", "-", "--force", "--deep", APP], check=True)
+    print("rebuilt: allow SDPClick again under Privacy & Security > Accessibility and > Screen & System Audio Recording")
     print(run_click("trusted")[1])
     return 0
 
@@ -298,7 +311,8 @@ def main(argv=None):
     ap = argparse.ArgumentParser(description="Real clicks on the planner panel")
     sub = ap.add_subparsers(dest="cmd", required=True)
     sub.add_parser("suite")
-    sub.add_parser("build")
+    b = sub.add_parser("build")
+    b.add_argument("--force", action="store_true")
     sub.add_parser("trusted")
     ap_at = sub.add_parser("at")
     ap_at.add_argument("code")

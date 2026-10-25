@@ -98,6 +98,42 @@ def region(_args):
 
 
 def capture(args):
+    """The panel, cut from a capture of the whole game window (no front needed);
+    if that capture is refused, a capture of the panel's rectangle with the game in front."""
+    import realclick  # noqa: E402 (macOS only)
+    whole = os.path.join(ROOT, "logs", "window.png")
+    if os.path.exists(whole):
+        os.remove(whole)
+    ok, text = realclick.run_click("capturewindow", whole)
+    if ok:
+        lines = run("""
+local c = Controls.Window
+local x, y = c:GetScreenOffset()
+local w, h = UIManager:GetScreenSizeVal()
+print('AT', x, y, c:GetSizeX(), c:GetSizeY(), w, h)
+""")
+        at = next(l for l in lines if l.startswith("AT"))
+        cx, cy, cw, ch, uw, uh = (float(v) for v in at.split()[1:7])
+        iw, ih = image_size(whole)
+        scale = iw / uw
+        title = ih - uh * scale  # the window's title bar, in pixels
+        box = (int(round(cx * scale)), int(round(title + cy * scale)), int(round(cw * scale)), int(round(ch * scale)))
+        src = os.path.join(ROOT, "logs", "shot.png")
+        shutil.copyfile(whole, src)
+        subprocess.run(["sips", "-c", str(box[3]), str(box[2]), "--cropOffset", str(box[1]), str(box[0]), src],
+                       check=True, capture_output=True)
+        return write_jpeg(src, args.name, cut=0)
+    print("whole-window capture refused (%s); capturing with the game in front" % text)
+    return capture_front(args)
+
+
+def image_size(path):
+    size = subprocess.run(["sips", "-g", "pixelWidth", "-g", "pixelHeight", path], capture_output=True,
+                          text=True).stdout
+    return (int(re.search(r"pixelWidth: (\d+)", size).group(1)), int(re.search(r"pixelHeight: (\d+)", size).group(1)))
+
+
+def capture_front(args):
     import time
     import realclick  # noqa: E402 (macOS only)
     _, (x, y, w, h) = panel_rect()

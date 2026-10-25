@@ -10,6 +10,7 @@
 //   sdp-click X Y                click at window-relative point (X, Y)
 //   sdp-click capturable         whether screen capture is allowed (asks once)
 //   sdp-click capture X Y W H FILE   PNG of a window-relative rectangle (points)
+//   sdp-click capturewindow FILE     PNG of the whole game window, wherever it is (no front needed)
 //   (each with --out FILE when started through open)
 //
 // Capturing needs SDPClick.app allowed under System Settings > Privacy &
@@ -30,6 +31,20 @@ let bundleID = "com.aspyr.civ6.steam"
 // starts with an invisible U+0092 on this machine, hence "contains"): the game
 // runs as a child process (Civ6_Exe_Child) that LaunchServices lists with
 // pid -1, so NSRunningApplication cannot give its pid.
+func gameWindowNumber() -> Int? {
+  let list = CGWindowListCopyWindowInfo([.optionAll, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]] ?? []
+  var best: (id: Int, area: CGFloat)? = nil
+  for info in list {
+    guard let name = info[kCGWindowOwnerName as String] as? String, name.contains("Civilization VI"),
+          let layer = info[kCGWindowLayer as String] as? Int, layer == 0,
+          let id = info[kCGWindowNumber as String] as? Int,
+          let dict = info[kCGWindowBounds as String] as? NSDictionary,
+          let rect = CGRect(dictionaryRepresentation: dict) else { continue }
+    if best == nil || rect.width * rect.height > best!.area { best = (id, rect.width * rect.height) }
+  }
+  return best?.id
+}
+
 func gameWindow() -> (pid: pid_t, bounds: CGRect)? {
   let list = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]] ?? []
   var best: (pid: pid_t, bounds: CGRect)? = nil
@@ -76,6 +91,21 @@ func fail(_ message: String) -> Never {
   if let path = outPath { try? ("ERROR " + message + "\n").write(toFile: path, atomically: true, encoding: .utf8) }
   FileHandle.standardError.write((message + "\n").data(using: .utf8)!)
   exit(2)
+}
+if args.count == 3 && args[1] == "capturewindow" {
+  guard CGPreflightScreenCaptureAccess() else {
+    _ = CGRequestScreenCaptureAccess()
+    fail("not allowed to capture: allow SDPClick under System Settings > Privacy & Security > Screen & System Audio Recording")
+  }
+  guard let number = gameWindowNumber() else { fail("no Civilization VI window") }
+  let task = Process()
+  task.executableURL = URL(fileURLWithPath: "/usr/sbin/screencapture")
+  task.arguments = ["-x", "-o", "-t", "png", "-l", String(number), args[2]]
+  try? task.run()
+  task.waitUntilExit()
+  guard task.terminationStatus == 0, FileManager.default.fileExists(atPath: args[2]) else { fail("screencapture failed") }
+  say("captured window \(number)")
+  exit(0)
 }
 guard let window = gameWindow() else { fail("no Civilization VI window on screen") }
 if args.count == 2 && args[1] == "trusted" {
