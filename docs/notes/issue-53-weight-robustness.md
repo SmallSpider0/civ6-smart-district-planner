@@ -25,7 +25,7 @@
 - 裁判的加成对权重是线性的（`cmp_lib.lua`：加成 = Σ 权重 × 各产出的变化 `byYield`），所以 `robust53.py` 用方案的 `byYield` 算它在每组权重下的得分；`compare.mjs --rejudge … --weights` 把开发集每个场景互不相同的最优方案（273 个）在 12 组权重下各打一次分，10368 个（场景, A, B）与算出的值全部相同（最大差 7e-15）。
 - 权重都是 1/k 的整数倍（k ≤ 100）时，真最优把界取整到 1/k 的倍数（原来只对整数权重取整），这样 0.25、1.15 这类权重和整数权重一样快。`tests/offline/spec_land.lua` 在假世界的 3 个区域场景上对 3 组权重（含小数）核对真最优与全部枚举相同（这个小场景暴露不出下面那处漏项，旧界在它上面也对）。
 - **真最优的界漏了一项**（`cmp_oracle.lua`，5ba714d 修正）：搜索树的一个节点给子节点估界时用 `Rest(d + 1)`，没有算它正在放的那个区域与后面区域的配对，界可能低于真值，整棵子树被错剪。整数权重时少见，界取整到更细的格子后更容易碰上：留出集的 9 组权重里，有 5 个（场景, 权重）的“已证明最优”被另一组权重的方案超过（如 HS12-vietnam-jungle-mid 在 g05 下 8 → 8.5）。修正后开发集 12 组权重 × 72 个场景全部重算：864 个里只有 1 个值变了（S17-egypt-desert-late，sc125，18 → 18.25），每次运行的耗时约为原来的 2.2 倍（-j 7，3.2 小时）。**此前入库的 `sdp:ORACLE` 和 `sdp:ORACLE_LAND` 结果（[issue-48-land-oracle.md](issue-48-land-oracle.md)、`land_oracle*.jsonl`）都是用旧界算的，“已证明”不完全可靠，要用修正后的版本重算或复核。**
-- 留出集只有旧界的结果（9 组权重，全量重算超过 3 小时，没有重做），作为已知最好解使用：B 下的“最优”取所有权重组方案在 B 下的最高分，`robust53.py` 把这些行算作未证明。
+- 留出集 9 组权重 2026-10-25 用修正后的界（另加 issue-48-true-optimum-sets.md 第 3 节收紧的界）重算：648 个全部证明，与旧界相比 5 个值变了，正是上面被别组方案超过的 5 个（HS09-brazil-jungle-late 在 sc075 下 16 → 16.5、在 ep 下 36.3 → 37.1，HS12-vietnam-jungle-mid 在 g05 下 8 → 8.5、在 g05f05 下 7.5 → 8，HS16-indonesia-island-late 在 g05 下 18.5 → 19）。
 
 ## 3. 结果（开发集 72 个场景，修正后的界，全部证明）
 
@@ -64,7 +64,7 @@
 - 不对称：按 g05 规划、实际是全 1 时平均只损失 0.21%（72 个场景里 69 个仍是最优），反过来按全 1 规划、实际是 g05 时损失 1.16%（55 个）。金币减半主要是在全 1 下同分的方案里挑一个，全 1 不挑。g05f05 对全 1 也只损失 0.54%（67 个仍是最优）。
 - “金币、信仰减半”这一族（g05f05、g025f05、sc125、sc075、ep）彼此的平均损失都不到 1.9%，sc075 对 g05f05 只有 0.04%（71 个仍是最优）。AMT 是例外，和这一族互相损失 1.5–4%（AMT 的金币、信仰权重高，生产力低）。
 - 单个场景的最差损失大（33–50%），多出在区域少、最优值小的早期场景（S21-maya-jungle-early：sci3 下最优 4，全 1 的方案得 2）；也有最优 11 的场景差 36%（S10-netherlands-temperate-mid，sc125 的方案在 faith3 下）。
-- 留出集（旧界，9 组权重）排序相同：对其余 8 组的平均损失 all1 2.05、g05 1.17、g025 1.36、g05f05 0.63、g025f05 0.84、sc125 0.62、sc075 0.55、amt 1.76、ep 0.83；所有 9 组给出同一个方案的场景 17 个，每个方案都最优的 31 个。
+- 留出集（修正后的界，9 组权重，全部证明）排序相同：对其余 8 组的平均损失 all1 2.05、g05 1.04、g025 1.37、g05f05 0.54、g025f05 0.84、sc125 0.62、sc075 0.56、amt 1.76、ep 0.79；所有 9 组给出同一个方案的场景 17 个，每个方案都最优的 31 个。
 
 ## 4. 读法
 
@@ -80,9 +80,10 @@ node tools/compare.mjs -s '^S\d\d-[^~]*$' -p sdp --only sdp:ORACLE --add sdp:ORA
 python3 -I tests/compare/robust53.py --vectors tests/compare/weights/w53.jsonl --distinct PLANS.jsonl tests/compare/results/w53_oracle.jsonl
 node tools/compare.mjs --rejudge PLANS.jsonl --weights tests/compare/weights/w53.jsonl -j 2 --out CROSS.jsonl   # 3252 次打分，-j 2 约 54 分钟
 python3 -I tests/compare/robust53.py --slim CROSS.jsonl tests/compare/results/w53_cross.jsonl
-python3 -I tests/compare/robust53.py --vectors tests/compare/weights/w53.jsonl --check tests/compare/results/w53_cross.jsonl tests/compare/results/w53_oracle.jsonl tests/compare/results/w53_oracle_hs_oldbound.jsonl
+python3 -I tests/compare/robust53.py --vectors tests/compare/weights/w53.jsonl --check tests/compare/results/w53_cross.jsonl tests/compare/results/w53_oracle.jsonl tests/compare/results/w53_oracle_hs.jsonl
+node tools/compare.mjs -s '^HS\d\d-[^~]*$' -p sdp --only sdp:ORACLE --add sdp:ORACLE --weights W9.jsonl -j 4 --out tests/compare/results/w53_oracle_hs.jsonl   # W9：w53.jsonl 去掉 sci3、prod3、faith3；约 1 小时
 ```
 
 - `w53_oracle.jsonl`：开发集 72 个场景 × 12 组权重的真最优（修正后的界，864 行）。
-- `w53_oracle_hs_oldbound.jsonl`：留出集 72 个场景 × 9 组权重，旧界算的已知最好解（648 行，行里 `oracleBound` 注明）。
+- `w53_oracle_hs.jsonl`：留出集 72 个场景 × 9 组权重的真最优（修正后的界，648 行，全部证明；取代旧界算的 `w53_oracle_hs_oldbound.jsonl`）。
 - `w53_cross.jsonl`：开发集互不相同的最优方案在每组权重下的裁判打分（只留核对用的字段）。
