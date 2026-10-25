@@ -5,6 +5,8 @@ title: "发布 vX.Y.Z"
 labels: release
 ---
 
+步骤和命令见 `.claude/skills/sdp-release/SKILL.md`（`tools/release.py` 做版本号、更新说明、发布和创意工坊上传）。
+
 **版本**：vX.Y.Z（modinfo version 改为 N，`UI/SDP_Panel.lua` 的 `VERSION` 改为 vX.Y.Z）
 **里程碑**：vX.Y.Z 里的 Issue 都已关闭或移到下一版
 

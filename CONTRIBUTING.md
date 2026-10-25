@@ -6,7 +6,8 @@
 
 ## 先读
 
-- [AGENTS.md](AGENTS.md)：需求约束、技术方案、44 条坑、每轮改动流程。
+- [AGENTS.md](AGENTS.md)：需求约束、技术方案、44 条坑的要点（完整说明在 [docs/pitfalls.md](docs/pitfalls.md)）、每轮改动流程。
+- [.claude/skills/](.claude/skills/)：Issue 处理、游戏内测试、离线重活、发版、监听的固定步骤，Claude Code 按需加载；人照着做也一样。
 - 当前平台的环境说明：[docs/dev-macos.md](docs/dev-macos.md) 或 [docs/dev-windows.md](docs/dev-windows.md)。
 - [tools/README.md](tools/README.md)：每个工具的用法。
 
@@ -93,9 +94,10 @@
   - 不用套话和 AI 腔，比如“赋能”“全面提升”“值得注意的是”；
   - 同一个意思只写一次，不重复已经说过的话。
 - 直接描述功能，不加"新功能""新加""新指标"之类的标签。
+- 游戏里的名称（区域、建筑、奇观、文明、领袖、地貌、资源、界面）中英文都用游戏自己的，不自己翻译。核对办法：解析 `Civ6.app/Contents/Assets` 下 Base 和全部 DLC 的文本 XML（`DebugLocalization.sqlite` 只有最后加载的规则集），按 Tag 或中文查。已定的英文：tile（不是 plot）、valid（不是 legal）、map tack / tack（不是 pin）、specialty districts、City Center、Woods / Rainforest / Marsh / Floodplains / Volcanic Soil、Housing、Appeal、Amenities、Additional Content、Key Bindings、the toolbar at the upper left（不是 launch bar）。PR 里列出这次核对过的术语和出处。
 - 测试项数、耗时这类数字只写在自测报告和“介绍与评测”页里（由脚本生成或刷新），其他文档链接过去，免得过时。
-- 例外：面板开关的悬停提示讲清这个开关做什么、收益和代价，收益尽量写成实测的百分比（如“相邻加成平均高 x%”），代价写手动操作和耗时倍数。数字的出处（场景、档位、命令、结果文件）记在 [docs/multicity-design.md](docs/multicity-design.md) 对应的小节，结果文件放在 `tests/compare/results/`。改了算法、规则或测试集后，按发版清单重跑并更新这些数字。
-- 截图只截游戏画面，不带系统菜单栏、标题栏、任务栏或 Dock。放在 `docs/images/`，按 `v<版本>-<内容>.jpg` 命名。
+- 例外：面板开关的悬停提示写给玩家，分三段（中间空一行）：这个开关做什么（背后的游戏规则）、收益、代价；不用“候选格”“求解”这类内部词，不重复勾选框已经显示的默认值。收益尽量写成实测的百分比（如“相邻加成平均高 x%”），代价写手动操作和耗时倍数。数字的出处（场景、档位、命令、结果文件）记在 [docs/notes/](docs/notes/) 里对应 Issue 的记录，结果文件放在 `tests/compare/results/`。改了算法、规则或测试集后，按发版清单重跑并更新这些数字。
+- 截图只截游戏画面，不带系统菜单栏、标题栏、任务栏或 Dock。放在 `docs/images/`，按 `v<轮次>-<内容>.jpg` 命名，英文界面的加 `-en-`；有中英文两版的画面两版都拍（`tools/shots.py`）。
 - “介绍与评测”页由 `report/build.py` 生成，前 6 节写给玩家，技术内容放在附录。中文页、英文页内容相同，附录也有英文版；改了一页就同步改另一页（`report/template.html` 与 `report/template_en.html`，附录里的图（`part_*_en.html`、`hexfig_en.svg.txt`）、`build.py` 生成的句子和表格、图表文字（`build.py` 的 `CHART_WORDS`）都要有英文）。用 Claude 做的页面（artifact）沿用这个页面的样式和写法。
 
 ## 许可证与第三方内容
