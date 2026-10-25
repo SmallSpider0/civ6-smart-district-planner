@@ -684,6 +684,7 @@ test("issue 67: what to do first, the camera, clickable rows, plain tooltips", f
     if r.X ~= nil and row == nil then row = r end
   end
   T.ok(row ~= nil, "a row with a plot")
+  T.ok(row.Row:GetToolTipString():find("LOC_SDP_RESULT_LOOK", 1, true) == 1, "its tooltip says a click moves the camera (issue 75)")
   row.Row:Click()
   look = UI_Mock.Looks[#UI_Mock.Looks]
   T.eq(look.X .. "," .. look.Y, row.X .. "," .. row.Y, "the row's plot")
@@ -717,6 +718,67 @@ test("issue 67: what to do first, the camera, clickable rows, plain tooltips", f
   T.ok(checked > 0, "district pins checked")
   multi.SelectSolution(1)
   T.eq(#UI_Mock.Looks, looks + 2, "another solution moves the camera too")
+  SDP_Panel.SelectTab("SINGLE")
+  SDP_Panel.Close()
+end)
+
+-- Issue 75: the sites of a solution one after another: the selected
+-- solution's button again, the row of a site, "next site" while peeking.
+test("issue 75: the selected solution again, a site's row and next site while peeking go through its sites", function()
+  SDP_Panel.Open()
+  SDP_Panel.SelectTab("SITES")
+  local sites = SDP_Panel.Sites
+  sites.SetCount(2)
+  sites.SetDistance(7)
+  sites.SetSelected("DISTRICT_CAMPUS", true)
+  T.ok(sites.Solve(), "started")
+  SDP_Panel.RunTask(200)
+  local result = sites.State().Result
+  T.ok(result and result.Ok, "sites result")
+  local n = sites.State().Solution
+  local solution = result.Solutions[n]
+  T.eq(#solution.Sites, 2, "two sites")
+  local function Look() local l = UI_Mock.Looks[#UI_Mock.Looks]; return l.X .. "," .. l.Y end
+  local function At(s) return solution.Sites[s].X .. "," .. solution.Sites[s].Y end
+  T.eq(Look(), At(1), "a new result: the first site")
+  local cell = sites.State().View.Solutions[n].Cell
+  T.ok(cell:GetToolTipString():find("LOC_SDP_SITES_SOLUTION_NEXT", 1, true), "its tooltip says to click again")
+  cell:Click()
+  T.eq(Look(), At(2), "clicked again: the second site")
+  T.eq(sites.State().Solution, n, "the same solution")
+  sites.State().View.Solutions[n].Cell:Click()
+  T.eq(Look(), At(1), "after the last, the first")
+  -- A site's row: the camera there, and "next" goes on from it.
+  local row = sites.State().View.Results[2]
+  T.ok(row.Row:GetToolTipString():find("LOC_SDP_RESULT_LOOK", 1, true) == 1, "the row says a click moves the camera")
+  row.Row:Click()
+  T.eq(Look(), At(2), "the row's site")
+  T.eq(sites.State().Site, 2, "remembered")
+  -- Peeking: next site while the window is hidden.
+  local c = UI_Mock.Controls
+  c.PeekButton:Click()
+  T.eq(c.PeekNextSite:IsHidden(), false, "next site shown while peeking")
+  c.PeekNextSite:Click()
+  T.eq(Look(), At(1), "next site: round to the first")
+  T.eq(SDP_Panel.State().Peek, true, "still peeking")
+  c.PeekReturn:Click()
+  T.eq(c.PeekNextSite:IsHidden(), true, "gone with the peek")
+  -- Not on the other tabs.
+  SDP_Panel.SelectTab("SINGLE")
+  c.PeekButton:Click()
+  T.eq(c.PeekNextSite:IsHidden(), true, "single-city tab: no next site")
+  c.PeekReturn:Click()
+  -- One site: nothing to go through.
+  SDP_Panel.SelectTab("SITES")
+  sites.SetCount(1)
+  T.ok(sites.Solve(), "one site")
+  SDP_Panel.RunTask(200)
+  local one = sites.State().View.Solutions[sites.State().Solution].Cell
+  T.ok(one:GetToolTipString():find("LOC_SDP_SITES_SOLUTION_NEXT", 1, true) == nil, "one site: no click-again note")
+  c.PeekButton:Click()
+  T.eq(c.PeekNextSite:IsHidden(), true, "one site: no next site")
+  c.PeekReturn:Click()
+  sites.SetSelected("DISTRICT_CAMPUS", false)
   SDP_Panel.SelectTab("SINGLE")
   SDP_Panel.Close()
 end)

@@ -730,6 +730,18 @@
     <Replace Tag="LOC_SDP_PEEK_RETURN_TOOLTIP" Language="en_US">
       <Text>Show the planner window again (or press Esc)</Text>
     </Replace>
+    <Replace Tag="LOC_SDP_RESULT_LOOK" Language="en_US">
+      <Text>Click: move the camera here</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_SOLUTION_NEXT" Language="en_US">
+      <Text>Click again: move the camera to the next site of this plan</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_PEEK_NEXT_SITE" Language="en_US">
+      <Text>Next site</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_PEEK_NEXT_SITE_TOOLTIP" Language="en_US">
+      <Text>Move the camera to the next site of this plan; after the last, back to the first</Text>
+    </Replace>
     <Replace Tag="LOC_SDP_FOLD_SHOW" Language="en_US">
       <Text>Show</Text>
     </Replace>

@@ -53,6 +53,7 @@ local m_result = nil
 local m_solution = 1
 local m_view = { Districts = {}, Solutions = {}, Results = {} }
 local m_lookNext = false -- move the camera to the first site when the next result shows (issue 67)
+local m_site = 1 -- the site of the solution the camera was last moved to (issue 75)
 
 -- The preset, the weights and the tier, kept in the save (issue 57).
 local ALL_COLUMNS = {}
@@ -343,12 +344,42 @@ function P.Preview(n)
   -- Only for a new result or another solution, not on reopening the tab (issue 67).
   if m_lookNext and SDP_UI.IsOpen() then
     m_lookNext = false
+    m_site = 1
     SDP_UI.LookAt(solution.Sites[1].X, solution.Sites[1].Y)
   end
 end
 
+-- Move the camera to site s of the selected solution (issue 75).
+function P.LookAtSite(s)
+  local solution = m_result and m_result.Ok and m_result.Solutions[m_solution]
+  local site = solution and solution.Sites[s]
+  if site == nil then return end
+  m_site = s
+  m_view.Site = s
+  SDP_UI.LookAt(site.X, site.Y)
+  UI.PlaySound("Play_UI_Click")
+end
+
+-- Whether the selected solution has more than one site to go through.
+function P.CanStep()
+  local solution = m_result and m_result.Ok and m_result.Solutions[m_solution]
+  return solution ~= nil and #solution.Sites > 1
+end
+
+-- The camera to the selected solution's next site, after the last the first.
+function P.NextSite()
+  if not P.CanStep() then return end
+  P.LookAtSite(m_site % #m_result.Solutions[m_solution].Sites + 1)
+end
+
+-- Another solution: shown, the camera to its first site. The selected one
+-- again: the camera to its next site (issue 75).
 function P.SelectSolution(n)
   if m_result == nil or not m_result.Ok or m_result.Solutions[n] == nil then return end
+  if n == m_solution and SDP_UI.IsOpen() then
+    if P.CanStep() then P.NextSite() else P.LookAtSite(1) end
+    return
+  end
   m_solution = n
   m_lookNext = true
   P.Render()
@@ -376,17 +407,22 @@ function P.Render()
       local inst = m_solutionIM:GetInstance()
       local where = {}
       for _, site in ipairs(s.Sites) do where[#where + 1] = SDP_UI.Where(site.X, site.Y) end
+      local tip = table.concat(where, " ")
+      if #s.Sites > 1 then tip = tip .. "[NEWLINE]" .. Locale.Lookup("LOC_SDP_SITES_SOLUTION_NEXT") end
       SDP_UI.SolutionRow(inst, Locale.Lookup("LOC_SDP_SOLUTION_N", n, SDP_UI.Number(math.floor(s.Value * 10 + 0.5) / 10)),
-        table.concat(where, " "), n == m_solution)
+        tip, n == m_solution)
       inst.Root:RegisterCallback(Mouse.eLClick, function() P.SelectSolution(n) end)
-      m_view.Solutions[n] = { Value = s.Value, Selected = n == m_solution }
+      m_view.Solutions[n] = { Value = s.Value, Selected = n == m_solution, Cell = inst.Root }
     end
     local numbers = SiteNumbers(solution)
     for s, site in ipairs(solution.Sites) do
       local name = Locale.Lookup("LOC_SDP_SITE_N", numbers[s]) .. "  " .. SDP_UI.Where(site.X, site.Y) .. "  "
         .. SDP_UI.Number(math.floor(site.Value * 10 + 0.5) / 10)
-      m_view.Results[#m_view.Results + 1] = SDP_UI.ResultRow(m_resultIM:GetInstance(), "ICON_DISTRICT_CITY_CENTER", name,
+      local inst = m_resultIM:GetInstance()
+      m_view.Results[#m_view.Results + 1] = SDP_UI.ResultRow(inst, "ICON_DISTRICT_CITY_CENTER", name,
         SiteDetail(site), SiteToolTip(site), site.X, site.Y)
+      -- A click on a site also sets where "next site" goes on from.
+      inst.Root:RegisterCallback(Mouse.eLClick, function() P.LookAtSite(s) end)
     end
     if not Controls.SitesPage:IsHidden() then P.Preview(m_solution) end
   end
@@ -472,7 +508,7 @@ end
 
 function P.State()
   return {
-    Result = m_result, Solution = m_solution, K = m_k, D = m_d, Tier = m_tier, Weights = m_weights, View = m_view,
+    Result = m_result, Solution = m_solution, Site = m_site, K = m_k, D = m_d, Tier = m_tier, Weights = m_weights, View = m_view,
     PlanCount = m_planCount, Preset = m_preset, Fold = m_fold, FoldText = Controls.SitesFoldText:GetText(),
     EstimateText = Controls.SitesEstimate:GetText(), PlaceDisabled = Controls.SitesPlaceButton:IsDisabled(),
   }

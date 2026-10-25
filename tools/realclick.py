@@ -295,8 +295,46 @@ SDP_Panel.Multi.Refresh()
     s.check("place by click", value("SDP_Panel.State().Result.Placed"), "true")
     click_control("Controls.UndoButton")
     s.check("undo by click", value("SDP_Panel.State().Result.Placed"), "false")
+    # City sites (issue 75): the selected plan again, and Next site while
+    # peeking, go through its sites.
+    click_control("Controls.SitesTab")
+    s.check("sites tab by click", value("SDP_Panel.Tab()"), "SITES")
+    lua("SDP_Panel.Sites.SetCount(2); SDP_Panel.Sites.SetTier('FAST'); SDP_Panel.Sites.SetSelected('%s', true)" % campus)
+    click_control("Controls.SitesSolveButton")
+    for _ in range(120):
+        if value("SDP_Panel.State().Running") == "false" and value("SDP_Panel.Sites.State().Result ~= nil") == "true":
+            break
+        time.sleep(0.5)
+    sol = "SDP_Panel.Sites.State().Result.Solutions[SDP_Panel.Sites.State().Solution]"
+    if value("SDP_Panel.Sites.State().Result.Ok and #%s.Sites == 2" % sol) == "true":
+        at = ["%s.Sites[%d].X .. ',' .. %s.Sites[%d].Y" % (sol, n, sol, n) for n in (1, 2)]
+        s.check("sites: the camera at the first site", value("SDP_UI.LastLook"), value(at[0]))
+        click_control("SDP_Panel.Sites.State().View.Solutions[SDP_Panel.Sites.State().Solution].Cell")
+        s.check("sites: the plan again by click, the second site", value("SDP_UI.LastLook"), value(at[1]))
+        click_control("Controls.PeekButton")
+        s.check("sites: next site shown while peeking", value("Controls.PeekNextSite:IsHidden()"), "false")
+        click_control("Controls.PeekNextSite")
+        s.check("sites: next site by click, round to the first", value("SDP_UI.LastLook"), value(at[0]))
+        click_control("Controls.PeekReturn")
+        s.check("sites: next site gone with the peek", value("Controls.PeekNextSite:IsHidden()"), "true")
+    else:
+        s.check("sites: a plan with two sites", value("SDP_Panel.Sites.State().Result.Ok and #%s.Sites" % sol), "2")
+    lua("SDP_Panel.Sites.SetSelected('%s', false); SDP_Panel.Sites.SetTier('STANDARD')" % campus)
     click_control("Controls.CloseButton")
     s.check("close by click", value("SDP_Panel.IsOpen()"), "false")
+    # Issue 76: a city selected on the map since the panel last opened: it
+    # opens on the single-city tab; the same one still selected: the tab it
+    # was closed on. (Closed on the city sites tab just above.)
+    lua("UI.DeselectAllCities(); SDP_Panel.Open(); SDP_Panel.SelectTab('SITES'); SDP_Panel.Close()")
+    lua("UI.SelectCity(Players[Game.GetLocalPlayer()]:GetCities():GetCapitalCity())")
+    time.sleep(0.5)
+    lua("SDP_Panel.Open()")
+    s.check("a city selected: opens on the single-city tab", value("SDP_Panel.Tab()"), "SINGLE")
+    click_control("Controls.MultiTab")
+    click_control("Controls.CloseButton")
+    lua("SDP_Panel.Open()")
+    s.check("the same city still selected: the tab it was closed on", value("SDP_Panel.Tab()"), "MULTI")
+    lua("SDP_Panel.SelectTab('SINGLE'); SDP_Panel.Close(); UI.DeselectAllCities()")
     # Clean up the site pin.
     lua("while SDP_Pins.CanUndo() do SDP_Pins.UndoLast() end")
     print("realclick: %d passed, %d failed%s" % (s.passed, len(s.failed),

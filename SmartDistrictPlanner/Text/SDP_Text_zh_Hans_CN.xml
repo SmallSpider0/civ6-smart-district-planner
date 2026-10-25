@@ -730,6 +730,18 @@
     <Replace Tag="LOC_SDP_PEEK_RETURN_TOOLTIP" Language="zh_Hans_CN">
       <Text>回到规划器窗口（也可以按 Esc）</Text>
     </Replace>
+    <Replace Tag="LOC_SDP_RESULT_LOOK" Language="zh_Hans_CN">
+      <Text>点击：镜头移到这里</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_SOLUTION_NEXT" Language="zh_Hans_CN">
+      <Text>再点一次：镜头移到这套方案的下一个城址</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_PEEK_NEXT_SITE" Language="zh_Hans_CN">
+      <Text>下一个城址</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_PEEK_NEXT_SITE_TOOLTIP" Language="zh_Hans_CN">
+      <Text>镜头移到这套方案的下一个城址，最后一个之后回到第一个</Text>
+    </Replace>
     <Replace Tag="LOC_SDP_FOLD_SHOW" Language="zh_Hans_CN">
       <Text>展开</Text>
     </Replace>

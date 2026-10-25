@@ -721,7 +721,8 @@ end
 
 -- Follow the city selected on the map (issue 63): a city selected since the
 -- panel last opened becomes the single-city tab's city and the centre of
--- the Several cities tab's default group. Not while a computation runs (its
+-- the Several cities tab's default group, and the panel opens on the
+-- single-city tab (issue 76; true then). Not while a computation runs (its
 -- result would go); that selection is then passed over, not kept for later.
 local m_followed = nil -- the selected city (ID) when the panel last opened
 local FollowSelection -- defined below (after SelectCity)
@@ -734,6 +735,8 @@ local function SetPeek(on)
   m_peek = on
   Controls.DropShadow:SetHide(on)
   Controls.PeekReturn:SetHide(not on)
+  -- The city sites tab: its sites one after another on the map (issue 75).
+  Controls.PeekNextSite:SetHide(not (on and m_tab == "SITES" and SDP_PageSites.CanStep()))
 end
 
 -- The window's height for the screen (M1), then the open tab's page.
@@ -757,7 +760,7 @@ end
 local function Open()
   if IsOpen() then return end
   if m_launchDone then SetLaunchMark(false) end
-  FollowSelection()
+  if FollowSelection() then m_tab = "SINGLE" end
   SelectTab(m_tab)
   Controls.DropShadow:SetHide(false)
   UIManager:QueuePopup(ContextPtr, PopupPriority.Low)
@@ -822,13 +825,20 @@ end
 SDP_UI.QualityText = QualityText
 
 -- A result row (ResultRow instance); with x, y a click moves the camera to
--- that plot (issue 67). Shared with the other tabs, which keep their rows.
+-- that plot (issue 67), and the row lights up under the mouse and says so
+-- first in its tooltip (issue 75). Shared with the other tabs, which keep
+-- their rows.
 function SDP_UI.ResultRow(inst, icon, name, detail, toolTip, x, y)
   inst.Icon:SetIcon(icon, 32)
   inst.Name:SetText(name)
   inst.Detail:SetText(detail)
   FitResultRow(inst)
-  inst.Root:SetToolTipString(toolTip or "")
+  inst.HoverArea:SetHide(x == nil)
+  local tip = toolTip or ""
+  if x ~= nil then
+    tip = Locale.Lookup("LOC_SDP_RESULT_LOOK") .. (tip ~= "" and ("[NEWLINE]" .. tip) or "")
+  end
+  inst.Root:SetToolTipString(tip)
   inst.Root:RegisterCallback(Mouse.eLClick, function()
     if x ~= nil then
       LookAt(x, y)
@@ -1239,15 +1249,16 @@ FollowSelection = function()
   local selected = UI.GetHeadSelectedCity()
   local cityID = nil
   if selected ~= nil and selected:GetOwner() == playerID then cityID = selected:GetID() end
-  if cityID == m_followed then return end
+  if cityID == m_followed then return false end
   m_followed = cityID
-  if cityID == nil or SDP_Task.IsRunning() then return end
+  if cityID == nil or SDP_Task.IsRunning() then return false end
   if cityID ~= m_cityID then
     m_cityID = cityID
     ClearResult()
     if m_heat ~= nil then ShowHeat(nil) end
   end
   SDP_PageMulti.SetCenter(cityID)
+  return true
 end
 
 local function SetWeight(key, value)
@@ -2029,6 +2040,7 @@ SDP_Panel = {
 Controls.CloseButton:RegisterCallback(Mouse.eLClick, Close)
 Controls.PeekButton:RegisterCallback(Mouse.eLClick, function() SetPeek(true) end)
 Controls.PeekReturn:RegisterCallback(Mouse.eLClick, function() SetPeek(false) end)
+Controls.PeekNextSite:RegisterCallback(Mouse.eLClick, function() SDP_PageSites.NextSite() end)
 Controls.FoldButton:RegisterCallback(Mouse.eLClick, function() SetFold(not m_fold) end)
 Controls.PresetReset:RegisterCallback(Mouse.eLClick, function() SetPreset(m_preset) end)
 Controls.CloseButton:RegisterCallback(Mouse.eMouseEnter, function()

@@ -34,7 +34,7 @@ The panel has three tabs: **One city**, **City sites** and **Several cities**. T
 
 ## One city
 
-1. **City**: the city selected on the map, otherwise your capital. Pick another one in the dropdown. Select another of your cities on the map and open the panel again, and the tab switches to it (not while a plan is being computed in the background).
+1. **City**: the city selected on the map, otherwise your capital. Pick another one in the dropdown. Select another of your cities on the map and open the panel again, and the panel opens on the One city tab with that city; with no city selected, or the same one as last time, it opens on the tab you closed it on (neither happens while a plan is being computed in the background).
 2. **Districts**, in two grids. Click a cell to change its state:
    - **Specialty districts**: Pool → Must → Off. Must is always placed, Off never. Pool districts are picked only when the district count is higher than the number of Must ones. Districts limited to one per empire (Government Plaza, Diplomatic Quarter) are Must or Off.
    - **Other districts** (Aqueduct, Dam, Canal, Neighborhood…): Auto → Must → Off. Auto exists for the Aqueduct and the Dam: an Aqueduct is added when the city lacks fresh water, a Dam (Gathering Storm) when 3 or more free Floodplains tiles lie within its 3 rings. The solver chooses their tiles.
@@ -54,7 +54,7 @@ The panel has three tabs: **One city**, **City sites** and **Several cities**. T
 1. **New cities** (1–6) and **Max distance** (4–15 tiles from one of your cities or from another new site).
 2. A weight preset (Balanced, Growth first, Districts first), or set each weight (each click 0.5); like the One city tab's settings, they hide under one line after each solve. A site's tile yields are weighed by the fixed numbers of the One city tab's **Tiles** column, times this tab's weight for the same yield (Growth first's Food 2 doubles Food tiles). Housing scores a site's Housing from water (plus the Granary, and the Lighthouse and Seaport when the plan has a Harbor): each Housing up to the population the planned districts need counts 1, each one after it half the one before.
 3. Tick the **districts each site is scored with**. **Per site** (default 3) is how many of them each site is scored with when you tick more.
-4. **Solve**: up to three plans. Click one to preview its sites' 3 rings on the map. Hover a site row for its water, its distances to your nearest city or site tack and to the other sites, the Luxury and Strategic resources it gets, its features and the districts it picked.
+4. **Solve**: up to three plans. Click one to preview its sites' 3 rings on the map and move the camera to its first site; click it again for the next site, and after the last, the first. Click a site row to move the camera to that site. While you **View map**, **Next site** is beside **Back to planner**. Hover a site row for its water, its distances to your nearest city or site tack and to the other sites, the Luxury and Strategic resources it gets, its features and the districts it picked.
 5. **Place site tacks**: a City Center tack on each site, numbered after your cities. These tacks are what the Several cities tab plans.
 
 Only revealed tiles are considered; a tile whose 3 rings are mostly unrevealed is not a candidate.

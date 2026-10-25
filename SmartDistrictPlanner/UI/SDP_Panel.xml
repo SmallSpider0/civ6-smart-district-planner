@@ -10,6 +10,8 @@
 
   <!-- While peeking (issue 71): the way back where the window was. -->
   <GridButton ID="PeekReturn" Anchor="L,T" Offset="35,85" Size="200,41" Style="MainButton" String="LOC_SDP_PEEK_RETURN" ToolTip="LOC_SDP_PEEK_RETURN_TOOLTIP" Hidden="1"/>
+  <!-- While peeking on the city sites tab (issue 75): the camera to the next site. -->
+  <GridButton ID="PeekNextSite" Anchor="L,T" Offset="245,85" Size="200,41" Style="MainButton" String="LOC_SDP_PEEK_NEXT_SITE" ToolTip="LOC_SDP_PEEK_NEXT_SITE_TOOLTIP" Hidden="1"/>
 
   <Grid ID="DropShadow" Size="auto,auto" Anchor="L,T" Offset="10,60" Style="DropShadow2" Color="255,255,255,200" AutoSizePadding="25,25" ConsumeMouse="1">
     <Grid ID="Window" Size="560,920" Anchor="C,C" Style="WindowFrameTitle">
@@ -392,10 +394,16 @@
   </Instance>
 
   <!-- A row with a plot moves the camera there when clicked (issue 67): a
-       plain Button, no look of its own, over nothing that takes the mouse
-       (pitfall 31). -->
+       plain Button over nothing that takes the mouse (pitfall 31). Under
+       the mouse a light button look shows (as the game's city banners,
+       ShowOnMouseOver), only for rows with a plot (HoverArea, issue 75). -->
   <Instance Name="ResultRow">
     <Button ID="Root" Size="460,40">
+      <Container ID="HoverArea" Size="parent,parent">
+        <AlphaAnim Size="parent,parent" ShowOnMouseOver="1" AlphaStart="0" AlphaEnd="1" Speed="4" Function="Root" Cycle="Once">
+          <Grid Size="parent,parent" Texture="Controls_ButtonControl_Tan" SliceCorner="12,6" SliceTextureSize="24,24"/>
+        </AlphaAnim>
+      </Container>
       <Image ID="Icon" Anchor="L,C" Size="32,32"/>
       <Label ID="Name" Anchor="L,T" Offset="40,2" Style="BodyTextDark16"/>
       <Label ID="Detail" Anchor="L,T" Offset="40,21" Style="BodyTextDark14" WrapWidth="420"/>
