@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """refresh_results - rerun this mod's rows of stored comparison results with the current code.
 
-    python3 -I tools/refresh_results.py [-j 8] tests/compare/results/FILE.jsonl ...
-    python3 -I tools/refresh_results.py --check [-j 8] [FILE ...]   # rerun and compare, change nothing
+    python3 -I tools/refresh_results.py [-j N] tests/compare/results/FILE.jsonl ...
+    python3 -I tools/refresh_results.py --check [-j N] [FILE ...]   # rerun and compare, change nothing
 
 --check is the check before a release after solver changes: it reruns the
 same rows (default the development set, full_rejudged.jsonl: 84 scenes in
@@ -146,7 +146,8 @@ def refresh(path, jobs):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("files", nargs="*")
-    ap.add_argument("-j", "--jobs", type=int, default=8)
+    ap.add_argument("-j", "--jobs", type=int, default=int(os.environ.get("SDP_JOBS") or 4),
+                    help="compare.mjs workers (default $SDP_JOBS, set by remote.py and sdplock.py heavy, else 4)")
     ap.add_argument("--check", action="store_true", help="rerun and compare with the stored rows; change nothing")
     args = ap.parse_args()
     os.makedirs(WORK, exist_ok=True)

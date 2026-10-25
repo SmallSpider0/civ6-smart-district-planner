@@ -456,7 +456,10 @@ if (!isMainThread) {
   const argv = process.argv.slice(2);
   let filter = null;
   let planners = ["sdp", "amt", "ep", "dwp"];
-  let jobs = Math.max(1, Math.min(8, (availableParallelism ? availableParallelism() : 4) - 2));
+  // Workers: $SDP_JOBS (set by tools/remote.py and sdplock.py heavy), else 4 so
+  // this machine stays usable for the game and whoever works on it.
+  let jobs = parseInt(process.env.SDP_JOBS, 10) ||
+    Math.max(1, Math.min(4, (availableParallelism ? availableParallelism() : 4) - 2));
   let out = join(COMPARE, "results", "latest.jsonl");
   let verbose = false;
   let list = false;

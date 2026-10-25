@@ -11,11 +11,11 @@
 | `validate.py` | 静态校验 mod 与测试文件 | 0 通过；1 有错误；2 缺工具 |
 | `luacheck.mjs` | Lua 语法与陷阱检查（validate 会调用它） | 0 无错误；1 有错误 |
 | `offline_tests.mjs` | 不开游戏跑求解逻辑测试与基准（`tests/offline/`） | 0 全过；1 有失败；2 用法错误 |
-| `deploy.py` | 校验后把 mod 同步到游戏 Mods 目录 | 0 成功；1 校验失败；2 找不到 Mods 目录 |
+| `deploy.py` | 校验后把 mod 同步到游戏 Mods 目录 | 0 成功；1 校验失败；2 找不到 Mods 目录；4 游戏被别的工作树占着 |
 | `workshop.py` | 创意工坊素材检查、预览图和示意图渲染、提交包（不连接 Steam） | 0 成功；1 超出限制；2 缺 tag、更新说明或有未提交的改动 |
 | `package.py` | 从最近一次提交打出压缩包（mod、安装说明、测试说明、“介绍与评测”页）；发布 Release 时由工作流以 `--release` 调用，不带测试说明 | 0 成功；1 校验失败；2 有未提交的改动 |
-| `run_tests.py` | 经 Tuner 在游戏内跑 `tests/test_*.lua` | 0 全过；1 有失败；2 连接问题；3 超时 |
-| `game.py` | 退出游戏、经 Steam 启动、从主菜单快速开局（可选建首都）；启动时的前台切换仅 macOS | 0 成功；2 超时 |
+| `run_tests.py` | 经 Tuner 在游戏内跑 `tests/test_*.lua`；Mods 里部署的不是本工作树的代码时停下 | 0 全过；1 有失败；2 连接问题；3 超时；4 游戏被占 |
+| `game.py` | 退出游戏、经 Steam 启动、从主菜单快速开局（可选建首都）；启动时的前台切换仅 macOS | 0 成功；2 超时；4 游戏被占 |
 | `realclick.py` | 仅 macOS：用系统鼠标事件真实点击面板，每步从面板状态读回核对 | 0 全过；1 有失败；2 环境问题 |
 | `stress.py` | 发布前在后期存档上做压力测试：AI 自动打出存档、逐步计时、魅力复核 | 0 全过；1 有问题步骤；2 环境问题 |
 | `refscene.py` | 手写的参照布局（社区公认布局）转成对比场景，画回文字或图片核对 | 0 成功；1 有错误；2 找不到场景 |
@@ -23,7 +23,9 @@
 | `shots.py` | 仅 macOS：摆好页签（`tests/shots/`）、截面板存进 `docs/images/`、切换英文界面 | 0 成功 |
 | `release.py` | 发版：改版本号与 CHANGELOG、起草更新说明和发布说明、发 Release、上传创意工坊并核对 | 0 成功；1 下载回来与提交包不同 |
 | `refresh_results.py` | 用当前代码重跑结果文件里本模组的行（`--check` 只比对、不改文件） | 0 成功；1 有变差的行或新违规 |
-| `remote.py` | 在第二台机器上跑离线重活：拷代码、后台运行、等待并取回结果 | 远端任务的退出码 |
+| `remote.py` | 在第二台机器上跑离线重活：拷代码、按格子数排队运行、等待并取回结果 | 远端任务的退出码 |
+| `sdplock.py` | 并行会话共用资源：游戏锁、本机重活（一次一个、限 worker、开游戏时暂停）、夜间队列、一条命令看本机和第二台机器 | 0 成功；4 被别人占着 |
+| `sdpsched.py` | 第二台机器上所有会话共用的任务队列（`remote.py` 拷过去调用，本机不直接用） | 任务的退出码 |
 | `worktree.py` | 新建能直接用的工作树（接好依赖和参考源码的链接）、列出与清理已合并的 | 0 成功 |
 
 ## paths.py、setup_reference.py — 位置与参考源码
@@ -480,16 +482,41 @@ python3 -I tools/refresh_results.py tests/compare/results/land.jsonl   # 重跑�
 ## remote.py — 在第二台机器上跑离线重活
 
 ```bash
-export SDP_REMOTE=XZC-compute                 # ~/.ssh/config 里能免密登录的主机名
+export SDP_REMOTE=build-box                   # ~/.ssh/config 里能免密登录的主机名（或写进本机配置的 remote）
 python3 -I tools/remote.py sync               # 把这个工作树（含未提交的文件）、node_modules、规则缓存和参考源码拷过去
-python3 -I tools/remote.py run devcheck -- python3 -I tools/refresh_results.py --check
-python3 -I tools/remote.py status             # 各任务在跑还是已结束、日志最后一行
+python3 -I tools/remote.py run devcheck --slots 6 -- python3 -I tools/refresh_results.py --check
+python3 -I tools/remote.py status             # 所有会话的任务：谁的、几格、排队 / 在跑 / 退出码、日志最后一行；还剩几格
 python3 -I tools/remote.py wait devcheck --fetch logs/refresh/full_rejudged.jsonl.STANDARD.jsonl
 ```
 
 - 不需要装游戏。远端在 `~/sdp-runs/<工作树名>/`，参考源码只拷 Lua。结果和本机相同（耗时字段除外），所以报告里要写耗时的那组结果放在同一台机器上跑。
+- **排队**：远端的格子数默认是它的核数减 2（留给系统；本机配置的 `remote_slots` 可改），所有会话共用。任务要 `--slots N` 格（默认取命令里的 `-j`，没写就是全部；`-j` 比 N 大会改小，子进程拿到 `SDP_JOBS=N`），排在最前面、空出 N 格时启动，先到先得。别的方式启动的 `compare.mjs` 按它的 `-j` 计入（没写按全部）。`--exclusive` 等整台机器空下来再跑、跑时别人排队：报告里要写秒数的那组用它。同名任务还在排队或在跑时拒绝。队列是 `tools/sdpsched.py`，`sync` 和 `run` 把它拷到远端的 `~/sdp-runs/bin/`。
+- **快照**：`run` 把远端的工作树用 APFS 克隆（瞬间完成、不另占空间）到 `~/sdp-runs/snap/NAME/`，任务在快照里跑，之后再 `sync` 不会改到它正在读的文件；`wait --fetch` 和 `fetch --job NAME` 从快照取回结果。结束超过 7 天的快照在下次 `run` 时删掉。
 - `run` 用 nohup 启动，ssh 断了也继续；结束时写 `~/sdp-runs/NAME.exit`。`wait` 只看这个文件（不按进程名查找），结束后取回 `--fetch` 列的文件，以远端任务的退出码退出：放在后台跑，它结束就是可以接着处理的信号。
-- 远端的 node 不在默认 PATH 上：`SDP_REMOTE_PATH` 放在 PATH 前面（默认 `/opt/homebrew/bin:/usr/local/bin`）。
+- 远端的 node、python3 不在默认 PATH 上：`SDP_REMOTE_PATH`（或本机配置的 `remote_path`）放在 PATH 前面（默认 `/opt/homebrew/bin:/usr/local/bin`）。
+
+## sdplock.py — 并行会话怎么分用游戏和 CPU
+
+几个会话（或几个人）同时工作，各在自己的工作树里，但游戏、Tuner 连接、Mods 文件夹只有一份，本机的 CPU 也要留给游戏和正在用这台机器的人。
+
+```bash
+python3 -I tools/sdplock.py status                      # 游戏锁、本机重活、夜间队列、第二台机器的格子和队列
+python3 -I tools/sdplock.py take --purpose "#71 测试"     # 拿游戏锁并写明用途（工具也会自己拿）
+python3 -I tools/sdplock.py wait --take --purpose "..."  # 放后台：锁一空就拿下并结束
+python3 -I tools/sdplock.py take --next --purpose "v1.4.2 发版测试"  # 发版测试排到下一个
+python3 -I tools/sdplock.py release                     # 不退游戏也放锁（game.py quit 会自己放）
+python3 -I tools/sdplock.py heavy NAME -- node tools/compare.mjs ...   # 本机重活
+python3 -I tools/sdplock.py queue add --what "realclick suite" --why "#71 界面" --cmd "python3 -I tools/realclick.py suite"
+python3 -I tools/sdplock.py queue list                  # 由一个会话在机器空闲时按顺序跑，跑完 queue done ID --result ...
+```
+
+- **游戏锁**：`deploy.py`、`game.py`、`run_tests.py`、`realclick.py`、`shots.py`、`stress.py` 和 `civ6tuner.py serve`/`exec` 自己拿锁、续约；别的工作树拿着时以退出码 4 停下，写明谁、做什么、从几点开始。`civ6tuner.py states` 谁都能用。`game.py quit` 放锁并停掉本工作树的 Tuner 后台进程。
+- **过期**：30 分钟没续约，并且游戏已经关了或持有者的 Tuner 后台进程不在了，才算过期，`take --stale` 接手（接手后先 `game.py quit`，从新对局开始）。`--force` 不看状态直接拿，只在确定持有者已经不在时用。
+- **插队**：`take --next` 预订下一个；持有者放锁后 15 分钟内只有预订的工作树能拿。
+- **本机重活**：一次一个；worker 上限按本机配置（没有配置时 4 个），`-j` 超了就改小，`compare.mjs`、`refresh_results.py` 没写 `-j` 就补上；游戏锁被拿走时发 `SIGSTOP` 暂停（整个进程组），放锁时 `SIGCONT` 继续。暂停过的任务结束时会说，它的耗时字段不能用。Windows 上不能暂停。
+- **共用目录**：`$SDP_SHARED`，否则 macOS `~/Library/Application Support/SDP`，Windows `%LOCALAPPDATA%\SDP`。显示的会话名是 `$SDP_OWNER`，没设就是分支名。
+- **本机配置**：和机器有关的数值不进仓库，写在 `~/.config/sdp/local.json`（`SDP_LOCAL_CONFIG` 可改路径），每项都可省：`workers_day`（默认 4）、`workers_night`（默认同白天）、`night`（如 `"22:00-07:00"`，默认没有夜间）、`weekend_is_night`（默认 false）、`remote`（第二台机器的 ssh 主机名，`SDP_REMOTE` 优先）、`remote_slots`（默认那台机器的核数减 2）、`remote_path`（那边 node 和 python3 所在目录）。
+- 离线测试：`python3 -I -m unittest discover -s tests/tools`（假时钟、假进程、假游戏；CI 上也跑）。
 
 ## worktree.py — 工作树
 

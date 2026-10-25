@@ -19,15 +19,27 @@ Before any compare.mjs run: `node tools/compare.mjs --list -s 'REGEX'` and count
 
 ## Where
 
-Heavy runs (more than ~15 minutes of CPU, every oracle run) go to the second machine when there is one (`$SDP_REMOTE`), so this machine stays free for the game and the maintainer:
+First `python3 -I tools/sdplock.py status`: the game lock, the heavy job on this machine and, when there is a second machine, its slots and queue (all sessions share them).
+
+| Job | Where |
+|---|---|
+| oracle runs, `refresh_results.py --check`, the development set, anything over ~15 minutes of CPU | the second machine, when there is one (`$SDP_REMOTE`, or `remote` in the local config) |
+| `offline_tests.mjs`, `validate.py`, one spec, a comparison under ~15 minutes | here |
+
+A heavy job that must run here (no second machine, or both machines on one job by splitting the scenes and rerunning only missing rows) goes through `python3 -I tools/sdplock.py heavy NAME -- CMD`: one at a time, with the workers the local config allows (4 without one; `-j` is lowered to fit), paused while the game lock is held. A job that was paused says so at the end: its timing fields are not usable.
+
+The second machine has one queue for all sessions: `remote.py run` holds a job until its slots are free (first come, first served), so never start jobs there by hand:
 
 ```bash
 python3 -I tools/remote.py sync                       # this worktree, including uncommitted files
-python3 -I tools/remote.py run NAME -- node tools/compare.mjs ... --out logs/remote/NAME.jsonl
+python3 -I tools/remote.py run NAME [--slots N] -- node tools/compare.mjs ... --out logs/remote/NAME.jsonl
 python3 -I tools/remote.py wait NAME --fetch logs/remote/NAME.jsonl     # in the background
 ```
 
-`wait` ends when the job ends: that notification is when to carry on. Results there equal this machine's except timing fields; runs whose seconds get reported stay on one machine (say which). Never run heavy jobs here while the game is running (sdp-game-test).
+- Slots default to the command's `-j` (all slots without one); ask for what the job needs, not the whole machine. Names are unique across sessions: prefix them with your topic.
+- The job runs in its own snapshot of the worktree, so `sync` again at any time; `wait --fetch` and `fetch --job NAME` take results from that snapshot.
+- Runs whose seconds get reported: `--exclusive` (waits for an empty machine and keeps it), and say which machine.
+- `wait` ends when the job ends: that notification is when to carry on. Results there equal this machine's except timing fields.
 
 ## Afterwards
 
