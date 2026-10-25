@@ -9,6 +9,7 @@ Releases and Workshop updates need no extra approval. Windows is not tested befo
 
 ## 1. Before the PR (on the batch's branch)
 
+0. Keep the screen from locking from the start of the release work (sdp-game-test, Before 1): it runs for hours and touches the game.
 1. Every issue of the milestone is closed by this PR or moved on. Version digit: sdp-issue §3.
 2. Tests (sdp-game-test, sdp-offline-runs), heavy ones on the second machine while the game tests run here. Real clicks, screenshots, the stress test and the three rulesets take the screen: they go into the night queue (21:00–08:00) on weekdays unless the maintainer says to run them now (weekends: any time), so a weekday release is usually prepared by day, tested at night and published the next morning. Everything that does not need the screen is done before the night:
    - `python3 -I tools/validate.py`, `node tools/offline_tests.mjs`;

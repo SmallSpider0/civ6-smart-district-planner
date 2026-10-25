@@ -23,7 +23,7 @@ Keep the game in the background: the maintainer's app (Claude Code) stays in fro
 
 ## Before
 
-1. Keep the machine awake for the whole task (desktop app: `request_keep_awake`; otherwise `caffeinate -dims` in the background).
+1. Keep the screen from locking for the whole task, from its first step, not just before the launch: a locked screen stops the game drawing, takes no clicks and captures only the lock screen, and long offline steps before the game are enough for it to lock. Desktop app: `request_keep_awake` with `until: "session_idle"`; request it again in a later turn of the same task if the session went idle. Elsewhere: `caffeinate -dimsu` in the background, stopped at the end. Night runs need it most.
 2. Heavy offline jobs must not run on this machine at the same time: they slow the game to minutes per turn and make timings meaningless. Run them on the second machine (sdp-offline-runs) or pause them (`kill -STOP`, resume with `-CONT`; a job whose output is written row by row may simply be stopped and the missing rows rerun later).
 3. `python3 -I tools/deploy.py`. A Lua or UI XML change needs a new game; modinfo or text changes need a game restart (deploy says which).
 
