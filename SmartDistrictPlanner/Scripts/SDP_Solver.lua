@@ -89,9 +89,9 @@ function SDP_Solver.NewSession(request, scan)
       end
     end
   end
-  -- Districts the city needs (feedback item 4), unless built or pinned.
-  local pinned = {}
-  for _, pin in ipairs(scan.Pins) do pinned[(pin.Icon or ""):gsub("^ICON_", "")] = true end
+  -- Districts the city needs (feedback item 4), unless built or pinned for
+  -- it (a neighbour's pin is not this city's, issue 64).
+  local pinned = SDP_City.TackedDistricts(scan)
   self.Auto = {}
   for _, d in ipairs(plannable) do
     if request.Auto and request.Auto[d.Type] and not seen[d.Type] and not status[d.Type] and not pinned[d.Type]

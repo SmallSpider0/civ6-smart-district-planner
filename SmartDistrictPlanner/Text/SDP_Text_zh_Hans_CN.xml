@@ -229,6 +229,9 @@
     <Replace Tag="LOC_SDP_REASON_PINNED" Language="zh_Hans_CN">
       <Text>已有地图钉</Text>
     </Replace>
+    <Replace Tag="LOC_SDP_REASON_TACKED" Language="zh_Hans_CN">
+      <Text>本城已有它的地图钉</Text>
+    </Replace>
     <Replace Tag="LOC_SDP_REASON_NEEDS_DISTRICT" Language="zh_Hans_CN">
       <Text>需要相邻某个区域，但没有城市规划它</Text>
     </Replace>

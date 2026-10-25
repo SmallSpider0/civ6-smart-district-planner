@@ -565,19 +565,79 @@ function SDP_City.BuiltTypes(scan)
   return built
 end
 
--- District types a city has already: built (complete or not), or pinned
--- within its RADIUS rings (pins being replaced are not in scan.Pins).
--- A set; for SDP_Rules.Apart.
-function SDP_City.PresentDistricts(scan)
-  local present = {}
-  for _, built in ipairs(scan.Built) do present[built.Type] = true end
-  for _, pin in ipairs(scan.Pins) do
-    local key = (pin.Icon or ""):gsub("^ICON_", "")
-    local row = GameInfo.Districts[key]
-    if row ~= nil and not row.CityCenter and Map.GetPlotDistance(scan.X, scan.Y, pin.X, pin.Y) <= SDP_City.RADIUS then
-      present[key] = true
+-- The pins of a scan that are the city's own (issue 64). A pin within RADIUS
+-- is the city's when
+--   1. it is named with the number of a city or planned city within RADIUS
+--      of it (this mod names its tacks so, SDP_Pins.Own), and that is this
+--      city; else
+--   2. its plot is owned: this city owns it; else
+--   3. its plot is unowned and no other of the player's cities or planned
+--      cities (city-center pins) is nearer to it, as the land part gives out
+--      unowned plots (SDP_Solver, issue 54).
+-- A planned city owns no plot yet: for it 2 never holds. Any other pin is a
+-- neighbour's plan: a fixed neighbour, not a district this city has. Pins
+-- being replaced are not in scan.Pins. A sublist of scan.Pins, same order.
+function SDP_City.OwnPins(scan)
+  local playerID = scan.PlayerID
+  local here = Map.GetPlotIndex(scan.X, scan.Y)
+  local centers, byNumber = {}, {}
+  local cityNumbers = SDP_City.CityNumbers(playerID)
+  for _, city in Players[playerID]:GetCities():Members() do
+    local c = { X = city:GetX(), Y = city:GetY(), Self = city:GetID() == scan.CityID }
+    centers[#centers + 1] = c
+    byNumber[cityNumbers[city:GetID()]] = c
+  end
+  local sites, names = SDP_City.Sites(playerID), {}
+  for s, site in ipairs(sites) do names[s] = site.Name end
+  local siteNumbers = SDP_City.SiteNumbers(playerID, names)
+  for s, site in ipairs(sites) do
+    if not (scan.Ignored and scan.Ignored[site.PinID]) then
+      local c = { X = site.X, Y = site.Y, Self = scan.CityID == nil and site.Index == here }
+      centers[#centers + 1] = c
+      byNumber[siteNumbers[s]] = c
     end
   end
+  local own = {}
+  for _, pin in ipairs(scan.Pins) do
+    local d = Map.GetPlotDistance(scan.X, scan.Y, pin.X, pin.Y)
+    local plot = Map.GetPlot(pin.X, pin.Y)
+    local mine = false
+    if plot ~= nil and d <= SDP_City.RADIUS then
+      local n = tonumber(pin.Name or "")
+      local named = n ~= nil and byNumber[n] or nil
+      if named ~= nil and Map.GetPlotDistance(named.X, named.Y, pin.X, pin.Y) <= SDP_City.RADIUS then
+        mine = named.Self
+      elseif plot:GetOwner() == playerID then
+        local owningCity = Cities.GetPlotPurchaseCity(plot)
+        mine = scan.CityID ~= nil and owningCity ~= nil and owningCity:GetID() == scan.CityID
+      elseif plot:GetOwner() == -1 then
+        mine = true
+        for _, c in ipairs(centers) do
+          if not c.Self and Map.GetPlotDistance(c.X, c.Y, pin.X, pin.Y) < d then mine = false end
+        end
+      end
+    end
+    if mine then own[#own + 1] = pin end
+  end
+  return own
+end
+
+-- District types the city has a pin of (SDP_City.OwnPins). A set.
+function SDP_City.TackedDistricts(scan)
+  local tacked = {}
+  for _, pin in ipairs(SDP_City.OwnPins(scan)) do
+    local key = (pin.Icon or ""):gsub("^ICON_", "")
+    local row = GameInfo.Districts[key]
+    if row ~= nil and not row.CityCenter then tacked[key] = true end
+  end
+  return tacked
+end
+
+-- District types a city has already: built (complete or not), or pinned for
+-- it (SDP_City.OwnPins). A set; for SDP_Rules.Apart.
+function SDP_City.PresentDistricts(scan)
+  local present = SDP_City.TackedDistricts(scan)
+  for _, built in ipairs(scan.Built) do present[built.Type] = true end
   return present
 end
 

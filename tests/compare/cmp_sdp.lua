@@ -174,11 +174,10 @@ function CmpAdapters.sdp(request, variant, w)
     for first = 1, #all, group do
       local existing, plans = {}, nil
       for c, city in ipairs(all) do existing[city:GetID()] = c >= first and c < first + group end
-      -- Every city its own list, also when all want the same: with the shared
-      -- list, an existing city skips a district type that has any pin within
-      -- four plots (SDP_Multi PinnedDistricts), so the earlier groups' pins
-      -- of a neighbour would silently take districts off this group's plan.
-      -- "_GROUP<n>S": the shared list, as the tab sends it by default.
+      -- Every city its own list, also when all want the same; "_GROUP<n>S":
+      -- the shared list, as the tab sends it by default, where an existing
+      -- city skips what it has tacked (SDP_City.OwnPins). Before issue 64 it
+      -- skipped any tack of the type within four plots, a neighbour's too.
       if request.plans or not sharedList then
         plans = {}
         for _, city in ipairs(all) do

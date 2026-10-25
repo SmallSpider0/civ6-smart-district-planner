@@ -131,16 +131,6 @@ end
 local Session = {}
 Session.__index = Session
 
--- Districts of the player's type with an icon pin within a scan's range.
-local function PinnedDistricts(scan)
-  local pinned = {}
-  for _, pin in ipairs(scan.Pins) do
-    local key = (pin.Icon or ""):gsub("^ICON_", "")
-    pinned[key] = true
-  end
-  return pinned
-end
-
 -- Request = {
 --   PlayerID, Tier, Params (overrides, tests)
 --   Districts            default plan of every new city, and of existing cities
@@ -217,7 +207,10 @@ function SDP_Multi.NewSession(request)
     end
     local status = SDP_City.DistrictStatus(part.Scan, plannable)
     part.Present = SDP_City.PresentDistricts(part.Scan)
-    local pinned = (part.Kind == "CITY" and not (request.Plans and request.Plans[part.Key])) and PinnedDistricts(part.Scan) or {}
+    -- With the shared list an existing city skips what it has pinned
+    -- already; pins of other cities are only neighbours (issue 64).
+    local pinnedHere = SDP_City.TackedDistricts(part.Scan)
+    local pinned = (part.Kind == "CITY" and not (request.Plans and request.Plans[part.Key])) and pinnedHere or {}
     local plan, seen, kept = {}, {}, {}
     for _, districtType in ipairs(wanted) do
       if not seen[districtType] then
@@ -233,7 +226,10 @@ function SDP_Multi.NewSession(request)
         elseif excluded ~= nil then
           -- Two required districts one city cannot have: the first one asked stays.
           unplaced[#unplaced + 1] = { City = part.Key, Type = districtType, Reason = "EXCLUSIVE", Other = excluded }
-        elseif not pinned[districtType] then
+        elseif pinned[districtType] then
+          -- Shown as LOC_SDP_REASON_TACKED.
+          unplaced[#unplaced + 1] = { City = part.Key, Type = districtType, Reason = "TACKED" }
+        else
           plan[#plan + 1] = districtType
           kept[districtType] = true
         end
@@ -241,7 +237,6 @@ function SDP_Multi.NewSession(request)
     end
     -- Districts the city needs (feedback item 4), unless built or pinned.
     local auto = (request.Autos and request.Autos[part.Key]) or request.Auto or {}
-    local pinnedHere = PinnedDistricts(part.Scan)
     part.Auto = {}
     for _, d in ipairs(plannable) do
       if auto[d.Type] and not seen[d.Type] and not status[d.Type] and not pinnedHere[d.Type]
@@ -1067,7 +1062,8 @@ end
 --                          Keys (target keys) } by group (both nil when coverage is off)
 --                 Plan     { City (participant Key), Type, Kind, X, Y, Index, Yields, ToolTip, Score,
 --                          Reach (keys of the targets it newly covers; coverage on, types with a reach) }
---                 Unplaced { City, Type, Reason } (NOT_AVAILABLE, BUILT, PINNED, MAX_PER_PLAYER,
+--                 Unplaced { City, Type, Reason } (NOT_AVAILABLE, BUILT, PINNED, TACKED (an existing
+--                          city with the shared list has a pin of it, SDP_City.OwnPins), MAX_PER_PLAYER,
 --                          NEEDS_DISTRICT, NEEDS_IMPROVEMENT (Other: the improvement), NO_LEGAL_PLOT,
 --                          NO_FREE_PLOT; City "WONDERS" for wonders)
 --                 A wonder's plan entry may carry Support = { Type, X, Y, Index, Unowned }: the
