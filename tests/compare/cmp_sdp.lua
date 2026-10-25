@@ -16,6 +16,7 @@
 --                                    the player's cities owns are candidates
 --                                    when they can be swapped (issue 54)
 --   variant <TIER>_COV<n>            multi: the coverage part on, weight n
+--   variant <TIER>_GROWTH            sites: the Growth first preset (SDP_Sites.PRESETS)
 --                                    (design 19)
 --   variant ORACLE                   the exact reference (cmp_oracle.lua, issue
 --                                    48): the fine tier's plan, then branch and
@@ -189,6 +190,9 @@ function CmpAdapters.sdp(request, variant, w)
   local oracle = variant:match("^ORACLE") ~= nil
   local check = oracle and variant:match("_CHECK$") ~= nil
   if oracle then variant = "FINE" .. variant:gsub("_CHECK$", ""):gsub("^ORACLE", "") end
+  -- "<TIER>_GROWTH" (sites): the sites tab's Growth first preset.
+  local growth = variant:match("_GROWTH$") ~= nil
+  variant = variant:gsub("_GROWTH$", "")
   -- "<TIER>_LAND[nnn]": the land part on (the panel's default), scaled by
   -- nnn / 100; else adjacency only.
   local coverage = tonumber(variant:match("_COV(%d)$") or "")
@@ -221,7 +225,7 @@ function CmpAdapters.sdp(request, variant, w)
   if scn.kind == "sites" then
     -- The sites tab: K sites within D, scored with the scenario's districts.
     local r = SDP_SiteSolver.Solve({ PlayerID = 0, Tier = variant, K = request.sites.count, D = request.sites.distance,
-      Districts = request.districts })
+      Districts = request.districts, Weights = growth and SDP_Sites.PRESETS.GROWTH or nil })
     if not r.Ok then out.notes[#out.notes + 1] = tostring(r.Error) end
     for _, site in ipairs((r.Ok and r.Solutions[1] and r.Solutions[1].Sites) or {}) do
       out.placements[#out.placements + 1] = { kind = "SITE", x = site.X, y = site.Y }

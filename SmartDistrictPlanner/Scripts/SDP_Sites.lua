@@ -46,6 +46,19 @@ function SDP_Sites.Weights(weights)
   return out
 end
 
+-- What a site's plot yields weigh (issue 53, the maintainer's choice of
+-- 2026-10-25 for this tab): the fixed numbers of the district planner's
+-- land part (SDP_Land.PLOT_WEIGHTS) times the tab's own weight of that
+-- yield, which only leans on it (all 1: the fixed numbers; Growth first:
+-- food twice). FEATURE weighs the one-time yields as before.
+function SDP_Sites.PlotWeights(w)
+  local out = { FEATURE = w.FEATURE }
+  for _, yieldType in ipairs(SDP_Land.TILE_YIELDS) do
+    out[yieldType] = SDP_Land.PLOT_WEIGHTS[yieldType] * (w[yieldType] or 1)
+  end
+  return out
+end
+
 -- Closest distance at which two cities may stand (game data, not DMT's 3).
 function SDP_Sites.MinRange()
   return (GlobalParameters and GlobalParameters.CITY_MIN_RANGE) or 3
@@ -131,7 +144,7 @@ end
 -- What is shared by every site of one request.
 function SDP_Sites.Context(playerID, request)
   local ctx = { PlayerID = playerID, Weights = SDP_Sites.Weights(request.Weights) }
-  ctx.Land = SDP_Land.Context(playerID, ctx.Weights, true)
+  ctx.Land = SDP_Land.Context(playerID, SDP_Sites.PlotWeights(ctx.Weights), true)
   local plannable, byType = SDP_Rules.PlannableDistricts(playerID), {}
   for _, d in ipairs(plannable) do byType[d.Type] = d end
   -- The plan every site is scored with. A district with an empire limit

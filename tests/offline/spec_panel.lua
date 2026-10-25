@@ -74,7 +74,9 @@ test("single-city tab: district states and the count; picking from the pool; thr
   T.eq(states.DISTRICT_NEIGHBORHOOD, "OFF", "the neighborhood is off")
   for _, d in ipairs(SINGLE) do SDP_Panel.SetSelected(d, false) end
   SDP_Panel.SetSelected("DISTRICT_CAMPUS", true)
-  T.eq(SDP_Panel.State().Count, 1, "the count follows the required districts")
+  T.eq(SDP_Panel.State().Count, SDP_UI.DEFAULT_COUNT, "three by default (issue 71)")
+  SDP_Panel.SetCount(0)
+  T.eq(SDP_Panel.State().Count, 1, "down to the required districts")
   SDP_Panel.SetCount(3)
   T.eq(SDP_Panel.State().Count, 3, "count")
   T.eq(SDP_Panel.Solve(), nil, "picking runs as a task")
@@ -277,6 +279,9 @@ test("several cities tab: the new site tacks take part; solve; solutions; place"
   SDP_Panel.SelectTab("MULTI")
   local multi = SDP_Panel.Multi
   multi.Refresh()
+  T.eq(multi.State().View.Count, SDP_UI.DEFAULT_COUNT, "three districts a city by default (issue 71)")
+  -- These tests plan the required districts only: picking makes them slow.
+  multi.SetCount(0)
   local sites = 0
   for _, c in ipairs(multi.State().View.Cities) do
     if c.Kind == "SITE" then sites = sites + 1 end
@@ -465,8 +470,13 @@ test("single-city tab: the coverage column", function()
   SDP_Panel.SetState("DISTRICT_AQUEDUCT", "OFF")
   SDP_Panel.SetTier("FAST")
   local cells = SDP_Panel.State().WeightCells
-  T.eq(#cells, 10, "ten columns")
-  local cell = cells[10]
+  -- Issue 53: no food or harvest column; one land column instead of the switch.
+  local keys = {}
+  for i, c in ipairs(cells) do keys[i] = c.Key end
+  T.same(keys, { "YIELD_SCIENCE", "YIELD_CULTURE", "YIELD_FAITH", "YIELD_GOLD", "YIELD_PRODUCTION", "LAND", "DISTANCE",
+    "HOUSING", "COVERAGE" }, "the columns")
+  T.eq(cells[6].Root:GetToolTipString(), "LOC_SDP_LAND", "the land column explains the fixed plot weights")
+  local cell = cells[9]
   T.eq(cell.Key, "COVERAGE", "coverage last")
   T.eq(cell.Root:GetToolTipString(), "LOC_SDP_WEIGHT_COVERAGE", "the same tooltip as the several cities tab")
   T.eq(SDP_Panel.State().Weights.COVERAGE, 0, "off by default")
@@ -476,9 +486,13 @@ test("single-city tab: the coverage column", function()
   T.ok(off and off.Ok, "solved: " .. tostring(off and off.Error))
   T.eq(off.Session.Request.Coverage, 0, "weight 0 in the request")
   T.eq(off.Covered, nil, "no coverage figures at 0")
-  for _ = 1, 4 do cell.More:Click() end
+  cell.More:Click()
+  T.eq(SDP_Panel.State().Weights.COVERAGE, 0.5, "up by 0.5 (issue 53)")
+  T.eq(cell.Value:GetText(), "0.5", "shown")
+  for _ = 1, 7 do cell.More:Click() end
   T.eq(SDP_Panel.State().Weights.COVERAGE, SDP_UI.MAX_WEIGHT, "up by the arrow, capped")
   T.ok(cell.More:IsDisabled(), "the arrow stops at the cap")
+  cell.Less:Click()
   cell.Less:Click()
   T.eq(SDP_Panel.State().Weights.COVERAGE, SDP_UI.MAX_WEIGHT - 1, "down by the arrow")
   T.eq(cell.Value:GetText(), tostring(SDP_UI.MAX_WEIGHT - 1), "shown")
@@ -512,7 +526,7 @@ test("single-city tab: the coverage column", function()
   T.ok(#want >= 2, "city-center pins on the map")
   T.same(keys, want, "the city and every city-center pin are cities to cover")
   SDP_Panel.SetWonder("BUILDING_STONEHENGE", false)
-  for _ = 1, 3 do cell.Less:Click() end
+  for _ = 1, 4 do cell.Less:Click() end
   T.eq(SDP_Panel.State().Weights.COVERAGE, 0, "back to 0")
   for _, d in ipairs(SDP_Rules.PlannableDistricts(0)) do SDP_Panel.SetState(d.Type, SDP_UI.DefaultState(d)) end
   SDP_Panel.SetTier("STANDARD")
@@ -670,6 +684,7 @@ test("issue 67: what to do first, the camera, clickable rows, plain tooltips", f
     if r.X ~= nil and row == nil then row = r end
   end
   T.ok(row ~= nil, "a row with a plot")
+  T.ok(row.Row:GetToolTipString():find("LOC_SDP_RESULT_LOOK", 1, true) == 1, "its tooltip says a click moves the camera (issue 75)")
   row.Row:Click()
   look = UI_Mock.Looks[#UI_Mock.Looks]
   T.eq(look.X .. "," .. look.Y, row.X .. "," .. row.Y, "the row's plot")
@@ -705,4 +720,300 @@ test("issue 67: what to do first, the camera, clickable rows, plain tooltips", f
   T.eq(#UI_Mock.Looks, looks + 2, "another solution moves the camera too")
   SDP_Panel.SelectTab("SINGLE")
   SDP_Panel.Close()
+end)
+
+-- Issue 75: the sites of a solution one after another: the selected
+-- solution's button again, the row of a site, "next site" while peeking.
+test("issue 75: the selected solution again, a site's row and next site while peeking go through its sites", function()
+  SDP_Panel.Open()
+  SDP_Panel.SelectTab("SITES")
+  local sites = SDP_Panel.Sites
+  sites.SetCount(2)
+  sites.SetDistance(7)
+  sites.SetSelected("DISTRICT_CAMPUS", true)
+  T.ok(sites.Solve(), "started")
+  SDP_Panel.RunTask(200)
+  local result = sites.State().Result
+  T.ok(result and result.Ok, "sites result")
+  local n = sites.State().Solution
+  local solution = result.Solutions[n]
+  T.eq(#solution.Sites, 2, "two sites")
+  local function Look() local l = UI_Mock.Looks[#UI_Mock.Looks]; return l.X .. "," .. l.Y end
+  local function At(s) return solution.Sites[s].X .. "," .. solution.Sites[s].Y end
+  T.eq(Look(), At(1), "a new result: the first site")
+  local cell = sites.State().View.Solutions[n].Cell
+  T.ok(cell:GetToolTipString():find("LOC_SDP_SITES_SOLUTION_NEXT", 1, true), "its tooltip says to click again")
+  cell:Click()
+  T.eq(Look(), At(2), "clicked again: the second site")
+  T.eq(sites.State().Solution, n, "the same solution")
+  sites.State().View.Solutions[n].Cell:Click()
+  T.eq(Look(), At(1), "after the last, the first")
+  -- A site's row: the camera there, and "next" goes on from it.
+  local row = sites.State().View.Results[2]
+  T.ok(row.Row:GetToolTipString():find("LOC_SDP_RESULT_LOOK", 1, true) == 1, "the row says a click moves the camera")
+  row.Row:Click()
+  T.eq(Look(), At(2), "the row's site")
+  T.eq(sites.State().Site, 2, "remembered")
+  -- Peeking: next site while the window is hidden.
+  local c = UI_Mock.Controls
+  c.PeekButton:Click()
+  T.eq(c.PeekNextSite:IsHidden(), false, "next site shown while peeking")
+  c.PeekNextSite:Click()
+  T.eq(Look(), At(1), "next site: round to the first")
+  T.eq(SDP_Panel.State().Peek, true, "still peeking")
+  c.PeekReturn:Click()
+  T.eq(c.PeekNextSite:IsHidden(), true, "gone with the peek")
+  -- Not on the other tabs.
+  SDP_Panel.SelectTab("SINGLE")
+  c.PeekButton:Click()
+  T.eq(c.PeekNextSite:IsHidden(), true, "single-city tab: no next site")
+  c.PeekReturn:Click()
+  -- One site: nothing to go through.
+  SDP_Panel.SelectTab("SITES")
+  sites.SetCount(1)
+  T.ok(sites.Solve(), "one site")
+  SDP_Panel.RunTask(200)
+  local one = sites.State().View.Solutions[sites.State().Solution].Cell
+  T.ok(one:GetToolTipString():find("LOC_SDP_SITES_SOLUTION_NEXT", 1, true) == nil, "one site: no click-again note")
+  c.PeekButton:Click()
+  T.eq(c.PeekNextSite:IsHidden(), true, "one site: no next site")
+  c.PeekReturn:Click()
+  sites.SetSelected("DISTRICT_CAMPUS", false)
+  SDP_Panel.SelectTab("SINGLE")
+  SDP_Panel.Close()
+end)
+
+-- Issue 71: the window fits the screen, the settings fold, the map can be
+-- seen without the window, the solutions are one row of buttons.
+test("issue 71: the window's height follows the screen", function()
+  T.eq(SDP_UI.WindowHeight(1080), 960, "1080: from below the launch bar to 35 above the bottom")
+  T.eq(SDP_UI.WindowHeight(1440), 1320, "a tall screen: higher")
+  T.eq(SDP_UI.WindowHeight(768), 648, "a low screen: lower")
+  T.eq(SDP_UI.WindowHeight(500), SDP_UI.WINDOW_MIN, "never below the minimum")
+  UI_Mock.Screen = 1440
+  w.Events.SystemUpdateUI(SystemUpdateUI.ScreenResize)
+  T.eq(SDP_Panel.State().WindowHeight, 1320, "a resize fits the window again")
+  T.eq(UI_Mock.Controls.Window:GetSizeY(), 1320, "the window")
+  T.eq(UI_Mock.Controls.SinglePage:GetSizeY(), 1320 - SDP_UI.PAGE_INSET, "and its pages")
+  UI_Mock.Screen = nil
+  SDP_Panel.FitWindow()
+  -- The result list takes what the page leaves (the stub's stack is 30 high).
+  local scroll, body, page = UI_Mock.NewControl("s"), UI_Mock.NewControl("b"), UI_Mock.NewControl("p")
+  page:SetSizeY(500)
+  function body:GetSizeY() return 400 + scroll:GetSizeY() end
+  T.eq(SDP_UI.FitResults(body, page, scroll), 100, "fills the page")
+  page:SetSizeY(420)
+  T.eq(SDP_UI.FitResults(body, page, scroll), SDP_UI.RESULT_MIN, "never below one row")
+end)
+
+test("issue 71: the settings fold after a solve and a click unfolds them; kept in the save", function()
+  SDP_Panel.Open()
+  SDP_Panel.SelectTab("SINGLE")
+  SDP_Panel.SelectCity(1)
+  local c = UI_Mock.Controls
+  for _, column in ipairs(SDP_UI.WEIGHT_COLUMNS) do SDP_Panel.SetWeight(column.Key, column.Default or 1) end
+  SDP_Panel.SetWeight("COVERAGE", 0)
+  SDP_Panel.SetFold(false)
+  T.eq(c.SettingsStack:IsHidden(), false, "unfolded")
+  T.eq(c.FoldAction:GetText(), "LOC_SDP_FOLD_HIDE", "the line offers to hide")
+  T.ok(c.FoldText:GetText():find("LOC_SDP_PRESET_BALANCED", 1, true) ~= nil, "the preset named: " .. c.FoldText:GetText())
+  SDP_Panel.SetLand(false)
+  T.ok(c.FoldText:GetText():find("LOC_SDP_FOLD_LAND_OFF", 1, true) ~= nil, "a switch not as usual is named")
+  T.ok(c.FoldText:GetText():find("LOC_SDP_FOLD_EDITED", 1, true) ~= nil, "the preset shows it was changed")
+  SDP_Panel.SetLand(true)
+  T.ok(c.FoldText:GetText():find("LOC_SDP_FOLD_EDITED", 1, true) == nil, "back as the preset")
+  SDP_Panel.SetTier("FAST")
+  SDP_Panel.SetState("DISTRICT_CAMPUS", "MUST")
+  SDP_Panel.SetState("DISTRICT_AQUEDUCT", "OFF")
+  SDP_Panel.SetCount(0)
+  local result = SDP_Panel.Solve()
+  T.ok(result and result.Ok, "solved")
+  T.eq(SDP_Panel.State().Fold, true, "folded by the solve")
+  T.eq(c.SettingsStack:IsHidden(), true, "settings hidden")
+  T.eq(c.FoldAction:GetText(), "LOC_SDP_FOLD_SHOW", "the line offers to show")
+  T.ok(PlayerConfigurations[0]:GetValue("SDP_Settings_SINGLE"):find(";FOLD=1", 1, true) ~= nil, "kept in the save")
+  c.FoldButton:Click()
+  T.eq(SDP_Panel.State().Fold, false, "a click unfolds")
+  T.eq(c.SettingsStack:IsHidden(), false, "settings shown")
+  T.ok(PlayerConfigurations[0]:GetValue("SDP_Settings_SINGLE"):find("FOLD", 1, true) == nil, "unfolded is the default")
+  -- The other tabs fold the same way.
+  local multi = SDP_Panel.Multi
+  multi.SetFold(true)
+  T.eq(c.MultiSettingsStack:IsHidden(), true, "several cities: folded")
+  c.MultiFoldButton:Click()
+  T.eq(multi.State().Fold, false, "and a click unfolds")
+  local sites = SDP_Panel.Sites
+  sites.SetFold(true)
+  T.eq(c.SitesSettingsStack:IsHidden(), true, "city sites: folded")
+  c.SitesFoldButton:Click()
+  T.eq(sites.State().Fold, false, "and unfolded")
+end)
+
+test("issue 71: peek hides the window and keeps the preview; the button or Esc bring it back", function()
+  SDP_Panel.Open()
+  SDP_Panel.SelectTab("SINGLE")
+  SDP_Panel.SelectCity(1)
+  SDP_Panel.SetTier("FAST")
+  SDP_Panel.SetState("DISTRICT_CAMPUS", "MUST")
+  SDP_Panel.SetState("DISTRICT_AQUEDUCT", "OFF")
+  SDP_Panel.SetCount(0)
+  local result = SDP_Panel.Solve()
+  T.ok(result and result.Ok, "solved")
+  local c = UI_Mock.Controls
+  local hexes = UI_Mock.Lenses.hexes[SDP_Preview.LAYER] or 0
+  T.ok(hexes > 0, "previewed")
+  c.PeekButton:Click()
+  T.eq(SDP_Panel.State().Peek, true, "peeking")
+  T.eq(c.DropShadow:IsHidden(), true, "the window hidden")
+  T.eq(c.PeekReturn:IsHidden(), false, "the way back shown")
+  T.ok(SDP_Panel.IsOpen(), "the panel is still open")
+  T.eq(ContextPtr:IsHidden(), false, "its context shown (pitfall 23)")
+  T.eq(UI_Mock.Lenses.hexes[SDP_Preview.LAYER], hexes, "the preview stays")
+  c.PeekReturn:Click()
+  T.eq(c.DropShadow:IsHidden(), false, "back")
+  T.eq(c.PeekReturn:IsHidden(), true, "the button gone")
+  c.PeekButton:Click()
+  T.eq(SDP_Panel.HandleInput(KeyEvents.KeyUp, Keys.VK_ESCAPE), true, "Esc taken")
+  T.eq(SDP_Panel.State().Peek, false, "Esc ends the peek")
+  T.ok(SDP_Panel.IsOpen(), "and leaves the panel open")
+  c.PeekButton:Click()
+  SDP_Panel.Close()
+  T.eq(SDP_Panel.State().Peek, false, "closing ends a peek")
+  T.eq(c.PeekReturn:IsHidden(), true, "no button left behind")
+  SDP_Panel.Open()
+  T.eq(c.DropShadow:IsHidden(), false, "opens with the window")
+end)
+
+test("issue 71: the solutions are buttons in one row, their districts in the tooltip", function()
+  SDP_Panel.SelectTab("SINGLE")
+  SDP_Panel.SelectCity(1)
+  SDP_Panel.SetTier("FAST")
+  for _, d in ipairs(SDP_Rules.PlannableDistricts(0)) do SDP_Panel.SetState(d.Type, SDP_UI.DefaultState(d)) end
+  SDP_Panel.SetState("DISTRICT_CAMPUS", "MUST")
+  SDP_Panel.SetCount(3)
+  T.eq(SDP_Panel.Solve(), nil, "picking runs as a task")
+  local result = SDP_Panel.RunTask(200)
+  T.ok(result and result.Ok, "solved")
+  local cells = SDP_Panel.State().SolutionCells
+  T.ok(#cells >= 2, "several solutions: " .. #cells)
+  for n, cell in ipairs(cells) do
+    T.eq(cell:GetToolTipString(), SDP_UI.SolutionDetail(result.Solutions[n]), "solution " .. n .. "'s districts")
+  end
+  cells[2]:Click()
+  T.eq(SDP_Panel.State().Solution, 2, "a click selects one")
+  SDP_Panel.SetCount(0)
+end)
+
+-- Issue 66 (plan A): a chosen wonder's district shows "for wonder" and the
+-- solve plans it; the player's "not wanted" wins; the stored state is left.
+test("issue 66: a wonder's district is supplied, shown, marked; not wanted stands", function()
+  SDP_Panel.Open()
+  SDP_Panel.SelectTab("SINGLE")
+  SDP_Panel.SelectCity(1)
+  local ENT = "DISTRICT_ENTERTAINMENT_COMPLEX"
+  for _, d in ipairs(SDP_Rules.PlannableDistricts(0)) do SDP_Panel.SetState(d.Type, SDP_UI.DefaultState(d)) end
+  SDP_Panel.SetState("DISTRICT_AQUEDUCT", "OFF")
+  SDP_Panel.SetState("DISTRICT_CAMPUS", "MUST")
+  SDP_Panel.SetCount(0)
+  SDP_Panel.SetTier("FAST")
+  local function Row(districtType)
+    for _, r in ipairs(SDP_Panel.State().DistrictRows) do
+      if r.Type == districtType then return r end
+    end
+  end
+  T.eq(Row(ENT).State, "POOL", "a candidate before")
+  SDP_Panel.SetWonder("BUILDING_COLOSSEUM", true)
+  T.eq(Row(ENT).State, "WONDER", "for the wonder")
+  T.eq(UI_Mock.Controls.DistrictStack ~= nil, true, "grid")
+  SDP_Panel.Solve()
+  local result = SDP_Panel.RunTask(500)
+  T.ok(result and result.Ok, "solved: " .. tostring(result and result.Error))
+  local complex, colosseum = nil, nil
+  for _, p in ipairs(result.Plan) do
+    if p.Type == ENT then complex = p end
+    if p.Type == "BUILDING_COLOSSEUM" then colosseum = p end
+  end
+  T.ok(complex ~= nil and colosseum ~= nil, "both planned")
+  T.eq(complex.ForWonder, "BUILDING_COLOSSEUM", "supplied for it")
+  local marked = false
+  for _, row in ipairs(SDP_Panel.State().ResultRows) do
+    if row.Detail:find("LOC_SDP_RESULT_FOR_WONDER(LOC_BUILDING_COLOSSEUM_NAME)", 1, true) then marked = true end
+  end
+  T.ok(marked, "its row says what it is for")
+  -- A click goes on from its own state: candidate -> required.
+  Row(ENT).Cell:Click()
+  T.eq(Row(ENT).State, "MUST", "required now")
+  Row(ENT).Cell:Click()
+  T.eq(Row(ENT).State, "OFF", "not wanted: the player's choice")
+  SDP_Panel.Solve()
+  local off = SDP_Panel.RunTask(500)
+  local reason = nil
+  for _, u in ipairs(off.Unplaced) do
+    if u.Type == "BUILDING_COLOSSEUM" then reason = u.Reason end
+  end
+  T.eq(reason, "NEEDS_DISTRICT", "the colosseum is left out")
+  local named = false
+  for _, row in ipairs(SDP_Panel.State().ResultRows) do
+    if row.Detail:find("LOC_SDP_REASON_NEEDS_DISTRICT(LOC_DISTRICT_ENTERTAINMENT_COMPLEX_NAME", 1, true) then named = true end
+  end
+  T.ok(named, "naming the district")
+  Row(ENT).Cell:Click()
+  T.eq(Row(ENT).State, "WONDER", "back to a candidate: for the wonder again")
+  SDP_Panel.SetWonder("BUILDING_COLOSSEUM", false)
+  T.eq(Row(ENT).State, "POOL", "without the wonder: as it was")
+  -- Several cities: a line says the first city of the list gets it.
+  local multi = SDP_Panel.Multi
+  SDP_Panel.SelectTab("MULTI")
+  multi.SetWonder("BUILDING_COLOSSEUM", true)
+  local supply = multi.State().View.Supply
+  T.eq(#supply, 1, "one line")
+  T.ok(supply[1]:find("LOC_SDP_MULTI_SUPPLY", 1, true) ~= nil, "before a solve: who will get it")
+  multi.SetWonder("BUILDING_COLOSSEUM", false)
+  T.eq(#multi.State().View.Supply, 0, "no line without the wonder")
+  SDP_Panel.SelectTab("SINGLE")
+end)
+
+-- Issue 49: a preset from its pulldown entry sets the weights; a change
+-- marks it changed; Reset puts it back; the save keeps the preset's name.
+test("issue 49: presets through their pulldown, changed, reset, kept", function()
+  SDP_Panel.Open()
+  SDP_Panel.SelectTab("SINGLE")
+  SDP_Panel.SelectCity(1)
+  local c = UI_Mock.Controls
+  SDP_Panel.SetPreset("BALANCED")
+  local entries = c.PresetPull._entries
+  T.eq(#entries, #SDP_Settings.PRESET_ORDER, "one entry a preset")
+  local science = nil
+  for i, name in ipairs(SDP_Settings.PRESET_ORDER) do
+    if name == "SCIENCE" then science = entries[i] end
+  end
+  T.eq(science.Button:GetText(), "LOC_SDP_PRESET_SCIENCE", "named")
+  science.Button:Click()
+  local s = SDP_Panel.State()
+  T.eq(s.Preset, "SCIENCE", "chosen")
+  T.eq(s.Weights.YIELD_SCIENCE, SDP_Settings.FOCUS.SCIENCE, "science weight")
+  T.eq(s.Weights.YIELD_CULTURE, 1, "the others as balanced")
+  T.eq(c.PresetPull:GetButton():GetText(), "LOC_SDP_PRESET_SCIENCE", "shown")
+  T.ok(c.PresetReset:IsDisabled(), "nothing to reset")
+  T.ok(PlayerConfigurations[0]:GetValue("SDP_Settings_SINGLE"):find("preset=SCIENCE", 1, true) ~= nil, "kept in the save")
+  T.ok(PlayerConfigurations[0]:GetValue("SDP_Settings_SINGLE"):find("YIELD_SCIENCE", 1, true) == nil,
+    "the preset's own value is not written as a change")
+  SDP_Panel.SetWeight("YIELD_GOLD", 2)
+  T.eq(c.PresetPull:GetButton():GetText(), "LOC_SDP_FOLD_EDITED(LOC_SDP_PRESET_SCIENCE)", "changed")
+  T.ok(c.FoldText:GetText():find("LOC_SDP_FOLD_EDITED(LOC_SDP_PRESET_SCIENCE)", 1, true) ~= nil, "on the fold line too")
+  T.eq(c.PresetReset:IsDisabled(), false, "reset offered")
+  c.PresetReset:Click()
+  T.eq(SDP_Panel.State().Weights.YIELD_GOLD, 1, "reset to the preset")
+  T.eq(SDP_Panel.State().Weights.YIELD_SCIENCE, SDP_Settings.FOCUS.SCIENCE, "its own value stays")
+  T.ok(c.PresetReset:IsDisabled(), "nothing left to reset")
+  -- Several cities: its own preset.
+  local multi = SDP_Panel.Multi
+  SDP_Panel.SelectTab("MULTI")
+  multi.SetPreset("HALF_GOLD_FAITH")
+  T.eq(multi.State().Weights.YIELD_GOLD, 0.5, "half gold")
+  T.eq(multi.State().Weights.YIELD_FAITH, 0.5, "half faith")
+  T.eq(SDP_Panel.State().Preset, "SCIENCE", "the single-city tab keeps its own")
+  multi.SetPreset("BALANCED")
+  SDP_Panel.SelectTab("SINGLE")
+  SDP_Panel.SetPreset("BALANCED")
 end)

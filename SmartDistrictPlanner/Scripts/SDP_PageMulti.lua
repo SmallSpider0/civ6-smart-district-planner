@@ -45,14 +45,13 @@ local m_center = nil   -- the city the default group is around (nil: the capital
 local m_existing = {}  -- [cityID] = true | false: switches over the default group
 local m_sites = {}     -- [site Key] = true | false: city-center pins switched over the default group
 -- The panel's weight columns plus the coverage part, as on the single-city tab.
-local COLUMNS, COLUMN_WIDTH = {}, 50 -- ten columns: a little wider than the 480 rows, inside the page
+local COLUMNS, COLUMN_WIDTH = {}, 50 -- nine columns, as on the single-city tab
 for _, column in ipairs(SDP_UI.WEIGHT_COLUMNS) do COLUMNS[#COLUMNS + 1] = column end
 COLUMNS[#COLUMNS + 1] = SDP_UI.COVERAGE_COLUMN
 local m_weights = {}
 for _, column in ipairs(COLUMNS) do m_weights[column.Key] = column.Default or 1 end
 local m_weightViews = {}
 local m_tier = SDP_Tiers.DEFAULT
-local m_land = true
 local m_swap = false -- plots swapped from another of our cities are candidates (issue 54)
 local m_replace = false -- plan over this mod's earlier pins for the cities and replace them
 local m_remind = true
@@ -61,6 +60,28 @@ local m_result = nil
 local m_solution = 1
 local m_view = { Cities = {}, Districts = {}, Wonders = {}, Solutions = {}, Results = {}, Plans = {}, Templates = {} } -- for tests
 local m_lookNext = false -- move the camera to the cities when the next result shows (issue 67)
+local m_preset = SDP_Settings.PRESET_ORDER[1] -- the weights and switches started from (issue 49)
+
+-- The weights, these switches and the tier, kept in the save (issue 57).
+local SWITCHES = {
+  { Key = "SWAP", Default = false, Get = function() return m_swap end, Put = function(v) m_swap = v end },
+  { Key = "REPLACE", Default = false, Get = function() return m_replace end, Put = function(v) m_replace = v end },
+  { Key = "REMIND", Default = true, Get = function() return m_remind end, Put = function(v) m_remind = v end },
+  { Key = "APART", Default = true, Get = function() return m_apart end, Put = function(v) m_apart = v end },
+}
+local m_fold = false -- the settings folded into one line (issue 71)
+local m_keeper = SDP_UI.Keeper({ Tab = "MULTI", Columns = COLUMNS, Weights = m_weights, Switches = SWITCHES,
+  Extra = { { Key = "FOLD", Default = false, Get = function() return m_fold end, Put = function(v) m_fold = v end } },
+  Tiers = SDP_Tiers.Multi, GetTier = function() return m_tier end, PutTier = function(tier) m_tier = tier end })
+local UpdateFold, FitPage -- defined below
+local function Remember()
+  m_keeper.Remember(m_preset)
+  UpdateFold()
+end
+function P.Restore()
+  local kept = m_keeper.Restore()
+  if kept ~= nil then m_preset = kept.Preset end
+end
 
 -- How a participant is called: its number (the name its pins get, see
 -- SDP_City.CityNumbers) and the city's name, or "Site n" for a planned city.
@@ -135,15 +156,16 @@ function P.Request()
   local existing, sites = Choice()
   -- Cities with their own list; lists of cities no longer taking part are
   -- kept for later but not sent.
-  local plans, pools, counts, autos = nil, nil, nil, nil
+  local plans, pools, counts, autos, offs = nil, nil, nil, nil, nil
   local anything = #shared.Must > 0 or shared.Pick > 0
   local participants = Participants()
   for _, part in ipairs(participants) do
     local own = m_plans[part.Key]
     if own ~= nil then
       local list = ListOf(own)
-      plans, pools, counts, autos = plans or {}, pools or {}, counts or {}, autos or {}
+      plans, pools, counts, autos, offs = plans or {}, pools or {}, counts or {}, autos or {}, offs or {}
       plans[part.Key], pools[part.Key], counts[part.Key], autos[part.Key] = list.Must, list.Pool, list.Count, list.Auto
+      offs[part.Key] = SDP_UI.OffSet(own.States)
       if #list.Must > 0 or list.Pick > 0 then anything = true end
     end
   end
@@ -152,7 +174,8 @@ function P.Request()
   return {
     PlayerID = playerID, Tier = m_tier, Districts = shared.Must, Pool = shared.Pool, Count = shared.Count, Auto = shared.Auto,
     Plans = plans, Pools = pools, Counts = counts, Autos = autos, Wonders = wonders, Sites = sites,
-    Existing = existing, Weights = weights, Land = m_land, Coverage = m_weights.COVERAGE, Distance = m_weights.DISTANCE,
+    Off = SDP_UI.OffSet(m_shared.States), Offs = offs,
+    Existing = existing, Weights = weights, Land = m_weights.LAND > 0, Coverage = m_weights.COVERAGE, Distance = m_weights.DISTANCE,
     Remind = m_remind, Apart = m_apart, IgnorePins = m_replace and P.OwnPins() or nil, Swap = m_swap,
   }
 end
@@ -175,6 +198,7 @@ function P.SetReplace(on)
   if m_replace ~= on then
     m_replace = on
     ClearResult()
+    Remember()
   end
 end
 
@@ -183,6 +207,7 @@ function P.SetRemind(on)
   if m_remind ~= on then
     m_remind = on
     ClearResult()
+    Remember()
   end
 end
 
@@ -191,6 +216,7 @@ function P.SetApart(on)
   if m_apart ~= on then
     m_apart = on
     ClearResult()
+    Remember()
   end
 end
 
@@ -284,7 +310,8 @@ end
 -- Make the edited list require `types` (a template), everything else at its
 -- default; nil on a city: back to the shared list.
 function P.ApplyPlan(types)
-  local list = { States = {}, Count = nil }
+  -- A template replaces the districts; the count stays as the player set it.
+  local list = { States = {}, Count = EditedList().Count }
   for _, t in ipairs(types or {}) do list.States[t] = "MUST" end
   if m_planFor == "ALL" then
     m_shared = list
@@ -303,6 +330,7 @@ function P.SetWonder(wonderType, on)
     ClearResult()
   end
   P.RefreshLists()
+  UpdateFold()
 end
 
 -- A change to who takes part: the result goes only when the cities differ.
@@ -365,6 +393,7 @@ function P.SetTier(tier)
   if m_tier ~= tier then
     m_tier = tier
     ClearResult()
+    Remember()
   end
   Controls.MultiTierPull:GetButton():SetText(Locale.Lookup("LOC_SDP_TIER_" .. tier))
   UpdateEstimate()
@@ -375,17 +404,16 @@ function P.SetSwap(on)
   if m_swap ~= on then
     m_swap = on
     ClearResult()
+    Remember()
   end
 end
 
+-- Tests: the land part on (weight 1 unless it is set) or off (0).
 function P.SetLand(on)
-  Controls.MultiLandCheck:SetCheck(on)
-  if m_land ~= on then
-    m_land = on
-    ClearResult()
-  end
-  for _, column in ipairs(COLUMNS) do
-    if column.Land and m_weightViews[column.Key] then m_weightViews[column.Key]() end
+  if on then
+    if m_weights.LAND == 0 then P.SetWeight("LAND", 1) end
+  else
+    P.SetWeight("LAND", 0)
   end
 end
 
@@ -394,6 +422,7 @@ function P.SetWeight(key, value)
   if m_weights[key] ~= value then
     m_weights[key] = value
     ClearResult()
+    Remember()
   end
   if m_weightViews[key] then m_weightViews[key]() end
 end
@@ -402,38 +431,113 @@ end
 -- Lists
 -- ===========================================================================
 local CHIP_ROWS, CHIP_HEIGHT, CHIP_GAP, CHIP_NAME = 5, 26, 4, 112 -- at most five rows shown, then the list scrolls
-local RESULT_HEIGHT, RESULT_ROWS, RESULT_MIN = 96, 80, 40 -- the result list: as drawn, two rows, one row
+local RESULT_ROWS = 80 -- two rows of results
 local m_chipRows = 1 -- rows of city chips
 
--- Keep the page inside the window (many cities and three solutions do not
--- fit at full height): the result list gives way to two rows first, then
--- the chip list to two rows, then the result list to one row.
-local function FitPage()
-  local shown, result = math.min(m_chipRows, CHIP_ROWS), RESULT_HEIGHT
+-- Keep the page inside the window (issue 71): the result list takes what
+-- the page has left (SDP_UI.FitResults); below two rows, the chip list gives
+-- way down to two rows first.
+FitPage = function()
+  local shown = math.min(m_chipRows, CHIP_ROWS)
   local function Apply()
     Controls.MultiCityScroll:SetSizeY(shown * CHIP_HEIGHT + (shown - 1) * CHIP_GAP)
-    Controls.MultiResultScroll:SetSizeY(result)
     Controls.MultiCityStack:CalculateSize()
     Controls.MultiCityScroll:CalculateSize()
-    Controls.MultiResultScroll:CalculateSize()
-    Controls.MultiBody:CalculateSize()
-    return Controls.MultiBody:GetSizeY() - Controls.MultiPage:GetSizeY()
+    return SDP_UI.FitResults(Controls.MultiBody, Controls.MultiPage, Controls.MultiResultScroll)
   end
-  local over = Apply()
-  if over > 0 then
-    result = math.max(RESULT_ROWS, result - over)
-    over = Apply()
-  end
-  while over > 0 and shown > 2 do
+  local height = Apply()
+  while height < RESULT_ROWS and shown > 2 do
     shown = shown - 1
-    over = Apply()
-  end
-  if over > 0 then
-    result = math.max(RESULT_MIN, result - over)
-    Apply()
+    height = Apply()
   end
 end
-P.FitPage = FitPage -- tests
+P.FitPage = FitPage
+
+-- Under the wonder tags (issue 66): the districts the chosen wonders need
+-- that no city of the group has. Before a solve: they go to the first city
+-- of the list that can take them; after it: which city got them.
+function P.ShowSupply()
+  local lines = {}
+  local supplied = m_result ~= nil and m_result.Ok and m_result.Supplied or nil
+  if supplied ~= nil then
+    local byKey = {}
+    for _, city in ipairs(m_result.Cities or {}) do byKey[city.Key] = city end
+    for _, s in ipairs(supplied) do
+      local city = byKey[s.City]
+      lines[#lines + 1] = Locale.Lookup("LOC_SDP_MULTI_SUPPLIED", SDP_UI.TypeName(s.Type), SDP_UI.TypeName(s.Wonder),
+        city ~= nil and P.CityLabel(city) or s.City)
+    end
+  else
+    local wonders = WonderTypes()
+    if #wonders > 0 then
+      local has = {}
+      local rows = {}
+      for _, w in ipairs(SDP_Wonders.List(Game.GetLocalPlayer())) do rows[w.Type] = w end
+      local shared = ListOf(m_shared)
+      for _, t in ipairs(shared.Must) do has[SDP_Rules.BaseDistrict(t)] = true end
+      for _, own in pairs(m_plans) do
+        for _, t in ipairs(ListOf(own).Must) do has[SDP_Rules.BaseDistrict(t)] = true end
+      end
+      for _, part in ipairs(Participants()) do
+        local scan = part.Kind == "CITY" and SDP_City.Scan(Game.GetLocalPlayer(), part.CityID) or nil
+        if scan ~= nil then
+          for t in pairs(SDP_City.PresentDistricts(scan)) do has[SDP_Rules.BaseDistrict(t)] = true end
+        end
+      end
+      for _, wonderType in ipairs(wonders) do
+        local base = rows[wonderType] and rows[wonderType].AdjacentDistrict or nil
+        if base ~= nil and not has[base] and GameInfo.Districts[base] ~= nil and not GameInfo.Districts[base].CityCenter then
+          has[base] = true
+          local own = base
+          for _, d in ipairs(Districts()) do
+            if SDP_Rules.BaseDistrict(d.Type) == base then own = d.Type end
+          end
+          lines[#lines + 1] = Locale.Lookup("LOC_SDP_MULTI_SUPPLY", SDP_UI.TypeName(own), SDP_UI.TypeName(wonderType))
+        end
+      end
+    end
+  end
+  Controls.MultiSupplyNote:SetText(table.concat(lines, "[NEWLINE]"))
+  Controls.MultiSupplyNote:SetHide(#lines == 0)
+  m_view.Supply = lines
+end
+
+-- The fold line (issue 71): the preset, then what is not as usual.
+UpdateFold = function()
+  local parts = {}
+  if m_weights.LAND == 0 then parts[#parts + 1] = Locale.Lookup("LOC_SDP_FOLD_LAND_OFF") end
+  if m_swap then parts[#parts + 1] = Locale.Lookup("LOC_SDP_FOLD_SWAP") end
+  if m_replace then parts[#parts + 1] = Locale.Lookup("LOC_SDP_FOLD_REPLACE") end
+  local wonders = #WonderTypes()
+  if wonders > 0 then parts[#parts + 1] = Locale.Lookup("LOC_SDP_FOLD_WONDERS", wonders) end
+  local changed = m_keeper.Changed(m_preset)
+  SDP_UI.ShowFold(Controls.MultiFoldButton, Controls.MultiFoldText, Controls.MultiFoldAction, Controls.MultiSettingsStack,
+    m_fold, SDP_UI.FoldSummary("LOC_SDP_PRESET_" .. m_preset, changed, parts))
+  SDP_UI.ShowPreset(Controls.MultiPresetPull, Controls.MultiPresetReset, m_preset, changed, function(name) P.SetPreset(name) end)
+end
+
+-- A preset (issue 49), as on the single-city tab.
+function P.SetPreset(name)
+  if not m_keeper.Use(name) then return end
+  m_preset = name
+  ClearResult()
+  for _, view in pairs(m_weightViews) do view() end
+  Controls.MultiSwapCheck:SetCheck(m_swap)
+  Controls.MultiReplaceCheck:SetCheck(m_replace)
+  Controls.MultiRemindCheck:SetCheck(m_remind)
+  Controls.MultiApartCheck:SetCheck(m_apart)
+  Remember()
+  UpdateEstimate()
+end
+
+function P.SetFold(on)
+  if m_fold ~= on then
+    m_fold = on
+    Remember()
+  end
+  UpdateFold()
+  FitPage()
+end
 
 -- One city chip: the selected look while it takes part; dimmed when the
 -- list is full and it cannot be switched on.
@@ -579,6 +683,7 @@ function P.RefreshLists()
   for _, w in ipairs(wonders) do
     m_view.Wonders[#m_view.Wonders + 1] = { Type = w.Type, Status = w.Status, Chosen = m_wonders[w.Type] == true }
   end
+  P.ShowSupply()
   UpdateReplaceLabel()
   m_view.PlanFor = m_planFor
   m_view.Plans = {}
@@ -633,15 +738,16 @@ function P.PopulatePlanPulls(participants)
 end
 
 function P.Refresh()
+  P.Restore()
   P.RefreshLists()
-  m_weightViews = SDP_UI.BuildWeights(m_weightIM, Controls.MultiWeightStack, COLUMNS, m_weights,
-    function(column) return column.Land and not m_land end, P.SetWeight, COLUMN_WIDTH)
+  m_weightViews = SDP_UI.BuildWeights(m_weightIM, Controls.MultiWeightStack, COLUMNS, m_weights, nil,
+    P.SetWeight, COLUMN_WIDTH)
   SDP_UI.PopulateTierPull(Controls.MultiTierPull, m_tier, P.SetTier)
-  Controls.MultiLandCheck:SetCheck(m_land)
   Controls.MultiSwapCheck:SetCheck(m_swap)
   Controls.MultiReplaceCheck:SetCheck(m_replace)
   Controls.MultiRemindCheck:SetCheck(m_remind)
   SDP_UI.ShowApart(Controls.MultiApartBox, Controls.MultiApartCheck, Controls.MultiApartLabel, m_apart)
+  UpdateFold()
   P.Render()
 end
 
@@ -774,9 +880,7 @@ function P.Render()
         AddRow("ICON_DISTRICT_CITY_CENTER", Locale.Lookup("LOC_SDP_RESULT_POOL_SHORT", where),
           Locale.Lookup("LOC_SDP_REASON_POOL_SHORT", u.Count or 1), "")
       else
-        local key = u.Auto and "LOC_SDP_RESULT_UNPLACED_AUTO" or "LOC_SDP_RESULT_UNPLACED"
-        AddRow("ICON_" .. u.Type, Locale.Lookup(key, SDP_UI.TypeName(u.Type)) .. "  " .. where,
-          Locale.Lookup("LOC_SDP_REASON_" .. u.Reason, u.Other and SDP_UI.TypeName(u.Other) or ""), SDP_UI.UnplacedTip(u))
+        AddRow("ICON_" .. u.Type, SDP_UI.UnplacedName(u) .. "  " .. where, SDP_UI.ReasonText(u), SDP_UI.UnplacedTip(u))
       end
     end
     -- The selected solution, city by city.
@@ -803,6 +907,7 @@ function P.Render()
   end
   Controls.MultiSolutionStack:CalculateSize()
   Controls.MultiResultStack:CalculateSize()
+  P.ShowSupply()
   FitPage()
   P.UpdateButtons()
 end
@@ -837,6 +942,7 @@ function P.Solve()
   local params = SDP_Tiers.Params(SDP_Tiers.Multi, m_tier)
   m_result, m_solution = nil, 1
   m_lookNext = true
+  P.SetFold(true) -- the results get the room (issue 71)
   SDP_Preview.Clear()
   return SDP_UI.StartTask(function() return SDP_Multi.SolveNow(request) end, Estimate(request, params),
     function(result) m_result, m_solution = result, 1 end, P)
@@ -895,8 +1001,9 @@ end
 -- Tests drive the tab through these.
 function P.State()
   return {
-    Result = m_result, Solution = m_solution, Tier = m_tier, Land = m_land, Replace = m_replace, Remind = m_remind,
-    Apart = m_apart, Swap = m_swap,
+    Result = m_result, Solution = m_solution, Tier = m_tier, Land = m_weights.LAND > 0, Replace = m_replace, Remind = m_remind,
+    Apart = m_apart, Swap = m_swap, Weights = m_weights, Preset = m_preset, Fold = m_fold,
+    FoldText = Controls.MultiFoldText:GetText(), ResultHeight = Controls.MultiResultScroll:GetSizeY(),
     View = m_view, EstimateText = Controls.MultiEstimate:GetText(), QualityText = Controls.MultiQuality:GetText(),
     PlaceDisabled = Controls.MultiPlaceButton:IsDisabled(), ContinueDisabled = Controls.MultiContinueButton:IsDisabled(),
     SolveDisabled = Controls.MultiSolveButton:IsDisabled(), SummaryText = Controls.MultiSummary:GetText(),
@@ -906,7 +1013,6 @@ end
 
 Controls.MultiCityClear:RegisterCallback(Mouse.eLClick, function() P.ClearCities() end)
 Controls.MultiCityDefault:RegisterCallback(Mouse.eLClick, function() P.DefaultCities() end)
-Controls.MultiLandCheck:RegisterCheckHandler(function() P.SetLand(Controls.MultiLandCheck:IsChecked()) end)
 Controls.MultiSwapCheck:RegisterCheckHandler(function() P.SetSwap(Controls.MultiSwapCheck:IsChecked()) end)
 Controls.MultiReplaceCheck:RegisterCheckHandler(function() P.SetReplace(Controls.MultiReplaceCheck:IsChecked()) end)
 Controls.MultiRemindCheck:RegisterCheckHandler(function() P.SetRemind(Controls.MultiRemindCheck:IsChecked()) end)
@@ -918,3 +1024,5 @@ Controls.MultiContinueButton:RegisterCallback(Mouse.eLClick, function() P.Contin
 Controls.MultiCancelButton:RegisterCallback(Mouse.eLClick, function() SDP_Task.Cancel() end)
 Controls.MultiPlaceButton:RegisterCallback(Mouse.eLClick, function() P.Place() end)
 Controls.MultiUndoButton:RegisterCallback(Mouse.eLClick, function() P.Undo() end)
+Controls.MultiFoldButton:RegisterCallback(Mouse.eLClick, function() P.SetFold(not m_fold) end)
+Controls.MultiPresetReset:RegisterCallback(Mouse.eLClick, function() P.SetPreset(m_preset) end)

@@ -222,6 +222,7 @@ test("several cities tab: the coverage weight is off by default and goes into th
   multi.SetExisting(2, false)
   multi.SetExisting(3, false)
   multi.SetSelected(IZ, true)
+  multi.SetCount(0) -- the zone only (the default count is 3, issue 71)
   T.eq(multi.Request().Coverage, 0, "off by default")
   multi.SetWeight("COVERAGE", 2)
   T.eq(multi.Request().Coverage, 2, "the weight is sent")

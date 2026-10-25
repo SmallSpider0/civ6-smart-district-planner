@@ -8,12 +8,21 @@
   <!-- World icons of the map preview (SDP_Preview): outside the window. -->
   <Container ID="PreviewWorldIcons"/>
 
+  <!-- While peeking (issue 71): the way back where the window was. -->
+  <GridButton ID="PeekReturn" Anchor="L,T" Offset="35,85" Size="200,41" Style="MainButton" String="LOC_SDP_PEEK_RETURN" ToolTip="LOC_SDP_PEEK_RETURN_TOOLTIP" Hidden="1"/>
+  <!-- While peeking on the city sites tab (issue 75): the camera to the next site. -->
+  <GridButton ID="PeekNextSite" Anchor="L,T" Offset="245,85" Size="200,41" Style="MainButton" String="LOC_SDP_PEEK_NEXT_SITE" ToolTip="LOC_SDP_PEEK_NEXT_SITE_TOOLTIP" Hidden="1"/>
+
   <Grid ID="DropShadow" Size="auto,auto" Anchor="L,T" Offset="10,60" Style="DropShadow2" Color="255,255,255,200" AutoSizePadding="25,25" ConsumeMouse="1">
     <Grid ID="Window" Size="560,920" Anchor="C,C" Style="WindowFrameTitle">
       <Container Size="parent,38" Offset="0,4">
         <Label ID="Title" Style="WindowHeader" Anchor="C,C" String="{LOC_SDP_PANEL_TITLE:upper}"/>
       </Container>
       <Button ID="CloseButton" Anchor="R,T" Style="CloseButtonSmall"/>
+      <!-- Peek (issue 71): hide the window, keep the map preview. -->
+      <GridButton ID="PeekButton" Anchor="L,T" Offset="14,12" Size="96,24" Style="ButtonControl" ToolTip="LOC_SDP_PEEK_TOOLTIP">
+        <Label Anchor="C,C" Style="FontNormal14" String="LOC_SDP_PEEK"/>
+      </GridButton>
 
       <!-- Tabs (as in TradeOverview.xml: a second label for the selected look) -->
       <Stack ID="TabStack" Anchor="C,T" Offset="0,46" StackGrowth="Right" StackPadding="6">
@@ -68,6 +77,13 @@
         </Container>
         <Stack ID="UtilityStack" StackGrowth="Right" WrapWidth="480" WrapGrowth="Bottom" StackPadding="4"/>
 
+        <!-- The settings below fold into this line (issue 71): what they are
+             set to, and a click shows or hides them. -->
+        <GridButton ID="FoldButton" Size="480,26" Style="ButtonControl">
+          <Label ID="FoldText" Anchor="L,C" Offset="10,0" Style="FontNormal14" TruncateWidth="390" TruncatedTooltip="1"/>
+          <Label ID="FoldAction" Anchor="R,C" Offset="10,0" Style="FontNormal14"/>
+        </GridButton>
+        <Stack ID="SettingsStack" StackGrowth="Bottom" StackPadding="4">
         <!-- Wonders as tags (feedback 2), good places -->
         <Container Size="480,26">
           <Stack Anchor="L,C" StackGrowth="Right" StackPadding="6">
@@ -82,23 +98,31 @@
         <Stack ID="WonderChipStack" StackGrowth="Right" WrapWidth="480" WrapGrowth="Bottom" StackPadding="4"/>
 
         <!-- Weights, one icon family (feedback 3), and the distance cost (feedback 9) -->
+        <!-- The weights' title and the preset (issue 49): a preset sets the
+             weights and switches; Reset puts them back to it. -->
+        <Container Size="480,26">
+          <Label Anchor="L,C" Style="BodyTextDark14" String="LOC_SDP_WEIGHTS_TITLE" ToolTip="LOC_SDP_WEIGHTS_TOOLTIP"/>
+          <Stack Anchor="R,C" StackGrowth="Right" StackPadding="4">
+            <Label Anchor="L,C" Style="BodyTextDark14" String="LOC_SDP_PRESET_TITLE"/>
+            <PullDown ID="PresetPull" Anchor="L,C" Style="PullDownBlue" Size="170,24"/>
+            <GridButton ID="PresetReset" Size="80,24" Style="ButtonControl" ToolTip="LOC_SDP_PRESET_RESET_TOOLTIP">
+              <Label Anchor="C,C" Style="FontNormal14" String="LOC_SDP_PRESET_RESET"/>
+            </GridButton>
+          </Stack>
+        </Container>
         <Stack ID="WeightStack" Anchor="C,T" StackGrowth="Right" StackPadding="0"/>
 
         <!-- Switches in one row; the full meaning is in each tooltip -->
         <Container Size="480,26">
-          <Container Anchor="L,C" Size="116,26" ToolTip="LOC_SDP_LAND">
-            <CheckBox ID="LandCheck" Anchor="L,C" Style="MainCheckBox"/>
-            <Label Anchor="L,C" Offset="26,0" Style="BodyTextDark14" String="LOC_SDP_LAND_SHORT"/>
-          </Container>
-          <Container Anchor="L,C" Offset="120,0" Size="116,26" ToolTip="LOC_SDP_ALLOW_FEATURE_REMOVAL">
+          <Container Anchor="L,C" Size="116,26" ToolTip="LOC_SDP_ALLOW_FEATURE_REMOVAL">
             <CheckBox ID="FeatureCheck" Anchor="L,C" Style="MainCheckBox"/>
             <Label Anchor="L,C" Offset="26,0" Style="BodyTextDark14" String="LOC_SDP_FEATURE_SHORT"/>
           </Container>
-          <Container Anchor="L,C" Offset="240,0" Size="120,26" ToolTip="LOC_SDP_REPLACE_OWN_TOOLTIP">
+          <Container Anchor="L,C" Offset="120,0" Size="120,26" ToolTip="LOC_SDP_REPLACE_OWN_TOOLTIP">
             <CheckBox ID="ReplaceCheck" Anchor="L,C" Style="MainCheckBox"/>
             <Label ID="ReplaceLabel" Anchor="L,C" Offset="26,0" Style="BodyTextDark14"/>
           </Container>
-          <Container Anchor="L,C" Offset="364,0" Size="116,26" ToolTip="LOC_SDP_REMIND_TOOLTIP">
+          <Container Anchor="L,C" Offset="244,0" Size="116,26" ToolTip="LOC_SDP_REMIND_TOOLTIP">
             <CheckBox ID="RemindCheck" Anchor="L,C" Style="MainCheckBox"/>
             <Label Anchor="L,C" Offset="26,0" Style="BodyTextDark14" String="LOC_SDP_REMIND_SHORT"/>
           </Container>
@@ -109,6 +133,7 @@
             <Label Anchor="L,C" Offset="26,0" Style="BodyTextDark14" String="LOC_SDP_SWAP_SHORT"/>
           </Container>
         </Container>
+        </Stack>
 
         <!-- Tier, estimate, solve / continue (cancel while running) -->
         <Container Size="480,42">
@@ -127,7 +152,8 @@
         <!-- Results: the solutions (feedback 1), the selected one's districts -->
         <Label ID="Summary" Style="BodyTextDark16" WrapWidth="480"/>
         <Label ID="Quality" Style="BodyTextDark14" WrapWidth="480"/>
-        <Stack ID="SolutionStack" StackGrowth="Bottom" StackPadding="2"/>
+        <Stack ID="SolutionStack" StackGrowth="Right" StackPadding="6"/>
+        <!-- Its height fills the page (SDP_UI.FitResults, issue 71). -->
         <ScrollPanel ID="ResultScroll" Size="480,140" Vertical="1">
           <ScrollBar Anchor="R,C" AnchorSide="I,I" Style="Slider_Blue"/>
           <Stack ID="ResultStack" StackGrowth="Bottom" StackPadding="2"/>
@@ -154,12 +180,21 @@
           <Label ID="SitesDistance" Anchor="L,C" Offset="380,0" Style="BodyTextDark18"/>
           <Button ID="SitesDistanceMore" Anchor="L,C" Offset="404,0" Style="ArrowButtonRight"/>
         </Container>
+        <GridButton ID="SitesFoldButton" Size="480,26" Style="ButtonControl">
+          <Label ID="SitesFoldText" Anchor="L,C" Offset="10,0" Style="FontNormal14" TruncateWidth="390" TruncatedTooltip="1"/>
+          <Label ID="SitesFoldAction" Anchor="R,C" Offset="10,0" Style="FontNormal14"/>
+        </GridButton>
+        <Stack ID="SitesSettingsStack" StackGrowth="Bottom" StackPadding="4">
         <Container Size="480,28">
           <Label Anchor="L,C" Style="BodyTextDark16" String="LOC_SDP_SITES_PRESET"/>
           <PullDown ID="SitesPresetPull" Anchor="L,C" Offset="100,0" Style="PullDownBlue" Size="180,24"/>
         </Container>
-        <Stack ID="SitesWeightStack" Anchor="C,T" StackGrowth="Right" StackPadding="0"/>
-        <Stack ID="SitesWeightStack2" Anchor="C,T" StackGrowth="Right" StackPadding="0"/>
+        <Container Size="480,104">
+          <Label Anchor="L,C" Style="BodyTextDark14" WrapWidth="110" String="LOC_SDP_WEIGHTS_TITLE" ToolTip="LOC_SDP_WEIGHTS_TOOLTIP"/>
+          <Stack ID="SitesWeightStack" Anchor="R,T" StackGrowth="Right" StackPadding="0"/>
+          <Stack ID="SitesWeightStack2" Anchor="R,T" Offset="0,52" StackGrowth="Right" StackPadding="0"/>
+        </Container>
+        </Stack>
         <!-- The districts each site is scored with: its best few (feedback 8) -->
         <Container Size="480,24">
           <Label Anchor="L,C" Style="BodyTextDark16" String="LOC_SDP_SITES_PLAN"/>
@@ -185,7 +220,7 @@
         </Container>
         <Label ID="SitesSummary" Style="BodyTextDark16" WrapWidth="480"/>
         <Label ID="SitesQuality" Style="BodyTextDark14" WrapWidth="480"/>
-        <Stack ID="SitesSolutionStack" StackGrowth="Bottom" StackPadding="2"/>
+        <Stack ID="SitesSolutionStack" StackGrowth="Right" StackPadding="6"/>
         <ScrollPanel ID="SitesResultScroll" Size="480,190" Vertical="1">
           <ScrollBar Anchor="R,C" AnchorSide="I,I" Style="Slider_Blue"/>
           <Stack ID="SitesResultStack" StackGrowth="Bottom" StackPadding="2"/>
@@ -242,6 +277,11 @@
           <Label Anchor="R,C" Style="BodyTextDark14" String="LOC_SDP_STATES_LEGEND_OTHER"/>
         </Container>
         <Stack ID="MultiUtilityStack" StackGrowth="Right" WrapWidth="480" WrapGrowth="Bottom" StackPadding="4"/>
+        <GridButton ID="MultiFoldButton" Size="480,26" Style="ButtonControl">
+          <Label ID="MultiFoldText" Anchor="L,C" Offset="10,0" Style="FontNormal14" TruncateWidth="390" TruncatedTooltip="1"/>
+          <Label ID="MultiFoldAction" Anchor="R,C" Offset="10,0" Style="FontNormal14"/>
+        </GridButton>
+        <Stack ID="MultiSettingsStack" StackGrowth="Bottom" StackPadding="4">
         <Container Size="480,26">
           <Stack Anchor="L,C" StackGrowth="Right" StackPadding="6">
             <Label Anchor="L,C" Style="BodyTextDark16" String="LOC_SDP_MULTI_WONDERS"/>
@@ -249,17 +289,27 @@
           </Stack>
         </Container>
         <Stack ID="MultiWonderChipStack" StackGrowth="Right" WrapWidth="480" WrapGrowth="Bottom" StackPadding="4"/>
+        <!-- The districts the chosen wonders need, and which city gets them (issue 66). -->
+        <Label ID="MultiSupplyNote" Style="BodyTextDark14" WrapWidth="480" Hidden="1"/>
+        <!-- The weights' title and the preset (issue 49): a preset sets the
+             weights and switches; Reset puts them back to it. -->
+        <Container Size="480,26">
+          <Label Anchor="L,C" Style="BodyTextDark14" String="LOC_SDP_WEIGHTS_TITLE" ToolTip="LOC_SDP_WEIGHTS_TOOLTIP"/>
+          <Stack Anchor="R,C" StackGrowth="Right" StackPadding="4">
+            <Label Anchor="L,C" Style="BodyTextDark14" String="LOC_SDP_PRESET_TITLE"/>
+            <PullDown ID="MultiPresetPull" Anchor="L,C" Style="PullDownBlue" Size="170,24"/>
+            <GridButton ID="MultiPresetReset" Size="80,24" Style="ButtonControl" ToolTip="LOC_SDP_PRESET_RESET_TOOLTIP">
+              <Label Anchor="C,C" Style="FontNormal14" String="LOC_SDP_PRESET_RESET"/>
+            </GridButton>
+          </Stack>
+        </Container>
         <Stack ID="MultiWeightStack" Anchor="C,T" StackGrowth="Right" StackPadding="0"/>
         <Container Size="480,26">
-          <Container Anchor="L,C" Size="150,26" ToolTip="LOC_SDP_LAND">
-            <CheckBox ID="MultiLandCheck" Anchor="L,C" Style="MainCheckBox"/>
-            <Label Anchor="L,C" Offset="26,0" Style="BodyTextDark14" String="LOC_SDP_LAND_SHORT"/>
-          </Container>
-          <Container Anchor="L,C" Offset="160,0" Size="180,26" ToolTip="LOC_SDP_REPLACE_OWN_MULTI_TOOLTIP">
+          <Container Anchor="L,C" Size="180,26" ToolTip="LOC_SDP_REPLACE_OWN_MULTI_TOOLTIP">
             <CheckBox ID="MultiReplaceCheck" Anchor="L,C" Style="MainCheckBox"/>
             <Label ID="MultiReplaceLabel" Anchor="L,C" Offset="26,0" Style="BodyTextDark14"/>
           </Container>
-          <Container Anchor="L,C" Offset="350,0" Size="130,26" ToolTip="LOC_SDP_REMIND_TOOLTIP">
+          <Container Anchor="L,C" Offset="190,0" Size="130,26" ToolTip="LOC_SDP_REMIND_TOOLTIP">
             <CheckBox ID="MultiRemindCheck" Anchor="L,C" Style="MainCheckBox"/>
             <Label Anchor="L,C" Offset="26,0" Style="BodyTextDark14" String="LOC_SDP_REMIND_SHORT"/>
           </Container>
@@ -270,6 +320,7 @@
             <Label Anchor="L,C" Offset="26,0" Style="BodyTextDark14" String="LOC_SDP_SWAP_SHORT"/>
           </Container>
         </Container>
+        </Stack>
         <Container Size="480,42">
           <Stack Anchor="L,C" StackGrowth="Right" StackPadding="6">
             <Label Anchor="L,C" Style="BodyTextDark16" String="LOC_SDP_TIER_SHORT"/>
@@ -284,7 +335,7 @@
         </Container>
         <Label ID="MultiSummary" Style="BodyTextDark16" WrapWidth="480"/>
         <Label ID="MultiQuality" Style="BodyTextDark14" WrapWidth="480"/>
-        <Stack ID="MultiSolutionStack" StackGrowth="Bottom" StackPadding="2"/>
+        <Stack ID="MultiSolutionStack" StackGrowth="Right" StackPadding="6"/>
         <ScrollPanel ID="MultiResultScroll" Size="480,96" Vertical="1">
           <ScrollBar Anchor="R,C" AnchorSide="I,I" Style="Slider_Blue"/>
           <Stack ID="MultiResultStack" StackGrowth="Bottom" StackPadding="2"/>
@@ -343,10 +394,16 @@
   </Instance>
 
   <!-- A row with a plot moves the camera there when clicked (issue 67): a
-       plain Button, no look of its own, over nothing that takes the mouse
-       (pitfall 31). -->
+       plain Button over nothing that takes the mouse (pitfall 31). Under
+       the mouse the light selected look shows (as the game's city banners,
+       ShowOnMouseOver), only for rows with a plot (HoverArea, issue 75). -->
   <Instance Name="ResultRow">
     <Button ID="Root" Size="460,40">
+      <Container ID="HoverArea" Size="parent,parent">
+        <AlphaAnim Size="parent,parent" ShowOnMouseOver="1" AlphaStart="0" AlphaEnd="1" Speed="4" Function="Root" Cycle="Once">
+          <Grid Size="parent,parent" Texture="Controls_Tab" SliceStart="0,136" SliceCorner="21,16"/>
+        </AlphaAnim>
+      </Container>
       <Image ID="Icon" Anchor="L,C" Size="32,32"/>
       <Label ID="Name" Anchor="L,T" Offset="40,2" Style="BodyTextDark16"/>
       <Label ID="Detail" Anchor="L,T" Offset="40,21" Style="BodyTextDark14" WrapWidth="420"/>
@@ -365,16 +422,15 @@
     </GridButton>
   </Instance>
 
-  <!-- One solution: a selectable row; selecting it previews it on the map. -->
+  <!-- One solution: a button of three in a row (issue 71); selecting it
+       previews it on the map, its districts are in the tooltip. -->
   <Instance Name="SolutionRow">
-    <GridButton ID="Root" Size="480,30" Style="ButtonControl">
+    <GridButton ID="Root" Size="156,30" Style="ButtonControl">
       <Grid ID="Selected" Size="parent,parent" Texture="Controls_Tab" SliceStart="0,136" SliceCorner="21,16" Hidden="1"/>
       <!-- Light text on the dark button; dark text on the light selected look
-           (SDP_UI.SolutionRow shows one pair). -->
-      <Label ID="Name" Anchor="L,C" Offset="10,0" Style="FontNormal16"/>
-      <Label ID="Detail" Anchor="R,C" Offset="10,0" Style="FontNormal14"/>
-      <Label ID="NameDark" Anchor="L,C" Offset="10,0" Style="BodyTextDark16" Hidden="1"/>
-      <Label ID="DetailDark" Anchor="R,C" Offset="10,0" Style="BodyTextDark14" Hidden="1"/>
+           (SDP_UI.SolutionRow shows one). -->
+      <Label ID="Name" Anchor="C,C" Style="FontNormal16"/>
+      <Label ID="NameDark" Anchor="C,C" Style="BodyTextDark16" Hidden="1"/>
     </GridButton>
   </Instance>
 

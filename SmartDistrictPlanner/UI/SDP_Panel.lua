@@ -23,29 +23,32 @@ include("SDP_Sites")
 include("SDP_SiteSolver")
 include("SDP_Pins")
 include("SDP_Preview")
+include("SDP_Settings")
 
 local LAUNCH_BAR_STACK = "/InGame/LaunchBar/ButtonStack"
 local MAX_WEIGHT = 3
 -- The release, in the launch bar button's tooltip, so that a report says
 -- which copy the game loaded (issue 27). tools/validate.py checks it against
 -- the newest version in CHANGELOG.md.
-local VERSION = "v1.4.1"
+local VERSION = "v1.5.0"
 
 -- The weight row (feedback item 3): the six yields with the game's font
 -- icons, one family (the texture icons cover only some yields: requirements
 -- pitfalls 13 and 14); the other weights with a short word, since the font
 -- icons that would fit them (terrain, movement, range) are drawn in another
--- style, dark squares. Food and FEATURE (one-time yields of clearing and harvesting)
--- only weigh the land part (SDP_Land). DISTANCE is the distance cost weight
--- (feedback item 9), in steps of 0.5, 0 (off) by default.
+-- style, dark squares. The land part weighs plots with fixed numbers
+-- (SDP_Land.PLOT_WEIGHTS, issue 53), so food and the one-time yields of
+-- clearing and harvesting have no column here; LAND weighs the whole land
+-- part (0: off, in place of the switch it had). DISTANCE is the distance
+-- cost weight (feedback item 9), 0 (off) by default. Every weight steps by
+-- 0.5 (issue 53).
 local WEIGHT_COLUMNS = {
   { Key = "YIELD_SCIENCE", Glyph = "[ICON_Science]" },
   { Key = "YIELD_CULTURE", Glyph = "[ICON_Culture]" },
   { Key = "YIELD_FAITH", Glyph = "[ICON_Faith]" },
   { Key = "YIELD_GOLD", Glyph = "[ICON_Gold]" },
   { Key = "YIELD_PRODUCTION", Glyph = "[ICON_Production]" },
-  { Key = "YIELD_FOOD", Glyph = "[ICON_Food]", Land = true },
-  { Key = "FEATURE", Glyph = "LOC_SDP_WEIGHT_FEATURE_SHORT", ToolTip = "LOC_SDP_WEIGHT_FEATURE", Land = true },
+  { Key = "LAND", Glyph = "LOC_SDP_WEIGHT_LAND_SHORT", ToolTip = "LOC_SDP_LAND" },
   { Key = "DISTANCE", Glyph = "LOC_SDP_WEIGHT_DISTANCE_SHORT", ToolTip = "LOC_SDP_WEIGHT_DISTANCE", Step = 0.5, Default = 0 },
   -- Housing of districts that depend on appeal (neighborhood, preserve; SDP_Appeal).
   -- Short text like the other non-yield columns: [ICON_Housing] is a
@@ -59,7 +62,7 @@ local COVERAGE_COLUMN = { Key = "COVERAGE", Glyph = "LOC_SDP_WEIGHT_COVERAGE_SHO
 local SINGLE_COLUMNS = {}
 for _, column in ipairs(WEIGHT_COLUMNS) do SINGLE_COLUMNS[#SINGLE_COLUMNS + 1] = column end
 SINGLE_COLUMNS[#SINGLE_COLUMNS + 1] = COVERAGE_COLUMN
-local WEIGHT_WIDTH = 50 -- ten columns: a little wider than the 480 rows, inside the page
+local WEIGHT_WIDTH = 50 -- nine columns: a little narrower than the 520 page
 
 local m_launchItem = {}     -- SDP_LaunchBarItem instance in the game's launch bar
 local m_launchPin = {}      -- SDP_LaunchBarPin instance next to it
@@ -74,11 +77,10 @@ local m_resultIM = InstanceManager:new("ResultRow", "Root", Controls.ResultStack
 -- Panel state, kept while the game runs.
 local m_cityID = nil
 local m_states = {}           -- [DistrictType] = "MUST" | "POOL" | "OFF" | "AUTO" (chosen; else SDP_UI.DefaultState)
-local m_count = nil           -- districts that take population to plan (nil: the required ones)
-local m_weights = {}          -- [YieldType, FEATURE, DISTANCE, HOUSING or COVERAGE] = 0..MAX_WEIGHT
+local m_count = nil           -- districts that take population to plan (nil: SDP_UI.DEFAULT_COUNT)
+local m_weights = {}          -- [YieldType, DISTANCE, HOUSING or COVERAGE] = 0..MAX_WEIGHT
 for _, column in ipairs(SINGLE_COLUMNS) do m_weights[column.Key] = column.Default or 1 end
 local m_allowFeatureRemoval = true
-local m_land = true           -- count the land part (design 4.2)
 local m_swap = false          -- plots swapped from another of our cities are candidates (issue 54)
 local m_replace = false       -- plan over this mod's earlier pins for the city and replace them
 local m_remind = true         -- reminder pins on the woods and rainforest the plan relies on (feedback item 5)
@@ -100,6 +102,19 @@ local m_weightViews = {}      -- [key] = function that redraws that weight
 local m_weightCells = {}      -- the weight columns' controls, for tests (SDP_UI.BuildWeights)
 local m_tab = "SINGLE"        -- the open tab: SINGLE, SITES or MULTI
 local m_lookNext = false      -- move the camera to the city when the next result shows (a solve, a continue)
+local m_preset = SDP_Settings.PRESET_ORDER[1] -- the weights and switches started from (issue 49)
+local m_fold = false          -- the settings folded into one line (issue 71)
+local m_peek = false          -- the window hidden to look at the map (issue 71)
+
+-- The switches kept in the save with the weights and the tier (issue 57).
+local SINGLE_SWITCHES = {
+  { Key = "ALLOW_REMOVAL", Default = true, Get = function() return m_allowFeatureRemoval end,
+    Put = function(v) m_allowFeatureRemoval = v end },
+  { Key = "SWAP", Default = false, Get = function() return m_swap end, Put = function(v) m_swap = v end },
+  { Key = "REPLACE", Default = false, Get = function() return m_replace end, Put = function(v) m_replace = v end },
+  { Key = "REMIND", Default = true, Get = function() return m_remind end, Put = function(v) m_remind = v end },
+  { Key = "APART", Default = true, Get = function() return m_apart end, Put = function(v) m_apart = v end },
+}
 
 -- ===========================================================================
 -- Formatting
@@ -196,6 +211,152 @@ SDP_UI = {
   Number = Number, Signed = Signed, Where = Where, YieldText = YieldText, PinText = PinText, TypeName = TypeName, Join = Join,
 }
 
+-- An "is left out" row: what (a district added by itself, or for a wonder,
+-- says so: issue 66), and why.
+function SDP_UI.UnplacedName(u)
+  if u.ForWonder ~= nil then return Locale.Lookup("LOC_SDP_RESULT_UNPLACED_FOR_WONDER", TypeName(u.Type), TypeName(u.ForWonder)) end
+  return Locale.Lookup(u.Auto and "LOC_SDP_RESULT_UNPLACED_AUTO" or "LOC_SDP_RESULT_UNPLACED", TypeName(u.Type))
+end
+
+function SDP_UI.ReasonText(u)
+  local other = u.Other and TypeName(u.Other) or ""
+  if u.Where ~= nil then return Locale.Lookup("LOC_SDP_REASON_" .. u.Reason, other, Locale.Lookup(u.Where)) end
+  return Locale.Lookup("LOC_SDP_REASON_" .. u.Reason, other)
+end
+
+-- What a tab keeps in the save (issue 57, SDP_Settings): its weight columns,
+-- its switches ({ Key, Default }), its tier (one of `tiers`) and `extra`
+-- flags no preset sets ({ Key, Default }: the fold, issue 71).
+function SDP_UI.SettingFields(columns, switches, tiers, extra)
+  local fields = {}
+  for _, column in ipairs(columns) do
+    fields[#fields + 1] = { Key = column.Key, Kind = "number", Min = 0, Max = MAX_WEIGHT, Default = column.Default or 1,
+      Preset = true }
+  end
+  for _, switch in ipairs(switches) do
+    fields[#fields + 1] = { Key = switch.Key, Kind = "flag", Default = switch.Default, Preset = true }
+  end
+  local choices = {}
+  for _, tier in ipairs(SDP_Tiers.ORDER) do
+    if tiers[tier] ~= nil then choices[tier] = true end
+  end
+  fields[#fields + 1] = { Key = "TIER", Kind = "choice", Choices = choices, Default = SDP_Tiers.DEFAULT }
+  for _, flag in ipairs(extra or {}) do fields[#fields + 1] = { Key = flag.Key, Kind = "flag", Default = flag.Default } end
+  return fields
+end
+
+-- A keeper (SDP_Settings.Keeper) for a tab: spec = { Tab, Columns, Weights
+-- (the tab's table), Switches and Extra ({ Key, Default, Get, Put }), Tiers,
+-- GetTier, PutTier, Presets and Order (default the planner's, SDP_Settings) }.
+function SDP_UI.Keeper(spec)
+  local columns, weights = spec.Columns, spec.Weights
+  local switches = {}
+  for _, switch in ipairs(spec.Switches or {}) do switches[#switches + 1] = switch end
+  for _, flag in ipairs(spec.Extra or {}) do switches[#switches + 1] = flag end
+  local getTier, putTier = spec.GetTier, spec.PutTier
+  local fields = SDP_UI.SettingFields(columns, spec.Switches or {}, spec.Tiers, spec.Extra)
+  return SDP_Settings.Keeper({
+    Tab = spec.Tab, Fields = fields, Presets = spec.Presets or SDP_Settings.PRESETS,
+    Order = spec.Order or SDP_Settings.PRESET_ORDER,
+    Values = function()
+      local values = {}
+      for _, column in ipairs(columns) do values[column.Key] = weights[column.Key] end
+      for _, switch in ipairs(switches) do values[switch.Key] = switch.Get() end
+      values.TIER = getTier()
+      return values
+    end,
+    Apply = function(values)
+      for _, column in ipairs(columns) do weights[column.Key] = values[column.Key] end
+      for _, switch in ipairs(switches) do switch.Put(values[switch.Key]) end
+      putTier(values.TIER)
+    end,
+  })
+end
+
+-- ===========================================================================
+-- Fold, fit, peek (issue 71)
+-- ===========================================================================
+-- A tab's fold line: the summary `text`; `folded` hides the settings stack.
+function SDP_UI.ShowFold(button, label, action, stack, folded, text)
+  label:SetText(text)
+  action:SetText(Locale.Lookup(folded and "LOC_SDP_FOLD_SHOW" or "LOC_SDP_FOLD_HIDE"))
+  button:SetToolTipString(Locale.Lookup("LOC_SDP_FOLD_TOOLTIP"))
+  stack:SetHide(folded)
+end
+
+-- The preset pulldown (issue 49): the presets with what each changes as
+-- tooltip, the current one ("changed" when the values differ from it);
+-- Reset is greyed out unless they do. onSelect(name).
+function SDP_UI.ShowPreset(pull, reset, current, changed, onSelect)
+  pull:ClearEntries()
+  for _, name in ipairs(SDP_Settings.PRESET_ORDER) do
+    local entry = {}
+    pull:BuildEntry("InstanceOne", entry)
+    entry.Button:SetText(Locale.Lookup("LOC_SDP_PRESET_" .. name))
+    entry.Button:SetToolTipString(Locale.Lookup("LOC_SDP_PRESET_" .. name .. "_TOOLTIP", Number(SDP_Settings.FOCUS[name] or 1)))
+    entry.Button:RegisterCallback(Mouse.eLClick, function() onSelect(name) end)
+  end
+  pull:CalculateInternals()
+  local label = Locale.Lookup("LOC_SDP_PRESET_" .. current)
+  if changed then label = Locale.Lookup("LOC_SDP_FOLD_EDITED", label) end
+  pull:GetButton():SetText(label)
+  pull:GetButton():SetToolTipString(Locale.Lookup("LOC_SDP_PRESET_" .. current .. "_TOOLTIP",
+    Number(SDP_Settings.FOCUS[current] or 1)))
+  reset:SetDisabled(not changed)
+end
+
+-- The summary: the preset's name (`nameKey`, "changed" when `changed`),
+-- then `parts`, the settings that are not as usual.
+function SDP_UI.FoldSummary(nameKey, changed, parts)
+  local name = Locale.Lookup(nameKey)
+  if changed then name = Locale.Lookup("LOC_SDP_FOLD_EDITED", name) end
+  local list = { name }
+  for _, part in ipairs(parts) do list[#list + 1] = part end
+  return Locale.Lookup("LOC_SDP_FOLD_SUMMARY", Join(list, "LOC_SDP_FOLD_JOIN"))
+end
+
+-- The window's height for the screen (M1): from WINDOW_TOP down to
+-- WINDOW_BELOW above the bottom, at least WINDOW_MIN. A page has the
+-- window's height less PAGE_INSET (the title and the tabs above, 12 below).
+SDP_UI.WINDOW_TOP = 85   -- the shadow's offset 60 and its padding 25
+SDP_UI.WINDOW_BELOW = 35 -- the shadow's padding 25 and 10 more
+SDP_UI.WINDOW_MIN = 640
+SDP_UI.PAGE_INSET = 100
+function SDP_UI.WindowHeight(screenHeight)
+  return math.max(SDP_UI.WINDOW_MIN, screenHeight - SDP_UI.WINDOW_TOP - SDP_UI.WINDOW_BELOW)
+end
+
+-- The result list takes what the page has left (M1): the window's height
+-- above or below the drawn 920 goes there, never below RESULT_MIN (a row).
+SDP_UI.RESULT_MIN = 40
+function SDP_UI.FitResults(body, page, scroll)
+  scroll:SetSizeY(SDP_UI.RESULT_MIN)
+  scroll:CalculateSize()
+  body:CalculateSize()
+  local height = SDP_UI.RESULT_MIN + math.max(0, page:GetSizeY() - body:GetSizeY())
+  scroll:SetSizeY(height)
+  scroll:CalculateSize()
+  body:CalculateSize()
+  return height
+end
+
+local m_keeper = SDP_UI.Keeper({ Tab = "SINGLE", Columns = SINGLE_COLUMNS, Weights = m_weights, Switches = SINGLE_SWITCHES,
+  Extra = { { Key = "FOLD", Default = false, Get = function() return m_fold end, Put = function(v) m_fold = v end } },
+  Tiers = SDP_Tiers.Single, GetTier = function() return m_tier end, PutTier = function(tier) m_tier = tier end })
+local UpdateFold, SetPreset -- defined below (inputs)
+-- Keep the tab's settings in the save after a change (issue 57), and show
+-- them on the fold line.
+local function Remember()
+  m_keeper.Remember(m_preset)
+  UpdateFold()
+end
+local function FitPage() SDP_UI.FitResults(Controls.Body, Controls.SinglePage, Controls.ResultScroll) end
+-- Read them from the save the first time the panel shows for this player.
+local function Restore()
+  local kept = m_keeper.Restore()
+  if kept ~= nil then m_preset = kept.Preset end
+end
+
 -- How a coverage target (SDP_Coverage key) is called: one of the player's
 -- cities ("C<id>") by its number and name, a city-center pin ("S<plot
 -- index>") as "Site n" with the number SDP_City.SiteNumbers gives it.
@@ -276,9 +437,11 @@ end
 -- What a district list asks for, in type order: Must (types), Pool (types,
 -- candidates that take population), Auto (set), MustSpecialty (count), and
 -- Count, the districts that take population to plan (at least MustSpecialty,
--- at most MustSpecialty + #Pool). `status` (optional): [type] = reason the
--- district cannot be planned (left out).
+-- at most MustSpecialty + #Pool; `count` nil: DEFAULT_COUNT, issue 71).
+-- `status` (optional): [type] = reason the district cannot be planned (left out).
+SDP_UI.DEFAULT_COUNT = 3
 function SDP_UI.ListRequest(districts, states, count, status)
+  if count == nil then count = SDP_UI.DEFAULT_COUNT end
   local out = { Must = {}, Pool = {}, Auto = {}, MustSpecialty = 0 }
   for _, d in ipairs(districts) do
     if status == nil or status[d.Type] == nil then
@@ -293,9 +456,54 @@ function SDP_UI.ListRequest(districts, states, count, status)
       end
     end
   end
-  out.Count = math.max(out.MustSpecialty, math.min(count or 0, out.MustSpecialty + #out.Pool))
+  out.Count = math.max(out.MustSpecialty, math.min(count, out.MustSpecialty + #out.Pool))
   out.Pick = out.Count - out.MustSpecialty
   return out
+end
+
+-- The districts the player set to "not wanted" themselves (a default OFF
+-- state is no choice): a wonder's district is never supplied there (issue 66).
+function SDP_UI.OffSet(states)
+  local off = {}
+  for districtType, state in pairs(states) do
+    if state == "OFF" then off[districtType] = true end
+  end
+  return off
+end
+
+-- The districts the chosen wonders (types) need next to them that a city
+-- does not have, built, pinned for it, required or added by itself (issue
+-- 66): [district type] = the wonder. `scan` the city (SDP_City.Scan),
+-- `states` its list. The player's own "not wanted" and a district the
+-- required ones exclude are left out, as the solver does (SDP_Multi).
+function SDP_UI.WonderNeeds(playerID, wonders, districts, states, scan, status)
+  local needs = {}
+  if scan == nil or #wonders == 0 then return needs end
+  local must, has = {}, {}
+  for _, d in ipairs(districts) do
+    local state = SDP_UI.StateOf(states, d)
+    if (status == nil or status[d.Type] == nil) and (state == "MUST" or state == "AUTO" and SDP_City.NeedsAuto(scan, d.Type)) then
+      must[d.Type] = true
+      has[SDP_Rules.BaseDistrict(d.Type)] = true
+    end
+  end
+  for districtType in pairs(SDP_City.PresentDistricts(scan)) do has[SDP_Rules.BaseDistrict(districtType)] = true end
+  local rows = {}
+  for _, w in ipairs(SDP_Wonders.List(playerID)) do rows[w.Type] = w end
+  for _, wonderType in ipairs(wonders) do
+    local w = rows[wonderType]
+    local base = w ~= nil and w.Status == nil and w.AdjacentDistrict or nil
+    if base ~= nil and not has[base] then
+      for _, d in ipairs(districts) do
+        if SDP_Rules.BaseDistrict(d.Type) == base and (status == nil or status[d.Type] == nil) and states[d.Type] ~= "OFF"
+            and SDP_Rules.ExcludedBy(d.Type, must) == nil then
+          needs[d.Type] = wonderType
+        end
+      end
+      has[base] = true
+    end
+  end
+  return needs
 end
 
 -- A name in a fixed-width cell (TruncateWidth in the XML): one line in the
@@ -321,7 +529,8 @@ SDP_UI.FitName = FitName
 -- Show one district cell: its icon, name and state; the selected look for
 -- MUST and AUTO; dimmed when OFF or when it cannot be planned (`status`).
 function SDP_UI.ShowCell(inst, d, state, status)
-  local selected = status == nil and (state == "MUST" or state == "AUTO")
+  -- WONDER: shown for a district a chosen wonder needs (issue 66), not stored.
+  local selected = status == nil and (state == "MUST" or state == "AUTO" or state == "WONDER")
   local name = Locale.Lookup(d.Name)
   local label = status and Locale.Lookup("LOC_SDP_STATUS_" .. status) or Locale.Lookup("LOC_SDP_STATE_" .. state)
   inst.Icon:SetIcon(d.Icon, 26)
@@ -512,15 +721,46 @@ end
 
 -- Follow the city selected on the map (issue 63): a city selected since the
 -- panel last opened becomes the single-city tab's city and the centre of
--- the Several cities tab's default group. Not while a computation runs (its
+-- the Several cities tab's default group, and the panel opens on the
+-- single-city tab (issue 76; true then). Not while a computation runs (its
 -- result would go); that selection is then passed over, not kept for later.
 local m_followed = nil -- the selected city (ID) when the panel last opened
 local FollowSelection -- defined below (after SelectCity)
 
+-- Peek (M3): the window hidden, the panel still open, so the map preview
+-- stays; a button where the window was, and Esc, bring it back. The context
+-- stays shown (pitfall 23: a hidden one gets no updates).
+local function SetPeek(on)
+  on = on == true and IsOpen()
+  m_peek = on
+  Controls.DropShadow:SetHide(on)
+  Controls.PeekReturn:SetHide(not on)
+  -- The city sites tab: its sites one after another on the map (issue 75).
+  Controls.PeekNextSite:SetHide(not (on and m_tab == "SITES" and SDP_PageSites.CanStep()))
+end
+
+-- The window's height for the screen (M1), then the open tab's page.
+local m_fitPages = {} -- [tab] = function that fits its page (FitPage, the tabs' P.FitPage)
+local function FitWindow()
+  local screenHeight = nil
+  if UIManager.GetScreenSizeVal ~= nil then
+    local _, h = UIManager:GetScreenSizeVal()
+    screenHeight = h
+  end
+  if screenHeight == nil or screenHeight <= 0 then return end
+  local height = SDP_UI.WindowHeight(screenHeight)
+  Controls.Window:SetSizeY(height)
+  for _, page in ipairs({ Controls.SinglePage, Controls.SitesPage, Controls.MultiPage }) do
+    page:SetSizeY(height - SDP_UI.PAGE_INSET)
+  end
+  SDP_UI.WindowFitted = height -- tests
+  if m_fitPages[m_tab] ~= nil then m_fitPages[m_tab]() end
+end
+
 local function Open()
   if IsOpen() then return end
   if m_launchDone then SetLaunchMark(false) end
-  FollowSelection()
+  if FollowSelection() then m_tab = "SINGLE" end
   SelectTab(m_tab)
   Controls.DropShadow:SetHide(false)
   UIManager:QueuePopup(ContextPtr, PopupPriority.Low)
@@ -529,6 +769,7 @@ end
 
 local function Close()
   if not IsOpen() then return end
+  SetPeek(false)
   SDP_Preview.Clear()
   UIManager:DequeuePopup(ContextPtr)
   if SDP_Task.IsRunning() then KeepRunningHidden(true) end
@@ -584,13 +825,20 @@ end
 SDP_UI.QualityText = QualityText
 
 -- A result row (ResultRow instance); with x, y a click moves the camera to
--- that plot (issue 67). Shared with the other tabs, which keep their rows.
+-- that plot (issue 67), and the row lights up under the mouse and says so
+-- first in its tooltip (issue 75). Shared with the other tabs, which keep
+-- their rows.
 function SDP_UI.ResultRow(inst, icon, name, detail, toolTip, x, y)
   inst.Icon:SetIcon(icon, 32)
   inst.Name:SetText(name)
   inst.Detail:SetText(detail)
   FitResultRow(inst)
-  inst.Root:SetToolTipString(toolTip or "")
+  inst.HoverArea:SetHide(x == nil)
+  local tip = toolTip or ""
+  if x ~= nil then
+    tip = Locale.Lookup("LOC_SDP_RESULT_LOOK") .. (tip ~= "" and ("[NEWLINE]" .. tip) or "")
+  end
+  inst.Root:SetToolTipString(tip)
   inst.Root:RegisterCallback(Mouse.eLClick, function()
     if x ~= nil then
       LookAt(x, y)
@@ -611,6 +859,7 @@ end
 function SDP_UI.PlanNote(p)
   local notes = {}
   if p.Auto then notes[#notes + 1] = Locale.Lookup("LOC_SDP_RESULT_AUTO") end
+  if p.ForWonder then notes[#notes + 1] = Locale.Lookup("LOC_SDP_RESULT_FOR_WONDER", TypeName(p.ForWonder)) end
   if p.Picked then notes[#notes + 1] = Locale.Lookup("LOC_SDP_RESULT_PICKED") end
   if p.Unowned then notes[#notes + 1] = Locale.Lookup("LOC_SDP_RESULT_UNOWNED") end
   if p.Swap ~= nil then
@@ -791,9 +1040,7 @@ local function ShowResult()
     -- What the plan leaves out comes first, so a long list does not hide it
     -- (issue 60).
     for _, u in ipairs(shown.Unplaced or result.Unplaced or {}) do
-      local key = u.Auto and "LOC_SDP_RESULT_UNPLACED_AUTO" or "LOC_SDP_RESULT_UNPLACED"
-      AddResultRow("ICON_" .. u.Type, Locale.Lookup(key, TypeName(u.Type)),
-        Locale.Lookup("LOC_SDP_REASON_" .. u.Reason, u.Other and TypeName(u.Other) or ""), UnplacedTip(u))
+      AddResultRow("ICON_" .. u.Type, SDP_UI.UnplacedName(u), SDP_UI.ReasonText(u), UnplacedTip(u))
     end
     -- Each planned district: where, its yields, and DMT's own breakdown on hover.
     for _, p in ipairs(shown.Plan) do
@@ -831,6 +1078,7 @@ local function ShowResult()
   Controls.SolutionStack:CalculateSize()
   Controls.ResultStack:CalculateSize()
   Controls.ResultScroll:CalculateSize()
+  FitPage()
   UpdateButtons()
 end
 
@@ -877,9 +1125,18 @@ end
 
 local SetState -- defined below
 
+local SelectedWonders -- defined below
+
 local function ShowCells()
+  -- A district a chosen wonder needs shows "for wonder" (issue 66); a click
+  -- goes on from its own state.
+  local needs = SDP_UI.WonderNeeds(Game.GetLocalPlayer(), SelectedWonders(), m_districts, m_states, m_scan, m_status)
   m_districtRows = SDP_UI.BuildCells(m_cellIM, m_utilityIM, Controls.DistrictStack, Controls.UtilityStack, m_districts,
-    function(d) return SDP_UI.StateOf(m_states, d) end, StatusOf, function(d)
+    function(d)
+      local state = SDP_UI.StateOf(m_states, d)
+      if needs[d.Type] ~= nil and state ~= "MUST" then return "WONDER" end
+      return state
+    end, StatusOf, function(d)
       SetState(d.Type, SDP_UI.NextState(d, SDP_UI.StateOf(m_states, d)))
     end)
   ShowCount()
@@ -992,15 +1249,16 @@ FollowSelection = function()
   local selected = UI.GetHeadSelectedCity()
   local cityID = nil
   if selected ~= nil and selected:GetOwner() == playerID then cityID = selected:GetID() end
-  if cityID == m_followed then return end
+  if cityID == m_followed then return false end
   m_followed = cityID
-  if cityID == nil or SDP_Task.IsRunning() then return end
+  if cityID == nil or SDP_Task.IsRunning() then return false end
   if cityID ~= m_cityID then
     m_cityID = cityID
     ClearResult()
     if m_heat ~= nil then ShowHeat(nil) end
   end
   SDP_PageMulti.SetCenter(cityID)
+  return true
 end
 
 local function SetWeight(key, value)
@@ -1008,6 +1266,7 @@ local function SetWeight(key, value)
   if m_weights[key] ~= value then
     m_weights[key] = value
     ClearResult()
+    Remember()
   end
   if m_weightViews[key] then m_weightViews[key]() end
 end
@@ -1023,7 +1282,7 @@ function SDP_UI.BuildWeights(im, stack, columns, weights, isOff, onChange, width
   local views, cells = {}, {}
   for _, column in ipairs(columns) do
     local key = column.Key
-    local step = column.Step or 1
+    local step = column.Step or 0.5
     local inst = im:GetInstance()
     if width ~= nil then inst.Root:SetSizeX(width) end
     local function Show()
@@ -1047,8 +1306,8 @@ function SDP_UI.BuildWeights(im, stack, columns, weights, isOff, onChange, width
 end
 
 local function BuildWeights()
-  m_weightViews, m_weightCells = SDP_UI.BuildWeights(m_weightIM, Controls.WeightStack, SINGLE_COLUMNS, m_weights,
-    function(column) return column.Land and not m_land end, SetWeight, WEIGHT_WIDTH)
+  m_weightViews, m_weightCells = SDP_UI.BuildWeights(m_weightIM, Controls.WeightStack, SINGLE_COLUMNS, m_weights, nil,
+    SetWeight, WEIGHT_WIDTH)
 end
 
 -- A tier pulldown: entries for the three tiers, onSelect(tier).
@@ -1065,18 +1324,16 @@ function SDP_UI.PopulateTierPull(pull, current, onSelect)
   pull:GetButton():SetText(Locale.Lookup("LOC_SDP_TIER_" .. current))
 end
 
--- A SolutionRow instance: texts and the selected look (light text on the
--- dark button, dark text on the light selected look).
+-- A SolutionRow instance, one button of a row of three (issue 71): its
+-- name and the selected look (light text on the dark button, dark text on
+-- the light selected look); the detail (the districts picked) is the tooltip.
 function SDP_UI.SolutionRow(inst, name, detail, selected)
   inst.Name:SetText(name)
   inst.NameDark:SetText(name)
-  inst.Detail:SetText(detail)
-  inst.DetailDark:SetText(detail)
+  inst.Root:SetToolTipString(detail or "")
   inst.Selected:SetHide(not selected)
   inst.Name:SetHide(selected)
-  inst.Detail:SetHide(selected)
   inst.NameDark:SetHide(not selected)
-  inst.DetailDark:SetHide(not selected)
 end
 
 -- "About X s" for `units` of work.
@@ -1092,6 +1349,7 @@ local function SetSwap(on)
   if m_swap ~= on then
     m_swap = on
     ClearResult()
+    Remember()
   end
 end
 
@@ -1100,6 +1358,7 @@ local function SetAllowFeatureRemoval(allow)
   if m_allowFeatureRemoval ~= allow then
     m_allowFeatureRemoval = allow
     ClearResult()
+    Remember()
   end
 end
 
@@ -1119,6 +1378,7 @@ local function SetReplace(on)
   if m_replace ~= on then
     m_replace = on
     ClearResult()
+    Remember()
   end
 end
 
@@ -1127,6 +1387,7 @@ local function SetApart(on)
   if m_apart ~= on then
     m_apart = on
     ClearResult()
+    Remember()
   end
 end
 
@@ -1136,12 +1397,13 @@ local function SetRemind(on)
   if m_remind ~= on then
     m_remind = on
     ClearResult()
+    Remember()
   end
 end
 
 -- Wonders to place with the districts (design 18, item 5): selectable ones,
 -- in type order (the solver's slot order, independent of the list's order).
-local function SelectedWonders()
+SelectedWonders = function()
   local list = {}
   for _, w in ipairs(SDP_Wonders.List(Game.GetLocalPlayer())) do
     if m_wonders[w.Type] and w.Status == nil then list[#list + 1] = w.Type end
@@ -1161,7 +1423,52 @@ SetWonder = function(wonderType, on)
     ClearResult()
   end
   PopulateWonders()
+  ShowCells()
   UpdateEstimate()
+  UpdateFold()
+end
+
+-- The fold line: the preset, then what is not as usual (land part off,
+-- clearing off, swaps, replacing, wonders, the good places shown).
+UpdateFold = function()
+  local parts = {}
+  if m_weights.LAND == 0 then parts[#parts + 1] = Locale.Lookup("LOC_SDP_FOLD_LAND_OFF") end
+  if not m_allowFeatureRemoval then parts[#parts + 1] = Locale.Lookup("LOC_SDP_FOLD_NO_REMOVAL") end
+  if m_swap then parts[#parts + 1] = Locale.Lookup("LOC_SDP_FOLD_SWAP") end
+  if m_replace then parts[#parts + 1] = Locale.Lookup("LOC_SDP_FOLD_REPLACE") end
+  local wonders = #SelectedWonders()
+  if wonders > 0 then parts[#parts + 1] = Locale.Lookup("LOC_SDP_FOLD_WONDERS", wonders) end
+  if m_heat ~= nil then parts[#parts + 1] = Locale.Lookup("LOC_SDP_FOLD_HEAT", TypeName(m_heat)) end
+  local changed = m_keeper.Changed(m_preset)
+  SDP_UI.ShowFold(Controls.FoldButton, Controls.FoldText, Controls.FoldAction, Controls.SettingsStack, m_fold,
+    SDP_UI.FoldSummary("LOC_SDP_PRESET_" .. m_preset, changed, parts))
+  SDP_UI.ShowPreset(Controls.PresetPull, Controls.PresetReset, m_preset, changed, function(name) SetPreset(name) end)
+end
+
+-- A preset (issue 49): its weights and switches; the tier and the fold stay.
+-- The same preset again puts back what was changed.
+SetPreset = function(name)
+  if not m_keeper.Use(name) then return end
+  m_preset = name
+  ClearResult()
+  for _, view in pairs(m_weightViews) do view() end
+  Controls.FeatureCheck:SetCheck(m_allowFeatureRemoval)
+  Controls.SwapCheck:SetCheck(m_swap)
+  Controls.ReplaceCheck:SetCheck(m_replace)
+  Controls.RemindCheck:SetCheck(m_remind)
+  Controls.ApartCheck:SetCheck(m_apart)
+  Remember()
+  UpdateEstimate()
+end
+
+-- Fold or unfold the settings (M2): after a solve, or a click on the line.
+local function SetFold(on)
+  if m_fold ~= on then
+    m_fold = on
+    Remember()
+  end
+  UpdateFold()
+  FitPage()
 end
 
 -- Where one district is good (design 18, item 6): its legal plots colored in
@@ -1194,6 +1501,7 @@ ShowHeat = function(districtType)
     m_heatSpots = nil
   end
   Controls.HeatPull:GetButton():SetText(label)
+  UpdateFold()
 end
 
 -- The heat map pulldown: off, or a district the city can still plan.
@@ -1217,14 +1525,12 @@ PopulateHeat = function()
   pull:GetButton():SetText(m_heat and TypeName(m_heat) or Locale.Lookup("LOC_SDP_HEAT_OFF"))
 end
 
+-- Tests and older callers: the land part on (weight 1 unless it is set) or off (0).
 local function SetLand(on)
-  Controls.LandCheck:SetCheck(on)
-  if m_land ~= on then
-    m_land = on
-    ClearResult()
-  end
-  for _, column in ipairs(WEIGHT_COLUMNS) do
-    if column.Land and m_weightViews[column.Key] then m_weightViews[column.Key]() end
+  if on then
+    if m_weights.LAND == 0 then SetWeight("LAND", 1) end
+  else
+    SetWeight("LAND", 0)
   end
 end
 
@@ -1233,6 +1539,7 @@ local function SetTier(tier)
   if m_tier ~= tier then
     m_tier = tier
     ClearResult()
+    Remember()
   end
   Controls.TierPull:GetButton():SetText(Locale.Lookup("LOC_SDP_TIER_" .. tier))
   UpdateEstimate()
@@ -1279,13 +1586,13 @@ UpdateEstimate = function()
 end
 
 Refresh = function()
+  Restore()
   PopulateCities()
   RefreshDistricts()
   BuildWeights()
   SDP_UI.PopulateTierPull(Controls.TierPull, m_tier, SetTier)
   Controls.FeatureCheck:SetCheck(m_allowFeatureRemoval)
   Controls.SwapCheck:SetCheck(m_swap)
-  Controls.LandCheck:SetCheck(m_land)
   Controls.ReplaceCheck:SetCheck(m_replace)
   Controls.RemindCheck:SetCheck(m_remind)
   SDP_UI.ShowApart(Controls.ApartBox, Controls.ApartCheck, Controls.ApartLabel, m_apart)
@@ -1294,6 +1601,7 @@ Refresh = function()
   m_heat = nil
   PopulateHeat()
   UpdateEstimate()
+  UpdateFold()
   ShowResult()
 end
 
@@ -1393,8 +1701,8 @@ Request = function()
     PlayerID = Game.GetLocalPlayer(), CityID = m_cityID, Districts = list.Must, Weights = weights,
     Pool = list.Pool, Count = list.Count, MustSpecialty = list.MustSpecialty, Auto = list.Auto,
     Distance = m_weights.DISTANCE, Coverage = m_weights.COVERAGE, Remind = m_remind, Apart = m_apart,
-    AllowFeatureRemoval = m_allowFeatureRemoval, Land = m_land, Tier = m_tier, Swap = m_swap,
-    IgnorePins = m_replace and OwnPins() or nil, Wonders = wonders,
+    AllowFeatureRemoval = m_allowFeatureRemoval, Land = m_weights.LAND > 0, Tier = m_tier, Swap = m_swap,
+    IgnorePins = m_replace and OwnPins() or nil, Wonders = wonders, Off = SDP_UI.OffSet(m_states),
   }
 end
 
@@ -1408,7 +1716,7 @@ local function WonderRequest(request)
     Coverage = request.Coverage,
     Only = { [request.CityID] = true }, Weights = request.Weights, Land = request.Land, Apart = request.Apart,
     AllowFeatureRemoval = request.AllowFeatureRemoval, IgnorePins = request.IgnorePins, Swap = request.Swap,
-    Plans = { [key] = request.Districts },
+    Plans = { [key] = request.Districts }, Off = request.Off,
   }
 end
 
@@ -1420,6 +1728,8 @@ local function Solve()
   if m_heat ~= nil then ShowHeat(nil) end
   m_solution = 1
   m_lookNext = true
+  -- The settings fold away after a solve (M2): the results get the room.
+  if request ~= nil then SetFold(true) end
   if request ~= nil and #request.Wonders > 0 then
     local multi = WonderRequest(request)
     m_result = nil
@@ -1523,6 +1833,7 @@ include("SDP_PageSites")
 include("SDP_PageMulti")
 m_pages.SITES = SDP_PageSites
 m_pages.MULTI = SDP_PageMulti
+m_fitPages.SINGLE, m_fitPages.SITES, m_fitPages.MULTI = FitPage, SDP_PageSites.FitPage, SDP_PageMulti.FitPage
 
 local TABS = {
   { Name = "SINGLE", Button = Controls.SingleTab, Selected = Controls.SingleTabSelected, Page = Controls.SinglePage,
@@ -1610,17 +1921,27 @@ end
 -- ===========================================================================
 local function OnLoadScreenClose()
   InjectLaunchButton()
+  FitWindow()
+  Restore()
+  SDP_PageSites.Restore()
+  SDP_PageMulti.Restore()
 end
 
 local function OnInput(uiMsg, wParam)
   if uiMsg == KeyEvents.KeyUp and wParam == Keys.VK_ESCAPE and IsOpen() then
-    Close()
+    -- Esc from a peek brings the window back (M3); else it closes the panel.
+    if m_peek then SetPeek(false) else Close() end
     return true
   end
   return false
 end
 
+local function OnUpdateUI(type)
+  if type == SystemUpdateUI.ScreenResize then FitWindow() end
+end
+
 local function OnInit(isReload)
+  FitWindow()
   -- After a hot reload the load screen is long gone; inject right away.
   if isReload then InjectLaunchButton() end
 end
@@ -1640,6 +1961,7 @@ local function OnShutdown()
   SDP_Preview.Shutdown()
   Events.LoadScreenClose.Remove(OnLoadScreenClose)
   Events.InterfaceModeChanged.Remove(OnInterfaceModeChanged)
+  Events.SystemUpdateUI.Remove(OnUpdateUI)
   LuaEvents.SDP_OpenPanel.Remove(Open)
   LuaEvents.SDP_ClosePanel.Remove(Close)
   RemoveLaunchButton()
@@ -1674,6 +1996,10 @@ SDP_Panel = {
   Heat = function() return m_heatSpots end,
   SetLand = SetLand,
   SetSwap = SetSwap,
+  SetFold = function(on) SetFold(on) end,
+  SetPreset = function(name) SetPreset(name) end,
+  SetPeek = SetPeek,
+  FitWindow = FitWindow,
   SetTier = SetTier,
   Solve = Solve,
   Continue = Continue,
@@ -1696,7 +2022,7 @@ SDP_Panel = {
       CityID = m_cityID, Result = m_result, DistrictRows = m_districtRows, ResultRows = m_resultRows,
       SolutionCells = m_solutionCells, WeightCells = m_weightCells,
       Count = List().Count, Solution = m_solution, Remind = m_remind, Apart = m_apart,
-      Weights = m_weights, AllowFeatureRemoval = m_allowFeatureRemoval, Land = m_land, Tier = m_tier, Replace = m_replace,
+      Weights = m_weights, AllowFeatureRemoval = m_allowFeatureRemoval, Land = m_weights.LAND > 0, Tier = m_tier, Replace = m_replace,
       Swap = m_swap,
       Wonders = SelectedWonders(), HeatDistrict = m_heat,
       Running = SDP_Task.IsRunning(), QualityText = Controls.Quality:GetText(), EstimateText = Controls.Estimate:GetText(),
@@ -1704,12 +2030,19 @@ SDP_Panel = {
       ContinueDisabled = Controls.ContinueButton:IsDisabled(), LaunchMark = m_launchDone,
       SolveDisabled = Controls.SolveButton:IsDisabled(), SummaryText = Controls.Summary:GetText(),
       SummaryToolTip = Controls.Summary:GetToolTipString(),
+      Fold = m_fold, FoldText = Controls.FoldText:GetText(), Peek = m_peek, Preset = m_preset,
+      ResultHeight = Controls.ResultScroll:GetSizeY(), WindowHeight = SDP_UI.WindowFitted,
       LaunchToolTip = m_launchItem.LaunchItemButton and m_launchItem.LaunchItemButton:GetToolTipString() or nil,
     }
   end,
 }
 
 Controls.CloseButton:RegisterCallback(Mouse.eLClick, Close)
+Controls.PeekButton:RegisterCallback(Mouse.eLClick, function() SetPeek(true) end)
+Controls.PeekReturn:RegisterCallback(Mouse.eLClick, function() SetPeek(false) end)
+Controls.PeekNextSite:RegisterCallback(Mouse.eLClick, function() SDP_PageSites.NextSite() end)
+Controls.FoldButton:RegisterCallback(Mouse.eLClick, function() SetFold(not m_fold) end)
+Controls.PresetReset:RegisterCallback(Mouse.eLClick, function() SetPreset(m_preset) end)
 Controls.CloseButton:RegisterCallback(Mouse.eMouseEnter, function()
   UI.PlaySound("Main_Menu_Mouse_Over")
 end)
@@ -1718,9 +2051,6 @@ Controls.ReplaceCheck:RegisterCheckHandler(function()
 end)
 Controls.FeatureCheck:RegisterCheckHandler(function()
   SetAllowFeatureRemoval(Controls.FeatureCheck:IsChecked())
-end)
-Controls.LandCheck:RegisterCheckHandler(function()
-  SetLand(Controls.LandCheck:IsChecked())
 end)
 Controls.SwapCheck:RegisterCheckHandler(function()
   SetSwap(Controls.SwapCheck:IsChecked())
@@ -1744,5 +2074,7 @@ ContextPtr:SetShutdown(OnShutdown)
 Events.LoadScreenClose.Add(OnLoadScreenClose)
 Events.InputActionTriggered.Add(OnInputActionTriggered)
 Events.InterfaceModeChanged.Add(OnInterfaceModeChanged)
+Events.SystemUpdateUI.Add(OnUpdateUI)
 LuaEvents.SDP_OpenPanel.Add(Open)
 LuaEvents.SDP_ClosePanel.Add(Close)
+FitWindow()

@@ -28,8 +28,37 @@ SDP_Land.HARVEST_TURNS = 20 -- one-time yields count as this many turns of yield
 -- Plots of a city scan (SDP_City.EXCLUDED reasons) that can still be worked.
 local WORKABLE_EXCLUSIONS = { FEATURE = true, NATURAL_WONDER = true, PIN = true, RESOURCE = true }
 
--- Weights for the land part: the six tile yields (missing ones weigh 1) and
--- FEATURE, the weight of one-time yields (default 1).
+-- What a plot's yields are worth in the district planner's land part (issue
+-- 53, the maintainer's choice of 2026-10-25): fixed, apart from the
+-- player's yield weights, which weigh the districts' adjacency only. From
+-- another planner's weighted-output setting (food 12, production 12, gold 3,
+-- science 10, culture 10, faith 6) with food and production as 1; gold and
+-- faith match the purchase prices (1 production = 4 gold = 2 faith,
+-- GOLD_PURCHASE_MULTIPLIER, GOLD_EQUIVALENT_OTHER_YIELDS). One-time yields of
+-- clearing and harvesting are weighed by the same numbers (FEATURE 1).
+SDP_Land.PLOT_WEIGHTS = { YIELD_FOOD = 1, YIELD_PRODUCTION = 1, YIELD_GOLD = 1 / 4, YIELD_SCIENCE = 5 / 6,
+  YIELD_CULTURE = 5 / 6, YIELD_FAITH = 1 / 2, FEATURE = 1 }
+
+-- The player's one land weight (the request's Weights.LAND, default 1; 0:
+-- the land part is off) scales the whole land part (issue 53, decided
+-- 2026-10-25): PLOT_WEIGHTS times it, so the one-time yields scale too.
+function SDP_Land.Scale(weights)
+  local scale = weights and weights.LAND
+  if scale == nil then scale = 1 end
+  return scale
+end
+
+function SDP_Land.PlotWeights(scale)
+  local out = {}
+  for key, value in pairs(SDP_Land.PLOT_WEIGHTS) do out[key] = value end
+  for _, yieldType in ipairs(SDP_Land.TILE_YIELDS) do out[yieldType] = out[yieldType] * (scale or 1) end
+  return out
+end
+
+-- Weights for valuing plots: the six tile yields (missing ones weigh 1) and
+-- FEATURE, the weight of one-time yields (default 1). The district planner
+-- passes PLOT_WEIGHTS times its land weight; the site scores PLOT_WEIGHTS
+-- times the sites tab's weights (SDP_Sites.PlotWeights).
 function SDP_Land.Weights(weights)
   local out = {}
   for _, yieldType in ipairs(SDP_Land.TILE_YIELDS) do

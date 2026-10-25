@@ -223,6 +223,10 @@ SDP_Panel.Multi.Refresh()
     s.check("clear all by click", value("#SDP_Panel.Multi.Participants()"), "0")
     click_control("Controls.MultiCityDefault")
     s.check("default by click", value(site + ".Included"), "true")
+    # The settings line (issue 71): the switches sit under it; unfold by click.
+    lua("SDP_Panel.Multi.SetFold(true)")
+    click_control("Controls.MultiFoldButton")
+    s.check("multi settings unfolded by click", value("SDP_Panel.Multi.State().Fold"), "false")
     # The harbor / commercial hub switch.
     click_control("Controls.MultiApartCheck")
     s.check("multi apart switch off by click", value("SDP_Panel.Multi.State().Apart"), "false")
@@ -236,6 +240,9 @@ SDP_Panel.Multi.Refresh()
     # Back to the single-city tab: solve, a solution row, place, undo.
     click_control("Controls.SingleTab")
     s.check("single tab by click", value("SDP_Panel.Tab()"), "SINGLE")
+    lua("SDP_Panel.SetFold(true)")
+    click_control("Controls.FoldButton")
+    s.check("single settings unfolded by click", value("SDP_Panel.State().Fold"), "false")
     click_control("Controls.ApartCheck")
     s.check("single apart switch off by click", value("SDP_Panel.State().Apart"), "false")
     click_control("Controls.ApartCheck")
@@ -244,12 +251,19 @@ SDP_Panel.Multi.Refresh()
     s.check("single swap switch on by click", value("SDP_Panel.State().Swap"), "true")
     click_control("Controls.SwapCheck")
     s.check("single swap switch off again", value("SDP_Panel.State().Swap"), "false")
-    # The coverage column, the last of the weight row (issue 61): its arrows.
-    s.check("single coverage column last", value("SDP_Panel.State().WeightCells[10].Key"), "COVERAGE")
-    click_control("SDP_Panel.State().WeightCells[10].More")
-    s.check("single coverage up by click", value("SDP_Panel.State().Weights.COVERAGE == 1"), "true")
-    click_control("SDP_Panel.State().WeightCells[10].Less")
+    # The coverage column, the last of the weight row (issue 61): its arrows,
+    # 0.5 a click (issue 53).
+    s.check("single coverage column last", value("SDP_Panel.State().WeightCells[9].Key"), "COVERAGE")
+    click_control("SDP_Panel.State().WeightCells[9].More")
+    s.check("single coverage up by click", value("SDP_Panel.State().Weights.COVERAGE == 0.5"), "true")
+    click_control("SDP_Panel.State().WeightCells[9].Less")
     s.check("single coverage down by click", value("SDP_Panel.State().Weights.COVERAGE == 0"), "true")
+    # The Tiles column (issue 53), in place of the land switch.
+    s.check("single tiles column", value("SDP_Panel.State().WeightCells[6].Key"), "LAND")
+    click_control("SDP_Panel.State().WeightCells[6].Less")
+    s.check("single tiles down by click", value("SDP_Panel.State().Weights.LAND == 0.5"), "true")
+    click_control("SDP_Panel.State().WeightCells[6].More")
+    s.check("single tiles up by click", value("SDP_Panel.State().Weights.LAND == 1"), "true")
     lua("SDP_Panel.SetState('%s', 'MUST'); SDP_Panel.SetCount(3)" % campus)
     # Camera moves (issue 67): the panel records the last one (the game's UI table is read-only).
     lua("SDP_UI.LastLook = nil")
@@ -259,6 +273,7 @@ SDP_Panel.Multi.Refresh()
             break
         time.sleep(0.5)
     s.check("solve by click", value("SDP_Panel.State().Result and SDP_Panel.State().Result.Ok"), "true")
+    s.check("settings folded by the solve", value("SDP_Panel.State().Fold"), "true")
     capital = value("(function() local c = Players[Game.GetLocalPlayer()]:GetCities():GetCapitalCity() "
                     "return c:GetX() .. ',' .. c:GetY() end)()")
     s.check("the camera goes to the city", value("SDP_UI.LastLook"), capital)
@@ -271,12 +286,55 @@ SDP_Panel.Multi.Refresh()
     if rows > 1:
         click_control("SDP_Panel.State().SolutionCells[2]")
         s.check("second solution by click", value("SDP_Panel.State().Solution"), "2")
+    # Peek (issue 71): the window hidden, the way back by click.
+    click_control("Controls.PeekButton")
+    s.check("peek by click", value("SDP_Panel.State().Peek"), "true")
+    click_control("Controls.PeekReturn")
+    s.check("back from peek by click", value("SDP_Panel.State().Peek"), "false")
     click_control("Controls.PlaceButton")
     s.check("place by click", value("SDP_Panel.State().Result.Placed"), "true")
     click_control("Controls.UndoButton")
     s.check("undo by click", value("SDP_Panel.State().Result.Placed"), "false")
+    # City sites (issue 75): the selected plan again, and Next site while
+    # peeking, go through its sites.
+    click_control("Controls.SitesTab")
+    s.check("sites tab by click", value("SDP_Panel.Tab()"), "SITES")
+    lua("SDP_Panel.Sites.SetCount(2); SDP_Panel.Sites.SetTier('FAST'); SDP_Panel.Sites.SetSelected('%s', true)" % campus)
+    click_control("Controls.SitesSolveButton")
+    for _ in range(120):
+        if value("SDP_Panel.State().Running") == "false" and value("SDP_Panel.Sites.State().Result ~= nil") == "true":
+            break
+        time.sleep(0.5)
+    sol = "SDP_Panel.Sites.State().Result.Solutions[SDP_Panel.Sites.State().Solution]"
+    if value("SDP_Panel.Sites.State().Result.Ok and #%s.Sites == 2" % sol) == "true":
+        at = ["%s.Sites[%d].X .. ',' .. %s.Sites[%d].Y" % (sol, n, sol, n) for n in (1, 2)]
+        s.check("sites: the camera at the first site", value("SDP_UI.LastLook"), value(at[0]))
+        click_control("SDP_Panel.Sites.State().View.Solutions[SDP_Panel.Sites.State().Solution].Cell")
+        s.check("sites: the plan again by click, the second site", value("SDP_UI.LastLook"), value(at[1]))
+        click_control("Controls.PeekButton")
+        s.check("sites: next site shown while peeking", value("Controls.PeekNextSite:IsHidden()"), "false")
+        click_control("Controls.PeekNextSite")
+        s.check("sites: next site by click, round to the first", value("SDP_UI.LastLook"), value(at[0]))
+        click_control("Controls.PeekReturn")
+        s.check("sites: next site gone with the peek", value("Controls.PeekNextSite:IsHidden()"), "true")
+    else:
+        s.check("sites: a plan with two sites", value("SDP_Panel.Sites.State().Result.Ok and #%s.Sites" % sol), "2")
+    lua("SDP_Panel.Sites.SetSelected('%s', false); SDP_Panel.Sites.SetTier('STANDARD')" % campus)
     click_control("Controls.CloseButton")
     s.check("close by click", value("SDP_Panel.IsOpen()"), "false")
+    # Issue 76: a city selected on the map since the panel last opened: it
+    # opens on the single-city tab; the same one still selected: the tab it
+    # was closed on. (Closed on the city sites tab just above.)
+    lua("UI.DeselectAllCities(); SDP_Panel.Open(); SDP_Panel.SelectTab('SITES'); SDP_Panel.Close()")
+    lua("UI.SelectCity(Players[Game.GetLocalPlayer()]:GetCities():GetCapitalCity())")
+    time.sleep(0.5)
+    lua("SDP_Panel.Open()")
+    s.check("a city selected: opens on the single-city tab", value("SDP_Panel.Tab()"), "SINGLE")
+    click_control("Controls.MultiTab")
+    click_control("Controls.CloseButton")
+    lua("SDP_Panel.Open()")
+    s.check("the same city still selected: the tab it was closed on", value("SDP_Panel.Tab()"), "MULTI")
+    lua("SDP_Panel.SelectTab('SINGLE'); SDP_Panel.Close(); UI.DeselectAllCities()")
     # Clean up the site pin.
     lua("while SDP_Pins.CanUndo() do SDP_Pins.UndoLast() end")
     print("realclick: %d passed, %d failed%s" % (s.passed, len(s.failed),

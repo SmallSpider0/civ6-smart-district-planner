@@ -38,7 +38,7 @@ local function BruteForceTwo(city, a, b, weights, land)
       for _, d in ipairs(SDP_Rules.PlannableDistricts(pid)) do
         if (d.Type == a or d.Type == b) and d.Specialty then specialty = specialty + 1 end
       end
-      model = SDP_Land.ForScan(scan, fixed, weights,
+      model = SDP_Land.ForScan(scan, fixed, SDP_Land.PLOT_WEIGHTS,
         math.max(scan.Population, SDP_Land.RequiredPopulation(scan.SpecialtyBuilt + specialty)))
     end
     local best = nil

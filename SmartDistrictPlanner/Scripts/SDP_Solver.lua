@@ -42,10 +42,11 @@ Session.__index = Session
 --                        pin; 0 or nil: off, no model at all
 --   Remind               find the woods and rainforest each solution's
 --                        districts take adjacency from (SDP_Remind)
---   Weights              { [yield] = 0..3 } for the five adjacency yields; YIELD_FOOD
---                        and FEATURE also weigh the land part, HOUSING the
---                        housing of districts that depend on appeal (SDP_Appeal);
---                        missing ones weigh 1
+--   Weights              { [yield] = 0..3 } for the five adjacency yields, HOUSING
+--                        the housing of districts that depend on appeal
+--                        (SDP_Appeal), LAND the whole land part; missing ones
+--                        weigh 1. The land part weighs plots with
+--                        SDP_Land.PLOT_WEIGHTS times LAND (issue 53)
 --   AllowFeatureRemoval  default true (requirement constraint 5)
 --   Land                 count the land part (default false)
 --   Tier                 "FAST" | "STANDARD" | "FINE" (default STANDARD)
@@ -139,13 +140,14 @@ function SDP_Solver.NewSession(request, scan)
   local population = math.max(scan.Population, SDP_Land.RequiredPopulation(scan.SpecialtyBuilt + requiredSpecialty + pick))
   local lands = {}
   if request.Land then
+    local plotWeights = SDP_Land.PlotWeights(SDP_Land.Scale(request.Weights))
     -- A plot no city owns yet that another of the player's cities is nearer
     -- to is that city's to work (issue 54, as on the multi-city tab).
     local others = {}
     for _, city in Players[playerID]:GetCities():Members() do
       if city:GetID() ~= scan.CityID then others[#others + 1] = city end
     end
-    self.Land = SDP_Land.ForScan(scan, self.Fixed, request.Weights, population, function(index)
+    self.Land = SDP_Land.ForScan(scan, self.Fixed, plotWeights, population, function(index)
       local plot = Map.GetPlotByIndex(index)
       if plot:GetOwner() ~= -1 then
         local owner = Cities.GetPlotPurchaseCity(plot)
@@ -172,7 +174,7 @@ function SDP_Solver.NewSession(request, scan)
       local other = SDP_City.Scan(playerID, id, SDP_City.ScanOptions(request))
       if other ~= nil then
         local otherPopulation = math.max(other.Population, SDP_Land.RequiredPopulation(other.SpecialtyBuilt))
-        lands[#lands + 1] = SDP_Land.ForScan(other, SDP_Overlay.FixedSubjects(other), request.Weights, otherPopulation,
+        lands[#lands + 1] = SDP_Land.ForScan(other, SDP_Overlay.FixedSubjects(other), plotWeights, otherPopulation,
           function(index) return other.Reach.Start[index] == true end)
       end
     end

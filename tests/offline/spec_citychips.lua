@@ -168,17 +168,24 @@ test("opening the panel follows the city selected on the map, once per selection
   SDP_Panel.Open()
   T.eq(SDP_Panel.State().CityID, 1, "the player's choice stays")
   T.eq(Chip(off).Included, false, "the switch stays")
+  T.eq(SDP_Panel.Tab(), "MULTI", "the same city still selected: the tab it was closed on (issue 76)")
   SDP_Panel.Close()
-  -- Another city selected: followed; the switches go with the old centre.
+  -- Another city selected: followed, on the single-city tab (issue 76); the
+  -- switches go with the old centre.
   m_selected = 2
   SDP_Panel.Open()
+  T.eq(SDP_Panel.Tab(), "SINGLE", "another city selected: the single-city tab")
+  T.ok(not UI_Mock.Controls.SinglePage:IsHidden() and UI_Mock.Controls.MultiPage:IsHidden(), "its page shown")
   T.eq(SDP_Panel.State().CityID, 2, "followed")
   T.eq(multi.State().View.Center, "C2", "new centre")
   T.same(Taking(), Expected("C2"), "its default group")
   SDP_Panel.Close()
-  -- Nothing selected: the panel keeps what it shows.
+  -- Nothing selected: the panel keeps what it shows, the tab too.
+  SDP_Panel.SelectTab("SITES")
+  SDP_Panel.Close()
   m_selected = nil
   SDP_Panel.Open()
+  T.eq(SDP_Panel.Tab(), "SITES", "nothing selected: the tab it was closed on")
   T.eq(SDP_Panel.State().CityID, 2, "kept")
   T.eq(multi.State().View.Center, "C2", "kept")
   SDP_Panel.Close()
@@ -218,6 +225,7 @@ test("a running computation is not cut short by a new selection", function()
   m_selected = 3
   SDP_Panel.Open()
   T.ok(SDP_Panel.State().Running, "still running")
+  T.eq(SDP_Panel.Tab(), "MULTI", "the tab stays (issue 76)")
   T.eq(SDP_Panel.State().CityID, 1, "the single-city tab stays")
   T.eq(multi.State().View.Center, "C1", "the centre stays")
   local result = SDP_Panel.RunTask(500)
