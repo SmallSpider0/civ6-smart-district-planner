@@ -38,7 +38,8 @@
 // Results are JSON lines in --out (default tests/compare/results/latest.jsonl).
 
 import { createRequire } from "node:module";
-import { readFileSync, existsSync, writeFileSync, mkdirSync, appendFileSync } from "node:fs";
+import { readFileSync, existsSync, writeFileSync, mkdirSync, appendFileSync, readdirSync, statSync } from "node:fs";
+import { createHash } from "node:crypto";
 import { join, resolve, dirname, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { performance } from "node:perf_hooks";
@@ -97,6 +98,41 @@ do
   end
 end
 `;
+
+// What a result was computed with (issue 48), recorded in every row as
+// "env": the rules database exported from the game (.cache/gameinfo.lua),
+// DMT's Lua files, and this mod's and the comparison's Lua files, each as
+// the first 12 hex digits of a SHA-1 over the files' paths and contents in
+// path order (the same on any machine; no git needed there). A row whose
+// "code" differs from the current one was made by other legality rules or
+// another solver and may need recomputing.
+function treeHash(dirs, pattern) {
+  const files = [];
+  const walk = (dir) => {
+    if (!existsSync(dir)) return;
+    for (const name of readdirSync(dir).sort()) {
+      if (name.startsWith(".")) continue; // .cache: the rules, hashed apart
+      const path = join(dir, name);
+      if (statSync(path).isDirectory()) walk(path);
+      else if (pattern.test(name)) files.push(path);
+    }
+  };
+  for (const d of dirs) walk(d);
+  const h = createHash("sha1");
+  for (const f of files.sort()) h.update(display(f) + "\0").update(readFileSync(f)).update("\0");
+  return files.length ? h.digest("hex").slice(0, 12) : null;
+}
+let ENV = null;
+function environment() {
+  if (ENV === null) {
+    ENV = {
+      rules: existsSync(GAMEINFO) ? createHash("sha1").update(readFileSync(GAMEINFO)).digest("hex").slice(0, 12) : null,
+      dmt: treeHash([join(ROOT, "reference", "dmt")], /\.lua$/i),
+      code: treeHash([join(ROOT, "SmartDistrictPlanner"), COMPARE], /\.lua$/),
+    };
+  }
+  return ENV;
+}
 
 function display(path) {
   return relative(ROOT, path).split("\\").join("/");
@@ -574,6 +610,7 @@ if (!isMainThread) {
       w.on("message", (r) => {
         done++;
         if (r.error || r.judgeError || Object.values(r.cross || {}).some((c) => !c || c.error)) failed++;
+        r.env = environment();
         appendFileSync(out, JSON.stringify(r) + "\n");
         const s = r.score;
         const crossText = r.cross ? Object.entries(r.cross).map(([k, v]) => `${k} ${v && v.error ? "ERROR " + String(v.error).split("\n")[0].slice(0, 80) : v && v.gain}`).join(" ") : "";
