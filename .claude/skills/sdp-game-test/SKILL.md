@@ -5,32 +5,40 @@ description: Run Civilization VI for the Smart District Planner (civ6mod) — in
 
 # In-game work
 
-The maintainer allows in-game tests without asking. Ask first only before changing `Mods.sqlite`, or `AppOptions.txt` beyond the display language (that one is allowed, through `tools/shots.py lang`). Steps are in docs/dev-macos.md (or dev-windows.md) and tools/README.md; this is the order and what goes wrong.
+Steps are in docs/dev-macos.md (or dev-windows.md) and tools/README.md; this is the order and what goes wrong. Ask first before changing `Mods.sqlite`, or `AppOptions.txt` beyond the display language (`tools/shots.py lang` backs it up and restores it byte for byte). If a personal skill or note for this machine exists (when to take the screen, who runs the night queue, where to report), it comes first.
 
 ## When
 
-The maintainer works on this machine during the day. Steps that take the screen or the mouse wait for the night:
-
-| Step | When |
+| Step | Needs |
 |---|---|
-| `run_tests.py` (the game stays on its own desktop, the maintainer's app keeps the front) | any time, muted, the game closed right after |
-| real clicks, screenshots, the stress test, `--rulesets all` before a release | queued for 21:00–08:00, run together in one game session |
-| any of these at weekends (Saturday, Sunday), or when the maintainer says to run them now | any time |
+| `run_tests.py` | the game running; never the front (the game can stay on its own desktop, muted, closed right after) |
+| real clicks, screenshots, the stress test, `--rulesets all` before a release | the screen and the mouse for minutes to an hour |
 
-Queue them in logs/night-queue.md (what, which branch, why), tell the maintainer, and run the queue in the night window. To be woken for it, schedule a one-shot prompt for about 21:05 in this session (CronCreate) when the queue is not empty; the maintainer allowed this for the night queue. Night runs need the lid open, power connected and the screen not locked (a closed lid sleeps the Mac; a locked or dark screen takes no clicks and captures only the lock screen); keep-awake comes from the agent. If the maintainer is at the computer anyway, ask at the end of a turn before taking the screen, and keep the queue for the night meanwhile.
+When someone works on the machine, the steps that take the screen wait for a time it is free. Queue them with `python3 -I tools/sdplock.py queue add --what ... --why ... --cmd ...` (one queue for all sessions in the shared folder; it records the worktree and branch). One session runs the queue: for each item, `deploy.py` from that item's worktree, a new game or a game restart as deploy says, the commands, then `queue done ID --result ...` (or `--failed`). The other sessions only add items and read the results. Runs while nobody watches need the screen awake and unlocked (a locked or dark screen takes no clicks and captures only the lock screen) and, on a laptop, the lid open and power connected.
 
-Keep the game in the background: the maintainer's app (Claude Code) stays in front. `game.py launch`/`newgame` give the front back by themselves; `run_tests.py` never needs the front. Only real clicks and screenshots need the game in front, and the tools give the front back after each click or capture (`shots.py region` does not: switch back yourself with `open -b com.anthropic.claudefordesktop` or the app that was in front). Never leave the game in front at the end of a step.
+Keep the game in the background unless a step needs the front. `game.py launch`/`newgame` give the front back to the app that had it; real clicks and screenshots bring the game forward and give the front back after each click or capture (`shots.py region` does not: switch back yourself, e.g. `open -b <bundle id>`). Never leave the game in front at the end of a step.
+
+## The game lock
+
+Several sessions may run at once, each in its own worktree, and there is one game, one Tuner connection and one Mods folder. `tools/sdplock.py` keeps a lock on them in a folder shared by the worktrees. `deploy.py`, `game.py`, `run_tests.py`, `realclick.py`, `shots.py`, `stress.py` and `civ6tuner.py serve`/`exec` take it for their worktree by themselves; while another worktree holds it they stop with exit code 4 and say who holds it and why. `civ6tuner.py states` stays free, to look.
+
+- Before any game step: `python3 -I tools/sdplock.py status` (the holder, the night queue, the heavy jobs, the second machine). Say what you need it for: `python3 -I tools/sdplock.py take --purpose "#71 tests"`.
+- Busy: `python3 -I tools/sdplock.py wait --take --purpose "..."` in the background; its end is the signal to go on. No polling, no messages asking others to stop.
+- Release tests go first: `take --next --purpose "vX.Y.Z release tests"` books the game for when the holder releases it (15 minutes for the booking worktree only).
+- `game.py quit` releases the lock and stops this worktree's Tuner daemon. Ending game work without quitting the game: `sdplock.py release`.
+- A lock not renewed for 30 minutes while the game is closed or its Tuner daemon is gone is stale: `take --stale` takes it over; then `game.py quit` and start a new game (its state is unknown). `--force` only when you know the holder is gone.
+- `run_tests.py` stops when the mod in the Mods folder is not this worktree's: run `deploy.py` (and start a new game) first.
 
 ## Before
 
-1. Keep the screen from locking for the whole task, from its first step, not just before the launch: a locked screen stops the game drawing, takes no clicks and captures only the lock screen, and long offline steps before the game are enough for it to lock. Desktop app: `request_keep_awake` with `until: "session_idle"`; request it again in a later turn of the same task if the session went idle. Elsewhere: `caffeinate -dimsu` in the background, stopped at the end. Night runs need it most.
-2. Heavy offline jobs must not run on this machine at the same time: they slow the game to minutes per turn and make timings meaningless. Run them on the second machine (sdp-offline-runs) or pause them (`kill -STOP`, resume with `-CONT`; a job whose output is written row by row may simply be stopped and the missing rows rerun later).
+1. Keep the screen from locking for the whole task, from its first step: a locked screen stops the game drawing, takes no clicks and captures only the lock screen, and long offline steps before the game are enough for it to lock. `caffeinate -dimsu` in the background (macOS), stopped at the end, or the host app's keep-awake.
+2. Heavy offline jobs must not run on this machine at the same time: they slow the game to minutes per turn and make timings meaningless. Those started through `sdplock.py heavy` are paused by the lock while the game is held and resumed when it is released; anything else heavy goes to the second machine (sdp-offline-runs).
 3. `python3 -I tools/deploy.py`. A Lua or UI XML change needs a new game; modinfo or text changes need a game restart (deploy says which).
 
 ## Start
 
 - `python3 -I tools/civ6tuner.py serve` in the background (one Tuner client at a time).
-- Not running: `python3 -I tools/game.py launch`, then press the launcher's 开始 (macOS: computer-use `app_click` on bundle `com.aspyr.civ6.steam`, the button's AX element), then `python3 -I tools/game.py newgame --state SDP_Panel --capital --reveal` (waits for the main menu, mutes, fixed map, Rome). newgame gives the front back to the app the maintainer was using.
+- Not running: `python3 -I tools/game.py launch`, then press the launcher's 开始 (macOS: computer-use `app_click` on bundle `com.aspyr.civ6.steam`, the button's AX element), then `python3 -I tools/game.py newgame --state SDP_Panel --capital --reveal` (waits for the main menu, mutes, fixed map, Rome).
 - `run_tests.py` stops when the game loads the Workshop copy of the mod (pitfall 38): move that copy out, never test it.
 
 ## Tests
@@ -45,8 +53,8 @@ Keep the game in the background: the maintainer's app (Claude Code) stays in fro
 
 ## After
 
-- `python3 -I tools/game.py quit` and stop the Tuner daemon right after the last in-game step; restore anything you switched (display language).
-- Report what was verified automatically and what needs a person; never call unverified behaviour passed. Windows is not tested before a release.
+- `python3 -I tools/game.py quit` right after the last in-game step: it releases the game lock and stops the Tuner daemon; restore anything you switched (display language).
+- Report what was verified automatically and what needs a person; never call unverified behaviour passed.
 
 ## Don't
 

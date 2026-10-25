@@ -8,8 +8,12 @@ static checks in validate.py run first and block the deploy on errors.
 The game reads the modinfo and text only at startup, so changes to those need
 a game restart; Lua and UI XML changes load when a game is (re)entered.
 
+The game has one Mods folder, so a deploy takes the game lock for this
+worktree (tools/sdplock.py) and refuses while another worktree holds it.
+
 Usage: deploy.py [--dry-run] [--skip-validate] [--mods-dir DIR] [--source DIR]
-Exit codes: 0 deployed, 1 validation failed, 2 Mods folder not found.
+Exit codes: 0 deployed, 1 validation failed, 2 Mods folder not found,
+4 the game is held by another worktree.
 """
 
 import argparse
@@ -20,6 +24,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # -I drops the script dir
 import paths  # noqa: E402
+import sdplock  # noqa: E402
 import validate  # noqa: E402
 
 MOD_NAME = "SmartDistrictPlanner"
@@ -68,6 +73,8 @@ def main(argv=None):
         print("deploy: Mods folder not found: %s" % args.mods_dir)
         return 2
 
+    if not args.dry_run:
+        sdplock.claim_or_exit(validate.ROOT)  # one Mods folder: only the game's holder deploys
     target = os.path.join(os.path.abspath(args.mods_dir), MOD_NAME)
     source = os.path.abspath(args.source)
     added, updated, removed, unchanged = plan(source, target)

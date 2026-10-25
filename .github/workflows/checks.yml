@@ -52,6 +52,9 @@ jobs:
         working-directory: tools
       - name: validate.py (no reference/ here, so the UI precedent check is skipped)
         run: python -I tools/validate.py
+      - name: Tool tests (game lock, local jobs, the remote queue)
+        if: steps.scope.outputs.code == 'true'
+        run: python -I -m unittest discover -s tests/tools -v
       - name: Offline tests
         if: steps.scope.outputs.code == 'true'
         run: node tools/offline_tests.mjs
