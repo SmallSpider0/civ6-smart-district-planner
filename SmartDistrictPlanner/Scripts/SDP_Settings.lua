@@ -25,13 +25,21 @@ SDP_Settings = {}
 SDP_Settings.CONFIG_KEY = "SDP_Settings_"   -- + the tab's name
 SDP_Settings.VERSION = "v1"
 
--- The single-city and several-cities tabs' presets (issue 49): what each
--- changes from the defaults (the weight columns' and switches' Default).
--- The first is the default.
+-- The single-city and several-cities tabs' presets (issue 49, decided
+-- 2026-10-25): what each changes from the defaults (the weight columns' and
+-- switches' Default); the first is the default. A victory focus raises one
+-- yield's weight by FOCUS; FOCUS comes from the experiment on the proven
+-- optima (docs/notes/issue-49-presets.md), the smallest of 1.5, 2, 3 that
+-- does not merge the preset into Balanced.
+SDP_Settings.FOCUS = { SCIENCE = 2, RELIGION = 2 }
 SDP_Settings.PRESETS = {
   BALANCED = {},
+  SCIENCE = { YIELD_SCIENCE = SDP_Settings.FOCUS.SCIENCE },
+  RELIGION = { YIELD_FAITH = SDP_Settings.FOCUS.RELIGION },
+  -- Gold and faith at half (purchase prices: 1 production = 4 gold = 2 faith).
+  HALF_GOLD_FAITH = { YIELD_GOLD = 0.5, YIELD_FAITH = 0.5 },
 }
-SDP_Settings.PRESET_ORDER = { "BALANCED" }
+SDP_Settings.PRESET_ORDER = { "BALANCED", "SCIENCE", "RELIGION", "HALF_GOLD_FAITH" }
 
 local function Text(value)
   if type(value) == "boolean" then return value and "1" or "0" end
@@ -178,6 +186,18 @@ function SDP_Settings.Keeper(spec)
   end
   function keeper.Changed(name)
     return SDP_Settings.Changed(name, spec.Values(), spec.Fields, spec.Presets)
+  end
+  -- Set every field a preset may set to preset `name`'s value (the tier and
+  -- the fold stay); false for an unknown preset.
+  function keeper.Use(name)
+    local preset = spec.Presets[name]
+    if preset == nil then return false end
+    local values = spec.Values()
+    for _, field in ipairs(spec.Fields) do
+      if field.Preset then values[field.Key] = SDP_Settings.Base(field, preset) end
+    end
+    spec.Apply(values)
+    return true
   end
   function keeper.Remember(name)
     local playerID = Game.GetLocalPlayer()

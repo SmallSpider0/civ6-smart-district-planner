@@ -788,5 +788,36 @@
     <Replace Tag="LOC_SDP_MULTI_SUPPLIED" Language="en_US">
       <Text>{1_District} added to {3_City} for {2_Wonder}</Text>
     </Replace>
+    <!-- Presets (issue 49) -->
+    <Replace Tag="LOC_SDP_PRESET_TITLE" Language="en_US">
+      <Text>Preset</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_PRESET_RESET" Language="en_US">
+      <Text>Reset</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_PRESET_RESET_TOOLTIP" Language="en_US">
+      <Text>Put the weights and switches back to this preset (Effort stays)</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_PRESET_BALANCED_TOOLTIP" Language="en_US">
+      <Text>Every yield weighs 1; every switch as it comes.</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_PRESET_SCIENCE" Language="en_US">
+      <Text>Science</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_PRESET_SCIENCE_TOOLTIP" Language="en_US">
+      <Text>Science victory, Campus first: Science weighs {1_K}, the rest as in Balanced.</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_PRESET_RELIGION" Language="en_US">
+      <Text>Religion</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_PRESET_RELIGION_TOOLTIP" Language="en_US">
+      <Text>Religious victory, or Holy Sites whose Faith buys what you need: Faith weighs {1_K}, the rest as in Balanced.</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_PRESET_HALF_GOLD_FAITH" Language="en_US">
+      <Text>Half Gold and Faith</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_PRESET_HALF_GOLD_FAITH_TOOLTIP" Language="en_US">
+      <Text>Gold and Faith weigh 0.5, the rest as in Balanced. Purchase prices: what 1 Production buys costs 4 Gold or 2 Faith.</Text>
+    </Replace>
   </LocalizedText>
 </GameData>

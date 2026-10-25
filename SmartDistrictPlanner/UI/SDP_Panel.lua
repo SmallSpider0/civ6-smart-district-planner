@@ -283,6 +283,27 @@ function SDP_UI.ShowFold(button, label, action, stack, folded, text)
   stack:SetHide(folded)
 end
 
+-- The preset pulldown (issue 49): the presets with what each changes as
+-- tooltip, the current one ("changed" when the values differ from it);
+-- Reset is greyed out unless they do. onSelect(name).
+function SDP_UI.ShowPreset(pull, reset, current, changed, onSelect)
+  pull:ClearEntries()
+  for _, name in ipairs(SDP_Settings.PRESET_ORDER) do
+    local entry = {}
+    pull:BuildEntry("InstanceOne", entry)
+    entry.Button:SetText(Locale.Lookup("LOC_SDP_PRESET_" .. name))
+    entry.Button:SetToolTipString(Locale.Lookup("LOC_SDP_PRESET_" .. name .. "_TOOLTIP", Number(SDP_Settings.FOCUS[name] or 1)))
+    entry.Button:RegisterCallback(Mouse.eLClick, function() onSelect(name) end)
+  end
+  pull:CalculateInternals()
+  local label = Locale.Lookup("LOC_SDP_PRESET_" .. current)
+  if changed then label = Locale.Lookup("LOC_SDP_FOLD_EDITED", label) end
+  pull:GetButton():SetText(label)
+  pull:GetButton():SetToolTipString(Locale.Lookup("LOC_SDP_PRESET_" .. current .. "_TOOLTIP",
+    Number(SDP_Settings.FOCUS[current] or 1)))
+  reset:SetDisabled(not changed)
+end
+
 -- The summary: the preset's name (`nameKey`, "changed" when `changed`),
 -- then `parts`, the settings that are not as usual.
 function SDP_UI.FoldSummary(nameKey, changed, parts)
@@ -321,7 +342,7 @@ end
 local m_keeper = SDP_UI.Keeper({ Tab = "SINGLE", Columns = SINGLE_COLUMNS, Weights = m_weights, Switches = SINGLE_SWITCHES,
   Extra = { { Key = "FOLD", Default = false, Get = function() return m_fold end, Put = function(v) m_fold = v end } },
   Tiers = SDP_Tiers.Single, GetTier = function() return m_tier end, PutTier = function(tier) m_tier = tier end })
-local UpdateFold -- defined below (inputs)
+local UpdateFold, SetPreset -- defined below (inputs)
 -- Keep the tab's settings in the save after a change (issue 57), and show
 -- them on the fold line.
 local function Remember()
@@ -1406,8 +1427,26 @@ UpdateFold = function()
   local wonders = #SelectedWonders()
   if wonders > 0 then parts[#parts + 1] = Locale.Lookup("LOC_SDP_FOLD_WONDERS", wonders) end
   if m_heat ~= nil then parts[#parts + 1] = Locale.Lookup("LOC_SDP_FOLD_HEAT", TypeName(m_heat)) end
+  local changed = m_keeper.Changed(m_preset)
   SDP_UI.ShowFold(Controls.FoldButton, Controls.FoldText, Controls.FoldAction, Controls.SettingsStack, m_fold,
-    SDP_UI.FoldSummary("LOC_SDP_PRESET_" .. m_preset, m_keeper.Changed(m_preset), parts))
+    SDP_UI.FoldSummary("LOC_SDP_PRESET_" .. m_preset, changed, parts))
+  SDP_UI.ShowPreset(Controls.PresetPull, Controls.PresetReset, m_preset, changed, function(name) SetPreset(name) end)
+end
+
+-- A preset (issue 49): its weights and switches; the tier and the fold stay.
+-- The same preset again puts back what was changed.
+SetPreset = function(name)
+  if not m_keeper.Use(name) then return end
+  m_preset = name
+  ClearResult()
+  for _, view in pairs(m_weightViews) do view() end
+  Controls.FeatureCheck:SetCheck(m_allowFeatureRemoval)
+  Controls.SwapCheck:SetCheck(m_swap)
+  Controls.ReplaceCheck:SetCheck(m_replace)
+  Controls.RemindCheck:SetCheck(m_remind)
+  Controls.ApartCheck:SetCheck(m_apart)
+  Remember()
+  UpdateEstimate()
 end
 
 -- Fold or unfold the settings (M2): after a solve, or a click on the line.
@@ -1946,6 +1985,7 @@ SDP_Panel = {
   SetLand = SetLand,
   SetSwap = SetSwap,
   SetFold = function(on) SetFold(on) end,
+  SetPreset = function(name) SetPreset(name) end,
   SetPeek = SetPeek,
   FitWindow = FitWindow,
   SetTier = SetTier,
@@ -1989,6 +2029,7 @@ Controls.CloseButton:RegisterCallback(Mouse.eLClick, Close)
 Controls.PeekButton:RegisterCallback(Mouse.eLClick, function() SetPeek(true) end)
 Controls.PeekReturn:RegisterCallback(Mouse.eLClick, function() SetPeek(false) end)
 Controls.FoldButton:RegisterCallback(Mouse.eLClick, function() SetFold(not m_fold) end)
+Controls.PresetReset:RegisterCallback(Mouse.eLClick, function() SetPreset(m_preset) end)
 Controls.CloseButton:RegisterCallback(Mouse.eMouseEnter, function()
   UI.PlaySound("Main_Menu_Mouse_Over")
 end)

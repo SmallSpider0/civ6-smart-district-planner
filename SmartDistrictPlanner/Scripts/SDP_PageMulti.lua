@@ -510,8 +510,24 @@ UpdateFold = function()
   if m_replace then parts[#parts + 1] = Locale.Lookup("LOC_SDP_FOLD_REPLACE") end
   local wonders = #WonderTypes()
   if wonders > 0 then parts[#parts + 1] = Locale.Lookup("LOC_SDP_FOLD_WONDERS", wonders) end
+  local changed = m_keeper.Changed(m_preset)
   SDP_UI.ShowFold(Controls.MultiFoldButton, Controls.MultiFoldText, Controls.MultiFoldAction, Controls.MultiSettingsStack,
-    m_fold, SDP_UI.FoldSummary("LOC_SDP_PRESET_" .. m_preset, m_keeper.Changed(m_preset), parts))
+    m_fold, SDP_UI.FoldSummary("LOC_SDP_PRESET_" .. m_preset, changed, parts))
+  SDP_UI.ShowPreset(Controls.MultiPresetPull, Controls.MultiPresetReset, m_preset, changed, function(name) P.SetPreset(name) end)
+end
+
+-- A preset (issue 49), as on the single-city tab.
+function P.SetPreset(name)
+  if not m_keeper.Use(name) then return end
+  m_preset = name
+  ClearResult()
+  for _, view in pairs(m_weightViews) do view() end
+  Controls.MultiSwapCheck:SetCheck(m_swap)
+  Controls.MultiReplaceCheck:SetCheck(m_replace)
+  Controls.MultiRemindCheck:SetCheck(m_remind)
+  Controls.MultiApartCheck:SetCheck(m_apart)
+  Remember()
+  UpdateEstimate()
 end
 
 function P.SetFold(on)
@@ -1009,3 +1025,4 @@ Controls.MultiCancelButton:RegisterCallback(Mouse.eLClick, function() SDP_Task.C
 Controls.MultiPlaceButton:RegisterCallback(Mouse.eLClick, function() P.Place() end)
 Controls.MultiUndoButton:RegisterCallback(Mouse.eLClick, function() P.Undo() end)
 Controls.MultiFoldButton:RegisterCallback(Mouse.eLClick, function() P.SetFold(not m_fold) end)
+Controls.MultiPresetReset:RegisterCallback(Mouse.eLClick, function() P.SetPreset(m_preset) end)

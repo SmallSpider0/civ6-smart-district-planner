@@ -910,3 +910,48 @@ test("issue 66: a wonder's district is supplied, shown, marked; not wanted stand
   T.eq(#multi.State().View.Supply, 0, "no line without the wonder")
   SDP_Panel.SelectTab("SINGLE")
 end)
+
+-- Issue 49: a preset from its pulldown entry sets the weights; a change
+-- marks it changed; Reset puts it back; the save keeps the preset's name.
+test("issue 49: presets through their pulldown, changed, reset, kept", function()
+  SDP_Panel.Open()
+  SDP_Panel.SelectTab("SINGLE")
+  SDP_Panel.SelectCity(1)
+  local c = UI_Mock.Controls
+  SDP_Panel.SetPreset("BALANCED")
+  local entries = c.PresetPull._entries
+  T.eq(#entries, #SDP_Settings.PRESET_ORDER, "one entry a preset")
+  local science = nil
+  for i, name in ipairs(SDP_Settings.PRESET_ORDER) do
+    if name == "SCIENCE" then science = entries[i] end
+  end
+  T.eq(science.Button:GetText(), "LOC_SDP_PRESET_SCIENCE", "named")
+  science.Button:Click()
+  local s = SDP_Panel.State()
+  T.eq(s.Preset, "SCIENCE", "chosen")
+  T.eq(s.Weights.YIELD_SCIENCE, SDP_Settings.FOCUS.SCIENCE, "science weight")
+  T.eq(s.Weights.YIELD_CULTURE, 1, "the others as balanced")
+  T.eq(c.PresetPull:GetButton():GetText(), "LOC_SDP_PRESET_SCIENCE", "shown")
+  T.ok(c.PresetReset:IsDisabled(), "nothing to reset")
+  T.ok(PlayerConfigurations[0]:GetValue("SDP_Settings_SINGLE"):find("preset=SCIENCE", 1, true) ~= nil, "kept in the save")
+  T.ok(PlayerConfigurations[0]:GetValue("SDP_Settings_SINGLE"):find("YIELD_SCIENCE", 1, true) == nil,
+    "the preset's own value is not written as a change")
+  SDP_Panel.SetWeight("YIELD_GOLD", 2)
+  T.eq(c.PresetPull:GetButton():GetText(), "LOC_SDP_FOLD_EDITED(LOC_SDP_PRESET_SCIENCE)", "changed")
+  T.ok(c.FoldText:GetText():find("LOC_SDP_FOLD_EDITED(LOC_SDP_PRESET_SCIENCE)", 1, true) ~= nil, "on the fold line too")
+  T.eq(c.PresetReset:IsDisabled(), false, "reset offered")
+  c.PresetReset:Click()
+  T.eq(SDP_Panel.State().Weights.YIELD_GOLD, 1, "reset to the preset")
+  T.eq(SDP_Panel.State().Weights.YIELD_SCIENCE, SDP_Settings.FOCUS.SCIENCE, "its own value stays")
+  T.ok(c.PresetReset:IsDisabled(), "nothing left to reset")
+  -- Several cities: its own preset.
+  local multi = SDP_Panel.Multi
+  SDP_Panel.SelectTab("MULTI")
+  multi.SetPreset("HALF_GOLD_FAITH")
+  T.eq(multi.State().Weights.YIELD_GOLD, 0.5, "half gold")
+  T.eq(multi.State().Weights.YIELD_FAITH, 0.5, "half faith")
+  T.eq(SDP_Panel.State().Preset, "SCIENCE", "the single-city tab keeps its own")
+  multi.SetPreset("BALANCED")
+  SDP_Panel.SelectTab("SINGLE")
+  SDP_Panel.SetPreset("BALANCED")
+end)

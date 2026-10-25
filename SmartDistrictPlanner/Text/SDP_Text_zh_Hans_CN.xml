@@ -788,5 +788,36 @@
     <Replace Tag="LOC_SDP_MULTI_SUPPLIED" Language="zh_Hans_CN">
       <Text>{1_District}随{2_Wonder}补给了{3_City}</Text>
     </Replace>
+    <!-- 玩法预设（#49） -->
+    <Replace Tag="LOC_SDP_PRESET_TITLE" Language="zh_Hans_CN">
+      <Text>预设</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_PRESET_RESET" Language="zh_Hans_CN">
+      <Text>恢复</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_PRESET_RESET_TOOLTIP" Language="zh_Hans_CN">
+      <Text>把权重和开关恢复成这个预设的值（档位不变）</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_PRESET_BALANCED_TOOLTIP" Language="zh_Hans_CN">
+      <Text>各产出权重都是 1，开关都是默认。</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_PRESET_SCIENCE" Language="zh_Hans_CN">
+      <Text>科技</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_PRESET_SCIENCE_TOOLTIP" Language="zh_Hans_CN">
+      <Text>科技胜利、学院优先：科学权重 {1_K}，其余同均衡。</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_PRESET_RELIGION" Language="zh_Hans_CN">
+      <Text>宗教</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_PRESET_RELIGION_TOOLTIP" Language="zh_Hans_CN">
+      <Text>宗教胜利、宗辅（圣地给信仰，再用信仰买东西）：信仰权重 {1_K}，其余同均衡。</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_PRESET_HALF_GOLD_FAITH" Language="zh_Hans_CN">
+      <Text>金币信仰减半</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_PRESET_HALF_GOLD_FAITH_TOOLTIP" Language="zh_Hans_CN">
+      <Text>金币、信仰权重 0.5，其余同均衡。依据是购买价：1 生产力能买到的东西要 4 金币或 2 信仰。</Text>
+    </Replace>
   </LocalizedText>
 </GameData>
