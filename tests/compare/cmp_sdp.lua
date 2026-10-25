@@ -129,6 +129,45 @@ local function Oracle(result, out, cityOf, check, weights, land, lambda)
   return o
 end
 
+-- The long-run reference (cmp_longrun.lua, issue 40) on a fine solve's
+-- result: 20 continues, annealing from the best layout, the two-slot check
+-- of the fine plan and of the final layout, then the oracle from the best
+-- layout (Oracle above) for the upper end.
+local function LongRun(result, out, cityOf, request)
+  local search = result.Session.Search
+  local k = search.K
+  local function Gain(layout)
+    return SDP_Overlay.With(0, function()
+      search.Board:Clear()
+      search:Evaluate(layout)
+      return search.Board:Total()
+    end)
+  end
+  local fine = {}
+  for m = 1, k do fine[m] = search.BestLayout[m] end
+  local fineGain = Gain(fine)
+  local fineTwo = SDP_Overlay.With(0, CmpLongrun.TwoSlot, search, fine)
+  for _ = 1, 20 do
+    local nextResult = SDP_Multi.Continue(result)
+    if not nextResult.Ok then break end
+    result = nextResult
+  end
+  local continued = {}
+  for m = 1, k do continued[m] = search.BestLayout[m] end
+  local continuedGain = Gain(continued)
+  local annealed, layout, evaluations = SDP_Overlay.With(0, CmpLongrun.Anneal, search, continued, 200000, 20261025)
+  search.BestLayout = layout
+  local o = Oracle(result, out, cityOf, false, request.weights, false, nil)
+  local finalTwo = o.Layout and SDP_Overlay.With(0, CmpLongrun.TwoSlot, search, o.Layout) or nil
+  out.stats.longrun = {
+    fine = fineGain, fineTwoSlot = { improving = fineTwo.improving, best = fineTwo.best, evaluations = fineTwo.evaluations },
+    continued = continuedGain, annealed = annealed, annealEvaluations = evaluations,
+    value = o.Value, upper = o.Upper, proven = o.Proven, complete = o.Complete,
+    finalTwoSlot = finalTwo and { improving = finalTwo.improving, best = finalTwo.best, evaluations = finalTwo.evaluations },
+  }
+  return o
+end
+
 function CmpAdapters.sdp(request, variant, w)
   -- "ORACLE", "ORACLE_CHECK", "ORACLE_LAND[nnn]", "ORACLE_LAND[nnn]_CHECK",
   -- optionally "@<millions>" for the node limit.
@@ -137,6 +176,16 @@ function CmpAdapters.sdp(request, variant, w)
     include("cmp_oracle")
     CmpOracle.NODE_LIMIT = tonumber(limit) * 1e6
     variant = base
+  end
+  -- "LONGRUN[@<millions>]" (issue 40): the fine tier, 20 continues,
+  -- annealing, then the oracle from there to its node limit (default 1
+  -- million): a range [value, upper] where the optimum cannot be proven.
+  local longrun = variant:match("^LONGRUN") ~= nil
+  if longrun then
+    include("cmp_oracle")
+    include("cmp_longrun")
+    CmpOracle.NODE_LIMIT = tonumber(variant:match("@(%d+)$") or "1") * 1e6
+    variant = "FINE"
   end
   local oracle = variant:match("^ORACLE") ~= nil
   local check = oracle and variant:match("_CHECK$") ~= nil
@@ -276,6 +325,11 @@ function CmpAdapters.sdp(request, variant, w)
     if not r.Ok then out.notes[#out.notes + 1] = tostring(r.Error) end
     local byKey = {}
     for _, c in ipairs(r.Cities or {}) do byKey[c.Key] = c.CityID end
+    if longrun and r.Ok then
+      LongRun(r, out, function(m) return r.Cities[r.Session.Search.Groups[m]].CityID end, request)
+      stats.method = "longrun"
+      return out
+    end
     if oracle and r.Ok then
       local search = r.Session.Search
       Oracle(r, out, function(m) return r.Cities[search.Groups[m]].CityID end, check, request.weights, land, lambda)
