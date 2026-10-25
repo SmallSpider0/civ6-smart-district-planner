@@ -322,7 +322,8 @@ test("wonders: legal places, a required district next to it, unplaceable ones re
   for _, p in ipairs(result.Plan) do
     if p.Kind == "WONDER" then placed[p.Type] = p end
   end
-  for _, u in ipairs(result.Unplaced) do reasons[u.Type] = u.Reason end
+  local others = {}
+  for _, u in ipairs(result.Unplaced) do reasons[u.Type], others[u.Type] = u.Reason, u.Other end
   T.ok(placed.BUILDING_PYRAMIDS ~= nil, "pyramids placed")
   T.eq(Map.GetPlot(placed.BUILDING_PYRAMIDS.X, placed.BUILDING_PYRAMIDS.Y):GetTerrainType(), GameInfo.Terrains.TERRAIN_DESERT.Index,
     "pyramids on desert")
@@ -335,6 +336,8 @@ test("wonders: legal places, a required district next to it, unplaceable ones re
   T.ok(nextToCampus, "great library next to a planned campus")
   T.eq(reasons.BUILDING_STONEHENGE, "BUILT", "built wonder not planned")
   T.eq(reasons.BUILDING_COLOSSEUM, "NEEDS_DISTRICT", "no entertainment complex anywhere")
+  -- The reason names the district (the panel shows Other; it was empty before).
+  T.eq(others.BUILDING_COLOSSEUM, "DISTRICT_ENTERTAINMENT_COMPLEX", "the missing district named")
 end)
 
 test("a wonder counts only its own city's district (issue 45)", function()
