@@ -19,6 +19,11 @@
 | `realclick.py` | 仅 macOS：用系统鼠标事件真实点击面板，每步从面板状态读回核对 | 0 全过；1 有失败；2 环境问题 |
 | `stress.py` | 发布前在后期存档上做压力测试：AI 自动打出存档、逐步计时、魅力复核 | 0 全过；1 有问题步骤；2 环境问题 |
 | `civ6tuner.py` | FireTuner 客户端：收集 Lua 输出、远程执行 Lua | 见下文 |
+| `shots.py` | 仅 macOS：摆好页签（`tests/shots/`）、截面板存进 `docs/images/`、切换英文界面 | 0 成功 |
+| `release.py` | 发版：改版本号与 CHANGELOG、起草更新说明和发布说明、发 Release、上传创意工坊并核对 | 0 成功；1 下载回来与提交包不同 |
+| `refresh_results.py` | 用当前代码重跑结果文件里本模组的行（`--check` 只比对、不改文件） | 0 成功；1 有变差的行或新违规 |
+| `remote.py` | 在第二台机器上跑离线重活：拷代码、后台运行、等待并取回结果 | 远端任务的退出码 |
+| `worktree.py` | 新建能直接用的工作树（接好依赖和参考源码的链接）、列出与清理已合并的 | 0 成功 |
 
 ## paths.py、setup_reference.py — 位置与参考源码
 
@@ -196,6 +201,7 @@ python3 -I report/build.py --version v1.0.0 --site _site   # 另输出 GitHub Pa
 ```bash
 python3 -I tools/run_tests.py                     # 跑 tests/**/test_*.lua
 python3 -I tools/run_tests.py -k campus -v tests/test_dmt.lua
+python3 -I tools/run_tests.py --rulesets all       # 原版、迭起兴衰、风云变幻各开一局再跑（发版前）
 ```
 
 开测前先查对局加载的是本模组的哪一份：是创意工坊那份（订阅了创意工坊版，见 AGENTS.md 坑 38）就不跑，返回 1。
@@ -228,7 +234,7 @@ end)
 ```bash
 python3 -I tools/realclick.py build     # 编译 tools/click/sdp-click.swift 为 ~/Applications/SDPClick.app（一次）
 python3 -I tools/realclick.py trusted   # 检查辅助功能权限
-python3 -I tools/realclick.py suite     # 30 项点击检查，需要有首都的对局（game.py newgame --capital --reveal）
+python3 -I tools/realclick.py suite     # 全部点击检查，需要有首都的对局（game.py newgame --capital --reveal）
 python3 -I tools/realclick.py at 'Controls.SolveButton'   # 点 SDP_Panel 状态里这个 Lua 表达式给出的控件；点完鼠标停在那里，可以借此截悬停提示
 ```
 
@@ -343,3 +349,66 @@ python3 -I tools/civ6tuner.py exec -s MainMenu 'print(_VERSION)'
 - **读取画面期间 Tuner 不响应握手和状态查询**（输出帧照常推送）；此时若断开连接，4318 会暂停监听，直到进入对局才恢复。所以读档/开局期间不要重启 `serve`。
 - 4319 端口能连上但不处理请求，客户端默认只用 4318。
 - 协议说明见 `civ6tuner.py` 文件头注释；协议格式参考了社区项目 [lmwilki/civ6-mcp](https://github.com/lmwilki/civ6-mcp)（MIT）的公开说明，代码为独立实现。
+
+## shots.py — 截图（仅 macOS）
+
+```bash
+python3 -I tools/shots.py stage single           # 在 SDP_Panel 状态执行 tests/shots/single.lua（single、sites、multi）
+python3 -I tools/shots.py capture v10-panel-single   # 截面板 -> docs/images/v10-panel-single.jpg
+python3 -I tools/shots.py region                 # 没有录屏权限时：打印面板的屏幕区域，用 computer-use 缩放截图后
+python3 -I tools/shots.py save 截图文件 v10-panel-single
+python3 -I tools/shots.py lang en                # 游戏关着时：显示语言改英文（备份 AppOptions.txt）
+python3 -I tools/shots.py lang restore           # 恢复备份，核对逐字节相同
+```
+
+- `capture` 经 SDPClick.app 截图：面板位置由游戏给出（同真实点击），只截游戏窗口内、未被遮挡的区域，截完把前台还给原来的应用。要在“系统设置 → 隐私与安全性 → 录屏与系统录音”里允许 SDPClick 一次；重新 `realclick.py build` 后可能要重新允许辅助功能和录屏。
+- 截图左右各裁掉 5 像素，存成质量 90 的 JPEG，命名见 CONTRIBUTING 的写作规则。
+- `multi` 会先把选城址页的方案打成城址钉，奇观选阿耳忒弥斯神庙（原版选大图书馆），并把结果列表滚到奇观那一行。
+
+## release.py — 发版
+
+```bash
+python3 -I tools/release.py prep 1.4.1       # 发版分支上：modinfo 版本加 1、VERSION、CHANGELOG 加日期、起草更新说明
+python3 -I tools/release.py notes 1.4.1      # 从上一版的发布说明和这一版的更新说明生成 logs/release-v1.4.1.md
+python3 -I tools/release.py publish 1.4.1    # PR 合并后：发 Release，等工作流附上四个文件，查 GitHub Pages
+python3 -I tools/release.py workshop 1.4.1   # SteamCMD 上传、下载回来比对、把下载的那份移出游戏目录
+```
+
+- `prep` 起草的更新说明英文部分是 TODO，要自己写；中文部分取 CHANGELOG 的条目，去掉 Issue 号。`notes` 遇到 TODO 拒绝生成。
+- `workshop` 要设 `SDP_STEAM_LOGIN`（Steam 登录名），SteamCMD 默认 `~/steamcmd/steamcmd.sh`（`STEAMCMD` 可改）。SteamCMD 用单独的家目录 `~/steamcmd-home`（`STEAMCMD_HOME` 可改）：macOS 上它默认和 Steam 客户端共用 `~/Library/Application Support/Steam`，客户端改写 `config.vdf` 时会把 SteamCMD 的登录缓存冲掉（一两天就要重新登录），下载回来的物品也会落进游戏扫描的创意工坊文件夹（AGENTS.md 坑 38）。登录要已缓存：SteamCMD 要密码时停下，由维护者自己运行一次 `HOME=~/steamcmd-home ~/steamcmd/steamcmd.sh +login 登录名 +quit`。物品页上的简体中文简介和图片仍在网页上改，脚本最后打印这次要改什么。
+- 步骤和顺序见 `.claude/skills/sdp-release/SKILL.md`。
+
+## refresh_results.py — 重跑与核对对比结果
+
+```bash
+python3 -I tools/refresh_results.py --check            # 开发集（full_rejudged.jsonl，约 270 次运行）重跑后逐行比对，不改文件
+python3 -I tools/refresh_results.py tests/compare/results/land.jsonl   # 重跑本模组的行、换回原处、重新裁判和交叉评分
+```
+
+- `--check` 报告方案变了几行、提升变高和变低各几行、新出现的违规（“范围内没有合法位置”不算）；有变低或新违规时退出码 1。改了求解器后、发版前跑它，不要整组重跑开发集的权重组合和真最优。
+- 重跑整份结果很慢，有第二台机器时用 `remote.py` 放到那边跑。
+
+## remote.py — 在第二台机器上跑离线重活
+
+```bash
+export SDP_REMOTE=XZC-compute                 # ~/.ssh/config 里能免密登录的主机名
+python3 -I tools/remote.py sync               # 把这个工作树（含未提交的文件）、node_modules、规则缓存和参考源码拷过去
+python3 -I tools/remote.py run devcheck -- python3 -I tools/refresh_results.py --check
+python3 -I tools/remote.py status             # 各任务在跑还是已结束、日志最后一行
+python3 -I tools/remote.py wait devcheck --fetch logs/refresh/full_rejudged.jsonl.STANDARD.jsonl
+```
+
+- 不需要装游戏。远端在 `~/sdp-runs/<工作树名>/`，参考源码只拷 Lua。结果和本机相同（耗时字段除外），所以报告里要写耗时的那组结果放在同一台机器上跑。
+- `run` 用 nohup 启动，ssh 断了也继续；结束时写 `~/sdp-runs/NAME.exit`。`wait` 只看这个文件（不按进程名查找），结束后取回 `--fetch` 列的文件，以远端任务的退出码退出：放在后台跑，它结束就是可以接着处理的信号。
+- 远端的 node 不在默认 PATH 上：`SDP_REMOTE_PATH` 放在 PATH 前面（默认 `/opt/homebrew/bin:/usr/local/bin`）。
+
+## worktree.py — 工作树
+
+```bash
+python3 -I tools/worktree.py add ~/civ6mod-x mac/x     # 从 main 新建分支和工作树，接好 node_modules、规则缓存和 reference/ 的链接
+python3 -I tools/worktree.py list                      # 各工作树的分支，PR 是否已合并，有没有未提交的改动
+python3 -I tools/worktree.py prune                     # 删掉 PR 已合并且没有未提交改动的工作树和本地分支（逐个确认，--yes 不问）
+```
+
+- 仓库只做 squash 合并，所以“已合并”按 PR 判断：分支当前的提交就是那个已合并 PR 的最后一个提交。分支名重复用过也不会误判。
+
