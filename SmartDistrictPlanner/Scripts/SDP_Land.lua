@@ -28,8 +28,20 @@ SDP_Land.HARVEST_TURNS = 20 -- one-time yields count as this many turns of yield
 -- Plots of a city scan (SDP_City.EXCLUDED reasons) that can still be worked.
 local WORKABLE_EXCLUSIONS = { FEATURE = true, NATURAL_WONDER = true, PIN = true, RESOURCE = true }
 
--- Weights for the land part: the six tile yields (missing ones weigh 1) and
--- FEATURE, the weight of one-time yields (default 1).
+-- What a plot's yields are worth in the district planner's land part (issue
+-- 53, the maintainer's choice of 2026-10-25): fixed, apart from the
+-- player's yield weights, which weigh the districts' adjacency only. From
+-- another planner's weighted-output setting (food 12, production 12, gold 3,
+-- science 10, culture 10, faith 6) with food and production as 1; gold and
+-- faith match the purchase prices (1 production = 4 gold = 2 faith,
+-- GOLD_PURCHASE_MULTIPLIER, GOLD_EQUIVALENT_OTHER_YIELDS). One-time yields of
+-- clearing and harvesting are weighed by the same numbers (FEATURE 1).
+SDP_Land.PLOT_WEIGHTS = { YIELD_FOOD = 1, YIELD_PRODUCTION = 1, YIELD_GOLD = 1 / 4, YIELD_SCIENCE = 5 / 6,
+  YIELD_CULTURE = 5 / 6, YIELD_FAITH = 1 / 2, FEATURE = 1 }
+
+-- Weights for valuing plots: the six tile yields (missing ones weigh 1) and
+-- FEATURE, the weight of one-time yields (default 1). The district planner
+-- passes PLOT_WEIGHTS; the site scores pass the sites tab's own weights.
 function SDP_Land.Weights(weights)
   local out = {}
   for _, yieldType in ipairs(SDP_Land.TILE_YIELDS) do

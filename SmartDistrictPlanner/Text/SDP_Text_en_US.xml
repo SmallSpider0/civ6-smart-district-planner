@@ -123,7 +123,7 @@
 
     <!-- Tiers, land part, quality, background computation -->
     <Replace Tag="LOC_SDP_LAND" Language="en_US">
-      <Text>Count the yields of the tiles the districts take, as the tiles give with their best improvement; chopping and harvesting are done before building (the Food and Chop weights apply here)</Text>
+      <Text>Count the yields of the tiles the districts take, as the tiles give with their best improvement; chopping and harvesting are done before building. Tile yields are weighed by fixed numbers, not by the weights above: Food and Production 1, Science and Culture 5/6, Faith 1/2, Gold 1/4 (1 Production = 4 Gold = 2 Faith), and the same for the one-time yields of chopping and harvesting.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SWAP_SHORT" Language="en_US">
       <Text>Swap tiles from my cities</Text>

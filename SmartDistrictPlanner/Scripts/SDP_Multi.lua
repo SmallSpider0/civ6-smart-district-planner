@@ -216,7 +216,7 @@ Session.__index = Session
 --   Wonders              wonder types (building types) to place, in any participating city
 --   Existing             { [cityID] = bool } who else takes part (see Participants)
 --   Only                 { [cityID] = true }: exactly these cities (see Participants)
---   Weights              as for SDP_Solver (five yields; YIELD_FOOD, FEATURE for land)
+--   Weights              as for SDP_Solver (five yields, HOUSING)
 --   Land                 count the land part (default true)
 --   Coverage             weight 0..3 of the coverage part (default 0: off); with
 --                        Only, every city-center pin is a target too
@@ -451,7 +451,7 @@ function SDP_Multi.NewSession(request)
       end
     end
     for p, part in ipairs(participants) do
-      part.Land = SDP_Land.ForScan(part.Scan, fixed, request.Weights, part.Population, function(index)
+      part.Land = SDP_Land.ForScan(part.Scan, fixed, SDP_Land.PLOT_WEIGHTS, part.Population, function(index)
         return owner[index] ~= nil and owner[index].Part == p
       end)
       lands[#lands + 1] = part.Land

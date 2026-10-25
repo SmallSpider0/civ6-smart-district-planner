@@ -80,6 +80,21 @@ test("plot values: one-time yields count against keeping a feature or resource, 
   T.eq(once, 0, "and never cleared")
 end)
 
+test("the district planner weighs plot yields with fixed numbers (issue 53)", function()
+  local W = SDP_Land.PLOT_WEIGHTS
+  T.eq(W.YIELD_FOOD, 1, "food")
+  T.eq(W.YIELD_PRODUCTION, 1, "production")
+  T.eq(W.YIELD_GOLD, 1 / 4, "gold: 1 production = 4 gold")
+  T.eq(W.YIELD_FAITH, 1 / 2, "faith: 1 production = 2 faith")
+  T.eq(W.YIELD_SCIENCE, 5 / 6, "science")
+  T.eq(W.YIELD_CULTURE, 5 / 6, "culture")
+  local w = World.New({ rows = { "d" }, resources = { { 0, 0, "RESOURCE_COPPER" } } })
+  local ctx = SDP_Land.Context(0, W, true)
+  local tile, once = SDP_Land.PlotValues(w:Plot(0, 0), ctx)
+  T.near(once, 40 * (1 / 4) / 20, 1e-12, "the copper harvest's gold weighs 1/4 too")
+  T.near(tile, 0, 1e-12, "kept: 2 gold x 1/4 minus the forgone harvest")
+end)
+
 test("plot values: the best improvement the rules allow (issue 52)", function()
   local w = World.New({
     rows = { ".fhqfp" },

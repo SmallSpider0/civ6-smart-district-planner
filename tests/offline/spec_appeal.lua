@@ -332,11 +332,17 @@ test("a preserve: its own housing and its yields on the unimproved plots around,
   -- (8, 3) gets nothing; the other workable ones 0 + 1 = 1: nothing.
   local want = { YIELD_FOOD = 2, YIELD_FAITH = 2, YIELD_CULTURE = 2, YIELD_GOLD = 2, YIELD_SCIENCE = 2, YIELD_PRODUCTION = 2 }
   T.same(d.Tiles, want, "breathtaking yields on (7, 2) only")
-  T.eq(value, 3 + 12, "land part off: counted in full, weighted 1")
+  -- Plot yields weigh as in the land part (issue 53): food, production 1,
+  -- science, culture 5/6, faith 1/2, gold 1/4.
+  local tiles = 2 * (1 + 1 + 5 / 6 + 5 / 6 + 1 / 2 + 1 / 4)
+  T.near(value, 3 + tiles, 1e-9, "land part off: counted in full, at the plot weights")
   local lazy = SDP_Appeal.New({ Types = { PRESERVE }, Kinds = { "DISTRICT" }, Candidates = scan.Candidates, Fixed = {},
     Weights = { YIELD_FOOD = 0, YIELD_FAITH = 0, YIELD_CULTURE = 0, YIELD_GOLD = 0, YIELD_SCIENCE = 0, YIELD_PRODUCTION = 0,
       HOUSING = 1 }, Lands = {}, Workable = workable })
-  T.eq(lazy:Score({ position }), 3, "weights 0: housing only")
+  T.near(lazy:Score({ position }), 3 + tiles, 1e-9, "the yield weights do not change the plot yields")
+  local noHousing = SDP_Appeal.New({ Types = { PRESERVE }, Kinds = { "DISTRICT" }, Candidates = scan.Candidates, Fixed = {},
+    Weights = { HOUSING = 0 }, Lands = {}, Workable = workable })
+  T.near(noHousing:Score({ position }), tiles, 1e-9, "housing weight 0: the plot yields only")
   -- Picked from the pool (an optional slot): housing counts, the grove and
   -- sanctuary yields are reported but not scored (the user's call, 2026-10-22).
   local picked = SDP_Appeal.New({ Types = { PRESERVE }, Kinds = { "DISTRICT" }, Candidates = scan.Candidates, Fixed = {},

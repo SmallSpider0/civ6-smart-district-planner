@@ -99,7 +99,7 @@ local function BruteForceLand(districts, weights)
     local fixed = SDP_Overlay.FixedSubjects(scan)
     local baseline = SDP_Overlay.Evaluate({}, fixed, weights).Total
     local specialty = #districts
-    local land = SDP_Land.ForScan(scan, fixed, weights, math.max(scan.Population, SDP_Land.RequiredPopulation(specialty)))
+    local land = SDP_Land.ForScan(scan, fixed, SDP_Land.PLOT_WEIGHTS, math.max(scan.Population, SDP_Land.RequiredPopulation(specialty)))
     local best = nil
     for _, p in ipairs(scan.Candidates) do
       for _, q in ipairs(scan.Candidates) do
@@ -126,6 +126,12 @@ test("with the land part: exhaustive equals brute force", function()
   T.ok(result.LandDelta <= 0, "the land part is a loss")
   T.near(result.Gain, BruteForceLand(districts, weights), 1e-9, "gain vs brute force")
   T.near(result.Gain, result.Adjacency + result.LandDelta, 1e-9, "gain = adjacency + land")
+  -- Plots weigh the same whatever the yield weights (issue 53): food and
+  -- harvest weights, which the panel no longer has, change nothing.
+  local plain = SDP_Solver.Solve({ PlayerID = 0, CityID = 1, Districts = districts, Land = true,
+    Weights = { YIELD_SCIENCE = 1, YIELD_CULTURE = 1, YIELD_FAITH = 1, YIELD_GOLD = 1, YIELD_PRODUCTION = 1 } })
+  T.same(plain.Plan, result.Plan, "same plan without the food and harvest weights")
+  T.near(plain.LandDelta, result.LandDelta, 1e-9, "same land part")
   local off = SDP_Solver.Solve({ PlayerID = 0, CityID = 1, Districts = districts, Weights = weights })
   T.eq(off.LandDelta, 0, "land part off")
   T.ok(off.Adjacency >= result.Adjacency, "without land losses adjacency can only be higher")
