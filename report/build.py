@@ -1259,15 +1259,16 @@ def build(files=None, make_snapshots=True, version=None, date=None, lang="zh"):
     texts["OPTIMUM_NOTE"] = L(
         "真最优的求法：在本模组搜索用的候选格和合法性上做分支定界，上界 = 每个区域单独的值 + 相邻区域两两的配对值，配对值取 DMT "
         "在那两格上的实测和查表里大的一个，凑满几个邻居才给加成的规则按份额计。每个算过的方案都检查不超过它的上界，超过就不算证明；"
-        "小场景与逐一枚举全部方案对照，另有不依赖上界的爬山检查。大城和多城的“已知最好”是精细档再继续优化 20 次、模拟退火 20 万次后"
-        "由分支定界接着改进的结果（附录 B.1）。",
+        "小场景与逐一枚举全部方案对照，另有不依赖上界的爬山检查。大城的“已知最好”是各规划器和分支定界找到的最好方案，"
+        "多城的是精细档再继续优化 20 次、模拟退火 20 万次后由分支定界接着改进的结果（附录 B.1）。",
         "How the optimum is found: branch and bound over the candidate tiles and validity rules this mod's search uses; the "
         "upper bound is each district's value alone plus every two neighbouring districts' pair value, the larger of DMT's "
         "measured value on those two tiles and the rules table, with rules that need several neighbours counted by their "
         "share. Every plan evaluated is checked against its bound, and one above it voids the proof; small scenarios are "
         "checked against trying every layout, and a hill climb that does not use the bound checks the rest. The best known "
-        "plan of large cities and several cities is the Thorough plan continued 20 times, then 200,000 steps of simulated "
-        "annealing, then improved by the branch and bound (appendix B.1).")
+        "plan of a large city is the best of the planners and the branch and bound; that of several cities is the Thorough "
+        "plan continued 20 times, then 200,000 steps of simulated annealing, then improved by the branch and bound "
+        "(appendix B.1).")
 
     def tr(cells):
         return "<tr>" + "".join("<td>%s</td>" % c for c in cells) + "</tr>"
