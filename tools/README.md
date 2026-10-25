@@ -96,6 +96,7 @@ node tools/compare.mjs --snapshot S01-rome-temperate-mid   # 场景地图数据�
 node tools/compare.mjs --probe FILE.lua                    # 在本 mod 的状态里跑一段 Lua（临时探针：先 include("cmp_lib")，CmpRun.Setup(场景) 建好世界）
 node tools/compare.mjs --refscore -s ^REF --weights tests/compare/refscenes/weights.jsonl -j 3 --out tests/compare/results/refscore.jsonl   # 参照布局与最优解，见 refscene.py 一节
 node tools/compare.mjs --refscore -s '^REF(0[4-9]|1\d|20)' --weights tests/compare/refscenes/grid53.jsonl -j 2 --out G.jsonl   # 权重 × 地块系数 λ 的网格（#53），python3 -I tests/compare/refgrid53.py G.jsonl 汇总
+python3 -I tests/compare/refmaps.py [--tables]             # 参照场景的图（docs/images/refscenes/）和 docs/reference-scenes.md 的表，只读结果文件
 node tools/compare.mjs -s '^S0[1-4]-' -p sdp --only sdp:ORACLE_LAND_CHECK --add sdp:ORACLE_LAND_CHECK -j 8   # 计入地块时的真最优（#48），带枚举对照和爬山检查
 node tools/compare.mjs -s '^H?S\d\d-[^~]*$' -p sdp --only sdp:ORACLE --add sdp:ORACLE --weights tests/compare/weights/w53.jsonl -j 4 --out W.jsonl   # 每组权重各跑一遍（行里记 weights），见下文“权重组”
 node tools/compare.mjs --rejudge PLANS.jsonl --weights tests/compare/weights/w53.jsonl -j 4 --out CROSS.jsonl   # 每个方案在每组权重下重新打分（行里另记 planWeights）
@@ -201,6 +202,7 @@ wonder 2,2 BUILDING_COLOSSEUM city=1     # 已建的奇观
 - 权重组：`--weights` 给 JSON lines 文件（每行 `{"name": "…", "science": 1, "culture": 1, "faith": 0.5, "gold": 0.5, "production": 1, "food": 1, "land": 0}`，没写的产出为 1；`"oracle": n` 把真最优的节点上限设为 n 百万），或直接写 `"all1:;half:gold=0.5,faith=0.5;land:land=1;L050:lambda=0.5"`。不给时只算全 1。`CMP_WEIGHTS` 同时传给规划器和裁判，替换场景自己的权重。`"lambda"` 只用于 `--refscore`；普通运行的地块系数用变体后缀 `_LAND<nnn>` 设（见上）。`tests/compare/refscenes/grid53.jsonl` 是 #53 第 2 步的网格（全 1、金币信仰减半、金币减半 × λ = 0、0.25、0.5、0.75、1）。
 - `--weights` 也可用于普通运行和 `--rejudge`（不和 `--crossscore` 一起用）：每个运行或每次打分对每组权重各做一遍，行里记 `weights`（`name`、`yields`），重新打分的行另记 `planWeights`（方案原来的权重组名，没有时为 null）。场景编号不变，所以 `summarize.py` 不读带 `weights` 的行。权重都是 1/k 的整数倍（k ≤ 100，如 0.25、AMT 的 1.15）时，`sdp:ORACLE` 把界取整到 1/k 的倍数，和整数权重一样快。
 - `refgrid53.py`：读 `--refscore` 计入地块的行，按参照场景和 (权重, λ) 算差距 (V* − V(L)) / 参照布局的相邻加成（裁判的，按同一组产出权重；`--unweighted` 改用全 1 的），列平均差距与参照即最优的场景数，按作者分开发组和复核组（约 2:1，同一作者不跨组）套用先定好的选择规则，另列每位作者的平均差距、逐场景差距和耗时；`--sanity refscore.jsonl` 核对 λ = 0 与只算相邻的真最优相同。见 multicity-design.md 第 30 节。
+- `refmaps.py`：给 REF04 起的每个参照场景画一张 SVG（`docs/images/refscenes/<编号>.svg`，另有 `legend.svg`）：所选城市 3 环内的地形、地貌、资源、河、领土边界和固定的区域、奇观、钉，并排画作者布局、只算相邻的真最优（`refscore.jsonl` 的 `all1`）和计入地块的真最优（`refgrid53.jsonl` 的 `all1-L100`，与前者相同时不画），北在上。`--tables` 另输出 `docs/reference-scenes.md` 的总表和逐场景的表。只读结果文件，不重算。
 - `robust53.py`：读 `sdp:ORACLE` 的行（带 `weights` 的按其组名；不带的是 `all1`，`~SCI`、`~PROD`、`~FAITH` 场景是 `sci3`、`prod3`、`faith3`），对每个单城场景、每对权重组 (A, B) 算 A 的最优方案在 B 下的损失 1 − score_B(plan_A)/V*_B（裁判的加成对权重是线性的，按方案的 `byYield` 算），报两两损失表、每组作默认时的平均和最坏损失、所有权重给出同一方案的场景比例；`--check` 拿重新打分的文件逐个核对。`--distinct OUT` 写出每个场景互不相同的最优方案各一行，供 `--rejudge --weights` 用。
 
 ## deploy.py — 部署

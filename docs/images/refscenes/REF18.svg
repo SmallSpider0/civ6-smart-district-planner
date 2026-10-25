@@ -1,0 +1,251 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="618" height="326" viewBox="0 0 618.0 326.0" font-family="'Noto Sans SC','PingFang SC','Microsoft YaHei','Hiragino Sans GB',sans-serif">
+<rect width="100%" height="100%" fill="#ffffff"/>
+<defs><pattern id="foreign" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="6" stroke="#ffffff" stroke-width="2.2" stroke-opacity="0.75"/></pattern></defs>
+<g>
+<text x="2.0" y="19.0" font-size="15" font-weight="700" fill="#14202a">作者布局 · 相邻 5</text>
+<text x="2.0" y="36.0" font-size="12" fill="#555555">作者已建的区域</text>
+<polygon points="105.9,72.0 105.9,96.0 85.1,108.0 64.4,96.0 64.4,72.0 85.1,60.0" fill="#c1ae5a" stroke="#6b6b6b" stroke-width="0.7"/>
+<path d="M77.1,104.5 q8.0,-5.0 16.0,0" fill="none" stroke="#4d3f22" stroke-width="1.4"/>
+<text x="85.1" y="92.0" font-size="13" font-weight="700" fill="#0f4f2e" text-anchor="middle">雨</text>
+<polygon points="147.5,72.0 147.5,96.0 126.7,108.0 105.9,96.0 105.9,72.0 126.7,60.0" fill="#a6d4ec" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="189.1,72.0 189.1,96.0 168.3,108.0 147.5,96.0 147.5,72.0 168.3,60.0" fill="#dccd80" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="188.7,72.2 188.7,95.8 168.3,107.6 147.8,95.8 147.8,72.2 168.3,60.4" fill="#ffffff" fill-opacity="0.5"/>
+<text x="168.3" y="75.5" font-size="8.5" text-anchor="middle"><tspan fill="#1b3a4b">香蕉</tspan></text>
+<text x="168.3" y="92.0" font-size="13" font-weight="700" fill="#0f4f2e" text-anchor="middle">雨</text>
+<polygon points="230.6,72.0 230.6,96.0 209.8,108.0 189.1,96.0 189.1,72.0 209.8,60.0" fill="#a9d07c" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="230.3,72.2 230.3,95.8 209.8,107.6 189.4,95.8 189.4,72.2 209.8,60.4" fill="#ffffff" fill-opacity="0.5"/>
+<text x="209.8" y="92.0" font-size="13" font-weight="700" fill="#7a5a1e" text-anchor="middle">泛</text>
+<polygon points="85.1,108.0 85.1,132.0 64.4,144.0 43.6,132.0 43.6,108.0 64.4,96.0" fill="#dccd80" stroke="#6b6b6b" stroke-width="0.7"/>
+<text x="64.4" y="128.0" font-size="13" font-weight="700" fill="#0f4f2e" text-anchor="middle">雨</text>
+<polygon points="126.7,108.0 126.7,132.0 105.9,144.0 85.1,132.0 85.1,108.0 105.9,96.0" fill="#dccd80" stroke="#6b6b6b" stroke-width="0.7"/>
+<text x="105.9" y="111.5" font-size="8.5" text-anchor="middle"><tspan fill="#5b2a86">可可</tspan></text>
+<text x="105.9" y="128.0" font-size="13" font-weight="700" fill="#0f4f2e" text-anchor="middle">雨</text>
+<polygon points="168.3,108.0 168.3,132.0 147.5,144.0 126.7,132.0 126.7,108.0 147.5,96.0" fill="#a9d07c" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="164.4,110.2 164.4,129.8 147.5,139.5 130.6,129.8 130.6,110.2 147.5,100.5" fill="#cfcfcf" stroke="#555555" stroke-width="1"/>
+<text x="147.5" y="124.5" font-size="12" fill="#333333" text-anchor="middle">政</text>
+<polygon points="209.8,108.0 209.8,132.0 189.1,144.0 168.3,132.0 168.3,108.0 189.1,96.0" fill="#8ab45a" stroke="#6b6b6b" stroke-width="0.7"/>
+<path d="M181.1,140.5 q8.0,-5.0 16.0,0" fill="none" stroke="#4d3f22" stroke-width="1.4"/>
+<text x="189.1" y="128.0" font-size="13" font-weight="700" fill="#1f6b2a" text-anchor="middle">林</text>
+<polygon points="251.4,108.0 251.4,132.0 230.6,144.0 209.8,132.0 209.8,108.0 230.6,96.0" fill="#a9d07c" stroke="#6b6b6b" stroke-width="0.7"/>
+<text x="230.6" y="111.5" font-size="8.5" text-anchor="middle"><tspan fill="#8a1c1c">硝石</tspan></text>
+<text x="230.6" y="128.0" font-size="13" font-weight="700" fill="#7a5a1e" text-anchor="middle">泛</text>
+<polygon points="64.4,144.0 64.4,168.0 43.6,180.0 22.8,168.0 22.8,144.0 43.6,132.0" fill="#a6d4ec" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="105.9,144.0 105.9,168.0 85.1,180.0 64.4,168.0 64.4,144.0 85.1,132.0" fill="#a9d07c" stroke="#6b6b6b" stroke-width="0.7"/>
+<text x="85.1" y="164.0" font-size="13" font-weight="700" fill="#1f6b2a" text-anchor="middle">林</text>
+<polygon points="147.5,144.0 147.5,168.0 126.7,180.0 105.9,168.0 105.9,144.0 126.7,132.0" fill="#c1ae5a" stroke="#6b6b6b" stroke-width="0.7"/>
+<path d="M118.7,176.5 q8.0,-5.0 16.0,0" fill="none" stroke="#4d3f22" stroke-width="1.4"/>
+<text x="126.7" y="164.0" font-size="13" font-weight="700" fill="#0f4f2e" text-anchor="middle">雨</text>
+<polygon points="189.1,144.0 189.1,168.0 168.3,180.0 147.5,168.0 147.5,144.0 168.3,132.0" fill="#a9d07c" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="185.2,146.2 185.2,165.8 168.3,175.5 151.4,165.8 151.4,146.2 168.3,136.5" fill="#9457b5" stroke="#1a1a1a" stroke-width="1.2"/>
+<text x="168.3" y="161.0" font-size="13" font-weight="700" fill="#ffffff" text-anchor="middle">剧</text>
+<text x="168.3" y="171.5" font-size="9.5" font-weight="700" fill="#ffffff" text-anchor="middle">+2</text>
+<polygon points="230.6,144.0 230.6,168.0 209.8,180.0 189.1,168.0 189.1,144.0 209.8,132.0" fill="#dccd80" stroke="#6b6b6b" stroke-width="0.7"/>
+<text x="209.8" y="164.0" font-size="13" font-weight="700" fill="#0f4f2e" text-anchor="middle">雨</text>
+<polygon points="272.2,144.0 272.2,168.0 251.4,180.0 230.6,168.0 230.6,144.0 251.4,132.0" fill="#dccd80" stroke="#6b6b6b" stroke-width="0.7"/>
+<text x="251.4" y="164.0" font-size="13" font-weight="700" fill="#7a5a1e" text-anchor="middle">泛</text>
+<polygon points="43.6,180.0 43.6,204.0 22.8,216.0 2.0,204.0 2.0,180.0 22.8,168.0" fill="#6198c6" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="85.1,180.0 85.1,204.0 64.4,216.0 43.6,204.0 43.6,180.0 64.4,168.0" fill="#a6d4ec" stroke="#6b6b6b" stroke-width="0.7"/>
+<text x="64.4" y="183.5" font-size="8.5" text-anchor="middle"><tspan fill="#1b3a4b">鱼</tspan></text>
+<polygon points="126.7,180.0 126.7,204.0 105.9,216.0 85.1,204.0 85.1,180.0 105.9,168.0" fill="#a6d4ec" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="122.8,182.2 122.8,201.8 105.9,211.5 89.0,201.8 89.0,182.2 105.9,172.5" fill="#178fa6" stroke="#1a1a1a" stroke-width="1.2"/>
+<text x="105.9" y="197.0" font-size="13" font-weight="700" fill="#ffffff" text-anchor="middle">港</text>
+<text x="105.9" y="207.5" font-size="9.5" font-weight="700" fill="#ffffff" text-anchor="middle">+3</text>
+<polygon points="168.3,180.0 168.3,204.0 147.5,216.0 126.7,204.0 126.7,180.0 147.5,168.0" fill="#dccd80" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="164.4,182.2 164.4,201.8 147.5,211.5 130.6,201.8 130.6,182.2 147.5,172.5" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="147.5" y="196.5" font-size="12" font-weight="700" fill="#111111" text-anchor="middle">城</text>
+<polygon points="209.8,180.0 209.8,204.0 189.1,216.0 168.3,204.0 168.3,180.0 189.1,168.0" fill="#dccd80" stroke="#6b6b6b" stroke-width="0.7"/>
+<text x="189.1" y="200.0" font-size="13" font-weight="700" fill="#1f6b2a" text-anchor="middle">林</text>
+<polygon points="251.4,180.0 251.4,204.0 230.6,216.0 209.8,204.0 209.8,180.0 230.6,168.0" fill="#dccd80" stroke="#6b6b6b" stroke-width="0.7"/>
+<text x="230.6" y="200.0" font-size="13" font-weight="700" fill="#0f4f2e" text-anchor="middle">雨</text>
+<polygon points="293.0,180.0 293.0,204.0 272.2,216.0 251.4,204.0 251.4,180.0 272.2,168.0" fill="#c1ae5a" stroke="#6b6b6b" stroke-width="0.7"/>
+<path d="M264.2,212.5 q8.0,-5.0 16.0,0" fill="none" stroke="#4d3f22" stroke-width="1.4"/>
+<polygon points="64.4,216.0 64.4,240.0 43.6,252.0 22.8,240.0 22.8,216.0 43.6,204.0" fill="#6198c6" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="105.9,216.0 105.9,240.0 85.1,252.0 64.4,240.0 64.4,216.0 85.1,204.0" fill="#a6d4ec" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="147.5,216.0 147.5,240.0 126.7,252.0 105.9,240.0 105.9,216.0 126.7,204.0" fill="#dccd80" stroke="#6b6b6b" stroke-width="0.7"/>
+<text x="126.7" y="219.5" font-size="8.5" text-anchor="middle"><tspan fill="#1b3a4b">香蕉</tspan></text>
+<text x="126.7" y="236.0" font-size="13" font-weight="700" fill="#0f4f2e" text-anchor="middle">雨</text>
+<polygon points="189.1,216.0 189.1,240.0 168.3,252.0 147.5,240.0 147.5,216.0 168.3,204.0" fill="#c1ae5a" stroke="#6b6b6b" stroke-width="0.7"/>
+<path d="M160.3,248.5 q8.0,-5.0 16.0,0" fill="none" stroke="#4d3f22" stroke-width="1.4"/>
+<text x="168.3" y="236.0" font-size="13" font-weight="700" fill="#1f6b2a" text-anchor="middle">林</text>
+<polygon points="230.6,216.0 230.6,240.0 209.8,252.0 189.1,240.0 189.1,216.0 209.8,204.0" fill="#dccd80" stroke="#6b6b6b" stroke-width="0.7"/>
+<text x="209.8" y="236.0" font-size="13" font-weight="700" fill="#1f6b2a" text-anchor="middle">林</text>
+<polygon points="272.2,216.0 272.2,240.0 251.4,252.0 230.6,240.0 230.6,216.0 251.4,204.0" fill="#dccd80" stroke="#6b6b6b" stroke-width="0.7"/>
+<text x="251.4" y="236.0" font-size="13" font-weight="700" fill="#0f4f2e" text-anchor="middle">雨</text>
+<polygon points="85.1,252.0 85.1,276.0 64.4,288.0 43.6,276.0 43.6,252.0 64.4,240.0" fill="#6198c6" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="126.7,252.0 126.7,276.0 105.9,288.0 85.1,276.0 85.1,252.0 105.9,240.0" fill="#a6d4ec" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="168.3,252.0 168.3,276.0 147.5,288.0 126.7,276.0 126.7,252.0 147.5,240.0" fill="#dccd80" stroke="#6b6b6b" stroke-width="0.7"/>
+<text x="147.5" y="255.5" font-size="8.5" text-anchor="middle"><tspan fill="#1b3a4b">香蕉</tspan></text>
+<text x="147.5" y="272.0" font-size="13" font-weight="700" fill="#0f4f2e" text-anchor="middle">雨</text>
+<polygon points="209.8,252.0 209.8,276.0 189.1,288.0 168.3,276.0 168.3,252.0 189.1,240.0" fill="#dccd80" stroke="#6b6b6b" stroke-width="0.7"/>
+<text x="189.1" y="272.0" font-size="13" font-weight="700" fill="#1f6b2a" text-anchor="middle">林</text>
+<polygon points="251.4,252.0 251.4,276.0 230.6,288.0 209.8,276.0 209.8,252.0 230.6,240.0" fill="#dccd80" stroke="#6b6b6b" stroke-width="0.7"/>
+<text x="230.6" y="255.5" font-size="8.5" text-anchor="middle"><tspan fill="#5b2a86">钻石</tspan></text>
+<text x="230.6" y="272.0" font-size="13" font-weight="700" fill="#0f4f2e" text-anchor="middle">雨</text>
+<polygon points="105.9,288.0 105.9,312.0 85.1,324.0 64.4,312.0 64.4,288.0 85.1,276.0" fill="#a6d4ec" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="147.5,288.0 147.5,312.0 126.7,324.0 105.9,312.0 105.9,288.0 126.7,276.0" fill="#dccd80" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="147.1,288.2 147.1,311.8 126.7,323.6 106.3,311.8 106.3,288.2 126.7,276.4" fill="#ffffff" fill-opacity="0.5"/>
+<polygon points="147.1,288.2 147.1,311.8 126.7,323.6 106.3,311.8 106.3,288.2 126.7,276.4" fill="url(#foreign)"/>
+<polygon points="189.1,288.0 189.1,312.0 168.3,324.0 147.5,312.0 147.5,288.0 168.3,276.0" fill="#dccd80" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="188.7,288.2 188.7,311.8 168.3,323.6 147.8,311.8 147.8,288.2 168.3,276.4" fill="#ffffff" fill-opacity="0.5"/>
+<polygon points="188.7,288.2 188.7,311.8 168.3,323.6 147.8,311.8 147.8,288.2 168.3,276.4" fill="url(#foreign)"/>
+<polygon points="230.6,288.0 230.6,312.0 209.8,324.0 189.1,312.0 189.1,288.0 209.8,276.0" fill="#dccd80" stroke="#6b6b6b" stroke-width="0.7"/>
+<text x="209.8" y="308.0" font-size="13" font-weight="700" fill="#1f6b2a" text-anchor="middle">林</text>
+<line x1="85.1" y1="276.0" x2="105.9" y2="288.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="126.7" y1="276.0" x2="147.5" y2="288.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="168.3" y1="276.0" x2="189.1" y2="288.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="189.1" y1="288.0" x2="189.1" y2="312.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="64.4" y1="240.0" x2="85.1" y2="252.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="85.1" y1="252.0" x2="85.1" y2="276.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="43.6" y1="252.0" x2="64.4" y2="240.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="126.7" y1="276.0" x2="105.9" y2="288.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="168.3" y1="276.0" x2="147.5" y2="288.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="126.7" y1="204.0" x2="147.5" y2="216.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="126.7" y1="180.0" x2="126.7" y2="204.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="147.5" y1="168.0" x2="168.3" y2="180.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="168.3" y1="180.0" x2="168.3" y2="204.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="168.3" y1="204.0" x2="147.5" y2="216.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="126.7" y1="180.0" x2="147.5" y2="168.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="230.6" y1="168.0" x2="251.4" y2="180.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="251.4" y1="180.0" x2="272.2" y2="168.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="209.8" y1="132.0" x2="230.6" y2="144.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="230.6" y1="144.0" x2="230.6" y2="168.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="105.9" y1="96.0" x2="126.7" y2="108.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="147.5" y1="96.0" x2="168.3" y2="108.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="126.7" y1="108.0" x2="147.5" y2="96.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="189.1" y1="96.0" x2="209.8" y2="108.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="209.8" y1="108.0" x2="209.8" y2="132.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="168.3" y1="108.0" x2="189.1" y2="96.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="105.9" y1="72.0" x2="105.9" y2="96.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="272.2" y1="144.0" x2="251.4" y2="132.0" stroke="#1f62c9" stroke-width="4.2" stroke-linecap="round"/>
+<line x1="251.4" y1="108.0" x2="251.4" y2="132.0" stroke="#1f62c9" stroke-width="4.2" stroke-linecap="round"/>
+<line x1="251.4" y1="108.0" x2="230.6" y2="96.0" stroke="#1f62c9" stroke-width="4.2" stroke-linecap="round"/>
+<line x1="230.6" y1="96.0" x2="209.8" y2="108.0" stroke="#1f62c9" stroke-width="4.2" stroke-linecap="round"/>
+<line x1="209.8" y1="108.0" x2="189.1" y2="96.0" stroke="#1f62c9" stroke-width="4.2" stroke-linecap="round"/>
+<line x1="189.1" y1="96.0" x2="168.3" y2="108.0" stroke="#1f62c9" stroke-width="4.2" stroke-linecap="round"/>
+<line x1="168.3" y1="108.0" x2="147.5" y2="96.0" stroke="#1f62c9" stroke-width="4.2" stroke-linecap="round"/>
+</g>
+<g>
+<text x="325.0" y="19.0" font-size="15" font-weight="700" fill="#14202a">真最优（只算相邻）· 相邻 6</text>
+<text x="325.0" y="36.0" font-size="12" fill="#555555">只算相邻加成，全 1</text>
+<text x="325.0" y="51.0" font-size="12" fill="#555555">计入地块（λ = 1）的真最优相同，与作者布局同分</text>
+<polygon points="428.9,72.0 428.9,96.0 408.1,108.0 387.3,96.0 387.3,72.0 408.1,60.0" fill="#c1ae5a" stroke="#6b6b6b" stroke-width="0.7"/>
+<path d="M400.1,104.5 q8.0,-5.0 16.0,0" fill="none" stroke="#4d3f22" stroke-width="1.4"/>
+<text x="408.1" y="92.0" font-size="13" font-weight="700" fill="#0f4f2e" text-anchor="middle">雨</text>
+<polygon points="470.5,72.0 470.5,96.0 449.7,108.0 428.9,96.0 428.9,72.0 449.7,60.0" fill="#a6d4ec" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="512.0,72.0 512.0,96.0 491.3,108.0 470.5,96.0 470.5,72.0 491.3,60.0" fill="#dccd80" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="511.7,72.2 511.7,95.8 491.3,107.6 470.8,95.8 470.8,72.2 491.3,60.4" fill="#ffffff" fill-opacity="0.5"/>
+<text x="491.3" y="75.5" font-size="8.5" text-anchor="middle"><tspan fill="#1b3a4b">香蕉</tspan></text>
+<text x="491.3" y="92.0" font-size="13" font-weight="700" fill="#0f4f2e" text-anchor="middle">雨</text>
+<polygon points="553.6,72.0 553.6,96.0 532.8,108.0 512.0,96.0 512.0,72.0 532.8,60.0" fill="#a9d07c" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="553.3,72.2 553.3,95.8 532.8,107.6 512.4,95.8 512.4,72.2 532.8,60.4" fill="#ffffff" fill-opacity="0.5"/>
+<text x="532.8" y="92.0" font-size="13" font-weight="700" fill="#7a5a1e" text-anchor="middle">泛</text>
+<polygon points="408.1,108.0 408.1,132.0 387.3,144.0 366.6,132.0 366.6,108.0 387.3,96.0" fill="#dccd80" stroke="#6b6b6b" stroke-width="0.7"/>
+<text x="387.3" y="128.0" font-size="13" font-weight="700" fill="#0f4f2e" text-anchor="middle">雨</text>
+<polygon points="449.7,108.0 449.7,132.0 428.9,144.0 408.1,132.0 408.1,108.0 428.9,96.0" fill="#dccd80" stroke="#6b6b6b" stroke-width="0.7"/>
+<text x="428.9" y="111.5" font-size="8.5" text-anchor="middle"><tspan fill="#5b2a86">可可</tspan></text>
+<text x="428.9" y="128.0" font-size="13" font-weight="700" fill="#0f4f2e" text-anchor="middle">雨</text>
+<polygon points="491.3,108.0 491.3,132.0 470.5,144.0 449.7,132.0 449.7,108.0 470.5,96.0" fill="#a9d07c" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="487.4,110.2 487.4,129.8 470.5,139.5 453.6,129.8 453.6,110.2 470.5,100.5" fill="#cfcfcf" stroke="#555555" stroke-width="1"/>
+<text x="470.5" y="124.5" font-size="12" fill="#333333" text-anchor="middle">政</text>
+<polygon points="532.8,108.0 532.8,132.0 512.0,144.0 491.3,132.0 491.3,108.0 512.0,96.0" fill="#8ab45a" stroke="#6b6b6b" stroke-width="0.7"/>
+<path d="M504.0,140.5 q8.0,-5.0 16.0,0" fill="none" stroke="#4d3f22" stroke-width="1.4"/>
+<text x="512.0" y="128.0" font-size="13" font-weight="700" fill="#1f6b2a" text-anchor="middle">林</text>
+<polygon points="574.4,108.0 574.4,132.0 553.6,144.0 532.8,132.0 532.8,108.0 553.6,96.0" fill="#a9d07c" stroke="#6b6b6b" stroke-width="0.7"/>
+<text x="553.6" y="111.5" font-size="8.5" text-anchor="middle"><tspan fill="#8a1c1c">硝石</tspan></text>
+<text x="553.6" y="128.0" font-size="13" font-weight="700" fill="#7a5a1e" text-anchor="middle">泛</text>
+<polygon points="387.3,144.0 387.3,168.0 366.6,180.0 345.8,168.0 345.8,144.0 366.6,132.0" fill="#a6d4ec" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="428.9,144.0 428.9,168.0 408.1,180.0 387.3,168.0 387.3,144.0 408.1,132.0" fill="#a9d07c" stroke="#6b6b6b" stroke-width="0.7"/>
+<text x="408.1" y="164.0" font-size="13" font-weight="700" fill="#1f6b2a" text-anchor="middle">林</text>
+<polygon points="470.5,144.0 470.5,168.0 449.7,180.0 428.9,168.0 428.9,144.0 449.7,132.0" fill="#c1ae5a" stroke="#6b6b6b" stroke-width="0.7"/>
+<path d="M441.7,176.5 q8.0,-5.0 16.0,0" fill="none" stroke="#4d3f22" stroke-width="1.4"/>
+<text x="449.7" y="147.5" font-size="8.5" text-anchor="middle"><tspan fill="#0f4f2e" font-weight="700">雨</tspan></text>
+<polygon points="466.6,146.2 466.6,165.8 449.7,175.5 432.8,165.8 432.8,146.2 449.7,136.5" fill="#9457b5" stroke="#d0021b" stroke-width="2.6"/>
+<text x="449.7" y="161.0" font-size="13" font-weight="700" fill="#ffffff" text-anchor="middle">剧</text>
+<text x="449.7" y="171.5" font-size="9.5" font-weight="700" fill="#ffffff" text-anchor="middle">+2</text>
+<polygon points="512.0,144.0 512.0,168.0 491.3,180.0 470.5,168.0 470.5,144.0 491.3,132.0" fill="#a9d07c" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="553.6,144.0 553.6,168.0 532.8,180.0 512.0,168.0 512.0,144.0 532.8,132.0" fill="#dccd80" stroke="#6b6b6b" stroke-width="0.7"/>
+<text x="532.8" y="164.0" font-size="13" font-weight="700" fill="#0f4f2e" text-anchor="middle">雨</text>
+<polygon points="595.2,144.0 595.2,168.0 574.4,180.0 553.6,168.0 553.6,144.0 574.4,132.0" fill="#dccd80" stroke="#6b6b6b" stroke-width="0.7"/>
+<text x="574.4" y="164.0" font-size="13" font-weight="700" fill="#7a5a1e" text-anchor="middle">泛</text>
+<polygon points="366.6,180.0 366.6,204.0 345.8,216.0 325.0,204.0 325.0,180.0 345.8,168.0" fill="#6198c6" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="408.1,180.0 408.1,204.0 387.3,216.0 366.6,204.0 366.6,180.0 387.3,168.0" fill="#a6d4ec" stroke="#6b6b6b" stroke-width="0.7"/>
+<text x="387.3" y="183.5" font-size="8.5" text-anchor="middle"><tspan fill="#1b3a4b">鱼</tspan></text>
+<polygon points="449.7,180.0 449.7,204.0 428.9,216.0 408.1,204.0 408.1,180.0 428.9,168.0" fill="#a6d4ec" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="445.8,182.2 445.8,201.8 428.9,211.5 412.0,201.8 412.0,182.2 428.9,172.5" fill="#178fa6" stroke="#1a1a1a" stroke-width="1.2"/>
+<text x="428.9" y="197.0" font-size="13" font-weight="700" fill="#ffffff" text-anchor="middle">港</text>
+<text x="428.9" y="207.5" font-size="9.5" font-weight="700" fill="#ffffff" text-anchor="middle">+4</text>
+<polygon points="491.3,180.0 491.3,204.0 470.5,216.0 449.7,204.0 449.7,180.0 470.5,168.0" fill="#dccd80" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="487.4,182.2 487.4,201.8 470.5,211.5 453.6,201.8 453.6,182.2 470.5,172.5" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="470.5" y="196.5" font-size="12" font-weight="700" fill="#111111" text-anchor="middle">城</text>
+<polygon points="532.8,180.0 532.8,204.0 512.0,216.0 491.3,204.0 491.3,180.0 512.0,168.0" fill="#dccd80" stroke="#6b6b6b" stroke-width="0.7"/>
+<text x="512.0" y="200.0" font-size="13" font-weight="700" fill="#1f6b2a" text-anchor="middle">林</text>
+<polygon points="574.4,180.0 574.4,204.0 553.6,216.0 532.8,204.0 532.8,180.0 553.6,168.0" fill="#dccd80" stroke="#6b6b6b" stroke-width="0.7"/>
+<text x="553.6" y="200.0" font-size="13" font-weight="700" fill="#0f4f2e" text-anchor="middle">雨</text>
+<polygon points="616.0,180.0 616.0,204.0 595.2,216.0 574.4,204.0 574.4,180.0 595.2,168.0" fill="#c1ae5a" stroke="#6b6b6b" stroke-width="0.7"/>
+<path d="M587.2,212.5 q8.0,-5.0 16.0,0" fill="none" stroke="#4d3f22" stroke-width="1.4"/>
+<polygon points="387.3,216.0 387.3,240.0 366.6,252.0 345.8,240.0 345.8,216.0 366.6,204.0" fill="#6198c6" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="428.9,216.0 428.9,240.0 408.1,252.0 387.3,240.0 387.3,216.0 408.1,204.0" fill="#a6d4ec" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="470.5,216.0 470.5,240.0 449.7,252.0 428.9,240.0 428.9,216.0 449.7,204.0" fill="#dccd80" stroke="#6b6b6b" stroke-width="0.7"/>
+<text x="449.7" y="219.5" font-size="8.5" text-anchor="middle"><tspan fill="#1b3a4b">香蕉</tspan></text>
+<text x="449.7" y="236.0" font-size="13" font-weight="700" fill="#0f4f2e" text-anchor="middle">雨</text>
+<polygon points="512.0,216.0 512.0,240.0 491.3,252.0 470.5,240.0 470.5,216.0 491.3,204.0" fill="#c1ae5a" stroke="#6b6b6b" stroke-width="0.7"/>
+<path d="M483.3,248.5 q8.0,-5.0 16.0,0" fill="none" stroke="#4d3f22" stroke-width="1.4"/>
+<text x="491.3" y="236.0" font-size="13" font-weight="700" fill="#1f6b2a" text-anchor="middle">林</text>
+<polygon points="553.6,216.0 553.6,240.0 532.8,252.0 512.0,240.0 512.0,216.0 532.8,204.0" fill="#dccd80" stroke="#6b6b6b" stroke-width="0.7"/>
+<text x="532.8" y="236.0" font-size="13" font-weight="700" fill="#1f6b2a" text-anchor="middle">林</text>
+<polygon points="595.2,216.0 595.2,240.0 574.4,252.0 553.6,240.0 553.6,216.0 574.4,204.0" fill="#dccd80" stroke="#6b6b6b" stroke-width="0.7"/>
+<text x="574.4" y="236.0" font-size="13" font-weight="700" fill="#0f4f2e" text-anchor="middle">雨</text>
+<polygon points="408.1,252.0 408.1,276.0 387.3,288.0 366.6,276.0 366.6,252.0 387.3,240.0" fill="#6198c6" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="449.7,252.0 449.7,276.0 428.9,288.0 408.1,276.0 408.1,252.0 428.9,240.0" fill="#a6d4ec" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="491.3,252.0 491.3,276.0 470.5,288.0 449.7,276.0 449.7,252.0 470.5,240.0" fill="#dccd80" stroke="#6b6b6b" stroke-width="0.7"/>
+<text x="470.5" y="255.5" font-size="8.5" text-anchor="middle"><tspan fill="#1b3a4b">香蕉</tspan></text>
+<text x="470.5" y="272.0" font-size="13" font-weight="700" fill="#0f4f2e" text-anchor="middle">雨</text>
+<polygon points="532.8,252.0 532.8,276.0 512.0,288.0 491.3,276.0 491.3,252.0 512.0,240.0" fill="#dccd80" stroke="#6b6b6b" stroke-width="0.7"/>
+<text x="512.0" y="272.0" font-size="13" font-weight="700" fill="#1f6b2a" text-anchor="middle">林</text>
+<polygon points="574.4,252.0 574.4,276.0 553.6,288.0 532.8,276.0 532.8,252.0 553.6,240.0" fill="#dccd80" stroke="#6b6b6b" stroke-width="0.7"/>
+<text x="553.6" y="255.5" font-size="8.5" text-anchor="middle"><tspan fill="#5b2a86">钻石</tspan></text>
+<text x="553.6" y="272.0" font-size="13" font-weight="700" fill="#0f4f2e" text-anchor="middle">雨</text>
+<polygon points="428.9,288.0 428.9,312.0 408.1,324.0 387.3,312.0 387.3,288.0 408.1,276.0" fill="#a6d4ec" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="470.5,288.0 470.5,312.0 449.7,324.0 428.9,312.0 428.9,288.0 449.7,276.0" fill="#dccd80" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="470.1,288.2 470.1,311.8 449.7,323.6 429.3,311.8 429.3,288.2 449.7,276.4" fill="#ffffff" fill-opacity="0.5"/>
+<polygon points="470.1,288.2 470.1,311.8 449.7,323.6 429.3,311.8 429.3,288.2 449.7,276.4" fill="url(#foreign)"/>
+<polygon points="512.0,288.0 512.0,312.0 491.3,324.0 470.5,312.0 470.5,288.0 491.3,276.0" fill="#dccd80" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="511.7,288.2 511.7,311.8 491.3,323.6 470.8,311.8 470.8,288.2 491.3,276.4" fill="#ffffff" fill-opacity="0.5"/>
+<polygon points="511.7,288.2 511.7,311.8 491.3,323.6 470.8,311.8 470.8,288.2 491.3,276.4" fill="url(#foreign)"/>
+<polygon points="553.6,288.0 553.6,312.0 532.8,324.0 512.0,312.0 512.0,288.0 532.8,276.0" fill="#dccd80" stroke="#6b6b6b" stroke-width="0.7"/>
+<text x="532.8" y="308.0" font-size="13" font-weight="700" fill="#1f6b2a" text-anchor="middle">林</text>
+<line x1="408.1" y1="276.0" x2="428.9" y2="288.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="449.7" y1="276.0" x2="470.5" y2="288.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="491.3" y1="276.0" x2="512.0" y2="288.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="512.0" y1="288.0" x2="512.0" y2="312.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="387.3" y1="240.0" x2="408.1" y2="252.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="408.1" y1="252.0" x2="408.1" y2="276.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="366.6" y1="252.0" x2="387.3" y2="240.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="449.7" y1="276.0" x2="428.9" y2="288.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="491.3" y1="276.0" x2="470.5" y2="288.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="449.7" y1="204.0" x2="470.5" y2="216.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="449.7" y1="180.0" x2="449.7" y2="204.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="470.5" y1="168.0" x2="491.3" y2="180.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="491.3" y1="180.0" x2="491.3" y2="204.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="491.3" y1="204.0" x2="470.5" y2="216.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="449.7" y1="180.0" x2="470.5" y2="168.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="553.6" y1="168.0" x2="574.4" y2="180.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="574.4" y1="180.0" x2="595.2" y2="168.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="532.8" y1="132.0" x2="553.6" y2="144.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="553.6" y1="144.0" x2="553.6" y2="168.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="428.9" y1="96.0" x2="449.7" y2="108.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="470.5" y1="96.0" x2="491.3" y2="108.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="449.7" y1="108.0" x2="470.5" y2="96.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="512.0" y1="96.0" x2="532.8" y2="108.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="532.8" y1="108.0" x2="532.8" y2="132.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="491.3" y1="108.0" x2="512.0" y2="96.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="428.9" y1="72.0" x2="428.9" y2="96.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="595.2" y1="144.0" x2="574.4" y2="132.0" stroke="#1f62c9" stroke-width="4.2" stroke-linecap="round"/>
+<line x1="574.4" y1="108.0" x2="574.4" y2="132.0" stroke="#1f62c9" stroke-width="4.2" stroke-linecap="round"/>
+<line x1="574.4" y1="108.0" x2="553.6" y2="96.0" stroke="#1f62c9" stroke-width="4.2" stroke-linecap="round"/>
+<line x1="553.6" y1="96.0" x2="532.8" y2="108.0" stroke="#1f62c9" stroke-width="4.2" stroke-linecap="round"/>
+<line x1="532.8" y1="108.0" x2="512.0" y2="96.0" stroke="#1f62c9" stroke-width="4.2" stroke-linecap="round"/>
+<line x1="512.0" y1="96.0" x2="491.3" y2="108.0" stroke="#1f62c9" stroke-width="4.2" stroke-linecap="round"/>
+<line x1="491.3" y1="108.0" x2="470.5" y2="96.0" stroke="#1f62c9" stroke-width="4.2" stroke-linecap="round"/>
+</g>
+</svg>

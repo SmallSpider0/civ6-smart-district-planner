@@ -1,0 +1,425 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="826" height="434" viewBox="0 0 825.8 434.0" font-family="'Noto Sans SC','PingFang SC','Microsoft YaHei','Hiragino Sans GB',sans-serif">
+<rect width="100%" height="100%" fill="#ffffff"/>
+<defs><pattern id="foreign" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="6" stroke="#ffffff" stroke-width="2.2" stroke-opacity="0.75"/></pattern></defs>
+<g>
+<text x="2.0" y="19.0" font-size="15" font-weight="700" fill="#14202a">作者布局 · 相邻 25</text>
+<text x="2.0" y="36.0" font-size="12" fill="#555555">作者已建的区域</text>
+<polygon points="105.9,72.0 105.9,96.0 85.1,108.0 64.4,96.0 64.4,72.0 85.1,60.0" fill="#a6d4ec" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="105.6,72.2 105.6,95.8 85.1,107.6 64.7,95.8 64.7,72.2 85.1,60.4" fill="#ffffff" fill-opacity="0.5"/>
+<polygon points="102.0,74.2 102.0,93.8 85.1,103.5 68.3,93.8 68.3,74.2 85.1,64.5" fill="#cfcfcf" stroke="#555555" stroke-width="1"/>
+<text x="85.1" y="88.5" font-size="12" fill="#333333" text-anchor="middle">港</text>
+<polygon points="147.5,72.0 147.5,96.0 126.7,108.0 105.9,96.0 105.9,72.0 126.7,60.0" fill="#a6d4ec" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="189.1,72.0 189.1,96.0 168.3,108.0 147.5,96.0 147.5,72.0 168.3,60.0" fill="#a6d4ec" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="230.6,72.0 230.6,96.0 209.8,108.0 189.1,96.0 189.1,72.0 209.8,60.0" fill="#a6d4ec" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="226.7,74.2 226.7,93.8 209.8,103.5 193.0,93.8 193.0,74.2 209.8,64.5" fill="#178fa6" stroke="#1a1a1a" stroke-width="1.2"/>
+<text x="209.8" y="89.0" font-size="13" font-weight="700" fill="#ffffff" text-anchor="middle">港1</text>
+<text x="209.8" y="99.5" font-size="9.5" font-weight="700" fill="#ffffff" text-anchor="middle">+3</text>
+<polygon points="85.1,108.0 85.1,132.0 64.4,144.0 43.6,132.0 43.6,108.0 64.4,96.0" fill="#a9d07c" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="84.8,108.2 84.8,131.8 64.4,143.6 43.9,131.8 43.9,108.2 64.4,96.4" fill="#ffffff" fill-opacity="0.5"/>
+<polygon points="81.2,110.2 81.2,129.8 64.4,139.5 47.5,129.8 47.5,110.2 64.4,100.5" fill="#cfcfcf" stroke="#555555" stroke-width="1"/>
+<text x="64.4" y="124.5" font-size="12" fill="#333333" text-anchor="middle">商</text>
+<polygon points="126.7,108.0 126.7,132.0 105.9,144.0 85.1,132.0 85.1,108.0 105.9,96.0" fill="#a6d4ec" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="126.4,108.2 126.4,131.8 105.9,143.6 85.5,131.8 85.5,108.2 105.9,96.4" fill="#ffffff" fill-opacity="0.5"/>
+<text x="105.9" y="111.5" font-size="8.5" text-anchor="middle"><tspan fill="#1b3a4b">鱼</tspan></text>
+<polygon points="168.3,108.0 168.3,132.0 147.5,144.0 126.7,132.0 126.7,108.0 147.5,96.0" fill="#a6d4ec" stroke="#6b6b6b" stroke-width="0.7"/>
+<text x="147.5" y="128.0" font-size="13" font-weight="700" fill="#b0457a" text-anchor="middle">礁</text>
+<polygon points="209.8,108.0 209.8,132.0 189.1,144.0 168.3,132.0 168.3,108.0 189.1,96.0" fill="#a6d4ec" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="205.9,110.2 205.9,129.8 189.1,139.5 172.2,129.8 172.2,110.2 189.1,100.5" fill="#cfcfcf" stroke="#555555" stroke-width="1"/>
+<text x="189.1" y="124.5" font-size="12" fill="#333333" text-anchor="middle">奇</text>
+<polygon points="251.4,108.0 251.4,132.0 230.6,144.0 209.8,132.0 209.8,108.0 230.6,96.0" fill="#a9d07c" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="247.5,110.2 247.5,129.8 230.6,139.5 213.7,129.8 213.7,110.2 230.6,100.5" fill="#e3a41f" stroke="#1a1a1a" stroke-width="1.2"/>
+<text x="230.6" y="125.0" font-size="13" font-weight="700" fill="#2a1d00" text-anchor="middle">商1</text>
+<text x="230.6" y="135.5" font-size="9.5" font-weight="700" fill="#2a1d00" text-anchor="middle">+5</text>
+<polygon points="64.4,144.0 64.4,168.0 43.6,180.0 22.8,168.0 22.8,144.0 43.6,132.0" fill="#a9d07c" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="64.0,144.2 64.0,167.8 43.6,179.6 23.1,167.8 23.1,144.2 43.6,132.4" fill="#ffffff" fill-opacity="0.5"/>
+<text x="43.6" y="147.5" font-size="8.5" text-anchor="middle"><tspan fill="#1b3a4b">牛</tspan></text>
+<polygon points="105.9,144.0 105.9,168.0 85.1,180.0 64.4,168.0 64.4,144.0 85.1,132.0" fill="#a9d07c" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="105.6,144.2 105.6,167.8 85.1,179.6 64.7,167.8 64.7,144.2 85.1,132.4" fill="#ffffff" fill-opacity="0.5"/>
+<polygon points="147.5,144.0 147.5,168.0 126.7,180.0 105.9,168.0 105.9,144.0 126.7,132.0" fill="#a6d4ec" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="189.1,144.0 189.1,168.0 168.3,180.0 147.5,168.0 147.5,144.0 168.3,132.0" fill="#a9d07c" stroke="#6b6b6b" stroke-width="0.7"/>
+<text x="168.3" y="147.5" font-size="8.5" text-anchor="middle"><tspan fill="#5b2a86">大理石</tspan></text>
+<polygon points="230.6,144.0 230.6,168.0 209.8,180.0 189.1,168.0 189.1,144.0 209.8,132.0" fill="#a9d07c" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="226.7,146.2 226.7,165.8 209.8,175.5 193.0,165.8 193.0,146.2 209.8,136.5" fill="#cfcfcf" stroke="#555555" stroke-width="1"/>
+<text x="209.8" y="160.5" font-size="12" fill="#333333" text-anchor="middle">奇</text>
+<polygon points="272.2,144.0 272.2,168.0 251.4,180.0 230.6,168.0 230.6,144.0 251.4,132.0" fill="#a9d07c" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="268.3,146.2 268.3,165.8 251.4,175.5 234.5,165.8 234.5,146.2 251.4,136.5" fill="#9457b5" stroke="#1a1a1a" stroke-width="1.2"/>
+<text x="251.4" y="161.0" font-size="13" font-weight="700" fill="#ffffff" text-anchor="middle">剧1</text>
+<text x="251.4" y="171.5" font-size="9.5" font-weight="700" fill="#ffffff" text-anchor="middle">+5</text>
+<polygon points="43.6,180.0 43.6,204.0 22.8,216.0 2.0,204.0 2.0,180.0 22.8,168.0" fill="#8a8077" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="43.2,180.2 43.2,203.8 22.8,215.6 2.3,203.8 2.3,180.2 22.8,168.4" fill="#ffffff" fill-opacity="0.5"/>
+<text x="22.8" y="200.0" font-size="12" fill="#3d362f" text-anchor="middle">▲</text>
+<polygon points="85.1,180.0 85.1,204.0 64.4,216.0 43.6,204.0 43.6,180.0 64.4,168.0" fill="#8a8077" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="84.8,180.2 84.8,203.8 64.4,215.6 43.9,203.8 43.9,180.2 64.4,168.4" fill="#ffffff" fill-opacity="0.5"/>
+<text x="64.4" y="200.0" font-size="12" fill="#3d362f" text-anchor="middle">▲</text>
+<polygon points="126.7,180.0 126.7,204.0 105.9,216.0 85.1,204.0 85.1,180.0 105.9,168.0" fill="#8ab45a" stroke="#6b6b6b" stroke-width="0.7"/>
+<path d="M97.9,212.5 q8.0,-5.0 16.0,0" fill="none" stroke="#4d3f22" stroke-width="1.4"/>
+<text x="105.9" y="183.5" font-size="8.5" text-anchor="middle"><tspan fill="#1b3a4b">铜</tspan></text>
+<polygon points="168.3,180.0 168.3,204.0 147.5,216.0 126.7,204.0 126.7,180.0 147.5,168.0" fill="#8ab45a" stroke="#6b6b6b" stroke-width="0.7"/>
+<path d="M139.5,212.5 q8.0,-5.0 16.0,0" fill="none" stroke="#4d3f22" stroke-width="1.4"/>
+<text x="147.5" y="183.5" font-size="8.5" text-anchor="middle"><tspan fill="#1b3a4b">铜</tspan></text>
+<polygon points="164.4,182.2 164.4,201.8 147.5,211.5 130.6,201.8 130.6,182.2 147.5,172.5" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="147.5" y="196.5" font-size="12" font-weight="700" fill="#111111" text-anchor="middle">城1</text>
+<polygon points="209.8,180.0 209.8,204.0 189.1,216.0 168.3,204.0 168.3,180.0 189.1,168.0" fill="#a9d07c" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="251.4,180.0 251.4,204.0 230.6,216.0 209.8,204.0 209.8,180.0 230.6,168.0" fill="#a9d07c" stroke="#6b6b6b" stroke-width="0.7"/>
+<text x="230.6" y="183.5" font-size="8.5" text-anchor="middle"><tspan fill="#8a1c1c">马</tspan></text>
+<polygon points="293.0,180.0 293.0,204.0 272.2,216.0 251.4,204.0 251.4,180.0 272.2,168.0" fill="#a9d07c" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="289.1,182.2 289.1,201.8 272.2,211.5 255.3,201.8 255.3,182.2 272.2,172.5" fill="#cfcfcf" stroke="#555555" stroke-width="1"/>
+<text x="272.2" y="196.5" font-size="12" fill="#333333" text-anchor="middle">奇</text>
+<polygon points="334.6,180.0 334.6,204.0 313.8,216.0 293.0,204.0 293.0,180.0 313.8,168.0" fill="#a6d4ec" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="64.4,216.0 64.4,240.0 43.6,252.0 22.8,240.0 22.8,216.0 43.6,204.0" fill="#8a8077" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="64.0,216.2 64.0,239.8 43.6,251.6 23.1,239.8 23.1,216.2 43.6,204.4" fill="#ffffff" fill-opacity="0.5"/>
+<text x="43.6" y="236.0" font-size="12" fill="#3d362f" text-anchor="middle">▲</text>
+<polygon points="105.9,216.0 105.9,240.0 85.1,252.0 64.4,240.0 64.4,216.0 85.1,204.0" fill="#8ab45a" stroke="#6b6b6b" stroke-width="0.7"/>
+<path d="M77.1,248.5 q8.0,-5.0 16.0,0" fill="none" stroke="#4d3f22" stroke-width="1.4"/>
+<text x="85.1" y="219.5" font-size="8.5" text-anchor="middle"><tspan fill="#1b3a4b">铜</tspan></text>
+<polygon points="147.5,216.0 147.5,240.0 126.7,252.0 105.9,240.0 105.9,216.0 126.7,204.0" fill="#5fb3c4" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="189.1,216.0 189.1,240.0 168.3,252.0 147.5,240.0 147.5,216.0 168.3,204.0" fill="#a9d07c" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="230.6,216.0 230.6,240.0 209.8,252.0 189.1,240.0 189.1,216.0 209.8,204.0" fill="#a9d07c" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="272.2,216.0 272.2,240.0 251.4,252.0 230.6,240.0 230.6,216.0 251.4,204.0" fill="#a9d07c" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="268.3,218.2 268.3,237.8 251.4,247.5 234.5,237.8 234.5,218.2 251.4,208.5" fill="#e3a41f" stroke="#1a1a1a" stroke-width="1.2"/>
+<text x="251.4" y="233.0" font-size="13" font-weight="700" fill="#2a1d00" text-anchor="middle">商2</text>
+<text x="251.4" y="243.5" font-size="9.5" font-weight="700" fill="#2a1d00" text-anchor="middle">+0</text>
+<polygon points="313.8,216.0 313.8,240.0 293.0,252.0 272.2,240.0 272.2,216.0 293.0,204.0" fill="#a6d4ec" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="355.3,216.0 355.3,240.0 334.6,252.0 313.8,240.0 313.8,216.0 334.6,204.0" fill="#6198c6" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="85.1,252.0 85.1,276.0 64.4,288.0 43.6,276.0 43.6,252.0 64.4,240.0" fill="#5fb3c4" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="84.8,252.2 84.8,275.8 64.4,287.6 43.9,275.8 43.9,252.2 64.4,240.4" fill="#ffffff" fill-opacity="0.5"/>
+<polygon points="81.2,254.2 81.2,273.8 64.4,283.5 47.5,273.8 47.5,254.2 64.4,244.5" fill="#cfcfcf" stroke="#555555" stroke-width="1"/>
+<text x="64.4" y="268.5" font-size="12" fill="#333333" text-anchor="middle">奇</text>
+<polygon points="126.7,252.0 126.7,276.0 105.9,288.0 85.1,276.0 85.1,252.0 105.9,240.0" fill="#5fb3c4" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="168.3,252.0 168.3,276.0 147.5,288.0 126.7,276.0 126.7,252.0 147.5,240.0" fill="#5fb3c4" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="209.8,252.0 209.8,276.0 189.1,288.0 168.3,276.0 168.3,252.0 189.1,240.0" fill="#8a8077" stroke="#6b6b6b" stroke-width="0.7"/>
+<text x="189.1" y="272.0" font-size="12" fill="#3d362f" text-anchor="middle">▲</text>
+<polygon points="251.4,252.0 251.4,276.0 230.6,288.0 209.8,276.0 209.8,252.0 230.6,240.0" fill="#a9d07c" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="247.5,254.2 247.5,273.8 230.6,283.5 213.7,273.8 213.7,254.2 230.6,244.5" fill="#cfcfcf" stroke="#555555" stroke-width="1"/>
+<text x="230.6" y="268.5" font-size="12" fill="#333333" text-anchor="middle">奇</text>
+<polygon points="293.0,252.0 293.0,276.0 272.2,288.0 251.4,276.0 251.4,252.0 272.2,240.0" fill="#a9d07c" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="289.1,254.2 289.1,273.8 272.2,283.5 255.3,273.8 255.3,254.2 272.2,244.5" fill="#9457b5" stroke="#1a1a1a" stroke-width="1.2"/>
+<text x="272.2" y="269.0" font-size="13" font-weight="700" fill="#ffffff" text-anchor="middle">剧2</text>
+<text x="272.2" y="279.5" font-size="9.5" font-weight="700" fill="#ffffff" text-anchor="middle">+3</text>
+<polygon points="334.6,252.0 334.6,276.0 313.8,288.0 293.0,276.0 293.0,252.0 313.8,240.0" fill="#a6d4ec" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="376.1,252.0 376.1,276.0 355.3,288.0 334.6,276.0 334.6,252.0 355.3,240.0" fill="#6198c6" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="105.9,288.0 105.9,312.0 85.1,324.0 64.4,312.0 64.4,288.0 85.1,276.0" fill="#8a8077" stroke="#6b6b6b" stroke-width="0.7"/>
+<text x="85.1" y="308.0" font-size="12" fill="#3d362f" text-anchor="middle">▲</text>
+<polygon points="147.5,288.0 147.5,312.0 126.7,324.0 105.9,312.0 105.9,288.0 126.7,276.0" fill="#8a8077" stroke="#6b6b6b" stroke-width="0.7"/>
+<text x="126.7" y="308.0" font-size="12" fill="#3d362f" text-anchor="middle">▲</text>
+<polygon points="189.1,288.0 189.1,312.0 168.3,324.0 147.5,312.0 147.5,288.0 168.3,276.0" fill="#8a8077" stroke="#6b6b6b" stroke-width="0.7"/>
+<text x="168.3" y="308.0" font-size="12" fill="#3d362f" text-anchor="middle">▲</text>
+<polygon points="230.6,288.0 230.6,312.0 209.8,324.0 189.1,312.0 189.1,288.0 209.8,276.0" fill="#8ab45a" stroke="#6b6b6b" stroke-width="0.7"/>
+<path d="M201.8,320.5 q8.0,-5.0 16.0,0" fill="none" stroke="#4d3f22" stroke-width="1.4"/>
+<polygon points="226.7,290.2 226.7,309.8 209.8,319.5 193.0,309.8 193.0,290.2 209.8,280.5" fill="#3d7fd9" stroke="#1a1a1a" stroke-width="1.2"/>
+<text x="209.8" y="305.0" font-size="13" font-weight="700" fill="#ffffff" text-anchor="middle">学1</text>
+<text x="209.8" y="315.5" font-size="9.5" font-weight="700" fill="#ffffff" text-anchor="middle">+4</text>
+<polygon points="272.2,288.0 272.2,312.0 251.4,324.0 230.6,312.0 230.6,288.0 251.4,276.0" fill="#a9d07c" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="268.3,290.2 268.3,309.8 251.4,319.5 234.5,309.8 234.5,290.2 251.4,280.5" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="251.4" y="304.5" font-size="12" font-weight="700" fill="#111111" text-anchor="middle">城2</text>
+<polygon points="313.8,288.0 313.8,312.0 293.0,324.0 272.2,312.0 272.2,288.0 293.0,276.0" fill="#a6d4ec" stroke="#6b6b6b" stroke-width="0.7"/>
+<text x="293.0" y="308.0" font-size="13" font-weight="700" fill="#b0457a" text-anchor="middle">礁</text>
+<polygon points="355.3,288.0 355.3,312.0 334.6,324.0 313.8,312.0 313.8,288.0 334.6,276.0" fill="#a6d4ec" stroke="#6b6b6b" stroke-width="0.7"/>
+<text x="334.6" y="291.5" font-size="8.5" text-anchor="middle"><tspan fill="#1b3a4b">鱼</tspan></text>
+<polygon points="396.9,288.0 396.9,312.0 376.1,324.0 355.3,312.0 355.3,288.0 376.1,276.0" fill="#6198c6" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="168.3,324.0 168.3,348.0 147.5,360.0 126.7,348.0 126.7,324.0 147.5,312.0" fill="#8a8077" stroke="#6b6b6b" stroke-width="0.7"/>
+<text x="147.5" y="344.0" font-size="12" fill="#3d362f" text-anchor="middle">▲</text>
+<polygon points="209.8,324.0 209.8,348.0 189.1,360.0 168.3,348.0 168.3,324.0 189.1,312.0" fill="#8a8077" stroke="#6b6b6b" stroke-width="0.7"/>
+<text x="189.1" y="344.0" font-size="12" fill="#3d362f" text-anchor="middle">▲</text>
+<polygon points="251.4,324.0 251.4,348.0 230.6,360.0 209.8,348.0 209.8,324.0 230.6,312.0" fill="#8a8077" stroke="#6b6b6b" stroke-width="0.7"/>
+<text x="230.6" y="344.0" font-size="12" fill="#3d362f" text-anchor="middle">▲</text>
+<polygon points="293.0,324.0 293.0,348.0 272.2,360.0 251.4,348.0 251.4,324.0 272.2,312.0" fill="#8ab45a" stroke="#6b6b6b" stroke-width="0.7"/>
+<path d="M264.2,356.5 q8.0,-5.0 16.0,0" fill="none" stroke="#4d3f22" stroke-width="1.4"/>
+<text x="272.2" y="327.5" font-size="8.5" text-anchor="middle"><tspan fill="#8a1c1c">铁</tspan></text>
+<polygon points="334.6,324.0 334.6,348.0 313.8,360.0 293.0,348.0 293.0,324.0 313.8,312.0" fill="#a6d4ec" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="376.1,324.0 376.1,348.0 355.3,360.0 334.6,348.0 334.6,324.0 355.3,312.0" fill="#a6d4ec" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="189.1,360.0 189.1,384.0 168.3,396.0 147.5,384.0 147.5,360.0 168.3,348.0" fill="#8ab45a" stroke="#6b6b6b" stroke-width="0.7"/>
+<path d="M160.3,392.5 q8.0,-5.0 16.0,0" fill="none" stroke="#4d3f22" stroke-width="1.4"/>
+<text x="168.3" y="363.5" font-size="8.5" text-anchor="middle"><tspan fill="#8a1c1c">铁</tspan></text>
+<polygon points="230.6,360.0 230.6,384.0 209.8,396.0 189.1,384.0 189.1,360.0 209.8,348.0" fill="#8a8077" stroke="#6b6b6b" stroke-width="0.7"/>
+<text x="209.8" y="380.0" font-size="12" fill="#3d362f" text-anchor="middle">▲</text>
+<polygon points="272.2,360.0 272.2,384.0 251.4,396.0 230.6,384.0 230.6,360.0 251.4,348.0" fill="#8ab45a" stroke="#6b6b6b" stroke-width="0.7"/>
+<path d="M243.4,392.5 q8.0,-5.0 16.0,0" fill="none" stroke="#4d3f22" stroke-width="1.4"/>
+<polygon points="268.3,362.2 268.3,381.8 251.4,391.5 234.5,381.8 234.5,362.2 251.4,352.5" fill="#3d7fd9" stroke="#1a1a1a" stroke-width="1.2"/>
+<text x="251.4" y="377.0" font-size="13" font-weight="700" fill="#ffffff" text-anchor="middle">学2</text>
+<text x="251.4" y="387.5" font-size="9.5" font-weight="700" fill="#ffffff" text-anchor="middle">+3</text>
+<polygon points="313.8,360.0 313.8,384.0 293.0,396.0 272.2,384.0 272.2,360.0 293.0,348.0" fill="#a6d4ec" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="355.3,360.0 355.3,384.0 334.6,396.0 313.8,384.0 313.8,360.0 334.6,348.0" fill="#a6d4ec" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="209.8,396.0 209.8,420.0 189.1,432.0 168.3,420.0 168.3,396.0 189.1,384.0" fill="#8a8077" stroke="#6b6b6b" stroke-width="0.7"/>
+<text x="189.1" y="416.0" font-size="12" fill="#3d362f" text-anchor="middle">▲</text>
+<polygon points="251.4,396.0 251.4,420.0 230.6,432.0 209.8,420.0 209.8,396.0 230.6,384.0" fill="#8ab45a" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="251.1,396.2 251.1,419.8 230.6,431.6 210.2,419.8 210.2,396.2 230.6,384.4" fill="#ffffff" fill-opacity="0.5"/>
+<path d="M222.6,428.5 q8.0,-5.0 16.0,0" fill="none" stroke="#4d3f22" stroke-width="1.4"/>
+<polygon points="247.5,398.2 247.5,417.8 230.6,427.5 213.7,417.8 213.7,398.2 230.6,388.5" fill="#cfcfcf" stroke="#555555" stroke-width="1"/>
+<text x="230.6" y="412.5" font-size="12" fill="#333333" text-anchor="middle">学</text>
+<polygon points="293.0,396.0 293.0,420.0 272.2,432.0 251.4,420.0 251.4,396.0 272.2,384.0" fill="#8a8077" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="292.6,396.2 292.6,419.8 272.2,431.6 251.8,419.8 251.8,396.2 272.2,384.4" fill="#ffffff" fill-opacity="0.5"/>
+<text x="272.2" y="416.0" font-size="12" fill="#3d362f" text-anchor="middle">▲</text>
+<polygon points="334.6,396.0 334.6,420.0 313.8,432.0 293.0,420.0 293.0,396.0 313.8,384.0" fill="#a6d4ec" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="334.2,396.2 334.2,419.8 313.8,431.6 293.3,419.8 293.3,396.2 313.8,384.4" fill="#ffffff" fill-opacity="0.5"/>
+<line x1="209.8" y1="396.0" x2="209.8" y2="420.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="230.6" y1="384.0" x2="251.4" y2="396.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="209.8" y1="396.0" x2="230.6" y2="384.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="272.2" y1="384.0" x2="293.0" y2="396.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="251.4" y1="396.0" x2="272.2" y2="384.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="313.8" y1="384.0" x2="334.6" y2="396.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="293.0" y1="396.0" x2="313.8" y2="384.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="147.5" y1="312.0" x2="168.3" y2="324.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="168.3" y1="324.0" x2="168.3" y2="348.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="168.3" y1="348.0" x2="147.5" y2="360.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="189.1" y1="312.0" x2="209.8" y2="324.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="230.6" y1="312.0" x2="251.4" y2="324.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="209.8" y1="324.0" x2="230.6" y2="312.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="251.4" y1="324.0" x2="272.2" y2="312.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="147.5" y1="288.0" x2="147.5" y2="312.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="168.3" y1="276.0" x2="189.1" y2="288.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="189.1" y1="288.0" x2="189.1" y2="312.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="209.8" y1="276.0" x2="230.6" y2="288.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="230.6" y1="288.0" x2="230.6" y2="312.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="251.4" y1="276.0" x2="272.2" y2="288.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="272.2" y1="288.0" x2="272.2" y2="312.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="64.4" y1="240.0" x2="85.1" y2="252.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="85.1" y1="252.0" x2="85.1" y2="276.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="85.1" y1="276.0" x2="64.4" y2="288.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="168.3" y1="276.0" x2="147.5" y2="288.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="209.8" y1="252.0" x2="209.8" y2="276.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="251.4" y1="276.0" x2="230.6" y2="288.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="209.8" y1="252.0" x2="230.6" y2="240.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="64.4" y1="216.0" x2="64.4" y2="240.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="126.7" y1="204.0" x2="147.5" y2="216.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="209.8" y1="204.0" x2="230.6" y2="216.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="230.6" y1="216.0" x2="230.6" y2="240.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="251.4" y1="204.0" x2="272.2" y2="216.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="85.1" y1="180.0" x2="85.1" y2="204.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="85.1" y1="204.0" x2="64.4" y2="216.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="126.7" y1="180.0" x2="126.7" y2="204.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="85.1" y1="180.0" x2="105.9" y2="168.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="147.5" y1="168.0" x2="168.3" y2="180.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="168.3" y1="180.0" x2="168.3" y2="204.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="168.3" y1="204.0" x2="147.5" y2="216.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="126.7" y1="180.0" x2="147.5" y2="168.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="209.8" y1="180.0" x2="209.8" y2="204.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="230.6" y1="168.0" x2="251.4" y2="180.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="251.4" y1="180.0" x2="251.4" y2="204.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="209.8" y1="180.0" x2="230.6" y2="168.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="293.0" y1="180.0" x2="293.0" y2="204.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="293.0" y1="204.0" x2="272.2" y2="216.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="105.9" y1="144.0" x2="105.9" y2="168.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="105.9" y1="96.0" x2="126.7" y2="108.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="126.7" y1="108.0" x2="126.7" y2="132.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="126.7" y1="132.0" x2="105.9" y2="144.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="105.9" y1="72.0" x2="105.9" y2="96.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="2.0" y1="180.0" x2="2.0" y2="204.0" stroke="#1f62c9" stroke-width="4.2" stroke-linecap="round"/>
+<line x1="22.8" y1="168.0" x2="43.6" y2="180.0" stroke="#1f62c9" stroke-width="4.2" stroke-linecap="round"/>
+<line x1="2.0" y1="180.0" x2="22.8" y2="168.0" stroke="#1f62c9" stroke-width="4.2" stroke-linecap="round"/>
+<line x1="43.6" y1="180.0" x2="64.4" y2="168.0" stroke="#1f62c9" stroke-width="4.2" stroke-linecap="round"/>
+<line x1="64.4" y1="144.0" x2="64.4" y2="168.0" stroke="#1f62c9" stroke-width="4.2" stroke-linecap="round"/>
+<line x1="64.4" y1="144.0" x2="85.1" y2="132.0" stroke="#1f62c9" stroke-width="4.2" stroke-linecap="round"/>
+</g>
+<g>
+<text x="428.9" y="19.0" font-size="15" font-weight="700" fill="#14202a">真最优（只算相邻）· 相邻 27</text>
+<text x="428.9" y="36.0" font-size="12" fill="#555555">只算相邻加成，全 1</text>
+<text x="428.9" y="51.0" font-size="12" fill="#555555">计入地块（λ = 1）的真最优相同</text>
+<polygon points="532.8,72.0 532.8,96.0 512.0,108.0 491.3,96.0 491.3,72.0 512.0,60.0" fill="#a6d4ec" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="532.5,72.2 532.5,95.8 512.0,107.6 491.6,95.8 491.6,72.2 512.0,60.4" fill="#ffffff" fill-opacity="0.5"/>
+<polygon points="528.9,74.2 528.9,93.8 512.0,103.5 495.2,93.8 495.2,74.2 512.0,64.5" fill="#cfcfcf" stroke="#555555" stroke-width="1"/>
+<text x="512.0" y="88.5" font-size="12" fill="#333333" text-anchor="middle">港</text>
+<polygon points="574.4,72.0 574.4,96.0 553.6,108.0 532.8,96.0 532.8,72.0 553.6,60.0" fill="#a6d4ec" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="616.0,72.0 616.0,96.0 595.2,108.0 574.4,96.0 574.4,72.0 595.2,60.0" fill="#a6d4ec" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="657.5,72.0 657.5,96.0 636.8,108.0 616.0,96.0 616.0,72.0 636.8,60.0" fill="#a6d4ec" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="653.6,74.2 653.6,93.8 636.8,103.5 619.9,93.8 619.9,74.2 636.8,64.5" fill="#178fa6" stroke="#1a1a1a" stroke-width="1.2"/>
+<text x="636.8" y="89.0" font-size="13" font-weight="700" fill="#ffffff" text-anchor="middle">港1</text>
+<text x="636.8" y="99.5" font-size="9.5" font-weight="700" fill="#ffffff" text-anchor="middle">+3</text>
+<polygon points="512.0,108.0 512.0,132.0 491.3,144.0 470.5,132.0 470.5,108.0 491.3,96.0" fill="#a9d07c" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="511.7,108.2 511.7,131.8 491.3,143.6 470.8,131.8 470.8,108.2 491.3,96.4" fill="#ffffff" fill-opacity="0.5"/>
+<polygon points="508.1,110.2 508.1,129.8 491.3,139.5 474.4,129.8 474.4,110.2 491.3,100.5" fill="#cfcfcf" stroke="#555555" stroke-width="1"/>
+<text x="491.3" y="124.5" font-size="12" fill="#333333" text-anchor="middle">商</text>
+<polygon points="553.6,108.0 553.6,132.0 532.8,144.0 512.0,132.0 512.0,108.0 532.8,96.0" fill="#a6d4ec" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="553.3,108.2 553.3,131.8 532.8,143.6 512.4,131.8 512.4,108.2 532.8,96.4" fill="#ffffff" fill-opacity="0.5"/>
+<text x="532.8" y="111.5" font-size="8.5" text-anchor="middle"><tspan fill="#1b3a4b">鱼</tspan></text>
+<polygon points="595.2,108.0 595.2,132.0 574.4,144.0 553.6,132.0 553.6,108.0 574.4,96.0" fill="#a6d4ec" stroke="#6b6b6b" stroke-width="0.7"/>
+<text x="574.4" y="128.0" font-size="13" font-weight="700" fill="#b0457a" text-anchor="middle">礁</text>
+<polygon points="636.8,108.0 636.8,132.0 616.0,144.0 595.2,132.0 595.2,108.0 616.0,96.0" fill="#a6d4ec" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="632.9,110.2 632.9,129.8 616.0,139.5 599.1,129.8 599.1,110.2 616.0,100.5" fill="#cfcfcf" stroke="#555555" stroke-width="1"/>
+<text x="616.0" y="124.5" font-size="12" fill="#333333" text-anchor="middle">奇</text>
+<polygon points="678.3,108.0 678.3,132.0 657.5,144.0 636.8,132.0 636.8,108.0 657.5,96.0" fill="#a9d07c" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="674.4,110.2 674.4,129.8 657.5,139.5 640.7,129.8 640.7,110.2 657.5,100.5" fill="#e3a41f" stroke="#1a1a1a" stroke-width="1.2"/>
+<text x="657.5" y="125.0" font-size="13" font-weight="700" fill="#2a1d00" text-anchor="middle">商1</text>
+<text x="657.5" y="135.5" font-size="9.5" font-weight="700" fill="#2a1d00" text-anchor="middle">+5</text>
+<polygon points="491.3,144.0 491.3,168.0 470.5,180.0 449.7,168.0 449.7,144.0 470.5,132.0" fill="#a9d07c" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="490.9,144.2 490.9,167.8 470.5,179.6 450.0,167.8 450.0,144.2 470.5,132.4" fill="#ffffff" fill-opacity="0.5"/>
+<text x="470.5" y="147.5" font-size="8.5" text-anchor="middle"><tspan fill="#1b3a4b">牛</tspan></text>
+<polygon points="532.8,144.0 532.8,168.0 512.0,180.0 491.3,168.0 491.3,144.0 512.0,132.0" fill="#a9d07c" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="532.5,144.2 532.5,167.8 512.0,179.6 491.6,167.8 491.6,144.2 512.0,132.4" fill="#ffffff" fill-opacity="0.5"/>
+<polygon points="574.4,144.0 574.4,168.0 553.6,180.0 532.8,168.0 532.8,144.0 553.6,132.0" fill="#a6d4ec" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="616.0,144.0 616.0,168.0 595.2,180.0 574.4,168.0 574.4,144.0 595.2,132.0" fill="#a9d07c" stroke="#6b6b6b" stroke-width="0.7"/>
+<text x="595.2" y="147.5" font-size="8.5" text-anchor="middle"><tspan fill="#5b2a86">大理石</tspan></text>
+<polygon points="657.5,144.0 657.5,168.0 636.8,180.0 616.0,168.0 616.0,144.0 636.8,132.0" fill="#a9d07c" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="653.6,146.2 653.6,165.8 636.8,175.5 619.9,165.8 619.9,146.2 636.8,136.5" fill="#cfcfcf" stroke="#555555" stroke-width="1"/>
+<text x="636.8" y="160.5" font-size="12" fill="#333333" text-anchor="middle">奇</text>
+<polygon points="699.1,144.0 699.1,168.0 678.3,180.0 657.5,168.0 657.5,144.0 678.3,132.0" fill="#a9d07c" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="695.2,146.2 695.2,165.8 678.3,175.5 661.4,165.8 661.4,146.2 678.3,136.5" fill="#9457b5" stroke="#1a1a1a" stroke-width="1.2"/>
+<text x="678.3" y="161.0" font-size="13" font-weight="700" fill="#ffffff" text-anchor="middle">剧1</text>
+<text x="678.3" y="171.5" font-size="9.5" font-weight="700" fill="#ffffff" text-anchor="middle">+5</text>
+<polygon points="470.5,180.0 470.5,204.0 449.7,216.0 428.9,204.0 428.9,180.0 449.7,168.0" fill="#8a8077" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="470.1,180.2 470.1,203.8 449.7,215.6 429.3,203.8 429.3,180.2 449.7,168.4" fill="#ffffff" fill-opacity="0.5"/>
+<text x="449.7" y="200.0" font-size="12" fill="#3d362f" text-anchor="middle">▲</text>
+<polygon points="512.0,180.0 512.0,204.0 491.3,216.0 470.5,204.0 470.5,180.0 491.3,168.0" fill="#8a8077" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="511.7,180.2 511.7,203.8 491.3,215.6 470.8,203.8 470.8,180.2 491.3,168.4" fill="#ffffff" fill-opacity="0.5"/>
+<text x="491.3" y="200.0" font-size="12" fill="#3d362f" text-anchor="middle">▲</text>
+<polygon points="553.6,180.0 553.6,204.0 532.8,216.0 512.0,204.0 512.0,180.0 532.8,168.0" fill="#8ab45a" stroke="#6b6b6b" stroke-width="0.7"/>
+<path d="M524.8,212.5 q8.0,-5.0 16.0,0" fill="none" stroke="#4d3f22" stroke-width="1.4"/>
+<text x="532.8" y="183.5" font-size="8.5" text-anchor="middle"><tspan fill="#1b3a4b">铜</tspan></text>
+<polygon points="595.2,180.0 595.2,204.0 574.4,216.0 553.6,204.0 553.6,180.0 574.4,168.0" fill="#8ab45a" stroke="#6b6b6b" stroke-width="0.7"/>
+<path d="M566.4,212.5 q8.0,-5.0 16.0,0" fill="none" stroke="#4d3f22" stroke-width="1.4"/>
+<text x="574.4" y="183.5" font-size="8.5" text-anchor="middle"><tspan fill="#1b3a4b">铜</tspan></text>
+<polygon points="591.3,182.2 591.3,201.8 574.4,211.5 557.5,201.8 557.5,182.2 574.4,172.5" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="574.4" y="196.5" font-size="12" font-weight="700" fill="#111111" text-anchor="middle">城1</text>
+<polygon points="636.8,180.0 636.8,204.0 616.0,216.0 595.2,204.0 595.2,180.0 616.0,168.0" fill="#a9d07c" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="678.3,180.0 678.3,204.0 657.5,216.0 636.8,204.0 636.8,180.0 657.5,168.0" fill="#a9d07c" stroke="#6b6b6b" stroke-width="0.7"/>
+<text x="657.5" y="183.5" font-size="8.5" text-anchor="middle"><tspan fill="#8a1c1c">马</tspan></text>
+<polygon points="719.9,180.0 719.9,204.0 699.1,216.0 678.3,204.0 678.3,180.0 699.1,168.0" fill="#a9d07c" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="716.0,182.2 716.0,201.8 699.1,211.5 682.2,201.8 682.2,182.2 699.1,172.5" fill="#cfcfcf" stroke="#555555" stroke-width="1"/>
+<text x="699.1" y="196.5" font-size="12" fill="#333333" text-anchor="middle">奇</text>
+<polygon points="761.5,180.0 761.5,204.0 740.7,216.0 719.9,204.0 719.9,180.0 740.7,168.0" fill="#a6d4ec" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="491.3,216.0 491.3,240.0 470.5,252.0 449.7,240.0 449.7,216.0 470.5,204.0" fill="#8a8077" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="490.9,216.2 490.9,239.8 470.5,251.6 450.0,239.8 450.0,216.2 470.5,204.4" fill="#ffffff" fill-opacity="0.5"/>
+<text x="470.5" y="236.0" font-size="12" fill="#3d362f" text-anchor="middle">▲</text>
+<polygon points="532.8,216.0 532.8,240.0 512.0,252.0 491.3,240.0 491.3,216.0 512.0,204.0" fill="#8ab45a" stroke="#6b6b6b" stroke-width="0.7"/>
+<path d="M504.0,248.5 q8.0,-5.0 16.0,0" fill="none" stroke="#4d3f22" stroke-width="1.4"/>
+<text x="512.0" y="219.5" font-size="8.5" text-anchor="middle"><tspan fill="#1b3a4b">铜</tspan></text>
+<polygon points="574.4,216.0 574.4,240.0 553.6,252.0 532.8,240.0 532.8,216.0 553.6,204.0" fill="#5fb3c4" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="616.0,216.0 616.0,240.0 595.2,252.0 574.4,240.0 574.4,216.0 595.2,204.0" fill="#a9d07c" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="657.5,216.0 657.5,240.0 636.8,252.0 616.0,240.0 616.0,216.0 636.8,204.0" fill="#a9d07c" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="699.1,216.0 699.1,240.0 678.3,252.0 657.5,240.0 657.5,216.0 678.3,204.0" fill="#a9d07c" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="695.2,218.2 695.2,237.8 678.3,247.5 661.4,237.8 661.4,218.2 678.3,208.5" fill="#9457b5" stroke="#d0021b" stroke-width="2.6"/>
+<text x="678.3" y="233.0" font-size="13" font-weight="700" fill="#ffffff" text-anchor="middle">剧2</text>
+<text x="678.3" y="243.5" font-size="9.5" font-weight="700" fill="#ffffff" text-anchor="middle">+4</text>
+<polygon points="740.7,216.0 740.7,240.0 719.9,252.0 699.1,240.0 699.1,216.0 719.9,204.0" fill="#a6d4ec" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="782.2,216.0 782.2,240.0 761.5,252.0 740.7,240.0 740.7,216.0 761.5,204.0" fill="#6198c6" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="512.0,252.0 512.0,276.0 491.3,288.0 470.5,276.0 470.5,252.0 491.3,240.0" fill="#5fb3c4" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="511.7,252.2 511.7,275.8 491.3,287.6 470.8,275.8 470.8,252.2 491.3,240.4" fill="#ffffff" fill-opacity="0.5"/>
+<polygon points="508.1,254.2 508.1,273.8 491.3,283.5 474.4,273.8 474.4,254.2 491.3,244.5" fill="#cfcfcf" stroke="#555555" stroke-width="1"/>
+<text x="491.3" y="268.5" font-size="12" fill="#333333" text-anchor="middle">奇</text>
+<polygon points="553.6,252.0 553.6,276.0 532.8,288.0 512.0,276.0 512.0,252.0 532.8,240.0" fill="#5fb3c4" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="595.2,252.0 595.2,276.0 574.4,288.0 553.6,276.0 553.6,252.0 574.4,240.0" fill="#5fb3c4" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="636.8,252.0 636.8,276.0 616.0,288.0 595.2,276.0 595.2,252.0 616.0,240.0" fill="#8a8077" stroke="#6b6b6b" stroke-width="0.7"/>
+<text x="616.0" y="272.0" font-size="12" fill="#3d362f" text-anchor="middle">▲</text>
+<polygon points="678.3,252.0 678.3,276.0 657.5,288.0 636.8,276.0 636.8,252.0 657.5,240.0" fill="#a9d07c" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="674.4,254.2 674.4,273.8 657.5,283.5 640.7,273.8 640.7,254.2 657.5,244.5" fill="#cfcfcf" stroke="#555555" stroke-width="1"/>
+<text x="657.5" y="268.5" font-size="12" fill="#333333" text-anchor="middle">奇</text>
+<polygon points="719.9,252.0 719.9,276.0 699.1,288.0 678.3,276.0 678.3,252.0 699.1,240.0" fill="#a9d07c" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="716.0,254.2 716.0,273.8 699.1,283.5 682.2,273.8 682.2,254.2 699.1,244.5" fill="#e3a41f" stroke="#d0021b" stroke-width="2.6"/>
+<text x="699.1" y="269.0" font-size="13" font-weight="700" fill="#2a1d00" text-anchor="middle">商2</text>
+<text x="699.1" y="279.5" font-size="9.5" font-weight="700" fill="#2a1d00" text-anchor="middle">+1</text>
+<polygon points="761.5,252.0 761.5,276.0 740.7,288.0 719.9,276.0 719.9,252.0 740.7,240.0" fill="#a6d4ec" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="803.0,252.0 803.0,276.0 782.2,288.0 761.5,276.0 761.5,252.0 782.2,240.0" fill="#6198c6" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="532.8,288.0 532.8,312.0 512.0,324.0 491.3,312.0 491.3,288.0 512.0,276.0" fill="#8a8077" stroke="#6b6b6b" stroke-width="0.7"/>
+<text x="512.0" y="308.0" font-size="12" fill="#3d362f" text-anchor="middle">▲</text>
+<polygon points="574.4,288.0 574.4,312.0 553.6,324.0 532.8,312.0 532.8,288.0 553.6,276.0" fill="#8a8077" stroke="#6b6b6b" stroke-width="0.7"/>
+<text x="553.6" y="308.0" font-size="12" fill="#3d362f" text-anchor="middle">▲</text>
+<polygon points="616.0,288.0 616.0,312.0 595.2,324.0 574.4,312.0 574.4,288.0 595.2,276.0" fill="#8a8077" stroke="#6b6b6b" stroke-width="0.7"/>
+<text x="595.2" y="308.0" font-size="12" fill="#3d362f" text-anchor="middle">▲</text>
+<polygon points="657.5,288.0 657.5,312.0 636.8,324.0 616.0,312.0 616.0,288.0 636.8,276.0" fill="#8ab45a" stroke="#6b6b6b" stroke-width="0.7"/>
+<path d="M628.8,320.5 q8.0,-5.0 16.0,0" fill="none" stroke="#4d3f22" stroke-width="1.4"/>
+<polygon points="653.6,290.2 653.6,309.8 636.8,319.5 619.9,309.8 619.9,290.2 636.8,280.5" fill="#3d7fd9" stroke="#1a1a1a" stroke-width="1.2"/>
+<text x="636.8" y="305.0" font-size="13" font-weight="700" fill="#ffffff" text-anchor="middle">学1</text>
+<text x="636.8" y="315.5" font-size="9.5" font-weight="700" fill="#ffffff" text-anchor="middle">+4</text>
+<polygon points="699.1,288.0 699.1,312.0 678.3,324.0 657.5,312.0 657.5,288.0 678.3,276.0" fill="#a9d07c" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="695.2,290.2 695.2,309.8 678.3,319.5 661.4,309.8 661.4,290.2 678.3,280.5" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+<text x="678.3" y="304.5" font-size="12" font-weight="700" fill="#111111" text-anchor="middle">城2</text>
+<polygon points="740.7,288.0 740.7,312.0 719.9,324.0 699.1,312.0 699.1,288.0 719.9,276.0" fill="#a6d4ec" stroke="#6b6b6b" stroke-width="0.7"/>
+<text x="719.9" y="308.0" font-size="13" font-weight="700" fill="#b0457a" text-anchor="middle">礁</text>
+<polygon points="782.2,288.0 782.2,312.0 761.5,324.0 740.7,312.0 740.7,288.0 761.5,276.0" fill="#a6d4ec" stroke="#6b6b6b" stroke-width="0.7"/>
+<text x="761.5" y="291.5" font-size="8.5" text-anchor="middle"><tspan fill="#1b3a4b">鱼</tspan></text>
+<polygon points="823.8,288.0 823.8,312.0 803.0,324.0 782.2,312.0 782.2,288.0 803.0,276.0" fill="#6198c6" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="595.2,324.0 595.2,348.0 574.4,360.0 553.6,348.0 553.6,324.0 574.4,312.0" fill="#8a8077" stroke="#6b6b6b" stroke-width="0.7"/>
+<text x="574.4" y="344.0" font-size="12" fill="#3d362f" text-anchor="middle">▲</text>
+<polygon points="636.8,324.0 636.8,348.0 616.0,360.0 595.2,348.0 595.2,324.0 616.0,312.0" fill="#8a8077" stroke="#6b6b6b" stroke-width="0.7"/>
+<text x="616.0" y="344.0" font-size="12" fill="#3d362f" text-anchor="middle">▲</text>
+<polygon points="678.3,324.0 678.3,348.0 657.5,360.0 636.8,348.0 636.8,324.0 657.5,312.0" fill="#8a8077" stroke="#6b6b6b" stroke-width="0.7"/>
+<text x="657.5" y="344.0" font-size="12" fill="#3d362f" text-anchor="middle">▲</text>
+<polygon points="719.9,324.0 719.9,348.0 699.1,360.0 678.3,348.0 678.3,324.0 699.1,312.0" fill="#8ab45a" stroke="#6b6b6b" stroke-width="0.7"/>
+<path d="M691.1,356.5 q8.0,-5.0 16.0,0" fill="none" stroke="#4d3f22" stroke-width="1.4"/>
+<text x="699.1" y="327.5" font-size="8.5" text-anchor="middle"><tspan fill="#8a1c1c">铁</tspan></text>
+<polygon points="761.5,324.0 761.5,348.0 740.7,360.0 719.9,348.0 719.9,324.0 740.7,312.0" fill="#a6d4ec" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="803.0,324.0 803.0,348.0 782.2,360.0 761.5,348.0 761.5,324.0 782.2,312.0" fill="#a6d4ec" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="616.0,360.0 616.0,384.0 595.2,396.0 574.4,384.0 574.4,360.0 595.2,348.0" fill="#8ab45a" stroke="#6b6b6b" stroke-width="0.7"/>
+<path d="M587.2,392.5 q8.0,-5.0 16.0,0" fill="none" stroke="#4d3f22" stroke-width="1.4"/>
+<text x="595.2" y="363.5" font-size="8.5" text-anchor="middle"><tspan fill="#8a1c1c">铁</tspan></text>
+<polygon points="657.5,360.0 657.5,384.0 636.8,396.0 616.0,384.0 616.0,360.0 636.8,348.0" fill="#8a8077" stroke="#6b6b6b" stroke-width="0.7"/>
+<text x="636.8" y="380.0" font-size="12" fill="#3d362f" text-anchor="middle">▲</text>
+<polygon points="699.1,360.0 699.1,384.0 678.3,396.0 657.5,384.0 657.5,360.0 678.3,348.0" fill="#8ab45a" stroke="#6b6b6b" stroke-width="0.7"/>
+<path d="M670.3,392.5 q8.0,-5.0 16.0,0" fill="none" stroke="#4d3f22" stroke-width="1.4"/>
+<polygon points="695.2,362.2 695.2,381.8 678.3,391.5 661.4,381.8 661.4,362.2 678.3,352.5" fill="#3d7fd9" stroke="#1a1a1a" stroke-width="1.2"/>
+<text x="678.3" y="377.0" font-size="13" font-weight="700" fill="#ffffff" text-anchor="middle">学2</text>
+<text x="678.3" y="387.5" font-size="9.5" font-weight="700" fill="#ffffff" text-anchor="middle">+3</text>
+<polygon points="740.7,360.0 740.7,384.0 719.9,396.0 699.1,384.0 699.1,360.0 719.9,348.0" fill="#a6d4ec" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="782.2,360.0 782.2,384.0 761.5,396.0 740.7,384.0 740.7,360.0 761.5,348.0" fill="#a6d4ec" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="636.8,396.0 636.8,420.0 616.0,432.0 595.2,420.0 595.2,396.0 616.0,384.0" fill="#8a8077" stroke="#6b6b6b" stroke-width="0.7"/>
+<text x="616.0" y="416.0" font-size="12" fill="#3d362f" text-anchor="middle">▲</text>
+<polygon points="678.3,396.0 678.3,420.0 657.5,432.0 636.8,420.0 636.8,396.0 657.5,384.0" fill="#8ab45a" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="678.0,396.2 678.0,419.8 657.5,431.6 637.1,419.8 637.1,396.2 657.5,384.4" fill="#ffffff" fill-opacity="0.5"/>
+<path d="M649.5,428.5 q8.0,-5.0 16.0,0" fill="none" stroke="#4d3f22" stroke-width="1.4"/>
+<polygon points="674.4,398.2 674.4,417.8 657.5,427.5 640.7,417.8 640.7,398.2 657.5,388.5" fill="#cfcfcf" stroke="#555555" stroke-width="1"/>
+<text x="657.5" y="412.5" font-size="12" fill="#333333" text-anchor="middle">学</text>
+<polygon points="719.9,396.0 719.9,420.0 699.1,432.0 678.3,420.0 678.3,396.0 699.1,384.0" fill="#8a8077" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="719.5,396.2 719.5,419.8 699.1,431.6 678.7,419.8 678.7,396.2 699.1,384.4" fill="#ffffff" fill-opacity="0.5"/>
+<text x="699.1" y="416.0" font-size="12" fill="#3d362f" text-anchor="middle">▲</text>
+<polygon points="761.5,396.0 761.5,420.0 740.7,432.0 719.9,420.0 719.9,396.0 740.7,384.0" fill="#a6d4ec" stroke="#6b6b6b" stroke-width="0.7"/>
+<polygon points="761.1,396.2 761.1,419.8 740.7,431.6 720.2,419.8 720.2,396.2 740.7,384.4" fill="#ffffff" fill-opacity="0.5"/>
+<line x1="636.8" y1="396.0" x2="636.8" y2="420.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="657.5" y1="384.0" x2="678.3" y2="396.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="636.8" y1="396.0" x2="657.5" y2="384.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="699.1" y1="384.0" x2="719.9" y2="396.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="678.3" y1="396.0" x2="699.1" y2="384.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="740.7" y1="384.0" x2="761.5" y2="396.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="719.9" y1="396.0" x2="740.7" y2="384.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="574.4" y1="312.0" x2="595.2" y2="324.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="595.2" y1="324.0" x2="595.2" y2="348.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="595.2" y1="348.0" x2="574.4" y2="360.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="616.0" y1="312.0" x2="636.8" y2="324.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="657.5" y1="312.0" x2="678.3" y2="324.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="636.8" y1="324.0" x2="657.5" y2="312.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="678.3" y1="324.0" x2="699.1" y2="312.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="574.4" y1="288.0" x2="574.4" y2="312.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="595.2" y1="276.0" x2="616.0" y2="288.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="616.0" y1="288.0" x2="616.0" y2="312.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="636.8" y1="276.0" x2="657.5" y2="288.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="657.5" y1="288.0" x2="657.5" y2="312.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="678.3" y1="276.0" x2="699.1" y2="288.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="699.1" y1="288.0" x2="699.1" y2="312.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="491.3" y1="240.0" x2="512.0" y2="252.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="512.0" y1="252.0" x2="512.0" y2="276.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="512.0" y1="276.0" x2="491.3" y2="288.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="595.2" y1="276.0" x2="574.4" y2="288.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="636.8" y1="252.0" x2="636.8" y2="276.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="678.3" y1="276.0" x2="657.5" y2="288.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="636.8" y1="252.0" x2="657.5" y2="240.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="491.3" y1="216.0" x2="491.3" y2="240.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="553.6" y1="204.0" x2="574.4" y2="216.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="636.8" y1="204.0" x2="657.5" y2="216.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="657.5" y1="216.0" x2="657.5" y2="240.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="678.3" y1="204.0" x2="699.1" y2="216.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="512.0" y1="180.0" x2="512.0" y2="204.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="512.0" y1="204.0" x2="491.3" y2="216.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="553.6" y1="180.0" x2="553.6" y2="204.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="512.0" y1="180.0" x2="532.8" y2="168.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="574.4" y1="168.0" x2="595.2" y2="180.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="595.2" y1="180.0" x2="595.2" y2="204.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="595.2" y1="204.0" x2="574.4" y2="216.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="553.6" y1="180.0" x2="574.4" y2="168.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="636.8" y1="180.0" x2="636.8" y2="204.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="657.5" y1="168.0" x2="678.3" y2="180.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="678.3" y1="180.0" x2="678.3" y2="204.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="636.8" y1="180.0" x2="657.5" y2="168.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="719.9" y1="180.0" x2="719.9" y2="204.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="719.9" y1="204.0" x2="699.1" y2="216.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="532.8" y1="144.0" x2="532.8" y2="168.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="532.8" y1="96.0" x2="553.6" y2="108.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="553.6" y1="108.0" x2="553.6" y2="132.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="553.6" y1="132.0" x2="532.8" y2="144.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="532.8" y1="72.0" x2="532.8" y2="96.0" stroke="#2b2b2b" stroke-width="2.4" stroke-dasharray="5,3"/>
+<line x1="428.9" y1="180.0" x2="428.9" y2="204.0" stroke="#1f62c9" stroke-width="4.2" stroke-linecap="round"/>
+<line x1="449.7" y1="168.0" x2="470.5" y2="180.0" stroke="#1f62c9" stroke-width="4.2" stroke-linecap="round"/>
+<line x1="428.9" y1="180.0" x2="449.7" y2="168.0" stroke="#1f62c9" stroke-width="4.2" stroke-linecap="round"/>
+<line x1="470.5" y1="180.0" x2="491.3" y2="168.0" stroke="#1f62c9" stroke-width="4.2" stroke-linecap="round"/>
+<line x1="491.3" y1="144.0" x2="491.3" y2="168.0" stroke="#1f62c9" stroke-width="4.2" stroke-linecap="round"/>
+<line x1="491.3" y1="144.0" x2="512.0" y2="132.0" stroke="#1f62c9" stroke-width="4.2" stroke-linecap="round"/>
+</g>
+</svg>
