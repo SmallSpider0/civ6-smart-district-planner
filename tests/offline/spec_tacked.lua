@@ -72,6 +72,7 @@ test("several cities tab, two batches with the shared list: the second keeps its
   multi.SetPlanFor("ALL")
   multi.SetSelected(CAMPUS, true)
   multi.SetSelected(THEATER, true)
+  multi.SetCount(0) -- the required two only (the default count is 3, issue 71)
   multi.SetTier("FAST")
   local function Solve()
     T.ok(multi.Solve(), "started")

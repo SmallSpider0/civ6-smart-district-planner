@@ -219,8 +219,9 @@ function SDP_UI.UnplacedName(u)
 end
 
 function SDP_UI.ReasonText(u)
-  return Locale.Lookup("LOC_SDP_REASON_" .. u.Reason, u.Other and TypeName(u.Other) or "",
-    u.Where ~= nil and Locale.Lookup(u.Where) or "")
+  local other = u.Other and TypeName(u.Other) or ""
+  if u.Where ~= nil then return Locale.Lookup("LOC_SDP_REASON_" .. u.Reason, other, Locale.Lookup(u.Where)) end
+  return Locale.Lookup("LOC_SDP_REASON_" .. u.Reason, other)
 end
 
 -- What a tab keeps in the save (issue 57, SDP_Settings): its weight columns,
@@ -2064,3 +2065,4 @@ Events.InterfaceModeChanged.Add(OnInterfaceModeChanged)
 Events.SystemUpdateUI.Add(OnUpdateUI)
 LuaEvents.SDP_OpenPanel.Add(Open)
 LuaEvents.SDP_ClosePanel.Add(Close)
+FitWindow()
