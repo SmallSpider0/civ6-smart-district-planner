@@ -25,7 +25,10 @@ Usage: run_tests.py [-k SUBSTRING] [-v] [--rulesets all|LIST] [FILE...]
 --rulesets starts a new game for each ruleset in turn (tools/game.py newgame
 --state SDP_Panel --capital --reveal --ruleset R) and runs the files in each:
 `all` is the base game, Rise and Fall and Gathering Storm, as before a release.
-Exit codes: 0 all passed, 1 failures, 2 connection problem, 3 timeout.
+It takes the game lock for this worktree (tools/sdplock.py) and stops when the
+mod in the game's Mods folder is not this worktree's (run deploy.py).
+Exit codes: 0 all passed, 1 failures, 2 connection problem, 3 timeout,
+4 the game is held by another worktree.
 """
 
 import argparse
@@ -37,6 +40,7 @@ import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # -I drops the script dir
 import civ6tuner  # noqa: E402
+import sdplock  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TESTS_DIR = os.path.join(ROOT, "tests")
@@ -181,6 +185,17 @@ def workshop_copy():
     return None
 
 
+def deployed_differences():
+    """Files in which the deployed mod differs from this worktree's SmartDistrictPlanner/."""
+    import deploy
+    import paths
+    mods = paths.mods_dir()
+    if not mods or not os.path.isdir(mods):
+        return []  # no local game folder: the test files report the missing game themselves
+    added, updated, removed, _same = deploy.plan(deploy.SOURCE, os.path.join(mods, deploy.MOD_NAME))
+    return added + updated + removed
+
+
 def run_file(path, name_filter, verbose):
     """Returns (counts dict, exit kind or None)."""
     counts = {"PASS": 0, "FAIL": 0, "SKIP": 0, "ERROR": 0}
@@ -272,12 +287,19 @@ def main(argv=None):
     ap.add_argument("-v", "--verbose", action="store_true", help="show print() output of passing files")
     ap.add_argument("--rulesets", help="all, or RULESET_... names separated by commas: a new game for each")
     args = ap.parse_args(argv)
+    what = args.rulesets or (" ".join(os.path.basename(f) for f in args.files[:3]) or "all files")
+    sdplock.claim_or_exit(ROOT, "run_tests " + what)
     if args.rulesets:
         return run_rulesets(args)
 
     files = args.files or sorted(glob.glob(os.path.join(TESTS_DIR, "**", "test_*.lua"), recursive=True))
     if not files:
         print("run_tests: no test files found")
+        return 1
+    differ = deployed_differences()
+    if differ:
+        print("run_tests: the mod in the game's Mods folder is not this worktree's (%d file(s) differ, e.g. %s). "
+              "Run tools/deploy.py, then start a new game." % (len(differ), ", ".join(differ[:3])))
         return 1
     item = workshop_copy()
     if item:

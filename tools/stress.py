@@ -34,6 +34,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # -I drops the s
 import civ6tuner  # noqa: E402
 import game  # noqa: E402
 import paths  # noqa: E402
+import sdplock  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 RESULTS = os.path.join(ROOT, "tests", "stress", "results")
@@ -422,6 +423,8 @@ def main(argv=None):
     ap_all.add_argument("--cities", type=int, default=6)
     sub.add_parser("summary")
     args = ap.parse_args(argv)
+    if args.cmd != "summary":
+        sdplock.claim_or_exit(ROOT, "stress %s %s" % (args.cmd, getattr(args, "name", "")))
     return {"prepare": cmd_prepare, "load": cmd_load, "run": cmd_run, "check": cmd_check, "all": cmd_all, "summary": cmd_summary}[args.cmd](args)
 
 

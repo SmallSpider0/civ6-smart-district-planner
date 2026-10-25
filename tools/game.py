@@ -27,11 +27,16 @@
                      another app was in front (see launch). Mutes the game
                      for the run (the saved volume is not changed).
 
+Every command takes the game lock for this worktree (tools/sdplock.py) and
+refuses, with exit code 4, while another worktree holds it; quit releases it
+and stops this worktree's Tuner daemon.
+
 quit, menu, popups and newgame work through the tuner on macOS and Windows.
 launch opens Steam on both; the launcher click and keeping the game out of
 the front are macOS only (on Windows the game simply comes to the front).
 
-Exit codes: 0 done, 2 the game did not reach the expected state in time.
+Exit codes: 0 done, 2 the game did not reach the expected state in time,
+4 the game is held by another worktree.
 """
 
 import argparse
@@ -44,6 +49,7 @@ import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # -I drops the script dir
 import civ6tuner  # noqa: E402
+import sdplock  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 STEAM_URL = "steam://rungameid/289070"
@@ -81,11 +87,7 @@ if SDP_TestSetupOriginal then GameSetup_RefreshParameters = SDP_TestSetupOrigina
 MUTE = 'Options.SetAudioOption("Sound", "Master Volume", 0, 0)'
 
 
-def game_running():
-    if sys.platform == "win32":  # CivilizationVI.exe or CivilizationVI_DX12.exe
-        listed = subprocess.run(["tasklist", "/FO", "CSV", "/NH"], capture_output=True, text=True, errors="replace")
-        return "civilizationvi" in listed.stdout.lower()
-    return subprocess.run(["pgrep", "-f", "Civ6_Exe"], capture_output=True).returncode == 0
+game_running = sdplock.game_running
 
 
 def front_app():
@@ -181,13 +183,17 @@ def has_state(name):
 
 
 def cmd_quit(_args):
-    if not game_running():
+    sdplock.claim_or_exit(ROOT)  # never quit another worktree's game
+    if game_running():
+        exec_lua("InGame", "Events.UserConfirmedClose()", raw=True)
+        if not has_state("InGame"):  # main menu: the same event quits there too
+            exec_lua("MainMenu", "Events.UserConfirmedClose()", raw=True)
+        if not wait_for("game exit", lambda: not game_running(), 60, 2):
+            return 2
+    else:
         print("game not running")
-        return 0
-    exec_lua("InGame", "Events.UserConfirmedClose()", raw=True)
-    if not has_state("InGame"):  # main menu: the same event quits there too
-        exec_lua("MainMenu", "Events.UserConfirmedClose()", raw=True)
-    return 0 if wait_for("game exit", lambda: not game_running(), 60, 2) else 2
+    print(sdplock.release(ROOT))  # also stops this worktree's Tuner daemon
+    return 0
 
 
 def cmd_menu(_args):
@@ -248,6 +254,7 @@ def cmd_popups(args):
 
 
 def cmd_launch(args):
+    sdplock.claim_or_exit(ROOT)
     front = None if args.stay else front_app()
     forget_front()
     if front is not None and front != CIV6_BUNDLE:

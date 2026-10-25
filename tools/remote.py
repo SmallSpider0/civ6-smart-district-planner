@@ -2,26 +2,38 @@
 """remote - run heavy offline jobs (compare.mjs, the oracle) on a second machine over ssh.
 
     python3 -I tools/remote.py sync                       # copy this worktree there
-    python3 -I tools/remote.py run NAME -- node tools/compare.mjs ... --out logs/remote/NAME.jsonl
-    python3 -I tools/remote.py status [NAME]              # running / exit code, last log line
+    python3 -I tools/remote.py run NAME [--slots N | --exclusive] -- node tools/compare.mjs ... --out logs/remote/NAME.jsonl
+    python3 -I tools/remote.py status [NAME]              # every session's jobs, free slots / one job
     python3 -I tools/remote.py wait NAME [--fetch PATH ...] [--every 60]
-    python3 -I tools/remote.py fetch PATH ...             # copy files back (paths relative to the worktree)
+    python3 -I tools/remote.py fetch [--job NAME] PATH ...  # copy files back (paths relative to the worktree)
 
-The host is $SDP_REMOTE (an ssh host name from ~/.ssh/config that logs in
-without prompts, e.g. a key of its own with BatchMode). No game is needed
+The host is $SDP_REMOTE, else "remote" in the local config (tools/sdplock.py:
+~/.config/sdp/local.json, outside the repository): an ssh host name from
+~/.ssh/config that logs in without prompts, e.g. a key of its own with BatchMode. No game is needed
 there: `sync` copies the worktree's files (tracked and new, not ignored), tools/node_modules and
 tests/compare/.cache (following links) and the Lua sources under reference/
 (only *.lua of base-ui; dmt, amt, ep, dwp whole) to ~/sdp-runs/<worktree
 name>/ and ~/sdp-runs/ref/. Results there match this machine's except for
 timing fields, so keep runs whose seconds get reported on one machine.
 
-`run` starts the command under nohup in the copy (it keeps running when ssh
-drops), with output in ~/sdp-runs/NAME.log and the exit code written to
-~/sdp-runs/NAME.exit when it ends. `wait` checks every --every seconds until
+`run` clones the copy (APFS clone: instant, no extra space) to
+~/sdp-runs/snap/NAME/, so a later `sync` does not change files under a
+running job, and starts the command there under nohup (it keeps running when
+ssh drops) through tools/sdpsched.py, the machine's one queue for all
+sessions: its cores minus two slots ("remote_slots" in the local config to
+change), a job takes --slots N (default: the command's -j, else all slots;
+a larger -j is lowered to N) and starts when it is first in line and N slots
+are free; --exclusive waits for an empty machine and keeps it (runs whose
+seconds get reported). A name already queued or running is refused. Output
+goes to ~/sdp-runs/NAME.log and the exit code to ~/sdp-runs/NAME.exit when it
+ends. `status` lists every session's jobs and the slots in use; look before
+starting a heavy job anywhere. `wait` and `fetch --job` copy results back
+from the job's snapshot. `wait` checks every --every seconds until
 that file exists (no process matching), then fetches the given paths and
 exits with the job's exit code: start it in the background and its end is
-the signal to carry on. Node there: $SDP_REMOTE_PATH is put in front of PATH
-(default /opt/homebrew/bin:/usr/local/bin).
+the signal to carry on. Node and python3 there: $SDP_REMOTE_PATH (or
+"remote_path" in the local config) is put in front of PATH (default
+/opt/homebrew/bin:/usr/local/bin).
 """
 import argparse
 import os
@@ -30,6 +42,10 @@ import subprocess
 import sys
 import time
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # -I drops the script dir
+import sdplock  # noqa: E402
+import sdpsched  # noqa: E402
+
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 NAME = os.path.basename(ROOT)
 BASE = "sdp-runs"
@@ -37,9 +53,9 @@ TREE = BASE + "/" + NAME
 
 
 def host():
-    h = os.environ.get("SDP_REMOTE")
+    h = sdplock.remote_host()
     if not h:
-        raise SystemExit("set SDP_REMOTE to the ssh host to use")
+        raise SystemExit("set SDP_REMOTE (or \"remote\" in %s) to the ssh host to use" % sdplock.config_path())
     return h
 
 
@@ -55,7 +71,23 @@ def rsync(args):
 
 
 def env_path():
-    return os.environ.get("SDP_REMOTE_PATH", "/opt/homebrew/bin:/usr/local/bin")
+    return (os.environ.get("SDP_REMOTE_PATH") or sdplock.local_config().get("remote_path")
+            or "/opt/homebrew/bin:/usr/local/bin")
+
+
+def remote_env():
+    slots = sdplock.local_config().get("remote_slots")
+    return "export PATH=%s:$PATH%s" % (env_path(), " SDP_SLOTS=%d" % int(slots) if slots else "")
+
+
+def install_sched():
+    """The queue's script, the same for every worktree's jobs."""
+    ssh("mkdir -p %s/bin %s/snap" % (BASE, BASE))
+    rsync([os.path.join(ROOT, "tools", "sdpsched.py"), "%s:%s/bin/sdpsched.py" % (host(), BASE)])
+
+
+def sched(args, check=True, capture=True):
+    return ssh("%s && python3 ~/%s/bin/sdpsched.py %s" % (remote_env(), BASE, args), check=check, capture=capture)
 
 
 def sync(_args):
@@ -77,6 +109,7 @@ def sync(_args):
         only_lua = ["--include=*/", "--include=*.lua", "--exclude=*", "--prune-empty-dirs"] if name == "base-ui" else []
         rsync(["-L"] + only_lua + [src + "/", "%s:%s/ref/%s/" % (h, BASE, name)])
         ssh("ln -sfn ~/%s/ref/%s %s/reference/%s" % (BASE, name, TREE, name))
+    install_sched()
     print("synced %s to %s:~/%s" % (ROOT, h, TREE))
     return 0
 
@@ -84,12 +117,25 @@ def sync(_args):
 def run(args):
     if not args.command:
         raise SystemExit("give the command after --")
-    cmd = " ".join(shlex.quote(c) for c in args.command)
+    install_sched()
+    if sched("check %s" % shlex.quote(args.name), check=False).strip():
+        raise SystemExit("a job named %s is queued or running there; pick another name "
+                         "(tools/remote.py status)" % args.name)
+    slots = 0 if args.exclusive else (args.slots or sdpsched.workers_of(" ".join(args.command)) or 0)
+    command = sdplock.fit_workers(args.command, slots) if slots else list(args.command)
+    cmd = " ".join(shlex.quote(c) for c in command)
+    me = sdplock.identity(ROOT)
+    snap = "~/%s/snap/%s" % (BASE, args.name)
     log, code = "~/%s/%s.log" % (BASE, args.name), "~/%s/%s.exit" % (BASE, args.name)
-    inner = "cd ~/%s && export PATH=%s:$PATH && %s; echo $? > %s" % (TREE, env_path(), cmd, code)
-    ssh("rm -f %s; nohup sh -c %s > %s 2>&1 < /dev/null & echo started $!" % (code, shlex.quote(inner), log),
-        capture=False)
-    print("started %s on %s: %s (log %s)" % (args.name, host(), cmd, log))
+    queue = "python3 ~/%s/bin/sdpsched.py run %s --slots %d %s--owner %s --tree %s -- sh -c %s" % (
+        BASE, shlex.quote(args.name), slots, "--exclusive " if args.exclusive else "", shlex.quote(me["owner"]),
+        shlex.quote(NAME), shlex.quote(cmd))
+    ssh("python3 ~/%s/bin/sdpsched.py prune >/dev/null 2>&1; rm -rf %s %s && (cp -c -R ~/%s %s || cp -R ~/%s %s) && cd %s && %s && "
+        "(nohup %s > %s 2>&1 < /dev/null &) && echo queued" % (
+            BASE, snap, code, TREE, snap, TREE, snap, snap, remote_env(), queue, log), capture=False)
+    print("queued %s on %s (%s%s; snapshot %s): %s (log %s)"
+          % (args.name, host(), "%d slot(s)" % slots if slots else "all slots", ", exclusive" if args.exclusive else "",
+             snap, cmd, log))
     return 0
 
 
@@ -101,25 +147,29 @@ def state(name):
 
 
 def status(args):
-    names = [args.name] if args.name else [l[:-4] for l in ssh("cd ~/%s && ls *.log 2>/dev/null" % BASE,
-                                                                   check=False).split() if l.endswith(".log")]
-    for n in names:
-        code, last = state(n)
-        print("%-30s %-10s %s" % (n, "running" if code is None else "exit %d" % code, last[:120]))
+    if args.name:
+        code, last = state(args.name)
+        print("%-30s %-10s %s" % (args.name, "running" if code is None else "exit %d" % code, last[:120]))
+        return 0
+    install_sched()
+    sys.stdout.write(sched("status", check=False))
     return 0
 
 
-def fetch_paths(paths):
+def fetch_paths(paths, job=None):
     h = host()
+    where = "%s/snap/%s" % (BASE, job) if job else TREE
+    if job and ssh("test -d %s && echo yes" % where, check=False).strip() != "yes":
+        where = TREE  # a job started before snapshots
     for rel in paths:
         dest = os.path.join(ROOT, rel)
         os.makedirs(os.path.dirname(dest), exist_ok=True)
-        rsync(["%s:%s/%s" % (h, TREE, rel), dest])
+        rsync(["%s:%s/%s" % (h, where, rel), dest])
         print("fetched", rel)
 
 
 def fetch(args):
-    fetch_paths(args.paths)
+    fetch_paths(args.paths, args.job)
     return 0
 
 
@@ -137,7 +187,7 @@ def wait(args):
             print("%s %s" % (time.strftime("%H:%M"), last[:120]), flush=True)
         time.sleep(args.every)
     if args.fetch:
-        fetch_paths(args.fetch)
+        fetch_paths(args.fetch, args.name)
     print("%s %s ended with exit %d: %s" % (time.strftime("%H:%M"), args.name, code, last[:160]))
     return code
 
@@ -148,7 +198,9 @@ def main():
     sub.add_parser("sync")
     r = sub.add_parser("run")
     r.add_argument("name")
-    r.add_argument("command", nargs=argparse.REMAINDER)
+    group = r.add_mutually_exclusive_group()
+    group.add_argument("--slots", type=int, help="slots (workers) for the job; default the command's -j, else 8")
+    group.add_argument("--exclusive", action="store_true", help="wait for an empty machine and keep it")
     s = sub.add_parser("status")
     s.add_argument("name", nargs="?")
     w = sub.add_parser("wait")
@@ -156,10 +208,12 @@ def main():
     w.add_argument("--fetch", nargs="*", default=[])
     w.add_argument("--every", type=float, default=60)
     f = sub.add_parser("fetch")
+    f.add_argument("--job", help="take the files from this job's snapshot")
     f.add_argument("paths", nargs="+")
-    args = ap.parse_args()
-    if args.cmd == "run" and args.command[:1] == ["--"]:
-        args.command = args.command[1:]
+    argv = sys.argv[1:]
+    split = argv.index("--") if "--" in argv else len(argv)
+    args = ap.parse_args(argv[:split])
+    args.command = argv[split + 1:]
     return {"sync": sync, "run": run, "status": status, "wait": wait, "fetch": fetch}[args.cmd](args)
 
 
