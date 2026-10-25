@@ -30,7 +30,7 @@ The panel has three tabs: **One city**, **City sites** and **Several cities**. T
 
 ## One city
 
-1. **City**: the city selected on the map, otherwise your capital. Pick another one in the dropdown.
+1. **City**: the city selected on the map, otherwise your capital. Pick another one in the dropdown. Select another of your cities on the map and open the panel again, and the tab switches to it (not while a plan is being computed in the background).
 2. **Districts**, in two grids. Click a cell to change its state:
    - **Specialty districts**: Pool → Must → Off. Must is always placed, Off never. Pool districts are picked only when the district count is higher than the number of Must ones. Districts limited to one per empire (Government Plaza, Diplomatic Quarter) are Must or Off.
    - **Other districts** (Aqueduct, Dam, Canal, Neighborhood…): Auto → Must → Off. Auto exists for the Aqueduct and the Dam: an Aqueduct is added when the city lacks fresh water, a Dam (Gathering Storm) when 3 or more free Floodplains tiles lie within its 3 rings. The solver chooses their tiles.
@@ -56,7 +56,11 @@ Only revealed tiles are considered; a tile whose 3 rings are mostly unrevealed i
 
 ## Several cities
 
-1. **Cities**: every City Center tack, plus your cities within 7 tiles of a new one (up to 8). Untick one to leave it out; an unticked tack stays on the map as a neighbor.
+1. **Cities**: your cities and City Center tacks (sites not founded yet) as chips, three a row, five rows shown, more scroll. Tacks come first, then cities by number. Click a chip to switch it on or off; the ones on are highlighted.
+   - By default the city selected on the map when the panel opens is the center, otherwise your capital: it is on, then, nearest first, the cities and tacks within 7 tiles of one already on, 4 at most. Select another city and open the panel again, and the center moves and your own choices go back to the default (not while a plan is being computed in the background).
+   - Up to 8 by hand; when 8 are on the others are dimmed until you switch one off. **Clear all** and **Default** sit to the right of the title.
+   - A city left out counts as a fixed neighbor (its districts and tacks count, but stay as they are); a tack left out gets no districts and is not counted as a new city, but stays on the map.
+   - The more cities, the longer the wait; hover over the title for measured waits and how much more adjacency planning together gives.
 2. **Districts for**: one list shared by every city, or a list for one city. **Apply a template** fills a list by yield (Science city, Production city…) from your civilization's adjacency rules. The number per city works as on the One city tab. A district limited to one per empire (Government Plaza, Diplomatic Quarter) that is Must in the shared list goes to the first city of the list; the others are marked "empire limit reached" and take a Pool district instead. To put it in another city, make it Must in that city's own list only. With the shared list a city skips what it has built or already has a tack of (the tacks this mod placed for it, and tacks on its own tiles or on unowned tiles nearest to it); a skipped tack is listed as "this city already has a map tack for it".
 3. Wonders, weights, switches and Effort as on the One city tab. **Reach** (default 0) moves districts with a regional effect, such as the Industrial Zone, to where they cover more of your cities; picking from the pool counts it too. A district's row says how many cities it newly covers (cities a built or tacked district of the same type covers already do not count).
 4. **Solve**, preview a plan, **Place tacks**; tacks are named with their city's number. **Undo tacks** works as on the One city tab.
