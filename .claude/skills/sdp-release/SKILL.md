@@ -26,7 +26,7 @@ Bug-fix PRs merge into `main` as usual in the meantime: `main` reaches no player
    - `python3 -I tools/realclick.py suite` when the UI changed;
    - `python3 -I tools/refresh_results.py --check` when the solver or legality changed; explain any lower gain or new violation;
    - tooltip numbers whose source changed (the records in docs/notes/ name them);
-   - stress test: load/run/check on the three saves, `tools/refresh_stress_md.py`.
+   - stress test: load/run/check on the three saves, `tools/refresh_stress_md.py`. Skipped when the release changes only the interface (maintainer, 2026-10-25): `git diff vLAST..HEAD -- SmartDistrictPlanner/Scripts` touches nothing but `SDP_Page*.lua` and `SDP_Preview.lua`, and the panel's changes do not alter what is sent to the solver. Say in the self-test report that it was skipped and why.
 3. Screenshots when the UI changed: `shots.py` (zh and en, new round number in the name), point README, the report templates (`report/template.html`, `template_en.html`: image names, alt text and captions) and `workshop/src/*.html` at them, `tools/workshop.py render`, look at `workshop/images/`.
 4. `python3 -I tools/release.py prep X.Y.Z`, then write the change note's English half and shorten the Chinese half (players' words, no issue numbers). Typographic quotes in the note (`workshop.py check` refuses `"`).
 5. When features or limits changed: README (en and zh), `workshop/description.bbcode` and `description_zh.bbcode`, the report pages.
