@@ -43,7 +43,21 @@
 
 科技 ×1.5 的平均损失正好 2.00%，按“< 2%”算不满足；而且只有 44/72（61%）的场景均衡方案也是最优，远低于 80%，两条都不满足也不改结论。
 
-留出集复核：科学 1.5、信仰 2 与 3、文化 2 与 3 在留出集 72 个场景上的真最优（`tests/compare/weights/w49hs.jsonl`，结果 `w49_oracle_hs.jsonl`）在跑，出来后记在这里。
+留出集复核：科学 1.5、信仰 2 与 3、文化 2 与 3 在留出集 72 个场景上的真最优（360 次，全部证明，0 失败），均衡和金币信仰减半用 #48 的 `w53_oracle_hs.jsonl`：
+
+```
+node tools/compare.mjs -s '^HS\d\d-[^~]*$' -p sdp --only sdp:ORACLE --add sdp:ORACLE --weights tests/compare/weights/w49hs.jsonl -j 4 --out tests/compare/results/w49_oracle_hs.jsonl
+python3 -I tests/compare/robust53.py --vectors <w53.jsonl 与 w49.jsonl 合并> tests/compare/results/w53_oracle_hs.jsonl tests/compare/results/w49_oracle_hs.jsonl
+```
+
+| 预设 | 留出集（均衡的方案用在预设上） | 结论 |
+|---|---|---|
+| 科技 ×1.5 | 损失 1.04%，54/72（75%）最优 → 不并入 | 同开发集 |
+| 宗教 ×2 / ×3 | 1.24%、59/72 → 并入 / 3.86%、45/72 → 不并入 | 同开发集，取 3 |
+| 文化 ×2 / ×3 | 1.55%、58/72 → 并入 / 3.39%、46/72 → 不并入 | 同开发集，取 3 |
+| 金币信仰减半 | 1.83%，51/72（71%）→ 不并入 | 同开发集 |
+
+科技 ×1.5 在留出集上离并入更近（损失低于 2%，只差在 80% 那一条）；按规则仍不并入。
 
 ## 界面
 
