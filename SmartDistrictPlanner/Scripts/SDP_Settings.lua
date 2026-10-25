@@ -31,15 +31,16 @@ SDP_Settings.VERSION = "v1"
 -- yield's weight by FOCUS; FOCUS comes from the experiment on the proven
 -- optima (docs/notes/issue-49-presets.md), the smallest of 1.5, 2, 3 that
 -- does not merge the preset into Balanced.
-SDP_Settings.FOCUS = { SCIENCE = 2, RELIGION = 2 }
+SDP_Settings.FOCUS = { SCIENCE = 1.5, CULTURE = 3, RELIGION = 3 }
 SDP_Settings.PRESETS = {
   BALANCED = {},
   SCIENCE = { YIELD_SCIENCE = SDP_Settings.FOCUS.SCIENCE },
+  CULTURE = { YIELD_CULTURE = SDP_Settings.FOCUS.CULTURE },
   RELIGION = { YIELD_FAITH = SDP_Settings.FOCUS.RELIGION },
   -- Gold and faith at half (purchase prices: 1 production = 4 gold = 2 faith).
   HALF_GOLD_FAITH = { YIELD_GOLD = 0.5, YIELD_FAITH = 0.5 },
 }
-SDP_Settings.PRESET_ORDER = { "BALANCED", "SCIENCE", "RELIGION", "HALF_GOLD_FAITH" }
+SDP_Settings.PRESET_ORDER = { "BALANCED", "SCIENCE", "CULTURE", "RELIGION", "HALF_GOLD_FAITH" }
 
 local function Text(value)
   if type(value) == "boolean" then return value and "1" or "0" end

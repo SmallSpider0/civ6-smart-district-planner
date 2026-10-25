@@ -819,6 +819,12 @@
     <Replace Tag="LOC_SDP_PRESET_SCIENCE_TOOLTIP" Language="zh_Hans_CN">
       <Text>科技胜利、学院优先：科学权重 {1_K}，其余同均衡。</Text>
     </Replace>
+    <Replace Tag="LOC_SDP_PRESET_CULTURE" Language="zh_Hans_CN">
+      <Text>文化</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_PRESET_CULTURE_TOOLTIP" Language="zh_Hans_CN">
+      <Text>文化胜利、剧院广场优先：文化权重 {1_K}，其余同均衡。</Text>
+    </Replace>
     <Replace Tag="LOC_SDP_PRESET_RELIGION" Language="zh_Hans_CN">
       <Text>宗教</Text>
     </Replace>

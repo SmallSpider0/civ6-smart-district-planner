@@ -1,0 +1,6 @@
+# Preset focus factors on the held-out set (issue 49): the chosen ones and the next smaller.
+{"name": "sci15", "science": 1.5}
+{"name": "faith2", "faith": 2}
+{"name": "faith3", "faith": 3}
+{"name": "cul2", "culture": 2}
+{"name": "cul3", "culture": 3}

@@ -819,6 +819,12 @@
     <Replace Tag="LOC_SDP_PRESET_SCIENCE_TOOLTIP" Language="en_US">
       <Text>Science victory, Campus first: Science weighs {1_K}, the rest as in Balanced.</Text>
     </Replace>
+    <Replace Tag="LOC_SDP_PRESET_CULTURE" Language="en_US">
+      <Text>Culture</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_PRESET_CULTURE_TOOLTIP" Language="en_US">
+      <Text>Culture victory, Theater Square first: Culture weighs {1_K}, the rest as in Balanced.</Text>
+    </Replace>
     <Replace Tag="LOC_SDP_PRESET_RELIGION" Language="en_US">
       <Text>Religion</Text>
     </Replace>

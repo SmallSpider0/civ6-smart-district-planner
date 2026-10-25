@@ -1,0 +1,8 @@
+# Preset focus factors (issue 49): one yield x1.5, x2 (and culture x3); the rest 1.
+{"name": "sci15", "science": 1.5}
+{"name": "sci2", "science": 2}
+{"name": "faith15", "faith": 1.5}
+{"name": "faith2", "faith": 2}
+{"name": "cul15", "culture": 1.5}
+{"name": "cul2", "culture": 2}
+{"name": "cul3", "culture": 3}
