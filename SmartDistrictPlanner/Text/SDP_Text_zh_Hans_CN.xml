@@ -49,10 +49,7 @@
       <Text>超出当前上限：方案供人口增长后建造（仅提示）。</Text>
     </Replace>
     <Replace Tag="LOC_SDP_WEIGHTS" Language="zh_Hans_CN">
-      <Text>权重（0–3）</Text>
-    </Replace>
-    <Replace Tag="LOC_SDP_WEIGHTS_TOOLTIP" Language="zh_Hans_CN">
-      <Text>每一项在总分里乘的倍数，0 表示不计。带图标的列是产出，其余各列见它们自己的悬停提示。</Text>
+      <Text>产出权重（0–3）</Text>
     </Replace>
     <Replace Tag="LOC_SDP_ALLOW_FEATURE_REMOVAL" Language="zh_Hans_CN">
       <Text>允许砍伐树林、雨林、沼泽</Text>

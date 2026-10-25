@@ -8,14 +8,17 @@
 |---|---|---|
 | S1(a) | 没有可规划的内容时“求解”变灰，汇总行写明先做什么；有内容、还没求解时写“点击‘求解’开始规划” | `SDP_Panel.lua` 的 `UpdateButtons`、`UpdateEstimate`；`SDP_PageMulti.lua` 同名函数 |
 | S2 | 新结果（求解、继续优化）和换方案时，`UI.LookAtPlotScreenPosition(x, y, 0.65, 0.5)` 把城市放到面板右边（游戏的 `TradeOverview.lua` 用同一个接口把单位放到它的面板旁边）。重开面板、改设置不移。结果行改成按钮，带坐标的行点一下移到那一格 | `SDP_UI.LookAt`、`SDP_UI.ResultRow`；三个页签的 `m_lookNext` |
-| S3 | 档位悬停写实测数字（见下）；权重行加标题；“地貌”列改名“收获”（英文 Harv.），与开关“允许砍伐”（Allow chop）分开 | 文本 |
+| S3 | 档位悬停写实测数字（见下）；“地貌”列改名“收获”（英文 Harv.），与开关“允许砍伐”（Allow chop）分开 | 文本 |
 | S4 | 启动栏悬停加当前快捷键：`Input.GetGestureDisplayString(Input.GetActionId("SDP_OpenPlanner"), 0)`，与游戏 `Options.lua` 显示键位的方法相同；没有绑定时不写 | `SDP_Panel.lua` 的 `OpenKey` |
 | S5 | 汇总悬停只留覆盖的城；多城页另留“逐城依次规划时的加权提升”，它说明一起规划多得了多少。搜索次数、DMT 调用次数留在 `result.Stats`，测试用 | `ShowResult`、`P.Render` |
 | S6 | 预计耗时标签 `WrapWidth` 76 → 96（左边“档位”+ 下拉框约 146 像素，右边按钮最宽 238 像素，480 宽的行里还剩约 96）；格子状态字的右边距 9 → 12 | `SDP_Panel.xml` |
 | S7 | 多城预览：区域钉下文字前加城市编号（`LOC_SDP_PREVIEW_CITY`），编号与打钉后钉的名字相同；没有相邻产出时只写编号 | `SDP_PageMulti.P.Preview` |
 | — | 区域格子去掉悬停提示（维护者 2026-10-25 定）。多城页全国限一座的区域保留一条提示：能放进哪座城不写在格子上 | `SDP_UI.ShowCell`、`P.RefreshLists` |
 
-没做：A12（结果行的备注堆在一起）不在已定的范围里。
+没做：
+
+- 权重行的标题（S3 的一部分）移到 #71。加一行约 22 像素：英文单城页的质量说明折成两行时，底部的“打钉”“撤销”被挤出窗口一半；多城页的结果列表按剩余高度缩，加一行就矮约 20 像素。等 #71 折叠设置区、窗口按屏幕高度调整后再加。
+- A12（结果行的备注堆在一起）不在已定的范围里。
 
 ## 档位提示里的数字
 

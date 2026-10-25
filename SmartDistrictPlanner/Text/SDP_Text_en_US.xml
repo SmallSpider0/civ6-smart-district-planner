@@ -49,10 +49,7 @@
       <Text>Over the current limit: the plan is for later population growth.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_WEIGHTS" Language="en_US">
-      <Text>Weights (0–3)</Text>
-    </Replace>
-    <Replace Tag="LOC_SDP_WEIGHTS_TOOLTIP" Language="en_US">
-      <Text>How much each part counts in the score; 0 leaves it out. The columns with icons are yields; hover over the others for what they are.</Text>
+      <Text>Yield weights (0-3)</Text>
     </Replace>
     <Replace Tag="LOC_SDP_ALLOW_FEATURE_REMOVAL" Language="en_US">
       <Text>Allow removing Woods, Rainforest and Marsh</Text>

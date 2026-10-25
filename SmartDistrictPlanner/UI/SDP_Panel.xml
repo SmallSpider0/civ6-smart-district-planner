@@ -82,9 +82,6 @@
         <Stack ID="WonderChipStack" StackGrowth="Right" WrapWidth="480" WrapGrowth="Bottom" StackPadding="4"/>
 
         <!-- Weights, one icon family (feedback 3), and the distance cost (feedback 9) -->
-        <Container Size="480,18">
-          <Label Anchor="L,C" Style="BodyTextDark16" String="LOC_SDP_WEIGHTS" ToolTip="LOC_SDP_WEIGHTS_TOOLTIP"/>
-        </Container>
         <Stack ID="WeightStack" Anchor="C,T" StackGrowth="Right" StackPadding="0"/>
 
         <!-- Switches in one row; the full meaning is in each tooltip -->
@@ -252,9 +249,6 @@
           </Stack>
         </Container>
         <Stack ID="MultiWonderChipStack" StackGrowth="Right" WrapWidth="480" WrapGrowth="Bottom" StackPadding="4"/>
-        <Container Size="480,18">
-          <Label Anchor="L,C" Style="BodyTextDark16" String="LOC_SDP_WEIGHTS" ToolTip="LOC_SDP_WEIGHTS_TOOLTIP"/>
-        </Container>
         <Stack ID="MultiWeightStack" Anchor="C,T" StackGrowth="Right" StackPadding="0"/>
         <Container Size="480,26">
           <Container Anchor="L,C" Size="150,26" ToolTip="LOC_SDP_LAND">

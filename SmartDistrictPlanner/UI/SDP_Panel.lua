@@ -183,7 +183,9 @@ end
 -- game's TradeOverview puts a unit beside its own panel.
 local LOOK_X = 0.65
 local function LookAt(x, y)
-  if x ~= nil and y ~= nil then UI.LookAtPlotScreenPosition(x, y, LOOK_X, 0.5) end
+  if x == nil or y == nil then return end
+  UI.LookAtPlotScreenPosition(x, y, LOOK_X, 0.5)
+  SDP_UI.LastLook = x .. "," .. y -- for tests: the game's UI table cannot be wrapped
 end
 
 -- Helpers shared with the other tabs (SDP_PageSites, SDP_PageMulti).
