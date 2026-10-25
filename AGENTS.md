@@ -43,6 +43,7 @@ civ6mod/
 │   ├── pitfalls.md                   # Civ6 Modding 的坑：完整说明（AGENTS 第 5 节是要点）
 │   ├── multicity-design.md           # 选城址、多城、奇观、档位、离线基准的设计（第 1–14 节）
 │   ├── notes/                        # 历次实现、实测与修正的记录：NN-主题.md（原第 15–30 节）、issue-<编号>-主题.md
+│   ├── reference-scenes.md           # #53 的参照场景：来源、地图、作者布局与真最优的对照（图由 tests/compare/refmaps.py 画）
 │   ├── install-and-test.md           # 交付物 2：安装、使用与验收（含"勿与 AMT 同开"）
 │   ├── install-en.md                 # 英文安装与使用说明（README 英文部分链接它，package.py 打进压缩包）
 │   ├── tester-guide.md               # 给测试者的说明，tools/package.py 打进测试包

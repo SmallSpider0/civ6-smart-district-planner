@@ -26,6 +26,12 @@
                      While it waits, the game is kept out of the front if
                      another app was in front (see launch). Mutes the game
                      for the run (the saved volume is not changed).
+  game.py load NAME  load the single-player save Saves/Single/NAME.Civ6Save
+                     from the main menu (leaves a game first), the load
+                     screen pressing its own continue button; waits until
+                     in-game Lua answers and closes the popups. Mutes too.
+                     A save asking for content this account lacks stops at
+                     the game's own warning (timeout, exit code 2).
 
 Every command takes the game lock for this worktree (tools/sdplock.py) and
 refuses, with exit code 4, while another worktree holds it; quit releases it
@@ -327,6 +333,31 @@ def start_game(args):
     return 0
 
 
+LOAD_SAVE = """
+Automation.SetAutoStartEnabled(true)
+Network.LoadGame({ Name = "%s", Location = SaveLocations.LOCAL_STORAGE, Type = SaveTypes.SINGLE_PLAYER,
+  IsAutosave = false, IsQuicksave = false, Directory = SaveDirectories.DEFAULT }, ServerType.SERVER_TYPE_NONE)
+"""
+
+
+def cmd_load(args):
+    if has_state("InGame") and cmd_menu(args) != 0:
+        return 2
+    if not wait_for("main menu", lambda: has_state("MainMenu"), args.timeout):
+        return 2
+    resp = exec_lua("MainMenu", MUTE + "; " + LOAD_SAVE % args.name.replace("\\", "\\\\").replace('"', '\\"'))
+    if not resp.get("ok"):
+        print("could not load %s: %s" % (args.name, resp.get("error")))
+        return 2
+    in_game = lambda: exec_lua(args.state, "print(1)").get("ok")  # noqa: E731
+    if not wait_for("state %s" % args.state, in_game, args.timeout, 5):
+        return 2
+    exec_lua("InGame", MUTE)
+    time.sleep(5)
+    close_popups()
+    return 0
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description="Start, enter and quit the game for testing")
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -346,8 +377,13 @@ def main(argv=None):
     np.add_argument("--ruleset", help="RULESET_STANDARD, RULESET_EXPANSION_1 or RULESET_EXPANSION_2 "
                     "(default: Play Now's choice, the newest installed)")
     np.add_argument("--timeout", type=float, default=300)
+    ldp = sub.add_parser("load", help="load a single-player save from the main menu")
+    ldp.add_argument("name", help="file name in Saves/Single without .Civ6Save")
+    ldp.add_argument("--state", default="InGame", help="Lua state to wait for (default InGame)")
+    ldp.add_argument("--timeout", type=float, default=600)
     args = ap.parse_args(argv)
-    commands = {"quit": cmd_quit, "menu": cmd_menu, "popups": cmd_popups, "launch": cmd_launch, "newgame": cmd_newgame}
+    commands = {"quit": cmd_quit, "menu": cmd_menu, "popups": cmd_popups, "launch": cmd_launch, "newgame": cmd_newgame,
+                "load": cmd_load}
     return commands[args.cmd](args)
 
 

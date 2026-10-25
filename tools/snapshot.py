@@ -19,6 +19,23 @@ districts can reach, and the districts already covering them, are in it.
   python3 -I tools/snapshot.py export RC01-pangaea-japan-kyoto --save pangaea-gs --cities 65536 --radius 15
   python3 -I tools/snapshot.py check RS01-pangaea-japan-kyoto     # offline DMT vs the game's sample
   python3 -I tools/snapshot.py list
+  python3 -I tools/snapshot.py ref REF04-bh-japan-okayama --from bh-hojo-276 --cities 131073,262147 \
+      --source URL --author NAME --date 2019-04 --title "..."   # a reference scene (issue 53)
+
+`ref` exports a reference scene (set REF, tools/refscene.py) from a loaded
+community save (tools/game.py load): the real map, and as the reference
+layout the author's built districts of the chosen cities (--reference
+built, the default), their district map tacks (--reference pins), or
+both (--reference both; a tack's placement is marked "pin": true). Those
+districts leave the cities (the tacks leave the pin list), so the optimum
+may put them anywhere; every other district, wonder and tack stays. For
+each built reference district the game's adjacency is kept as
+reference.claimed, to compare with the judge: the placement lens's value
+(plot:GetAdjacencyYield) and, as withPolicies, the district's own, which
+policy cards double. A Rise and Fall save can be judged under --ruleset
+RULESET_EXPANSION_2: the save's ruleset is kept as meta.savedRuleset, and
+techs, civics or a pantheon the comparison's rules lack are dropped
+(meta.dropped).
 
 --save loads that stress-test save first (tools/stress.py load); without
 it the game must already be in the wanted position. The game must be
@@ -202,6 +219,226 @@ def cmd_export(args):
     return 0
 
 
+# What a reference layout is made of by default: the districts with
+# adjacency yields (base types; a civilization's own counts as its base).
+REF_TYPES = ["DISTRICT_CAMPUS", "DISTRICT_HOLY_SITE", "DISTRICT_THEATER", "DISTRICT_COMMERCIAL_HUB",
+             "DISTRICT_HARBOR", "DISTRICT_INDUSTRIAL_ZONE"]
+# The engine's adjacency of each built district of the chosen cities, in
+# game coordinates (a UI state: districts and their yields as the player
+# sees them).
+CLAIMED = """
+local pid, chosen = Game.GetLocalPlayer(), %s
+for _, city in Players[pid]:GetCities():Members() do
+  if chosen[city:GetID()] then
+    for _, d in city:GetDistricts():Members() do
+      local row = GameInfo.Districts[d:GetType()]
+      if not row.CityCenter then
+        -- The plot's value (the placement lens) is the adjacency alone; the
+        -- district's own includes policy cards that double it.
+        local plot, parts, total = Map.GetPlot(d:GetX(), d:GetY()), {}, 0
+        for y in GameInfo.Yields() do
+          local v = plot:GetAdjacencyYield(pid, city:GetID(), row.Index, y.Index) or 0
+          if v ~= 0 then parts[#parts + 1] = y.YieldType .. "=" .. v end
+          total = total + (d:GetAdjacencyYield(y.Index) or 0)
+        end
+        print("SDP_CLAIM " .. city:GetID() .. " " .. row.DistrictType .. " " .. d:GetX() .. " " .. d:GetY() .. " "
+          .. tostring(d:IsComplete()) .. " " .. total .. " " .. table.concat(parts, ","))
+      end
+    end
+  end
+end
+"""
+
+
+def claimed_adjacency(lua_cities, meta):
+    """{(city, local x, local y): {"type", "complete", "yields", "district"}} from
+    the game: yields as the placement lens shows them (plot:GetAdjacencyYield),
+    "district" the district's own total, policy cards included."""
+    out = {}
+    for line in exec_lua("InGame", CLAIMED % lua_cities, 60):
+        if not line.startswith("SDP_CLAIM "):
+            continue
+        parts = line.split(" ")
+        cid, dtype, gx, gy, complete = int(parts[1]), parts[2], int(parts[3]), int(parts[4]), parts[5] == "true"
+        yields = {}
+        for kv in (parts[7] if len(parts) > 7 else "").split(","):
+            if kv:
+                k, v = kv.split("=")
+                yields[k] = float(v)
+        lx, ly = (gx - meta["x0"]) % meta["mapWidth"], gy - meta["y0"]
+        out[(cid, lx, ly)] = {"type": dtype, "complete": complete, "yields": yields, "district": float(parts[6])}
+    return out
+
+
+GAMEINFO = os.path.join(ROOT, "tests", "compare", ".cache", "gameinfo.lua")
+
+
+def fit_ruleset(spec):
+    """A save judged under another ruleset: drop the local player's techs,
+    civics and pantheon the comparison's rules lack (recorded in
+    meta.dropped); a map type they lack is an error (returned)."""
+    if not os.path.exists(GAMEINFO):
+        return "no %s (tools/compare.mjs exports it); cannot check the names" % os.path.relpath(GAMEINFO, ROOT)
+    with open(GAMEINFO, encoding="utf-8") as f:
+        text = f.read()
+    known = lambda name: ('"%s"' % name) in text  # noqa: E731
+    dropped = []
+    for p in spec["players"]:
+        for key in ("techs", "civics"):
+            if isinstance(p.get(key), list):
+                dropped += [n for n in p[key] if not known(n)]
+                p[key] = [n for n in p[key] if known(n)]
+        if p.get("pantheon") and not known(p["pantheon"]):
+            dropped.append(p.pop("pantheon"))
+    if dropped:
+        spec["meta"]["dropped"] = sorted(set(dropped))
+        print("not in the comparison's rules, dropped: %s" % ", ".join(sorted(set(dropped))))
+    names = {v for plot in spec["plots"] for k, v in plot.items() if k in ("t", "f", "r", "imp")}
+    names |= {d["type"] for c in spec["cities"] for d in c["districts"]} | {w["building"] for w in spec["wonders"]}
+    missing = sorted(n for n in names if not known(n))
+    return "not in the comparison's rules: %s" % ", ".join(missing) if missing else None
+
+
+def settle_reference(spec):
+    """A layout of built districts, taken out of the cities: the game's DMT
+    sample was taken with them in place (a Japanese district next to them
+    shows more), so it does not describe the scene and is dropped; a
+    resource under one appeared after it was built (strategic resources are
+    revealed late) and is dropped too, with a note, so the reference stays
+    legal as the game let it stand."""
+    ref = spec["reference"]
+    if ref.get("from") not in ("built", "both"):
+        return
+    spec["sample"] = []
+    width = spec["width"]
+    for p in ref["placements"]:
+        if p.get("pin"):
+            continue
+        plot = spec["plots"][p["y"] * width + p["x"]]
+        if plot.get("r"):
+            note = "%s under the built %s at %d,%d left out (revealed after it was built)" % (
+                plot["r"], p["type"], p["x"], p["y"])
+            if note not in ref["notes"]:
+                ref["notes"].append(note)
+            plot.pop("r")
+            plot.pop("rc", None)
+
+
+def cmd_ref(args):
+    if not args.id.startswith("REF") or not args.id[3:5].isdigit():
+        print("the id must look like REF04-some-name")
+        return 2
+    if args.save and stress.cmd_load(argparse.Namespace(name=args.save)) != 0:
+        return 2
+    with open(EXPORTER, encoding="utf-8") as f:
+        exec_lua("SDP_Panel", f.read(), 60)
+    cities = [int(c) for c in args.cities.split(",")]
+    lua_cities = "{ %s }" % ", ".join("[%d] = true" % c for c in cities)
+    lines = exec_lua("SDP_Panel", "SDP_Export.Scene({ Cities = %s, Radius = %d, Sample = %s })"
+                     % (lua_cities, args.radius, "false" if args.no_sample else "true"), 900)
+    spec = parse_scene(lines)
+    chosen = sorted(spec["meta"]["chosen"])
+    if sorted(cities) != chosen:
+        print("cities not found: %s" % sorted(set(cities) - set(chosen)))
+        return 2
+    me = next(p for p in spec["players"] if p["id"] == 0)
+    width = spec["width"]
+    types = [t.upper() if t.upper().startswith("DISTRICT_") else "DISTRICT_" + t.upper()
+             for t in args.types.split(",")] if args.types else REF_TYPES
+    base = lambda t: UNIQUE_BASE.get(t, t)  # noqa: E731
+    by_id = {c["id"]: c for c in spec["cities"] if c["owner"] == 0}
+    claims = claimed_adjacency(lua_cities, spec["meta"])
+    placements, claimed = [], []
+    if args.reference in ("built", "both"):
+        for cid in chosen:
+            city, keep = by_id[cid], []
+            for d in city["districts"]:
+                if base(d["type"]) in types:
+                    placements.append({"city": cid, "type": base(d["type"]), "x": d["x"], "y": d["y"]})
+                    claim = claims.get((cid, d["x"], d["y"]), {})
+                    claimed.append({"city": cid, "type": d["type"], "x": d["x"], "y": d["y"],
+                                    "complete": claim.get("complete"), "yields": claim.get("yields", {}),
+                                    "adj": sum(claim.get("yields", {}).values()),
+                                    "withPolicies": claim.get("district")})
+                else:
+                    keep.append(d)
+            city["districts"] = keep
+    if args.reference in ("pins", "both"):
+        # District tacks within 3 of a chosen city, not on a city or a built
+        # district: to the chosen city owning the plot, else the nearest one
+        # (lower ID on a tie), skipping a city that has that district
+        # already (a city has one of each); a tack no city can take stays a
+        # tack.
+        built = {(d["x"], d["y"]) for c in spec["cities"] for d in c["districts"]}
+        built |= {(p["x"], p["y"]) for p in placements}
+        built |= {(c["x"], c["y"]) for c in spec["cities"]}
+        owner = {i: c["id"] for c in spec["cities"] if c["owner"] == 0 for i in c["plots"]}
+        kept = []
+        for pin in spec["pins"]:
+            icon = pin.get("icon") or ""
+            dtype = base(icon[5:]) if icon.startswith("ICON_DISTRICT_") else None
+            near = sorted((hex_distance(pin["x"], pin["y"], by_id[c]["x"], by_id[c]["y"]), c) for c in chosen)
+            near = [(dist, c) for dist, c in near if dist <= 3]
+            if dtype in types and near and (pin["x"], pin["y"]) not in built:
+                first = owner.get(pin["y"] * width + pin["x"])
+                order = ([first] if first in chosen else []) + [c for _, c in near if c != first]
+                has = lambda c: any(p["city"] == c and p["type"] == dtype for p in placements)  # noqa: E731
+                cid = next((c for c in order if not has(c)), None)
+                if cid is None:
+                    kept.append(pin)
+                    print("tack %s at %d,%d left as a tack: every city in reach has one" % (dtype, pin["x"], pin["y"]))
+                    continue
+                placements.append({"city": cid, "type": dtype, "x": pin["x"], "y": pin["y"], "pin": True})
+            else:
+                kept.append(pin)
+        spec["pins"] = kept
+    if not placements:
+        print("no reference districts found (%s)" % args.reference)
+        return 2
+    plans = [[p["type"] for p in placements if p["city"] == cid] for cid in chosen]
+    union = []
+    for plan in plans:
+        for t in plan:
+            if t not in union:
+                union.append(t)
+    kind = "single" if len(chosen) == 1 else "multi"
+    saved_ruleset = spec.get("ruleset")
+    ruleset = args.ruleset or saved_ruleset
+    scenario = {
+        "id": args.id, "kind": kind, "set": "REF", "civ": me["civ"], "leader": me["leader"],
+        "title": args.title or args.id, "districts": union, "only": chosen, "target": chosen[0],
+        "file": args.id + ".json", "save": args.save or args.from_save, "turn": spec["turn"], "ruleset": ruleset,
+        "source": args.source or "", "author": args.author or "", "date": args.date or "",
+    }
+    if kind == "multi":
+        scenario["plans"] = plans
+    spec["ruleset"] = ruleset
+    if ruleset != saved_ruleset:
+        spec["meta"]["savedRuleset"] = saved_ruleset
+        problem = fit_ruleset(spec)
+        if problem:
+            print(problem)
+            return 2
+    spec["reference"] = {"placements": placements, "guessed": [], "guessAll": False, "from": args.reference,
+                         "claimed": claimed, "notes": list(args.note or [])}
+    settle_reference(spec)
+    spec["scenario"] = scenario
+    path = os.path.join(SCENES, scenario["file"])
+    with open(path, "w", encoding="utf-8", newline="\n") as f:
+        json.dump(spec, f, ensure_ascii=False, separators=(",", ":"), sort_keys=True)
+        f.write("\n")
+    write_index([e for e in read_index() if e["id"] != args.id] + [scenario])
+    print("%s: %dx%d window, %d cities chosen, ruleset %s%s; reference (%s): %s" % (
+        path, spec["width"], spec["height"], len(chosen), ruleset,
+        " (save: %s)" % saved_ruleset if ruleset != saved_ruleset else "", args.reference,
+        ", ".join("%s@%d,%d%s" % (p["type"][9:], p["x"], p["y"], "" if kind == "single" else "/%d" % p["city"])
+                  for p in placements)))
+    for c in claimed:
+        print("  claimed %s @%d,%d city %d: %s (with policies %s)%s" % (
+            c["type"][9:], c["x"], c["y"], c["city"], c["adj"], c["withPolicies"], "" if c["complete"] else " (not complete)"))
+    return 0
+
+
 def cmd_check(args):
     code = 0
     for sid in args.ids or [e["id"] for e in read_index()]:
@@ -236,11 +473,28 @@ def main(argv=None):
     ep.add_argument("--radius", type=int, default=6, help="plots around each chosen city (default 6)")
     ep.add_argument("--title", help="scenario title")
     ep.add_argument("--no-sample", action="store_true", help="skip the in-game DMT sample")
+    rp = sub.add_parser("ref", help="export a reference scene (set REF) from a loaded community save")
+    rp.add_argument("id", help="REF04-...")
+    rp.add_argument("--cities", required=True, help="city IDs, comma-separated")
+    rp.add_argument("--save", help="load this stress-test save first (name as in tools/stress.py)")
+    rp.add_argument("--from", dest="from_save", help="record this save name (already loaded)")
+    rp.add_argument("--reference", choices=("built", "pins", "both"), default="built",
+                    help="the author's built districts (default), district map tacks, or both")
+    rp.add_argument("--types", help="base district types in the reference (default: %s)"
+                    % ",".join(t[9:] for t in REF_TYPES).lower())
+    rp.add_argument("--ruleset", help="judge under this ruleset (default the save's)")
+    rp.add_argument("--radius", type=int, default=6, help="plots around each chosen city (default 6)")
+    rp.add_argument("--title")
+    rp.add_argument("--source")
+    rp.add_argument("--author")
+    rp.add_argument("--date")
+    rp.add_argument("--note", action="append", help="a note (repeatable)")
+    rp.add_argument("--no-sample", action="store_true", help="skip the in-game DMT sample")
     cp = sub.add_parser("check", help="compare the offline world's DMT with the game's sample")
     cp.add_argument("ids", nargs="*")
     sub.add_parser("list")
     args = ap.parse_args(argv)
-    return {"export": cmd_export, "check": cmd_check, "list": cmd_list}[args.cmd](args)
+    return {"export": cmd_export, "ref": cmd_ref, "check": cmd_check, "list": cmd_list}[args.cmd](args)
 
 
 if __name__ == "__main__":

@@ -30,14 +30,19 @@ SITE_FIELDS = ("siteValue", "tileValue", "districtPotential", "freshWater", "coa
 
 def group(sid):
     """(set, kind) of a scenario id: dev / heldout / sealed / real / smallmulti(/heldout, /sealed) /
-    profile:SCI ... (profile:RND/heldout ...) / wonders (/improvement) / sites / coverage (/real)."""
+    large, pools (/heldout, /sealed) / profile:SCI ... (profile:RND/heldout ...) /
+    wonders (/heldout, /sealed, /improvement) / sites / coverage (/real)."""
     if "~" in sid:
         base, profile = sid.split("~", 1)
         part = group(base)[0]
         return "profile:" + profile + ("" if part == "dev" else "/" + part), "single"
     for prefix, name, kind in (("D3", "three", "single"), ("HD3", "three/heldout", "single"),
                                ("FD3", "three/sealed", "single"), ("DM", "twoeach", "multi"),
-                               ("HDM", "twoeach/heldout", "multi"), ("FDM", "twoeach/sealed", "multi")):
+                               ("HDM", "twoeach/heldout", "multi"), ("FDM", "twoeach/sealed", "multi"),
+                               ("L", "large", "single"), ("HL", "large/heldout", "single"),
+                               ("FL", "large/sealed", "single"), ("P", "pools", "single"),
+                               ("HP", "pools/heldout", "single"), ("FP", "pools/sealed", "single"),
+                               ("HW", "wonders/heldout", "single"), ("FW", "wonders/sealed", "single")):
         if sid.startswith(prefix) and sid[len(prefix):len(prefix) + 1].isdigit():
             return name, kind
     if sid.startswith("OM"):
@@ -163,6 +168,32 @@ def key(r):
 ORACLE_KEYS = ("sdp:ORACLE", "sdp:ORACLE_CHECK")
 
 
+def left_out(score):
+    """Districts and wonders the plan does not place: the missing districts
+    plus the wonders asked for and not placed."""
+    score = score or {}
+    return (score.get("missing") or 0) + max(0, (score.get("wondersRequested") or 0) - (score.get("wondersPlaced") or 0))
+
+
+def is_adjacency_reference(k):
+    """A run that gives the adjacency reference (issues 48, 40): the oracle
+    (ORACLE_KEYS, also with a node limit "@n") or the long-run reference
+    sdp:LONGRUN[@n], whose oracle stats hold the range [value, upper]."""
+    base = k.split("@", 1)[0]
+    return base in ORACLE_KEYS or base == "sdp:LONGRUN"
+
+
+def is_oracle(k):
+    """Any reference run, left out of the planners' tables: the adjacency
+    references above or the optimum of the mod's whole objective with land
+    on (sdp:ORACLE_LAND...)."""
+    return k.startswith("sdp:ORACLE") or k.startswith("sdp:LONGRUN")
+
+
+def stats_of(r):
+    return ((r or {}).get("plan") or {}).get("stats") or {}
+
+
 def load(paths):
     rows = []
     for p in paths:
@@ -171,9 +202,13 @@ def load(paths):
                 line = line.strip()
                 if line:
                     rows.append(json.loads(line))
-    # Later files win for the same (scenario, planner, variant).
+    # Later files win for the same (scenario, planner, variant). Runs under
+    # a named weight vector (compare.mjs --weights, issue 53) are for
+    # robust53.py and refscore rows for --refscore: both left out here.
     out = {}
     for r in rows:
+        if "weights" in r or r.get("mode") == "refscore":
+            continue
         out[(r["scenario"], r["planner"], r.get("variant", ""))] = r
     return list(out.values())
 
@@ -215,19 +250,52 @@ def summarize(rows):
                     best_out = s["output"] if best_out is None else max(best_out, s["output"])
         # The exact reference (issue 48): a proven optimum replaces the best
         # known gain; otherwise its upper bound gives the range.
-        optimum, upper, optimumMissing = None, None, None
-        for k in ORACLE_KEYS:
+        # Several runs (oracles with different node limits, the long run):
+        # the smallest upper end and the best value found.
+        optimum, upper, optimumMissing, lower = None, None, None, None
+        for k in sorted(runs):
+            if not is_adjacency_reference(k):
+                continue
             o = ((runs.get(k) or {}).get("plan") or {}).get("stats", {}).get("oracle")
             if isinstance(o, dict) and not runs[k].get("error"):
                 if o.get("proven"):
                     optimum = o["value"]
-                    optimumMissing = ((runs[k].get("score") or {}).get("missing")) or 0
+                    optimumMissing = left_out(runs[k].get("score"))
                 else:
-                    upper = o.get("upper")
+                    if o.get("upper") is not None:
+                        upper = o["upper"] if upper is None else min(upper, o["upper"])
+                    if o.get("value") is not None:
+                        lower = o["value"] if lower is None else max(lower, o["value"])
         if optimum is not None:
-            best, exact = optimum, True
+            best, exact, upper = optimum, True, None
+        elif lower is not None and (best is None or lower > best):
+            best = lower
+        # Potential output (issue 48: the judge's outputP, plots valued as
+        # improved, population the scene's districts need): the best legal.
+        best_out_p = None
+        for k, r in runs.items():
+            s = r.get("score")
+            if s and not r.get("error") and s.get("outputP") is not None:
+                if not [v for v in s["violations"] if v["kind"] in HARD]:
+                    best_out_p = s["outputP"] if best_out_p is None else max(best_out_p, s["outputP"])
+        # The optimum of the mod's whole objective with land on (issue 48),
+        # one per land coefficient: { lambda: { value, upper, proven, ... } }.
+        land_optimum = {}
+        for k in sorted(runs):
+            if not k.startswith("sdp:ORACLE_LAND") or runs[k].get("error"):
+                continue
+            o = stats_of(runs[k]).get("oracle")
+            if not isinstance(o, dict) or not (o.get("objective") or {}).get("land"):
+                continue
+            lam = o["objective"].get("lambda", 1)
+            land_optimum[str(lam)] = {"value": o.get("value"), "upper": o.get("upper"), "proven": bool(o.get("proven")),
+                                      "unproven": o.get("unproven"), "seconds": runs[k].get("planSeconds"),
+                                      "nodes": o.get("nodes"), "leaves": o.get("leaves"), "violations": o.get("violations"),
+                                      "brute": o.get("brute"), "climb": o.get("climb"), "start": o.get("start"),
+                                      "outputP": (runs[k].get("score") or {}).get("outputP"), "key": k}
         entry = {"reference": best, "exact": exact, "optimum": optimum, "upper": upper, "referenceOutput": best_out,
-                 "optimumMissing": optimumMissing, "runs": {}}
+                 "referenceOutputP": best_out_p, "optimumMissing": optimumMissing, "landOptimum": land_optimum,
+                 "runs": {}}
         for k, r in runs.items():
             s = r.get("score")
             e = {"seconds": r.get("planSeconds"), "error": r.get("error")}
@@ -238,13 +306,16 @@ def summarize(rows):
                 hard = sum(n for kk, n in kinds.items() if kk in HARD)
                 g = metric(s)
                 e.update({
-                    "gain": g, "legal": hard == 0, "violations": dict(kinds), "missing": s.get("missing", 0),
+                    "gain": g, "legal": hard == 0, "violations": dict(kinds), "missing": s.get("missing", 0), "leftOut": left_out(s),
                     "missingPlaceable": s.get("missingPlaceable"),
                     "tileLoss": s.get("tileLoss"), "placed": s.get("placed"),
                     "quality": (g / best) if best and best > 0 else (1.0 if best == 0 and g is not None and g >= 0 else None),
                     "dmtCalls": (r.get("plan") or {}).get("stats", {}).get("dmtCalls"),
                     "output": s.get("output"), "worked": s.get("worked"),
                     "outputGap": (best_out - s["output"]) if (best_out is not None and s.get("output") is not None) else None,
+                    "outputP": s.get("outputP"), "workedP": s.get("workedP"), "oneTime": s.get("oneTime"),
+                    "outputPT3": s.get("outputPT3"), "outputPWeighted": s.get("outputPWeighted"),
+                    "outputPGap": (best_out_p - s["outputP"]) if (best_out_p is not None and s.get("outputP") is not None) else None,
                     "notes": (r.get("plan") or {}).get("notes"),
                     "wondersPlaced": s.get("wondersPlaced"), "wondersRequested": s.get("wondersRequested"),
                     # Coverage (design 19.5): (city, kind) pairs newly reached.
@@ -263,6 +334,15 @@ def summarize(rows):
                 for f in SITE_FIELDS:
                     if s.get(f) is not None:
                         e[f] = s[f]
+            # The mod's own objective with land on, against its optimum.
+            st = stats_of(r)
+            if st.get("sdpObjective") is not None and st.get("sdpLambda") is not None:
+                e["sdpObjective"], e["sdpLambda"] = st["sdpObjective"], st["sdpLambda"]
+                lo = land_optimum.get(str(st["sdpLambda"]))
+                if lo and lo["proven"] and lo["value"] is not None:
+                    v = lo["value"]
+                    e["landGap"] = v - st["sdpObjective"]
+                    e["ofLandOptimum"] = st["sdpObjective"] / v if v > 0 else None
             # The competitors' own objectives (compare.mjs --crossscore).
             for scorer, c in (r.get("cross") or {}).items():
                 if isinstance(c, dict) and c.get("gain") is not None and not c.get("error"):
@@ -308,7 +388,7 @@ def per_planner(scenarios, kind_filter=None):
         if kind_filter and group(sid)[1] != {"S": "single", "M": "multi"}.get(kind_filter, kind_filter):
             continue
         for k, r in e["runs"].items():
-            if k in ORACLE_KEYS:
+            if is_oracle(k):
                 continue
             a = agg[k]
             a["n"].append(1)
@@ -336,14 +416,20 @@ def per_planner(scenarios, kind_filter=None):
                 a["ofOptimum"].append(g / o if o > 0 else (1.0 if g >= 0 else 0.0))
                 # Above the optimum: a check that must stay 0. A plan that
                 # leaves out districts the optimum places solves an easier
-                # problem; it is counted apart (fewerAbove).
+                # problem; it is counted apart (fewerAbove). Wonders left out
+                # count as well (an easier problem the same way).
                 above = r["legal"] and r["gain"] > e["optimum"] + 1e-9
-                fewer = (r.get("missing") or 0) > (e.get("optimumMissing") or 0)
+                fewer = (r.get("leftOut") or 0) > (e.get("optimumMissing") or 0)
                 a["overOptimum"].append(1 if above and not fewer else 0)
                 a["fewerAbove"].append(1 if above and fewer else 0)
             if r.get("outputGap") is not None:
                 a["outGap"].append(r["outputGap"])
                 a["outBest"].append(1 if r["legal"] and r["outputGap"] <= 1e-9 else 0)
+            if r.get("outputPGap") is not None:
+                a["outP"].append(r["outputP"])
+                a["outPGap"].append(r["outputPGap"])
+                a["outPBest"].append(1 if r["legal"] and r["outputPGap"] <= 1e-9 else 0)
+                a["oneTime"].append(r.get("oneTime") or 0)
             for kk, n in (r.get("violations") or {}).items():
                 a["v_" + kk].append(n)
             q = r.get("sdpQuality")
@@ -371,6 +457,10 @@ def per_planner(scenarios, kind_filter=None):
             "violations": {kk[2:]: sum(v) for kk, v in a.items() if kk.startswith("v_")},
             "outputBestShare": statistics.mean(a["outBest"]) if a["outBest"] else None,
             "outputGapMean": statistics.mean(a["outGap"]) if a["outGap"] else None,
+            "outputPMean": statistics.mean(a["outP"]) if a["outP"] else None,
+            "outputPBestShare": statistics.mean(a["outPBest"]) if a["outPBest"] else None,
+            "outputPGapMean": statistics.mean(a["outPGap"]) if a["outPGap"] else None,
+            "oneTimeMean": statistics.mean(a["oneTime"]) if a["oneTime"] else None,
         }
         if a["q_n"]:
             out[k]["sdpQuality"] = {
@@ -382,6 +472,73 @@ def per_planner(scenarios, kind_filter=None):
                 "boundBeaten": sum(a["q_boundBeaten"]),
             }
     return out
+
+
+def land_vs_adjacency(sub, ours="sdp:STANDARD_LAND", base="sdp:STANDARD"):
+    """The land part on against off (issue 48): paired on the potential
+    output, then a 2 x 2 table of whether the land part gave up adjacency
+    and whether the potential output rose or fell, listing the scenes where
+    it gave up adjacency and the potential output fell too."""
+    for field in ("outputP", "outputPT3", "outputPWeighted"):
+        pr = paired(sub, ours, base, field)
+        if pr["n"]:
+            lo, hi = pr["ci"]
+            print("  %-17s vs %-13s %-10s n %3d  W/T/L %d/%d/%d  mean %+.2f  CI [%+.2f, %+.2f]  p %.2g" % (
+                ours, base, field, pr["n"], pr["wins"], pr["ties"], pr["losses"], pr["mean"], lo, hi, pr["p"]))
+    cells = defaultdict(list)
+    for sid in sorted(sub):
+        ra, rb = sub[sid]["runs"].get(ours), sub[sid]["runs"].get(base)
+        if not ra or not rb or ra.get("error") or rb.get("error"):
+            continue
+        if None in (ra.get("gain"), rb.get("gain"), ra.get("outputP"), rb.get("outputP")):
+            continue
+        gave = "gave up adjacency" if ra["gain"] < rb["gain"] - 1e-9 else "kept adjacency"
+        d = ra["outputP"] - rb["outputP"]
+        move = "outputP up" if d > 1e-9 else "outputP down" if d < -1e-9 else "outputP same"
+        cells[(gave, move)].append((sid, ra["gain"] - rb["gain"], d))
+    if not cells:
+        return
+    print("  %s vs %s: adjacency given up x potential output" % (ours, base))
+    for gave in ("gave up adjacency", "kept adjacency"):
+        print("    %-18s " % gave + "  ".join("%s %3d" % (move, len(cells[(gave, move)]))
+                                            for move in ("outputP up", "outputP same", "outputP down")))
+    for sid, dg, dp in cells[("gave up adjacency", "outputP down")]:
+        print("    gave up adjacency and outputP fell: %-34s adjacency %+.2f outputP %+.2f" % (sid, dg, dp))
+
+
+def land_optimum_report(sub):
+    """The optimum of the mod's whole objective with land on (sdp:ORACLE_LAND,
+    issue 48): how many scenes it proved, its times, and each land run's
+    share of it (ratio when the optimum is above 0, else the gap)."""
+    lambdas = sorted({lam for e in sub.values() for lam in e.get("landOptimum", {})}, key=float)
+    for lam in lambdas:
+        rows = [(sid, e["landOptimum"][lam]) for sid, e in sorted(sub.items()) if lam in e.get("landOptimum", {})]
+        proven = [o for _, o in rows if o["proven"]]
+        secs = sorted(o["seconds"] or 0 for _, o in rows)
+        unproven = sorted({u for _, o in rows for u in (o.get("unproven") or [])})
+        print("  land optimum (lambda %s): proven %d/%d; plan time median %.1fs max %.1fs total %.0fs; violations %d%s" % (
+            lam, len(proven), len(rows), statistics.median(secs), max(secs), sum(secs),
+            sum(o.get("violations") or 0 for _, o in rows),
+            ("; not proven because: " + ", ".join(unproven)) if unproven else ""))
+        for sid, o in rows:
+            if not o["proven"]:
+                print("    not proven: %-34s value %s upper %s nodes %s" % (sid, o["value"], o["upper"], o["nodes"]))
+            if o.get("brute") is not None and abs(o["brute"] - o["value"]) > 1e-6:
+                print("    ENUMERATION DIFFERS: %-28s oracle %s enumeration %s" % (sid, o["value"], o["brute"]))
+            if o.get("climb") is not None and o["climb"] > o["value"] + 1e-6:
+                print("    CLIMB ABOVE: %-34s oracle %s climb %s" % (sid, o["value"], o["climb"]))
+        keys = sorted({k for e in sub.values() for k, r in e["runs"].items()
+                       if r.get("sdpLambda") is not None and str(r["sdpLambda"]) == lam and not is_oracle(k)})
+        for k in keys:
+            shares = [e["runs"][k]["ofLandOptimum"] for e in sub.values()
+                      if k in e["runs"] and e["runs"][k].get("ofLandOptimum") is not None]
+            gaps = [e["runs"][k]["landGap"] for e in sub.values() if k in e["runs"] and e["runs"][k].get("landGap") is not None]
+            if not gaps:
+                continue
+            ss = share_stats(shares)
+            print("  %-18s of the land optimum (n %d): %s; gap mean %.3f max %.3f; at the optimum %d/%d" % (
+                k, len(gaps), ("mean %.1f%% worst %.1f%%" % (100 * ss["mean"], 100 * ss["min"])) if ss else "-",
+                statistics.mean(gaps), max(gaps), sum(1 for g in gaps if g <= 1e-6), len(gaps)))
 
 
 def main():
@@ -416,9 +573,12 @@ def main():
                 print("  %-18s of the optimum (n %d): mean %.1f%% median %.1f%% worst %.1f%%; at 100%% %.0f%%, >=95%% %.0f%%, >=90%% %.0f%%; above the optimum %d" % (
                     "", so["n"], 100 * so["mean"], 100 * so["median"], 100 * so["min"], 100 * so["at100"], 100 * so["at95"],
                     100 * so["at90"], v["overOptimum"]) + (
-                    "; above it with fewer districts placed %d" % v["fewerAbove"] if v.get("fewerAbove") else ""))
+                    "; above it with fewer districts or wonders placed %d" % v["fewerAbove"] if v.get("fewerAbove") else ""))
             if ob is not None:
                 print("  %-18s output best %.2f gap %.2f" % ("", ob, og))
+            if v.get("outputPMean") is not None:
+                print("  %-18s potential output (outputP) mean %.2f, best %.2f, gap %.2f; one-time yields taken mean %.1f" % (
+                    "", v["outputPMean"], v["outputPBestShare"], v["outputPGapMean"], v["oneTimeMean"]))
             sq = v.get("sdpQuality")
             if sq:
                 print("  %-18s self-reported: exhaustive %d/%d, gap to the model's bound mean %s max %s (n %d), truncated %d, not converged %d, bound beaten by the reference %d" % (
@@ -431,13 +591,16 @@ def main():
         # Adjacency and the competitors' objectives with the standard tier;
         # city output with the panel's default (land part on).
         for other in ("amt", "ep", "amt:DEFAULTW", "ep:DEFAULT"):
-            for ours, field in (("sdp:STANDARD", "gain"), ("sdp:STANDARD_LAND", "output"),
+            for ours, field in (("sdp:STANDARD", "gain"), ("sdp:STANDARD_LAND", "output"), ("sdp:STANDARD_LAND", "outputP"),
                                 ("sdp:STANDARD", "cross_amt"), ("sdp:STANDARD", "cross_ep")):
                 pr = paired(sub, ours, other, field)
                 if pr["n"]:
                     lo, hi = pr["ci"]
                     print("  %-17s vs %-13s %-10s n %3d  W/T/L %d/%d/%d  mean %+.2f  CI [%+.2f, %+.2f]  p %.2g" % (
                         ours, other, field, pr["n"], pr["wins"], pr["ties"], pr["losses"], pr["mean"], lo, hi, pr["p"]))
+        land_vs_adjacency(sub)
+        land_vs_adjacency(sub, "sdp:FINE_LAND", "sdp:FINE")
+        land_optimum_report(sub)
     # Coverage (design 19.5): reach and adjacency, each setting against the
     # same tier without coverage and against AMT.
     cov = subset(scenarios, "coverage", "multi")

@@ -473,6 +473,101 @@ TwoEachMulti("DM", 83000)
 TwoEachMulti("HDM", 84000)
 TwoEachMulti("FDM", 85000)
 
+
+-- The harder parts of the true-optimum benchmark (issue 48), each in a
+-- development, a held-out ("H") and a sealed ("F") part like the others.
+--
+-- Large cities ("Lnn-civ-biome"): one late-game city that asks for 9 to 12
+-- districts at once (n mod 4: 9, 10, 11, 12), nothing built yet: the eight
+-- of a full city (a Holy Site where the civilization may have one, else an
+-- Encampment), then a Harbor where the sea is near, an Encampment, a
+-- Neighborhood, a Dam in the desert, an Aerodrome and a Spaceport, in that
+-- order, as many as the size takes. The population leaves a slot for each.
+local function LargeCities(prefix, seed)
+  for n, entry in ipairs(SINGLE) do
+    local civKey, biome, extra = entry[1], entry[2], entry[3] or {}
+    seed = seed + 7
+    local civ = CIVS[civKey]
+    local size = 9 + (n - 1) % 4
+    local list = { "DISTRICT_CAMPUS", "DISTRICT_THEATER", "DISTRICT_COMMERCIAL_HUB", "DISTRICT_INDUSTRIAL_ZONE",
+      civKey ~= "kongo" and "DISTRICT_HOLY_SITE" or "DISTRICT_ENCAMPMENT", "DISTRICT_ENTERTAINMENT_COMPLEX",
+      "DISTRICT_GOVERNMENT", "DISTRICT_AQUEDUCT" }
+    local extras = { COASTAL[biome] and "DISTRICT_HARBOR" or nil, "DISTRICT_ENCAMPMENT", "DISTRICT_NEIGHBORHOOD",
+      biome == "desert" and "DISTRICT_DAM" or nil, "DISTRICT_AERODROME", "DISTRICT_SPACEPORT" }
+    local seen = {}
+    for _, t in ipairs(list) do seen[t] = true end
+    for x = 1, 6 do
+      local t = extras[x]
+      if #list < size and t ~= nil and not seen[t] then
+        seen[t] = true
+        list[#list + 1] = t
+      end
+    end
+    Add({
+      id = string.format("%s%02d-%s-%s", prefix, n, civKey, biome), kind = "single",
+      title = civ[3] .. "; " .. #list .. " districts", seed = seed, biome = biome, civKey = civKey, civ = civ[1],
+      leader = civ[2], stage = "late", cities = 1, districts = list, built = { {} }, population = 3 * (#list - 1) + 1,
+      foreign = extra.foreign, cityState = extra.cityState, naturalWonder = extra.naturalWonder, set = prefix,
+      runs = Runs("single"),
+    })
+  end
+end
+LargeCities("L", 86000)
+LargeCities("HL", 87000)
+LargeCities("FL", 88000)
+
+-- Picking from a pool ("Pnn-civ-biome"): one mid-game city (a Holy Site, or
+-- for Kongo an Encampment, built) that must have a Campus and a Commercial
+-- Hub and wants two more specialty districts (odd n) or three (even n) out
+-- of a Theater Square, an Industrial Zone, an Entertainment Complex and a
+-- Harbor where the sea is near (else an Encampment, or for Kongo an
+-- Aerodrome): the panel's "pick from these" (SDP_Solver Pool and Count).
+-- Only this mod's tiers take part; the other planners have no such choice.
+local function PoolCities(prefix, seed)
+  for n, entry in ipairs(SINGLE) do
+    local civKey, biome, extra = entry[1], entry[2], entry[3] or {}
+    seed = seed + 7
+    local civ = CIVS[civKey]
+    local req = Request("mid", biome, civKey)
+    local fourth = COASTAL[biome] and "DISTRICT_HARBOR" or (civKey ~= "kongo" and "DISTRICT_ENCAMPMENT" or "DISTRICT_AERODROME")
+    local pool = { "DISTRICT_THEATER", "DISTRICT_INDUSTRIAL_ZONE", "DISTRICT_ENTERTAINMENT_COMPLEX", fourth }
+    local pick = n % 2 == 1 and 2 or 3
+    Add({
+      id = string.format("%s%02d-%s-%s", prefix, n, civKey, biome), kind = "single",
+      title = civ[3] .. "; pick " .. pick .. " of 4", seed = seed, biome = biome, civKey = civKey, civ = civ[1],
+      leader = civ[2], stage = "mid", cities = 1, districts = { "DISTRICT_CAMPUS", "DISTRICT_COMMERCIAL_HUB" },
+      pool = pool, count = 2 + pick, built = { req.built }, population = req.population, foreign = extra.foreign,
+      cityState = extra.cityState, naturalWonder = extra.naturalWonder, set = prefix,
+      runs = { { planner = "sdp", variant = "FAST" }, { planner = "sdp", variant = "STANDARD" },
+        { planner = "sdp", variant = "FINE" }, { planner = "sdp", variant = "STANDARD_LAND" } },
+    })
+  end
+end
+PoolCities("P", 89000)
+PoolCities("HP", 89500)
+PoolCities("FP", 95000)
+
+-- Wonders with the districts: held-out and sealed parts of "W" (new maps,
+-- the same wonders per biome).
+local function WonderCities(prefix, seed)
+  for n, entry in ipairs(SINGLE) do
+    local civKey, biome, extra = entry[1], entry[2], entry[3] or {}
+    seed = seed + 13
+    local civ = CIVS[civKey]
+    local req = Request("mid", biome, civKey)
+    Add({
+      id = string.format("%s%02d-%s-%s", prefix, n, civKey, biome), kind = "single", title = civ[3] .. "; wonders",
+      seed = seed, biome = biome, civKey = civKey, civ = civ[1], leader = civ[2], stage = "mid", cities = 1,
+      districts = req.districts, built = { req.built }, population = req.population, foreign = extra.foreign,
+      cityState = extra.cityState, naturalWonder = extra.naturalWonder, wantWonders = WONDERS[biome], set = prefix,
+      runs = { { planner = "sdp", variant = "STANDARD" }, { planner = "sdp", variant = "STANDARD_LAND" },
+        { planner = "amt", variant = "" }, { planner = "ep", variant = "" } },
+    })
+  end
+end
+WonderCities("HW", 31000)
+WonderCities("FW", 32000)
+
 CmpScenarios.List = list
 CmpScenarios.ById = byId
 CmpScenarios.Runs = Runs -- for the scenes cmp_lib adds from files

@@ -18,6 +18,7 @@
 | `game.py` | 退出游戏、经 Steam 启动、从主菜单快速开局（可选建首都）；启动时的前台切换仅 macOS | 0 成功；2 超时；4 游戏被占 |
 | `realclick.py` | 仅 macOS：用系统鼠标事件真实点击面板，每步从面板状态读回核对 | 0 全过；1 有失败；2 环境问题 |
 | `stress.py` | 发布前在后期存档上做压力测试：AI 自动打出存档、逐步计时、魅力复核 | 0 全过；1 有问题步骤；2 环境问题 |
+| `refscene.py` | 手写的参照布局（社区公认布局）转成对比场景，画回文字或图片核对 | 0 成功；1 有错误；2 找不到场景 |
 | `civ6tuner.py` | FireTuner 客户端：收集 Lua 输出、远程执行 Lua | 见下文 |
 | `shots.py` | 仅 macOS：摆好页签（`tests/shots/`）、截面板存进 `docs/images/`、切换英文界面 | 0 成功 |
 | `release.py` | 发版：改版本号与 CHANGELOG、起草更新说明和发布说明、发 Release、上传创意工坊并核对 | 0 成功；1 下载回来与提交包不同 |
@@ -100,6 +101,15 @@ python3 -I tests/compare/summarize.py tests/compare/results/full_rejudged.jsonl 
 node tools/compare.mjs --dump S01-rome-temperate-mid       # 场景地图的文字图
 node tools/compare.mjs --snapshot S01-rome-temperate-mid   # 场景地图数据（报告画图用）
 node tools/compare.mjs --probe FILE.lua                    # 在本 mod 的状态里跑一段 Lua（临时探针：先 include("cmp_lib")，CmpRun.Setup(场景) 建好世界）
+node tools/compare.mjs --refscore -s ^REF --weights tests/compare/refscenes/weights.jsonl -j 3 --out tests/compare/results/refscore.jsonl   # 参照布局与最优解，见 refscene.py 一节
+node tools/compare.mjs --refscore -s '^REF(0[4-9]|1\d|20)' --weights tests/compare/refscenes/grid53.jsonl -j 2 --out G.jsonl   # 权重 × 地块系数 λ 的网格（#53），python3 -I tests/compare/refgrid53.py G.jsonl 汇总
+python3 -I tests/compare/refmaps.py [--tables]             # 参照场景的图（docs/images/refscenes/）和 docs/reference-scenes.md 的表，只读结果文件
+node tools/compare.mjs -s '^S0[1-4]-' -p sdp --only sdp:ORACLE_LAND_CHECK --add sdp:ORACLE_LAND_CHECK -j 8   # 计入地块时的真最优（#48），带枚举对照和爬山检查
+node tools/compare.mjs -s '^H?S\d\d-[^~]*$' -p sdp --only sdp:ORACLE --add sdp:ORACLE --weights tests/compare/weights/w53.jsonl -j 4 --out W.jsonl   # 每组权重各跑一遍（行里记 weights），见下文“权重组”
+node tools/compare.mjs --rejudge PLANS.jsonl --weights tests/compare/weights/w53.jsonl -j 4 --out CROSS.jsonl   # 每个方案在每组权重下重新打分（行里另记 planWeights）
+python3 -I tests/compare/robust53.py --vectors tests/compare/weights/w53.jsonl --check tests/compare/results/w53_cross.jsonl tests/compare/results/w53_oracle.jsonl   # 默认权重的稳健性（#53，docs/notes/issue-53-weight-robustness.md）
+node tools/compare.mjs --probe tests/compare/probe_land.lua   # 裁判的地块值调成本模组的口径时，与 SDP_Land.PlotValues 逐格相同（默认开发集；--arg 换场景的 Lua 模式）
+node tools/compare.mjs --probe tests/compare/probe_oracle.lua # 神谕之后的枚举对照和爬山给每个布局的估值，与新棋盘、新覆盖层上的估值相同（默认 S01–S04；--arg 'LAND <模式>' 计入地块；'CHECKS [LAND ]<模式>' 只重跑这两项检查，每个场景输出一行 CHECK JSON）
 ```
 
 - 不开游戏，在 fengari 里比较本 mod、Auto Map Tacks Planner r49（AMT）和 Empire Planner（EP）的区域规划。**规则是真的**：`GameInfo` 来自游戏写在缓存里的规则数据库 `Cache/DebugGameplay.sqlite`（最后一次加载的对局的规则集，目前是风云变幻；导出文件是 Firaxis 的数据，只放在被忽略的 `.cache/`）。**代码是真的**：DMT、AMT、EP 的 Lua 原样从 `reference/` 和本机创意工坊目录加载，不改一行。**引擎是模拟的**：`tests/compare/cmp_game.lua` 实现地图、城市、地图钉、玩家配置、可见性、河流与泛滥平原、修正系统（`GameEffects`，DMT 从它读文明特性的相邻规则）和 UI 替身。
@@ -109,18 +119,30 @@ node tools/compare.mjs --probe FILE.lua                    # 在本 mod 的状�
   - `HS`/`HM`：留出集，同样的设计、新的种子（50000 起），改算法时不看，只用来复核结论（第 18.1 节第 5 条）。
   - `S…~SCI`、`~PROD`、`~FAITH`：开发集单城场景换一组产出权重（该项 ×3，其余 1），规划器和裁判都用这组权重（第 4 条）。
   - `W`：24 个中期单城场景，另要两个与地形相符的奇观（`request.wonders`；裁判用 DMT 判奇观合法性，报告 `wondersPlaced`）。
+  - `HW`、`FW`：`W` 的留出集、封存集（种子 31000、32000 起），奇观相同、地图不同（#48）。
+  - `L`、`HL`、`FL`：大城，后期一座城一次要 9–12 个区域，什么都没建（种子 86000、87000、88000 起，#48）；真最优多半只能给范围，用 `sdp:ORACLE@n` 设节点上限。
+  - `P`、`HP`、`FP`：从候选里挑，中期一座城必建学院、商业中心，再从 4 种里挑 2 或 3 个（场景的 `pool`、`count`，请求里是 `request.pool`、`request.count`，交给 `SDP_Solver` 的 `Pool`、`Count`；裁判把少挑的记为漏放）。只有本模组参加（#48）。
   - `WA`：8 个中期单城场景，要阿耳忒弥斯神庙（需相邻营地，#51；双号场景另要大图书馆）。生成地图时在城市 2–3 环放一两个营地能建的资源（鹿、皮草、象牙、松露里地形允许的），附近不预建营地，规划器要把营地和神庙一起规划。方案里的改良设施（`placements` 里类型是改良的项）由裁判按规则表检查：资源可见且属于这种改良（有自己改良的资源只认那些），否则按地貌、地形；格上没有区域、奇观、改良、钉；是玩家的格（哪座城都行，引擎认别的本方城市的营地，`tests/bench/probe_camp.py`），或在某座城 3 环内的无主格。违规记作 `improvement_illegal`、`improvement_out_of_reach`、`occupied` 等；改良设施不计入 `placed`、地块损失和相邻加成。`summarize.py` 分组为 `wonders/improvement`。
   - `C`：12 个选城址场景（kind `sites`，`request.sites = { count = 2, distance = 8 }`），只比本模组与 EP。裁判 `JudgeSites` 不用任何一方的评分，独立计算合法性与间距、各城址最好 8 块地的产出、淡水、新的奢侈与战略资源种类、区域潜力（城址处打市中心钉后各区域在 DMT 下的最好相邻加成）、重叠格，`siteValue` = 地块产出 + 区域潜力。
   - `V`：12 个覆盖范围场景（multicity-design.md 19.5）：后期 3–4 座城，每座城自己一张清单（`scn.plans`，请求里是 `request.plans[城市 ID]`），只有一两座城要工业区、娱乐中心。本模组跑标准档、精细档各三种覆盖权重（变体 `STANDARD`、`STANDARD_COV1`、`STANDARD_COV3`、`FINE`…；`_COV<n>` 即多城页签的覆盖权重 n），AMT 用同样的逐城清单（它自带覆盖）；EP 不能逐城给清单，不参加。裁判按城检查"没要求的区域"和漏放，并独立计算覆盖：每类基础区域取通用建筑最大的 `RegionalRange`，数玩家城市被覆盖的（城市, 类别）个数，方案前后各一次（`coverageBefore`、`coverage`、`coverageGain`）。
+  - `REF`：参照布局场景（`tools/refscene.py`，见下），没有默认运行，只由 `--refscore`（或 `--add`）跑，不改变其他各组的运行。
   - `RS`/`RM`：真实集，从运行中的对局导出的场景文件（`tests/compare/scenes/<编号>.json`，`index.json` 列出；`tools/snapshot.py`，见下）。单城 `RS` 规划 `target` 那座城，多城 `RM` 只规划 `only` 里的城，每城各自的清单（`plans`）。后期的城人口往往放不下请求的特色区域，加载时把要规划的城的人口提到刚好够（已建加请求的特色区域，与裁判的名额规则相同；原人口记在 `savedPopulation`），和生成场景一样按“为以后规划”比较。只取规则库对应规则集的场景（`--ruleset`，默认 `RULESET_EXPANSION_2`）：迭起兴衰存档导出的 5 个场景用风云变幻的规则库核对，学院、工业区的加成不同，所以默认不参加。
   - `RC`：真实集的覆盖范围版（#61）：与 `RS01`–`RS14` 同一座城、同一张清单，但用多城求解器只规划这一座城（`only` 只有它），窗口取 15 格（`--radius 15`），使工业区、娱乐中心能够到的 9 格内的本方城市，以及已经覆盖它们的区域都在场景里（导出时与游戏内逐城核对过原有覆盖）。跑 `STANDARD`、`STANDARD_COV1`、`STANDARD_COV3`：`node tools/compare.mjs -s '^RC' -p sdp --only sdp:STANDARD,sdp:STANDARD_COV1,sdp:STANDARD_COV3 --add sdp:STANDARD_COV1,sdp:STANDARD_COV3 -j 3 --out tests/compare/results/coverage_single.jsonl`。
   - `RP`：玩家布局的覆盖范围版（#61）：`mac/baseline2` 上 `REF04`–`REF20` 参照场景里的每座参照城一个场景，从同一存档以 15 格窗口重新导出（`tools/covscene.py`，见下），只规划这一座城，清单是作者这座城的参照区域（已建的和地图钉），这些区域从城里拿掉、记在 `reference`；别的城（包括同一参照场景里的另一座）保持存档里的样子。迭起兴衰的存档按风云变幻的规则评判。结果在 `coverage_player.jsonl`，跑法同 `RC`（`-s '^RP'`）；作者布局的裁判分是其中 `ref:AUTHOR` 的行（`--rejudge` 打分）。只规划一座城的多城场景（`RC`、`RP`）在 `cmp_sdp.lua` 里按单城页签的做法传 `Only`，城市中心的地图钉不当作新城参加。
   - 对手各跑两种设置：权重与裁判一致（与场景权重相同）和它们面板的默认设置。
 - 模拟层缺的接口会记在输出的 `missingApi` 里；HavokScript 的类型标注在加载时去掉。AMT 的多城联合很慢（离线一局 3–40 分钟），全量对比建议在机器空闲时跑。每个工作线程的 JS 堆上限默认 1536 MB，AMT 的 4 城联合偶尔会超出（线程被终止，那次运行和同线程排队的一次都没有结果，日志里是 `ERR_WORKER_OUT_OF_MEMORY`）；用环境变量 `CMP_HEAP_MB=6144` 单独补跑缺的运行。
 - 交叉评分（第 18.1 节第 2 条）：`--crossscore` 对结果文件里每个方案，在新的 Lua 状态里调用 `tests/compare/cmp_cross_<打分方>.lua` 的 `CmpCross[打分方](request, plan, w)`，返回该对手自己的目标函数对这个方案的分数（`score`、空方案的 `baseline`、`gain`），写进 `row.cross`；`summarize.py` 以 `cross_amt`、`cross_ep` 字段汇总。
-- `summarize.py` 按场景集分组列表，并给出本模组标准档对每个对手的逐场景配对比较：胜/平/负、平均差及其 95% 自助法置信区间（2000 次确定性重抽样）、符号检验 p 值；城市总产出用本模组的"计入地块"一组比较。覆盖场景另列覆盖与相邻加成两项的帕累托比较（`pareto`：两项都不差且至少一项更好 / 更差 / 相同 / 各有胜负）和各设置的平均值。
+- `summarize.py` 按场景集分组列表，并给出本模组标准档对每个对手的逐场景配对比较：胜/平/负、平均差及其 95% 自助法置信区间（2000 次确定性重抽样）、符号检验 p 值；城市总产出和潜力产出 `outputP` 用本模组的"计入地块"一组比较。另列 `STANDARD_LAND` 对 `STANDARD` 在 `outputP`（及 T + 3、加权两个版本）上的配对比较，和"相邻加成让出与否 × `outputP` 升降"的 2×2 表，逐个列出让出了相邻加成、`outputP` 也降了的场景。有 `sdp:ORACLE_LAND` 时，按 λ 报证明了几个、耗时、枚举对照和爬山检查的异常，以及同样 λ 的各档占地块真最优的比例（真最优 ≤ 0 时只报差距）。`sdp:ORACLE*` 的运行都不进各规划器的表。覆盖场景另列覆盖与相邻加成两项的帕累托比较（`pareto`：两项都不差且至少一项更好 / 更差 / 相同 / 各有胜负）和各设置的平均值。
 - 结果 JSON lines：方案、裁判分（`gain`、`violations`、`items`、城市总产出 `output = gain + worked`、漏放 `missing` 与其中有位置却没放的 `missingPlaceable`）、耗时、DMT 调用次数。`summarize.py` 以每个场景所有合法方案里的最高加成为参照，算质量、达到最高的比例、合法率、漏放、城市总产出、确定性（"#2" 重复运行与原运行比方案）。
-- 入库的结果（2026-10-20）：开发集 `full_rejudged.jsonl`（588 次运行）与 `land.jsonl`（本 mod 计入地块的 84 次）、留出集 `heldout.jsonl`、三组权重 `profiles_{SCI,PROD,FAITH}.jsonl`、奇观 `wonders_sdp_ep.jsonl` + `wonders_amt.jsonl`（本 mod 加入补放后重跑的是 `wonders_sdp_repair.jsonl`；v1.2.0 加了奇观同城规则后三个规划器重跑、用新裁判重评的是 `wonders_v120.jsonl`）、选城址 `sites.jsonl`，以及交叉评分 `*_cross.jsonl`；覆盖范围 `coverage_sdp.jsonl`、`coverage_amt.jsonl`，真实场景的单城覆盖 `coverage_single.jsonl`（`RC`）。阿耳忒弥斯神庙场景 `wonders_artemis.jsonl`（`WA`，三个规划器，`node tools/compare.mjs -s '^WA' -j 2`）。汇总时把后者放在后面，同名运行以后面的为准。
+- 潜力产出（#48）：`output` 按地块现在的产出、城市现在的人口算；裁判另报 `outputP = gain + workedP`：每城耕作最好的 T 格，地块按修上改良后的产出算（`cmp_lib.lua` 的 `CmpLand`，从 `GameInfo` 自己推导，不调用本模组的 `SDP_Land`）。每格取地貌保留或清除、资源收获或不收获里每回合产出最高的一种，加上时代视野内最好的改良：玩家已有的科技、市政，加上到玩家所在时代的下一个时代为止的全部（场景都是全科技，等于全部）。改良包括文明特色改良和需要河流、相邻资源或地形的改良（按格子判断），不算 `OnePerCity` 的改良、改良相邻加成和按魅力给的产出。T = max(人口, 3 × 已建和请求的特色区域数 − 2)，是场景的属性，与方案放了几个区域无关，每城的 T 记在 `potentialTargets`。各产出都按 1；另报 `outputPT3`（T + 3）和 `outputPWeighted`（按场景权重）。一次性产出（砍伐、收获）不计入，方案压掉的格上的一次性产出之和记为 `oneTime`。
+- `probe_land.lua` 把同一段代码调成本模组的口径（现有科技、通用改良、已修改良的格照原样、一次性产出按本模组的增长折合后扣除），核对每个可耕作格都与 `SDP_Land.PlotValues` 相同。
+- 地块系数 λ（#53）：本模组的变体加后缀 `_LAND<nnn>`（如 `STANDARD_LAND050`、`FINE_LAND025`、`ORACLE_LAND075`），地块部分乘以 nnn/100；`_LAND` 即 1。只在离线对比里注入：`cmp_sdp.lua` 把 `SDP_Land.PlotValues` 给出的每格值、一次性值，以及保护区给周边格的产出乘以 λ，模组本身不变。住房部分不乘。计入地块的运行在 `stats.sdpLambda` 记 λ，`stats.sdpObjective` 记本模组自己的目标值（相邻 + λ × 地块 + 住房）。
+- 计入地块时的真最优 `sdp:ORACLE_LAND`（以及 `_LAND<nnn>`、`_CHECK`、`@n`）：对本模组的整个目标（`search:Evaluate`）做分支定界，初始现任解是同样 λ 的精细档方案；界的推导见 `cmp_oracle.lua` 的文件头和 docs/notes/issue-48-land-oracle.md。`stats.oracle.objective` 为 `{ land = true, lambda }`，`adjacency` 是最优布局的相邻加成，`unproven` 列出不能证明的原因（方案里的保护区、负的地块值）。
+- 真最优也支持奇观槽和候选挑选（每种组合各搜一遍；需要相邻改良设施的奇观不支持）。界的写法见 `cmp_oracle.lua` 的文件头和 docs/notes/issue-48-true-optimum-sets.md。
+- 长跑参照 `sdp:LONGRUN`（`@n`：分支定界的节点上限，默认 1 百万；#40）：精细档，继续优化 20 次，从最好的布局做 20 万步模拟退火（`cmp_longrun.lua`，固定的伪随机序列），再由分支定界从那里接着搜到节点上限；`stats.oracle` 是范围 [`value`, `upper`]，`stats.longrun` 记各步的值和对精细档方案的两槽邻域检查（任意两个已放的区域同时移到空格或互换，`improving` 是比原方案好的走法数）。`summarize.py` 把 `sdp:ORACLE@n` 和 `sdp:LONGRUN` 都当参照：最好的值和最小的上界。`python3 -I tests/compare/ranges.py 结果文件...` 列出大城、多城各档占上界和占已知最好的比例。
+- 每行结果有 `env`：导出的规则库、`reference/dmt` 的 Lua 文件、本模组和 `tests/compare` 的 Lua 文件各自的 SHA-1 前 12 位（`compare.mjs` 算，不需要 git）。`code` 变了，说明合法性或求解器改过，行可能要重算。
+- 入库的结果（2026-10-20）：开发集 `full_rejudged.jsonl`（588 次运行）与 `land.jsonl`（本 mod 计入地块的 84 次）、留出集 `heldout.jsonl`、三组权重 `profiles_{SCI,PROD,FAITH}.jsonl`、奇观 `wonders_sdp_ep.jsonl` + `wonders_amt.jsonl`（本 mod 加入补放后重跑的是 `wonders_sdp_repair.jsonl`；v1.2.0 加了奇观同城规则后三个规划器重跑、用新裁判重评的是 `wonders_v120.jsonl`）、选城址 `sites.jsonl`，以及交叉评分 `*_cross.jsonl`；覆盖范围 `coverage_sdp.jsonl`、`coverage_amt.jsonl`，真实场景的单城覆盖 `coverage_single.jsonl`（`RC`）；参照布局 `refscore.jsonl`（`--refscore`，`summarize.py` 不读）。阿耳忒弥斯神庙场景 `wonders_artemis.jsonl`（`WA`，三个规划器，`node tools/compare.mjs -s '^WA' -j 2`）。计入地块的真最优试算 `land_oracle_trial.jsonl`（开发集 11 个单城场景，docs/notes/issue-48-land-oracle.md 第 4 节）。汇总时把后两者放在后面，同名运行以后面的为准。
+- 真最优（#48）：留出集单城和小多城场景只算相邻的 `oracle_hs_om.jsonl`；开发集、留出集和各组权重场景计入地块的 `land_oracle.jsonl`（504 次，都是 5ba714d 修正界之后算的；按 v1.5.0 固定地块倍数重算的是 `land_oracle_v150.jsonl`）。开发集、留出集、三组换权重和真实存档的单城 `oracle_single.jsonl`；前中期场景的枚举对照与爬山检查 `oracle_check.jsonl`；从候选里挑（`P`、`HP`）和奇观（`W`、`HW`）的全部规划器加真最优 `pools_wonders.jsonl`；小多城（`OM`、`HOM`）的全部规划器加真最优 `smallmulti.jsonl`；大城（`L`、`HL`）的全部规划器加 500 万节点的真最优 `large.jsonl`、`large_heldout.jsonl`；多城的长跑参照 `longrun_multi.jsonl`（#40，docs/notes/issue-40-multi-city-bounds.md）。这些的说明和命令在 docs/notes/issue-48-true-optimum-sets.md。默认权重的稳健性（#53，docs/notes/issue-53-weight-robustness.md）：开发集 12 组权重的真最优 `w53_oracle.jsonl`、留出集 9 组权重的真最优 `w53_oracle_hs.jsonl`、重新打分的核对 `w53_cross.jsonl`，由 `robust53.py` 读；参照布局在“权重 × λ”网格上的结果 `refgrid53.jsonl`（docs/notes/issue-53-reference-layouts.md），由 `refgrid53.py` 读。
 
 ## snapshot.py — 从真实对局导出对比场景
 
@@ -130,12 +152,76 @@ python3 -I tools/snapshot.py export RM01-pangaea-japan-3c --from pangaea-gs --ci
 python3 -I tools/snapshot.py export RC01-pangaea-japan-kyoto --from pangaea-gs --cities 65536 --radius 15   # 覆盖版：一座城、多城求解器、大窗口
 python3 -I tools/snapshot.py check                 # 全部场景：离线世界里 DMT 的判定与游戏里导出的样本逐格比较
 python3 -I tools/snapshot.py list
+python3 -I tools/snapshot.py ref REF05-bh-japan-tokyo-shizuoka --from bh-hojo-276 --cities 196610,327684 \
+    --source URL --author NAME --date 2019-04-17 --title "…"   # 社区存档 → 参照场景（#53），见下
 ```
 
 - 需要游戏开着、Tuner 连通。`tests/bench/export_scene.lua` 在 `SDP_Panel` 状态里跑：取所选城市周围 6 格的窗口（加上在 4 格内拥有格子的城的市中心），按 `cmp_game.lua` 的 spec 格式写出地形、地貌、资源、改良、湖、未揭示、河流边（风云变幻按命名河流带泛滥平原；其他规则集从过河判断收集）、玩家（本地玩家的科技、市政、万神殿）、城市（归属格、已建区域、建筑）、奇观、地图钉，窗口跨地图接缝时重新编号，起始行取偶数行以保持六边形行的奇偶。另带每座所选城市 3 环内已拥有格上每种可规划区域的 DMT 判定与加成（`sample`）和各环的格索引（`rings`，加载时核对几何）。
 - 请求的区域：开发集的五种加娱乐中心，3 环内有海再加港口，减去该城已建的（特色区域按基础区域算）；多城每城一张清单。
 - `check` 用 `compare.mjs --probe tests/compare/cmp_scene_check.lua --arg <编号>` 在离线世界里重算样本，列出可放置性和加成的差异。
 - 窗口外的城拥有的格会丢掉归属（输出里的 `droppedOwned`）；按构造它们都在所选城市 4 格以外，候选格和相邻格不受影响。
+- `ref`：读进社区玩家的存档（`game.py load`，存档放进 `Saves/Single`，文件名以 `SDP_ref_` 开头）后，把所选城市导出成参照场景（`REF` 组，与 `refscene.py` 手写的同格式）：地图是存档里的真实地图，参照布局是作者这几座城已建的学院、圣地、剧院、商业中心、港口、工业区（`--reference built`，默认；特色区域按基础区域记；`--types` 改范围），或作者的区域地图钉（`--reference pins`），或两者都要（`--reference both`，钉来的记 `"pin": true`）。钉归拥有那一格的城，否则归最近的城；那座城已有同种区域时归下一座，都有就留作普通的钉。这些区域从城里拿掉（钉从钉表拿掉），最优解可以放在任何地方；其他区域、奇观、钉保持原样。
+  - 每个参照区域在游戏里的相邻加成记在 `reference.claimed`：放置透镜的值（`plot:GetAdjacencyYield`），另记区域自己的值 `withPolicies`（含政策卡翻倍），用来和裁判对照。
+  - 场景记作者（`scenario.author`）和来源，按作者分开发集、核对集时用。
+  - 已建区域下面的资源是建成后才揭示的（如煤），游戏让区域留着；场景里去掉它，记一条说明，参照布局才合法。游戏里的 DMT 样本是在这些区域还在的状态下取的，不描述场景，所以不保存（`check` 不适用）。
+  - 迭起兴衰的存档用 `--ruleset RULESET_EXPANSION_2` 按风云变幻的规则核对：原规则集记在 `meta.savedRuleset`，比较用的规则库里没有的科技、市政、万神殿去掉（`meta.dropped`），没有的地形、资源、区域等报错。两版工业区的加成不同，场景说明里写明。
+
+## refscene.py — 手写参照布局（#53）
+
+```bash
+python3 -I tools/refscene.py build                  # tests/compare/refscenes/*.txt → tests/compare/scenes/<编号>.json，并更新 index.json
+python3 -I tools/refscene.py check REF01 --svg out.svg   # 把场景文件写回文字格式（就是地图），--svg 另画一张图，和原图对照
+python3 -I tools/refscene.py verify                 # 往返一致、场景文件是最新的，并让离线对比的裁判给参照布局打分：合法、全部放下
+python3 -I tools/refscene.py list
+node tools/compare.mjs --refscore -s ^REF --weights tests/compare/refscenes/weights.jsonl -j 3 --out tests/compare/results/refscore.jsonl
+```
+
+- 用途：#53 用社区公认的布局反推默认权重。每个布局手写成一个文本文件（`tests/compare/refscenes/<编号>.txt`，编号 `REF01-名字`），`build` 转成与真实集同样格式的场景文件，另带 `reference`（布局里的区域、哪些格是猜的、说明）。场景属于 `REF` 组，没有默认运行，不改变其他各组。
+- `validate.py` 检查每个文本能读、写回再读得到同样的场景、场景文件和 `index.json` 里的条目是最新的（不需要 node）。`verify` 还要游戏规则库（`tests/compare/.cache/`），只在导出了规则库的机器上能跑。
+- 格式（坐标与游戏相同：x 向右，y 向下，第 0 行在最上面，奇数行向右错半格；`#` 后是注释）：
+
+```
+id      REF01-suqin-aqueduct-dam
+title   Su Qin: two-city aqueduct diamond with a dam
+source  https://www.zhihu.com/question/397145858/answer/1784399407
+author  苏秦
+date    2021-03
+ruleset RULESET_EXPANSION_2              # 默认风云变幻
+civ     CIVILIZATION_AMERICA LEADER_T_ROOSEVELT
+techs   all                              # all（默认）、none 或逗号分隔的 TECH_ 名（可省前缀）；civics 同理
+turn    150
+guess   all                              # 整张图都是猜的；单格在格子后加 ?
+note    任意说明，可写多行
+
+city 1 name=A pop=10 owns=1 capital      # 人口、拥有几环（默认 1；城和已建区域的格也归它）
+city 2 name=B pop=10 owns=1
+
+map
+  g    gh   M    g+f  p+fp  c    L
+    g    g:iron  gh@mine  g+j?  ...
+end
+
+layout
+  .    CC1  AQ1  IZ1  *CA1  .    .
+    .    IZ2  AQ2  CC2  ...
+end
+
+river Rhine 3,4:SE,SW 4,4:SW             # 某格的哪几条边有河：NE E SE SW W NW
+wonder 2,2 BUILDING_COLOSSEUM city=1     # 已建的奇观
+```
+
+  - 地形：`g` 草原、`p` 平原、`d` 沙漠、`t` 冻土、`s` 雪地，加 `h` 是丘陵、加 `m` 是山（`M` = 草原山）；`c` 海岸、`o` 海洋、`L` 湖；也可写完整的 `TERRAIN_` 名。
+  - 地貌 `+`：`f` 树林、`j` 雨林、`m` 沼泽、`fp` 泛滥平原（按地形取风云变幻的三种之一）、`oa` 绿洲、`r` 礁石、`vs` 火山土、`vo` 火山、`gf` 地热裂缝、`ice` 冰，其他写 `FEATURE_` 后面的部分。泛滥平原归第一条沿它流过的河，没有河就报错。
+  - 资源 `:名字`（`RESOURCE_` 后面的部分）、改良 `@名字`（`IMPROVEMENT_` 后面的部分），格子后加 `?` 表示是猜的。
+  - 布局：`.` 空，`CC` 市中心，区域用两字母：`CA` 学院、`HS` 圣地、`TH` 剧院、`CH` 商业中心、`HA` 港口、`IZ` 工业区、`EC` 娱乐中心、`WP` 水上乐园、`AQ` 水渠、`DA` 堤坝、`CN` 运河、`EN` 军营、`NB` 社区、`AE` 航空港、`SP` 航天中心、`GP` 政府广场、`DQ` 外交区、`PR` 保护区，或完整的 `DISTRICT_` 名。后面的数字是城的编号（只有一座城时可省）。前面加 `*` 是已建的区域，不加的是参照布局。写基础区域即可，文明的特色区域在加载时换上（与开发集的请求相同）。
+  - 场景请求的区域就是参照布局里每座城的区域；一座城是单城场景，几座城是多城场景（每城一张清单）。
+- `check` 写回的文字用规范写法（如 `M` 写成 `gm`），`build` 和 `validate.py` 都检查写回的文字再读一遍得到同样的场景。`--svg` 的图里橙色是参照布局、灰色是已建区域、白色是市中心，蓝线是河，虚线边框的格是猜的。
+- `compare.mjs --refscore`：每个参照场景、每组权重，裁判给参照布局打分，再求同样权重下的最优解并打分，写一行 JSON：`reference`、`optimum`（裁判的完整打分和方案），`summary` 里是比较的目标值、差距 `gap`、参照布局占最优的比例、参照布局是不是最优、最优是否已证明。只算相邻时最优解用 `sdp:ORACLE`（证明过的真最优，目标是裁判的加权相邻加成 `gain`）。权重组计入地块（`"land": 1`，或 `"lambda": x` 设地块系数 λ）时最优解用 `sdp:ORACLE_LAND<nnn>`（本模组整个目标的真最优：相邻 + λ × 地块 + 住房），参照布局由同一个搜索按同一个目标估值（`cmp_oracle.lua` 的 `CmpOracle.ScoreLayout`，参照布局经 `CMP_REFERENCE` 传入），`objective` 记为 `sdp`；`summary` 另有两边裁判的相邻加成（`referenceGain`、`optimumGain`，按权重；`…Gain1` 全按 1）、搜索里的相邻加成和合法性，节点数到上限没算完时有 `upper`、`gapUpper`（最优在 [`optimum`, `upper`] 之间）。参照布局有格不在本模组的候选格里时记为错误。`refscore.jsonl` 里 `all1-land` 的行是改用 `ORACLE_LAND` 之前的做法（精细档，比较裁判的 `outputWeighted`），不是证明过的最优。`--reference-only` 只给参照布局打分（`verify` 用它）。
+- 权重组：`--weights` 给 JSON lines 文件（每行 `{"name": "…", "science": 1, "culture": 1, "faith": 0.5, "gold": 0.5, "production": 1, "food": 1, "land": 0}`，没写的产出为 1；`"oracle": n` 把真最优的节点上限设为 n 百万），或直接写 `"all1:;half:gold=0.5,faith=0.5;land:land=1;L050:lambda=0.5"`。不给时只算全 1。`CMP_WEIGHTS` 同时传给规划器和裁判，替换场景自己的权重。`"lambda"` 只用于 `--refscore`；普通运行的地块系数用变体后缀 `_LAND<nnn>` 设（见上）。`tests/compare/refscenes/grid53.jsonl` 是 #53 第 2 步的网格（全 1、金币信仰减半、金币减半 × λ = 0、0.25、0.5、0.75、1）。
+- `--weights` 也可用于普通运行和 `--rejudge`（不和 `--crossscore` 一起用）：每个运行或每次打分对每组权重各做一遍，行里记 `weights`（`name`、`yields`），重新打分的行另记 `planWeights`（方案原来的权重组名，没有时为 null）。场景编号不变，所以 `summarize.py` 不读带 `weights` 的行。权重都是 1/k 的整数倍（k ≤ 100，如 0.25、AMT 的 1.15）时，`sdp:ORACLE` 把界取整到 1/k 的倍数，和整数权重一样快。
+- `refgrid53.py`：读 `--refscore` 计入地块的行，按参照场景和 (权重, λ) 算差距 (V* − V(L)) / 参照布局的相邻加成（裁判的，按同一组产出权重；`--unweighted` 改用全 1 的），列平均差距与参照即最优的场景数，按作者分开发组和复核组（约 2:1，同一作者不跨组）套用先定好的选择规则，另列每位作者的平均差距、逐场景差距和耗时；`--sanity refscore.jsonl` 核对 λ = 0 与只算相邻的真最优相同。见 docs/notes/issue-53-reference-layouts.md。
+- `refmaps.py`：给 REF04 起的每个参照场景画一张 SVG（`docs/images/refscenes/<编号>.svg`，另有 `legend.svg`）：所选城市 3 环内的地形、地貌、资源、河、领土边界和固定的区域、奇观、钉，并排画作者布局、只算相邻的真最优（`refscore.jsonl` 的 `all1`）和计入地块的真最优（`refgrid53.jsonl` 的 `all1-L100`，与前者相同时不画），北在上。`--tables` 另输出 `docs/reference-scenes.md` 的总表和逐场景的表。只读结果文件，不重算。
+- `robust53.py`：读 `sdp:ORACLE` 的行（带 `weights` 的按其组名；不带的是 `all1`，`~SCI`、`~PROD`、`~FAITH` 场景是 `sci3`、`prod3`、`faith3`），对每个单城场景、每对权重组 (A, B) 算 A 的最优方案在 B 下的损失 1 − score_B(plan_A)/V*_B（裁判的加成对权重是线性的，按方案的 `byYield` 算），报两两损失表、每组作默认时的平均和最坏损失、所有权重给出同一方案的场景比例；`--check` 拿重新打分的文件逐个核对。`--distinct OUT` 写出每个场景互不相同的最优方案各一行，供 `--rejudge --weights` 用。
 
 ## covscene.py — 玩家布局的覆盖范围场景（#61）
 
@@ -277,6 +363,7 @@ python3 -I tools/game.py launch                        # 记下前台应用，op
 python3 -I tools/game.py newgame --state SDP_Panel --capital   # 在对局里先退回主菜单→等主菜单→快速开始→等指定 Lua 状态可用→用开局开拓者建首都
 python3 -I tools/game.py popups --close                # 关掉排队中的游戏弹窗（历史时刻等），规划面板才会显示
 python3 -I tools/game.py newgame --state SDP_Panel --capital --reveal   # 另外揭示首都周围 12 格（城址、多城测试需要）
+python3 -I tools/game.py load SDP_ref_aw-curtin-232        # 读 Saves/Single 里的单人存档（不带扩展名），等对局可用、关掉弹窗；缺内容的存档停在游戏的提示上（超时）
 ```
 
 **不占用户的屏幕**：启动器和游戏窗口出现时会把自己切到前台（`activateIgnoringOtherApps`）。
@@ -403,7 +490,8 @@ python3 -I tools/remote.py wait devcheck --fetch logs/refresh/full_rejudged.json
 ```
 
 - 不需要装游戏。远端在 `~/sdp-runs/<工作树名>/`，参考源码只拷 Lua。结果和本机相同（耗时字段除外），所以报告里要写耗时的那组结果放在同一台机器上跑。
-- **排队**：远端的格子数默认是它的核数减 2（留给系统；本机配置的 `remote_slots` 可改），所有会话共用。任务要 `--slots N` 格（默认取命令里的 `-j`，没写就是全部；`-j` 比 N 大会改小，子进程拿到 `SDP_JOBS=N`），排在最前面、空出 N 格时启动，先到先得。别的方式启动的 `compare.mjs` 按它的 `-j` 计入（没写按全部）。`--exclusive` 等整台机器空下来再跑、跑时别人排队：报告里要写秒数的那组用它。同名任务还在排队或在跑时拒绝。队列是 `tools/sdpsched.py`，`sync` 和 `run` 把它拷到远端的 `~/sdp-runs/bin/`。
+- **排队**：远端的格子数默认是它的核数减 2（留给系统；本机配置的 `remote_slots` 可改），所有会话共用。任务要 `--slots N` 格（默认取命令里的 `-j`，没写就是全部；`-j` 比 N 大会改小，子进程拿到 `SDP_JOBS=N`），按排队先后分格子：前面的任务拿走它们的格子后还剩 N 格就启动。别的方式启动的 `compare.mjs` 按它的 `-j` 计入（没写按全部）。`--exclusive` 等整台机器空下来再跑、跑时别人排队：报告里要写秒数的那组用它。同名任务还在排队或在跑时拒绝。队列是 `tools/sdpsched.py`，`sync` 和 `run` 把它拷到远端的 `~/sdp-runs/bin/`。
+- **回填与防饿死**：前面的任务格子不够时，后面放得下的任务先启动，空着的格子不闲着（例如 8 格用了 6 格，排头要 4 格，后面要 2 格的先跑）。为了不让大任务一直被小任务插队，每个排队的任务最多被后来的任务越过 3 次（`sdpsched.py` 的 `MAX_PASSED`），之后它守住位置：排在它后面的都等它先启动。任务没有预计时长，所以按次数而不按时间限。独占任务不被越过：排着的独占任务后面的任务都等它。`status` 里排队的任务按先后列出；回填启动的任务在日志里写“ahead of N waiting job(s)”。每个排队任务的 `sdpsched.py run` 进程每 15 秒用自己启动时的代码判断一次，所以换了规则后，只有之后提交的任务按新规则启动。
 - **快照**：`run` 把远端的工作树用 APFS 克隆（瞬间完成、不另占空间）到 `~/sdp-runs/snap/NAME/`，任务在快照里跑，之后再 `sync` 不会改到它正在读的文件；`wait --fetch` 和 `fetch --job NAME` 从快照取回结果。结束超过 7 天的快照在下次 `run` 时删掉。
 - `run` 用 nohup 启动，ssh 断了也继续；结束时写 `~/sdp-runs/NAME.exit`。`wait` 只看这个文件（不按进程名查找），结束后取回 `--fetch` 列的文件，以远端任务的退出码退出：放在后台跑，它结束就是可以接着处理的信号。
 - 远端的 node、python3 不在默认 PATH 上：`SDP_REMOTE_PATH`（或本机配置的 `remote_path`）放在 PATH 前面（默认 `/opt/homebrew/bin:/usr/local/bin`）。

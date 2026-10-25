@@ -593,3 +593,30 @@ test("a layout whose district is walled in by other cities' districts is illegal
   for m = 2, k do layout[m] = position[around[m - 1].Index] end
   T.eq(search:Reachable(layout), true, "a group without reach plots is not checked")
 end)
+
+include("cmp_oracle")
+
+test("oracle with a wonder: the optimum equals brute force (issue 48)", function()
+  NewWorld()
+  -- One city, as the single-city tab plans districts with wonders.
+  local result = SDP_Multi.Solve(Request({ Districts = { "DISTRICT_CAMPUS", "DISTRICT_THEATER" },
+    Wonders = { "BUILDING_GREAT_LIBRARY" }, Only = { [1] = true } }))
+  T.ok(result.Ok, tostring(result.Error))
+  local search = result.Session.Search
+  local kinds = {}
+  for m = 1, search.K do kinds[search.Kinds[m]] = (kinds[search.Kinds[m]] or 0) + 1 end
+  T.eq(kinds.WONDER, 1, "a wonder slot")
+  -- No incumbent: the bound alone must lead to the optimum.
+  local o = SDP_Overlay.With(0, CmpOracle.Run, search, nil, {})
+  local brute, count = SDP_Overlay.With(0, CmpOracle.BruteForce, search, 1e6, {})
+  T.ok(count ~= nil and count > 100, "layouts tried: " .. tostring(count))
+  T.ok(o.Proven, "proven")
+  T.eq(o.Violations, 0, "no layout above its bound")
+  T.near(o.Value, brute, 1e-9, "optimum vs brute force")
+  T.ok(o.Value >= result.Adjacency - 1e-9, "not below the tier's plan")
+  -- The library stands next to the campus in the optimum.
+  local at = {}
+  for m = 1, search.K do at[search.Types[m]] = search.Candidates[o.Layout[m]] end
+  local lib, campus = at.BUILDING_GREAT_LIBRARY, at.DISTRICT_CAMPUS
+  T.eq(Map.GetPlotDistance(lib.X, lib.Y, campus.X, campus.Y), 1, "great library next to the campus")
+end)

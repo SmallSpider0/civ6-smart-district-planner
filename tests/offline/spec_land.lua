@@ -138,3 +138,181 @@ test("a city's workable plots: kept features count, built and pinned districts d
   T.ok(land.ByIndex[woods] ~= nil, "woods kept (feature removal off) are workable")
   T.ok(land.ByIndex[Map.GetPlotIndex(3, 2)] == nil, "the city center is not")
 end)
+
+-- ===========================================================================
+-- The exact solver's land bound (tests/compare/cmp_oracle.lua, issue 48)
+-- ===========================================================================
+include("cmp_oracle")
+
+-- Every subset of a model's plots (bit masks over Plots[1..n]): the loss of
+-- taking it, Base - ScoreTaken.
+local function Losses(model)
+  local n, losses = #model.Plots, {}
+  for mask = 0, 2 ^ n - 1 do
+    local taken, count, bit = {}, 0, mask
+    for x = 1, n do
+      if bit % 2 == 1 then
+        count = count + 1
+        taken[count] = model.Plots[x].Index
+      end
+      bit = math.floor(bit / 2)
+    end
+    losses[mask] = model.Base - SDP_Land.ScoreTaken(model, taken, count, {})
+  end
+  return losses
+end
+
+local function Taken(model, mask)
+  local taken, bit = {}, mask
+  for x = 1, #model.Plots do
+    if bit % 2 == 1 then taken[model.Plots[x].Index] = true end
+    bit = math.floor(bit / 2)
+  end
+  return taken
+end
+
+test("oracle land bound: one more plot costs max(0, t - c(S)), and only more as S grows", function()
+  local sets = {
+    { 5, 4, 4, 3, 3, 3, 2, 1, 0, 0 }, -- ties, zeros
+    { 2.5, 2.5, 2.5, 1.25, 0.75, 0.75, 0, 3.5, 6, 1 },
+    { 3, 1, 2 }, -- fewer plots than P + 1
+  }
+  for s, tiles in ipairs(sets) do
+    local plots = {}
+    for x, t in ipairs(tiles) do plots[x] = { Index = 100 + x, Tile = t, Once = 0 } end
+    for population = 0, #tiles do
+      local model = SDP_Land.Model(plots, population)
+      local losses = Losses(model)
+      local n = #model.Plots
+      for mask = 0, 2 ^ n - 1 do
+        local cut = CmpOracle.Cut(model, Taken(model, mask))
+        for x = 1, n do
+          local bitX = 2 ^ (x - 1)
+          if math.floor(mask / bitX) % 2 == 0 then
+            local exact = losses[mask + bitX] - losses[mask]
+            local where = string.format("set %d, P %d, S %d, plot %d", s, model.P, mask, x)
+            T.near(CmpOracle.Delta(model.Plots[x].Tile, cut), exact, 1e-9, "Delta " .. where)
+            if x == 1 or exact > 0 then
+              -- Supermodular: adding any y to S never lowers the cost of x.
+              for y = 1, n do
+                local bitY = 2 ^ (y - 1)
+                if y ~= x and math.floor(mask / bitY) % 2 == 0 then
+                  local later = losses[mask + bitY + bitX] - losses[mask + bitY]
+                  T.ok(later >= exact - 1e-9, "supermodular " .. where .. " + " .. y)
+                end
+              end
+            end
+          end
+        end
+      end
+    end
+  end
+end)
+
+test("oracle land bound: the Deltas along a placement order add up to the land part", function()
+  local plots = {}
+  for x, t in ipairs({ 4, 4, 3, 2, 2, 1, 0 }) do plots[x] = { Index = 10 + x, Tile = t, Once = 0 } end
+  for population = 0, 7 do
+    local model = SDP_Land.Model(plots, population)
+    for _, order in ipairs({ { 11, 12, 13 }, { 17, 11, 14, 15 }, { 13, 12, 11, 16, 15, 14, 17 } }) do
+      local taken, total, list = {}, 0, {}
+      for c, index in ipairs(order) do
+        total = total + CmpOracle.Delta(model.ByIndex[index].Tile, CmpOracle.Cut(model, taken))
+        taken[index] = true
+        list[c] = index
+        T.near(total, model.Base - SDP_Land.ScoreTaken(model, list, c, {}), 1e-9, "P " .. population .. " after " .. c)
+      end
+    end
+  end
+end)
+
+include("SDP_Tiers")
+include("SDP_Task")
+include("SDP_Board")
+include("SDP_Search")
+include("SDP_Solver")
+
+test("oracle with land: the optimum of the whole objective equals brute force", function()
+  World.New({
+    rows = {
+      "~~~~~~~~~",
+      "~.fj.h..~",
+      "~.fMp.f.~",
+      "~h..q..j~",
+      "~.p.M.f.~",
+      "~~~~~~~~~",
+    },
+    rivers = { "4,2", "4,3" },
+    resources = { { 1, 1, "RESOURCE_WHEAT" }, { 6, 3, "RESOURCE_COPPER" } },
+    improvementRules = true,
+    cities = { { id = 1, x = 4, y = 3, population = 24, capital = true } },
+  })
+  local districts = { "DISTRICT_CAMPUS", "DISTRICT_HOLY_SITE", "DISTRICT_THEATER" }
+  local weights = { YIELD_FOOD = 1, YIELD_PRODUCTION = 2, FEATURE = 1 }
+  local result = SDP_Solver.Solve({ PlayerID = 0, CityID = 1, Districts = districts, Weights = weights, Land = true,
+    Tier = "FAST" })
+  T.ok(result.Ok, tostring(result.Error))
+  local search = result.Session.Search
+  local options = { Land = true }
+  -- No incumbent: the bound alone must lead to the optimum.
+  local o = SDP_Overlay.With(0, CmpOracle.Run, search, nil, options)
+  local brute, count = SDP_Overlay.With(0, CmpOracle.BruteForce, search, 1e6, options)
+  T.ok(count ~= nil and count > 1000, "layouts tried: " .. tostring(count))
+  T.ok(o.Proven, "proven")
+  T.eq(o.Violations, 0, "no layout above its bound")
+  T.near(o.Value, brute, 1e-9, "optimum vs brute force")
+  T.ok(o.Value >= result.Gain - 1e-9, "not below the tier's plan")
+  T.ok(result.LandDelta < 0, "the land part counts here")
+  local adjacencyOnly = SDP_Overlay.With(0, CmpOracle.BruteForce, search, 1e6)
+  T.ok(adjacencyOnly >= o.Adjacency - 1e-9, "adjacency of the land optimum at most the adjacency optimum")
+  T.ok(o.Nodes < count, "the bound prunes: " .. o.Nodes .. " nodes for " .. count .. " layouts")
+  -- A given layout (compare.mjs --refscore, issue 53) valued by the same
+  -- search: the optimum's own layout, as placements, gives its value.
+  local placements = {}
+  for m = 1, search.K do
+    local c = search.Candidates[o.Layout[m]]
+    placements[#placements + 1] = { city = 1, type = search.Types[m], x = c.X, y = c.Y }
+  end
+  local scored = SDP_Overlay.With(0, CmpOracle.ScoreLayout, search, placements, function() return 1 end, options)
+  T.near(scored.value, o.Value, 1e-9, "the optimum's layout valued again")
+  T.near(scored.adjacency, o.Adjacency, 1e-9, "its adjacency")
+  T.ok(scored.legal and scored.missing == nil and scored.unplaced == nil, "legal, all placed")
+  placements[1] = { city = 1, type = placements[1].type, x = 0, y = 0 }
+  local outside = SDP_Overlay.With(0, CmpOracle.ScoreLayout, search, placements, function() return 1 end, options)
+  T.ok(outside.value == nil and outside.missing ~= nil and outside.missing[1].reason == "not a candidate", "a plot outside the candidates")
+end)
+
+test("oracle, adjacency only: the optimum equals brute force under whole and fractional weights (issue 53)", function()
+  World.New({
+    rows = {
+      "~~~~~~~~~",
+      "~.fj.h..~",
+      "~.fMp.f.~",
+      "~h..q..j~",
+      "~.p.M.f.~",
+      "~~~~~~~~~",
+    },
+    rivers = { "4,2", "4,3" },
+    resources = { { 1, 1, "RESOURCE_WHEAT" }, { 6, 3, "RESOURCE_COPPER" } },
+    cities = { { id = 1, x = 4, y = 3, population = 24, capital = true } },
+  })
+  local districts = { "DISTRICT_CAMPUS", "DISTRICT_HOLY_SITE", "DISTRICT_COMMERCIAL_HUB" }
+  local vectors = {
+    {},
+    { YIELD_GOLD = 0.5, YIELD_FAITH = 0.5, YIELD_SCIENCE = 0.75, YIELD_CULTURE = 0.75 },
+    { YIELD_SCIENCE = 1.8, YIELD_CULTURE = 1.5, YIELD_FAITH = 1.6, YIELD_GOLD = 1.15, YIELD_PRODUCTION = 0.75 },
+  }
+  for x, w in ipairs(vectors) do
+    local weights = { YIELD_SCIENCE = 1, YIELD_CULTURE = 1, YIELD_FAITH = 1, YIELD_GOLD = 1, YIELD_PRODUCTION = 1, YIELD_FOOD = 1 }
+    for k, v in pairs(w) do weights[k] = v end
+    local result = SDP_Solver.Solve({ PlayerID = 0, CityID = 1, Districts = districts, Weights = weights, Tier = "FAST" })
+    T.ok(result.Ok, tostring(result.Error))
+    local search = result.Session.Search
+    -- No incumbent: the bound alone must lead to the optimum.
+    local o = SDP_Overlay.With(0, CmpOracle.Run, search, nil, {})
+    local brute, count = SDP_Overlay.With(0, CmpOracle.BruteForce, search, 1e6, {})
+    T.ok(count ~= nil and count > 1000, "vector " .. x .. ": layouts tried " .. tostring(count))
+    T.ok(o.Proven, "vector " .. x .. ": proven")
+    T.near(o.Value, brute, 1e-9, "vector " .. x .. ": optimum vs brute force")
+  end
+end)

@@ -422,6 +422,672 @@
   ]
  },
  {
+  "id": "REF01-suqin-aqueduct-dam",
+  "kind": "multi",
+  "set": "REF",
+  "civ": "CIVILIZATION_AMERICA",
+  "leader": "LEADER_T_ROOSEVELT",
+  "title": "Su Qin: two-city aqueduct diamond with a dam",
+  "districts": [
+   "DISTRICT_AQUEDUCT",
+   "DISTRICT_INDUSTRIAL_ZONE",
+   "DISTRICT_DAM"
+  ],
+  "only": [
+   1,
+   2
+  ],
+  "target": 1,
+  "file": "REF01-suqin-aqueduct-dam.json",
+  "turn": 150,
+  "ruleset": "RULESET_EXPANSION_2",
+  "source": "https://www.zhihu.com/question/397145858/answer/1784399407",
+  "author": "苏秦",
+  "date": "2021-03",
+  "plans": [
+   [
+    "DISTRICT_AQUEDUCT",
+    "DISTRICT_INDUSTRIAL_ZONE"
+   ],
+   [
+    "DISTRICT_DAM",
+    "DISTRICT_INDUSTRIAL_ZONE",
+    "DISTRICT_AQUEDUCT"
+   ]
+  ]
+ },
+ {
+  "id": "REF02-fenqin-hojo-paititi",
+  "kind": "multi",
+  "set": "REF",
+  "civ": "CIVILIZATION_JAPAN",
+  "leader": "LEADER_HOJO",
+  "title": "焚琴煮茶: Hojo three-city river plan with a double-aqueduct Industrial Zone",
+  "districts": [
+   "DISTRICT_INDUSTRIAL_ZONE",
+   "DISTRICT_THEATER",
+   "DISTRICT_CAMPUS",
+   "DISTRICT_HARBOR",
+   "DISTRICT_COMMERCIAL_HUB",
+   "DISTRICT_HOLY_SITE",
+   "DISTRICT_GOVERNMENT",
+   "DISTRICT_AQUEDUCT"
+  ],
+  "only": [
+   1,
+   2,
+   3
+  ],
+  "target": 1,
+  "file": "REF02-fenqin-hojo-paititi.json",
+  "turn": 150,
+  "ruleset": "RULESET_EXPANSION_2",
+  "source": "https://www.zhihu.com/question/397145858/answer/3293261022",
+  "author": "焚琴煮茶",
+  "date": "2023-11",
+  "plans": [
+   [
+    "DISTRICT_INDUSTRIAL_ZONE",
+    "DISTRICT_THEATER",
+    "DISTRICT_CAMPUS",
+    "DISTRICT_HARBOR"
+   ],
+   [
+    "DISTRICT_COMMERCIAL_HUB",
+    "DISTRICT_CAMPUS",
+    "DISTRICT_HOLY_SITE",
+    "DISTRICT_GOVERNMENT",
+    "DISTRICT_AQUEDUCT",
+    "DISTRICT_INDUSTRIAL_ZONE"
+   ],
+   [
+    "DISTRICT_HOLY_SITE",
+    "DISTRICT_INDUSTRIAL_ZONE",
+    "DISTRICT_AQUEDUCT",
+    "DISTRICT_COMMERCIAL_HUB",
+    "DISTRICT_CAMPUS"
+   ]
+  ]
+ },
+ {
+  "id": "REF03-luoyuliang-japan-sendai",
+  "kind": "multi",
+  "set": "REF",
+  "civ": "CIVILIZATION_JAPAN",
+  "leader": "LEADER_HOJO",
+  "title": "洛雨凉: Japan four-city plan, Sendai",
+  "districts": [
+   "DISTRICT_HOLY_SITE",
+   "DISTRICT_INDUSTRIAL_ZONE",
+   "DISTRICT_CAMPUS",
+   "DISTRICT_AQUEDUCT",
+   "DISTRICT_COMMERCIAL_HUB",
+   "DISTRICT_GOVERNMENT",
+   "DISTRICT_THEATER"
+  ],
+  "only": [
+   1,
+   2
+  ],
+  "target": 1,
+  "file": "REF03-luoyuliang-japan-sendai.json",
+  "turn": 150,
+  "ruleset": "RULESET_EXPANSION_2",
+  "source": "https://www.bilibili.com/read/cv11098689",
+  "author": "洛雨凉_",
+  "date": "2021-04-30",
+  "plans": [
+   [
+    "DISTRICT_HOLY_SITE",
+    "DISTRICT_INDUSTRIAL_ZONE",
+    "DISTRICT_CAMPUS",
+    "DISTRICT_AQUEDUCT",
+    "DISTRICT_COMMERCIAL_HUB",
+    "DISTRICT_GOVERNMENT",
+    "DISTRICT_THEATER"
+   ],
+   []
+  ]
+ },
+ {
+  "id": "REF04-bh-japan-okayama-osaka",
+  "kind": "multi",
+  "set": "REF",
+  "civ": "CIVILIZATION_JAPAN",
+  "leader": "LEADER_HOJO",
+  "title": "BarbarianHunter: Japan, Osaka and Okayama (save, turn 276)",
+  "districts": [
+   "DISTRICT_COMMERCIAL_HUB",
+   "DISTRICT_THEATER"
+  ],
+  "only": [
+   131073,
+   262147
+  ],
+  "target": 131073,
+  "file": "REF04-bh-japan-okayama-osaka.json",
+  "save": "bh-hojo-276",
+  "turn": 276,
+  "ruleset": "RULESET_EXPANSION_2",
+  "source": "https://forums.civfanatics.com/threads/civ-of-the-week-japan.635221/page-2",
+  "author": "BarbarianHunter",
+  "date": "2019-04-17",
+  "plans": [
+   [
+    "DISTRICT_COMMERCIAL_HUB",
+    "DISTRICT_THEATER"
+   ],
+   [
+    "DISTRICT_THEATER",
+    "DISTRICT_COMMERCIAL_HUB"
+   ]
+  ]
+ },
+ {
+  "id": "REF05-bh-japan-tokyo-shizuoka",
+  "kind": "multi",
+  "set": "REF",
+  "civ": "CIVILIZATION_JAPAN",
+  "leader": "LEADER_HOJO",
+  "title": "BarbarianHunter: Japan, Tokyo and Shizuoka (save, turn 276)",
+  "districts": [
+   "DISTRICT_COMMERCIAL_HUB",
+   "DISTRICT_HOLY_SITE",
+   "DISTRICT_THEATER",
+   "DISTRICT_CAMPUS"
+  ],
+  "only": [
+   196610,
+   327684
+  ],
+  "target": 196610,
+  "file": "REF05-bh-japan-tokyo-shizuoka.json",
+  "save": "bh-hojo-276",
+  "turn": 276,
+  "ruleset": "RULESET_EXPANSION_2",
+  "source": "https://forums.civfanatics.com/threads/civ-of-the-week-japan.635221/page-2",
+  "author": "BarbarianHunter",
+  "date": "2019-04-17",
+  "plans": [
+   [
+    "DISTRICT_COMMERCIAL_HUB",
+    "DISTRICT_HOLY_SITE",
+    "DISTRICT_THEATER",
+    "DISTRICT_CAMPUS"
+   ],
+   [
+    "DISTRICT_COMMERCIAL_HUB",
+    "DISTRICT_HOLY_SITE",
+    "DISTRICT_THEATER",
+    "DISTRICT_CAMPUS"
+   ]
+  ]
+ },
+ {
+  "id": "REF06-bh-japan-kyoto",
+  "kind": "single",
+  "set": "REF",
+  "civ": "CIVILIZATION_JAPAN",
+  "leader": "LEADER_HOJO",
+  "title": "BarbarianHunter: Japan, Kyoto (save, turn 276)",
+  "districts": [
+   "DISTRICT_INDUSTRIAL_ZONE",
+   "DISTRICT_HOLY_SITE",
+   "DISTRICT_THEATER"
+  ],
+  "only": [
+   65536
+  ],
+  "target": 65536,
+  "file": "REF06-bh-japan-kyoto.json",
+  "save": "bh-hojo-276",
+  "turn": 276,
+  "ruleset": "RULESET_EXPANSION_2",
+  "source": "https://forums.civfanatics.com/threads/civ-of-the-week-japan.635221/page-2",
+  "author": "BarbarianHunter",
+  "date": "2019-04-17"
+ },
+ {
+  "id": "REF07-aw-australia-canberra-melbourne",
+  "kind": "multi",
+  "set": "REF",
+  "civ": "CIVILIZATION_AUSTRALIA",
+  "leader": "LEADER_JOHN_CURTIN",
+  "title": "Archon_Wing: Australia, Canberra and Melbourne (save, turn 232)",
+  "districts": [
+   "DISTRICT_CAMPUS",
+   "DISTRICT_THEATER",
+   "DISTRICT_COMMERCIAL_HUB",
+   "DISTRICT_HARBOR"
+  ],
+  "only": [
+   65536,
+   196610
+  ],
+  "target": 65536,
+  "file": "REF07-aw-australia-canberra-melbourne.json",
+  "save": "aw-curtin-232",
+  "turn": 232,
+  "ruleset": "RULESET_EXPANSION_2",
+  "source": "https://forums.civfanatics.com/threads/civ-of-the-week-australia.640147/",
+  "author": "Archon_Wing",
+  "date": "2019-01-05",
+  "plans": [
+   [
+    "DISTRICT_CAMPUS",
+    "DISTRICT_THEATER",
+    "DISTRICT_COMMERCIAL_HUB",
+    "DISTRICT_HARBOR"
+   ],
+   [
+    "DISTRICT_CAMPUS",
+    "DISTRICT_THEATER",
+    "DISTRICT_COMMERCIAL_HUB"
+   ]
+  ]
+ },
+ {
+  "id": "REF08-aw-australia-sydney",
+  "kind": "single",
+  "set": "REF",
+  "civ": "CIVILIZATION_AUSTRALIA",
+  "leader": "LEADER_JOHN_CURTIN",
+  "title": "Archon_Wing: Australia, Sydney (save, turn 232)",
+  "districts": [
+   "DISTRICT_CAMPUS",
+   "DISTRICT_COMMERCIAL_HUB",
+   "DISTRICT_THEATER",
+   "DISTRICT_HARBOR"
+  ],
+  "only": [
+   131073
+  ],
+  "target": 131073,
+  "file": "REF08-aw-australia-sydney.json",
+  "save": "aw-curtin-232",
+  "turn": 232,
+  "ruleset": "RULESET_EXPANSION_2",
+  "source": "https://forums.civfanatics.com/threads/civ-of-the-week-australia.640147/",
+  "author": "Archon_Wing",
+  "date": "2019-01-05"
+ },
+ {
+  "id": "REF09-aw-netherlands-amsterdam-haarlem",
+  "kind": "multi",
+  "set": "REF",
+  "civ": "CIVILIZATION_NETHERLANDS",
+  "leader": "LEADER_WILHELMINA",
+  "title": "Archon_Wing: Netherlands, Amsterdam and Haarlem (save, turn 237)",
+  "districts": [
+   "DISTRICT_THEATER",
+   "DISTRICT_INDUSTRIAL_ZONE",
+   "DISTRICT_CAMPUS",
+   "DISTRICT_COMMERCIAL_HUB"
+  ],
+  "only": [
+   65536,
+   131073
+  ],
+  "target": 65536,
+  "file": "REF09-aw-netherlands-amsterdam-haarlem.json",
+  "save": "aw-wilhelmina-237",
+  "turn": 237,
+  "ruleset": "RULESET_EXPANSION_2",
+  "source": "https://forums.civfanatics.com/threads/civ-of-the-week-netherlands.637219/",
+  "author": "Archon_Wing",
+  "date": "2018-10",
+  "plans": [
+   [
+    "DISTRICT_THEATER",
+    "DISTRICT_INDUSTRIAL_ZONE",
+    "DISTRICT_CAMPUS",
+    "DISTRICT_COMMERCIAL_HUB"
+   ],
+   [
+    "DISTRICT_CAMPUS",
+    "DISTRICT_COMMERCIAL_HUB",
+    "DISTRICT_THEATER"
+   ]
+  ]
+ },
+ {
+  "id": "REF10-aw-netherlands-utrecht",
+  "kind": "single",
+  "set": "REF",
+  "civ": "CIVILIZATION_NETHERLANDS",
+  "leader": "LEADER_WILHELMINA",
+  "title": "Archon_Wing: Netherlands, Utrecht (save, turn 237)",
+  "districts": [
+   "DISTRICT_INDUSTRIAL_ZONE",
+   "DISTRICT_CAMPUS",
+   "DISTRICT_THEATER",
+   "DISTRICT_HARBOR"
+  ],
+  "only": [
+   262146
+  ],
+  "target": 262146,
+  "file": "REF10-aw-netherlands-utrecht.json",
+  "save": "aw-wilhelmina-237",
+  "turn": 237,
+  "ruleset": "RULESET_EXPANSION_2",
+  "source": "https://forums.civfanatics.com/threads/civ-of-the-week-netherlands.637219/",
+  "author": "Archon_Wing",
+  "date": "2018-10"
+ },
+ {
+  "id": "REF11-aw-japan-kyoto-tokyo",
+  "kind": "multi",
+  "set": "REF",
+  "civ": "CIVILIZATION_JAPAN",
+  "leader": "LEADER_HOJO",
+  "title": "Archon_Wing: Japan, Kyoto and Tokyo (save, turn 236)",
+  "districts": [
+   "DISTRICT_THEATER",
+   "DISTRICT_CAMPUS",
+   "DISTRICT_INDUSTRIAL_ZONE",
+   "DISTRICT_HARBOR",
+   "DISTRICT_COMMERCIAL_HUB"
+  ],
+  "only": [
+   65536,
+   131073
+  ],
+  "target": 65536,
+  "file": "REF11-aw-japan-kyoto-tokyo.json",
+  "save": "aw-hojo-236",
+  "turn": 236,
+  "ruleset": "RULESET_EXPANSION_2",
+  "source": "https://forums.civfanatics.com/threads/civ-of-the-week-japan.635221/page-2",
+  "author": "Archon_Wing",
+  "date": "2018-08-11",
+  "plans": [
+   [
+    "DISTRICT_THEATER",
+    "DISTRICT_CAMPUS",
+    "DISTRICT_INDUSTRIAL_ZONE",
+    "DISTRICT_HARBOR",
+    "DISTRICT_COMMERCIAL_HUB"
+   ],
+   [
+    "DISTRICT_THEATER",
+    "DISTRICT_CAMPUS"
+   ]
+  ]
+ },
+ {
+  "id": "REF12-dq-china-xian-occ",
+  "kind": "single",
+  "set": "REF",
+  "civ": "CIVILIZATION_CHINA",
+  "leader": "LEADER_QIN",
+  "title": "DanQuayle: China, one-city challenge, Xi'an (save, turn 145)",
+  "districts": [
+   "DISTRICT_HOLY_SITE",
+   "DISTRICT_THEATER",
+   "DISTRICT_CAMPUS"
+  ],
+  "only": [
+   65536
+  ],
+  "target": 65536,
+  "file": "REF12-dq-china-xian-occ.json",
+  "save": "dq-qin-145",
+  "turn": 145,
+  "ruleset": "RULESET_EXPANSION_2",
+  "source": "https://forums.civfanatics.com/threads/the-solo-city-challenge.645236/",
+  "author": "DanQuayle",
+  "date": "2019-05-01"
+ },
+ {
+  "id": "REF13-pk-china-xian-occ",
+  "kind": "single",
+  "set": "REF",
+  "civ": "CIVILIZATION_CHINA",
+  "leader": "LEADER_QIN",
+  "title": "pahakuutti: China, one-city challenge, Xi'an (save, turn 150)",
+  "districts": [
+   "DISTRICT_HOLY_SITE",
+   "DISTRICT_COMMERCIAL_HUB",
+   "DISTRICT_THEATER",
+   "DISTRICT_CAMPUS"
+  ],
+  "only": [
+   65536
+  ],
+  "target": 65536,
+  "file": "REF13-pk-china-xian-occ.json",
+  "save": "pk-qin-150",
+  "turn": 150,
+  "ruleset": "RULESET_EXPANSION_2",
+  "source": "https://forums.civfanatics.com/threads/the-solo-city-challenge.645236/",
+  "author": "pahakuutti",
+  "date": "2019-04-30"
+ },
+ {
+  "id": "REF14-ca-poland-krakow-bydgoszcz",
+  "kind": "multi",
+  "set": "REF",
+  "civ": "CIVILIZATION_POLAND",
+  "leader": "LEADER_JADWIGA",
+  "title": "_Calyx: Poland, Krakow and Bydgoszcz (save, turn 100; two Industrial Zones tacked)",
+  "districts": [
+   "DISTRICT_COMMERCIAL_HUB",
+   "DISTRICT_CAMPUS",
+   "DISTRICT_INDUSTRIAL_ZONE"
+  ],
+  "only": [
+   65536,
+   131073
+  ],
+  "target": 65536,
+  "file": "REF14-ca-poland-krakow-bydgoszcz.json",
+  "save": "ca-jadwiga-100",
+  "turn": 100,
+  "ruleset": "RULESET_EXPANSION_2",
+  "source": "https://forums.civfanatics.com/threads/the-jump-up-to-immortal.657854/",
+  "author": "_Calyx",
+  "date": "2020-05-13",
+  "plans": [
+   [
+    "DISTRICT_COMMERCIAL_HUB",
+    "DISTRICT_CAMPUS",
+    "DISTRICT_INDUSTRIAL_ZONE"
+   ],
+   [
+    "DISTRICT_COMMERCIAL_HUB",
+    "DISTRICT_INDUSTRIAL_ZONE"
+   ]
+  ]
+ },
+ {
+  "id": "REF15-sk-hungary-buda-szeged-miskolc",
+  "kind": "multi",
+  "set": "REF",
+  "civ": "CIVILIZATION_HUNGARY",
+  "leader": "LEADER_MATTHIAS_CORVINUS",
+  "title": "Sklez: Hungary, Buda, Szeged and Miskolc (save, turn 58; districts placed and tacked)",
+  "districts": [
+   "DISTRICT_CAMPUS",
+   "DISTRICT_THEATER",
+   "DISTRICT_COMMERCIAL_HUB"
+  ],
+  "only": [
+   65536,
+   131073,
+   196610
+  ],
+  "target": 65536,
+  "file": "REF15-sk-hungary-buda-szeged-miskolc.json",
+  "save": "sk-matthias-58",
+  "turn": 58,
+  "ruleset": "RULESET_EXPANSION_2",
+  "source": "https://forums.civfanatics.com/threads/sv-discussion-for-gathering-storm.642304/",
+  "author": "Sklez",
+  "date": "2019-02-19",
+  "plans": [
+   [
+    "DISTRICT_CAMPUS",
+    "DISTRICT_THEATER",
+    "DISTRICT_COMMERCIAL_HUB"
+   ],
+   [
+    "DISTRICT_CAMPUS",
+    "DISTRICT_THEATER"
+   ],
+   [
+    "DISTRICT_CAMPUS",
+    "DISTRICT_COMMERCIAL_HUB",
+    "DISTRICT_THEATER"
+   ]
+  ]
+ },
+ {
+  "id": "REF16-vi-maori-south-3c",
+  "kind": "multi",
+  "set": "REF",
+  "civ": "CIVILIZATION_MAORI",
+  "leader": "LEADER_KUPE",
+  "title": "Victoria: Maori, three southern cities (save, turn 100)",
+  "districts": [
+   "DISTRICT_HARBOR",
+   "DISTRICT_COMMERCIAL_HUB",
+   "DISTRICT_CAMPUS",
+   "DISTRICT_THEATER"
+  ],
+  "only": [
+   196610,
+   262147,
+   458758
+  ],
+  "target": 196610,
+  "file": "REF16-vi-maori-south-3c.json",
+  "save": "vi-kupe-100",
+  "turn": 100,
+  "ruleset": "RULESET_EXPANSION_2",
+  "source": "https://forums.civfanatics.com/threads/whats-your-earliest-victory.654421/",
+  "author": "Victoria",
+  "date": "2020-04-25",
+  "plans": [
+   [
+    "DISTRICT_HARBOR",
+    "DISTRICT_COMMERCIAL_HUB",
+    "DISTRICT_CAMPUS"
+   ],
+   [
+    "DISTRICT_CAMPUS",
+    "DISTRICT_THEATER"
+   ],
+   [
+    "DISTRICT_HARBOR",
+    "DISTRICT_COMMERCIAL_HUB"
+   ]
+  ]
+ },
+ {
+  "id": "REF17-vi-maori-kaiapoi",
+  "kind": "single",
+  "set": "REF",
+  "civ": "CIVILIZATION_MAORI",
+  "leader": "LEADER_KUPE",
+  "title": "Victoria: Maori, Kaiapoi (save, turn 100)",
+  "districts": [
+   "DISTRICT_HARBOR",
+   "DISTRICT_THEATER",
+   "DISTRICT_HOLY_SITE"
+  ],
+  "only": [
+   131073
+  ],
+  "target": 131073,
+  "file": "REF17-vi-maori-kaiapoi.json",
+  "save": "vi-kupe-100",
+  "turn": 100,
+  "ruleset": "RULESET_EXPANSION_2",
+  "source": "https://forums.civfanatics.com/threads/whats-your-earliest-victory.654421/",
+  "author": "Victoria",
+  "date": "2020-04-25"
+ },
+ {
+  "id": "REF18-vi-maori-capital",
+  "kind": "single",
+  "set": "REF",
+  "civ": "CIVILIZATION_MAORI",
+  "leader": "LEADER_KUPE",
+  "title": "Victoria: Maori, capital (save, turn 100)",
+  "districts": [
+   "DISTRICT_HARBOR",
+   "DISTRICT_THEATER"
+  ],
+  "only": [
+   65536
+  ],
+  "target": 65536,
+  "file": "REF18-vi-maori-capital.json",
+  "save": "vi-kupe-100",
+  "turn": 100,
+  "ruleset": "RULESET_EXPANSION_2",
+  "source": "https://forums.civfanatics.com/threads/whats-your-earliest-victory.654421/",
+  "author": "Victoria",
+  "date": "2020-04-25"
+ },
+ {
+  "id": "REF19-ga-rome-rome-mediolanum",
+  "kind": "multi",
+  "set": "REF",
+  "civ": "CIVILIZATION_ROME",
+  "leader": "LEADER_TRAJAN",
+  "title": "Gaonac'h: Rome, Rome and Mediolanum (save, turn 156)",
+  "districts": [
+   "DISTRICT_CAMPUS",
+   "DISTRICT_INDUSTRIAL_ZONE"
+  ],
+  "only": [
+   65536,
+   131073
+  ],
+  "target": 65536,
+  "file": "REF19-ga-rome-rome-mediolanum.json",
+  "save": "ga-trajan-156",
+  "turn": 156,
+  "ruleset": "RULESET_EXPANSION_2",
+  "source": "https://forums.civfanatics.com/threads/science-in-the-new-patch-and-trajan-the-beast.647077/",
+  "author": "Gaonac'h",
+  "date": "2019-07-02",
+  "plans": [
+   [
+    "DISTRICT_CAMPUS"
+   ],
+   [
+    "DISTRICT_CAMPUS",
+    "DISTRICT_INDUSTRIAL_ZONE"
+   ]
+  ]
+ },
+ {
+  "id": "REF20-ga-rome-puteoli",
+  "kind": "single",
+  "set": "REF",
+  "civ": "CIVILIZATION_ROME",
+  "leader": "LEADER_TRAJAN",
+  "title": "Gaonac'h: Rome, Puteoli (save, turn 156)",
+  "districts": [
+   "DISTRICT_CAMPUS",
+   "DISTRICT_HARBOR"
+  ],
+  "only": [
+   262147
+  ],
+  "target": 262147,
+  "file": "REF20-ga-rome-puteoli.json",
+  "save": "ga-trajan-156",
+  "turn": 156,
+  "ruleset": "RULESET_EXPANSION_2",
+  "source": "https://forums.civfanatics.com/threads/science-in-the-new-patch-and-trajan-the-beast.647077/",
+  "author": "Gaonac'h",
+  "date": "2019-07-02"
+ },
+ {
   "id": "RM01-pangaea-japan-3c",
   "kind": "multi",
   "set": "R",
