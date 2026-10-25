@@ -28,7 +28,7 @@ local COLUMNS_A = {
   { Key = "YIELD_FAITH", Glyph = "[ICON_Faith]" },
   { Key = "YIELD_GOLD", Glyph = "[ICON_Gold]" },
   { Key = "YIELD_PRODUCTION", Glyph = "[ICON_Production]" },
-  { Key = "DISTANCE", Glyph = "LOC_SDP_WEIGHT_DISTANCE_SHORT", ToolTip = "LOC_SDP_WEIGHT_DISTANCE", Step = 0.5 },
+  { Key = "DISTANCE", Glyph = "LOC_SDP_WEIGHT_DISTANCE_SHORT", ToolTip = "LOC_SDP_WEIGHT_DISTANCE", Step = 0.5, Default = 0 },
 }
 local COLUMNS_B = {
   { Key = "YIELD_FOOD", Glyph = "[ICON_Food]" },
@@ -53,6 +53,19 @@ local m_result = nil
 local m_solution = 1
 local m_view = { Districts = {}, Solutions = {}, Results = {} }
 local m_lookNext = false -- move the camera to the first site when the next result shows (issue 67)
+
+-- The preset, the weights and the tier, kept in the save (issue 57).
+local ALL_COLUMNS = {}
+for _, column in ipairs(COLUMNS_A) do ALL_COLUMNS[#ALL_COLUMNS + 1] = column end
+for _, column in ipairs(COLUMNS_B) do ALL_COLUMNS[#ALL_COLUMNS + 1] = column end
+local m_keeper = SDP_UI.Keeper({ Tab = "SITES", Columns = ALL_COLUMNS, Weights = m_weights, Tiers = SDP_Tiers.Sites,
+  GetTier = function() return m_tier end, PutTier = function(tier) m_tier = tier end,
+  Presets = SDP_Sites.PRESETS, Order = SDP_Sites.PRESET_ORDER })
+local function Remember() m_keeper.Remember(m_preset) end
+function P.Restore()
+  local kept = m_keeper.Restore()
+  if kept ~= nil then m_preset = kept.Preset end
+end
 
 local function ClearResult()
   local job = SDP_Task.Current()
@@ -131,6 +144,7 @@ function P.SetWeight(key, value)
   if m_weights[key] ~= value then
     m_weights[key] = value
     ClearResult()
+    Remember()
   end
   if m_views[key] then m_views[key]() end
 end
@@ -139,6 +153,7 @@ function P.SetPreset(name)
   local preset = SDP_Sites.PRESETS[name]
   if preset == nil then return end
   m_preset = name
+  Remember()
   for _, key in ipairs(SDP_Sites.WEIGHT_KEYS) do
     if preset[key] ~= nil then P.SetWeight(key, preset[key]) end
   end
@@ -161,12 +176,14 @@ function P.SetTier(tier)
   if m_tier ~= tier then
     m_tier = tier
     ClearResult()
+    Remember()
   end
   Controls.SitesTierPull:GetButton():SetText(Locale.Lookup("LOC_SDP_TIER_" .. tier))
   UpdateEstimate()
 end
 
 function P.Refresh()
+  P.Restore()
   ShowSteppers()
   local pull = Controls.SitesPresetPull
   pull:ClearEntries()
@@ -430,7 +447,7 @@ end
 function P.State()
   return {
     Result = m_result, Solution = m_solution, K = m_k, D = m_d, Tier = m_tier, Weights = m_weights, View = m_view,
-    PlanCount = m_planCount,
+    PlanCount = m_planCount, Preset = m_preset,
     EstimateText = Controls.SitesEstimate:GetText(), PlaceDisabled = Controls.SitesPlaceButton:IsDisabled(),
   }
 end

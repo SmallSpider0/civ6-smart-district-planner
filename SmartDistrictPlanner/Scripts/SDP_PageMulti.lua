@@ -45,7 +45,7 @@ local m_center = nil   -- the city the default group is around (nil: the capital
 local m_existing = {}  -- [cityID] = true | false: switches over the default group
 local m_sites = {}     -- [site Key] = true | false: city-center pins switched over the default group
 -- The panel's weight columns plus the coverage part, as on the single-city tab.
-local COLUMNS, COLUMN_WIDTH = {}, 50 -- ten columns: a little wider than the 480 rows, inside the page
+local COLUMNS, COLUMN_WIDTH = {}, 50 -- eight columns, as on the single-city tab
 for _, column in ipairs(SDP_UI.WEIGHT_COLUMNS) do COLUMNS[#COLUMNS + 1] = column end
 COLUMNS[#COLUMNS + 1] = SDP_UI.COVERAGE_COLUMN
 local m_weights = {}
@@ -61,6 +61,23 @@ local m_result = nil
 local m_solution = 1
 local m_view = { Cities = {}, Districts = {}, Wonders = {}, Solutions = {}, Results = {}, Plans = {}, Templates = {} } -- for tests
 local m_lookNext = false -- move the camera to the cities when the next result shows (issue 67)
+local m_preset = SDP_Settings.PRESET_ORDER[1] -- the weights and switches started from (issue 49)
+
+-- The weights, these switches and the tier, kept in the save (issue 57).
+local SWITCHES = {
+  { Key = "LAND", Default = true, Get = function() return m_land end, Put = function(v) m_land = v end },
+  { Key = "SWAP", Default = false, Get = function() return m_swap end, Put = function(v) m_swap = v end },
+  { Key = "REPLACE", Default = false, Get = function() return m_replace end, Put = function(v) m_replace = v end },
+  { Key = "REMIND", Default = true, Get = function() return m_remind end, Put = function(v) m_remind = v end },
+  { Key = "APART", Default = true, Get = function() return m_apart end, Put = function(v) m_apart = v end },
+}
+local m_keeper = SDP_UI.Keeper({ Tab = "MULTI", Columns = COLUMNS, Weights = m_weights, Switches = SWITCHES,
+  Tiers = SDP_Tiers.Multi, GetTier = function() return m_tier end, PutTier = function(tier) m_tier = tier end })
+local function Remember() m_keeper.Remember(m_preset) end
+function P.Restore()
+  local kept = m_keeper.Restore()
+  if kept ~= nil then m_preset = kept.Preset end
+end
 
 -- How a participant is called: its number (the name its pins get, see
 -- SDP_City.CityNumbers) and the city's name, or "Site n" for a planned city.
@@ -175,6 +192,7 @@ function P.SetReplace(on)
   if m_replace ~= on then
     m_replace = on
     ClearResult()
+    Remember()
   end
 end
 
@@ -183,6 +201,7 @@ function P.SetRemind(on)
   if m_remind ~= on then
     m_remind = on
     ClearResult()
+    Remember()
   end
 end
 
@@ -191,6 +210,7 @@ function P.SetApart(on)
   if m_apart ~= on then
     m_apart = on
     ClearResult()
+    Remember()
   end
 end
 
@@ -365,6 +385,7 @@ function P.SetTier(tier)
   if m_tier ~= tier then
     m_tier = tier
     ClearResult()
+    Remember()
   end
   Controls.MultiTierPull:GetButton():SetText(Locale.Lookup("LOC_SDP_TIER_" .. tier))
   UpdateEstimate()
@@ -375,6 +396,7 @@ function P.SetSwap(on)
   if m_swap ~= on then
     m_swap = on
     ClearResult()
+    Remember()
   end
 end
 
@@ -383,9 +405,7 @@ function P.SetLand(on)
   if m_land ~= on then
     m_land = on
     ClearResult()
-  end
-  for _, column in ipairs(COLUMNS) do
-    if column.Land and m_weightViews[column.Key] then m_weightViews[column.Key]() end
+    Remember()
   end
 end
 
@@ -394,6 +414,7 @@ function P.SetWeight(key, value)
   if m_weights[key] ~= value then
     m_weights[key] = value
     ClearResult()
+    Remember()
   end
   if m_weightViews[key] then m_weightViews[key]() end
 end
@@ -633,9 +654,10 @@ function P.PopulatePlanPulls(participants)
 end
 
 function P.Refresh()
+  P.Restore()
   P.RefreshLists()
-  m_weightViews = SDP_UI.BuildWeights(m_weightIM, Controls.MultiWeightStack, COLUMNS, m_weights,
-    function(column) return column.Land and not m_land end, P.SetWeight, COLUMN_WIDTH)
+  m_weightViews = SDP_UI.BuildWeights(m_weightIM, Controls.MultiWeightStack, COLUMNS, m_weights, nil,
+    P.SetWeight, COLUMN_WIDTH)
   SDP_UI.PopulateTierPull(Controls.MultiTierPull, m_tier, P.SetTier)
   Controls.MultiLandCheck:SetCheck(m_land)
   Controls.MultiSwapCheck:SetCheck(m_swap)
@@ -896,7 +918,7 @@ end
 function P.State()
   return {
     Result = m_result, Solution = m_solution, Tier = m_tier, Land = m_land, Replace = m_replace, Remind = m_remind,
-    Apart = m_apart, Swap = m_swap,
+    Apart = m_apart, Swap = m_swap, Weights = m_weights, Preset = m_preset,
     View = m_view, EstimateText = Controls.MultiEstimate:GetText(), QualityText = Controls.MultiQuality:GetText(),
     PlaceDisabled = Controls.MultiPlaceButton:IsDisabled(), ContinueDisabled = Controls.MultiContinueButton:IsDisabled(),
     SolveDisabled = Controls.MultiSolveButton:IsDisabled(), SummaryText = Controls.MultiSummary:GetText(),

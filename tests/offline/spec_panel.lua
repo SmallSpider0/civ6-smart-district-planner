@@ -465,8 +465,8 @@ test("single-city tab: the coverage column", function()
   SDP_Panel.SetState("DISTRICT_AQUEDUCT", "OFF")
   SDP_Panel.SetTier("FAST")
   local cells = SDP_Panel.State().WeightCells
-  T.eq(#cells, 10, "ten columns")
-  local cell = cells[10]
+  T.eq(#cells, 8, "eight columns: no food or harvest column (issue 53)")
+  local cell = cells[8]
   T.eq(cell.Key, "COVERAGE", "coverage last")
   T.eq(cell.Root:GetToolTipString(), "LOC_SDP_WEIGHT_COVERAGE", "the same tooltip as the several cities tab")
   T.eq(SDP_Panel.State().Weights.COVERAGE, 0, "off by default")

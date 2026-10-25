@@ -25,8 +25,6 @@ local function Reset()
   SDP_Panel.SetCount(0)
   SDP_Panel.SetRemind(false)
   for _, y in ipairs(SDP_Rules.YIELDS) do SDP_Panel.SetWeight(y, 1) end
-  SDP_Panel.SetWeight("YIELD_FOOD", 1)
-  SDP_Panel.SetWeight("FEATURE", 1)
   SDP_Panel.SetAllowFeatureRemoval(true)
   SDP_Panel.SetLand(true)
   SDP_Panel.SetTier("STANDARD")
@@ -75,7 +73,7 @@ test("the panel solves exactly what the solver does, whatever the click order", 
   local ordered = { a, b }
   table.sort(ordered)
   local direct = SDP_Solver.Solve({ PlayerID = pid, CityID = city:GetID(), Districts = ordered, Land = true, Tier = "STANDARD",
-    Weights = { YIELD_SCIENCE = 1, YIELD_CULTURE = 3, YIELD_FAITH = 1, YIELD_GOLD = 1, YIELD_PRODUCTION = 1, YIELD_FOOD = 1, FEATURE = 1 } })
+    Weights = { YIELD_SCIENCE = 1, YIELD_CULTURE = 3, YIELD_FAITH = 1, YIELD_GOLD = 1, YIELD_PRODUCTION = 1 } })
   T.same(fromPanel.Plan, direct.Plan, "plan")
   T.eq(fromPanel.Gain, direct.Gain, "gain")
 end)

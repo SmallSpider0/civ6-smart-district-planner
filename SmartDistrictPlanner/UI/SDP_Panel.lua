@@ -23,6 +23,7 @@ include("SDP_Sites")
 include("SDP_SiteSolver")
 include("SDP_Pins")
 include("SDP_Preview")
+include("SDP_Settings")
 
 local LAUNCH_BAR_STACK = "/InGame/LaunchBar/ButtonStack"
 local MAX_WEIGHT = 3
@@ -35,17 +36,16 @@ local VERSION = "v1.4.0"
 -- icons, one family (the texture icons cover only some yields: requirements
 -- pitfalls 13 and 14); the other weights with a short word, since the font
 -- icons that would fit them (terrain, movement, range) are drawn in another
--- style, dark squares. Food and FEATURE (one-time yields of clearing and harvesting)
--- only weigh the land part (SDP_Land). DISTANCE is the distance cost weight
--- (feedback item 9), in steps of 0.5, 0 (off) by default.
+-- style, dark squares. The land part weighs plots with fixed numbers
+-- (SDP_Land.PLOT_WEIGHTS, issue 53), so food and the one-time yields of
+-- clearing and harvesting have no column here. DISTANCE is the distance
+-- cost weight (feedback item 9), in steps of 0.5, 0 (off) by default.
 local WEIGHT_COLUMNS = {
   { Key = "YIELD_SCIENCE", Glyph = "[ICON_Science]" },
   { Key = "YIELD_CULTURE", Glyph = "[ICON_Culture]" },
   { Key = "YIELD_FAITH", Glyph = "[ICON_Faith]" },
   { Key = "YIELD_GOLD", Glyph = "[ICON_Gold]" },
   { Key = "YIELD_PRODUCTION", Glyph = "[ICON_Production]" },
-  { Key = "YIELD_FOOD", Glyph = "[ICON_Food]", Land = true },
-  { Key = "FEATURE", Glyph = "LOC_SDP_WEIGHT_FEATURE_SHORT", ToolTip = "LOC_SDP_WEIGHT_FEATURE", Land = true },
   { Key = "DISTANCE", Glyph = "LOC_SDP_WEIGHT_DISTANCE_SHORT", ToolTip = "LOC_SDP_WEIGHT_DISTANCE", Step = 0.5, Default = 0 },
   -- Housing of districts that depend on appeal (neighborhood, preserve; SDP_Appeal).
   -- Short text like the other non-yield columns: [ICON_Housing] is a
@@ -59,7 +59,7 @@ local COVERAGE_COLUMN = { Key = "COVERAGE", Glyph = "LOC_SDP_WEIGHT_COVERAGE_SHO
 local SINGLE_COLUMNS = {}
 for _, column in ipairs(WEIGHT_COLUMNS) do SINGLE_COLUMNS[#SINGLE_COLUMNS + 1] = column end
 SINGLE_COLUMNS[#SINGLE_COLUMNS + 1] = COVERAGE_COLUMN
-local WEIGHT_WIDTH = 50 -- ten columns: a little wider than the 480 rows, inside the page
+local WEIGHT_WIDTH = 50 -- eight columns, as wide as before the food and harvest columns went (issue 53)
 
 local m_launchItem = {}     -- SDP_LaunchBarItem instance in the game's launch bar
 local m_launchPin = {}      -- SDP_LaunchBarPin instance next to it
@@ -75,7 +75,7 @@ local m_resultIM = InstanceManager:new("ResultRow", "Root", Controls.ResultStack
 local m_cityID = nil
 local m_states = {}           -- [DistrictType] = "MUST" | "POOL" | "OFF" | "AUTO" (chosen; else SDP_UI.DefaultState)
 local m_count = nil           -- districts that take population to plan (nil: the required ones)
-local m_weights = {}          -- [YieldType, FEATURE, DISTANCE, HOUSING or COVERAGE] = 0..MAX_WEIGHT
+local m_weights = {}          -- [YieldType, DISTANCE, HOUSING or COVERAGE] = 0..MAX_WEIGHT
 for _, column in ipairs(SINGLE_COLUMNS) do m_weights[column.Key] = column.Default or 1 end
 local m_allowFeatureRemoval = true
 local m_land = true           -- count the land part (design 4.2)
@@ -100,6 +100,18 @@ local m_weightViews = {}      -- [key] = function that redraws that weight
 local m_weightCells = {}      -- the weight columns' controls, for tests (SDP_UI.BuildWeights)
 local m_tab = "SINGLE"        -- the open tab: SINGLE, SITES or MULTI
 local m_lookNext = false      -- move the camera to the city when the next result shows (a solve, a continue)
+local m_preset = SDP_Settings.PRESET_ORDER[1] -- the weights and switches started from (issue 49)
+
+-- The switches kept in the save with the weights and the tier (issue 57).
+local SINGLE_SWITCHES = {
+  { Key = "ALLOW_REMOVAL", Default = true, Get = function() return m_allowFeatureRemoval end,
+    Put = function(v) m_allowFeatureRemoval = v end },
+  { Key = "LAND", Default = true, Get = function() return m_land end, Put = function(v) m_land = v end },
+  { Key = "SWAP", Default = false, Get = function() return m_swap end, Put = function(v) m_swap = v end },
+  { Key = "REPLACE", Default = false, Get = function() return m_replace end, Put = function(v) m_replace = v end },
+  { Key = "REMIND", Default = true, Get = function() return m_remind end, Put = function(v) m_remind = v end },
+  { Key = "APART", Default = true, Get = function() return m_apart end, Put = function(v) m_apart = v end },
+}
 
 -- ===========================================================================
 -- Formatting
@@ -195,6 +207,60 @@ SDP_UI = {
   MAX_WEIGHT = MAX_WEIGHT, WEIGHT_COLUMNS = WEIGHT_COLUMNS, COVERAGE_COLUMN = COVERAGE_COLUMN,
   Number = Number, Signed = Signed, Where = Where, YieldText = YieldText, PinText = PinText, TypeName = TypeName, Join = Join,
 }
+
+-- What a tab keeps in the save (issue 57, SDP_Settings): its weight columns,
+-- its switches ({ Key, Default }) and its tier (one of `tiers`).
+function SDP_UI.SettingFields(columns, switches, tiers)
+  local fields = {}
+  for _, column in ipairs(columns) do
+    fields[#fields + 1] = { Key = column.Key, Kind = "number", Min = 0, Max = MAX_WEIGHT, Default = column.Default or 1,
+      Preset = true }
+  end
+  for _, switch in ipairs(switches) do
+    fields[#fields + 1] = { Key = switch.Key, Kind = "flag", Default = switch.Default, Preset = true }
+  end
+  local choices = {}
+  for _, tier in ipairs(SDP_Tiers.ORDER) do
+    if tiers[tier] ~= nil then choices[tier] = true end
+  end
+  fields[#fields + 1] = { Key = "TIER", Kind = "choice", Choices = choices, Default = SDP_Tiers.DEFAULT }
+  return fields
+end
+
+-- A keeper (SDP_Settings.Keeper) for a tab: spec = { Tab, Columns, Weights
+-- (the tab's table), Switches ({ Key, Default, Get, Put }), Tiers, GetTier,
+-- PutTier, Presets and Order (default the planner's, SDP_Settings) }.
+function SDP_UI.Keeper(spec)
+  local columns, weights, switches = spec.Columns, spec.Weights, spec.Switches or {}
+  local getTier, putTier = spec.GetTier, spec.PutTier
+  local fields = SDP_UI.SettingFields(columns, switches, spec.Tiers)
+  return SDP_Settings.Keeper({
+    Tab = spec.Tab, Fields = fields, Presets = spec.Presets or SDP_Settings.PRESETS,
+    Order = spec.Order or SDP_Settings.PRESET_ORDER,
+    Values = function()
+      local values = {}
+      for _, column in ipairs(columns) do values[column.Key] = weights[column.Key] end
+      for _, switch in ipairs(switches) do values[switch.Key] = switch.Get() end
+      values.TIER = getTier()
+      return values
+    end,
+    Apply = function(values)
+      for _, column in ipairs(columns) do weights[column.Key] = values[column.Key] end
+      for _, switch in ipairs(switches) do switch.Put(values[switch.Key]) end
+      putTier(values.TIER)
+    end,
+  })
+end
+
+local m_keeper = SDP_UI.Keeper({ Tab = "SINGLE", Columns = SINGLE_COLUMNS, Weights = m_weights, Switches = SINGLE_SWITCHES,
+  Tiers = SDP_Tiers.Single, GetTier = function() return m_tier end, PutTier = function(tier) m_tier = tier end })
+-- Keep the tab's settings in the save after a change (issue 57).
+local function Remember() m_keeper.Remember(m_preset) end
+-- Read them from the save the first time the panel shows for this player.
+local function Restore()
+  local kept = m_keeper.Restore()
+  if kept ~= nil then m_preset = kept.Preset end
+end
 
 -- How a coverage target (SDP_Coverage key) is called: one of the player's
 -- cities ("C<id>") by its number and name, a city-center pin ("S<plot
@@ -1008,6 +1074,7 @@ local function SetWeight(key, value)
   if m_weights[key] ~= value then
     m_weights[key] = value
     ClearResult()
+    Remember()
   end
   if m_weightViews[key] then m_weightViews[key]() end
 end
@@ -1047,8 +1114,8 @@ function SDP_UI.BuildWeights(im, stack, columns, weights, isOff, onChange, width
 end
 
 local function BuildWeights()
-  m_weightViews, m_weightCells = SDP_UI.BuildWeights(m_weightIM, Controls.WeightStack, SINGLE_COLUMNS, m_weights,
-    function(column) return column.Land and not m_land end, SetWeight, WEIGHT_WIDTH)
+  m_weightViews, m_weightCells = SDP_UI.BuildWeights(m_weightIM, Controls.WeightStack, SINGLE_COLUMNS, m_weights, nil,
+    SetWeight, WEIGHT_WIDTH)
 end
 
 -- A tier pulldown: entries for the three tiers, onSelect(tier).
@@ -1092,6 +1159,7 @@ local function SetSwap(on)
   if m_swap ~= on then
     m_swap = on
     ClearResult()
+    Remember()
   end
 end
 
@@ -1100,6 +1168,7 @@ local function SetAllowFeatureRemoval(allow)
   if m_allowFeatureRemoval ~= allow then
     m_allowFeatureRemoval = allow
     ClearResult()
+    Remember()
   end
 end
 
@@ -1119,6 +1188,7 @@ local function SetReplace(on)
   if m_replace ~= on then
     m_replace = on
     ClearResult()
+    Remember()
   end
 end
 
@@ -1127,6 +1197,7 @@ local function SetApart(on)
   if m_apart ~= on then
     m_apart = on
     ClearResult()
+    Remember()
   end
 end
 
@@ -1136,6 +1207,7 @@ local function SetRemind(on)
   if m_remind ~= on then
     m_remind = on
     ClearResult()
+    Remember()
   end
 end
 
@@ -1222,9 +1294,7 @@ local function SetLand(on)
   if m_land ~= on then
     m_land = on
     ClearResult()
-  end
-  for _, column in ipairs(WEIGHT_COLUMNS) do
-    if column.Land and m_weightViews[column.Key] then m_weightViews[column.Key]() end
+    Remember()
   end
 end
 
@@ -1233,6 +1303,7 @@ local function SetTier(tier)
   if m_tier ~= tier then
     m_tier = tier
     ClearResult()
+    Remember()
   end
   Controls.TierPull:GetButton():SetText(Locale.Lookup("LOC_SDP_TIER_" .. tier))
   UpdateEstimate()
@@ -1279,6 +1350,7 @@ UpdateEstimate = function()
 end
 
 Refresh = function()
+  Restore()
   PopulateCities()
   RefreshDistricts()
   BuildWeights()
@@ -1610,6 +1682,9 @@ end
 -- ===========================================================================
 local function OnLoadScreenClose()
   InjectLaunchButton()
+  Restore()
+  SDP_PageSites.Restore()
+  SDP_PageMulti.Restore()
 end
 
 local function OnInput(uiMsg, wParam)
