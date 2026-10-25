@@ -15,8 +15,8 @@ back. It needs SDPClick allowed once under System Settings > Privacy &
 Security > Screen & System Audio Recording (the first capture asks). Without
 that, capture with computer-use's full-screen zoom of the rectangle `region`
 prints (screen points; multiply by the screenshot frame's width / the
-screen's width) and pass the file to `save`. Both cut 5 px off the sides
-(the frame's shadow catches the map) and write a JPEG of quality 90. Names follow CONTRIBUTING: v<round>-panel-
+screen's width) and pass the file to `save`, which cuts 5 px off the sides
+(the zoom catches the map beside the frame). Both write a JPEG of quality 90. Names follow CONTRIBUTING: v<round>-panel-
 single.jpg, v<round>-en-panel-multi.jpg.
 
 English shots: quit the game, `lang en`, launch, new game, stage, capture,
@@ -98,15 +98,29 @@ def region(_args):
 
 
 def capture(args):
+    import time
     import realclick  # noqa: E402 (macOS only)
     _, (x, y, w, h) = panel_rect()
     src = os.path.join(ROOT, "logs", "shot.png")
     if os.path.exists(src):
         os.remove(src)
-    ok, text = realclick.run_click("capture", "%d" % x, "%d" % y, "%d" % w, "%d" % h, src)
+    # SDPClick cannot find the game's process to activate it (pid -1, as in
+    # realclick.click_control): bring it forward here, give the front back after.
+    previous = game.front_app()
+    subprocess.run(["open", "-b", game.CIV6_BUNDLE], capture_output=True)
+    for _ in range(30):
+        if game.front_app() == game.CIV6_BUNDLE:
+            break
+        time.sleep(0.1)
+    time.sleep(0.5)  # a frame or two after the switch
+    try:
+        ok, text = realclick.run_click("capture", "%d" % x, "%d" % y, "%d" % w, "%d" % h, src)
+    finally:
+        if previous and previous != game.CIV6_BUNDLE:
+            subprocess.run(["open", "-b", previous], capture_output=True)
     if not ok:
         raise SystemExit(text)
-    return write_jpeg(src, args.name)
+    return write_jpeg(src, args.name, cut=0)
 
 
 def save(args):
@@ -115,18 +129,20 @@ def save(args):
     return write_jpeg(args.src, args.name)
 
 
-def write_jpeg(src, name):
+def write_jpeg(src, name, cut=5):
     out = os.path.join(IMAGES, name if name.endswith(".jpg") else name + ".jpg")
     tmp = out + ".tmp.png"
     shutil.copyfile(src, tmp)
     size = subprocess.run(["sips", "-g", "pixelWidth", "-g", "pixelHeight", tmp], capture_output=True, text=True).stdout
     w = int(re.search(r"pixelWidth: (\d+)", size).group(1))
     h = int(re.search(r"pixelHeight: (\d+)", size).group(1))
-    subprocess.run(["sips", "-c", str(h), str(w - 10), "--cropOffset", "0", "5", tmp], check=True, capture_output=True)
+    if cut:
+        subprocess.run(["sips", "-c", str(h), str(w - 2 * cut), "--cropOffset", "0", str(cut), tmp], check=True,
+                       capture_output=True)
     subprocess.run(["sips", "-s", "format", "jpeg", "-s", "formatOptions", "90", tmp, "--out", out], check=True,
                    capture_output=True)
     os.remove(tmp)
-    print("wrote %s (%dx%d)" % (os.path.relpath(out, ROOT), w - 10, h))
+    print("wrote %s (%dx%d)" % (os.path.relpath(out, ROOT), w - 2 * cut, h))
     return 0
 
 
