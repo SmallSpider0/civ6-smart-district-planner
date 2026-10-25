@@ -713,5 +713,61 @@
     <Replace Tag="LOC_SDP_WEIGHT_HOUSING_SHORT" Language="zh_Hans_CN">
       <Text>住房</Text>
     </Replace>
+
+    <!-- 设置区折叠、看地图（#71） -->
+    <Replace Tag="LOC_SDP_WEIGHTS_TITLE" Language="zh_Hans_CN">
+      <Text>权重（0–3）</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_WEIGHTS_TOOLTIP" Language="zh_Hans_CN">
+      <Text>各种产出的相邻加成乘以这里的权重再相加，0 表示不考虑这种产出。地块被占的损失按固定倍数计，不用这里的权重（见“计入占地”的说明）。</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_PEEK" Language="zh_Hans_CN">
+      <Text>看地图</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_PEEK_TOOLTIP" Language="zh_Hans_CN">
+      <Text>先收起窗口，看地图上的方案预览；点“返回规划器”或按 Esc 回来。</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_PEEK_RETURN" Language="zh_Hans_CN">
+      <Text>返回规划器</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_PEEK_RETURN_TOOLTIP" Language="zh_Hans_CN">
+      <Text>回到规划器窗口（也可以按 Esc）</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_FOLD_SHOW" Language="zh_Hans_CN">
+      <Text>展开</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_FOLD_HIDE" Language="zh_Hans_CN">
+      <Text>收起</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_FOLD_TOOLTIP" Language="zh_Hans_CN">
+      <Text>奇观、好位置、权重和开关。求解后自动收起，点这一行展开。</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_FOLD_SUMMARY" Language="zh_Hans_CN">
+      <Text>设置：{1_Parts}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_FOLD_JOIN" Language="zh_Hans_CN">
+      <Text>{1_A} · {2_B}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_FOLD_EDITED" Language="zh_Hans_CN">
+      <Text>{1_Preset}（已改）</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_FOLD_LAND_OFF" Language="zh_Hans_CN">
+      <Text>不计占地</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_FOLD_NO_REMOVAL" Language="zh_Hans_CN">
+      <Text>不砍伐</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_FOLD_SWAP" Language="zh_Hans_CN">
+      <Text>换格</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_FOLD_REPLACE" Language="zh_Hans_CN">
+      <Text>替换旧钉</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_FOLD_WONDERS" Language="zh_Hans_CN">
+      <Text>奇观 {1_N}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_FOLD_HEAT" Language="zh_Hans_CN">
+      <Text>好位置：{1_District}</Text>
+    </Replace>
   </LocalizedText>
 </GameData>

@@ -713,5 +713,61 @@
     <Replace Tag="LOC_SDP_WEIGHT_HOUSING_SHORT" Language="en_US">
       <Text>Hous.</Text>
     </Replace>
+
+    <!-- Folded settings, peek (issue 71) -->
+    <Replace Tag="LOC_SDP_WEIGHTS_TITLE" Language="en_US">
+      <Text>Weights (0–3)</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_WEIGHTS_TOOLTIP" Language="en_US">
+      <Text>Each yield of the adjacency bonuses is multiplied by its weight and the results added up; 0 leaves that yield out. What the tiles the districts take would have given is weighed by fixed numbers, not by these weights (see Land loss).</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_PEEK" Language="en_US">
+      <Text>View map</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_PEEK_TOOLTIP" Language="en_US">
+      <Text>Hide the window and look at the plan previewed on the map; click Back to planner or press Esc to return.</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_PEEK_RETURN" Language="en_US">
+      <Text>Back to planner</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_PEEK_RETURN_TOOLTIP" Language="en_US">
+      <Text>Show the planner window again (or press Esc)</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_FOLD_SHOW" Language="en_US">
+      <Text>Show</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_FOLD_HIDE" Language="en_US">
+      <Text>Hide</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_FOLD_TOOLTIP" Language="en_US">
+      <Text>Wonders, good places, weights and switches. Hidden after each solve; click this line to show them.</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_FOLD_SUMMARY" Language="en_US">
+      <Text>Settings: {1_Parts}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_FOLD_JOIN" Language="en_US">
+      <Text>{1_A} · {2_B}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_FOLD_EDITED" Language="en_US">
+      <Text>{1_Preset} (changed)</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_FOLD_LAND_OFF" Language="en_US">
+      <Text>no land loss</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_FOLD_NO_REMOVAL" Language="en_US">
+      <Text>no chopping</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_FOLD_SWAP" Language="en_US">
+      <Text>tile swaps</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_FOLD_REPLACE" Language="en_US">
+      <Text>replace old tacks</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_FOLD_WONDERS" Language="en_US">
+      <Text>{1_N} wonders</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_FOLD_HEAT" Language="en_US">
+      <Text>good places: {1_District}</Text>
+    </Replace>
   </LocalizedText>
 </GameData>

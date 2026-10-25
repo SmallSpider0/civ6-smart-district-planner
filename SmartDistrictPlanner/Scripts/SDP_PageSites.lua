@@ -58,10 +58,33 @@ local m_lookNext = false -- move the camera to the first site when the next resu
 local ALL_COLUMNS = {}
 for _, column in ipairs(COLUMNS_A) do ALL_COLUMNS[#ALL_COLUMNS + 1] = column end
 for _, column in ipairs(COLUMNS_B) do ALL_COLUMNS[#ALL_COLUMNS + 1] = column end
+local m_fold = false -- the preset and weights folded into one line (issue 71)
 local m_keeper = SDP_UI.Keeper({ Tab = "SITES", Columns = ALL_COLUMNS, Weights = m_weights, Tiers = SDP_Tiers.Sites,
+  Extra = { { Key = "FOLD", Default = false, Get = function() return m_fold end, Put = function(v) m_fold = v end } },
   GetTier = function() return m_tier end, PutTier = function(tier) m_tier = tier end,
   Presets = SDP_Sites.PRESETS, Order = SDP_Sites.PRESET_ORDER })
-local function Remember() m_keeper.Remember(m_preset) end
+
+-- The fold line (issue 71): the preset, "changed" when a weight is not the preset's.
+local function UpdateFold()
+  SDP_UI.ShowFold(Controls.SitesFoldButton, Controls.SitesFoldText, Controls.SitesFoldAction, Controls.SitesSettingsStack,
+    m_fold, SDP_UI.FoldSummary("LOC_SDP_PRESET_" .. m_preset, m_keeper.Changed(m_preset), {}))
+end
+
+function P.FitPage() SDP_UI.FitResults(Controls.SitesBody, Controls.SitesPage, Controls.SitesResultScroll) end
+
+local function Remember()
+  m_keeper.Remember(m_preset)
+  UpdateFold()
+end
+
+function P.SetFold(on)
+  if m_fold ~= on then
+    m_fold = on
+    Remember()
+  end
+  UpdateFold()
+  P.FitPage()
+end
 function P.Restore()
   local kept = m_keeper.Restore()
   if kept ~= nil then m_preset = kept.Preset end
@@ -227,6 +250,7 @@ function P.Refresh()
   Controls.SitesDistrictStack:CalculateSize()
   SDP_UI.PopulateTierPull(Controls.SitesTierPull, m_tier, P.SetTier)
   UpdateEstimate()
+  UpdateFold()
   P.Render()
 end
 
@@ -369,6 +393,7 @@ function P.Render()
   Controls.SitesSolutionStack:CalculateSize()
   Controls.SitesResultStack:CalculateSize()
   Controls.SitesResultScroll:CalculateSize()
+  P.FitPage()
   P.UpdateButtons()
 end
 
@@ -401,6 +426,7 @@ function P.Solve()
   local params = SDP_Tiers.Params(SDP_Tiers.Sites, m_tier)
   m_result, m_solution = nil, 1
   m_lookNext = true
+  P.SetFold(true) -- the results get the room (issue 71)
   SDP_Preview.Clear()
   return SDP_UI.StartTask(function() return SDP_SiteSolver.SolveNow(request) end,
     SDP_SiteSolver.EstimateUnits(#request.Districts, request.K, params, false, request.PlanCount),
@@ -447,7 +473,7 @@ end
 function P.State()
   return {
     Result = m_result, Solution = m_solution, K = m_k, D = m_d, Tier = m_tier, Weights = m_weights, View = m_view,
-    PlanCount = m_planCount, Preset = m_preset,
+    PlanCount = m_planCount, Preset = m_preset, Fold = m_fold, FoldText = Controls.SitesFoldText:GetText(),
     EstimateText = Controls.SitesEstimate:GetText(), PlaceDisabled = Controls.SitesPlaceButton:IsDisabled(),
   }
 end
@@ -463,3 +489,4 @@ Controls.SitesContinueButton:RegisterCallback(Mouse.eLClick, function() P.Contin
 Controls.SitesCancelButton:RegisterCallback(Mouse.eLClick, function() SDP_Task.Cancel() end)
 Controls.SitesPlaceButton:RegisterCallback(Mouse.eLClick, function() P.Place() end)
 Controls.SitesUndoButton:RegisterCallback(Mouse.eLClick, function() P.Undo() end)
+Controls.SitesFoldButton:RegisterCallback(Mouse.eLClick, function() P.SetFold(not m_fold) end)

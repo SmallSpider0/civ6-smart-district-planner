@@ -164,7 +164,8 @@ end
 -- reads the save once per local player (hot seat: each player their own)
 -- and returns { Preset, Values, Edited } then, nil when already read;
 -- Remember(name) keeps the values, only after Restore (so a change made
--- before the save was read never overwrites it).
+-- before the save was read never overwrites it); Changed(name) whether the
+-- values differ from preset `name` (SDP_Settings.Changed).
 function SDP_Settings.Keeper(spec)
   local keeper = { For = nil }
   function keeper.Restore()
@@ -174,6 +175,9 @@ function SDP_Settings.Keeper(spec)
     local kept = SDP_Settings.Load(playerID, spec.Tab, spec.Fields, spec.Presets, spec.Order)
     spec.Apply(kept.Values)
     return kept
+  end
+  function keeper.Changed(name)
+    return SDP_Settings.Changed(name, spec.Values(), spec.Fields, spec.Presets)
   end
   function keeper.Remember(name)
     local playerID = Game.GetLocalPlayer()

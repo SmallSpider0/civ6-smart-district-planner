@@ -116,8 +116,11 @@ function UI_Mock.Install()
       -- As in the game: a queued popup is shown, a dequeued one hidden.
       QueuePopup = function(_, ctx) queue[ctx] = true; ctx:SetHide(false) end,
       DequeuePopup = function(_, ctx) queue[ctx] = nil; ctx:SetHide(true) end,
+      -- The screen in logical pixels (UI_Mock.Screen, default 1080 high).
+      GetScreenSizeVal = function() return 1920, UI_Mock.Screen or 1080 end,
     },
     PopupPriority = { Low = 1 },
+    SystemUpdateUI = { ScreenResize = 1 },
     -- Input actions (key bindings from the configuration database): ids are names here.
     Input = {
       GetActionId = function(name) return "action:" .. name end,

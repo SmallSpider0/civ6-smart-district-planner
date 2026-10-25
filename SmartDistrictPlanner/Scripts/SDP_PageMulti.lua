@@ -71,9 +71,15 @@ local SWITCHES = {
   { Key = "REMIND", Default = true, Get = function() return m_remind end, Put = function(v) m_remind = v end },
   { Key = "APART", Default = true, Get = function() return m_apart end, Put = function(v) m_apart = v end },
 }
+local m_fold = false -- the settings folded into one line (issue 71)
 local m_keeper = SDP_UI.Keeper({ Tab = "MULTI", Columns = COLUMNS, Weights = m_weights, Switches = SWITCHES,
+  Extra = { { Key = "FOLD", Default = false, Get = function() return m_fold end, Put = function(v) m_fold = v end } },
   Tiers = SDP_Tiers.Multi, GetTier = function() return m_tier end, PutTier = function(tier) m_tier = tier end })
-local function Remember() m_keeper.Remember(m_preset) end
+local UpdateFold, FitPage -- defined below
+local function Remember()
+  m_keeper.Remember(m_preset)
+  UpdateFold()
+end
 function P.Restore()
   local kept = m_keeper.Restore()
   if kept ~= nil then m_preset = kept.Preset end
@@ -323,6 +329,7 @@ function P.SetWonder(wonderType, on)
     ClearResult()
   end
   P.RefreshLists()
+  UpdateFold()
 end
 
 -- A change to who takes part: the result goes only when the cities differ.
@@ -423,38 +430,48 @@ end
 -- Lists
 -- ===========================================================================
 local CHIP_ROWS, CHIP_HEIGHT, CHIP_GAP, CHIP_NAME = 5, 26, 4, 112 -- at most five rows shown, then the list scrolls
-local RESULT_HEIGHT, RESULT_ROWS, RESULT_MIN = 96, 80, 40 -- the result list: as drawn, two rows, one row
+local RESULT_ROWS = 80 -- two rows of results
 local m_chipRows = 1 -- rows of city chips
 
--- Keep the page inside the window (many cities and three solutions do not
--- fit at full height): the result list gives way to two rows first, then
--- the chip list to two rows, then the result list to one row.
-local function FitPage()
-  local shown, result = math.min(m_chipRows, CHIP_ROWS), RESULT_HEIGHT
+-- Keep the page inside the window (issue 71): the result list takes what
+-- the page has left (SDP_UI.FitResults); below two rows, the chip list gives
+-- way down to two rows first.
+FitPage = function()
+  local shown = math.min(m_chipRows, CHIP_ROWS)
   local function Apply()
     Controls.MultiCityScroll:SetSizeY(shown * CHIP_HEIGHT + (shown - 1) * CHIP_GAP)
-    Controls.MultiResultScroll:SetSizeY(result)
     Controls.MultiCityStack:CalculateSize()
     Controls.MultiCityScroll:CalculateSize()
-    Controls.MultiResultScroll:CalculateSize()
-    Controls.MultiBody:CalculateSize()
-    return Controls.MultiBody:GetSizeY() - Controls.MultiPage:GetSizeY()
+    return SDP_UI.FitResults(Controls.MultiBody, Controls.MultiPage, Controls.MultiResultScroll)
   end
-  local over = Apply()
-  if over > 0 then
-    result = math.max(RESULT_ROWS, result - over)
-    over = Apply()
-  end
-  while over > 0 and shown > 2 do
+  local height = Apply()
+  while height < RESULT_ROWS and shown > 2 do
     shown = shown - 1
-    over = Apply()
-  end
-  if over > 0 then
-    result = math.max(RESULT_MIN, result - over)
-    Apply()
+    height = Apply()
   end
 end
-P.FitPage = FitPage -- tests
+P.FitPage = FitPage
+
+-- The fold line (issue 71): the preset, then what is not as usual.
+UpdateFold = function()
+  local parts = {}
+  if not m_land then parts[#parts + 1] = Locale.Lookup("LOC_SDP_FOLD_LAND_OFF") end
+  if m_swap then parts[#parts + 1] = Locale.Lookup("LOC_SDP_FOLD_SWAP") end
+  if m_replace then parts[#parts + 1] = Locale.Lookup("LOC_SDP_FOLD_REPLACE") end
+  local wonders = #WonderTypes()
+  if wonders > 0 then parts[#parts + 1] = Locale.Lookup("LOC_SDP_FOLD_WONDERS", wonders) end
+  SDP_UI.ShowFold(Controls.MultiFoldButton, Controls.MultiFoldText, Controls.MultiFoldAction, Controls.MultiSettingsStack,
+    m_fold, SDP_UI.FoldSummary("LOC_SDP_PRESET_" .. m_preset, m_keeper.Changed(m_preset), parts))
+end
+
+function P.SetFold(on)
+  if m_fold ~= on then
+    m_fold = on
+    Remember()
+  end
+  UpdateFold()
+  FitPage()
+end
 
 -- One city chip: the selected look while it takes part; dimmed when the
 -- list is full and it cannot be switched on.
@@ -664,6 +681,7 @@ function P.Refresh()
   Controls.MultiReplaceCheck:SetCheck(m_replace)
   Controls.MultiRemindCheck:SetCheck(m_remind)
   SDP_UI.ShowApart(Controls.MultiApartBox, Controls.MultiApartCheck, Controls.MultiApartLabel, m_apart)
+  UpdateFold()
   P.Render()
 end
 
@@ -859,6 +877,7 @@ function P.Solve()
   local params = SDP_Tiers.Params(SDP_Tiers.Multi, m_tier)
   m_result, m_solution = nil, 1
   m_lookNext = true
+  P.SetFold(true) -- the results get the room (issue 71)
   SDP_Preview.Clear()
   return SDP_UI.StartTask(function() return SDP_Multi.SolveNow(request) end, Estimate(request, params),
     function(result) m_result, m_solution = result, 1 end, P)
@@ -918,7 +937,8 @@ end
 function P.State()
   return {
     Result = m_result, Solution = m_solution, Tier = m_tier, Land = m_land, Replace = m_replace, Remind = m_remind,
-    Apart = m_apart, Swap = m_swap, Weights = m_weights, Preset = m_preset,
+    Apart = m_apart, Swap = m_swap, Weights = m_weights, Preset = m_preset, Fold = m_fold,
+    FoldText = Controls.MultiFoldText:GetText(), ResultHeight = Controls.MultiResultScroll:GetSizeY(),
     View = m_view, EstimateText = Controls.MultiEstimate:GetText(), QualityText = Controls.MultiQuality:GetText(),
     PlaceDisabled = Controls.MultiPlaceButton:IsDisabled(), ContinueDisabled = Controls.MultiContinueButton:IsDisabled(),
     SolveDisabled = Controls.MultiSolveButton:IsDisabled(), SummaryText = Controls.MultiSummary:GetText(),
@@ -940,3 +960,4 @@ Controls.MultiContinueButton:RegisterCallback(Mouse.eLClick, function() P.Contin
 Controls.MultiCancelButton:RegisterCallback(Mouse.eLClick, function() SDP_Task.Cancel() end)
 Controls.MultiPlaceButton:RegisterCallback(Mouse.eLClick, function() P.Place() end)
 Controls.MultiUndoButton:RegisterCallback(Mouse.eLClick, function() P.Undo() end)
+Controls.MultiFoldButton:RegisterCallback(Mouse.eLClick, function() P.SetFold(not m_fold) end)
