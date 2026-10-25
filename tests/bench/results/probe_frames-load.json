@@ -1,0 +1,197 @@
+{
+ "AtOnceUnitsPerSecond": 28244.679671848455,
+ "Runs": {
+  "idle": {
+   "SpeedAfter": 40893.4,
+   "Phases": [
+    {
+     "Frames": 72,
+     "LastSlice": 0,
+     "MaxFrame": 0.114779,
+     "MeanFrame": 0.0226756,
+     "MedianFrame": 0.0169325,
+     "MedianSlice": 0,
+     "Phase": "start",
+     "Seconds": 1.63264,
+     "Units": 0,
+     "UnitsPerSecond": 0,
+     "Wall": null
+    },
+    {
+     "Frames": 317,
+     "LastSlice": 0,
+     "MaxFrame": 0.06748,
+     "MeanFrame": 0.0254228,
+     "MedianFrame": 0.02277,
+     "MedianSlice": 0,
+     "Phase": "idle-front",
+     "Seconds": 8.05904,
+     "Units": 0,
+     "UnitsPerSecond": 0,
+     "Wall": 8.005468958
+    },
+    {
+     "Frames": 55,
+     "LastSlice": 0,
+     "MaxFrame": 0.298013,
+     "MeanFrame": 0.0320853,
+     "MedianFrame": 0.0176077,
+     "MedianSlice": 0,
+     "Phase": "idle-front-after",
+     "Seconds": 1.76469,
+     "Units": 0,
+     "UnitsPerSecond": 0,
+     "Wall": null
+    },
+    {
+     "Frames": 304,
+     "LastSlice": 0,
+     "MaxFrame": 0.0759019,
+     "MeanFrame": 0.0265203,
+     "MedianFrame": 0.0238089,
+     "MedianSlice": 0,
+     "Phase": "idle-behind",
+     "Seconds": 8.06217,
+     "Units": 0,
+     "UnitsPerSecond": 0,
+     "Wall": 8.004935625
+    },
+    {
+     "Frames": 80,
+     "LastSlice": 0,
+     "MaxFrame": 0.0789663,
+     "MeanFrame": 0.0269196,
+     "MedianFrame": 0.024837,
+     "MedianSlice": 0,
+     "Phase": "idle-behind-after",
+     "Seconds": 2.15356,
+     "Units": 0,
+     "UnitsPerSecond": 0,
+     "Wall": null
+    },
+    {
+     "Frames": 300,
+     "LastSlice": 0,
+     "MaxFrame": 0.111536,
+     "MeanFrame": 0.0268111,
+     "MedianFrame": 0.0239529,
+     "MedianSlice": 0,
+     "Phase": "idle-hidden",
+     "Seconds": 8.04332,
+     "Units": 0,
+     "UnitsPerSecond": 0,
+     "Wall": 8.005109583
+    },
+    {
+     "Frames": 7,
+     "LastSlice": 0,
+     "MaxFrame": 0.0446259,
+     "MeanFrame": 0.0260897,
+     "MedianFrame": 0.0258619,
+     "MedianSlice": 0,
+     "Phase": "idle-hidden-after",
+     "Seconds": 0.182628,
+     "Units": 0,
+     "UnitsPerSecond": 0,
+     "Wall": null
+    }
+   ]
+  },
+  "task": {
+   "SpeedAfter": 30839.3,
+   "Phases": [
+    {
+     "Frames": 56,
+     "LastSlice": 660,
+     "MaxFrame": 0.155262,
+     "MeanFrame": 0.0300461,
+     "MedianFrame": 0.0262785,
+     "MedianSlice": 528,
+     "Phase": "start",
+     "Seconds": 1.68258,
+     "Units": 24580,
+     "UnitsPerSecond": 14608.5,
+     "Wall": null
+    },
+    {
+     "Frames": 254,
+     "LastSlice": 904,
+     "MaxFrame": 0.0787911,
+     "MeanFrame": 0.0318198,
+     "MedianFrame": 0.0310551,
+     "MedianSlice": 700,
+     "Phase": "task-front",
+     "Seconds": 8.08223,
+     "Units": 182211,
+     "UnitsPerSecond": 22544.6,
+     "Wall": 8.004250666999994
+    },
+    {
+     "Frames": 50,
+     "LastSlice": 747,
+     "MaxFrame": 0.15008,
+     "MeanFrame": 0.0361975,
+     "MedianFrame": 0.0315252,
+     "MedianSlice": 747,
+     "Phase": "task-front-after",
+     "Seconds": 1.80987,
+     "Units": 36570,
+     "UnitsPerSecond": 20205.8,
+     "Wall": null
+    },
+    {
+     "Frames": 247,
+     "LastSlice": 486,
+     "MaxFrame": 0.0717087,
+     "MeanFrame": 0.0326405,
+     "MedianFrame": 0.0318688,
+     "MedianSlice": 678,
+     "Phase": "task-behind",
+     "Seconds": 8.0622,
+     "Units": 166054,
+     "UnitsPerSecond": 20596.6,
+     "Wall": 8.003293583999998
+    },
+    {
+     "Frames": 65,
+     "LastSlice": 665,
+     "MaxFrame": 0.0748247,
+     "MeanFrame": 0.0328744,
+     "MedianFrame": 0.0309141,
+     "MedianSlice": 645,
+     "Phase": "task-behind-after",
+     "Seconds": 2.13684,
+     "Units": 38841,
+     "UnitsPerSecond": 18176.9,
+     "Wall": null
+    },
+    {
+     "Frames": 245,
+     "LastSlice": 750,
+     "MaxFrame": 0.073138,
+     "MeanFrame": 0.0328046,
+     "MedianFrame": 0.0320515,
+     "MedianSlice": 729,
+     "Phase": "task-hidden",
+     "Seconds": 8.03712,
+     "Units": 171439,
+     "UnitsPerSecond": 21330.9,
+     "Wall": 8.004385750000004
+    },
+    {
+     "Frames": 6,
+     "LastSlice": 527,
+     "MaxFrame": 0.0568403,
+     "MeanFrame": 0.0356808,
+     "MedianFrame": 0.0308962,
+     "MedianSlice": 703,
+     "Phase": "task-hidden-after",
+     "Seconds": 0.214085,
+     "Units": 3995,
+     "UnitsPerSecond": 18660.8,
+     "Wall": null
+    }
+   ]
+  }
+ }
+}

@@ -21,7 +21,10 @@ T.near(actual, expected, eps, msg), T.same(actual, expected, msg) (deep
 equality via T.dump, a sorted-key serialization), T.skip(reason). A test fails on any error;
 messages carry the file and line (the chunk is named after the file).
 
-Usage: run_tests.py [-k SUBSTRING] [-v] [FILE...]
+Usage: run_tests.py [-k SUBSTRING] [-v] [--rulesets all|LIST] [FILE...]
+--rulesets starts a new game for each ruleset in turn (tools/game.py newgame
+--state SDP_Panel --capital --reveal --ruleset R) and runs the files in each:
+`all` is the base game, Rise and Fall and Gathering Storm, as before a release.
 Exit codes: 0 all passed, 1 failures, 2 connection problem, 3 timeout.
 """
 
@@ -235,12 +238,42 @@ def run_file(path, name_filter, verbose):
     return counts, None
 
 
+RULESETS = ["RULESET_STANDARD", "RULESET_EXPANSION_1", "RULESET_EXPANSION_2"]
+
+
+def run_rulesets(args):
+    """A new game per ruleset, then this script again on the same files; one summary line each."""
+    import subprocess
+    names = RULESETS if args.rulesets == "all" else [r.strip() for r in args.rulesets.split(",") if r.strip()]
+    tools = os.path.dirname(os.path.abspath(__file__))
+    rest = list(args.files) + (["-k", args.name_filter] if args.name_filter else []) + (["-v"] if args.verbose else [])
+    results, worst = [], 0
+    for ruleset in names:
+        started = subprocess.run([sys.executable, "-I", os.path.join(tools, "game.py"), "newgame", "--state",
+                                  "SDP_Panel", "--capital", "--reveal", "--ruleset", ruleset])
+        if started.returncode != 0:
+            results.append((ruleset, "new game failed"))
+            worst = max(worst, 2)
+            continue
+        done = subprocess.run([sys.executable, "-I", os.path.abspath(__file__)] + rest, capture_output=True, text=True)
+        sys.stdout.write(done.stdout)
+        last = [l for l in done.stdout.splitlines() if l.startswith("run_tests:")]
+        results.append((ruleset, last[-1][len("run_tests: "):] if last else "no summary (exit %d)" % done.returncode))
+        worst = max(worst, done.returncode)
+    for ruleset, line in results:
+        print("run_tests %-20s %s" % (ruleset, line))
+    return worst
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description="Run Lua tests inside the running game")
     ap.add_argument("files", nargs="*", help="test files (default tests/**/test_*.lua)")
     ap.add_argument("-k", dest="name_filter", help="only tests whose name contains this text")
     ap.add_argument("-v", "--verbose", action="store_true", help="show print() output of passing files")
+    ap.add_argument("--rulesets", help="all, or RULESET_... names separated by commas: a new game for each")
     args = ap.parse_args(argv)
+    if args.rulesets:
+        return run_rulesets(args)
 
     files = args.files or sorted(glob.glob(os.path.join(TESTS_DIR, "**", "test_*.lua"), recursive=True))
     if not files:

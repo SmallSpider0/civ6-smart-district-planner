@@ -454,36 +454,97 @@ test("the swap switch on both tabs", function()
   T.eq(multi.State().Swap, false, "off again")
 end)
 
--- Through the row's own check box (its handler), as a click would.
-test("several cities tab: the check boxes switch a city-center pin and a city off and on", function()
+-- Issue 61: the coverage column on the single-city tab, through its arrows'
+-- own click handlers; the solve, the rows and the wonder path carry it.
+test("single-city tab: the coverage column", function()
+  SDP_Panel.SelectTab("SINGLE")
+  SDP_Panel.SelectCity(1)
+  local IZ = "DISTRICT_INDUSTRIAL_ZONE"
+  for _, d in ipairs(SDP_Rules.PlannableDistricts(0)) do SDP_Panel.SetState(d.Type, SDP_UI.DefaultState(d)) end
+  SDP_Panel.SetState(IZ, "MUST")
+  SDP_Panel.SetState("DISTRICT_AQUEDUCT", "OFF")
+  SDP_Panel.SetTier("FAST")
+  local cells = SDP_Panel.State().WeightCells
+  T.eq(#cells, 10, "ten columns")
+  local cell = cells[10]
+  T.eq(cell.Key, "COVERAGE", "coverage last")
+  T.eq(cell.Root:GetToolTipString(), "LOC_SDP_WEIGHT_COVERAGE", "the same tooltip as the several cities tab")
+  T.eq(SDP_Panel.State().Weights.COVERAGE, 0, "off by default")
+  T.eq(cell.Value:GetText(), "0", "shows 0")
+  T.ok(cell.Less:IsDisabled(), "cannot go below 0")
+  local off = SDP_Panel.Solve()
+  T.ok(off and off.Ok, "solved: " .. tostring(off and off.Error))
+  T.eq(off.Session.Request.Coverage, 0, "weight 0 in the request")
+  T.eq(off.Covered, nil, "no coverage figures at 0")
+  for _ = 1, 4 do cell.More:Click() end
+  T.eq(SDP_Panel.State().Weights.COVERAGE, SDP_UI.MAX_WEIGHT, "up by the arrow, capped")
+  T.ok(cell.More:IsDisabled(), "the arrow stops at the cap")
+  cell.Less:Click()
+  T.eq(SDP_Panel.State().Weights.COVERAGE, SDP_UI.MAX_WEIGHT - 1, "down by the arrow")
+  T.eq(cell.Value:GetText(), tostring(SDP_UI.MAX_WEIGHT - 1), "shown")
+  T.eq(SDP_Panel.State().Result, nil, "a weight change clears the result")
+  local on = SDP_Panel.Solve()
+  T.ok(on and on.Ok, "solved: " .. tostring(on and on.Error))
+  T.eq(on.Session.Request.Coverage, SDP_UI.MAX_WEIGHT - 1, "the weight is sent")
+  T.ok(on.Covered ~= nil and on.Covered >= 1, "the zone covers its own city at least")
+  T.near(on.CoverageDelta, (SDP_UI.MAX_WEIGHT - 1) * on.Covered, 1e-9, "weight x newly covered cities")
+  local rows = 0
+  for _, row in ipairs(SDP_Panel.State().ResultRows) do
+    if row.Detail:find("LOC_SDP_COVERAGE_ROW", 1, true) then
+      rows = rows + 1
+      T.ok(row.ToolTip:find("LOC_SDP_COVERAGE_TIP", 1, true) ~= nil, "the row's tooltip names the cities")
+    end
+  end
+  T.eq(rows, 1, "the industrial zone's row")
+  T.ok(UI_Mock.Controls.Summary:GetToolTipString():find("LOC_SDP_COVERAGE_GROUP", 1, true) ~= nil,
+    "the summary's tooltip lists the newly covered cities")
+  -- With a wonder the city goes to SDP_Multi: the weight goes with it.
+  SDP_Panel.SetWonder("BUILDING_STONEHENGE", true)
+  T.eq(SDP_Panel.Solve(), nil, "a task")
+  local wonder = SDP_Panel.RunTask(500)
+  T.ok(wonder and wonder.Ok, "result: " .. tostring(wonder and wonder.Error))
+  T.eq(wonder.Session.Request.Coverage, SDP_UI.MAX_WEIGHT - 1, "the weight goes with the wonder request")
+  T.ok(wonder.Covered ~= nil, "coverage figures")
+  local keys = {}
+  for _, target in ipairs(wonder.Session.Coverage.Targets) do keys[#keys + 1] = target.Key end
+  local want = { "C1" }
+  for _, site in ipairs(SDP_Coverage.SiteTargets(0)) do want[#want + 1] = site.Key end
+  T.ok(#want >= 2, "city-center pins on the map")
+  T.same(keys, want, "the city and every city-center pin are cities to cover")
+  SDP_Panel.SetWonder("BUILDING_STONEHENGE", false)
+  for _ = 1, 3 do cell.Less:Click() end
+  T.eq(SDP_Panel.State().Weights.COVERAGE, 0, "back to 0")
+  for _, d in ipairs(SDP_Rules.PlannableDistricts(0)) do SDP_Panel.SetState(d.Type, SDP_UI.DefaultState(d)) end
+  SDP_Panel.SetTier("STANDARD")
+end)
+
+-- Through the chip's own callback, as a click would.
+test("several cities tab: a click on a chip switches a city-center pin and a city off and on", function()
   SDP_Panel.SelectTab("MULTI")
   local multi = SDP_Panel.Multi
   multi.Refresh()
-  local function Row(kind)
-    for _, c in ipairs(multi.State().View.Cities) do
-      if c.Kind == kind then return c end
-    end
-  end
-  local site = Row("SITE")
-  T.ok(site and site.Included, "a city-center pin, on")
-  local key = site.Key
-  site.Check:Toggle()
   local function Find(k)
     for _, c in ipairs(multi.State().View.Cities) do
       if c.Key == k then return c end
     end
   end
-  T.eq(Find(key).Included, false, "unticked: off")
-  T.eq(Find(key).Check:IsChecked(), false, "the box stays unticked")
+  local site = nil
+  for _, c in ipairs(multi.State().View.Cities) do
+    if c.Kind == "SITE" and c.Included and site == nil then site = c end
+  end
+  T.ok(site ~= nil, "a city-center pin, on")
+  local key = site.Key
+  site.Chip:Click()
+  T.eq(Find(key).Included, false, "clicked: off")
   for _, part in ipairs(multi.Participants()) do T.ok(part.Key ~= key, "takes no part") end
-  Find(key).Check:Toggle()
-  T.eq(Find(key).Included, true, "ticked again: on")
-  local city = Row("CITY")
-  local on = city.On
-  city.Check:Toggle()
-  T.eq(Row("CITY").On, not on, "a city switched")
-  Row("CITY").Check:Toggle()
-  T.eq(Row("CITY").On, on, "and back")
+  Find(key).Chip:Click()
+  T.eq(Find(key).Included, true, "clicked again: on")
+  local city = Find("C1")
+  local on = city.Included
+  city.Chip:Click()
+  T.eq(Find("C1").Included, not on, "a city switched")
+  Find("C1").Chip:Click()
+  T.eq(Find("C1").Included, on, "and back")
 end)
 
 -- City-center pins from the sites tab are named with their numbers like
@@ -559,5 +620,89 @@ test("a result that ends while the panel is closed leaves no preview on the map"
   T.eq(UI_Mock.Lenses.hexes[SDP_Preview.LAYER] or 0, 0, "no preview while closed")
   SDP_Panel.Open()
   T.ok((UI_Mock.Lenses.hexes[SDP_Preview.LAYER] or 0) > 0, "preview back when the tab opens")
+  SDP_Panel.Close()
+end)
+
+-- Issue 67: Solve greyed with nothing to plan, cells without tooltips, the
+-- camera beside the panel on a new result or another solution only, result
+-- rows that move the camera, summary tooltips without the search's counts,
+-- city numbers on the several cities tab's preview pins.
+test("issue 67: what to do first, the camera, clickable rows, plain tooltips", function()
+  SDP_Panel.Open()
+  SDP_Panel.SelectTab("SINGLE")
+  SDP_Panel.SelectCity(1)
+  for _, row in ipairs(SDP_Panel.State().DistrictRows) do
+    SDP_Panel.SetState(row.Type, "OFF")
+  end
+  SDP_Panel.SetCount(0)
+  local state = SDP_Panel.State()
+  T.ok(state.SolveDisabled, "Solve greyed with nothing to plan")
+  T.eq(state.SummaryText, "LOC_SDP_RESULT_NONE", "the summary says what to do")
+  for _, row in ipairs(state.DistrictRows) do
+    T.eq(row.Cell:GetToolTipString(), "", "no tooltip on " .. row.Type)
+  end
+  -- A required district through the cell's own click: Solve comes back.
+  local campus = nil
+  for _, row in ipairs(SDP_Panel.State().DistrictRows) do
+    if row.Type == "DISTRICT_CAMPUS" then campus = row end
+  end
+  campus.Cell:Click() -- OFF -> POOL
+  campus.Cell:Click() -- POOL -> MUST
+  state = SDP_Panel.State()
+  T.ok(not state.SolveDisabled, "Solve back with a required district")
+  T.eq(state.SummaryText, "LOC_SDP_RESULT_READY", "the summary says to press Solve")
+
+  local looks = #UI_Mock.Looks
+  local result = SDP_Panel.Solve()
+  T.ok(result and result.Ok, "solve")
+  T.eq(#UI_Mock.Looks, looks + 1, "the camera moves once for the new result")
+  local look = UI_Mock.Looks[#UI_Mock.Looks]
+  T.eq(look.X .. "," .. look.Y, "4,5", "to the city")
+  T.ok(look.ScreenX > 0.5, "right of the panel")
+  T.ok(SDP_Panel.State().SummaryToolTip:find("LOC_SDP_RESULT_STATS", 1, true) == nil, "no search counts")
+  -- Reopening shows the same result without moving the camera.
+  SDP_Panel.Close()
+  SDP_Panel.Open()
+  T.eq(#UI_Mock.Looks, looks + 1, "reopening keeps the camera")
+  -- A planned district's row: a click moves the camera to its plot.
+  local row = nil
+  for _, r in ipairs(SDP_Panel.State().ResultRows) do
+    if r.X ~= nil and row == nil then row = r end
+  end
+  T.ok(row ~= nil, "a row with a plot")
+  row.Row:Click()
+  look = UI_Mock.Looks[#UI_Mock.Looks]
+  T.eq(look.X .. "," .. look.Y, row.X .. "," .. row.Y, "the row's plot")
+
+  -- Several cities: pins carry the city's number, the camera goes to the cities.
+  SDP_Panel.SelectTab("MULTI")
+  local multi = SDP_Panel.Multi
+  multi.Refresh()
+  multi.SetSelected("DISTRICT_CAMPUS", true)
+  multi.SetTier("FAST")
+  looks = #UI_Mock.Looks
+  T.ok(not multi.State().SolveDisabled, "Solve on with something to plan")
+  T.ok(multi.Solve(), "started")
+  SDP_Panel.RunTask(500)
+  local mresult = multi.State().Result
+  T.ok(mresult and mresult.Ok, "multi result: " .. tostring(mresult and mresult.Error))
+  T.eq(#UI_Mock.Looks, looks + 1, "the camera moves once for the new result")
+  T.ok(multi.State().SummaryToolTip:find("LOC_SDP_MULTI_STATS", 1, true) == nil, "no search counts")
+  local numbers = {}
+  for _, c in ipairs(mresult.Cities) do numbers[c.Key] = tostring(c.Number) end
+  local byPlot = {}
+  for _, p in ipairs(mresult.Plan) do byPlot[p.X .. "," .. p.Y] = numbers[p.City] end
+  local checked = 0
+  for _, icon in ipairs(multi.State().View.PreviewIcons) do
+    local want = byPlot[icon.X .. "," .. icon.Y]
+    if want ~= nil and icon.Icon ~= "ICON_DISTRICT_CITY_CENTER" then
+      T.ok(icon.Text == want or icon.Text:find("LOC_SDP_PREVIEW_CITY", 1, true) ~= nil, "pin text " .. icon.Text)
+      checked = checked + 1
+    end
+  end
+  T.ok(checked > 0, "district pins checked")
+  multi.SelectSolution(1)
+  T.eq(#UI_Mock.Looks, looks + 2, "another solution moves the camera too")
+  SDP_Panel.SelectTab("SINGLE")
   SDP_Panel.Close()
 end)

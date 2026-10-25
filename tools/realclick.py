@@ -16,8 +16,9 @@ units, scaled to the window), so no screenshot coordinates are guessed.
 
 The suite opens the panel and goes through what only a real click shows:
 district cells round their states on both tabs (the 2026-10-21 bug: the
-selected look took the mouse), the city-center pin check box on the
-multi-city tab, the harbor / commercial hub switch, tabs, solve, a solution
+selected look took the mouse), the city chips and the clear all / default
+buttons on the multi-city tab, the harbor / commercial hub switch, tabs, solve (the
+camera goes to the city), a result row (the camera goes to its plot), a solution
 row, place and undo, the close button. Each check reads the state back.
 """
 import os
@@ -32,6 +33,9 @@ import game  # noqa: E402
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 APP = os.path.expanduser("~/Applications/SDPClick.app")
 SOURCE = os.path.join(ROOT, "tools", "click", "sdp-click.swift")
+# A self-signed code-signing certificate in the login keychain (tools/README.md "realclick.py");
+# without it the app is signed ad hoc and loses its grants on every rebuild.
+SIGNING_ID = os.environ.get("SDP_CODESIGN_ID", "SDPClick Local Signing")
 OUT = os.path.join(ROOT, "logs", "sdp-click.out")
 INFO_PLIST = """<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -206,12 +210,18 @@ local _, count = SDP_City.CityNumbers(pid)
 SDP_Pins.Place(pid, { { Type = "DISTRICT_CITY_CENTER", X = SDP_RealClickSite.X, Y = SDP_RealClickSite.Y, Name = tostring(count + 1) } })
 SDP_Panel.Multi.Refresh()
 """)
+    lua("SDP_Panel.Multi.SetCenter(nil); SDP_Panel.Multi.DefaultCities()")
     site = "(function() for _, c in ipairs(SDP_Panel.Multi.State().View.Cities) do if c.Kind == 'SITE' then return c end end end)()"
     s.check("site pin listed, on", value(site + ".Included"), "true")
-    click_control(site + ".Check")
-    s.check("site pin unticked by click", value(site + ".Included"), "false")
-    click_control(site + ".Check")
-    s.check("site pin ticked again", value(site + ".Included"), "true")
+    click_control(site + ".Chip")
+    s.check("site chip off by click", value(site + ".Included"), "false")
+    click_control(site + ".Chip")
+    s.check("site chip on again by click", value(site + ".Included"), "true")
+    # The two buttons over the chips (issue 63).
+    click_control("Controls.MultiCityClear")
+    s.check("clear all by click", value("#SDP_Panel.Multi.Participants()"), "0")
+    click_control("Controls.MultiCityDefault")
+    s.check("default by click", value(site + ".Included"), "true")
     # The harbor / commercial hub switch.
     click_control("Controls.MultiApartCheck")
     s.check("multi apart switch off by click", value("SDP_Panel.Multi.State().Apart"), "false")
@@ -233,13 +243,29 @@ SDP_Panel.Multi.Refresh()
     s.check("single swap switch on by click", value("SDP_Panel.State().Swap"), "true")
     click_control("Controls.SwapCheck")
     s.check("single swap switch off again", value("SDP_Panel.State().Swap"), "false")
+    # The coverage column, the last of the weight row (issue 61): its arrows.
+    s.check("single coverage column last", value("SDP_Panel.State().WeightCells[10].Key"), "COVERAGE")
+    click_control("SDP_Panel.State().WeightCells[10].More")
+    s.check("single coverage up by click", value("SDP_Panel.State().Weights.COVERAGE == 1"), "true")
+    click_control("SDP_Panel.State().WeightCells[10].Less")
+    s.check("single coverage down by click", value("SDP_Panel.State().Weights.COVERAGE == 0"), "true")
     lua("SDP_Panel.SetState('%s', 'MUST'); SDP_Panel.SetCount(3)" % campus)
+    # Camera moves (issue 67): the panel records the last one (the game's UI table is read-only).
+    lua("SDP_UI.LastLook = nil")
     click_control("Controls.SolveButton")
     for _ in range(60):
         if value("SDP_Panel.State().Running") == "false" and value("SDP_Panel.State().Result ~= nil") == "true":
             break
         time.sleep(0.5)
     s.check("solve by click", value("SDP_Panel.State().Result and SDP_Panel.State().Result.Ok"), "true")
+    capital = value("(function() local c = Players[Game.GetLocalPlayer()]:GetCities():GetCapitalCity() "
+                    "return c:GetX() .. ',' .. c:GetY() end)()")
+    s.check("the camera goes to the city", value("SDP_UI.LastLook"), capital)
+    # A result row with a plot (issue 67): a click moves the camera there.
+    row = "(function() for _, r in ipairs(SDP_Panel.State().ResultRows) do if r.X ~= nil then return r end end end)()"
+    lua("SDP_UI.LastLook = nil")
+    click_control(row + ".Row")
+    s.check("result row by click", value("SDP_UI.LastLook"), value(row + ".X .. ',' .. " + row + ".Y"))
     rows = int(value("#(SDP_Panel.State().Result.Solutions or {})") or 0)
     if rows > 1:
         click_control("SDP_Panel.State().SolutionCells[2]")
@@ -262,15 +288,34 @@ def at(args):
     return 0
 
 
-def build(_args):
-    """Build ~/Applications/SDPClick.app (a rebuild may need the Accessibility grant again)."""
+def build(args):
+    """Build ~/Applications/SDPClick.app. Every rebuild changes the ad hoc signature, and macOS then
+    drops the app's Accessibility and Screen Recording grants (they must be given again), so it
+    only rebuilds when the Swift source changed (or with --force)."""
+    import hashlib
     macos = os.path.join(APP, "Contents", "MacOS")
+    stamp = os.path.join(APP, "Contents", "source.sha256")
+    digest = hashlib.sha256(open(SOURCE, "rb").read()).hexdigest()
+    if not getattr(args, "force", False) and os.path.exists(os.path.join(macos, "sdp-click")) \
+            and os.path.exists(stamp) and open(stamp).read().strip() == digest:
+        print("SDPClick.app is up to date (source unchanged); --force rebuilds (and needs the grants again)")
+        print(run_click("trusted")[1])
+        return 0
     os.makedirs(macos, exist_ok=True)
     with open(os.path.join(APP, "Contents", "Info.plist"), "w", encoding="utf-8") as fh:
         fh.write(INFO_PLIST)
     subprocess.run(["swiftc", "-O", SOURCE, "-o", os.path.join(macos, "sdp-click")], check=True)
     subprocess.run(["xattr", "-cr", APP], check=True)
-    subprocess.run(["codesign", "-s", "-", "--force", "--deep", APP], check=True)
+    with open(stamp, "w") as fh:
+        fh.write(digest + "\n")
+    # A signing identity of its own keeps the app's Accessibility and Screen Recording grants across
+    # rebuilds (an ad hoc signature changes with every build and macOS drops the grants).
+    ids = subprocess.run(["security", "find-identity", "-p", "codesigning"], capture_output=True, text=True).stdout
+    identity = SIGNING_ID if SIGNING_ID in ids else "-"
+    subprocess.run(["codesign", "-s", identity, "--force", "--deep", APP], check=True)
+    print("signed with %s" % ("the " + SIGNING_ID + " certificate" if identity != "-" else "an ad hoc signature"))
+    if identity == "-":
+        print("rebuilt: allow SDPClick again under Privacy & Security > Accessibility and > Screen & System Audio Recording")
     print(run_click("trusted")[1])
     return 0
 
@@ -286,7 +331,8 @@ def main(argv=None):
     ap = argparse.ArgumentParser(description="Real clicks on the planner panel")
     sub = ap.add_subparsers(dest="cmd", required=True)
     sub.add_parser("suite")
-    sub.add_parser("build")
+    b = sub.add_parser("build")
+    b.add_argument("--force", action="store_true")
     sub.add_parser("trusted")
     ap_at = sub.add_parser("at")
     ap_at.add_argument("code")

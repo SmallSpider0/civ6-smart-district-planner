@@ -31,6 +31,7 @@
 civ6mod/
 ├── AGENTS.md                         # 本文件（代理工作约定）
 ├── CLAUDE.md                         # 让 Claude Code 读入 AGENTS.md 和 CONTRIBUTING.md
+├── .claude/skills/                   # 固定流程：Issue 处理、游戏内测试、离线重活、发版、监听（sdp-*/SKILL.md）
 ├── CONTRIBUTING.md                   # 协作约定：分支、提交、测试分工、写作规则
 ├── CHANGELOG.md                      # 各阶段与各版本改了什么
 ├── README.md                         # 项目简介（GitHub 首页）
@@ -39,7 +40,9 @@ civ6mod/
 ├── .github/                          # CI（validate + 离线测试，Ubuntu 和 Windows）、Issue 与 PR 模板
 ├── docs/
 │   ├── design.md                     # 交付物 3：算法结构 / 目标函数 / DMT 接缝
-│   ├── multicity-design.md           # 选城址、多城、奇观、档位、离线基准
+│   ├── pitfalls.md                   # Civ6 Modding 的坑：完整说明（AGENTS 第 5 节是要点）
+│   ├── multicity-design.md           # 选城址、多城、奇观、档位、离线基准的设计（第 1–14 节）
+│   ├── notes/                        # 历次实现、实测与修正的记录：NN-主题.md（原第 15–30 节）、issue-<编号>-主题.md
 │   ├── reference-scenes.md           # #53 的参照场景：来源、地图、作者布局与真最优的对照（图由 tests/compare/refmaps.py 画）
 │   ├── install-and-test.md           # 交付物 2：安装、使用与验收（含"勿与 AMT 同开"）
 │   ├── install-en.md                 # 英文安装与使用说明（README 英文部分链接它，package.py 打进压缩包）
@@ -103,48 +106,51 @@ include("dmt_yieldcalculator");       -- 尾部会执行 DMT_Initialize()，见�
 - 同分比较必须有确定的次级排序键（如格子序列字典序）。
 
 ## 5. Civ6 Modding 硬坑速查（需求文档第四节，违反必出错）
+完整说明（日期、发现经过、游戏和 DMT 的实际行为、本模组的做法）在 [docs/pitfalls.md](docs/pitfalls.md)，编号相同；动到相关代码前读那一条。
 
 | # | 要点 |
 |---|------|
-| 1 | mod 名称/描述的文本在 **FrontEndActions → UpdateText** 加载，否则模组列表显示 `LOC_` 原始键 |
-| 2 | 外部文本 XML 只能用 `<LocalizedText><Replace Tag="…" Language="zh_Hans_CN"><Text>…</Text></Replace>`；`<Text id><en_US>` 格式只能内嵌在 modinfo，放外部文件会连累整阶段加载失败 |
-| 3 | UI 用 `InGameActions → AddUserInterfaces`（`<Context>InGame</Context>` + LoadOrder）；DMT 依赖写在 `<Dependencies>` |
-| 4–5 | 日志：Windows `%LOCALAPPDATA%\Firaxis Games\Sid Meier's Civilization VI\Logs\Lua.log`，需 Steam 启动项 `-log`；跨启动追加；先搜 `Runtime Error` |
-| 6 | `include("InstanceManager")`，`InstanceManager:new("模板", "Root", 父)`（冒号），模板根控件 `ID="Root"` |
-| 7 | include `dmt_yieldcalculator` 后立即 Remove 其 `DMT_Initialize()` 订阅的事件（需求文档写 3 LuaEvents + 10 Events；本机 DMT 实为 3 + 11，以源码为准，见 `Scripts/SDP_Overlay.lua`） |
-| 8 | XML 非法属性 = 控件**静默**构建失败、无日志。Stack 用 `StackPadding`；`AutoSizePadding="w,h"`；一律先在 `Base/Assets/UI/` 找先例 |
-| 9 | 带 String 的 GridButton 自适应撑宽；小步进按钮用 `Controls_ArrowButtonLeft/Right` 纹理 |
+| 1 | mod 名称、描述的文本在 FrontEndActions → UpdateText 加载，modinfo 里也内嵌一份 |
+| 2 | 外部文本 XML 只用 `<LocalizedText><Replace Tag Language><Text>`；`<Text id><en_US>` 格式只能内嵌在 modinfo |
+| 3 | UI 用 InGameActions → AddUserInterfaces；DMT 写在 `<Dependencies>` |
+| 4–5 | 日志 `Lua.log`（Windows 要 `-log`），先搜 `Runtime Error`；本机用 `civ6tuner.py serve` |
+| 6 | `InstanceManager:new("模板", "Root", 父)`，模板根控件 `ID="Root"` |
+| 7 | include `dmt_yieldcalculator` 后立刻移除它订阅的事件（以源码为准，见 `SDP_Overlay.lua`） |
+| 8 | XML 非法属性让控件静默构建失败；控件和属性先在 `Base/Assets/UI/` 找先例（validate.py 查） |
+| 9 | 带 String 的 GridButton 自适应撑宽；小步进按钮用 `Controls_ArrowButtonLeft/Right` |
 | 10 | 关闭钮 `<Button Style="CloseButtonSmall"/>` |
-| 11 | 打开面板：`UIManager:QueuePopup(ContextPtr, PopupPriority.Low)`；关闭 `DequeuePopup`；先查 `IsInPopupQueue` |
-| 12 | 跨上下文 `ContextPtr:LookUpControl("/InGame/LaunchBar/ButtonStack")`；注入时机 `Events.LoadScreenClose` |
-| 13–15 | yield 图标只有 `ICON_YIELD_{FOOD,GOLD,PRODUCTION,SCIENCE}_1..5`；文化用 `ICON_VICTORY_CULTURE`、信仰用 `ICON_RELIGION`；`SetIcon(name)` 不带尺寸，区域图标 `SetIcon("ICON_"..dt, 32)`；结果明细用纯文本（"科+2 文+1"），悬停用 DMT tooltip |
-| 16 | `TilesRequired` = 每凑满 N 个邻居给一份；线性近似会轻微高估，仅用于排序 |
-| 17 | 已建区域由 DMT 从 plot 读，无需特殊处理 |
-| 18 | 特色区域名额（GS）：`1 + floor((人口-1)/3)` |
-| 19 | 删钉：`LuaEvents.DMT_MapPinRemoved(pin); cfg:DeleteMapPin(pin:GetID()); Network.BroadcastPlayerInfo(); UI.PlaySound("Map_Pin_Remove")` |
-| 20 | 与 AMT 等规划 mod 同开会互相污染（都 hook `GetMapPinSubject`）——文档必须注明一局只开一个规划器 |
-| 21 | （2026-10-19 实测）新建地图钉后，之前拿到的钉对象可能失效，再调用其方法会让游戏直接崩溃（SIGSEGV）。只保存钉 ID，每次用 `cfg:GetMapPinID(id)` 重新取（DMT 弹窗的 `GetEditPinConfig` 也是这样做的） |
-| 22 | `PlayerConfiguration:GetMapPin(x, y)` 在没有钉的格子上会**新建**一个钉；只想查找时遍历 `GetMapPins()` |
-| 23 | （2026-10-20 实测）上下文隐藏后 `ContextPtr:SetUpdate` **不再被调用**。弹窗出队（`DequeuePopup`）会隐藏上下文，所以关闭面板后分帧计算会停住。做法：计算进行中关闭面板时，保持上下文显示、只隐藏窗口控件（`SDP_Panel.lua` 的 `KeepRunningHidden`），算完再隐藏上下文 |
-| 24 | （2026-10-20 实测）自然奇观、历史时刻等弹窗打开时会**占住游戏的事件队列**（`PopupManager:Lock` → `UI.ReferenceCurrentEvent`），UI 状态里的游戏数据（如 `PlayersVisibility`）停止更新，直到弹窗自己的 `Close` 调用 `Unlock` 释放。只 `DequeuePopup` 不会释放。测试工具关弹窗要调用该弹窗自己的 `OnClose`/`Close`（`tools/game.py popups --close` 已这样做） |
-| 25 | （2026-10-20 离线对比发现）DMT 的**修正缓存**（文明/领袖特性、信仰里的相邻规则与放置规则：日本区域互邻、巴西雨林、荷兰河流、高卢"特色区域不挨市中心"、越南"特色区域只建在地貌上"）只由它的 `LoadGameViewStateDone` / `LocalPlayerTurnBegin` 处理函数建立（`InitializeModifierCalculator` + `CacheEffectiveModifiers`）。按坑 7 移除这两个处理函数的上下文必须自己建：`SDP_Overlay.RefreshModifiers`（`InitializeModifierCalculator` 只能调一次，它往表里追加） |
-| 26 | （2026-10-20 离线对比发现）DMT 的 `CanPlacePin` 对区域钉**不拦奢侈、战略资源**：`GetRealizedPlotFeatures` 在评估区域钉时先把格上的资源去掉，"不能采收的资源"检查永远不触发。游戏不允许区域压在不能移除的资源上，所以候选格要自己排除（`SDP_City` 的 `RESOURCE`：可见、且 `Resource_Harvests` 里没有的资源） |
-| 27 | （2026-10-20 游戏内引擎复核发现）DMT 的 `CanPlacePin` **不检查运河是否连通水域**：首都旁 13 格 DMT 判运河可放，游戏引擎（`CityManager.GetOperationTargets`）不允许。运河的合法性在引擎 C++ 里，GameInfo 读不到。已加引擎复核（`SDP_City.EngineRefused`，经 `SDP_Overlay.CanPlace` 生效），城市已拥有的格子上以引擎为准；离线对比框架的模拟引擎不给可建格，复核在那里不生效。其余区域在罗马、日本、高卢三局复核中与引擎完全一致（`tests/bench/probe_engine.lua`）。引擎只对已解锁的区域、城市已拥有的格给出可建格 |
-| 28 | （2026-10-20 游戏内裁判校准发现）DMT 把水面上**任何**可见资源都算作海洋资源（`AdjacentSeaResource`），沉船（`RESOURCECLASS_ARTIFACT`）也算，引擎不算：港口挨着沉船时 DMT 比引擎多 1 金币。相邻加成按约定用 DMT，未修，列为已知问题；`tests/bench/calibrate_judge.lua` 把这种差异单独列出。另：引擎对特色区域的可建格受人口名额限制（坑 18），校准前置因此把首都人口设为 25 |
-| 29 | （2026-10-20 截图时发现）透镜图层 `Hex_Coloring_Placement`（游戏放置区域时用的那层）**不管传什么颜色都画成同一种绿**，`SetLayerHexesColoredArea` 的颜色参数无效。要分色得借用别的透镜的图层；打开它会触发 `Events.LensLayerOn`，小地图（`MinimapPanel.lua` 的 `OnLensLayerOn` → `SetAppealHexes`、`SetGovernmentHexes` 等）随后往同一层填满它自己的颜色，所以收到该事件时要清掉重画自己的格（`SDP_Preview`）。（2026-10-23 合作者发现）魅力透镜的图层 `Hex_Coloring_Appeal_Level` 打开后游戏还会在每格上画出魅力数字，不是 Lua 画的、关不掉；改用政体透镜的图层 `Hex_Coloring_Government` |
-| 30 | （2026-10-20 游戏内测试发现）脚本里写错或已删掉的 `Controls.<ID>` 在游戏里是 nil，**只有运行到那一行才报错**，离线的控件替身按需造控件，发现不了。`validate.py` 现在检查每个 `Controls.<ID>` 都是 UI XML 里的 ID |
-| 31 | （2026-10-21 合作者实测发现）按钮里盖一层 `Size="parent,parent"` 的 GridButton（游戏页签的选中样式 `TabButtonSelected`，带 `ConsumeMouseOver="1"`），显示时会**接住鼠标**，下面的按钮点不到。游戏页签没事是因为选中的页签不用再点；需要反复点的格子用 Grid 画选中样式（`Texture="Controls_Tab" SliceStart="0,136" SliceCorner="21,16"`，即 `TabButtonSelectedGrid`）。`validate.py` 检查实例里可点击的根控件上没有这样的按钮。合成点击进不了游戏窗口，这类问题只有真人点击能发现 |
-| 32 | （2026-10-21 离线对比发现）规则表的列名以 `Cache/DebugGameplay.sqlite` 为准（`sqlite3 … "pragma table_info(表名)"`），不要照印象写：`AppealHousingChanges` 的列是 `AppealChange`，不是 `AppealHousingChange`。读到 nil 只在用到那一行时才报错；离线假世界的表是照着代码写的，测不出列名错，只有用真实规则的对比框架（`tools/compare.mjs`）和游戏内会暴露 |
-| 33 | （2026-10-21 压力测试发现）`AutoplayManager` 以玩家 0 身份观察（`SetObserveAsPlayer(0)`）时，AI 的外交会话（初次见面、交易）发到本地的外交界面等回答，回合停住。以观察者身份观察（`SetObserveAsPlayer(PlayerTypes.OBSERVER)`，`SetReturnAsPlayer(0)`），与游戏自带的自动化测试相同。强行关外交界面（`OnForceClose`）后游戏崩溃过一次（崩在游戏自己的网络线程，原因不明），不要这样关 |
-| 34 | （2026-10-21 压力测试发现）`GameCore_Tuner` 状态里的 `Plot:GetYield` 不含建筑给别的地块的产出，连刚放的农场也不反映；界面状态（`InGame`、`SDP_Panel`）读到的才是玩家看到的产出，且要等一帧。读地块产出一律在界面状态里读。保护区古树林、避难所给周边地块的产出（`Adjacent_AppealYieldChanges`）因此曾被误判为“游戏不给”（`tests/bench/probe_preserve.py`） |
-| 35 | （2026-10-21 压力测试发现）读档后加载界面停在“继续游戏”按钮，等玩家点。读档前在主菜单状态执行 `Automation.SetAutoStartEnabled(true)`，加载界面会自己按（`LoadScreen.lua` 的 `OnLoadGameViewStateDone`），与开新局相同 |
-| 36 | （2026-10-21 压力测试发现）测试里用建造队列的 `CreateDistrict` 直接建出的区域，清不清格上的地貌和玩家正常放置不一样（群岛存档：玩家有采矿，直接建在树林上的商业中心，树林留在区域下面），还绕过人口名额和前置科技。校准“建区域会改变什么”要走正常流程：界面状态里 `CityManager.RequestOperation(city, CityOperationTypes.BUILD, {X, Y, DISTRICT_TYPE})` 下令，再在核心状态 `city:GetBuildQueue():FinishProgress()` 建完（`tools/stress.py check`、`tests/bench/probe_ownplot.py`）；区域不能用金币购买。界面状态里的魅力、住房读数也会滞后，一律在 `GameCore_Tuner` 里读魅力和住房，在界面状态里读地块产出（坑 34） |
-| 37 | （2026-10-22 英文界面检查发现）游戏载入文本时去掉 `<Text>` 首尾的空格：英文分隔符 `"; "` 读出来是 `";"`，`" / "` 是 `"/"`。中文全角标点不受影响，所以中文界面看不出来。分隔符写进格式串（`LOC_SDP_LIST_JOIN` = `{1_A}; {2_B}`，`SDP_UI.Join`）；需要前后空格的短文本同样整句写成格式串（如 `LOC_SDP_SITES_NEW_KIND` = `{1_Name} {2_Count} (new)`） |
-| 38 | （2026-10-22 实测）同一个模组 ID 装了两份（Mods 文件夹和创意工坊）时，“额外内容”里两份都列出、可以分别启用，但对局的启用列表（`GameConfiguration.GetEnabledMods()`）只记模组 ID，开局时游戏加载 `Mods.sqlite` 里先登记的那份（`ModRowId` 小），与启用的是哪一份无关：Mods 那份启用、创意工坊那份停用，对局里 `Modding.GetActiveMods()` 给出的仍是创意工坊那份（带 `SubscriptionId`）。哪份先登记取决于安装经过（`deploy.py` 改了文件后，本地那份会重新登记、排到后面），不一定是新的那份。所以只留一份；开发机上测试前确认加载的是 deploy 的那份 |
-| 39 | （2026-10-22 英文界面截图时发现）游戏的 Lua 里带 `^` 锚点的 `string.gsub` 不止替换一次：`("at most"):gsub("^%l", string.upper)` 得到 `"AT most"`，次数 2。标准 Lua（离线测试的 fengari）只替换一次，所以离线测不出。要只改开头，用 `s:sub(1, 1):upper() .. s:sub(2)` 或 `find` 加 `sub` |
-| 40 | （2026-10-23 合作者实测发现）城市只能扩张或购买**挨着自己领土**的格子，三环内被别的城（现有的、城址的一环，或方案里别的城的区域）隔开的格子永远拿不到。DMT 和引擎的可建格都不查这一条（引擎只对已拥有的格给结果）。候选格按“从领土能连到”筛（`SDP_City.Reach`），多城评估布局时再按其他城的区域挡路复查（`SDP_Search.Reachable`） |
-| 41 | （2026-10-23 引擎审计发现，#44）风云变幻里被海平面上升**淹没的沿海低地**（`TerrainManager.GetCoastalLowlandType(plot) ~= -1` 且 `TerrainManager.IsFlooded(plot)`）不能放任何区域，引擎不给原因；DMT 的 `CanPlacePin` 不查。已拥有的格有引擎复核兜着，未拥有的格和城址的格只看 DMT，会被当成候选。v1.2.0 起 `SDP_City` 把它们排除（`FLOODED`）。城市修了防洪堤后 `IsFlooded` 立即变为假，引擎恢复可建，排除也随之取消（2026-10-23 实测） |
-| 42 | （2026-10-23 引擎审计发现，#45）“需相邻某区域”的奇观（`Buildings.AdjacentDistrict`）要求那个区域**属于建奇观的城**：旁边只有别的本方城市的区域时引擎不给可建格，DMT 判可放。v1.2.0 起 `SDP_Search` 只认能拥有奇观所在格的城的区域（`Owners`），离线对比的裁判也查（`wonder_other_city`） |
+| 11 | 面板用 `UIManager:QueuePopup(ContextPtr, PopupPriority.Low)` / `DequeuePopup`，先查 `IsInPopupQueue` |
+| 12 | 跨上下文 `LookUpControl("/InGame/LaunchBar/ButtonStack")`，在 `Events.LoadScreenClose` 注入 |
+| 13–15 | 产出图标只有部分 `ICON_YIELD_*`，文化 `ICON_VICTORY_CULTURE`、信仰 `ICON_RELIGION`；结果明细纯文本，悬停用 DMT tooltip |
+| 16 | `TilesRequired` 每凑满 N 个邻居给一份；线性近似只用于排序 |
+| 17 | 已建区域由 DMT 从 plot 读 |
+| 18 | 特色区域名额 `1 + floor((人口-1)/3)` |
+| 19 | 删钉：`DMT_MapPinRemoved` → `DeleteMapPin` → `BroadcastPlayerInfo` → 音效 |
+| 20 | 与 AMT 等规划 mod 同开会互相污染（都 hook `GetMapPinSubject`）：一局只开一个 |
+| 21 | 新建地图钉后旧的钉对象可能失效，再调用会崩溃：只存 ID，每次 `GetMapPinID` 重取 |
+| 22 | `GetMapPin(x, y)` 在空格上会新建钉；只查找时遍历 `GetMapPins()` |
+| 23 | 上下文隐藏后 `SetUpdate` 不再被调用：计算中关面板只隐藏窗口（`KeepRunningHidden`） |
+| 24 | 自然奇观等弹窗占住事件队列，要调弹窗自己的 Close（`game.py popups --close`） |
+| 25 | DMT 的修正缓存（文明、领袖、信仰的相邻与放置规则）要自己建（`SDP_Overlay.RefreshModifiers`） |
+| 26 | DMT 的 `CanPlacePin` 不拦奢侈、战略资源：候选格自己排除不可采收的资源 |
+| 27 | DMT 不查运河是否连通水域：已拥有的格以引擎可建格为准（`SDP_City.EngineRefused`） |
+| 28 | DMT 把沉船等任何水面资源算作海洋资源，引擎不算（已知差异，不改） |
+| 29 | 放置图层不管传什么颜色都画绿：分色借政体透镜图层，`LensLayerOn` 时重画 |
+| 30 | 写错的 `Controls.<ID>` 运行到那一行才报错：validate.py 检查每个 ID 都在 XML 里 |
+| 31 | 按钮里盖一层 `Size="parent,parent"` 的 GridButton 会接住鼠标：选中样式用 Grid |
+| 32 | 规则表列名以 `DebugGameplay.sqlite` 的 `pragma table_info` 为准，不凭印象 |
+| 33 | 自动回合以观察者身份观察（`PlayerTypes.OBSERVER`），否则外交界面卡住回合 |
+| 34 | 地块产出在界面状态里读、等一帧；`GameCore_Tuner` 的 `GetYield` 不含建筑给别格的产出 |
+| 35 | 读档前 `Automation.SetAutoStartEnabled(true)`，加载界面才会自己按“继续游戏” |
+| 36 | 测试里建区域走正常流程（`RequestOperation` + `FinishProgress`），不用 `CreateDistrict`；魅力、住房在核心状态读 |
+| 37 | 游戏去掉 `<Text>` 首尾空格：带空格的分隔符和短句整句写成格式串 |
+| 38 | 同一模组 ID 装了两份时游戏加载先登记的那份：只留一份，测试前确认加载的是 deploy 的 |
+| 39 | 游戏 Lua 里带 `^` 的 `gsub` 不止替换一次：只改开头用 `sub` 拼 |
+| 40 | 城市只能拿挨着自己领土的格：候选按“从领土能连到”筛（`SDP_City.Reach`、`SDP_Search.Reachable`） |
+| 41 | 被淹的沿海低地不能放区域，DMT 不查：`SDP_City` 排除（修了防洪堤后恢复） |
+| 42 | “需相邻某区域”的奇观只认建奇观那座城的区域 |
+| 43 | 阿耳忒弥斯神庙的营地：DMT 不查改良能否建；引擎认本方任意城的营地，不认无主格 |
+| 44 | 魅力的两条引擎规则：被掠夺的改良设施让本格和四周 −1、不给住房；学了自然保护后原生树林本格 +1 |
 
 ## 6. 开发环境与工作流
 
@@ -191,6 +197,6 @@ include("dmt_yieldcalculator");       -- 尾部会执行 DMT_Initialize()，见�
 ## 8. 代理行为约定
 
 - 需求文档第二节 > 第三、四节硬约束 > 本文其他约定 > 自行设计。
-- 不修改需求文档；设计决策写入 `docs/design.md` 或 `docs/multicity-design.md`，每段改动在 `CHANGELOG.md` 记一笔。
+- 不修改需求文档；设计决策写入 `docs/design.md` 或 `docs/multicity-design.md`，一个 Issue 的实现、实测与数字出处写进 `docs/notes/issue-<编号>-<主题>.md`，每段改动在 `CHANGELOG.md` 记一笔。
 - 不把 DMT/AMT/EP/游戏本体的源码或数据复制进仓库，更不能进 `SmartDistrictPlanner/` 发布目录（版权与依赖关系：DMT 作为依赖 mod 由玩家自行订阅）。仓库是公开的。
 - 回复与文档使用中文；代码标识符与注释用英文或中文均可，但单文件内保持一致。

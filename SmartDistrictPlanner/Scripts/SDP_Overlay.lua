@@ -292,15 +292,21 @@ end
 --   placements  subjects put on the layer for this evaluation only
 --   fixed       subjects already on the map (locked pins, built districts)
 --               whose yields count towards the total
+--   extra       (optional) subjects put on the layer for this evaluation
+--               only, neither scored nor checked: the improvement a planned
+--               wonder needs next to it (issue 51, SDP_Board's silent slots)
 -- Returns { Legal, Total, Placements = {item}, Fixed = {item} } with
 -- item = { Subject, Yields, ToolTip, Score, CanPlace and Reason (placements),
 -- EngineRefused (DMT allows it, the game does not), Error (DMT raised one) }.
 -- Legal: DMT allows every placement. Total sums every item's score.
-function SDP_Overlay.Evaluate(placements, fixed, weights)
+function SDP_Overlay.Evaluate(placements, fixed, weights, extra)
   local state = m_state
   if state == nil then error("SDP_Overlay is not installed", 2) end
+  local layered = {}
+  for _, subject in ipairs(placements) do layered[#layered + 1] = subject end
+  for _, subject in ipairs(extra or {}) do layered[#layered + 1] = subject end
   local saved = {}
-  for i, subject in ipairs(placements) do
+  for i, subject in ipairs(layered) do
     saved[i] = state.Layer[Key(subject.X, subject.Y)]
     state.Layer[Key(subject.X, subject.Y)] = subject
   end
@@ -322,8 +328,8 @@ function SDP_Overlay.Evaluate(placements, fixed, weights)
     return out
   end)
 
-  for i = #placements, 1, -1 do
-    state.Layer[Key(placements[i].X, placements[i].Y)] = saved[i]
+  for i = #layered, 1, -1 do
+    state.Layer[Key(layered[i].X, layered[i].Y)] = saved[i]
   end
   ClearDMTCache(state.PlayerID)
   if not ok then error(result, 0) end

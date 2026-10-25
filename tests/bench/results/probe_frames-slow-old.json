@@ -1,0 +1,50 @@
+{
+ "AtOnceUnitsPerSecond": 70724.59872728043,
+ "Runs": {
+  "slow": {
+   "SpeedAfter": 62.7993,
+   "Phases": [
+    {
+     "Frames": 20,
+     "LastSlice": 4,
+     "MaxFrame": 0.0899085,
+     "MeanFrame": 0.0752831,
+     "MedianFrame": 0.0798597,
+     "MedianSlice": 4,
+     "Phase": "start",
+     "Seconds": 1.50566,
+     "Units": 187,
+     "UnitsPerSecond": 124.198,
+     "Wall": null
+    },
+    {
+     "Frames": 105,
+     "LastSlice": 4,
+     "MaxFrame": 0.0914775,
+     "MeanFrame": 0.0775224,
+     "MedianFrame": 0.0759145,
+     "MedianSlice": 4,
+     "Phase": "slow",
+     "Seconds": 8.13985,
+     "Units": 420,
+     "UnitsPerSecond": 51.598,
+     "Wall": 8.003833291
+    },
+    {
+     "Frames": 2,
+     "LastSlice": 4,
+     "MaxFrame": 0.0756492,
+     "MeanFrame": 0.0749129,
+     "MedianFrame": 0.0741765,
+     "MedianSlice": 4,
+     "Phase": "slow-after",
+     "Seconds": 0.149826,
+     "Units": 8,
+     "UnitsPerSecond": 53.3953,
+     "Wall": null
+    }
+   ]
+  }
+ },
+ "SlowMs": 60.0
+}

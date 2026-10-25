@@ -18,9 +18,9 @@ A district planner for Civilization VI: pick a city and the districts you want, 
 
 The panel has three tabs:
 
-- **One city**: pick a city, mark each district Must, Pool or Off, and set how many districts to plan and how much each yield counts. The planner finds the layout with the highest weighted adjacency within the city's 3 rings; when it picks from the pool you get three plans with different districts. Click one to preview it on the map, then place the tacks. Wonders can be planned along with the districts.
+- **One city**: pick a city, mark each district Must, Pool or Off, and set how many districts to plan and how much each yield counts. The planner finds the layout with the highest weighted adjacency within the city's 3 rings; when it picks from the pool you get three plans with different districts. Click one to preview it on the map, then place the tacks. Wonders can be planned along with the districts; the Temple of Artemis comes with the Camp it needs.
 - **City sites**: choose sites for new cities on the explored map, weighing fresh water, workable tiles, Luxury and Strategic resources, district potential, and how much the new cities overlap. Three plans; hover a site for the resources it gets and how far it is from the other sites; preview on the map, then place site tacks.
-- **Several cities**: plan districts and wonders for the site tacks and the cities near them together, counting adjacency across cities and empire limits. Each city can have its own district list, or a template built from your civilization's adjacency rules (Science city, Production city…).
+- **Several cities**: plan districts and wonders for the city selected on the map and the nearest cities and site tacks around it (4 by default, up to 8), counting adjacency across cities and empire limits. Each city can have its own district list, or a template built from your civilization's adjacency rules (Science city, Production city…).
 
 On every tab:
 
@@ -79,9 +79,9 @@ The development documents are in Chinese; issues and pull requests in English ar
 
 面板有三个页签：
 
-- **单城**：选一座城，把区域设为必建、候选或不建，给出区域数量和各产出的权重。规划器在城市三环内找加权相邻加成最高的摆法；从候选里挑时给出组合不同的三套方案，点一套就在地图上预览，再一键打钉。单城也能一起放奇观。
+- **单城**：选一座城，把区域设为必建、候选或不建，给出区域数量和各产出的权重。规划器在城市三环内找加权相邻加成最高的摆法；从候选里挑时给出组合不同的三套方案，点一套就在地图上预览，再一键打钉。单城也能一起放奇观，阿耳忒弥斯神庙会带上它要的营地。
 - **选城址**：在已探索的地图上给几座新城选位置，考虑水源、耕作地块、奢侈与战略资源、区域潜力，以及新城之间不抢地。给出三套方案，悬停看每个城址拿到的奢侈、战略资源和离其他城址多远，预览后打城址钉。
-- **多城**：城址钉和附近的现有城市一起规划区域和奇观，跨城的相邻加成和帝国上限都计入。可以给每座城单独的区域清单，或套用按产出生成的模板（科技城、生产力城……）。
+- **多城**：以地图上选中的城为中心，和离它最近的城市、城址钉（默认 4 座，最多 8 座）一起规划区域和奇观，跨城的相邻加成和帝国上限都计入。可以给每座城单独的区域清单，或套用按产出生成的模板（科技城、生产力城……）。
 
 各页签共用：
 

@@ -16,6 +16,9 @@
     <Replace Tag="LOC_SDP_LAUNCHBAR_TOOLTIP" Language="zh_Hans_CN">
       <Text>智能区域规划器 {1_Version}</Text>
     </Replace>
+    <Replace Tag="LOC_SDP_LAUNCHBAR_KEY" Language="zh_Hans_CN">
+      <Text>快捷键：{1_Key}</Text>
+    </Replace>
     <Replace Tag="LOC_SDP_PANEL_TITLE" Language="zh_Hans_CN">
       <Text>智能区域规划器</Text>
     </Replace>
@@ -55,13 +58,13 @@
       <Text>求解</Text>
     </Replace>
     <Replace Tag="LOC_SDP_RESULT_NONE" Language="zh_Hans_CN">
-      <Text>勾选要规划的区域后点击“求解”。</Text>
+      <Text>把区域点成“必建”，或调高“区域数量”，再点击“求解”。</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_READY" Language="zh_Hans_CN">
+      <Text>点击“求解”开始规划。</Text>
     </Replace>
     <Replace Tag="LOC_SDP_RESULT_SUMMARY" Language="zh_Hans_CN">
       <Text>加权相邻加成提升：{1_Gain}</Text>
-    </Replace>
-    <Replace Tag="LOC_SDP_RESULT_STATS" Language="zh_Hans_CN">
-      <Text>档位：{1_Tier}；方法：{2_Method}；DMT 调用 {3_Calls} 次；尝试布局 {4_Tries} 个；搜索节点 {5_Nodes} 个；继续优化 {6_Continues} 次</Text>
     </Replace>
     <Replace Tag="LOC_SDP_RESULT_TRUNCATED" Language="zh_Hans_CN">
       <Text>已达搜索预算上限，方案可能不是最优。</Text>
@@ -132,7 +135,7 @@
       <Text>计入占地</Text>
     </Replace>
     <Replace Tag="LOC_SDP_WEIGHT_FEATURE_SHORT" Language="zh_Hans_CN">
-      <Text>地貌</Text>
+      <Text>收获</Text>
     </Replace>
     <Replace Tag="LOC_SDP_WEIGHT_FEATURE" Language="zh_Hans_CN">
       <Text>砍伐树林、雨林、沼泽和收获加成资源的一次性产出（随科技、市政进度增长）：留着地貌或资源的地块得不到它</Text>
@@ -150,13 +153,13 @@
       <Text>精细</Text>
     </Replace>
     <Replace Tag="LOC_SDP_TIER_FAST_TOOLTIP" Language="zh_Hans_CN">
-      <Text>计算量最少，结果可能稍差。</Text>
+      <Text>计算量最少。离线基准上单城挑区域约 0.1–0.2 秒，平均达到最好方案的 98%（最差 93%）；多城 4 座约 0.5 秒。</Text>
     </Replace>
     <Replace Tag="LOC_SDP_TIER_STANDARD_TOOLTIP" Language="zh_Hans_CN">
-      <Text>默认，兼顾耗时与质量。</Text>
+      <Text>默认。离线基准上单城挑区域约 0.4–1 秒，都达到最好方案；多城 4 座约 2–6 秒。</Text>
     </Replace>
     <Replace Tag="LOC_SDP_TIER_FINE_TOOLTIP" Language="zh_Hans_CN">
-      <Text>计算量最多，分帧进行；计算期间可以继续操作或关闭面板。</Text>
+      <Text>计算量最多，分帧进行，计算期间可以继续操作或关闭面板。单城约 2–5 秒，多城 4 座约 2–7 秒、8 座 25–60 秒。离线基准上与标准档一样都达到最好方案；标准档提示“可能还有提升”时再用。</Text>
     </Replace>
     <Replace Tag="LOC_SDP_ESTIMATE" Language="zh_Hans_CN">
       <Text>预计约 {1_Seconds} 秒</Text>
@@ -229,8 +232,20 @@
     <Replace Tag="LOC_SDP_REASON_PINNED" Language="zh_Hans_CN">
       <Text>已有地图钉</Text>
     </Replace>
+    <Replace Tag="LOC_SDP_REASON_TACKED" Language="zh_Hans_CN">
+      <Text>本城已有它的地图钉</Text>
+    </Replace>
     <Replace Tag="LOC_SDP_REASON_NEEDS_DISTRICT" Language="zh_Hans_CN">
       <Text>需要相邻某个区域，但没有城市规划它</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_REASON_NEEDS_IMPROVEMENT" Language="zh_Hans_CN">
+      <Text>需要相邻{1_Improvement}，但附近没有能建它的格</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_SUPPORT" Language="zh_Hans_CN">
+      <Text>供{1_Wonder}相邻</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_SUPPORT_TOOLTIP" Language="zh_Hans_CN">
+      <Text>{1_Wonder}必须与{2_Improvement}相邻。这个钉标出建它的位置，它的产出不计入方案。</Text>
     </Replace>
     <Replace Tag="LOC_SDP_REASON_NO_FREE_PLOT" Language="zh_Hans_CN">
       <Text>没有剩余的空位</Text>
@@ -245,7 +260,7 @@
       <Text>已有钉</Text>
     </Replace>
     <Replace Tag="LOC_SDP_MULTI_CITIES" Language="zh_Hans_CN">
-      <Text>参与城市（市中心地图钉和附近的城市）</Text>
+      <Text>参与城市</Text>
     </Replace>
     <Replace Tag="LOC_SDP_MULTI_PLAN" Language="zh_Hans_CN">
       <Text>每座城的区域</Text>
@@ -253,32 +268,62 @@
     <Replace Tag="LOC_SDP_MULTI_WONDERS" Language="zh_Hans_CN">
       <Text>奇观</Text>
     </Replace>
+    <Replace Tag="LOC_SDP_MULTI_CITIES_TOOLTIP" Language="zh_Hans_CN">
+      <Text>点一格切换这座城或城址是否参与规划。打开面板时以地图上选中的城市为中心（没有选中时是首都）：默认勾选它，再按离它由近到远，加入离已勾选的某座不超过 7 格的本方城市和城址钉，最多 4 座。手动最多 8 座。不参与的城市只作固定邻居。[NEWLINE][NEWLINE]收益：一起规划的城可以互给相邻加成，这只出现在相距 4–5 格的城之间。实测 4 座一起比两两分组相邻加成多 1.5–7%，8 座一起比分成 4 + 4 多 0–11%。[NEWLINE][NEWLINE]代价：等待随城数增加。三张后期存档、每城 3 个区域，2、4、6、8 座城：快速档约 0.2、0.5、1、2 秒；标准档 0.5–2、2–6、4–9、10–16 秒；精细档 1–3、2–7、7–21、25–60 秒。</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_MULTI_CLEAR" Language="zh_Hans_CN">
+      <Text>全部取消</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_MULTI_CLEAR_TOOLTIP" Language="zh_Hans_CN">
+      <Text>取消全部城市和城址钉。</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_MULTI_DEFAULT" Language="zh_Hans_CN">
+      <Text>恢复默认</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_MULTI_DEFAULT_TOOLTIP" Language="zh_Hans_CN">
+      <Text>回到默认勾选：中心城市和附近连成一片的城市、城址钉，最多 4 座。</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_MULTI_CENTER" Language="zh_Hans_CN">
+      <Text>中心（打开面板时选中的城市，没有选中时是首都）</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_MULTI_FROM_CENTER" Language="zh_Hans_CN">
+      <Text>离 {2_Center} {1_Distance} 格</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_MULTI_TAKES_PART" Language="zh_Hans_CN">
+      <Text>参与规划</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_MULTI_FULL" Language="zh_Hans_CN">
+      <Text>已选 {1_Max} 座，一次最多规划这么多。先取消一座再选。</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_MULTI_CITY_TOOLTIP" Language="zh_Hans_CN">
+      <Text>点击切换这座城是否参与规划。不参与时，它的已建区域和地图钉仍作为固定邻居计入。</Text>
+    </Replace>
     <Replace Tag="LOC_SDP_MULTI_SITE_PIN" Language="zh_Hans_CN">
       <Text>地图钉 {1_Where}</Text>
     </Replace>
-    <Replace Tag="LOC_SDP_MULTI_DISTANCE" Language="zh_Hans_CN">
-      <Text>离新城 {1_Distance} 格</Text>
-    </Replace>
     <Replace Tag="LOC_SDP_MULTI_CAP" Language="zh_Hans_CN">
-      <Text>（超出一次最多 {1_Max} 座）</Text>
+      <Text>超出一次最多 {1_Max} 座，只作固定邻居</Text>
     </Replace>
     <Replace Tag="LOC_SDP_MULTI_NEIGHBOUR_ONLY" Language="zh_Hans_CN">
-      <Text>只作邻居</Text>
+      <Text>不参与，只作固定邻居</Text>
     </Replace>
     <Replace Tag="LOC_SDP_MULTI_EMPIRE_LIMIT" Language="zh_Hans_CN">
       <Text>全帝国限 {1_Max}</Text>
     </Replace>
     <Replace Tag="LOC_SDP_MULTI_NONE" Language="zh_Hans_CN">
-      <Text>在新城位置放市中心地图钉（或用“选城址”），勾选区域和奇观后点击“求解”。</Text>
+      <Text>选上参与的城（新城可以先放市中心地图钉，或用“选城址”），把区域点成“必建”或调高“每城数量”，再点击“求解”。</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_MULTI_FIRST" Language="zh_Hans_CN">
+      <Text>逐城依次规划时加权提升为 {1_First}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_PREVIEW_CITY" Language="zh_Hans_CN">
+      <Text>{1_N} {2_Text}</Text>
     </Replace>
     <Replace Tag="LOC_SDP_MULTI_SOLUTION_DETAIL" Language="zh_Hans_CN">
       <Text>{1_Cities} 座城、{2_Districts} 个区域、{3_Wonders} 个奇观</Text>
     </Replace>
     <Replace Tag="LOC_SDP_MULTI_CITY_GAIN" Language="zh_Hans_CN">
       <Text>新区域加权相邻 {1_Gain}</Text>
-    </Replace>
-    <Replace Tag="LOC_SDP_MULTI_STATS" Language="zh_Hans_CN">
-      <Text>档位：{1_Tier}；{2_Cities} 座城；DMT 调用 {3_Calls} 次；尝试布局 {4_Tries} 个；继续优化 {5_Continues} 次；逐城依次规划为 {6_First}</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SITES_COUNT" Language="zh_Hans_CN">
       <Text>新城数量</Text>
@@ -452,7 +497,7 @@
       <Text>覆盖</Text>
     </Replace>
     <Replace Tag="LOC_SDP_WEIGHT_COVERAGE" Language="zh_Hans_CN">
-      <Text>覆盖范围：工厂、电厂、动物园、体育场、水族馆和部分奇观，能惠及一定距离内（规则数据里多为 6 格）的本方城市，同类不叠加。规划时把新覆盖的城市也算进去：每新覆盖一座城记这么多分，单位与相邻加成相同；0 为不计。只决定已勾选的区域放在哪，不会替城市加区域。参考：工厂给每座被覆盖的城 +3 生产力，电厂再加 +3～+4；动物园、体育场、水族馆各 +1 宜居度。</Text>
+      <Text>覆盖：让方案照顾工厂、电厂、动物园、体育场、水族馆这类惠及周边城市的区域。每新覆盖一座本方城市或城址钉，加这么多分；已被同类区域覆盖的城不算。0 为不计。[NEWLINE][NEWLINE]好处：被覆盖的城得到这些建筑的范围效果（生产力、宜居度）。单城实测 42 座真实城市，权重 1 时 3 座多覆盖了邻城，权重 3 时 6 座。[NEWLINE]代价：这些城的相邻加成少 0～3 点（权重 3 时最多 4 点）；计算约慢 5%。</Text>
     </Replace>
     <Replace Tag="LOC_SDP_RESULT_SUMMARY_COVERAGE" Language="zh_Hans_CN">
       <Text>加权提升：{1_Gain}（相邻 {2_Adjacency}，地块 {3_Land}，覆盖 {4_Coverage}）</Text>
@@ -464,10 +509,10 @@
       <Text>覆盖：这套方案没有新覆盖的城市</Text>
     </Replace>
     <Replace Tag="LOC_SDP_COVERAGE_ROW" Language="zh_Hans_CN">
-      <Text>覆盖 {1_N} 城</Text>
+      <Text>新覆盖 {1_N} 城</Text>
     </Replace>
     <Replace Tag="LOC_SDP_COVERAGE_TIP" Language="zh_Hans_CN">
-      <Text>覆盖范围内的城市：{1_Names}</Text>
+      <Text>新覆盖的城市：{1_Names}</Text>
     </Replace>
     <!-- 区域状态、数量、提醒钉、距离成本 -->
     <Replace Tag="LOC_SDP_COUNT" Language="zh_Hans_CN">
@@ -511,9 +556,6 @@
     </Replace>
     <Replace Tag="LOC_SDP_STATE_AUTO" Language="zh_Hans_CN">
       <Text>自动</Text>
-    </Replace>
-    <Replace Tag="LOC_SDP_CELL_TOOLTIP" Language="zh_Hans_CN">
-      <Text>{1_Name}：{2_State}（点一下切换）</Text>
     </Replace>
     <Replace Tag="LOC_SDP_FEATURE_SHORT" Language="zh_Hans_CN">
       <Text>允许砍伐</Text>
@@ -602,11 +644,8 @@
     <Replace Tag="LOC_SDP_WEIGHT_DISTANCE" Language="zh_Hans_CN">
       <Text>距离成本：每个区域、奇观按到最近的本方市中心的格数减 1，乘以这个系数扣分（与相邻加成同一单位）；0 为不计。游戏里区域的造价与距离无关，与距离有关的是取得格子的先后和买地价格，这里表达“区域尽量靠近城市”的偏好。</Text>
     </Replace>
-    <Replace Tag="LOC_SDP_MULTI_SITE_OFF" Language="zh_Hans_CN">
-      <Text>（不参与）</Text>
-    </Replace>
     <Replace Tag="LOC_SDP_MULTI_SITE_TOOLTIP" Language="zh_Hans_CN">
-      <Text>取消勾选后，这个城址不参与规划：不为它放区域，也不算作新城。钉本身不动，仍作为固定邻居影响周围的加成。</Text>
+      <Text>点击切换这个城址是否参与规划。不参与时不为它放区域，也不算作新城；钉本身不动，仍作为固定邻居影响周围的加成。</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SITES_PLAN_COUNT" Language="zh_Hans_CN">
       <Text>每个城址按</Text>

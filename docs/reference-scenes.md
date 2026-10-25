@@ -2,11 +2,11 @@
 
 这份文档给合作者看 #53 用的参照场景 REF04–REF20：每个场景的来源、地图，作者的布局和证明过的真最优并排画在一起，附上已经算好的数字。请逐个看两件事：作者的布局能不能当参照，真最优和它比好在哪里、哪里在游戏里不合理。结论回复在 #53，下一轮按它决定哪些场景保留、哪些打折。
 
-推导和汇总见 [multicity-design.md](multicity-design.md) 第 28–30 节，这里不重复。
+推导和汇总见 [notes/issue-48-land-oracle.md](notes/issue-48-land-oracle.md)、[notes/issue-53-weight-robustness.md](notes/issue-53-weight-robustness.md)、[notes/issue-53-reference-layouts.md](notes/issue-53-reference-layouts.md)，这里不重复。
 
 ## 1. 用途
 
-#53 要回答默认的产出权重和地块系数 λ 该取多少。开发集的场景只能拿本模组和别的规划器比，看不出玩家怎么取舍。参照场景是高手实际下出来的布局：如果某组 (权重, λ) 让作者的布局最接近那组设置下的真最优，就说明这组设置和玩家的判断一致。第 30 节按这个思路在 15 组设置上比过，结论是默认不改（全 1、λ = 1）。
+#53 要回答默认的产出权重和地块系数 λ 该取多少。开发集的场景只能拿本模组和别的规划器比，看不出玩家怎么取舍。参照场景是高手实际下出来的布局：如果某组 (权重, λ) 让作者的布局最接近那组设置下的真最优，就说明这组设置和玩家的判断一致。[issue-53-reference-layouts.md](notes/issue-53-reference-layouts.md) 按这个思路在 15 组设置上比过，结论是默认不改（全 1、λ = 1）。
 
 ## 2. 怎么做的
 
@@ -16,7 +16,7 @@ REF01–REF03 是更早从截图手写的场景，一半以上的格是猜的，
 
 ## 3. 怎么打分
 
-裁判是只加载 DMT 的独立状态（离线对比框架，`tools/compare.mjs --refscore`），给参照布局打相邻加成；同一场景、同一组权重下用 `sdp:ORACLE` 求证明过的真最优。参照布局占真最优的比例就是下面“只算相邻”两列。计入地块时用 `sdp:ORACLE_LAND<λ>`，目标是本模组的整个目标（相邻 + λ × 地块 + 住房），参照布局由同一个搜索按同一个目标估值，差距 = (真最优 − 参照布局) / 参照布局的相邻加成，越小越好（第 30.1 节）。17 个场景、15 组设置的结果全部证明。分组按作者：开发组 11 个（Archon_Wing、Victoria、Gaonac'h、Sklez），复核组 6 个（BarbarianHunter、DanQuayle、_Calyx、pahakuutti）。
+裁判是只加载 DMT 的独立状态（离线对比框架，`tools/compare.mjs --refscore`），给参照布局打相邻加成；同一场景、同一组权重下用 `sdp:ORACLE` 求证明过的真最优。参照布局占真最优的比例就是下面“只算相邻”两列。计入地块时用 `sdp:ORACLE_LAND<λ>`，目标是本模组的整个目标（相邻 + λ × 地块 + 住房），参照布局由同一个搜索按同一个目标估值，差距 = (真最优 − 参照布局) / 参照布局的相邻加成，越小越好（[issue-53-reference-layouts.md](notes/issue-53-reference-layouts.md) 第 1 节）。17 个场景、15 组设置的结果全部证明。分组按作者：开发组 11 个（Archon_Wing、Victoria、Gaonac'h、Sklez），复核组 6 个（BarbarianHunter、DanQuayle、_Calyx、pahakuutti）。
 
 ## 4. 请看什么
 

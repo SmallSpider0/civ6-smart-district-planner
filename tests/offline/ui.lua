@@ -52,6 +52,7 @@ function Control:GetButton()
 end
 -- Simulated input.
 function Control:Click()
+  if self._disabled then return end -- as in the game: a disabled button takes no click
   local fn = self._callbacks[1] -- Mouse.eLClick
   if fn then fn() end
 end
@@ -118,7 +119,10 @@ function UI_Mock.Install()
     },
     PopupPriority = { Low = 1 },
     -- Input actions (key bindings from the configuration database): ids are names here.
-    Input = { GetActionId = function(name) return "action:" .. name end },
+    Input = {
+      GetActionId = function(name) return "action:" .. name end,
+      GetGestureDisplayString = function(action, n) return (action == "action:SDP_OpenPlanner" and n == 0) and "Shift+L" or nil end,
+    },
     Mouse = { eLClick = 1, eMouseEnter = 2 },
     KeyEvents = { KeyUp = 1 },
     Keys = { VK_ESCAPE = 27 },
@@ -136,7 +140,11 @@ function UI_Mock.Install()
   ui.GetHeadSelectedCity = function() return nil end
   ui.GridToWorld = function(x, y) return x * 10, y * 10, 0 end
   ui.GetColorValue = function() return 0 end
-  ui.LookAtPlot = function() end
+  -- Camera moves, newest last (issue 67).
+  UI_Mock.Looks = {}
+  ui.LookAtPlotScreenPosition = function(x, y, sx, sy)
+    UI_Mock.Looks[#UI_Mock.Looks + 1] = { X = x, Y = y, ScreenX = sx, ScreenY = sy }
+  end
 end
 
 return UI_Mock

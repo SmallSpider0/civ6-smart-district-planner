@@ -6,7 +6,8 @@
 
 ## 先读
 
-- [AGENTS.md](AGENTS.md)：需求约束、技术方案、42 条坑、每轮改动流程。
+- [AGENTS.md](AGENTS.md)：需求约束、技术方案、44 条坑的要点（完整说明在 [docs/pitfalls.md](docs/pitfalls.md)）、每轮改动流程。
+- [.claude/skills/](.claude/skills/)：Issue 处理、游戏内测试、离线重活、发版、监听的固定步骤，Claude Code 按需加载；人照着做也一样。
 - 当前平台的环境说明：[docs/dev-macos.md](docs/dev-macos.md) 或 [docs/dev-windows.md](docs/dev-windows.md)。
 - [tools/README.md](tools/README.md)：每个工具的用法。
 
@@ -15,10 +16,10 @@
 一轮工作的流程：
 
 1. **记成 Issue**：维护者或合作者在 GitHub 上提；在对话里告诉 Claude 的，由它来提。打算放进下一版的挂到里程碑（如 `v1.1.0`），里程碑页面能看到这一版还剩几项。
-2. **先调研、再确认**（明显的 bug 修复除外）：功能和优化类的 Issue，先用子 agent 调研规则库与游戏本体代码、玩家社区的做法和对比模组的做法，整理成“已查证的规则 / 玩家共识 / 个别意见 / 建议方案”写进 Issue。要维护者拿主意的地方停下来问，确认后再开发。
+2. **先调研、再确认**（明显的 bug 修复除外）：功能和优化类的 Issue，先用子 agent 调研规则库与游戏本体代码、玩家社区的做法和对比模组的做法，整理成“已查证的规则 / 玩家共识 / 个别意见 / 建议方案”写进 Issue。要维护者拿主意的地方列在评论里（方案 A、B，附建议），合作者可以在 Issue 下评论；维护者在 Claude Code 里拍板后再开发。
 3. **本地分多个提交修**：一个分支修这一批 Issue，一个 Issue 一个或几个提交，提交信息里写 `#编号`。分支上随便推，不开 PR 就不跑 CI。
 4. **只开一个 PR**：这一批都修好、本地测过（`validate.py`、离线测试、游戏内测试）再开 PR，描述里每个 Issue 写一行 `Closes #编号`，合并时自动关闭。要发版时，发版准备（版本号、CHANGELOG、更新说明、截图、自测报告、压力测试结果）也放进这个 PR。
-5. **合并后发版**：发 Release，再更新创意工坊（见下文“发版”）。
+5. **发版**：合并到 `main` 不会到玩家手里。只有修 bug 的小版本，攒够三个普通 bug、离第一个修复合并满七天，或修好一个严重 bug 时直接发；有功能或优化的版本，测过后由维护者决定什么时候发。然后发 Release、更新创意工坊（见下文“发版”）。
 
 这样一轮只跑一次 CI（每次约 6 分钟；只在 PR 上跑，合并后 `main` 上不再重跑）：
 
@@ -93,9 +94,10 @@
   - 不用套话和 AI 腔，比如“赋能”“全面提升”“值得注意的是”；
   - 同一个意思只写一次，不重复已经说过的话。
 - 直接描述功能，不加"新功能""新加""新指标"之类的标签。
+- 游戏里的名称（区域、建筑、奇观、文明、领袖、地貌、资源、界面）中英文都用游戏自己的，不自己翻译。核对办法：解析 `Civ6.app/Contents/Assets` 下 Base 和全部 DLC 的文本 XML（`DebugLocalization.sqlite` 只有最后加载的规则集），按 Tag 或中文查。已定的英文：tile（不是 plot）、valid（不是 legal）、map tack / tack（不是 pin）、specialty districts、City Center、Woods / Rainforest / Marsh / Floodplains / Volcanic Soil、Housing、Appeal、Amenities、Additional Content、Key Bindings、the toolbar at the upper left（不是 launch bar）。PR 里列出这次核对过的术语和出处。
 - 测试项数、耗时这类数字只写在自测报告和“介绍与评测”页里（由脚本生成或刷新），其他文档链接过去，免得过时。
-- 例外：面板开关的悬停提示讲清这个开关做什么、收益和代价，收益尽量写成实测的百分比（如“相邻加成平均高 x%”），代价写手动操作和耗时倍数。数字的出处（场景、档位、命令、结果文件）记在 [docs/multicity-design.md](docs/multicity-design.md) 对应的小节，结果文件放在 `tests/compare/results/`。改了算法、规则或测试集后，按发版清单重跑并更新这些数字。
-- 截图只截游戏画面，不带系统菜单栏、标题栏、任务栏或 Dock。放在 `docs/images/`，按 `v<版本>-<内容>.jpg` 命名。
+- 例外：面板开关的悬停提示写给玩家，分三段（中间空一行）：这个开关做什么（背后的游戏规则）、收益、代价；不用“候选格”“求解”这类内部词，不重复勾选框已经显示的默认值。收益尽量写成实测的百分比（如“相邻加成平均高 x%”），代价写手动操作和耗时倍数。数字的出处（场景、档位、命令、结果文件）记在 [docs/notes/](docs/notes/) 里对应 Issue 的记录，结果文件放在 `tests/compare/results/`。改了算法、规则或测试集后，按发版清单重跑并更新这些数字。
+- 截图只截游戏画面，不带系统菜单栏、标题栏、任务栏或 Dock。放在 `docs/images/`，按 `v<轮次>-<内容>.jpg` 命名，英文界面的加 `-en-`；有中英文两版的画面两版都拍（`tools/shots.py`）。
 - “介绍与评测”页由 `report/build.py` 生成，前 6 节写给玩家，技术内容放在附录。中文页、英文页内容相同，附录也有英文版；改了一页就同步改另一页（`report/template.html` 与 `report/template_en.html`，附录里的图（`part_*_en.html`、`hexfig_en.svg.txt`）、`build.py` 生成的句子和表格、图表文字（`build.py` 的 `CHART_WORDS`）都要有英文）。用 Claude 做的页面（artifact）沿用这个页面的样式和写法。
 
 ## 许可证与第三方内容

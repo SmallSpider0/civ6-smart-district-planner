@@ -9,10 +9,14 @@ adjacency DMT reported in the game for every plannable district on every
 owned plot, so the offline world can be checked against the game.
 tests/compare/scenes/index.json lists the scenes; cmp_scenarios.lua adds
 them to the scenario list (ids RS.. single, RM.. multi), summarize.py
-reports them as the "real" group.
+reports them as the "real" group. RC.. (coverage, issue 61) is one city
+planned with the several-cities solver (a multi scene whose `only` is that
+city), exported with a wider window so the own cities its regional
+districts can reach, and the districts already covering them, are in it.
 
   python3 -I tools/snapshot.py export RS01-pangaea-japan-kyoto --save pangaea-gs --cities 65536
   python3 -I tools/snapshot.py export RM01-pangaea-japan-3c --save pangaea-gs --cities 65536,65537,65538
+  python3 -I tools/snapshot.py export RC01-pangaea-japan-kyoto --save pangaea-gs --cities 65536 --radius 15
   python3 -I tools/snapshot.py check RS01-pangaea-japan-kyoto     # offline DMT vs the game's sample
   python3 -I tools/snapshot.py list
   python3 -I tools/snapshot.py ref REF04-bh-japan-okayama --from bh-hojo-276 --cities 131073,262147 \
@@ -158,8 +162,8 @@ def wanted_for(spec, city, base_list, exclusive=frozenset()):
 
 
 def cmd_export(args):
-    if not args.id[:2] in ("RS", "RM"):
-        print("the id must start with RS (one city) or RM (several cities)")
+    if not args.id[:2] in ("RS", "RM", "RC"):
+        print("the id must start with RS (one city), RM (several cities) or RC (one city, several-cities solver)")
         return 2
     if args.save:
         if stress.cmd_load(argparse.Namespace(name=args.save)) != 0:
@@ -176,8 +180,8 @@ def cmd_export(args):
         print("cities not found: %s" % sorted(set(cities) - set(chosen)))
         return 2
     kind = "single" if args.id.startswith("RS") else "multi"
-    if kind == "single" and len(chosen) != 1:
-        print("an RS scene takes one city (--cities ID)")
+    if args.id[:2] in ("RS", "RC") and len(chosen) != 1:
+        print("an %s scene takes one city (--cities ID)" % args.id[:2])
         return 2
     me = next(p for p in spec["players"] if p["id"] == 0)
     base_list = args.districts.split(",") if args.districts else DEFAULT_DISTRICTS
@@ -460,7 +464,7 @@ def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     sub = ap.add_subparsers(dest="cmd", required=True)
     ep = sub.add_parser("export", help="export a scene from the running game")
-    ep.add_argument("id", help="RS01-... (one city) or RM01-... (several cities)")
+    ep.add_argument("id", help="RS01-... (one city), RM01-... (several cities) or RC01-... (one city, several-cities solver)")
     ep.add_argument("--save", help="load this stress-test save first (name as in tools/stress.py)")
     ep.add_argument("--from", dest="from_save", help="record this save name without loading it (already loaded)")
     ep.add_argument("--cities", help="city IDs, comma-separated (default: all of the player's)")

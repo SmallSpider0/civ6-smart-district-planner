@@ -200,8 +200,11 @@ end
 
 -- Put `subject` in `slot` (moving it from wherever it was), or take the
 -- slot's subject off the map when `subject` is nil. Scores are brought up to
--- date lazily by Total.
-function Board:Put(slot, subject)
+-- date lazily by Total. `silent`: the subject is on the map for its
+-- neighbours (DMT sees it) but has no score or legality of its own (an
+-- improvement a wonder needs next to it, issue 51: placed by the search's
+-- rules, its yields not part of the objective).
+function Board:Put(slot, subject, silent)
   local current = self.slots[slot]
   if current ~= nil then
     if subject ~= nil and current.Subject == subject then return end
@@ -220,7 +223,8 @@ function Board:Put(slot, subject)
     if self.slotAt[plot] ~= nil or self.fixedAt[plot] ~= nil then
       error("SDP_Board: plot " .. plot .. " is taken", 2)
     end
-    self.slots[slot] = { Subject = subject, Plot = plot, Id = self:TypeId(subject.Key), Score = 0, Legal = true, Fresh = true }
+    self.slots[slot] = { Subject = subject, Plot = plot, Id = self:TypeId(subject.Key), Score = 0, Legal = true, Fresh = true,
+      Silent = silent == true }
     self.slotAt[plot] = slot
     SDP_Overlay.Put(subject.X, subject.Y, subject)
     self:Mark(plot)
@@ -239,9 +243,13 @@ function Board:Refresh()
     local slot = self.slotAt[plot]
     if slot ~= nil then
       local entry = self.slots[slot]
-      local code = self:Code(plot)
-      local score, ok = self:Score(plot, entry.Id, entry.Subject, code)
-      local legal = ok and self:Legal(plot, entry.Id, entry.Subject, code)
+      local score, legal = 0, true
+      if not entry.Silent then
+        local code = self:Code(plot)
+        local ok
+        score, ok = self:Score(plot, entry.Id, entry.Subject, code)
+        legal = ok and self:Legal(plot, entry.Id, entry.Subject, code)
+      end
       if entry.Fresh then
         entry.Fresh = false
         self.total = self.total + score

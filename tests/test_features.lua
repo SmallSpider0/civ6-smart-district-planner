@@ -335,3 +335,159 @@ test("multi tab: with the coverage weight the industrial zone moves to reach a p
   if pinID ~= nil then RemovePin(pinID) end
   if not ok then error(err, 0) end
 end)
+
+-- Issue 61: the coverage column on the single-city tab.
+-- The industrial zone's row and the result's lists: what each key says.
+local function CheckCoverage(result, zone, placed, range)
+  T.ok(not result.Stats.Mismatch, "board and full evaluation agree")
+  T.ok(math.abs(result.Gain - (result.Adjacency + result.LandDelta + result.CoverageDelta + result.CostDelta
+    + (result.AppealDelta or 0))) < 1e-6, "the gain adds up")
+  T.ok(math.abs(result.CoverageDelta - 3 * result.Covered) < 1e-6, "weight x newly covered cities")
+  -- Counted again here, from the targets: in reach of the zone and not
+  -- covered by a built or pinned district of its group.
+  local model = SDP_Coverage.New({ PlayerID = pid, Weight = 3, Sites = SDP_Coverage.SiteTargets(pid) })
+  local want = {}
+  for _, id in ipairs(model:InReach(zone, placed.X, placed.Y)) do
+    if not model.Covered[id] then want[#want + 1] = model:Pair(id).Key end
+  end
+  T.same(placed.Reach, want, "the row lists the cities the zone newly covers")
+  local listed = {}
+  for _, entry in ipairs(result.CoveredBy) do
+    for _, key in ipairs(entry.Keys) do listed[#listed + 1] = key end
+  end
+  table.sort(listed)
+  table.sort(want)
+  T.same(listed, want, "the summary's newly covered cities")
+  for _, key in ipairs(want) do
+    for _, target in ipairs(model.Targets) do
+      if target.Key == key then
+        T.ok(Map.GetPlotDistance(placed.X, placed.Y, target.X, target.Y) <= range, key .. " in reach")
+      end
+    end
+  end
+  return model, want
+end
+
+local function SingleZone(zone, weight)
+  Reset({ zone })
+  SDP_Panel.SetLand(false)
+  SDP_Panel.SetWeight("COVERAGE", weight)
+  local result = SDP_Panel.Solve()
+  T.ok(result and result.Ok, "result: " .. tostring(result and result.Error))
+  T.eq(result.Session.Request.Coverage, weight, "the weight is in the request")
+  for _, p in ipairs(result.Plan) do
+    if p.Type == zone then return result, p end
+  end
+  T.ok(false, "the industrial zone is planned")
+end
+
+test("single-city tab: with the coverage weight the industrial zone moves to reach a city-center pin", function()
+  local city = Capital()
+  local zone = Resolve("DISTRICT_INDUSTRIAL_ZONE")
+  local reach = SDP_Coverage.Reaches(pid)[zone]
+  if reach == nil then T.skip("no regional building for the industrial zone in this ruleset") end
+  local pinID, sx, sy
+  local ok, err = pcall(function()
+    local off, alone = SingleZone(zone, 0)
+    T.eq(off.Covered, nil, "no coverage figures at weight 0")
+    T.eq(alone.Reach, nil, "no reach on the row at weight 0")
+    pinID, sx, sy = SitePin(city, { reach.Range, reach.Range + 1, reach.Range + 2 }, alone, reach.Range)
+    local _, plain = SingleZone(zone, 0)
+    T.ok(Map.GetPlotDistance(plain.X, plain.Y, sx, sy) > reach.Range,
+      "without coverage the zone at " .. plain.X .. "," .. plain.Y .. " does not reach the pin at " .. sx .. "," .. sy)
+    local result, placed = SingleZone(zone, 3)
+    T.ok(Map.GetPlotDistance(placed.X, placed.Y, sx, sy) <= reach.Range,
+      "with weight 3 the zone at " .. placed.X .. "," .. placed.Y .. " reaches the pin at " .. sx .. "," .. sy)
+    local _, want = CheckCoverage(result, zone, placed, reach.Range)
+    local site = "S" .. Map.GetPlotIndex(sx, sy)
+    local listed = false
+    for _, key in ipairs(want) do
+      if key == site then listed = true end
+    end
+    T.ok(listed, "the pin is among the newly covered cities")
+    print(string.format("single: zone %d,%d without coverage, %d,%d with weight 3 (adjacency %+g -> %+g); pin %d,%d; range %d",
+      plain.X, plain.Y, placed.X, placed.Y, off.Adjacency, result.Adjacency, sx, sy, reach.Range))
+  end)
+  SDP_Panel.SetWeight("COVERAGE", 0)
+  SDP_Panel.SetLand(true)
+  if pinID ~= nil then RemovePin(pinID) end
+  if not ok then error(err, 0) end
+end)
+
+-- On a save with several cities (tools/stress.py load ...): a city that can
+-- still plan an industrial zone, with another of the player's cities in reach
+-- of its third ring that no industrial zone covers yet.
+test("single-city tab: on a save with several cities, the neighbours the zone can reach are counted", function()
+  local zone = Resolve("DISTRICT_INDUSTRIAL_ZONE")
+  local reach = SDP_Coverage.Reaches(pid)[zone]
+  if reach == nil then T.skip("no regional building for the industrial zone in this ruleset") end
+  local cities = {}
+  for _, c in Players[pid]:GetCities():Members() do cities[#cities + 1] = c end
+  table.sort(cities, function(a, b) return a:GetID() < b:GetID() end)
+  if #cities < 2 then T.skip("one city: load a save with several (tools/stress.py load pangaea-gs)") end
+  local model = SDP_Coverage.New({ PlayerID = pid, Weight = 1, Sites = SDP_Coverage.SiteTargets(pid) })
+  local uncovered = {}
+  for t, target in ipairs(model.Targets) do
+    if target.CityID ~= nil and not model.Covered[(model.GroupIndex[reach.Group] - 1) * #model.Targets + t] then
+      uncovered[#uncovered + 1] = target
+    end
+  end
+  local chosen, neighbours = nil, nil
+  for _, c in ipairs(cities) do
+    local scan = SDP_City.Scan(pid, c:GetID(), SDP_City.ScanOptions({}))
+    local status = scan and SDP_City.DistrictStatus(scan, SDP_Rules.PlannableDistricts(pid))[zone]
+    if chosen == nil and scan ~= nil and status == nil then
+      local near = {}
+      for _, target in ipairs(uncovered) do
+        if target.CityID ~= c:GetID() and Map.GetPlotDistance(c:GetX(), c:GetY(), target.X, target.Y) <= reach.Range + 3 then
+          near[#near + 1] = target
+        end
+      end
+      if #near > 0 then chosen, neighbours = c, near end
+    end
+  end
+  if chosen == nil then T.skip("no city that can plan an industrial zone with an uncovered city in reach") end
+  local function Solve(weight)
+    SDP_Panel.SelectTab("SINGLE")
+    SDP_Panel.SelectCity(chosen:GetID())
+    for _, d in ipairs(SDP_Rules.PlannableDistricts(pid)) do SDP_Panel.SetState(d.Type, "OFF") end
+    SDP_Panel.SetCount(0)
+    SDP_Panel.SetRemind(false)
+    for _, w in ipairs(SDP_Wonders.List(pid)) do SDP_Panel.SetWonder(w.Type, false) end
+    SDP_Panel.SetSelected(zone, true)
+    SDP_Panel.SetReplace(false)
+    SDP_Panel.SetTier("STANDARD")
+    SDP_Panel.SetLand(false)
+    SDP_Panel.SetWeight("COVERAGE", weight)
+    local result = SDP_Panel.Solve()
+    T.ok(result and result.Ok, "result: " .. tostring(result and result.Error))
+    for _, p in ipairs(result.Plan) do
+      if p.Type == zone then return result, p end
+    end
+    T.ok(false, "the industrial zone is planned")
+  end
+  local ok, err = pcall(function()
+    local off, plain = Solve(0)
+    local result, placed = Solve(3)
+    local _, want = CheckCoverage(result, zone, placed, reach.Range)
+    -- Newly covered at weight 0's place, counted with the same model.
+    local before = 0
+    for _, id in ipairs(model:InReach(zone, plain.X, plain.Y)) do
+      if not model.Covered[id] then before = before + 1 end
+    end
+    T.ok(result.Covered >= before, "covers at least as many as without coverage: " .. result.Covered .. " vs " .. before)
+    T.ok(result.Gain >= off.Gain + 3 * before - 1e-6, "at least as good under its own objective")
+    local names = {}
+    for _, n in ipairs(neighbours) do names[#names + 1] = n.Key end
+    local others = 0
+    for _, key in ipairs(want) do
+      if key ~= "C" .. chosen:GetID() then others = others + 1 end
+    end
+    print(string.format("city %d (%s): zone %d,%d -> %d,%d, adjacency %+g -> %+g, newly covered %d -> %d (%d other cities: %s); uncovered near: %s",
+      chosen:GetID(), Locale.Lookup(chosen:GetName()), plain.X, plain.Y, placed.X, placed.Y, off.Adjacency, result.Adjacency,
+      before, result.Covered, others, table.concat(want, " "), table.concat(names, " ")))
+  end)
+  SDP_Panel.SetWeight("COVERAGE", 0)
+  SDP_Panel.SetLand(true)
+  if not ok then error(err, 0) end
+end)

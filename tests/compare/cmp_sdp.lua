@@ -34,6 +34,14 @@
 --                                    STANDARD, in city order, earlier plans
 --                                    pinned (the baseline a player gets by
 --                                    using the single-city tab city by city)
+--   variant <TIER>_GROUP<n>          multi only: the cities in groups of n in
+--                                    city order (the capital first), each
+--                                    group planned on the Several cities tab
+--                                    with the tier, earlier groups' plans
+--                                    pinned (issue 63: a player who plans a
+--                                    few cities at a time); each city gets
+--                                    its own list ("_GROUP<n>S": the shared
+--                                    list, as the tab sends it)
 
 CmpAdapters = CmpAdapters or {}
 
@@ -145,6 +153,9 @@ function CmpAdapters.sdp(request, variant, w)
   end
   local swap = variant:match("_SWAP$") ~= nil
   variant = variant:gsub("_SWAP$", "")
+  local group = tonumber(variant:match("_GROUP(%d+)S?$") or "")
+  local sharedList = variant:match("_GROUP%d+S$") ~= nil
+  variant = variant:gsub("_GROUP%d+S?$", "")
   LoadSDP()
   if land then ScaleLand(lambda) end
   w.Events.LoadGameViewStateDone()
@@ -172,10 +183,15 @@ function CmpAdapters.sdp(request, variant, w)
     -- SDP_Multi with only this city (SDP_Panel's WonderRequest).
     local id = request.target:GetID()
     local r = SDP_Multi.Solve({ PlayerID = 0, Tier = variant, Districts = request.districts, Wonders = request.wonders,
-      Only = { [id] = true }, Weights = request.weights, Land = land, Swap = swap })
+      Only = { [id] = true }, Weights = request.weights, Land = land, Swap = swap, Coverage = coverage })
     if not r.Ok then out.notes[#out.notes + 1] = tostring(r.Error) end
     for _, p in ipairs(r.Plan or {}) do
       out.placements[#out.placements + 1] = { city = id, type = p.Type, x = p.X, y = p.Y, kind = p.Kind }
+      -- The improvement a wonder needs next to it (issue 51), tacked with it.
+      if p.Support ~= nil then
+        out.placements[#out.placements + 1] = { city = id, type = p.Support.Type, x = p.Support.X, y = p.Support.Y,
+          kind = "IMPROVEMENT" }
+      end
     end
     stats.sdpGain, stats.sdpAppeal = r.Adjacency, r.AppealDelta
     if land then stats.sdpObjective = r.Gain end
@@ -183,7 +199,7 @@ function CmpAdapters.sdp(request, variant, w)
     for _, u in ipairs(r.Unplaced or {}) do out.notes[#out.notes + 1] = "unplaced " .. tostring(u.Type) .. " " .. tostring(u.Reason) end
   elseif scn.kind == "single" then
     local r = SDP_Solver.Solve({ PlayerID = 0, CityID = request.target:GetID(), Districts = request.districts,
-      Land = land, Tier = variant, Weights = request.weights, Swap = swap })
+      Land = land, Tier = variant, Weights = request.weights, Swap = swap, Coverage = coverage })
     if not r.Ok then out.notes[#out.notes + 1] = tostring(r.Error) end
     Take(r.Plan, request.target:GetID())
     if oracle and r.Ok then
@@ -208,6 +224,35 @@ function CmpAdapters.sdp(request, variant, w)
       for _, p in ipairs(r.Plan or {}) do Pin(p.Type, p.X, p.Y) end
       for _, u in ipairs(r.Unplaced or {}) do out.notes[#out.notes + 1] = "unplaced " .. u.Type .. " " .. tostring(u.Reason) end
     end
+  elseif group ~= nil then
+    local all = request.cities
+    for first = 1, #all, group do
+      local existing, plans = {}, nil
+      for c, city in ipairs(all) do existing[city:GetID()] = c >= first and c < first + group end
+      -- Every city its own list, also when all want the same; "_GROUP<n>S":
+      -- the shared list, as the tab sends it by default, where an existing
+      -- city skips what it has tacked (SDP_City.OwnPins). Before issue 64 it
+      -- skipped any tack of the type within four plots, a neighbour's too.
+      if request.plans or not sharedList then
+        plans = {}
+        for _, city in ipairs(all) do
+          plans["C" .. city:GetID()] = (request.plans and request.plans[city:GetID()]) or request.districts
+        end
+      end
+      local r = SDP_Multi.Solve({ PlayerID = 0, Tier = variant, Districts = plans and {} or request.districts, Plans = plans,
+        Existing = existing, Land = land, Weights = request.weights })
+      if not r.Ok then out.notes[#out.notes + 1] = tostring(r.Error) end
+      local byKey = {}
+      for _, c in ipairs(r.Cities or {}) do byKey[c.Key] = c.CityID end
+      for _, p in ipairs(r.Plan or {}) do
+        if p.Kind == nil or p.Kind == "DISTRICT" then
+          out.placements[#out.placements + 1] = { city = byKey[p.City], type = p.Type, x = p.X, y = p.Y }
+          Pin(p.Type, p.X, p.Y)
+        end
+      end
+      for _, u in ipairs(r.Unplaced or {}) do out.notes[#out.notes + 1] = "unplaced " .. tostring(u.Type) .. " " .. tostring(u.Reason) end
+    end
+    stats.method = "groups of " .. group
   else
     local existing, plans = {}, nil
     for _, city in ipairs(request.cities) do existing[city:GetID()] = true end
@@ -216,8 +261,11 @@ function CmpAdapters.sdp(request, variant, w)
       plans = {}
       for _, city in ipairs(request.cities) do plans["C" .. city:GetID()] = request.plans[city:GetID()] or {} end
     end
+    -- One planned city (the coverage scenes RC, RP): exactly that city, as
+    -- the single-city tab would ask; city-center tacks do not take part.
+    local only = #request.cities == 1 and existing or nil
     local r = SDP_Multi.Solve({ PlayerID = 0, Tier = variant, Districts = plans and {} or request.districts, Plans = plans,
-      Existing = existing, Land = land, Weights = request.weights, Coverage = coverage, Swap = swap })
+      Existing = existing, Only = only, Land = land, Weights = request.weights, Coverage = coverage, Swap = swap })
     if not r.Ok then out.notes[#out.notes + 1] = tostring(r.Error) end
     local byKey = {}
     for _, c in ipairs(r.Cities or {}) do byKey[c.Key] = c.CityID end

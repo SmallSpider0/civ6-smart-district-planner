@@ -533,6 +533,11 @@ local function TakeItems(out, items, fallbackCity)
     elseif item.subjectType == "WONDER" then
       out.placements[#out.placements + 1] = { city = item.cityID or fallbackCity, type = item.subjectKey,
         x = item.x, y = item.y, kind = "WONDER" }
+    elseif item.subjectType == "IMPROVEMENT" then
+      -- An improvement tack (the Camp a Temple of Artemis needs, issue 51):
+      -- the judge checks where it stands and lets DMT see it.
+      out.placements[#out.placements + 1] = { city = item.cityID or fallbackCity, type = item.subjectKey,
+        x = item.x, y = item.y, kind = "IMPROVEMENT" }
     else
       out.stats.otherItems = (out.stats.otherItems or 0) + 1
     end

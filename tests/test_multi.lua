@@ -171,9 +171,13 @@ test("wonders: legal where placed, built ones left out", function()
     SDP_Overlay.With(pid, function()
       for _, p in ipairs(result.Plan) do
         if p.Kind == "WONDER" then
-          local subjects = {}
-          for _, q in ipairs(result.Plan) do subjects[#subjects + 1] = { Key = q.Type, Type = q.Kind, X = q.X, Y = q.Y } end
-          local full = SDP_Overlay.Evaluate(subjects, {}, { YIELD_SCIENCE = 1 })
+          local subjects, extra = {}, {}
+          for _, q in ipairs(result.Plan) do
+            subjects[#subjects + 1] = { Key = q.Type, Type = q.Kind, X = q.X, Y = q.Y }
+            -- The improvement a wonder needs next to it (issue 51; the Temple of Artemis's Camp).
+            if q.Support then extra[#extra + 1] = { Key = q.Support.Type, Type = "IMPROVEMENT", X = q.Support.X, Y = q.Support.Y } end
+          end
+          local full = SDP_Overlay.Evaluate(subjects, {}, { YIELD_SCIENCE = 1 }, extra)
           T.ok(full.Legal, p.Type .. " not legal with the plan")
         end
       end

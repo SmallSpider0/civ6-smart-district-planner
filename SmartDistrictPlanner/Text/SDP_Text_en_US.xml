@@ -16,6 +16,9 @@
     <Replace Tag="LOC_SDP_LAUNCHBAR_TOOLTIP" Language="en_US">
       <Text>Smart District Planner {1_Version}</Text>
     </Replace>
+    <Replace Tag="LOC_SDP_LAUNCHBAR_KEY" Language="en_US">
+      <Text>Shortcut: {1_Key}</Text>
+    </Replace>
     <Replace Tag="LOC_SDP_PANEL_TITLE" Language="en_US">
       <Text>Smart District Planner</Text>
     </Replace>
@@ -55,13 +58,13 @@
       <Text>Solve</Text>
     </Replace>
     <Replace Tag="LOC_SDP_RESULT_NONE" Language="en_US">
-      <Text>Tick the districts to plan, then press Solve.</Text>
+      <Text>Set districts to Must, or raise Districts, then press Solve.</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_READY" Language="en_US">
+      <Text>Press Solve to plan.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_RESULT_SUMMARY" Language="en_US">
       <Text>Weighted adjacency gain: {1_Gain}</Text>
-    </Replace>
-    <Replace Tag="LOC_SDP_RESULT_STATS" Language="en_US">
-      <Text>Effort: {1_Tier}; method: {2_Method}; DMT calls: {3_Calls}; layouts tried: {4_Tries}; search nodes: {5_Nodes}; improved {6_Continues} {6_Continues: plural 1?time; other?times;}</Text>
     </Replace>
     <Replace Tag="LOC_SDP_RESULT_TRUNCATED" Language="en_US">
       <Text>the search budget ran out, so this plan may not be the best one</Text>
@@ -132,7 +135,7 @@
       <Text>Land loss</Text>
     </Replace>
     <Replace Tag="LOC_SDP_WEIGHT_FEATURE_SHORT" Language="en_US">
-      <Text>Chop</Text>
+      <Text>Harv.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_WEIGHT_FEATURE" Language="en_US">
       <Text>One-time yields from removing Woods, Rainforest and Marsh and from harvesting Bonus resources (they grow with your technologies and civics); a tile that keeps its feature or resource forgoes them</Text>
@@ -150,13 +153,13 @@
       <Text>Thorough</Text>
     </Replace>
     <Replace Tag="LOC_SDP_TIER_FAST_TOOLTIP" Language="en_US">
-      <Text>Least work; the result may be a little worse.</Text>
+      <Text>Least work. On the offline benchmark, picking districts for one city takes about 0.1–0.2 s and reaches 98% of the best plan on average (93% at worst); four cities take about 0.5 s.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_TIER_STANDARD_TOOLTIP" Language="en_US">
-      <Text>The default balance of time and quality.</Text>
+      <Text>The default. On the offline benchmark, picking districts for one city takes about 0.4–1 s and always reaches the best plan; four cities take about 2–6 s.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_TIER_FINE_TOOLTIP" Language="en_US">
-      <Text>Most work, computed over several frames; you can keep playing or close the panel meanwhile.</Text>
+      <Text>Most work, computed over several frames; you can keep playing or close the panel meanwhile. One city takes about 2–5 s, four cities about 2–7 s, eight cities 25–60 s. On the offline benchmark it reaches the best plan as Standard does; use it when Standard says the plan may still improve.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_ESTIMATE" Language="en_US">
       <Text>About {1_Seconds} s</Text>
@@ -229,8 +232,20 @@
     <Replace Tag="LOC_SDP_REASON_PINNED" Language="en_US">
       <Text>already has a map tack</Text>
     </Replace>
+    <Replace Tag="LOC_SDP_REASON_TACKED" Language="en_US">
+      <Text>this city already has a map tack for it</Text>
+    </Replace>
     <Replace Tag="LOC_SDP_REASON_NEEDS_DISTRICT" Language="en_US">
       <Text>needs a district next to it that no city plans</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_REASON_NEEDS_IMPROVEMENT" Language="en_US">
+      <Text>needs a {1_Improvement} next to it, and no tile nearby can take one</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_SUPPORT" Language="en_US">
+      <Text>for {1_Wonder}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_SUPPORT_TOOLTIP" Language="en_US">
+      <Text>{1_Wonder} must be next to a {2_Improvement}. The tack marks where to build one; its yields are not counted in the plan.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_REASON_NO_FREE_PLOT" Language="en_US">
       <Text>no free tile left for it</Text>
@@ -245,7 +260,7 @@
       <Text>Has a tack</Text>
     </Replace>
     <Replace Tag="LOC_SDP_MULTI_CITIES" Language="en_US">
-      <Text>Cities (City Center map tacks and the cities near them)</Text>
+      <Text>Cities</Text>
     </Replace>
     <Replace Tag="LOC_SDP_MULTI_PLAN" Language="en_US">
       <Text>Districts for each city</Text>
@@ -253,32 +268,62 @@
     <Replace Tag="LOC_SDP_MULTI_WONDERS" Language="en_US">
       <Text>Wonders</Text>
     </Replace>
+    <Replace Tag="LOC_SDP_MULTI_CITIES_TOOLTIP" Language="en_US">
+      <Text>Click a chip to switch that city or site on or off. When the panel opens, the city selected on the map is the center (the capital when none is selected): it is on by default, then, nearest first, your cities and City Center map tacks within 7 tiles of one already on, 4 at most. Up to 8 by hand. Cities left out count as fixed neighbors.[NEWLINE][NEWLINE]Gain: cities planned together can give each other adjacency, which happens between cities 4–5 tiles apart. Measured: 4 together get 1.5–7% more adjacency than in pairs; 8 together 0–11% more than 4 + 4.[NEWLINE][NEWLINE]Cost: the wait grows with the number of cities. Three late-game saves, 3 districts per city, 2, 4, 6 and 8 cities: Fast about 0.2, 0.5, 1 and 2 seconds; Standard 0.5–2, 2–6, 4–9 and 10–16 seconds; Thorough 1–3, 2–7, 7–21 and 25–60 seconds.</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_MULTI_CLEAR" Language="en_US">
+      <Text>Clear all</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_MULTI_CLEAR_TOOLTIP" Language="en_US">
+      <Text>Switch every city and site off.</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_MULTI_DEFAULT" Language="en_US">
+      <Text>Default</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_MULTI_DEFAULT_TOOLTIP" Language="en_US">
+      <Text>Back to the default choice: the center city and the joined cities and sites near it, 4 at most.</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_MULTI_CENTER" Language="en_US">
+      <Text>Center (the city selected when the panel opened, else the capital)</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_MULTI_FROM_CENTER" Language="en_US">
+      <Text>{1_Distance} tiles from {2_Center}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_MULTI_TAKES_PART" Language="en_US">
+      <Text>Planned</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_MULTI_FULL" Language="en_US">
+      <Text>{1_Max} are on, the most planned at once. Switch one off first.</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_MULTI_CITY_TOOLTIP" Language="en_US">
+      <Text>Click to switch this city on or off. Left out, its districts and map tacks still count as fixed neighbors.</Text>
+    </Replace>
     <Replace Tag="LOC_SDP_MULTI_SITE_PIN" Language="en_US">
       <Text>map tack {1_Where}</Text>
     </Replace>
-    <Replace Tag="LOC_SDP_MULTI_DISTANCE" Language="en_US">
-      <Text>{1_Distance} tiles from a new city</Text>
-    </Replace>
     <Replace Tag="LOC_SDP_MULTI_CAP" Language="en_US">
-      <Text>(beyond the {1_Max} cities planned at once)</Text>
+      <Text>Beyond the {1_Max} cities planned at once: a fixed neighbor only</Text>
     </Replace>
     <Replace Tag="LOC_SDP_MULTI_NEIGHBOUR_ONLY" Language="en_US">
-      <Text>neighbor only</Text>
+      <Text>Not planned, a fixed neighbor only</Text>
     </Replace>
     <Replace Tag="LOC_SDP_MULTI_EMPIRE_LIMIT" Language="en_US">
       <Text>{1_Max} per empire</Text>
     </Replace>
     <Replace Tag="LOC_SDP_MULTI_NONE" Language="en_US">
-      <Text>Put City Center map tacks where new cities go (or use City sites), tick the districts and wonders, then press Solve.</Text>
+      <Text>Pick the cities (for a new city, put a City Center map tack first or use City sites), set districts to Must or raise Per city, then press Solve.</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_MULTI_FIRST" Language="en_US">
+      <Text>Planning the cities one after another gives {1_First}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_PREVIEW_CITY" Language="en_US">
+      <Text>{1_N} {2_Text}</Text>
     </Replace>
     <Replace Tag="LOC_SDP_MULTI_SOLUTION_DETAIL" Language="en_US">
       <Text>{1_Cities} {1_Cities: plural 1?city; other?cities;}, {2_Districts} {2_Districts: plural 1?district; other?districts;}, {3_Wonders} {3_Wonders: plural 1?wonder; other?wonders;}</Text>
     </Replace>
     <Replace Tag="LOC_SDP_MULTI_CITY_GAIN" Language="en_US">
       <Text>weighted adjacency of its new districts {1_Gain}</Text>
-    </Replace>
-    <Replace Tag="LOC_SDP_MULTI_STATS" Language="en_US">
-      <Text>Effort: {1_Tier}; {2_Cities} {2_Cities: plural 1?city; other?cities;}; DMT calls: {3_Calls}; layouts tried: {4_Tries}; improved {5_Continues} {5_Continues: plural 1?time; other?times;}; planning the cities one after another gave {6_First}</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SITES_COUNT" Language="en_US">
       <Text>New cities</Text>
@@ -452,7 +497,7 @@
       <Text>Reach</Text>
     </Replace>
     <Replace Tag="LOC_SDP_WEIGHT_COVERAGE" Language="en_US">
-      <Text>Reach: the regional effects of Factories, Power Plants, Zoos, Stadiums, Aquariums and some wonders reach each of your cities within range (6 tiles for most); buildings of the same type do not stack. The plan counts the cities it newly covers: each one adds this many points, in the same unit as adjacency; 0 leaves it out. It only decides where the chosen districts go and never adds districts to a city. For reference: a Factory gives each covered city +3 Production, a Power Plant +3 to +4 more; a Zoo, Stadium or Aquarium +1 Amenity each.</Text>
+      <Text>Reach: lets the plan count districts whose buildings help nearby cities, such as Factories, Power Plants, Zoos, Stadiums and Aquariums. Each of your cities or City Center map tacks newly covered adds this many points; a city a district of the same kind already covers does not count. 0 leaves it out.[NEWLINE][NEWLINE]Gain: covered cities get those buildings' regional effects (Production, Amenities). Measured planning one city on 42 real cities: at weight 1, 3 of them covered more cities; at weight 3, 6.[NEWLINE]Cost: those cities lost 0 to 3 adjacency (up to 4 at weight 3); planning takes about 5% longer.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_RESULT_SUMMARY_COVERAGE" Language="en_US">
       <Text>Weighted gain: {1_Gain} (adjacency {2_Adjacency}, tiles taken {3_Land}, reach {4_Coverage})</Text>
@@ -464,10 +509,10 @@
       <Text>Reach: this plan covers no new city</Text>
     </Replace>
     <Replace Tag="LOC_SDP_COVERAGE_ROW" Language="en_US">
-      <Text>reaches {1_N}</Text>
+      <Text>covers {1_N} more</Text>
     </Replace>
     <Replace Tag="LOC_SDP_COVERAGE_TIP" Language="en_US">
-      <Text>Cities within reach: {1_Names}</Text>
+      <Text>Cities it newly covers: {1_Names}</Text>
     </Replace>
     <!-- District states, counts, reminders, distance cost -->
     <Replace Tag="LOC_SDP_COUNT" Language="en_US">
@@ -511,9 +556,6 @@
     </Replace>
     <Replace Tag="LOC_SDP_STATE_AUTO" Language="en_US">
       <Text>Auto</Text>
-    </Replace>
-    <Replace Tag="LOC_SDP_CELL_TOOLTIP" Language="en_US">
-      <Text>{1_Name}: {2_State} (click to change)</Text>
     </Replace>
     <Replace Tag="LOC_SDP_FEATURE_SHORT" Language="en_US">
       <Text>Allow chop</Text>
@@ -602,11 +644,8 @@
     <Replace Tag="LOC_SDP_WEIGHT_DISTANCE" Language="en_US">
       <Text>Distance cost: each district and wonder loses this weight times (tiles to your nearest City Center - 1), in the same unit as adjacency; 0 is off. The game does not charge more for distant districts; distant tiles join the city later or cost more Gold to purchase. This expresses a wish to keep districts close.</Text>
     </Replace>
-    <Replace Tag="LOC_SDP_MULTI_SITE_OFF" Language="en_US">
-      <Text>(off)</Text>
-    </Replace>
     <Replace Tag="LOC_SDP_MULTI_SITE_TOOLTIP" Language="en_US">
-      <Text>Unticked, this site takes no part: no districts are planned for it and it is not counted as a new city. The tack stays where it is and still counts as a neighbor.</Text>
+      <Text>Click to switch this site on or off. Left out, no districts are planned for it and it is not counted as a new city; the tack stays where it is and still counts as a neighbor.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SITES_PLAN_COUNT" Language="en_US">
       <Text>Per site</Text>

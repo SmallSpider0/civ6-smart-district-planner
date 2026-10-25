@@ -6,21 +6,31 @@
 -- Appeal changes with the plan. Building on a plot clears its removable
 -- feature and its improvement, and the district or wonder there adds its own
 -- appeal to the plots around (Districts.Appeal: holy site +1, industrial
--- zone -1, a wonder as DISTRICT_WONDER). Cleared woods (a feature of
--- positive appeal) also stop counting for the plot itself; cleared
--- rainforest or marsh (negative) do not. Measured with neighborhoods
--- ordered and built the normal way (tests/bench/probe_ownplot.py,
--- 2026-10-21): woods, own plot -1 on 6 of 8 plots (the other two read no
--- change, perhaps stale readings); rainforest, own plot unchanged on 2 of 2;
--- marsh not measured. A feature whose Features.RemoveTech the player lacks
--- is not cleared, but the game does not let a district go there either.
+-- zone -1, a wonder as DISTRICT_WONDER). A cleared feature counts only for
+-- the plots around, not for the plot itself (issue 58): neighborhoods
+-- ordered and built the normal way on two late-game saves left their own
+-- plot's appeal unchanged on 9 of 10 woods, 5 of 6 rainforest and 1 marsh
+-- plots (tests/bench/probe_ownplot.py, 2026-10-24). Two exceptions, both
+-- measured in the game (2026-10-25):
+--   - old-growth woods: with the civic in Features.AddCivic (Conservation)
+--     the owner's woods that were never removed (not
+--     Plot:HasFeatureBeenAdded) give their own plot their Appeal too, so
+--     clearing them takes 1 off the plot (all 28 such plots on the islands
+--     save, none of the 103 without the civic; granting the civic to a
+--     player added it to that player's woods);
+--   - a pillaged improvement takes 1 off its own plot and the plots around
+--     (Civilopedia; the two improved plots where clearing raised the plot's
+--     own appeal by 1 were pillaged, and repairing one raised it and its
+--     land neighbours by 1).
+-- A feature whose Features.RemoveTech the player lacks is not cleared, but
+-- the game does not let a district go there either.
 -- Water plots keep their appeal. So
 --   appeal(plot) = the game's appeal now (Plot:GetAppeal)
 --                + over the neighbours with a planned or pinned (not built)
 --                  district or wonder: its Appeal - the Appeal of the feature
---                  and improvement it clears there
---                - with one on the plot itself: the Appeal of the feature it
---                  clears there, when positive
+--                  and improvement it clears there (and +1 for a pillaged one)
+--                on a plot that gets one itself: - the old-growth bonus it
+--                  clears (+1 if its improvement was pillaged)
 --   housing part = HOUSING weight x over every district with
 --                  AppealHousingChanges rows (placed, pinned or built):
 --                  Districts.Housing + the change for its plot's appeal;
@@ -36,7 +46,8 @@
 --                  plots), else they count in full, weighted.
 -- The part of a layout is its value minus the value of the empty layout, so
 -- that a plan is also charged for lowering a pinned or built neighborhood.
--- Everything comes from GameInfo and the plots at run time.
+-- Everything comes from GameInfo and the plots at run time, except the
+-- pillage penalty (the engine's; no table holds it).
 
 SDP_Appeal = {}
 
@@ -49,13 +60,17 @@ local m_rules, m_rulesFor = nil, nil
 --   Feature      { [feature index] = Appeal } of the features a district clears
 --                (Removable; with RemoveTech: { [feature index] = technology index })
 --   RemoveTech   { [feature index] = technology index } for those that need one
+--   OldGrowth    { [feature index] = civic index } of those with Features.AddCivic:
+--                the civic that lets builders plant it also gives the
+--                plot itself the feature's Appeal while it was never removed
 --   Improvement  { [improvement index] = Appeal }
 --   Share        { [improvement index] = Housing / TilesRequired } of the
 --                improvements that give housing (farms, pastures ...)
 -- }
 function SDP_Appeal.Rules()
   if m_rules ~= nil and m_rulesFor == GameInfo then return m_rules end
-  local rules = { Appeal = {}, Housing = {}, Tiles = {}, Feature = {}, RemoveTech = {}, Improvement = {}, Share = {} }
+  local rules = { Appeal = {}, Housing = {}, Tiles = {}, Feature = {}, RemoveTech = {}, OldGrowth = {}, Improvement = {},
+    Share = {} }
   for row in GameInfo.Districts() do
     if (row.Appeal or 0) ~= 0 then rules.Appeal[row.DistrictType] = row.Appeal end
   end
@@ -86,6 +101,8 @@ function SDP_Appeal.Rules()
       rules.Feature[row.Index] = row.Appeal
       local tech = row.RemoveTech and GameInfo.Technologies[row.RemoveTech]
       if tech ~= nil then rules.RemoveTech[row.Index] = tech.Index end
+      local civic = row.AddCivic and GameInfo.Civics[row.AddCivic]
+      if civic ~= nil then rules.OldGrowth[row.Index] = civic.Index end
     end
   end
   for row in GameInfo.Improvements() do
@@ -98,13 +115,15 @@ end
 
 -- Sum of Housing / TilesRequired over the improved plots a city owns (its
 -- housing from improvements is this rounded down). Cities own plots up to 5
--- rings out.
+-- rings out. A pillaged improvement gives none (measured 2026-10-25: two
+-- cities with one pillaged plot each read 3 and 2, the sums without it).
 function SDP_Appeal.CityShare(rules, city)
   local total = 0
   for dx = -5, 5 do
     for dy = -5, 5 do
       local plot = Map.GetPlotXYWithRangeCheck(city:GetX(), city:GetY(), dx, dy, 5)
-      if plot ~= nil and plot:GetImprovementType() ~= -1 and rules.Share[plot:GetImprovementType()] ~= nil then
+      if plot ~= nil and plot:GetImprovementType() ~= -1 and rules.Share[plot:GetImprovementType()] ~= nil
+          and not plot:IsImprovementPillaged() then
         local owner = Cities.GetPlotPurchaseCity(plot)
         if owner ~= nil and owner:GetID() == city:GetID() and plot:GetOwner() == city:GetOwner() then
           total = total + rules.Share[plot:GetImprovementType()]
@@ -157,21 +176,48 @@ local function Neighbours(cache, index)
   return list
 end
 
--- What building on plot `index` takes away from its neighbours' appeal (the
--- Appeal of its removable feature and its improvement) and from its own (the
--- feature's).
+-- A pillaged improvement takes 1 off its own plot's appeal and off each plot
+-- around (Civilopedia, Neighborhoods and Appeal: "-1: Each adjacent pillaged
+-- tile"; issue 58: repairing one in the game raised its plot and the land
+-- plots around by 1). The engine's rule; no GameInfo row holds it.
+local PILLAGED_APPEAL = -1
+
+-- Whether the plot's feature is old-growth with the bonus on: the plot's
+-- owner has the feature's AddCivic and the feature was never removed
+-- (Plot:HasFeatureBeenAdded, as the game's plot tooltip tells old-growth
+-- from second-growth woods).
+local function OldGrowth(rules, plot, feature)
+  local civic = rules.OldGrowth[feature]
+  if civic == nil or plot:GetOwner() < 0 then return false end
+  if plot.HasFeatureBeenAdded ~= nil and plot:HasFeatureBeenAdded() then return false end
+  local owner = Players[plot:GetOwner()]
+  local culture = owner ~= nil and owner.GetCulture ~= nil and owner:GetCulture() or nil
+  return culture ~= nil and culture:HasCivic(civic)
+end
+
+-- What building on plot `index` takes away from appeal: around, from each
+-- neighbour (the Appeal of its removable feature and of its improvement, and
+-- the pillage penalty); own, from the plot itself (an old-growth feature's
+-- bonus, the pillage penalty; a feature's Appeal otherwise counts only
+-- around, issue 58).
 local function Cleared(rules, index, techs)
   local plot = Map.GetPlotByIndex(index)
-  local cleared, own = 0, 0
+  local around, own = 0, 0
   local feature = plot:GetFeatureType()
   local tech = feature ~= -1 and rules.RemoveTech[feature] or nil
   if feature ~= -1 and (tech == nil or techs == nil or techs:HasTech(tech)) then
-    cleared = cleared + (rules.Feature[feature] or 0)
-    own = math.max(0, rules.Feature[feature] or 0)
+    around = around + (rules.Feature[feature] or 0)
+    if OldGrowth(rules, plot, feature) then own = own + (rules.Feature[feature] or 0) end
   end
   local improvement = plot:GetImprovementType()
-  if improvement ~= -1 then cleared = cleared + (rules.Improvement[improvement] or 0) end
-  return cleared, own
+  if improvement ~= -1 then
+    around = around + (rules.Improvement[improvement] or 0)
+    if plot.IsImprovementPillaged ~= nil and plot:IsImprovementPillaged() then
+      around = around + PILLAGED_APPEAL
+      own = own + PILLAGED_APPEAL
+    end
+  end
+  return around, own
 end
 
 local function OwnAppeal(rules, kind, key)
@@ -261,8 +307,8 @@ function SDP_Appeal.New(spec)
     end
     if own ~= 0 then self.Base0[p.Index] = Base(p.Index) - own end
   end
-  -- Per candidate: what building there takes off its neighbours' appeal, and
-  -- off its own.
+  -- Per candidate: what building there takes off its neighbours' appeal
+  -- (Cleared) and off its own (OwnCleared).
   self.Cleared, self.OwnCleared = {}, {}
   for i, c in ipairs(spec.Candidates) do self.Cleared[i], self.OwnCleared[i] = Cleared(rules, c.Index, techs) end
   self.Water = {}
@@ -333,7 +379,7 @@ function SDP_Appeal:Score(layout, detail)
       if i ~= 0 then
         local index = candidates[i].Index
         at[index] = self.Own[m] - self.Cleared[i]
-        if self.OwnCleared[i] ~= 0 then self.OwnAt[index] = self.OwnCleared[i] end
+        self.OwnAt[index] = self.OwnCleared[i]
         placedAt[#placedAt + 1] = index
       end
     end
@@ -438,7 +484,7 @@ function SDP_Appeal.ImprovementHousing(playerID, indices)
   for _, index in ipairs(indices) do
     local plot = Map.GetPlotByIndex(index)
     local improvement = plot:GetImprovementType()
-    local share = improvement ~= -1 and rules.Share[improvement] or nil
+    local share = improvement ~= -1 and not plot:IsImprovementPillaged() and rules.Share[improvement] or nil
     local city = share ~= nil and plot:GetOwner() == playerID and Cities.GetPlotPurchaseCity(plot) or nil
     if city ~= nil then
       local id = city:GetID()
@@ -466,7 +512,7 @@ function SDP_Appeal:AppealsUnder(layout, indices)
     if i ~= 0 then
       local index = self.Candidates[i].Index
       at[index] = self.Own[m] - self.Cleared[i]
-      if self.OwnCleared[i] ~= 0 then self.OwnAt[index] = self.OwnCleared[i] end
+      self.OwnAt[index] = self.OwnCleared[i]
       placed[#placed + 1] = index
     end
   end

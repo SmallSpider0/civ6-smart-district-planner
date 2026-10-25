@@ -1071,6 +1071,75 @@ function CmpRun.Judge(id, planJson)
   local tileLoss, featuresCleared = 0, 0
   local occupied = {}
   local placements = plan.placements or {}
+  -- Improvements a planner puts with a wonder that needs one next to it
+  -- (issue 51; the Temple of Artemis: a Camp). DMT does not check where an
+  -- improvement may go, so the judge does, from the rules: a visible
+  -- resource with improvements of its own takes only those, else the
+  -- feature, else the terrain (Improvement_Valid*); a free tile; the
+  -- player's (any city: the engine counts another city's Camp, 2026-10-24,
+  -- tests/bench/probe_camp.py) or unowned within 3 rings of a city of the
+  -- plan (the city grows into it first). They are not districts: no tile
+  -- loss, no adjacency of their own, not counted as placed.
+  local function IsImprovement(p) return gi.Districts[p.type] == nil and not IsWonder(p.type) and gi.Improvements[p.type] ~= nil end
+  local function ImprovementFits(row, plot)
+    if plot:IsWater() ~= (row.Domain == "DOMAIN_SEA") then return false end
+    local feature = plot:GetFeatureType() ~= -1 and gi.Features[plot:GetFeatureType()] or nil
+    local resource = plot:GetResourceType() ~= -1 and gi.Resources[plot:GetResourceType()] or nil
+    if resource ~= nil and not Players[0]:GetResources():IsResourceVisible(resource.Hash) then resource = nil end
+    if resource ~= nil then
+      local own, fits = false, false
+      for r in gi.Improvement_ValidResources({ ResourceType = resource.ResourceType }) do
+        own = true
+        if r.ImprovementType == row.ImprovementType then fits = true end
+      end
+      if own then return fits end
+    end
+    if feature ~= nil then
+      for _ in gi.Improvement_ValidFeatures({ ImprovementType = row.ImprovementType, FeatureType = feature.FeatureType }) do
+        return true
+      end
+      return false
+    end
+    for _ in gi.Improvement_ValidTerrains({ ImprovementType = row.ImprovementType,
+      TerrainType = gi.Terrains[plot:GetTerrainType()].TerrainType }) do
+      return true
+    end
+    return false
+  end
+  local improvements = {}
+  for _, p in ipairs(placements) do
+    if IsImprovement(p) then
+      improvements[#improvements + 1] = p
+      local plot = Map.GetPlot(p.x, p.y)
+      local key = p.x .. "_" .. p.y
+      if plot == nil then
+        Violation("off_map", p)
+      else
+        if occupied[key] then Violation("same_tile", p) end
+        occupied[key] = true
+        if plot:GetDistrictType() ~= -1 or plot:GetWonderType() ~= -1 or plot:IsCity() or plot:GetImprovementType() ~= -1 then
+          Violation("occupied", p)
+        end
+        if manualPins[key] then Violation("overwrites_pin", p, manualPins[key]) end
+        local owner = plot:GetOwner()
+        local near = false
+        for _, c in ipairs(request.cities) do
+          if Map.GetPlotDistance(p.x, p.y, c:GetX(), c:GetY()) <= 3 then near = true end
+        end
+        if owner ~= -1 and owner ~= 0 then Violation("foreign_tile", p)
+        elseif owner == -1 and not near then Violation("improvement_out_of_reach", p) end
+        if not ImprovementFits(gi.Improvements[p.type], plot) then Violation("improvement_illegal", p) end
+        if plot.lowland ~= -1 and (plot.flooded or plot.submerged) then Violation("flooded", p) end
+      end
+    end
+  end
+  do
+    local rest = {}
+    for _, p in ipairs(placements) do
+      if not IsImprovement(p) then rest[#rest + 1] = p end
+    end
+    placements = rest
+  end
   for _, p in ipairs(placements) do
     local plot = Map.GetPlot(p.x, p.y)
     local key = p.x .. "_" .. p.y
@@ -1162,7 +1231,16 @@ function CmpRun.Judge(id, planJson)
   for _ in pairs(swapped) do swaps = swaps + 1 end
   score.swapped = swaps
 
-  -- Put the plan on the map as the player would (pins with district or wonder icons).
+  -- Put the plan on the map as the player would (pins with district,
+  -- wonder or improvement icons; improvements are not counted as placed).
+  for _, p in ipairs(improvements) do
+    if Map.GetPlot(p.x, p.y) ~= nil then
+      local pin = cfg:GetMapPin(p.x, p.y)
+      pin:SetIconName("ICON_" .. p.type)
+      pin:SetName("")
+      w.LuaEvents.DMT_MapPinAdded(pin)
+    end
+  end
   for _, p in ipairs(placements) do
     if (gi.Districts[p.type] ~= nil or IsWonder(p.type)) and Map.GetPlot(p.x, p.y) ~= nil then
       local pin = cfg:GetMapPin(p.x, p.y)

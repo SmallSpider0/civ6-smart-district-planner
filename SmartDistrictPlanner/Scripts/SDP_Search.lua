@@ -66,7 +66,9 @@ SDP_Search.Better = Better
 --   PlayerID, Board (SDP_Board with the fixed subjects), Weights, Params
 --   Candidates  { Index, X, Y } sorted by plot index
 --   Slots       { Key, Type ("DISTRICT" | "WONDER"), Group, Allowed = { [position] = true } or nil (all),
---                 Requires = district type a wonder must be next to (GameInfo.Buildings.AdjacentDistrict) }
+--                 Requires = district type a wonder must be next to (GameInfo.Buildings.AdjacentDistrict),
+--                 Support = SDP_Wonders.Support: the improvement a wonder must be next to
+--                   (Buildings.AdjacentImprovement, issue 51) }
 --   Lands       SDP_Land models whose part counts (each only sees its own plots)
 --   Coverage    SDP_Coverage model or nil (off)
 --   Pools       { [group] = count }: of the group's slots marked Optional,
@@ -180,6 +182,60 @@ function Search:WondersServed(layout)
   return true
 end
 
+-- The board slot of the improvement next to wonder slot m (issue 51), and
+-- the one Singles uses: negative, apart from the slots' own numbers.
+local SUPPORT_SINGLE = -1
+local function SupportSlot(m) return -1 - m end
+
+-- The subject of improvement `improvementType` on plot `index` (made once
+-- per plot, so the board sees the same table every time).
+function Search:SupportSubject(improvementType, index)
+  self.SupportSubjects = self.SupportSubjects or {}
+  local byType = self.SupportSubjects[improvementType]
+  if byType == nil then
+    byType = {}
+    self.SupportSubjects[improvementType] = byType
+  end
+  local subject = byType[index]
+  if subject == nil then
+    local plot = Map.GetPlotByIndex(index)
+    subject = { Key = improvementType, Type = "IMPROVEMENT", X = plot:GetX(), Y = plot:GetY() }
+    byType[index] = subject
+  end
+  return subject
+end
+
+-- Where the improvements the placed wonders need go in `layout`: for each
+-- such wonder, in slot order, the first tile of its list (SDP_Wonders.Support,
+-- sorted by plot index) that no placed slot and no earlier improvement
+-- takes. Returns { [m] = plot index or nil } (scratch: read it before the
+-- next call) and false when a wonder that needs one finds no tile.
+function Search:SupportPlots(layout)
+  local out, ok = self.SupportOut, true
+  local list = self.SupportList
+  if list == nil then return out, true end
+  self.SupportStamp = self.SupportStamp + 1
+  local stamp, used, candidates = self.SupportStamp, self.SupportUsed, self.Candidates
+  for m = 1, self.K do
+    if layout[m] ~= 0 then used[candidates[layout[m]].Index] = stamp end
+  end
+  for _, m in ipairs(list) do
+    out[m] = nil
+    local i, support = layout[m], self.SupportOf[m]
+    if i ~= 0 and support.Needed[i] then
+      for _, index in ipairs(support.Plots[i] or {}) do
+        if used[index] ~= stamp then
+          out[m] = index
+          used[index] = stamp
+          break
+        end
+      end
+      if out[m] == nil then ok = false end
+    end
+  end
+  return out, ok
+end
+
 -- Every slot alone on every allowed candidate. Slots without any legal plot
 -- are dropped; returns the list of their indices into spec.Slots. Afterwards
 -- K, Types, Kinds, Groups, Single, Legal and SlotIndex (into spec.Slots)
@@ -198,7 +254,19 @@ function Search:Singles()
         local c = self.Candidates[i]
         row[i] = { Key = slot.Key, Type = slot.Type or "DISTRICT", X = c.X, Y = c.Y }
         board:Put(1, row[i])
+        -- A wonder that needs an improvement next to it: the first tile
+        -- that can take one (none: not here).
+        local support, supported = slot.Support, true
+        if support ~= nil and support.Needed[i] then
+          local first = support.Plots[i] and support.Plots[i][1]
+          if first ~= nil then
+            board:Put(SUPPORT_SINGLE, self:SupportSubject(support.Type, first), true)
+          else
+            supported = false
+          end
+        end
         local gain, isLegal = board:Total()
+        if not supported then isLegal = false end
         -- Next to another city's district only: not legal alone (issue 45).
         if isLegal and slot.Requires ~= nil and not self:OwnDistrictNext(slot.Requires, i) then isLegal = false end
         if not isLegal and slot.Requires ~= nil then
@@ -208,7 +276,7 @@ function Search:Singles()
             for g in pairs(mine or {}) do
               if self.Owners.Wonder[j] and self.Owners.Wonder[j][g] then shared = true end
             end
-            if shared then
+            if shared and supported and not board:IsTaken(self.Candidates[j].Index) then
               local cj = self.Candidates[j]
               board:Put(2, { Key = slot.Requires, Type = "DISTRICT", X = cj.X, Y = cj.Y })
               board:Total()
@@ -222,6 +290,7 @@ function Search:Singles()
             end
           end
         end
+        board:Put(SUPPORT_SINGLE, nil)
         gains[i], ok[i] = gain, isLegal
         any = any or isLegal
       else
@@ -241,6 +310,17 @@ function Search:Singles()
   self.Types, self.Kinds, self.Groups, self.Single, self.Legal, self.Subjects, self.SlotIndex =
     types, kinds, groups, single, legal, subjects, index
   self.K = #types
+  -- Wonders with an improvement to place next to them (issue 51).
+  self.SupportList, self.SupportOf = nil, {}
+  for m = 1, self.K do
+    local support = self.SlotSpecs[index[m]].Support
+    if support ~= nil then
+      self.SupportList = self.SupportList or {}
+      self.SupportList[#self.SupportList + 1] = m
+      self.SupportOf[m] = support
+    end
+  end
+  self.SupportOut, self.SupportUsed, self.SupportStamp = {}, {}, 0
   self:MeasurePairs()
   if self.AppealSpec ~= nil then
     local optional = {}
@@ -387,6 +467,16 @@ end
 -- leaves a slot off.
 function Search:Evaluate(layout)
   local board, candidates, k = self.Board, self.Candidates, self.K
+  -- The improvements wonders need (issue 51) leave the tiles they no longer
+  -- use first: a slot may move onto one.
+  local supports, supported = nil, true
+  if self.SupportList ~= nil then
+    supports, supported = self:SupportPlots(layout)
+    for _, m in ipairs(self.SupportList) do
+      local slot = SupportSlot(m)
+      if board:PlotOf(slot) ~= supports[m] then board:Put(slot, nil) end
+    end
+  end
   local moving, count = self.Moving, 0
   for m = 1, k do
     local i = layout[m]
@@ -400,7 +490,16 @@ function Search:Evaluate(layout)
     local m = moving[c]
     if layout[m] ~= 0 then board:Put(m, self:Subject(m, layout[m])) end
   end
+  if supports ~= nil then
+    for _, m in ipairs(self.SupportList) do
+      local slot, index = SupportSlot(m), supports[m]
+      if index ~= nil and board:PlotOf(slot) == nil then
+        board:Put(slot, self:SupportSubject(self.SupportOf[m].Type, index), true)
+      end
+    end
+  end
   local gain, legal = board:Total()
+  if not supported then legal = false end
   self.Stats.Evaluations = self.Stats.Evaluations + 1
   if legal and self.Reach ~= nil and not self:Reachable(layout) then legal = false end
   if legal and self.Owners ~= nil and not self:WondersServed(layout) then legal = false end

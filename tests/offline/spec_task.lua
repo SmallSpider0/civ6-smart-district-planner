@@ -130,3 +130,61 @@ test("a sliced solve equals the solve at once", function()
     T.same(sliced.Stats, direct.Stats, "stats, quota " .. quota)
   end
 end)
+
+-- Issue 65: frames the game itself makes long (other programs busy) must not
+-- shrink the quota to its minimum, nor teach the task a crawling speed.
+local function EndlessJob(state)
+  return {
+    PlayerID = 0,
+    Run = function()
+      while not state.stop do SDP_Task.Tick(1) end
+      return 0
+    end,
+  }
+end
+
+-- Step `frames` frames; each frame lasts `game` seconds plus the slice's own
+-- work at `perSecond` units per second. Returns the last slice's units.
+local function Drive(w, frames, game, perSecond)
+  local last = 0
+  for _ = 1, frames do
+    local before = SDP_Task.Progress().Units
+    T.eq(SDP_Task.Step(), "running", "still running")
+    last = SDP_Task.Progress().Units - before
+    w.Time = w.Time + game + last / perSecond
+  end
+  return last
+end
+
+test("a slow game does not starve the task", function()
+  local w = World.New({ rows = { "..." } })
+  local state = {}
+  SDP_Task.Cancel() -- a failed test before may have left its job
+  local speed = SDP_Task.Speed()
+  T.ok(SDP_Task.Start(EndlessJob(state)), "started")
+  local slice = Drive(w, 60, 0.2, SDP_Task.AT_ONCE_SPEED)
+  local target = SDP_Task.TARGET_FRAME * SDP_Task.AT_ONCE_SPEED
+  T.ok(slice >= target * 0.25, "slice " .. slice .. " stays at a fair share")
+  T.ok(slice <= target * 0.5 / 0.75 + 1, "slice " .. slice .. " stays below half a target frame")
+  state.stop = true
+  T.eq(SDP_Task.Step(), "done", "done")
+  T.eq(SDP_Task.Speed(), speed, "a run in slow frames does not change the measured speed")
+end)
+
+test("the quota still shrinks when the slice makes the frame long", function()
+  local w = World.New({ rows = { "..." } })
+  local state = {}
+  SDP_Task.Cancel()
+  T.ok(SDP_Task.Start(EndlessJob(state)), "started")
+  local perSecond = SDP_Task.AT_ONCE_SPEED / 2 -- a machine slower than assumed
+  Drive(w, 20, 0.01, perSecond)
+  local before = SDP_Task.Progress()
+  Drive(w, 40, 0.01, perSecond)
+  local after = SDP_Task.Progress()
+  local frame = (after.Seconds - before.Seconds) / (after.Frames - before.Frames)
+  T.ok(frame <= SDP_Task.TARGET_FRAME * 1.3, "frames " .. frame .. " near the target")
+  T.ok(frame >= SDP_Task.TARGET_FRAME * 0.6, "and not far below it")
+  state.stop = true
+  T.eq(SDP_Task.Step(), "done", "done")
+  T.ok(SDP_Task.Speed() > perSecond * 0.3, "a normal run is kept as the measured speed")
+end)
