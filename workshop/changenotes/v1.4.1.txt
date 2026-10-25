@@ -1,0 +1,15 @@
+Changes since v1.4.0:
+- Solve is greyed out while there is nothing to plan (no Must district, Districts at 0 and no wonder), and the result area says what to do first: set districts to Must or raise Districts.
+- A new result or another plan brings the city to the right of the panel instead of under it (Several cities: the middle of the cities; City sites: the first site). Reopening the panel or changing a setting leaves the camera alone. Click a result row with a tile to move the camera there.
+- Several cities: the text under each district icon on the map starts with its city's number (the name its tack gets), so overlapping cities can be told apart.
+- District cells no longer show a tooltip that repeated their state and covered the cells below. An empire-limited district on the Several cities tab still says which city can take it.
+- When a chosen wonder needs a district next to it that no city plans, the result names that district (Rome: the Bath) and says to set it to Must.
+- Smaller things: the Effort tooltips give measured times and quality; the column for one-time yields from chopping and harvesting is called “Harv.”, apart from the “Allow chop” switch; the launch bar button's tooltip shows the key that opens the panel (following your own binding); the summary's tooltip no longer lists search counts; “Under 1 s” no longer wraps; a selected cell's frame no longer covers its state.
+
+自 v1.4.0 以来的变化：
+- 没有要规划的内容时（没有必建区域、区域数量为 0、也没选奇观），“求解”按钮变灰，结果区写明先把区域设成“必建”或调高“区域数量”。
+- 出新结果、换方案时，镜头把城市移到面板右边，不再被面板挡住（多城页是几座城的中间，选城址页是第一个城址）；重开面板、改设置时镜头不动。点结果里带坐标的一行，镜头移到那一格。
+- 多城页的地图预览里，区域钉下的文字前面加上所属城市的编号（与打钉后钉的名字相同），几座城范围重叠时也分得清。
+- 区域格子悬停时不再弹出重复状态、挡住下面格子的提示。多城页里全国限一座的区域仍提示能放在哪座城。
+- 选了要挨着某个区域的奇观、方案里却没有这个区域时，原因写明缺的是哪个区域（罗马写浴场），并提示把它设为必建。
+- 小改动：档位的悬停提示写上实测耗时和质量；砍伐、收获的一次性产出那一列改名“收获”，和开关“允许砍伐”分开；启动栏按钮的悬停提示写上打开面板的快捷键（跟随你改的键位）；结果汇总的悬停提示不再列出搜索次数；“预计不到 1 秒”不再折行；格子选中后的边框不再压住状态字。
