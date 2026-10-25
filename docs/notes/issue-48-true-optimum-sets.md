@@ -61,6 +61,15 @@
 
 **真最优自己的检查**（`ORACLE_CHECK`，候选与奇观的 96 次）：0 次超过上界；能逐一枚举的 2 个场景与真最优相同；爬山 80 次，41 次等于真最优、39 次低于、0 次高于。从候选里挑的场景，每种组合各搜一遍（36 个场景有不止一种组合）。
 
+**小多城**（`smallmulti.jsonl`，2–4 座城、每城 2–3 个区域，开发集 `OM`、留出集 `HOM` 各 32 个，全部规划器）：64 个全部证明；开发集的 32 个与 `oracle_hs_om.jsonl` 里的证明相同，留出集是第一次算。
+
+| 场景集 | 快速档 | 标准档 | 精细档 | 逐城依次 | AMT | EP |
+|---|---|---|---|---|---|---|
+| `OM` 开发 | 98.0%（27） | 100%（32） | 100%（32） | 94.8%（19） | 96.5%（22） | 74.6%（7） |
+| `HOM` 留出 | 99.4%（29） | 99.7%（31） | 99.7%（31） | 94.8%（20） | 96.5%（22） | 71.4%（9） |
+
+括号里是正好达到真最优的场景数（每组 32 个）。
+
 **大城、多城**：（大城开发集、留出集和多城长跑跑完后填写。）
 
 ## 5. 命令与结果文件
@@ -68,6 +77,7 @@
 ```bash
 node tools/compare.mjs -s '^(H?S[0-9][0-9]-[^~]*|S[0-9][0-9]-.*~(SCI|PROD|FAITH)|RS[0-9][0-9]-.*)$' -p sdp --only sdp:ORACLE --add sdp:ORACLE -j 3 --out tests/compare/results/oracle_single.jsonl
 node tools/compare.mjs -s '^H?[PW][0-9][0-9]-' --add sdp:ORACLE_CHECK -j 2 --out tests/compare/results/pools_wonders.jsonl
+node tools/compare.mjs -s '^H?OM[0-9][0-9]-' -j 2 --out tests/compare/results/smallmulti.jsonl
 python3 -I tests/compare/summarize.py tests/compare/results/pools_wonders.jsonl
 python3 -I report/build.py
 ```
