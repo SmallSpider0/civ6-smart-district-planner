@@ -8,8 +8,8 @@ width of the range (upper end / best known), and for each tier the mean
 share of the best known plan and of the upper end (the share of the true
 optimum lies between the two). The reference is what summarize.py takes
 (sdp:ORACLE with a node limit, sdp:LONGRUN). With sdp:LONGRUN rows, also
-the two-slot check: how many fine plans and how many final layouts one move
-of two districts at once improves. Prints Markdown tables.
+the two-slot check: how many fine plans one move of two districts at once
+improves (issue 40). Prints Markdown tables.
 """
 import argparse
 import statistics
@@ -61,7 +61,7 @@ def main():
             cells.append("%.1f%% / %.1f%%" % (100 * statistics.mean(low), 100 * statistics.mean(known)) if known else "—")
         print("| %s | %d | %d | %.2f | %s |" % (spec, len(sub), proven, statistics.mean(widths) if widths else 1, " | ".join(cells)))
         # The two-slot check of the long runs.
-        fine_better = final_better = n = 0
+        fine_better = n = 0
         for sid in sub:
             for k, r in raw.items():
                 if k[0] != sid or not k[1].startswith("sdp:LONGRUN"):
@@ -71,17 +71,16 @@ def main():
                     continue
                 n += 1
                 fine_better += 1 if (lr.get("fineTwoSlot") or {}).get("improving") else 0
-                final_better += 1 if (lr.get("finalTwoSlot") or {}).get("improving") else 0
         if n:
-            two.append((spec, n, fine_better, final_better))
+            two.append((spec, n, fine_better))
     print()
     print("每格：占上界的比例 / 占已知最好的比例（真最优的比例在两者之间）。")
     if two:
         print()
-        print("| 场景集 | 长跑 | 精细档方案能被两槽移动改进 | 长跑结果能被两槽移动改进 |")
-        print("|---|---|---|---|")
-        for spec, n, a, b in two:
-            print("| %s | %d | %d | %d |" % (spec, n, a, b))
+        print("| 场景集 | 长跑 | 精细档方案能被两槽移动改进 |")
+        print("|---|---|---|")
+        for spec, n, a in two:
+            print("| %s | %d | %d |" % (spec, n, a))
 
 
 if __name__ == "__main__":

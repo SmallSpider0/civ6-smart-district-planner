@@ -131,9 +131,9 @@ end
 
 -- The long-run reference (cmp_longrun.lua, issue 40) on a fine solve's
 -- result: 20 continues (`again`: SDP_Multi.Continue or SDP_Solver.Continue),
--- annealing from the best layout, the two-slot check of the fine plan and
--- of the final layout, then the oracle from the best layout (Oracle above)
--- for the upper end.
+-- annealing from the best layout, the two-slot check of the fine plan
+-- (issue 40), then the oracle from the best layout (Oracle above) for the
+-- upper end.
 local function LongRun(result, out, cityOf, request, again)
   local search = result.Session.Search
   local k = search.K
@@ -159,12 +159,10 @@ local function LongRun(result, out, cityOf, request, again)
   local annealed, layout, evaluations = SDP_Overlay.With(0, CmpLongrun.Anneal, search, continued, 200000, 20261025)
   search.BestLayout = layout
   local o = Oracle(result, out, cityOf, false, request.weights, false, nil)
-  local finalTwo = o.Layout and SDP_Overlay.With(0, CmpLongrun.TwoSlot, search, o.Layout) or nil
   out.stats.longrun = {
     fine = fineGain, fineTwoSlot = { improving = fineTwo.improving, best = fineTwo.best, evaluations = fineTwo.evaluations },
     continued = continuedGain, annealed = annealed, annealEvaluations = evaluations,
     value = o.Value, upper = o.Upper, proven = o.Proven, complete = o.Complete,
-    finalTwoSlot = finalTwo and { improving = finalTwo.improving, best = finalTwo.best, evaluations = finalTwo.evaluations },
   }
   return o
 end
