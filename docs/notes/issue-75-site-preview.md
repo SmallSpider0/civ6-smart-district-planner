@@ -10,7 +10,7 @@
 | `SDP_PageSites.LookAtSite`、`CanStep`、`NextSite` | 记下镜头最后到的城址（`m_site`），下一个 = `m_site % 城址数 + 1`；新结果、换方案时回到 1（`P.Preview` 移镜头时） |
 | 城址的结果行 | 点击走 `LookAtSite`，“下一个”从点的那个城址接着走 |
 | 方案按钮的提示 | 城址不止一个时加一行 `LOC_SDP_SITES_SOLUTION_NEXT` |
-| `SDP_UI.ResultRow`（三个页签共用） | 带坐标的行：提示第一行 `LOC_SDP_RESULT_LOOK`；`HoverArea` 里一层 `AlphaAnim ShowOnMouseOver` 包着 tan 按钮底图（游戏的城市横幅 `CityBannerInstances.xml` 的写法），没坐标的行隐藏它。只是一个 Grid，不接鼠标（坑 31） |
+| `SDP_UI.ResultRow`（三个页签共用） | 带坐标的行：提示第一行 `LOC_SDP_RESULT_LOOK`；`HoverArea` 里一层 `AlphaAnim ShowOnMouseOver` 包着方案按钮选中时的浅色底图（`Controls_Tab`；先试的 tan 按钮底图太深，深色字看不清，2026-10-25 截图）（游戏的城市横幅 `CityBannerInstances.xml` 的写法），没坐标的行隐藏它。只是一个 Grid，不接鼠标（坑 31） |
 | `PeekNextSite`（`SDP_Panel.xml`） | 看地图时、选城址页、选中的方案不止一个城址时显示在“返回规划器”右边，点击 = `NextSite` |
 
 结果行返回的 `ToolTip` 仍是原来的提示（测试和 DMT 比对用），只有控件上显示的多一行。

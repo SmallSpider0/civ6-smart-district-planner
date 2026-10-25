@@ -395,13 +395,13 @@
 
   <!-- A row with a plot moves the camera there when clicked (issue 67): a
        plain Button over nothing that takes the mouse (pitfall 31). Under
-       the mouse a light button look shows (as the game's city banners,
+       the mouse the light selected look shows (as the game's city banners,
        ShowOnMouseOver), only for rows with a plot (HoverArea, issue 75). -->
   <Instance Name="ResultRow">
     <Button ID="Root" Size="460,40">
       <Container ID="HoverArea" Size="parent,parent">
         <AlphaAnim Size="parent,parent" ShowOnMouseOver="1" AlphaStart="0" AlphaEnd="1" Speed="4" Function="Root" Cycle="Once">
-          <Grid Size="parent,parent" Texture="Controls_ButtonControl_Tan" SliceCorner="12,6" SliceTextureSize="24,24"/>
+          <Grid Size="parent,parent" Texture="Controls_Tab" SliceStart="0,136" SliceCorner="21,16"/>
         </AlphaAnim>
       </Container>
       <Image ID="Icon" Anchor="L,C" Size="32,32"/>
