@@ -3,7 +3,7 @@
 
     python3 -I tools/watch_issues.py                 # wait until something new, print it, exit 0
     python3 -I tools/watch_issues.py --once          # print what is new now (exit 0 even if nothing)
-    python3 -I tools/watch_issues.py --mine URL ...  # comment URLs the agent posted: never reported
+    python3 -I tools/watch_issues.py --mine URL ...  # comment or issue URLs the agent posted: never reported
     python3 -I tools/watch_issues.py --reset         # start from now (forget the old state)
 
 Only the accounts in $SDP_WATCH_USERS (comma separated; default the
@@ -68,7 +68,7 @@ def poll(state):
     seen, mine, out = set(state["seen"]), set(state["mine"]), []
     for issue in gh("repos/{owner}/{repo}/issues?state=all&sort=created&direction=asc&per_page=50&since=" + since):
         key = "issue-%d" % issue["number"]
-        if "pull_request" in issue or issue["created_at"] < since or key in seen:
+        if "pull_request" in issue or issue["created_at"] < since or key in seen or key in mine:
             continue
         seen.add(key)
         line = "NEW ISSUE #%d by %s: %s %s" % (issue["number"], issue["user"]["login"], issue["title"], issue["html_url"])
@@ -107,12 +107,16 @@ def main():
     state = load()
     if args.mine:
         for url in args.mine:
-            m = re.search(r"issuecomment-(\d+)", url)
-            if m:
-                state["mine"].append(m.group(1))
+            m = re.search(r"issuecomment-(\d+)", url) or re.search(r"/issues/(\d+)$", url)
+            if not m:
+                print("not a comment or issue URL:", url, file=sys.stderr)
+                return 2
+            state["mine"].append(m.group(1) if "issuecomment" in url else "issue-" + m.group(1))
         save(state)
         return 0
     while True:
+        # --mine may have been run while this waited: take its records
+        state["mine"] = sorted(set(state["mine"]) | set(load()["mine"]))
         try:
             new = poll(state)
         except RuntimeError as problem:  # network: try again next round

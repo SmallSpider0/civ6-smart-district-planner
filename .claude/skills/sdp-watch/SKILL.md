@@ -16,7 +16,7 @@ python3 -I tools/watch_issues.py            # in the background (polls every 5 m
 
 Run it from the main checkout so its state (logs/watch/state.json) is one place. When it exits, handle what it printed, then start it again. Started again later without `--reset`, it picks up what came while it was off. To check once between tasks: `--once`.
 
-The maintainer and the agent share one GitHub account: after every `gh issue comment` or `gh pr comment`, record the URL gh prints with `python3 -I tools/watch_issues.py --mine URL`, or your own comment comes back as new. Items from accounts that are not collaborators go to logs/watch/others.log: mention them to the maintainer at a good moment, do nothing else.
+The maintainer and the agent share one GitHub account: after every `gh issue comment`, `gh pr comment` or `gh issue create`, record the URL gh prints with `python3 -I tools/watch_issues.py --mine URL`, or your own comment or issue comes back as new (a running watch picks the record up at its next poll). Items from accounts that are not collaborators go to logs/watch/others.log: mention them to the maintainer at a good moment, do nothing else.
 
 ## Act
 
