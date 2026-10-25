@@ -101,6 +101,7 @@ node tools/compare.mjs -s '^H?S\d\d-[^~]*$' -p sdp --only sdp:ORACLE --add sdp:O
 node tools/compare.mjs --rejudge PLANS.jsonl --weights tests/compare/weights/w53.jsonl -j 4 --out CROSS.jsonl   # 每个方案在每组权重下重新打分（行里另记 planWeights）
 python3 -I tests/compare/robust53.py --vectors tests/compare/weights/w53.jsonl --check tests/compare/results/w53_cross.jsonl tests/compare/results/w53_oracle.jsonl   # 默认权重的稳健性（#53，multicity-design.md 第 29 节）
 node tools/compare.mjs --probe tests/compare/probe_land.lua   # 裁判的地块值调成本模组的口径时，与 SDP_Land.PlotValues 逐格相同（默认开发集；--arg 换场景的 Lua 模式）
+node tools/compare.mjs --probe tests/compare/probe_oracle.lua # 神谕之后的枚举对照和爬山给每个布局的估值，与新棋盘、新覆盖层上的估值相同（默认 S01–S04；--arg 'LAND <模式>' 计入地块；'CHECKS [LAND ]<模式>' 只重跑这两项检查，每个场景输出一行 CHECK JSON）
 ```
 
 - 不开游戏，在 fengari 里比较本 mod、Auto Map Tacks Planner r49（AMT）和 Empire Planner（EP）的区域规划。**规则是真的**：`GameInfo` 来自游戏写在缓存里的规则数据库 `Cache/DebugGameplay.sqlite`（最后一次加载的对局的规则集，目前是风云变幻；导出文件是 Firaxis 的数据，只放在被忽略的 `.cache/`）。**代码是真的**：DMT、AMT、EP 的 Lua 原样从 `reference/` 和本机创意工坊目录加载，不改一行。**引擎是模拟的**：`tests/compare/cmp_game.lua` 实现地图、城市、地图钉、玩家配置、可见性、河流与泛滥平原、修正系统（`GameEffects`，DMT 从它读文明特性的相邻规则）和 UI 替身。

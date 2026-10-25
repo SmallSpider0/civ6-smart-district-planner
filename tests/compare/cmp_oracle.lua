@@ -68,6 +68,19 @@ local function Value(search, layout, land)
   return gain, legal, gain
 end
 
+-- Start a computation on a freshly installed overlay. The board's slots
+-- still sit where the last computation left them (Run ends on its best
+-- layout, BruteForce and Climb on their last), but on the layer of the
+-- overlay that computation had: the new one starts empty, and Evaluate only
+-- puts slots that move. A slot that stays is then missing from the layer,
+-- its neighbours are valued without it, and the board remembers those
+-- values under neighbourhoods that have it (REF05 under g05f05 gave 17, not
+-- 20; Climb on S03-rome-desert-late valued 34 layouts too low). Take every
+-- slot off first, so each is put on this layer.
+local function Fresh(search)
+  search.Board:Clear()
+end
+
 -- What taking one more plot costs a land model (issue 48): with the plots
 -- marked in `taken` ({ [plot index] = true }) taken, the (P+1)-th best free
 -- plot's value (0 when there is none) ...
@@ -571,12 +584,7 @@ end
 function CmpOracle.ScoreLayout(search, placements, cityOf, options)
   local land = options ~= nil and options.Land == true
   local k, n = search.K, search.N
-  -- The board's slots still sit where the last computation left them, but
-  -- on the layer of the overlay that computation had: this one starts
-  -- empty, and Evaluate only puts slots that move. Take them all off first,
-  -- so every slot is put on this layer (else the neighbours of a slot that
-  -- stays are valued without it: REF05 under g05f05 gave 17, not 20).
-  search.Board:Clear()
+  Fresh(search)
   local at = {}
   for i = 1, n do
     local c = search.Candidates[i]
@@ -631,6 +639,7 @@ function CmpOracle.BruteForce(search, limit, options)
   for m = 1, k do order[m] = m end
   local used = {}
   if search:CountLayouts(order, used, limit) > limit then return nil end
+  Fresh(search)
   local layout, best, count = {}, nil, 0
   for m = 1, k do layout[m] = 0 end
   local function Walk(m)
@@ -662,6 +671,7 @@ end
 function CmpOracle.Climb(search, active, starts, seed, options)
   local land = options ~= nil and options.Land == true
   local k = search.K
+  Fresh(search)
   local x = (seed % 2147483646) + 1.0
   local function Random(count)
     x = (x * 16807.0) % 2147483647.0
