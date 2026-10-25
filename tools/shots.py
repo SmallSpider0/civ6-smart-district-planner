@@ -34,6 +34,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # -I drops the s
 import civ6tuner  # noqa: E402
 import game  # noqa: E402
 import paths  # noqa: E402
+import sdplock  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 STAGES = os.path.join(ROOT, "tests", "shots")
@@ -234,6 +235,8 @@ def main():
     args = ap.parse_args()
     if sys.platform != "darwin" and args.cmd in ("capture", "region", "save"):
         raise SystemExit("macOS only")
+    if args.cmd != "save":
+        sdplock.claim_or_exit(ROOT, "shots %s %s" % (args.cmd, getattr(args, "name", None) or getattr(args, "which", "")))
     return {"stage": stage, "capture": capture, "region": region, "save": save, "lang": lang}[args.cmd](args)
 
 

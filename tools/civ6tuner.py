@@ -21,7 +21,10 @@ Usage:
   civ6tuner.py serve [--log PATH]          own the connection, log output
   civ6tuner.py states                      list Lua states (index, name)
   civ6tuner.py exec [-s STATE] CODE|-f FILE run Lua, print its output
-Exit codes: 0 ok, 1 Lua error, 2 connection/protocol problem, 3 timeout.
+serve and exec take the game lock (tools/sdplock.py) for this worktree and
+refuse while another worktree holds it; states is free for anyone.
+Exit codes: 0 ok, 1 Lua error, 2 connection/protocol problem, 3 timeout,
+4 the game is held by another worktree.
 """
 
 import argparse
@@ -37,6 +40,9 @@ import sys
 import threading
 import time
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # -I drops the script dir
+import sdplock  # noqa: E402
+
 GAME_HOST = "127.0.0.1"
 # 4319 also accepts connections but does not answer requests (observed on
 # macOS 1.0.12.54); probing it only leaves dead sockets, so use 4318 only.
@@ -51,9 +57,8 @@ HEADER = struct.Struct("<II")
 END_MARK = "<<SDP_TUNER_END:{}>>"
 ERR_MARK = "<<SDP_TUNER_ERR>>"
 
-DEFAULT_LOG = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "logs", "tuner-lua.log"
-)
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DEFAULT_LOG = os.path.join(ROOT, "logs", "tuner-lua.log")
 
 
 class TunerError(Exception):
@@ -375,7 +380,11 @@ def direct_request(req, port):
 
 def request(req, port=None):
     """Run one states/exec request through the daemon when it is up, else
-    over a direct connection. Returns the JSON-able result dict."""
+    over a direct connection. Returns the JSON-able result dict. An exec
+    takes (or renews) the game lock for this worktree (tools/sdplock.py);
+    another worktree's lock ends the process with exit code 4."""
+    if req.get("op") == "exec":
+        sdplock.claim_or_exit(ROOT)
     resp = daemon_request(req, float(req.get("timeout", 10.0)))
     return resp if resp is not None else direct_request(req, port)
 
@@ -400,6 +409,8 @@ def main(argv=None):
     args = ap.parse_args(argv)
 
     if args.cmd == "serve":
+        sdplock.claim_or_exit(ROOT)
+        sdplock.set_serve(ROOT, os.getpid())
         Daemon(args.log, args.port).serve()
         return 0
 

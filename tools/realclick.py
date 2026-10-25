@@ -29,6 +29,7 @@ import time
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # -I drops the script dir
 import civ6tuner  # noqa: E402
 import game  # noqa: E402
+import sdplock  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 APP = os.path.expanduser("~/Applications/SDPClick.app")
@@ -340,6 +341,8 @@ def main(argv=None):
     if sys.platform != "darwin":
         print("realclick.py posts macOS mouse events (SDPClick.app); on other systems click by hand")
         return 2
+    if args.cmd in ("suite", "at"):
+        sdplock.claim_or_exit(ROOT, "realclick " + args.cmd)
     return {"suite": suite, "at": at, "build": build, "trusted": trusted}[args.cmd](args)
 
 
