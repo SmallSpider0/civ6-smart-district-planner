@@ -233,7 +233,7 @@
       <Text>this city already has a map tack for it</Text>
     </Replace>
     <Replace Tag="LOC_SDP_REASON_NEEDS_DISTRICT" Language="en_US">
-      <Text>needs a district next to it that no city plans</Text>
+      <Text>needs a {1_Other} next to it that no city plans: set it to Must</Text>
     </Replace>
     <Replace Tag="LOC_SDP_REASON_NEEDS_IMPROVEMENT" Language="en_US">
       <Text>needs a {1_Improvement} next to it, and no tile nearby can take one</Text>
