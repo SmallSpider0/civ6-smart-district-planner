@@ -11,6 +11,8 @@
 //   sdp-click capturable         whether screen capture is allowed (asks once)
 //   sdp-click capture X Y W H FILE   PNG of a window-relative rectangle (points)
 //   sdp-click capturewindow FILE     PNG of the whole game window, wherever it is (no front needed)
+// Clicks need the game in front: events posted to its process while it is in the background
+// (CGEvent postToPid, with the window number and click count set) change nothing (tried 2026-10-25).
 //   (each with --out FILE when started through open)
 //
 // Capturing needs SDPClick.app allowed under System Settings > Privacy &

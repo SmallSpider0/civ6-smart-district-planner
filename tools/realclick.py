@@ -32,6 +32,9 @@ import game  # noqa: E402
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 APP = os.path.expanduser("~/Applications/SDPClick.app")
 SOURCE = os.path.join(ROOT, "tools", "click", "sdp-click.swift")
+# A self-signed code-signing certificate in the login keychain (tools/README.md "realclick.py");
+# without it the app is signed ad hoc and loses its grants on every rebuild.
+SIGNING_ID = os.environ.get("SDP_CODESIGN_ID", "SDPClick Local Signing")
 OUT = os.path.join(ROOT, "logs", "sdp-click.out")
 INFO_PLIST = """<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -294,8 +297,14 @@ def build(args):
     subprocess.run(["xattr", "-cr", APP], check=True)
     with open(stamp, "w") as fh:
         fh.write(digest + "\n")
-    subprocess.run(["codesign", "-s", "-", "--force", "--deep", APP], check=True)
-    print("rebuilt: allow SDPClick again under Privacy & Security > Accessibility and > Screen & System Audio Recording")
+    # A signing identity of its own keeps the app's Accessibility and Screen Recording grants across
+    # rebuilds (an ad hoc signature changes with every build and macOS drops the grants).
+    ids = subprocess.run(["security", "find-identity", "-p", "codesigning"], capture_output=True, text=True).stdout
+    identity = SIGNING_ID if SIGNING_ID in ids else "-"
+    subprocess.run(["codesign", "-s", identity, "--force", "--deep", APP], check=True)
+    print("signed with %s" % ("the " + SIGNING_ID + " certificate" if identity != "-" else "an ad hoc signature"))
+    if identity == "-":
+        print("rebuilt: allow SDPClick again under Privacy & Security > Accessibility and > Screen & System Audio Recording")
     print(run_click("trusted")[1])
     return 0
 

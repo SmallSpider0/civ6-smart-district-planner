@@ -361,7 +361,9 @@ python3 -I tools/shots.py lang en                # 游戏关着时：显示语�
 python3 -I tools/shots.py lang restore           # 恢复备份，核对逐字节相同
 ```
 
-- `capture` 经 SDPClick.app 截图：面板位置由游戏给出（同真实点击），只截游戏窗口内、未被遮挡的区域，截完把前台还给原来的应用。要在“系统设置 → 隐私与安全性 → 录屏与系统录音”里允许 SDPClick 一次；重新 `realclick.py build` 后可能要重新允许辅助功能和录屏。
+- `capture` 经 SDPClick.app 截下整个游戏窗口（游戏留在后台、在别的桌面空间也行），再按游戏给出的面板位置裁出面板；截不了时退回“把游戏切到前台、截面板那块、再切回原来的应用”。要在“系统设置 → 隐私与安全性 → 录屏与系统录音”里允许 SDPClick 一次。
+- 真实点击必须让游戏在前台：直接发给游戏进程的鼠标事件（不切前台）游戏不理（2026-10-25 试过）。
+- SDPClick 只在 `tools/click/sdp-click.swift` 改了时才重新编译（`realclick.py build`，`--force` 强制）。临时签名每次编译都会变，macOS 随之收回辅助功能和录屏两项授权，要重新允许。登录钥匙串里有名为 `SDPClick Local Signing` 的自签名代码签名证书时（或 `SDP_CODESIGN_ID` 指定的证书），编译脚本用它签名，签名身份不变，授权就会保留。
 - 截图左右各裁掉 5 像素，存成质量 90 的 JPEG，命名见 CONTRIBUTING 的写作规则。
 - `multi` 会先把选城址页的方案打成城址钉，奇观选阿耳忒弥斯神庙（原版选大图书馆），并把结果列表滚到奇观那一行。
 
