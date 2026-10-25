@@ -8,7 +8,16 @@
 //   sdp-click window             the game window's bounds (points): x y w h
 //   sdp-click trusted            whether input may be posted
 //   sdp-click X Y                click at window-relative point (X, Y)
+//   sdp-click capturable         whether screen capture is allowed (asks once)
+//   sdp-click capture X Y W H FILE   PNG of a window-relative rectangle (points)
+//   sdp-click capturewindow FILE     PNG of the whole game window, wherever it is (no front needed)
+// Clicks need the game in front: events posted to its process while it is in the background
+// (CGEvent postToPid, with the window number and click count set) change nothing (tried 2026-10-25).
 //   (each with --out FILE when started through open)
+//
+// Capturing needs SDPClick.app allowed under System Settings > Privacy &
+// Security > Screen & System Audio Recording. It only takes rectangles inside
+// the game window, with the game in front and nothing covering the rectangle.
 //
 // Before clicking it checks that the game is the frontmost app (it activates
 // it first and gives the previous app the front back afterwards), that the
@@ -24,6 +33,20 @@ let bundleID = "com.aspyr.civ6.steam"
 // starts with an invisible U+0092 on this machine, hence "contains"): the game
 // runs as a child process (Civ6_Exe_Child) that LaunchServices lists with
 // pid -1, so NSRunningApplication cannot give its pid.
+func gameWindowNumber() -> Int? {
+  let list = CGWindowListCopyWindowInfo([.optionAll, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]] ?? []
+  var best: (id: Int, area: CGFloat)? = nil
+  for info in list {
+    guard let name = info[kCGWindowOwnerName as String] as? String, name.contains("Civilization VI"),
+          let layer = info[kCGWindowLayer as String] as? Int, layer == 0,
+          let id = info[kCGWindowNumber as String] as? Int,
+          let dict = info[kCGWindowBounds as String] as? NSDictionary,
+          let rect = CGRect(dictionaryRepresentation: dict) else { continue }
+    if best == nil || rect.width * rect.height > best!.area { best = (id, rect.width * rect.height) }
+  }
+  return best?.id
+}
+
 func gameWindow() -> (pid: pid_t, bounds: CGRect)? {
   let list = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]] ?? []
   var best: (pid: pid_t, bounds: CGRect)? = nil
@@ -71,6 +94,21 @@ func fail(_ message: String) -> Never {
   FileHandle.standardError.write((message + "\n").data(using: .utf8)!)
   exit(2)
 }
+if args.count == 3 && args[1] == "capturewindow" {
+  guard CGPreflightScreenCaptureAccess() else {
+    _ = CGRequestScreenCaptureAccess()
+    fail("not allowed to capture: allow SDPClick under System Settings > Privacy & Security > Screen & System Audio Recording")
+  }
+  guard let number = gameWindowNumber() else { fail("no Civilization VI window") }
+  let task = Process()
+  task.executableURL = URL(fileURLWithPath: "/usr/sbin/screencapture")
+  task.arguments = ["-x", "-o", "-t", "png", "-l", String(number), args[2]]
+  try? task.run()
+  task.waitUntilExit()
+  guard task.terminationStatus == 0, FileManager.default.fileExists(atPath: args[2]) else { fail("screencapture failed") }
+  say("captured window \(number)")
+  exit(0)
+}
 guard let window = gameWindow() else { fail("no Civilization VI window on screen") }
 if args.count == 2 && args[1] == "trusted" {
   say(AXIsProcessTrusted() ? "trusted" : "not trusted")
@@ -80,8 +118,62 @@ if args.count == 2 && args[1] == "window" {
   say("\(Int(window.bounds.minX)) \(Int(window.bounds.minY)) \(Int(window.bounds.width)) \(Int(window.bounds.height))")
   exit(0)
 }
+if args.count == 2 && args[1] == "capturable" {
+  say(CGPreflightScreenCaptureAccess() || CGRequestScreenCaptureAccess() ? "capturable" : "not capturable")
+  exit(0)
+}
+
+// Bring the game forward for a click or a capture; returns the app to give the front back to.
+func bringGameForward() -> NSRunningApplication? {
+  let previous = NSWorkspace.shared.frontmostApplication
+  if !gameInFront() {
+    NSRunningApplication.runningApplications(withBundleIdentifier: bundleID).first?.activate(options: [])
+    var waited = 0.0
+    while !gameInFront() && waited < 3 {
+      Thread.sleep(forTimeInterval: 0.1)
+      waited += 0.1
+    }
+  }
+  guard gameInFront() else { fail("could not bring the game to the front") }
+  Thread.sleep(forTimeInterval: 0.3)
+  return previous
+}
+func giveFrontBack(_ previous: NSRunningApplication?) {
+  if let previous = previous, previous.bundleIdentifier != bundleID,
+     previous.bundleIdentifier != "com.apple.finder" {
+    previous.activate(options: [])
+  }
+}
+
+if args.count == 7 && args[1] == "capture" {
+  guard let x = Double(args[2]), let y = Double(args[3]), let w = Double(args[4]), let h = Double(args[5]) else {
+    fail("usage: sdp-click capture X Y W H FILE")
+  }
+  guard CGPreflightScreenCaptureAccess() else {
+    _ = CGRequestScreenCaptureAccess()
+    fail("not allowed to capture: allow SDPClick under System Settings > Privacy & Security > Screen & System Audio Recording")
+  }
+  let rect = CGRect(x: window.bounds.minX + x, y: window.bounds.minY + y, width: w, height: h)
+  guard window.bounds.contains(rect) else { fail("rectangle outside the game window") }
+  let previous = bringGameForward()
+  for p in [CGPoint(x: rect.minX + 1, y: rect.minY + 1), CGPoint(x: rect.maxX - 1, y: rect.minY + 1),
+            CGPoint(x: rect.minX + 1, y: rect.maxY - 1), CGPoint(x: rect.maxX - 1, y: rect.maxY - 1),
+            CGPoint(x: rect.midX, y: rect.midY)] {
+    guard ownerAt(p) == window.pid else { fail("another window covers the rectangle") }
+  }
+  let task = Process()
+  task.executableURL = URL(fileURLWithPath: "/usr/sbin/screencapture")
+  task.arguments = ["-x", "-t", "png", "-R", "\(Int(rect.minX)),\(Int(rect.minY)),\(Int(rect.width)),\(Int(rect.height))", args[6]]
+  try? task.run()
+  task.waitUntilExit()
+  giveFrontBack(previous)
+  guard task.terminationStatus == 0, FileManager.default.fileExists(atPath: args[6]) else { fail("screencapture failed") }
+  say("captured \(Int(rect.minX)) \(Int(rect.minY)) \(Int(rect.width)) \(Int(rect.height))")
+  exit(0)
+}
+
 guard args.count == 3, let x = Double(args[1]), let y = Double(args[2]) else {
-  fail("usage: sdp-click window | sdp-click X Y")
+  fail("usage: sdp-click window | trusted | capturable | X Y | capture X Y W H FILE")
 }
 guard AXIsProcessTrusted() else {
   fail("not allowed to post input: add this binary under System Settings > Privacy & Security > Accessibility")
@@ -89,17 +181,7 @@ guard AXIsProcessTrusted() else {
 let point = CGPoint(x: window.bounds.minX + x, y: window.bounds.minY + y)
 guard window.bounds.insetBy(dx: 2, dy: 2).contains(point) else { fail("point outside the game window") }
 
-let previous = NSWorkspace.shared.frontmostApplication
-if !gameInFront() {
-  NSRunningApplication.runningApplications(withBundleIdentifier: bundleID).first?.activate(options: [])
-  var waited = 0.0
-  while !gameInFront() && waited < 3 {
-    Thread.sleep(forTimeInterval: 0.1)
-    waited += 0.1
-  }
-}
-guard gameInFront() else { fail("could not bring the game to the front") }
-Thread.sleep(forTimeInterval: 0.3)
+let previous = bringGameForward()
 guard ownerAt(point) == window.pid else { fail("another window covers the point") }
 
 let source = CGEventSource(stateID: .hidSystemState)
@@ -112,8 +194,5 @@ post(.leftMouseDown)
 Thread.sleep(forTimeInterval: 0.08)
 post(.leftMouseUp)
 Thread.sleep(forTimeInterval: 0.3)
-if let previous = previous, previous.bundleIdentifier != bundleID,
-   previous.bundleIdentifier != "com.apple.finder" {
-  previous.activate(options: [])
-}
+giveFrontBack(previous)
 say("clicked \(Int(point.x)) \(Int(point.y))")
