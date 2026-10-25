@@ -17,7 +17,7 @@
 - `cmp_lib.lua` 把场景的 `pool`、`count` 转成本文明的区域类型交给规划器；裁判把候选里挑到的区域算作请求的，少于 `count` 的部分记为漏放（`missing`，“有位置却没放”或“没有合法位置”与必建的区域同样判断），`requested` 加上要挑的个数。
 - `cmp_sdp.lua` 把 `Pool`、`Count` 交给单城求解器；奇观的单城路径（`SDP_Multi` 只规划这一座城）也能跑真最优。
 - `summarize.py` 按前缀分组：`large`、`pools`、`wonders/heldout` 等（加 `/heldout`、`/sealed`）。
-- 每一行结果记 `env`：导出的规则库、DMT 的 Lua 文件、本模组和对比框架的 Lua 文件各自的 SHA-1 前 12 位（`compare.mjs`，在第二台机器上也不需要 git）。合法性或求解器一改，`code` 就变，可以据此找出要重算的行。
+- 每一行结果记 `env`：导出的规则库、DMT 的 Lua 文件、本模组和对比框架的 Lua 文件各自的 SHA-1 前 12 位（`compare.mjs` 算，没有 git 的副本里也能算）。合法性或求解器一改，`code` 就变，可以据此找出要重算的行。
 
 ## 2. 奇观的真最优
 

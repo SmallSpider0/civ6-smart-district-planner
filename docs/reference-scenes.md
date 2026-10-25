@@ -10,7 +10,7 @@
 
 ## 2. 怎么做的
 
-都来自 CivFanatics 上附了存档的帖子，共 8 位作者、10 个存档。读档（`tools/game.py load`，存档放在本机的 `Saves/Single`，文件名以 `SDP_ref_` 开头，不进仓库）后用 `tools/snapshot.py ref` 导出所选城市周围 6 格的真实地图：地形、地貌、资源、改良、河流、领土、已建的区域和奇观、地图钉。作者这几座城已建的学院、圣地、剧院广场、商业中心、港口、工业区（特色区域按基础区域算）从城里拿掉，作为参照布局；REF14、REF15 另把作者打的区域钉算进参照布局。其他区域、奇观和钉原样留下。每个参照区域在游戏里显示的相邻加成也记了下来，用来和裁判对照。场景文件在 `tests/compare/scenes/REF*.json`，导出命令见 [tools/README.md](../tools/README.md) 的 snapshot.py 一节。
+都来自 CivFanatics 上附了存档的帖子，共 8 位作者、10 个存档。读档（`tools/game.py load`，存档放在游戏的 `Saves/Single`，文件名以 `SDP_ref_` 开头，不进仓库）后用 `tools/snapshot.py ref` 导出所选城市周围 6 格的真实地图：地形、地貌、资源、改良、河流、领土、已建的区域和奇观、地图钉。作者这几座城已建的学院、圣地、剧院广场、商业中心、港口、工业区（特色区域按基础区域算）从城里拿掉，作为参照布局；REF14、REF15 另把作者打的区域钉算进参照布局。其他区域、奇观和钉原样留下。每个参照区域在游戏里显示的相邻加成也记了下来，用来和裁判对照。场景文件在 `tests/compare/scenes/REF*.json`，导出命令见 [tools/README.md](../tools/README.md) 的 snapshot.py 一节。
 
 REF01–REF03 是更早从截图手写的场景，一半以上的格是猜的，只作工具的例子，不参加比较；REF02 的真最优跑不完。
 
