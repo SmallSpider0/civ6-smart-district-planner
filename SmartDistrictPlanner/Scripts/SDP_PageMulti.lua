@@ -1,8 +1,13 @@
 -- SDP_PageMulti: the "several cities" tab of the planner panel
 -- (docs/multicity-design.md section 4, step 2). Included by SDP_Panel.lua
 -- into its context: uses its Controls and the SDP_UI helpers.
---   Cities    new cities (city-center pins) and the existing cities near
---             them; each can be switched off (feedback item 10)
+--   Cities    the player's cities and city-center pins as chips, three a
+--             row; a click switches one on or off (feedback item 10). By
+--             default the centre (the city selected on the map when the
+--             panel opened, else the capital) and the nearest ones joined
+--             to it within NEAR plots, at most DEFAULT_CITIES
+--             (SDP_Multi.DefaultGroup, issue 63); "clear all" and "default"
+--             buttons; at most MAX_CITIES at once.
 --   Plans     one district list for every city, or a city's own list (the
 --             "plan for" pulldown; role templates from SDP_Rules.Templates).
 --             A list gives each district a state (required, candidate, off,
@@ -23,7 +28,7 @@ SDP_PageMulti = {}
 local P = SDP_PageMulti
 P.Name = "MULTI"
 
-local m_cityIM = InstanceManager:new("CityRow", "Root", Controls.MultiCityStack)
+local m_cityIM = InstanceManager:new("CityChip", "Root", Controls.MultiCityStack)
 local m_cellIM = InstanceManager:new("DistrictCell", "Root", Controls.MultiDistrictStack)
 local m_utilityIM = InstanceManager:new("DistrictCell", "Root", Controls.MultiUtilityStack)
 local m_chipIM = InstanceManager:new("WonderChip", "Root", Controls.MultiWonderChipStack)
@@ -36,8 +41,9 @@ local m_shared = { States = {}, Count = nil } -- every city without its own
 local m_plans = {}     -- [participant Key] = a city's own list
 local m_planFor = "ALL" -- the list the grid edits: "ALL" or a participant Key
 local m_wonders = {}   -- [BuildingType] = true
-local m_existing = {}  -- [cityID] = true | false: switches over the default
-local m_sites = {}     -- [site Key] = false: city-center pins switched off
+local m_center = nil   -- the city the default group is around (nil: the capital)
+local m_existing = {}  -- [cityID] = true | false: switches over the default group
+local m_sites = {}     -- [site Key] = true | false: city-center pins switched over the default group
 -- The panel's weight columns plus the coverage part, as on the single-city tab.
 local COLUMNS, COLUMN_WIDTH = {}, 50 -- ten columns: a little wider than the 480 rows, inside the page
 for _, column in ipairs(SDP_UI.WEIGHT_COLUMNS) do COLUMNS[#COLUMNS + 1] = column end
@@ -94,18 +100,38 @@ local function WonderTypes()
   return list
 end
 
+-- Who takes part: the default group with the player's switches over it,
+-- as an explicit choice for every city and city-center pin (what the
+-- request sends, so the solver sees the same cities).
+local function Choice()
+  local group = SDP_Multi.DefaultGroup(Game.GetLocalPlayer(), m_center)
+  local existing, sites = {}, {}
+  for _, e in ipairs(group.Order) do
+    if e.Kind == "CITY" then
+      local on = m_existing[e.CityID]
+      if on == nil then on = group.Cities[e.CityID] == true end
+      existing[e.CityID] = on
+    else
+      local on = m_sites[e.Key]
+      if on == nil then on = group.Sites[e.Key] == true end
+      sites[e.Key] = on
+    end
+  end
+  return existing, sites, group
+end
+
 local function Participants()
-  return SDP_Multi.Participants(Game.GetLocalPlayer(), { Existing = m_existing, Sites = m_sites })
+  local existing, sites = Choice()
+  return SDP_Multi.Participants(Game.GetLocalPlayer(), { Existing = existing, Sites = sites })
 end
 P.Participants = Participants -- tests
 
 function P.Request()
   local playerID = Game.GetLocalPlayer()
   local shared = ListOf(m_shared)
-  local weights, existing, sites = {}, {}, {}
+  local weights = {}
   for key, value in pairs(m_weights) do weights[key] = value end
-  for id, on in pairs(m_existing) do existing[id] = on end
-  for key, on in pairs(m_sites) do sites[key] = on end
+  local existing, sites = Choice()
   -- Cities with their own list; lists of cities no longer taking part are
   -- kept for later but not sent.
   local plans, pools, counts, autos = nil, nil, nil, nil
@@ -273,23 +299,59 @@ function P.SetWonder(wonderType, on)
   P.RefreshLists()
 end
 
-function P.SetExisting(cityID, on)
-  if m_existing[cityID] ~= on then
-    m_existing[cityID] = on
-    ClearResult()
+-- A change to who takes part: the result goes only when the cities differ.
+local function ChangeCities(change)
+  local function Keys()
+    local keys = {}
+    for _, part in ipairs(Participants()) do keys[#keys + 1] = part.Key end
+    return table.concat(keys, ",")
   end
+  local before = Keys()
+  change()
+  if Keys() ~= before then ClearResult() end
   P.RefreshLists()
 end
 
--- Switch a city-center pin on or off (feedback item 10).
+-- Switch a city on or off; nil: back to the default group.
+function P.SetExisting(cityID, on)
+  ChangeCities(function() m_existing[cityID] = on end)
+end
+
+-- Switch a city-center pin on or off (feedback item 10); nil: the default.
 function P.SetSite(key, on)
-  local value = nil -- included
-  if not on then value = false end
-  if m_sites[key] ~= value then
-    m_sites[key] = value
-    ClearResult()
+  ChangeCities(function() m_sites[key] = on end)
+end
+
+-- The default group around a city (the one selected on the map when the
+-- panel opens; nil: the capital). A new centre drops the switches; the
+-- same centre named another way (the capital by its ID) keeps them.
+function P.SetCenter(cityID)
+  local function CenterKey(id)
+    local center = SDP_Multi.DefaultGroup(Game.GetLocalPlayer(), id).Center
+    return center and center.Key or ""
   end
-  P.RefreshLists()
+  if cityID == m_center or CenterKey(cityID) == CenterKey(m_center) then
+    m_center = cityID
+    return
+  end
+  ChangeCities(function()
+    m_center = cityID
+    m_existing, m_sites = {}, {}
+  end)
+end
+
+-- The two buttons over the chips: every city and pin off; the default group.
+function P.ClearCities()
+  ChangeCities(function()
+    local _, _, group = Choice()
+    for _, e in ipairs(group.Order) do
+      if e.Kind == "CITY" then m_existing[e.CityID] = false else m_sites[e.Key] = false end
+    end
+  end)
+end
+
+function P.DefaultCities()
+  ChangeCities(function() m_existing, m_sites = {}, {} end)
 end
 
 function P.SetTier(tier)
@@ -333,60 +395,137 @@ end
 -- ===========================================================================
 -- Lists
 -- ===========================================================================
-function P.RefreshLists()
+local CHIP_ROWS, CHIP_HEIGHT, CHIP_GAP, CHIP_NAME = 5, 26, 4, 112 -- at most five rows shown, then the list scrolls
+local RESULT_HEIGHT, RESULT_ROWS, RESULT_MIN = 96, 80, 40 -- the result list: as drawn, two rows, one row
+local m_chipRows = 1 -- rows of city chips
+
+-- Keep the page inside the window (many cities and three solutions do not
+-- fit at full height): the result list gives way to two rows first, then
+-- the chip list to two rows, then the result list to one row.
+local function FitPage()
+  local shown, result = math.min(m_chipRows, CHIP_ROWS), RESULT_HEIGHT
+  local function Apply()
+    Controls.MultiCityScroll:SetSizeY(shown * CHIP_HEIGHT + (shown - 1) * CHIP_GAP)
+    Controls.MultiResultScroll:SetSizeY(result)
+    Controls.MultiCityStack:CalculateSize()
+    Controls.MultiCityScroll:CalculateSize()
+    Controls.MultiResultScroll:CalculateSize()
+    Controls.MultiBody:CalculateSize()
+    return Controls.MultiBody:GetSizeY() - Controls.MultiPage:GetSizeY()
+  end
+  local over = Apply()
+  if over > 0 then
+    result = math.max(RESULT_ROWS, result - over)
+    over = Apply()
+  end
+  while over > 0 and shown > 2 do
+    shown = shown - 1
+    over = Apply()
+  end
+  if over > 0 then
+    result = math.max(RESULT_MIN, result - over)
+    Apply()
+  end
+end
+P.FitPage = FitPage -- tests
+
+-- One city chip: the selected look while it takes part; dimmed when the
+-- list is full and it cannot be switched on.
+local function ShowChip(inst, label, on, disabled, toolTip)
+  inst.Icon:SetIcon("ICON_DISTRICT_CITY_CENTER", 26)
+  SDP_UI.FitName(inst.Name, label, CHIP_NAME)
+  SDP_UI.FitName(inst.NameDark, label, CHIP_NAME)
+  inst.Selected:SetHide(not on)
+  inst.Name:SetHide(on)
+  inst.NameDark:SetHide(not on)
+  inst.Root:SetDisabled(disabled)
+  inst.Root:SetAlpha(disabled and 0.55 or 1)
+  inst.Root:SetToolTipString(toolTip)
+end
+
+-- The cities and city-center pins as chips, in the participants' order:
+-- the pins (by plot index), then the cities (by ID). An empire-limited
+-- district of the shared list goes to the first that requires it (issue
+-- 28), so the list reads in that order. Returns the participants.
+function P.RefreshCities()
   local playerID = Game.GetLocalPlayer()
-  -- Cities: the city-center pins (each can be switched off), then the
-  -- existing cities.
+  local existing, sites, group = Choice()
+  local participants, cities, siteList = SDP_Multi.Participants(playerID, { Existing = existing, Sites = sites })
+  local cityOf, siteOf, taking = {}, {}, {}
+  for _, e in ipairs(cities) do cityOf[e.CityID] = e end
+  for _, site in ipairs(siteList) do siteOf[site.Key] = site end
+  for _, part in ipairs(participants) do taking[part.Key] = true end
+  local numbers = SDP_City.CityNumbers(playerID)
+  local full = #participants >= SDP_Multi.MAX_CITIES
+  local labels = {}
+  for _, e in ipairs(group.Order) do
+    if e.Kind == "SITE" then
+      local site = siteOf[e.Key]
+      labels[e.Key] = P.CityLabel({ Kind = "SITE", Number = site.Number, SiteNumber = site.SiteNumber })
+    else
+      labels[e.Key] = P.CityLabel({ Kind = "CITY", Number = numbers[e.CityID], Name = cityOf[e.CityID].Name })
+    end
+  end
+  local entryOf, chips = {}, {}
+  for _, e in ipairs(group.Order) do entryOf[e.Key] = e end
+  for _, site in ipairs(siteList) do chips[#chips + 1] = entryOf[site.Key] end
+  for _, c in ipairs(cities) do chips[#chips + 1] = entryOf["C" .. c.CityID] end
   m_cityIM:ResetInstances()
   m_view.Cities = {}
-  local participants, existing, sites = Participants()
-  local byKey, keyOfCity = {}, {}
-  for _, part in ipairs(participants) do
-    byKey[part.Key] = part
-    if part.CityID ~= nil then keyOfCity[part.CityID] = part.Key end
-  end
-  if m_planFor ~= "ALL" and byKey[m_planFor] == nil then m_planFor = "ALL" end
-  local function OwnPlan(key)
-    return (key and m_plans[key] ~= nil) and (" " .. Locale.Lookup("LOC_SDP_MULTI_OWN_PLAN")) or ""
-  end
-  for _, site in ipairs(sites) do
+  for _, e in ipairs(chips) do
     local inst = m_cityIM:GetInstance()
-    local key = site.Key
-    inst.Icon:SetIcon("ICON_DISTRICT_CITY_CENTER", 26)
-    inst.Name:SetText(P.CityLabel({ Kind = "SITE", Number = site.Number, SiteNumber = site.SiteNumber }))
-    local detail = Locale.Lookup("LOC_SDP_MULTI_SITE_PIN", SDP_UI.Where(site.X, site.Y)) .. OwnPlan(key)
-    if not site.Included then detail = detail .. " " .. Locale.Lookup("LOC_SDP_MULTI_SITE_OFF") end
-    inst.Detail:SetText(detail)
-    inst.Check:SetDisabled(false)
-    inst.Check:SetCheck(site.Included)
-    inst.Root:SetToolTipString(Locale.Lookup("LOC_SDP_MULTI_SITE_TOOLTIP"))
-    inst.Check:RegisterCheckHandler(function() P.SetSite(key, inst.Check:IsChecked()) end)
-    m_view.Cities[#m_view.Cities + 1] = { Key = key, Kind = "SITE", Included = site.Included, Check = inst.Check }
-  end
-  for _, e in ipairs(existing) do
-    local inst = m_cityIM:GetInstance()
-    local cityID = e.CityID
-    inst.Icon:SetIcon("ICON_DISTRICT_CITY_CENTER", 26)
-    inst.Name:SetText(Locale.Lookup(e.Name))
-    local detail
-    if e.Distance == math.huge then
-      detail = ""
+    local key = e.Key
+    local on = taking[key] == true
+    local lines = { labels[key] }
+    if e.Kind == "SITE" then lines[#lines + 1] = Locale.Lookup("LOC_SDP_MULTI_SITE_PIN", SDP_UI.Where(e.X, e.Y)) end
+    if e == group.Center then
+      lines[#lines + 1] = Locale.Lookup("LOC_SDP_MULTI_CENTER")
     else
-      detail = Locale.Lookup("LOC_SDP_MULTI_DISTANCE", e.Distance)
+      lines[#lines + 1] = Locale.Lookup("LOC_SDP_MULTI_FROM_CENTER", e.Distance, labels[group.Center.Key])
     end
-    if e.Reason == "CAP" then detail = detail .. " " .. Locale.Lookup("LOC_SDP_MULTI_CAP", SDP_Multi.MAX_CITIES) end
-    if not e.On then detail = detail .. " " .. Locale.Lookup("LOC_SDP_MULTI_NEIGHBOUR_ONLY") end
-    inst.Detail:SetText(detail .. OwnPlan(keyOfCity[cityID]))
-    inst.Check:SetDisabled(false)
-    inst.Check:SetCheck(e.On == true)
-    inst.Root:SetToolTipString("")
-    inst.Check:RegisterCheckHandler(function() P.SetExisting(cityID, inst.Check:IsChecked()) end)
-    m_view.Cities[#m_view.Cities + 1] = { CityID = cityID, Kind = "CITY", On = e.On, Included = e.Included, Reason = e.Reason,
-      Check = inst.Check }
+    local city = e.Kind == "CITY" and cityOf[e.CityID] or nil
+    if on then
+      lines[#lines + 1] = Locale.Lookup("LOC_SDP_MULTI_TAKES_PART")
+    elseif city ~= nil and city.Reason == "CAP" then
+      lines[#lines + 1] = Locale.Lookup("LOC_SDP_MULTI_CAP", SDP_Multi.MAX_CITIES)
+    else
+      lines[#lines + 1] = Locale.Lookup("LOC_SDP_MULTI_NEIGHBOUR_ONLY")
+    end
+    if on and m_plans[key] ~= nil then lines[#lines + 1] = Locale.Lookup("LOC_SDP_MULTI_OWN_PLAN") end
+    local disabled = full and not on
+    local hint = disabled and Locale.Lookup("LOC_SDP_MULTI_FULL", SDP_Multi.MAX_CITIES)
+      or Locale.Lookup(e.Kind == "SITE" and "LOC_SDP_MULTI_SITE_TOOLTIP" or "LOC_SDP_MULTI_CITY_TOOLTIP")
+    ShowChip(inst, labels[key], on, disabled, table.concat(lines, "[NEWLINE]") .. "[NEWLINE][NEWLINE]" .. hint)
+    local view = { Key = key, Kind = e.Kind, Included = on, Center = e == group.Center, Default = false,
+      Chip = inst.Root, Disabled = disabled }
+    if e.Kind == "SITE" then
+      view.Default = group.Sites[key] == true
+      inst.Root:RegisterCallback(Mouse.eLClick, function() P.SetSite(key, not on) end)
+    else
+      local cityID = e.CityID
+      view.CityID, view.On, view.Reason, view.Default = cityID, city.On, city.Reason, group.Cities[cityID] == true
+      inst.Root:RegisterCallback(Mouse.eLClick, function() P.SetExisting(cityID, not city.On) end)
+    end
+    m_view.Cities[#m_view.Cities + 1] = view
   end
-  Controls.MultiCityStack:CalculateSize()
-  Controls.MultiCityScroll:CalculateSize()
+  m_chipRows = math.max(1, math.ceil(#group.Order / 3))
+  FitPage()
+  local default = true
+  for _, view in ipairs(m_view.Cities) do
+    if view.Included ~= view.Default then default = false end
+  end
+  Controls.MultiCityClear:SetDisabled(#participants == 0)
+  Controls.MultiCityDefault:SetDisabled(default)
+  m_view.Center = group.Center and group.Center.Key or nil
+  return participants
+end
 
+function P.RefreshLists()
+  local playerID = Game.GetLocalPlayer()
+  local participants = P.RefreshCities()
+  local byKey = {}
+  for _, part in ipairs(participants) do byKey[part.Key] = part end
+  if m_planFor ~= "ALL" and byKey[m_planFor] == nil then m_planFor = "ALL" end
   -- Plan: whose list, templates, the districts and how many.
   P.PopulatePlanPulls(participants)
   local list = EditedList()
@@ -645,7 +784,7 @@ function P.Render()
   end
   Controls.MultiSolutionStack:CalculateSize()
   Controls.MultiResultStack:CalculateSize()
-  Controls.MultiResultScroll:CalculateSize()
+  FitPage()
   P.UpdateButtons()
 end
 
@@ -742,6 +881,8 @@ function P.State()
   }
 end
 
+Controls.MultiCityClear:RegisterCallback(Mouse.eLClick, function() P.ClearCities() end)
+Controls.MultiCityDefault:RegisterCallback(Mouse.eLClick, function() P.DefaultCities() end)
 Controls.MultiLandCheck:RegisterCheckHandler(function() P.SetLand(Controls.MultiLandCheck:IsChecked()) end)
 Controls.MultiSwapCheck:RegisterCheckHandler(function() P.SetSwap(Controls.MultiSwapCheck:IsChecked()) end)
 Controls.MultiReplaceCheck:RegisterCheckHandler(function() P.SetReplace(Controls.MultiReplaceCheck:IsChecked()) end)

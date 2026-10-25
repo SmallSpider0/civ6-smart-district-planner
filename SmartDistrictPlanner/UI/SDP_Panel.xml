@@ -200,10 +200,21 @@
       <!-- ============ Several cities (step 2) ============ -->
       <Container ID="MultiPage" Anchor="C,T" Offset="0,88" Size="520,820" Hidden="1">
       <Stack ID="MultiBody" Anchor="C,T" StackGrowth="Bottom" StackPadding="4">
-        <Label Style="BodyTextDark16" String="LOC_SDP_MULTI_CITIES"/>
-        <ScrollPanel ID="MultiCityScroll" Size="480,72" Vertical="1">
+        <Container Size="480,26">
+          <Label Anchor="L,C" Style="BodyTextDark16" String="LOC_SDP_MULTI_CITIES" ToolTip="LOC_SDP_MULTI_CITIES_TOOLTIP"/>
+          <Stack Anchor="R,C" StackGrowth="Right" StackPadding="4">
+            <GridButton ID="MultiCityClear" Size="96,24" Style="ButtonControl" ToolTip="LOC_SDP_MULTI_CLEAR_TOOLTIP">
+              <Label Anchor="C,C" Style="FontNormal14" String="LOC_SDP_MULTI_CLEAR"/>
+            </GridButton>
+            <GridButton ID="MultiCityDefault" Size="96,24" Style="ButtonControl" ToolTip="LOC_SDP_MULTI_DEFAULT_TOOLTIP">
+              <Label Anchor="C,C" Style="FontNormal14" String="LOC_SDP_MULTI_DEFAULT"/>
+            </GridButton>
+          </Stack>
+        </Container>
+        <!-- City chips, three a row; SDP_PageMulti sizes the panel to at most five rows. -->
+        <ScrollPanel ID="MultiCityScroll" Size="480,26" Vertical="1" AutoScrollBar="1">
           <ScrollBar Anchor="R,C" AnchorSide="I,I" Style="Slider_Blue"/>
-          <Stack ID="MultiCityStack" StackGrowth="Bottom" StackPadding="2"/>
+          <Stack ID="MultiCityStack" StackGrowth="Right" WrapWidth="462" WrapGrowth="Bottom" StackPadding="4"/>
         </ScrollPanel>
         <Container Size="480,28">
           <Stack Anchor="L,C" StackGrowth="Right" StackPadding="6">
@@ -339,13 +350,16 @@
     </Container>
   </Instance>
 
-  <Instance Name="CityRow">
-    <Container ID="Root" Size="480,28">
-      <CheckBox ID="Check" Anchor="L,C" Style="MainCheckBox"/>
-      <Image ID="Icon" Anchor="L,C" Offset="24,0" Size="26,26"/>
-      <Label ID="Name" Anchor="L,C" Offset="54,0" Style="BodyTextDark16"/>
-      <Label ID="Detail" Anchor="R,C" Offset="12,0" Style="BodyTextDark14"/>
-    </Container>
+  <!-- A city or city-center pin on the Several cities tab: a click switches
+       it on or off. The look of DistrictCell (a Grid for the selected look,
+       not a GridButton that would take the mouse, pitfall 31). -->
+  <Instance Name="CityChip">
+    <GridButton ID="Root" Size="150,26" Style="ButtonControl">
+      <Grid ID="Selected" Size="parent,parent" Texture="Controls_Tab" SliceStart="0,136" SliceCorner="21,16" Hidden="1"/>
+      <Image ID="Icon" Anchor="L,C" Offset="2,0" Size="26,26"/>
+      <Label ID="Name" Anchor="L,C" Offset="30,0" Style="FontNormal14" TruncateWidth="112" TruncatedTooltip="1"/>
+      <Label ID="NameDark" Anchor="L,C" Offset="30,0" Style="BodyTextDark14" TruncateWidth="112" TruncatedTooltip="1" Hidden="1"/>
+    </GridButton>
   </Instance>
 
   <!-- One solution: a selectable row; selecting it previews it on the map. -->

@@ -52,6 +52,7 @@ function Control:GetButton()
 end
 -- Simulated input.
 function Control:Click()
+  if self._disabled then return end -- as in the game: a disabled button takes no click
   local fn = self._callbacks[1] -- Mouse.eLClick
   if fn then fn() end
 end

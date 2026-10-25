@@ -257,7 +257,7 @@
       <Text>已有钉</Text>
     </Replace>
     <Replace Tag="LOC_SDP_MULTI_CITIES" Language="zh_Hans_CN">
-      <Text>参与城市（市中心地图钉和附近的城市）</Text>
+      <Text>参与城市</Text>
     </Replace>
     <Replace Tag="LOC_SDP_MULTI_PLAN" Language="zh_Hans_CN">
       <Text>每座城的区域</Text>
@@ -265,17 +265,44 @@
     <Replace Tag="LOC_SDP_MULTI_WONDERS" Language="zh_Hans_CN">
       <Text>奇观</Text>
     </Replace>
+    <Replace Tag="LOC_SDP_MULTI_CITIES_TOOLTIP" Language="zh_Hans_CN">
+      <Text>点一格切换这座城或城址是否参与规划。打开面板时以地图上选中的城市为中心（没有选中时是首都）：默认勾选它，再按离它由近到远，加入离已勾选的某座不超过 7 格的本方城市和城址钉，最多 4 座。手动最多 8 座。不参与的城市只作固定邻居。[NEWLINE][NEWLINE]收益：一起规划的城可以互给相邻加成，这只出现在相距 4–5 格的城之间。实测 4 座一起比两两分组相邻加成多 1.5–7%，8 座一起比分成 4 + 4 多 0–11%。[NEWLINE][NEWLINE]代价：等待随城数增加。三张后期存档、每城 3 个区域，2、4、6、8 座城：快速档约 0.2、0.5、1、2 秒；标准档 0.5–2、2–6、4–9、10–16 秒；精细档 1–3、2–7、7–21、25–60 秒。</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_MULTI_CLEAR" Language="zh_Hans_CN">
+      <Text>全部取消</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_MULTI_CLEAR_TOOLTIP" Language="zh_Hans_CN">
+      <Text>取消全部城市和城址钉。</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_MULTI_DEFAULT" Language="zh_Hans_CN">
+      <Text>恢复默认</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_MULTI_DEFAULT_TOOLTIP" Language="zh_Hans_CN">
+      <Text>回到默认勾选：中心城市和附近连成一片的城市、城址钉，最多 4 座。</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_MULTI_CENTER" Language="zh_Hans_CN">
+      <Text>中心（打开面板时选中的城市，没有选中时是首都）</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_MULTI_FROM_CENTER" Language="zh_Hans_CN">
+      <Text>离 {2_Center} {1_Distance} 格</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_MULTI_TAKES_PART" Language="zh_Hans_CN">
+      <Text>参与规划</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_MULTI_FULL" Language="zh_Hans_CN">
+      <Text>已选 {1_Max} 座，一次最多规划这么多。先取消一座再选。</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_MULTI_CITY_TOOLTIP" Language="zh_Hans_CN">
+      <Text>点击切换这座城是否参与规划。不参与时，它的已建区域和地图钉仍作为固定邻居计入。</Text>
+    </Replace>
     <Replace Tag="LOC_SDP_MULTI_SITE_PIN" Language="zh_Hans_CN">
       <Text>地图钉 {1_Where}</Text>
     </Replace>
-    <Replace Tag="LOC_SDP_MULTI_DISTANCE" Language="zh_Hans_CN">
-      <Text>离新城 {1_Distance} 格</Text>
-    </Replace>
     <Replace Tag="LOC_SDP_MULTI_CAP" Language="zh_Hans_CN">
-      <Text>（超出一次最多 {1_Max} 座）</Text>
+      <Text>超出一次最多 {1_Max} 座，只作固定邻居</Text>
     </Replace>
     <Replace Tag="LOC_SDP_MULTI_NEIGHBOUR_ONLY" Language="zh_Hans_CN">
-      <Text>只作邻居</Text>
+      <Text>不参与，只作固定邻居</Text>
     </Replace>
     <Replace Tag="LOC_SDP_MULTI_EMPIRE_LIMIT" Language="zh_Hans_CN">
       <Text>全帝国限 {1_Max}</Text>
@@ -614,11 +641,8 @@
     <Replace Tag="LOC_SDP_WEIGHT_DISTANCE" Language="zh_Hans_CN">
       <Text>距离成本：每个区域、奇观按到最近的本方市中心的格数减 1，乘以这个系数扣分（与相邻加成同一单位）；0 为不计。游戏里区域的造价与距离无关，与距离有关的是取得格子的先后和买地价格，这里表达“区域尽量靠近城市”的偏好。</Text>
     </Replace>
-    <Replace Tag="LOC_SDP_MULTI_SITE_OFF" Language="zh_Hans_CN">
-      <Text>（不参与）</Text>
-    </Replace>
     <Replace Tag="LOC_SDP_MULTI_SITE_TOOLTIP" Language="zh_Hans_CN">
-      <Text>取消勾选后，这个城址不参与规划：不为它放区域，也不算作新城。钉本身不动，仍作为固定邻居影响周围的加成。</Text>
+      <Text>点击切换这个城址是否参与规划。不参与时不为它放区域，也不算作新城；钉本身不动，仍作为固定邻居影响周围的加成。</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SITES_PLAN_COUNT" Language="zh_Hans_CN">
       <Text>每个城址按</Text>

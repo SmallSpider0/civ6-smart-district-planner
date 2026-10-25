@@ -16,8 +16,8 @@ units, scaled to the window), so no screenshot coordinates are guessed.
 
 The suite opens the panel and goes through what only a real click shows:
 district cells round their states on both tabs (the 2026-10-21 bug: the
-selected look took the mouse), the city-center pin check box on the
-multi-city tab, the harbor / commercial hub switch, tabs, solve, a solution
+selected look took the mouse), the city chips and the clear all / default
+buttons on the multi-city tab, the harbor / commercial hub switch, tabs, solve, a solution
 row, place and undo, the close button. Each check reads the state back.
 """
 import os
@@ -206,12 +206,18 @@ local _, count = SDP_City.CityNumbers(pid)
 SDP_Pins.Place(pid, { { Type = "DISTRICT_CITY_CENTER", X = SDP_RealClickSite.X, Y = SDP_RealClickSite.Y, Name = tostring(count + 1) } })
 SDP_Panel.Multi.Refresh()
 """)
+    lua("SDP_Panel.Multi.SetCenter(nil); SDP_Panel.Multi.DefaultCities()")
     site = "(function() for _, c in ipairs(SDP_Panel.Multi.State().View.Cities) do if c.Kind == 'SITE' then return c end end end)()"
     s.check("site pin listed, on", value(site + ".Included"), "true")
-    click_control(site + ".Check")
-    s.check("site pin unticked by click", value(site + ".Included"), "false")
-    click_control(site + ".Check")
-    s.check("site pin ticked again", value(site + ".Included"), "true")
+    click_control(site + ".Chip")
+    s.check("site chip off by click", value(site + ".Included"), "false")
+    click_control(site + ".Chip")
+    s.check("site chip on again by click", value(site + ".Included"), "true")
+    # The two buttons over the chips (issue 63).
+    click_control("Controls.MultiCityClear")
+    s.check("clear all by click", value("#SDP_Panel.Multi.Participants()"), "0")
+    click_control("Controls.MultiCityDefault")
+    s.check("default by click", value(site + ".Included"), "true")
     # The harbor / commercial hub switch.
     click_control("Controls.MultiApartCheck")
     s.check("multi apart switch off by click", value("SDP_Panel.Multi.State().Apart"), "false")

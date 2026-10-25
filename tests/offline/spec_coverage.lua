@@ -217,7 +217,10 @@ test("several cities tab: the coverage weight is off by default and goes into th
   SDP_Panel.SelectTab("MULTI")
   local multi = SDP_Panel.Multi
   multi.Refresh()
+  -- The capital alone (the default group would take cities 2 and 3 too).
   multi.SetExisting(1, true)
+  multi.SetExisting(2, false)
+  multi.SetExisting(3, false)
   multi.SetSelected(IZ, true)
   T.eq(multi.Request().Coverage, 0, "off by default")
   multi.SetWeight("COVERAGE", 2)

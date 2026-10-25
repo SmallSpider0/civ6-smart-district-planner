@@ -482,9 +482,17 @@ local function KeepRunningHidden(on)
   end
 end
 
+-- Follow the city selected on the map (issue 63): a city selected since the
+-- panel last opened becomes the single-city tab's city and the centre of
+-- the Several cities tab's default group. Not while a computation runs (its
+-- result would go); that selection is then passed over, not kept for later.
+local m_followed = nil -- the selected city (ID) when the panel last opened
+local FollowSelection -- defined below (after SelectCity)
+
 local function Open()
   if IsOpen() then return end
   if m_launchDone then SetLaunchMark(false) end
+  FollowSelection()
   SelectTab(m_tab)
   Controls.DropShadow:SetHide(false)
   UIManager:QueuePopup(ContextPtr, PopupPriority.Low)
@@ -931,6 +939,22 @@ SelectCity = function(cityID)
   PopulateCities()
   RefreshDistricts()
   UpdateButtons()
+end
+
+FollowSelection = function()
+  local playerID = Game.GetLocalPlayer()
+  local selected = UI.GetHeadSelectedCity()
+  local cityID = nil
+  if selected ~= nil and selected:GetOwner() == playerID then cityID = selected:GetID() end
+  if cityID == m_followed then return end
+  m_followed = cityID
+  if cityID == nil or SDP_Task.IsRunning() then return end
+  if cityID ~= m_cityID then
+    m_cityID = cityID
+    ClearResult()
+    if m_heat ~= nil then ShowHeat(nil) end
+  end
+  SDP_PageMulti.SetCenter(cityID)
 end
 
 local function SetWeight(key, value)

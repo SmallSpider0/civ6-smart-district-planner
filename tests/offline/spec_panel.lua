@@ -518,36 +518,33 @@ test("single-city tab: the coverage column", function()
   SDP_Panel.SetTier("STANDARD")
 end)
 
--- Through the row's own check box (its handler), as a click would.
-test("several cities tab: the check boxes switch a city-center pin and a city off and on", function()
+-- Through the chip's own callback, as a click would.
+test("several cities tab: a click on a chip switches a city-center pin and a city off and on", function()
   SDP_Panel.SelectTab("MULTI")
   local multi = SDP_Panel.Multi
   multi.Refresh()
-  local function Row(kind)
-    for _, c in ipairs(multi.State().View.Cities) do
-      if c.Kind == kind then return c end
-    end
-  end
-  local site = Row("SITE")
-  T.ok(site and site.Included, "a city-center pin, on")
-  local key = site.Key
-  site.Check:Toggle()
   local function Find(k)
     for _, c in ipairs(multi.State().View.Cities) do
       if c.Key == k then return c end
     end
   end
-  T.eq(Find(key).Included, false, "unticked: off")
-  T.eq(Find(key).Check:IsChecked(), false, "the box stays unticked")
+  local site = nil
+  for _, c in ipairs(multi.State().View.Cities) do
+    if c.Kind == "SITE" and c.Included and site == nil then site = c end
+  end
+  T.ok(site ~= nil, "a city-center pin, on")
+  local key = site.Key
+  site.Chip:Click()
+  T.eq(Find(key).Included, false, "clicked: off")
   for _, part in ipairs(multi.Participants()) do T.ok(part.Key ~= key, "takes no part") end
-  Find(key).Check:Toggle()
-  T.eq(Find(key).Included, true, "ticked again: on")
-  local city = Row("CITY")
-  local on = city.On
-  city.Check:Toggle()
-  T.eq(Row("CITY").On, not on, "a city switched")
-  Row("CITY").Check:Toggle()
-  T.eq(Row("CITY").On, on, "and back")
+  Find(key).Chip:Click()
+  T.eq(Find(key).Included, true, "clicked again: on")
+  local city = Find("C1")
+  local on = city.Included
+  city.Chip:Click()
+  T.eq(Find("C1").Included, not on, "a city switched")
+  Find("C1").Chip:Click()
+  T.eq(Find("C1").Included, on, "and back")
 end)
 
 -- City-center pins from the sites tab are named with their numbers like

@@ -31,6 +31,7 @@ SDP_Multi = {}
 
 SDP_Multi.MAX_CITIES = 8 -- participants, new and existing
 SDP_Multi.NEAR = 7       -- existing cities this close to a new city take part by default
+SDP_Multi.DEFAULT_CITIES = 4 -- the Several cities tab's default group (DefaultGroup, issue 63)
 
 local Copy = SDP_Search.Copy
 
@@ -46,6 +47,73 @@ end
 -- The planned cities: SDP_City.Sites.
 function SDP_Multi.Sites(playerID)
   return SDP_City.Sites(playerID)
+end
+
+-- The Several cities tab's default group around a city (issue 63): the
+-- player's cities and city-center pins, ordered by distance from the centre
+-- (ties: cities first, then by city ID or plot index). Starting from the
+-- centre, the nearest one within NEAR plots of a member joins, until
+-- DEFAULT_CITIES take part or nobody is that close. centerID: a city of the
+-- player; nil or not the player's: the capital (else the first city, else
+-- the first city-center pin). Returns { Center = entry or nil, Order =
+-- entries, Cities = { [cityID] = true }, Sites = { [site Key] = true } };
+-- an entry is { Kind = "CITY" | "SITE", Key, CityID, X, Y, Distance }.
+function SDP_Multi.DefaultGroup(playerID, centerID)
+  local entries = {}
+  local player = Players[playerID]
+  local capital = player:GetCities():GetCapitalCity()
+  local cities = {}
+  for _, city in player:GetCities():Members() do cities[#cities + 1] = city end
+  table.sort(cities, function(a, b) return a:GetID() < b:GetID() end)
+  local center = nil
+  for _, city in ipairs(cities) do
+    local e = { Kind = "CITY", Key = "C" .. city:GetID(), CityID = city:GetID(), X = city:GetX(), Y = city:GetY(),
+      Order = city:GetID() }
+    entries[#entries + 1] = e
+    if centerID ~= nil and city:GetID() == centerID then center = e end
+  end
+  if center == nil and capital ~= nil then
+    for _, e in ipairs(entries) do
+      if e.CityID == capital:GetID() then center = e end
+    end
+  end
+  for _, site in ipairs(SDP_Multi.Sites(playerID)) do
+    entries[#entries + 1] = { Kind = "SITE", Key = "S" .. site.Index, X = site.X, Y = site.Y, Order = site.Index }
+  end
+  if center == nil then center = entries[1] end
+  local group = { Center = center, Order = {}, Cities = {}, Sites = {} }
+  if center == nil then return group end
+  for _, e in ipairs(entries) do
+    e.Distance = Map.GetPlotDistance(center.X, center.Y, e.X, e.Y)
+    e.Rank = (e == center) and -1 or e.Distance -- the centre first, even with a pin on it
+  end
+  local order = {}
+  for _, e in ipairs(entries) do order[#order + 1] = e end
+  table.sort(order, function(a, b)
+    if a.Rank ~= b.Rank then return a.Rank < b.Rank end
+    if a.Kind ~= b.Kind then return a.Kind == "CITY" end
+    return a.Order < b.Order
+  end)
+  group.Order = order
+  local members = { center }
+  local taken = { [center.Key] = true }
+  while #members < SDP_Multi.DEFAULT_CITIES do
+    local found = nil
+    for _, e in ipairs(order) do
+      if found == nil and not taken[e.Key] then
+        for _, m in ipairs(members) do
+          if Map.GetPlotDistance(m.X, m.Y, e.X, e.Y) <= SDP_Multi.NEAR then found = e end
+        end
+      end
+    end
+    if found == nil then break end
+    members[#members + 1] = found
+    taken[found.Key] = true
+  end
+  for _, m in ipairs(members) do
+    if m.Kind == "CITY" then group.Cities[m.CityID] = true else group.Sites[m.Key] = true end
+  end
+  return group
 end
 
 -- Who takes part. options.Existing = { [cityID] = true | false } overrides
