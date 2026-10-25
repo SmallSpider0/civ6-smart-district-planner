@@ -12,9 +12,9 @@
 --   Start()        solve over frames; Running() while it computes; Report(label) after
 --   SolveNow()     solve at once (the driver times the request); Report(label)
 --   Place(), Undo(n)    tack the plan; undo the last n batches
--- Over frames, the task's quota shrinks to its minimum when the game's own
--- frames are slow (game window in the background, other programs busy), so
--- such waits say little; at once is what the stress test measures.
+-- Over frames, waits grow when other programs keep the machine busy
+-- (docs/multicity-design.md section 30), so they say little; at once is what
+-- the stress test measures.
 SDP_MultiSize = {}
 local M = SDP_MultiSize
 local pid = Game.GetLocalPlayer()

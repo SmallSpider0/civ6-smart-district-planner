@@ -7,8 +7,8 @@ the capital, the other cities and the pins by distance from the capital, then
   grid   for each tier and n = 2..max: the n nearest take part, the tab's
          request solved at once (timed per Tuner request, as tools/stress.py
          does); --frames solves over frames instead and polls every 0.1 s
-         (slow and unrepresentative when the game window is in the
-         background: the task's quota drops to its minimum);
+         (slower when other programs keep the machine busy; see
+         docs/multicity-design.md section 30);
   groups the max nearest planned at once, in groups of 4, of 2 and city by
          city (each group's plan tacked before the next, as a player who
          plans a few cities at a time would); the tacks are undone after.

@@ -6,7 +6,10 @@
 -- frame's quota is used up, Tick yields and the next frame resumes it. The
 -- quota adapts to the frame time (UI.GetElapsedTime advances per frame; the
 -- game's clocks only tick in whole seconds), aiming at about TARGET_FRAME
--- seconds per frame. Results never depend on where the slices fall: the
+-- seconds per frame. A long frame shrinks the quota only when the task's own
+-- slice is a real part of it: when the game itself is slow (other programs
+-- busy), a smaller slice would not shorten the frame and would only starve
+-- the task (issue 65). Results never depend on where the slices fall: the
 -- computation is the same code whatever the quota (constraint 6).
 --
 -- Rules for the computation:
@@ -32,6 +35,10 @@ SDP_Task.START_QUOTA = 40
 -- draws the rest of each ~30 ms frame. Refined by every finished task.
 SDP_Task.DEFAULT_SPEED = 11000
 SDP_Task.AT_ONCE_SPEED = 20000
+-- A finished task whose frames averaged longer than this many TARGET_FRAMEs
+-- ran while the game itself was slow; its speed says nothing about the usual
+-- wait and is not kept.
+SDP_Task.SLOW_FRAMES = 3
 
 local m_job = nil         -- the running job
 local m_inWorker = false  -- our coroutine is running (Tick may yield)
@@ -89,7 +96,8 @@ local function Finish(job, status, value)
   m_job = nil
   job.Status = status
   if status == "done" then
-    if job.Seconds > 0 and job.Units > 0 then
+    local slow = job.Frames > 0 and job.Seconds / job.Frames > SDP_Task.TARGET_FRAME * SDP_Task.SLOW_FRAMES
+    if job.Seconds > 0 and job.Units > 0 and not slow then
       local speed = job.Units / job.Seconds
       m_speed = m_speed and (m_speed + speed) / 2 or speed
     end
@@ -102,18 +110,25 @@ local function Finish(job, status, value)
   return status
 end
 
--- Adapt the quota to the last frame's length.
+-- Adapt the quota to the last frame's length. The slice's own share is
+-- estimated from its units (the game's clocks cannot time it).
 local function Adapt(job)
   local now = UI.GetElapsedTime()
   local frame = now - (job.LastTime or now)
   job.LastTime = now
   if job.Frames > 0 and frame > 0 then
     job.Seconds = job.Seconds + frame
-    if frame > SDP_Task.TARGET_FRAME * 1.25 then
-      m_quota = math.max(SDP_Task.MIN_QUOTA, math.floor(m_quota * 0.75))
-    elseif frame < SDP_Task.TARGET_FRAME * 0.75 then
-      m_quota = math.min(SDP_Task.MAX_QUOTA, math.ceil(m_quota * 1.25))
+    local target = SDP_Task.TARGET_FRAME
+    local own = (job.LastUsed or 0) / SDP_Task.AT_ONCE_SPEED
+    local grow = frame < target * 0.75
+    if frame > target * 1.25 then
+      if own > target * 0.5 then
+        m_quota = math.max(SDP_Task.MIN_QUOTA, math.floor(m_quota * 0.75))
+      elseif own < target * 0.25 then
+        grow = true -- the game's own frame is long; our slice is small
+      end
     end
+    if grow then m_quota = math.min(SDP_Task.MAX_QUOTA, math.ceil(m_quota * 1.25)) end
   end
 end
 
@@ -144,6 +159,7 @@ function SDP_Task.Step(quota)
   end
   job.Overlay = SDP_Overlay.Suspend()
   job.Units = job.Units + m_used
+  job.LastUsed = m_used
   job.Frames = job.Frames + 1
 
   if not ok then return Finish(job, "error", tostring(result)) end
