@@ -76,4 +76,7 @@ node tools/compare.mjs -s '^C\d\d' -p sdp --only sdp:STANDARD,sdp:STANDARD_GROWT
 
 - 离线：`spec_land.lua` 检查倍数表和一块铜矿荒漠的估值；`spec_solver.lua` 检查请求里多给的食物、收获权重不改变方案和地块部分，地块权重 2.5 时穷举结果与暴力枚举一致；`spec_appeal.lua` 检查保护区给周围格的产出按固定倍数计、不随产出权重变；`spec_panel.lua` 检查权重行的 9 列和步长 0.5。
 - 游戏内：`test_ui.lua`、`test_tiers.lua` 跟着改了调用。
-- 方案变化的范围：发版前 `refresh_results.py --check` 对比存下的结果（记在 PR 里）。
+- 方案变化的范围：`refresh_results.py --check` 对比存下的结果。只算相邻的开发集 268 行方案全部不变（地块部分不参与）。计入地块的 `land.jsonl` 84 行里 4 行方案变了，裁判的加成 2 行变高、1 行变低（`S15-russia-tundra-late` 16 → 15），没有新违规；存下的结果是按改前的地块权重评的，按新倍数挑的方案在旧尺子上偶尔低一点。奇观的 `wonders_v120.jsonl`（48 行，含计入地块）、`wonders_artemis.jsonl`（16 行）方案全部不变。
+  ```
+  python3 -I tools/refresh_results.py --check -j 3 tests/compare/results/land.jsonl tests/compare/results/wonders_v120.jsonl tests/compare/results/wonders_artemis.jsonl
+  ```
