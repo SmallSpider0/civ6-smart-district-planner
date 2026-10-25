@@ -769,5 +769,24 @@
     <Replace Tag="LOC_SDP_WEIGHT_LAND_SHORT" Language="zh_Hans_CN">
       <Text>地块</Text>
     </Replace>
+    <!-- 奇观要挨着的区域（#66） -->
+    <Replace Tag="LOC_SDP_STATE_WONDER" Language="zh_Hans_CN">
+      <Text>随奇观</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_FOR_WONDER" Language="zh_Hans_CN">
+      <Text>（供{1_Wonder}相邻）</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_UNPLACED_FOR_WONDER" Language="zh_Hans_CN">
+      <Text>随{2_Wonder}补上的{1_Name}放不下</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_REASON_DISTRICT_ELSEWHERE" Language="zh_Hans_CN">
+      <Text>需要相邻{1_Other}，它已在{2_Where}：在那座城规划这个奇观</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_MULTI_SUPPLY" Language="zh_Hans_CN">
+      <Text>{2_Wonder}要挨着{1_District}：求解时补给列表里第一座能放下的城（想指定哪座城，就给它开自己的列表并把{1_District}设为必建）</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_MULTI_SUPPLIED" Language="zh_Hans_CN">
+      <Text>{1_District}随{2_Wonder}补给了{3_City}</Text>
+    </Replace>
   </LocalizedText>
 </GameData>

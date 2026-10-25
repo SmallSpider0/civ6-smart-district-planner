@@ -335,9 +335,51 @@ test("wonders: legal places, a required district next to it, unplaceable ones re
   end
   T.ok(nextToCampus, "great library next to a planned campus")
   T.eq(reasons.BUILDING_STONEHENGE, "BUILT", "built wonder not planned")
-  T.eq(reasons.BUILDING_COLOSSEUM, "NEEDS_DISTRICT", "no entertainment complex anywhere")
-  -- The reason names the district (the panel shows Other; it was empty before).
-  T.eq(others.BUILDING_COLOSSEUM, "DISTRICT_ENTERTAINMENT_COMPLEX", "the missing district named")
+  -- No city has an entertainment complex: the first city of the list that
+  -- can take one plans it for the colosseum (issue 66, plan A).
+  local ENT = "DISTRICT_ENTERTAINMENT_COMPLEX"
+  T.eq(reasons.BUILDING_COLOSSEUM, nil, "the colosseum is not left out")
+  T.eq(#result.Supplied, 1, "one district supplied")
+  local supplied = result.Supplied[1]
+  T.eq(supplied.Type, ENT, "an entertainment complex")
+  T.eq(supplied.Wonder, "BUILDING_COLOSSEUM", "for the colosseum")
+  T.eq(supplied.City, SDP_Multi.Participants(0)[1].Key, "in the first city of the list")
+  local colosseum, complex = placed.BUILDING_COLOSSEUM, nil
+  for _, p in ipairs(result.Plan) do
+    if p.Type == ENT then complex = p end
+  end
+  T.ok(colosseum ~= nil and complex ~= nil, "both placed")
+  T.eq(complex.ForWonder, "BUILDING_COLOSSEUM", "the district's entry says what it is for")
+  T.eq(complex.City, supplied.City, "in that city")
+  T.eq(Map.GetPlotDistance(colosseum.X, colosseum.Y, complex.X, complex.Y), 1, "the colosseum next to it")
+
+  -- The player's own "not wanted" stands: in the shared list no city gets
+  -- one, and the reason names the district (it was empty before, #73).
+  local request = Request({ Districts = { "DISTRICT_CAMPUS" }, Wonders = { "BUILDING_COLOSSEUM" } })
+  request.Off = { [ENT] = true }
+  local off = SDP_Multi.Solve(request)
+  T.ok(off.Ok, tostring(off.Error))
+  local reason, other = nil, nil
+  for _, u in ipairs(off.Unplaced) do
+    if u.Type == "BUILDING_COLOSSEUM" then reason, other = u.Reason, u.Other end
+  end
+  T.eq(reason, "NEEDS_DISTRICT", "not wanted anywhere: left out")
+  T.eq(other, ENT, "the missing district named")
+  T.eq(#off.Supplied, 0, "nothing supplied")
+  -- In the first city's own list only: the next city gets it.
+  local first, second = SDP_Multi.Participants(0)[1].Key, SDP_Multi.Participants(0)[2].Key
+  request = Request({ Districts = { "DISTRICT_CAMPUS" }, Wonders = { "BUILDING_COLOSSEUM" } })
+  request.Offs = { [first] = { [ENT] = true } }
+  local next = SDP_Multi.Solve(request)
+  T.eq(next.Supplied[1] and next.Supplied[1].City, second, "the next city of the list")
+  -- A first city that plans a water park cannot have one too.
+  request = Request({ Districts = { "DISTRICT_CAMPUS" }, Wonders = { "BUILDING_COLOSSEUM" },
+    Plans = { [first] = { "DISTRICT_WATER_ENTERTAINMENT_COMPLEX" } } })
+  local park = SDP_Multi.Solve(request)
+  T.ok(park.Supplied[1] == nil or park.Supplied[1].City ~= first, "not next to a planned water park")
+  -- A city that plans one already: nothing is supplied.
+  request = Request({ Districts = { "DISTRICT_CAMPUS", ENT }, Wonders = { "BUILDING_COLOSSEUM" } })
+  T.eq(#SDP_Multi.Solve(request).Supplied, 0, "planned already: nothing supplied")
 end)
 
 test("a wonder counts only its own city's district (issue 45)", function()
@@ -360,8 +402,17 @@ test("a wonder counts only its own city's district (issue 45)", function()
   T.ok(library ~= nil, "with the capital planning: placed")
   T.eq(Map.GetPlotDistance(library.X, library.Y, 7, 5), 1, "next to the campus")
   T.ok(Map.GetPlotDistance(library.X, library.Y, 4, 5) <= 3, "where the capital can build it")
-  local alone = Library({ [1] = false, [2] = false })
-  T.eq(alone, nil, "only the sites planning: the capital's campus does not count")
+  -- Only the sites planning: the capital's campus does not count, so a site
+  -- gets a campus of its own for the library (issue 66).
+  local alone, result = Library({ [1] = false, [2] = false })
+  T.eq(result.Supplied[1] and result.Supplied[1].Type, "DISTRICT_CAMPUS", "a campus supplied")
+  local campus = nil
+  for _, p in ipairs(result.Plan) do
+    if p.Type == "DISTRICT_CAMPUS" then campus = p end
+  end
+  T.ok(alone ~= nil and campus ~= nil, "the library and the supplied campus placed")
+  T.eq(campus.City:sub(1, 1), "S", "in a site")
+  T.eq(Map.GetPlotDistance(alone.X, alone.Y, campus.X, campus.Y), 1, "next to the site's own campus")
 end)
 
 test("repair: a wonder the search left off goes back in, next to its district", function()

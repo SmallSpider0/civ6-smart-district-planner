@@ -841,3 +841,72 @@ test("issue 71: the solutions are buttons in one row, their districts in the too
   T.eq(SDP_Panel.State().Solution, 2, "a click selects one")
   SDP_Panel.SetCount(0)
 end)
+
+-- Issue 66 (plan A): a chosen wonder's district shows "for wonder" and the
+-- solve plans it; the player's "not wanted" wins; the stored state is left.
+test("issue 66: a wonder's district is supplied, shown, marked; not wanted stands", function()
+  SDP_Panel.Open()
+  SDP_Panel.SelectTab("SINGLE")
+  SDP_Panel.SelectCity(1)
+  local ENT = "DISTRICT_ENTERTAINMENT_COMPLEX"
+  for _, d in ipairs(SDP_Rules.PlannableDistricts(0)) do SDP_Panel.SetState(d.Type, SDP_UI.DefaultState(d)) end
+  SDP_Panel.SetState("DISTRICT_AQUEDUCT", "OFF")
+  SDP_Panel.SetState("DISTRICT_CAMPUS", "MUST")
+  SDP_Panel.SetCount(0)
+  SDP_Panel.SetTier("FAST")
+  local function Row(districtType)
+    for _, r in ipairs(SDP_Panel.State().DistrictRows) do
+      if r.Type == districtType then return r end
+    end
+  end
+  T.eq(Row(ENT).State, "POOL", "a candidate before")
+  SDP_Panel.SetWonder("BUILDING_COLOSSEUM", true)
+  T.eq(Row(ENT).State, "WONDER", "for the wonder")
+  T.eq(UI_Mock.Controls.DistrictStack ~= nil, true, "grid")
+  SDP_Panel.Solve()
+  local result = SDP_Panel.RunTask(500)
+  T.ok(result and result.Ok, "solved: " .. tostring(result and result.Error))
+  local complex, colosseum = nil, nil
+  for _, p in ipairs(result.Plan) do
+    if p.Type == ENT then complex = p end
+    if p.Type == "BUILDING_COLOSSEUM" then colosseum = p end
+  end
+  T.ok(complex ~= nil and colosseum ~= nil, "both planned")
+  T.eq(complex.ForWonder, "BUILDING_COLOSSEUM", "supplied for it")
+  local marked = false
+  for _, row in ipairs(SDP_Panel.State().ResultRows) do
+    if row.Detail:find("LOC_SDP_RESULT_FOR_WONDER(LOC_BUILDING_COLOSSEUM_NAME)", 1, true) then marked = true end
+  end
+  T.ok(marked, "its row says what it is for")
+  -- A click goes on from its own state: candidate -> required.
+  Row(ENT).Cell:Click()
+  T.eq(Row(ENT).State, "MUST", "required now")
+  Row(ENT).Cell:Click()
+  T.eq(Row(ENT).State, "OFF", "not wanted: the player's choice")
+  SDP_Panel.Solve()
+  local off = SDP_Panel.RunTask(500)
+  local reason = nil
+  for _, u in ipairs(off.Unplaced) do
+    if u.Type == "BUILDING_COLOSSEUM" then reason = u.Reason end
+  end
+  T.eq(reason, "NEEDS_DISTRICT", "the colosseum is left out")
+  local named = false
+  for _, row in ipairs(SDP_Panel.State().ResultRows) do
+    if row.Detail:find("LOC_SDP_REASON_NEEDS_DISTRICT(LOC_DISTRICT_ENTERTAINMENT_COMPLEX_NAME", 1, true) then named = true end
+  end
+  T.ok(named, "naming the district")
+  Row(ENT).Cell:Click()
+  T.eq(Row(ENT).State, "WONDER", "back to a candidate: for the wonder again")
+  SDP_Panel.SetWonder("BUILDING_COLOSSEUM", false)
+  T.eq(Row(ENT).State, "POOL", "without the wonder: as it was")
+  -- Several cities: a line says the first city of the list gets it.
+  local multi = SDP_Panel.Multi
+  SDP_Panel.SelectTab("MULTI")
+  multi.SetWonder("BUILDING_COLOSSEUM", true)
+  local supply = multi.State().View.Supply
+  T.eq(#supply, 1, "one line")
+  T.ok(supply[1]:find("LOC_SDP_MULTI_SUPPLY", 1, true) ~= nil, "before a solve: who will get it")
+  multi.SetWonder("BUILDING_COLOSSEUM", false)
+  T.eq(#multi.State().View.Supply, 0, "no line without the wonder")
+  SDP_Panel.SelectTab("SINGLE")
+end)

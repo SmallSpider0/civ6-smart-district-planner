@@ -193,6 +193,33 @@ function SDP_Multi.Participants(playerID, options)
   return participants, existing, siteList
 end
 
+-- The city (its name) where the player has built or pinned a district of
+-- `districtType`, or nil: where an empire-limited district a wonder needs
+-- stands already (issue 66).
+function SDP_Multi.WhereBuilt(playerID, districtType)
+  local function CityAt(x, y)
+    local plot = Map.GetPlot(x, y)
+    local city = plot ~= nil and Cities.GetPlotPurchaseCity(plot) or nil
+    return city ~= nil and city:GetName() or nil
+  end
+  for _, district in Players[playerID]:GetDistricts():Members() do
+    if GameInfo.Districts[district:GetType()].DistrictType == districtType then
+      local name = CityAt(district:GetX(), district:GetY())
+      if name ~= nil then return name end
+    end
+  end
+  local pins = {}
+  for _, pin in pairs(PlayerConfigurations[playerID]:GetMapPins()) do
+    if pin:GetIconName() == "ICON_" .. districtType then pins[#pins + 1] = pin end
+  end
+  table.sort(pins, function(a, b) return a:GetID() < b:GetID() end)
+  for _, pin in ipairs(pins) do
+    local name = CityAt(pin:GetHexX(), pin:GetHexY())
+    if name ~= nil then return name end
+  end
+  return nil
+end
+
 -- ===========================================================================
 -- Session
 -- ===========================================================================
@@ -213,7 +240,12 @@ Session.__index = Session
 --   Sites                { [site Key] = false }: city-center pins left out
 --   Distance             distance cost weight (0 or nil: off)
 --   Remind               find the woods and rainforest each solution relies on
---   Wonders              wonder types (building types) to place, in any participating city
+--   Wonders              wonder types (building types) to place, in any participating city;
+--                        a district one needs next to it that no city has is
+--                        supplied (issue 66, see below)
+--   Off, Offs            { [district type] = true }: districts the player set to
+--                        "not wanted" (not by default) in the shared list, per Key;
+--                        never supplied for a wonder there
 --   Existing             { [cityID] = bool } who else takes part (see Participants)
 --   Only                 { [cityID] = true }: exactly these cities (see Participants)
 --   Weights              as for SDP_Solver (five yields, HOUSING, LAND)
@@ -275,6 +307,7 @@ function SDP_Multi.NewSession(request)
     end
     local status = SDP_City.DistrictStatus(part.Scan, plannable)
     part.Present = SDP_City.PresentDistricts(part.Scan)
+    part.ForWonder = {} -- [district type] = the wonder it is supplied for (issue 66)
     -- With the shared list an existing city skips what it has pinned
     -- already; pins of other cities are only neighbours (issue 64).
     local pinnedHere = SDP_City.TackedDistricts(part.Scan)
@@ -344,6 +377,71 @@ function SDP_Multi.NewSession(request)
       end
     end
     part.Plan = plan
+  end
+
+  -- Districts the chosen wonders need next to them (issue 66, plan A): when
+  -- no participating city has one (built, pinned for it or in its plan),
+  -- the first city in the list that can take it plans it as required, so it
+  -- counts among the city's districts that take population. Not where the
+  -- player set it to "not wanted" (Off, Offs), where the city has or plans
+  -- a district it cannot share a city with (a water park), where it has no
+  -- valid tile, or past an empire limit; two wonders needing one district
+  -- get one. self.Supplied lists them { City, Type, Wonder }; Elsewhere[wonder]
+  -- the city where an empire-limited district stands already.
+  self.Supplied, self.Elsewhere = {}, {}
+  if request.Wonders and #request.Wonders > 0 then
+    local wonderRows = {}
+    for _, w in ipairs(SDP_Wonders.List(playerID)) do wonderRows[w.Type] = w end
+    local have = {} -- base types some participant has or plans
+    for _, part in ipairs(participants) do
+      for districtType in pairs(part.Present) do have[SDP_Rules.BaseDistrict(districtType)] = true end
+      for _, districtType in ipairs(part.Plan) do have[SDP_Rules.BaseDistrict(districtType)] = true end
+    end
+    local wonders = {}
+    for _, wonderType in ipairs(request.Wonders) do wonders[#wonders + 1] = wonderType end
+    table.sort(wonders)
+    local function Placeable(part, districtType)
+      for _, c in ipairs(part.Scan.Candidates) do
+        if SDP_Overlay.CanPlace(SDP_Overlay.Subject(districtType, c.X, c.Y)) then return true end
+      end
+      return false
+    end
+    for _, wonderType in ipairs(wonders) do
+      local w = wonderRows[wonderType]
+      local base = (w ~= nil and w.Status == nil) and w.AdjacentDistrict or nil
+      if base ~= nil and not have[base] then
+        -- The player's own district where a unique one replaces it (Rome: the Bath).
+        local own = byType[base] ~= nil and base or nil
+        for _, d in ipairs(plannable) do
+          if SDP_Rules.BaseDistrict(d.Type) == base and d.Type ~= base then own = d.Type end
+        end
+        local row = own ~= nil and byType[own] or nil
+        if row ~= nil and not row.CityCenter then
+          local limited = row.MaxPerPlayer and row.MaxPerPlayer > 0
+          if limited and left[own] == nil then
+            left[own] = row.MaxPerPlayer - (builtByPlayer[own] or 0) - (pinnedAnywhere[own] or 0)
+          end
+          for p, part in ipairs(participants) do
+            local off = (request.Offs and request.Offs[part.Key]) or request.Off or {}
+            local a = asked[p]
+            if not have[base] and not off[own] and not (limited and left[own] <= 0)
+                and a.Status[own] == nil and not a.PinnedHere[own]
+                and SDP_Rules.ExcludedBy(own, a.Kept) == nil and SDP_Rules.ExcludedBy(own, part.Present) == nil
+                and Placeable(part, own) then
+              part.Plan[#part.Plan + 1] = own
+              a.Seen[own], a.Kept[own] = true, true
+              part.ForWonder[own] = wonderType
+              have[base] = true
+              if limited then left[own] = left[own] - 1 end
+              self.Supplied[#self.Supplied + 1] = { City = part.Key, Type = own, Wonder = wonderType }
+            end
+          end
+          if not have[base] and limited and left[own] <= 0 then
+            self.Elsewhere[wonderType] = SDP_Multi.WhereBuilt(playerID, own)
+          end
+        end
+      end
+    end
   end
 
   for p, part in ipairs(participants) do
@@ -479,7 +577,8 @@ function SDP_Multi.NewSession(request)
   local slots, slotCity = {}, {}
   for p, part in ipairs(participants) do
     for _, districtType in ipairs(part.Plan) do
-      slots[#slots + 1] = { Key = districtType, Type = "DISTRICT", Group = p, Allowed = part.Allowed }
+      slots[#slots + 1] = { Key = districtType, Type = "DISTRICT", Group = p, Allowed = part.Allowed,
+        ForWonder = part.ForWonder[districtType] }
       slotCity[#slots] = p
     end
   end
@@ -543,8 +642,14 @@ function SDP_Multi.NewSession(request)
           for _, d in ipairs(plannable) do
             if d.Type ~= own and SDP_Rules.BaseDistrict(d.Type) == w.AdjacentDistrict then own = d.Type end
           end
-          unplaced[#unplaced + 1] = { City = "WONDERS", Type = wonderType, Reason = "NEEDS_DISTRICT", District = w.AdjacentDistrict,
-            Other = own }
+          if self.Elsewhere[wonderType] ~= nil then
+            -- An empire-limited district in a city that does not take part.
+            unplaced[#unplaced + 1] = { City = "WONDERS", Type = wonderType, Reason = "DISTRICT_ELSEWHERE",
+              District = w.AdjacentDistrict, Other = own, Where = self.Elsewhere[wonderType] }
+          else
+            unplaced[#unplaced + 1] = { City = "WONDERS", Type = wonderType, Reason = "NEEDS_DISTRICT",
+              District = w.AdjacentDistrict, Other = own }
+          end
         else
           local support = w.AdjacentImprovement and SDP_Wonders.Support(playerID, w.AdjacentImprovement, candidates,
             everywhere, ownable, taken, fixed) or nil
@@ -631,7 +736,8 @@ function SDP_Multi.NewSession(request)
     if not slots[s].Optional then
       local city = slotCity[s] and participants[slotCity[s]].Key or "WONDERS"
       local auto = slotCity[s] and participants[slotCity[s]].Auto[slots[s].Key] or nil
-      unplaced[#unplaced + 1] = { City = city, Type = slots[s].Key, Reason = "NO_LEGAL_PLOT", Auto = auto }
+      unplaced[#unplaced + 1] = { City = city, Type = slots[s].Key, Reason = "NO_LEGAL_PLOT", Auto = auto,
+        ForWonder = slots[s].ForWonder }
     end
   end
   self.SlotSpecs = slots
@@ -1029,7 +1135,7 @@ function Session:PlanFor(layout)
     elseif not search.Optional[m] then
       local spec = self.SlotSpecs[search.SlotIndex[m]]
       local city = spec.Wonder and "WONDERS" or self.Participants[spec.Group].Key
-      out.Unplaced[#out.Unplaced + 1] = { City = city, Type = spec.Key, Reason = "NO_FREE_PLOT" }
+      out.Unplaced[#out.Unplaced + 1] = { City = city, Type = spec.Key, Reason = "NO_FREE_PLOT", ForWonder = spec.ForWonder }
     end
   end
   -- A city that could not fit as many candidates as asked.
@@ -1076,6 +1182,7 @@ function Session:PlanFor(layout)
       Appeal = a.Appeal, Housing = a.Housing, Tiles = a.Tiles, TilesCounted = a.TilesCounted,
       Reach = self.Coverage and self.Coverage:Reach(search.Types[m], c.X, c.Y) or nil,
       Picked = search.Optional[m], Auto = (not spec.Wonder) and self.Participants[p].Auto[search.Types[m]] or nil,
+      ForWonder = spec.ForWonder,
     }
     if supportAt[m] ~= nil then
       local support = Map.GetPlotByIndex(supportAt[m])
@@ -1139,14 +1246,17 @@ end
 --                          Reach (keys of the targets it newly covers; coverage on, types with a reach) }
 --                 Unplaced { City, Type, Reason } (NOT_AVAILABLE, BUILT, PINNED, TACKED (an existing
 --                          city with the shared list has a pin of it, SDP_City.OwnPins), MAX_PER_PLAYER,
---                          NEEDS_DISTRICT, NEEDS_IMPROVEMENT (Other: the improvement), NO_LEGAL_PLOT,
---                          NO_FREE_PLOT; City "WONDERS" for wonders)
+--                          NEEDS_DISTRICT, DISTRICT_ELSEWHERE (Where: the city's name), NEEDS_IMPROVEMENT
+--                          (Other: the improvement), NO_LEGAL_PLOT, NO_FREE_PLOT; City "WONDERS" for
+--                          wonders; ForWonder: a district supplied for that wonder, issue 66)
+--                 Plan entries of supplied districts carry ForWonder too
 --                 A wonder's plan entry may carry Support = { Type, X, Y, Index, Unowned }: the
 --                          improvement it needs next to it (issue 51), tacked with it
 --                 Cities   { Key, Kind, Name, X, Y, CityID, SiteNumber, Number (SDP_City city
 --                          number, the pins' name), Plan (types asked), Gain, Picked,
 --                          Together (unless Request.Apart is false: SDP_Rules.Together) }
 --   and the best solution's fields copied to the top level (Plan, Gain, ...)
+--   Supplied    { City, Type, Wonder }: districts supplied for wonders (issue 66)
 --   Baseline    joint DMT total without any plan
 --   FirstGain   value of the city-by-city start (the "never worse" reference)
 -- }
@@ -1157,7 +1267,7 @@ function Session:Result()
     Ok = true, Session = self, Existing = self.Existing, Stats = stats, Baseline = self.Base.Total,
     FirstGain = self.First and self.First.Gain or nil, Solutions = {},
     Plan = {}, Unplaced = {}, Neighbours = {}, Cities = {}, Gain = 0, Adjacency = 0, LandDelta = 0, CoverageDelta = 0,
-    CostDelta = 0, Total = self.Base.Total, Sites = self.SiteList,
+    CostDelta = 0, Total = self.Base.Total, Sites = self.SiteList, Supplied = self.Supplied,
   }
   if search.K > 0 and search.BestLayout == nil then result.Ok, result.Error = false, "NO_LEGAL_LAYOUT" end
   for _, entry in ipairs(self:Distinct(self.Params.Solutions or 3)) do

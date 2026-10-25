@@ -211,6 +211,18 @@ SDP_UI = {
   Number = Number, Signed = Signed, Where = Where, YieldText = YieldText, PinText = PinText, TypeName = TypeName, Join = Join,
 }
 
+-- An "is left out" row: what (a district added by itself, or for a wonder,
+-- says so: issue 66), and why.
+function SDP_UI.UnplacedName(u)
+  if u.ForWonder ~= nil then return Locale.Lookup("LOC_SDP_RESULT_UNPLACED_FOR_WONDER", TypeName(u.Type), TypeName(u.ForWonder)) end
+  return Locale.Lookup(u.Auto and "LOC_SDP_RESULT_UNPLACED_AUTO" or "LOC_SDP_RESULT_UNPLACED", TypeName(u.Type))
+end
+
+function SDP_UI.ReasonText(u)
+  return Locale.Lookup("LOC_SDP_REASON_" .. u.Reason, u.Other and TypeName(u.Other) or "",
+    u.Where ~= nil and Locale.Lookup(u.Where) or "")
+end
+
 -- What a tab keeps in the save (issue 57, SDP_Settings): its weight columns,
 -- its switches ({ Key, Default }), its tier (one of `tiers`) and `extra`
 -- flags no preset sets ({ Key, Default }: the fold, issue 71).
@@ -427,6 +439,51 @@ function SDP_UI.ListRequest(districts, states, count, status)
   return out
 end
 
+-- The districts the player set to "not wanted" themselves (a default OFF
+-- state is no choice): a wonder's district is never supplied there (issue 66).
+function SDP_UI.OffSet(states)
+  local off = {}
+  for districtType, state in pairs(states) do
+    if state == "OFF" then off[districtType] = true end
+  end
+  return off
+end
+
+-- The districts the chosen wonders (types) need next to them that a city
+-- does not have, built, pinned for it, required or added by itself (issue
+-- 66): [district type] = the wonder. `scan` the city (SDP_City.Scan),
+-- `states` its list. The player's own "not wanted" and a district the
+-- required ones exclude are left out, as the solver does (SDP_Multi).
+function SDP_UI.WonderNeeds(playerID, wonders, districts, states, scan, status)
+  local needs = {}
+  if scan == nil or #wonders == 0 then return needs end
+  local must, has = {}, {}
+  for _, d in ipairs(districts) do
+    local state = SDP_UI.StateOf(states, d)
+    if (status == nil or status[d.Type] == nil) and (state == "MUST" or state == "AUTO" and SDP_City.NeedsAuto(scan, d.Type)) then
+      must[d.Type] = true
+      has[SDP_Rules.BaseDistrict(d.Type)] = true
+    end
+  end
+  for districtType in pairs(SDP_City.PresentDistricts(scan)) do has[SDP_Rules.BaseDistrict(districtType)] = true end
+  local rows = {}
+  for _, w in ipairs(SDP_Wonders.List(playerID)) do rows[w.Type] = w end
+  for _, wonderType in ipairs(wonders) do
+    local w = rows[wonderType]
+    local base = w ~= nil and w.Status == nil and w.AdjacentDistrict or nil
+    if base ~= nil and not has[base] then
+      for _, d in ipairs(districts) do
+        if SDP_Rules.BaseDistrict(d.Type) == base and (status == nil or status[d.Type] == nil) and states[d.Type] ~= "OFF"
+            and SDP_Rules.ExcludedBy(d.Type, must) == nil then
+          needs[d.Type] = wonderType
+        end
+      end
+      has[base] = true
+    end
+  end
+  return needs
+end
+
 -- A name in a fixed-width cell (TruncateWidth in the XML): one line in the
 -- normal 14 point font; when that would cut it off (English names are
 -- longer), two lines at 11 points. Cut off, with the full name as tooltip,
@@ -450,7 +507,8 @@ SDP_UI.FitName = FitName
 -- Show one district cell: its icon, name and state; the selected look for
 -- MUST and AUTO; dimmed when OFF or when it cannot be planned (`status`).
 function SDP_UI.ShowCell(inst, d, state, status)
-  local selected = status == nil and (state == "MUST" or state == "AUTO")
+  -- WONDER: shown for a district a chosen wonder needs (issue 66), not stored.
+  local selected = status == nil and (state == "MUST" or state == "AUTO" or state == "WONDER")
   local name = Locale.Lookup(d.Name)
   local label = status and Locale.Lookup("LOC_SDP_STATUS_" .. status) or Locale.Lookup("LOC_SDP_STATE_" .. state)
   inst.Icon:SetIcon(d.Icon, 26)
@@ -769,6 +827,7 @@ end
 function SDP_UI.PlanNote(p)
   local notes = {}
   if p.Auto then notes[#notes + 1] = Locale.Lookup("LOC_SDP_RESULT_AUTO") end
+  if p.ForWonder then notes[#notes + 1] = Locale.Lookup("LOC_SDP_RESULT_FOR_WONDER", TypeName(p.ForWonder)) end
   if p.Picked then notes[#notes + 1] = Locale.Lookup("LOC_SDP_RESULT_PICKED") end
   if p.Unowned then notes[#notes + 1] = Locale.Lookup("LOC_SDP_RESULT_UNOWNED") end
   if p.Swap ~= nil then
@@ -949,9 +1008,7 @@ local function ShowResult()
     -- What the plan leaves out comes first, so a long list does not hide it
     -- (issue 60).
     for _, u in ipairs(shown.Unplaced or result.Unplaced or {}) do
-      local key = u.Auto and "LOC_SDP_RESULT_UNPLACED_AUTO" or "LOC_SDP_RESULT_UNPLACED"
-      AddResultRow("ICON_" .. u.Type, Locale.Lookup(key, TypeName(u.Type)),
-        Locale.Lookup("LOC_SDP_REASON_" .. u.Reason, u.Other and TypeName(u.Other) or ""), UnplacedTip(u))
+      AddResultRow("ICON_" .. u.Type, SDP_UI.UnplacedName(u), SDP_UI.ReasonText(u), UnplacedTip(u))
     end
     -- Each planned district: where, its yields, and DMT's own breakdown on hover.
     for _, p in ipairs(shown.Plan) do
@@ -1036,9 +1093,18 @@ end
 
 local SetState -- defined below
 
+local SelectedWonders -- defined below
+
 local function ShowCells()
+  -- A district a chosen wonder needs shows "for wonder" (issue 66); a click
+  -- goes on from its own state.
+  local needs = SDP_UI.WonderNeeds(Game.GetLocalPlayer(), SelectedWonders(), m_districts, m_states, m_scan, m_status)
   m_districtRows = SDP_UI.BuildCells(m_cellIM, m_utilityIM, Controls.DistrictStack, Controls.UtilityStack, m_districts,
-    function(d) return SDP_UI.StateOf(m_states, d) end, StatusOf, function(d)
+    function(d)
+      local state = SDP_UI.StateOf(m_states, d)
+      if needs[d.Type] ~= nil and state ~= "MUST" then return "WONDER" end
+      return state
+    end, StatusOf, function(d)
       SetState(d.Type, SDP_UI.NextState(d, SDP_UI.StateOf(m_states, d)))
     end)
   ShowCount()
@@ -1304,7 +1370,7 @@ end
 
 -- Wonders to place with the districts (design 18, item 5): selectable ones,
 -- in type order (the solver's slot order, independent of the list's order).
-local function SelectedWonders()
+SelectedWonders = function()
   local list = {}
   for _, w in ipairs(SDP_Wonders.List(Game.GetLocalPlayer())) do
     if m_wonders[w.Type] and w.Status == nil then list[#list + 1] = w.Type end
@@ -1324,6 +1390,7 @@ SetWonder = function(wonderType, on)
     ClearResult()
   end
   PopulateWonders()
+  ShowCells()
   UpdateEstimate()
   UpdateFold()
 end
@@ -1584,7 +1651,7 @@ Request = function()
     Pool = list.Pool, Count = list.Count, MustSpecialty = list.MustSpecialty, Auto = list.Auto,
     Distance = m_weights.DISTANCE, Coverage = m_weights.COVERAGE, Remind = m_remind, Apart = m_apart,
     AllowFeatureRemoval = m_allowFeatureRemoval, Land = m_weights.LAND > 0, Tier = m_tier, Swap = m_swap,
-    IgnorePins = m_replace and OwnPins() or nil, Wonders = wonders,
+    IgnorePins = m_replace and OwnPins() or nil, Wonders = wonders, Off = SDP_UI.OffSet(m_states),
   }
 end
 
@@ -1598,7 +1665,7 @@ local function WonderRequest(request)
     Coverage = request.Coverage,
     Only = { [request.CityID] = true }, Weights = request.Weights, Land = request.Land, Apart = request.Apart,
     AllowFeatureRemoval = request.AllowFeatureRemoval, IgnorePins = request.IgnorePins, Swap = request.Swap,
-    Plans = { [key] = request.Districts },
+    Plans = { [key] = request.Districts }, Off = request.Off,
   }
 end
 

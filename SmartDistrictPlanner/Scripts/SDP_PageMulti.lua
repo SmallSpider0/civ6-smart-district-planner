@@ -156,15 +156,16 @@ function P.Request()
   local existing, sites = Choice()
   -- Cities with their own list; lists of cities no longer taking part are
   -- kept for later but not sent.
-  local plans, pools, counts, autos = nil, nil, nil, nil
+  local plans, pools, counts, autos, offs = nil, nil, nil, nil, nil
   local anything = #shared.Must > 0 or shared.Pick > 0
   local participants = Participants()
   for _, part in ipairs(participants) do
     local own = m_plans[part.Key]
     if own ~= nil then
       local list = ListOf(own)
-      plans, pools, counts, autos = plans or {}, pools or {}, counts or {}, autos or {}
+      plans, pools, counts, autos, offs = plans or {}, pools or {}, counts or {}, autos or {}, offs or {}
       plans[part.Key], pools[part.Key], counts[part.Key], autos[part.Key] = list.Must, list.Pool, list.Count, list.Auto
+      offs[part.Key] = SDP_UI.OffSet(own.States)
       if #list.Must > 0 or list.Pick > 0 then anything = true end
     end
   end
@@ -173,6 +174,7 @@ function P.Request()
   return {
     PlayerID = playerID, Tier = m_tier, Districts = shared.Must, Pool = shared.Pool, Count = shared.Count, Auto = shared.Auto,
     Plans = plans, Pools = pools, Counts = counts, Autos = autos, Wonders = wonders, Sites = sites,
+    Off = SDP_UI.OffSet(m_shared.States), Offs = offs,
     Existing = existing, Weights = weights, Land = m_weights.LAND > 0, Coverage = m_weights.COVERAGE, Distance = m_weights.DISTANCE,
     Remind = m_remind, Apart = m_apart, IgnorePins = m_replace and P.OwnPins() or nil, Swap = m_swap,
   }
@@ -451,6 +453,55 @@ FitPage = function()
 end
 P.FitPage = FitPage
 
+-- Under the wonder tags (issue 66): the districts the chosen wonders need
+-- that no city of the group has. Before a solve: they go to the first city
+-- of the list that can take them; after it: which city got them.
+function P.ShowSupply()
+  local lines = {}
+  local supplied = m_result ~= nil and m_result.Ok and m_result.Supplied or nil
+  if supplied ~= nil then
+    local byKey = {}
+    for _, city in ipairs(m_result.Cities or {}) do byKey[city.Key] = city end
+    for _, s in ipairs(supplied) do
+      local city = byKey[s.City]
+      lines[#lines + 1] = Locale.Lookup("LOC_SDP_MULTI_SUPPLIED", SDP_UI.TypeName(s.Type), SDP_UI.TypeName(s.Wonder),
+        city ~= nil and P.CityLabel(city) or s.City)
+    end
+  else
+    local wonders = WonderTypes()
+    if #wonders > 0 then
+      local has = {}
+      local rows = {}
+      for _, w in ipairs(SDP_Wonders.List(Game.GetLocalPlayer())) do rows[w.Type] = w end
+      local shared = ListOf(m_shared)
+      for _, t in ipairs(shared.Must) do has[SDP_Rules.BaseDistrict(t)] = true end
+      for _, own in pairs(m_plans) do
+        for _, t in ipairs(ListOf(own).Must) do has[SDP_Rules.BaseDistrict(t)] = true end
+      end
+      for _, part in ipairs(Participants()) do
+        local scan = part.Kind == "CITY" and SDP_City.Scan(Game.GetLocalPlayer(), part.CityID) or nil
+        if scan ~= nil then
+          for t in pairs(SDP_City.PresentDistricts(scan)) do has[SDP_Rules.BaseDistrict(t)] = true end
+        end
+      end
+      for _, wonderType in ipairs(wonders) do
+        local base = rows[wonderType] and rows[wonderType].AdjacentDistrict or nil
+        if base ~= nil and not has[base] and GameInfo.Districts[base] ~= nil and not GameInfo.Districts[base].CityCenter then
+          has[base] = true
+          local own = base
+          for _, d in ipairs(Districts()) do
+            if SDP_Rules.BaseDistrict(d.Type) == base then own = d.Type end
+          end
+          lines[#lines + 1] = Locale.Lookup("LOC_SDP_MULTI_SUPPLY", SDP_UI.TypeName(own), SDP_UI.TypeName(wonderType))
+        end
+      end
+    end
+  end
+  Controls.MultiSupplyNote:SetText(table.concat(lines, "[NEWLINE]"))
+  Controls.MultiSupplyNote:SetHide(#lines == 0)
+  m_view.Supply = lines
+end
+
 -- The fold line (issue 71): the preset, then what is not as usual.
 UpdateFold = function()
   local parts = {}
@@ -616,6 +667,7 @@ function P.RefreshLists()
   for _, w in ipairs(wonders) do
     m_view.Wonders[#m_view.Wonders + 1] = { Type = w.Type, Status = w.Status, Chosen = m_wonders[w.Type] == true }
   end
+  P.ShowSupply()
   UpdateReplaceLabel()
   m_view.PlanFor = m_planFor
   m_view.Plans = {}
@@ -812,9 +864,7 @@ function P.Render()
         AddRow("ICON_DISTRICT_CITY_CENTER", Locale.Lookup("LOC_SDP_RESULT_POOL_SHORT", where),
           Locale.Lookup("LOC_SDP_REASON_POOL_SHORT", u.Count or 1), "")
       else
-        local key = u.Auto and "LOC_SDP_RESULT_UNPLACED_AUTO" or "LOC_SDP_RESULT_UNPLACED"
-        AddRow("ICON_" .. u.Type, Locale.Lookup(key, SDP_UI.TypeName(u.Type)) .. "  " .. where,
-          Locale.Lookup("LOC_SDP_REASON_" .. u.Reason, u.Other and SDP_UI.TypeName(u.Other) or ""), SDP_UI.UnplacedTip(u))
+        AddRow("ICON_" .. u.Type, SDP_UI.UnplacedName(u) .. "  " .. where, SDP_UI.ReasonText(u), SDP_UI.UnplacedTip(u))
       end
     end
     -- The selected solution, city by city.
@@ -841,6 +891,7 @@ function P.Render()
   end
   Controls.MultiSolutionStack:CalculateSize()
   Controls.MultiResultStack:CalculateSize()
+  P.ShowSupply()
   FitPage()
   P.UpdateButtons()
 end

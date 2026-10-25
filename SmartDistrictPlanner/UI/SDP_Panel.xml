@@ -276,6 +276,8 @@
           </Stack>
         </Container>
         <Stack ID="MultiWonderChipStack" StackGrowth="Right" WrapWidth="480" WrapGrowth="Bottom" StackPadding="4"/>
+        <!-- The districts the chosen wonders need, and which city gets them (issue 66). -->
+        <Label ID="MultiSupplyNote" Style="BodyTextDark14" WrapWidth="480" Hidden="1"/>
         <Label Style="BodyTextDark14" String="LOC_SDP_WEIGHTS_TITLE" ToolTip="LOC_SDP_WEIGHTS_TOOLTIP"/>
         <Stack ID="MultiWeightStack" Anchor="C,T" StackGrowth="Right" StackPadding="0"/>
         <Container Size="480,26">
