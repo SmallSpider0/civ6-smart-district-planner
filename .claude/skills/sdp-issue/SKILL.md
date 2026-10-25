@@ -23,7 +23,7 @@ The mod does something wrong, or a test or document is wrong. Fix it without ask
 2. Still a bug if the fix only corrects plans that were wrong (an illegal tile, a miscounted bonus). If the fix needs a default changed, the requirement document changed, something removed, or changes plans in ordinary cases, treat it as a feature.
 3. Write a test that fails on the old code, fix, run the related tests, commit with `#N`.
 4. Put it in the next patch milestone (§3; create it when none is open). If the fix changes plans in many scenes, say so in the milestone's status page entry: the version digit is settled when releasing.
-5. Comment: cause, fix, how it was tested, which version it will ship in. The release itself waits for the maintainer (sdp-release).
+5. Comment: cause, fix, how it was tested, which version it will ship in. A milestone of bug fixes only is released without asking when it is due (sdp-release, "Who decides"); a question the maintainer must settle goes to the status page and holds that fix back.
 
 ### Feature or optimisation
 
@@ -46,7 +46,7 @@ The version digit follows what players get with their old settings (CONTRIBUTING
 | the solver or scoring gives different plans for the same settings, a default changes, a new kind of capability | second digit |
 | a large incompatible change | first digit |
 
-Several changes go into one release; a single change is released alone only when the live version is badly broken. When to release is the maintainer's call (sdp-release). Put the issue in the open milestone of that version (`gh issue edit N --milestone vX.Y.Z`); create the milestone when needed, with a one-line description. Research-only milestones (评测基线) hold no mod changes until the maintainer decides.
+Several changes go into one release; a single change is released alone only when the live version is badly broken. Bug-fix milestones are released without asking when due; everything else when the maintainer says (sdp-release, "Who decides"). Put the issue in the open milestone of that version (`gh issue edit N --milestone vX.Y.Z`); create the milestone when needed, with a one-line description. Research-only milestones (评测基线) hold no mod changes until the maintainer decides.
 
 ## 4. Working on it
 
