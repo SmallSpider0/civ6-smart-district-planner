@@ -773,7 +773,7 @@
       <Text>replace old tacks</Text>
     </Replace>
     <Replace Tag="LOC_SDP_FOLD_WONDERS" Language="en_US">
-      <Text>{1_N} wonders</Text>
+      <Text>{1_N} {1_N: plural 1?wonder; other?wonders;}</Text>
     </Replace>
     <Replace Tag="LOC_SDP_FOLD_HEAT" Language="en_US">
       <Text>good places: {1_District}</Text>
