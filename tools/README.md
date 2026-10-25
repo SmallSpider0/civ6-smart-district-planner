@@ -177,7 +177,7 @@ node tools/compare.mjs --refscore -s ^REF --weights tests/compare/refscenes/weig
 ```
 
 - 用途：#53 用社区公认的布局反推默认权重。每个布局手写成一个文本文件（`tests/compare/refscenes/<编号>.txt`，编号 `REF01-名字`），`build` 转成与真实集同样格式的场景文件，另带 `reference`（布局里的区域、哪些格是猜的、说明）。场景属于 `REF` 组，没有默认运行，不改变其他各组。
-- `validate.py` 检查每个文本能读、写回再读得到同样的场景、场景文件和 `index.json` 里的条目是最新的（不需要 node）。`verify` 还要游戏规则库（`tests/compare/.cache/`），只在本机跑。
+- `validate.py` 检查每个文本能读、写回再读得到同样的场景、场景文件和 `index.json` 里的条目是最新的（不需要 node）。`verify` 还要游戏规则库（`tests/compare/.cache/`），只在导出了规则库的机器上能跑。
 - 格式（坐标与游戏相同：x 向右，y 向下，第 0 行在最上面，奇数行向右错半格；`#` 后是注释）：
 
 ```
