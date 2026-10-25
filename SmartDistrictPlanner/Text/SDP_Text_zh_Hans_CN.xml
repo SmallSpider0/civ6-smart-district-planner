@@ -236,7 +236,7 @@
       <Text>本城已有它的地图钉</Text>
     </Replace>
     <Replace Tag="LOC_SDP_REASON_NEEDS_DISTRICT" Language="zh_Hans_CN">
-      <Text>需要相邻某个区域，但没有城市规划它</Text>
+      <Text>需要相邻{1_Other}，但没有城市规划它：把它设为必建</Text>
     </Replace>
     <Replace Tag="LOC_SDP_REASON_NEEDS_IMPROVEMENT" Language="zh_Hans_CN">
       <Text>需要相邻{1_Improvement}，但附近没有能建它的格</Text>

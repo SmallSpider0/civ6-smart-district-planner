@@ -537,7 +537,14 @@ function SDP_Multi.NewSession(request)
         elseif w.Status ~= nil then
           unplaced[#unplaced + 1] = { City = "WONDERS", Type = wonderType, Reason = w.Status }
         elseif w.AdjacentDistrict ~= nil and not present[w.AdjacentDistrict] then
-          unplaced[#unplaced + 1] = { City = "WONDERS", Type = wonderType, Reason = "NEEDS_DISTRICT", District = w.AdjacentDistrict }
+          -- Other names the district the player would set to Must: their own
+          -- unique district where it replaces the one the wonder needs (Rome: the Bath).
+          local own = w.AdjacentDistrict
+          for _, d in ipairs(plannable) do
+            if d.Type ~= own and SDP_Rules.BaseDistrict(d.Type) == w.AdjacentDistrict then own = d.Type end
+          end
+          unplaced[#unplaced + 1] = { City = "WONDERS", Type = wonderType, Reason = "NEEDS_DISTRICT", District = w.AdjacentDistrict,
+            Other = own }
         else
           local support = w.AdjacentImprovement and SDP_Wonders.Support(playerID, w.AdjacentImprovement, candidates,
             everywhere, ownable, taken, fixed) or nil
