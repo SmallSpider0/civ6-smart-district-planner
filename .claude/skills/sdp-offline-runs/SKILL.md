@@ -24,9 +24,9 @@ First `python3 -I tools/sdplock.py status`: the game lock, the heavy job on this
 | Job | Where |
 |---|---|
 | anything over about a minute: the full `offline_tests.mjs`, comparisons, refreshes, `--check`, oracle runs, experiments | the second machine, when there is one (`$SDP_REMOTE`, or `remote` in the local config); here only when all its slots are taken and the job cannot wait |
-| under a minute: `validate.py`, one or two specs, a single scene | here (sending it would cost more than running it) |
+| under a minute: `validate.py`, a spec known to finish within a minute, a single scene | here (sending it would cost more than running it) |
 
-A job that runs here although it is not small (no second machine, its slots all taken, or both machines on one job by splitting the scenes and rerunning only missing rows) goes through `python3 -I tools/sdplock.py heavy NAME -- CMD`: one at a time, with the workers the local config allows (4 without one; `-j` is lowered to fit), paused while the game lock is held. A job that was paused says so at the end: its timing fields are not usable.
+Never start a job over a minute directly on this machine, subagents included: only jobs the two tools started are in the shared queue, so other sessions and the status page see nothing else. A job that runs here although it is not small (no second machine, its slots all taken, or both machines on one job by splitting the scenes and rerunning only missing rows) goes through `python3 -I tools/sdplock.py heavy NAME -- CMD`: one at a time, with the workers the local config allows (4 without one; `-j` is lowered to fit), paused while the game lock is held. A job that was paused says so at the end: its timing fields are not usable.
 
 The second machine has one queue for all sessions: `remote.py run` holds a job until its slots are free (first come, first served), so never start jobs there by hand:
 
