@@ -593,14 +593,14 @@ function Search:CoverageDelta(layout)
   return self.Coverage.Weight * self:CoverageCount(layout)
 end
 
--- The appeal part of a layout alone (for reports; 0 when there is none):
--- housing, and a preserve's yields on the plots around it (with the land
--- part on, what they add to the land score). `detail` as SDP_Appeal:Score.
-function Search:AppealDelta(layout, detail)
+-- The appeal part of a layout alone and what a preserve's yields on the
+-- plots around it add to the land part (for reports and the model; 0 when
+-- there is none): housing, tiles. `detail` as SDP_Appeal:Score.
+function Search:AppealParts(layout, detail)
   local appeal = self.AppealModel
-  if appeal == nil then return 0 end
+  if appeal == nil then return 0, 0 end
   local value, boosts = appeal:Score(layout, detail)
-  local delta = value - appeal.Base
+  local tiles = 0
   if boosts ~= nil then
     local taken = {}
     for m = 1, self.K do
@@ -608,15 +608,30 @@ function Search:AppealDelta(layout, detail)
     end
     for l, land in ipairs(self.Lands) do
       if boosts[l] ~= nil then
-        delta = delta + SDP_Land.ScoreTaken(land, taken, #taken, {}, boosts[l]) - SDP_Land.ScoreTaken(land, taken, #taken, {})
+        tiles = tiles + SDP_Land.ScoreTaken(land, taken, #taken, {}, boosts[l]) - SDP_Land.ScoreTaken(land, taken, #taken, {})
       end
     end
     appeal:ClearBoosts()
   end
-  return delta
+  return value - appeal.Base, tiles
 end
 
--- The land part of a layout alone (for reports).
+-- The appeal part of a layout alone (for reports; 0 when there is none): the
+-- housing of neighborhoods and preserves. A preserve's yields on the plots
+-- around it are in the land part (issue 91).
+function Search:AppealDelta(layout, detail)
+  local housing = self:AppealParts(layout, detail)
+  return housing
+end
+
+-- Both parts of AppealParts together (the model's single values).
+function Search:AppealSingle(layout)
+  local housing, tiles = self:AppealParts(layout)
+  return housing + tiles
+end
+
+-- The land part of a layout alone (for reports), with a preserve's yields
+-- on the plots around it.
 function Search:LandDelta(layout)
   local taken = {}
   for m = 1, self.K do
@@ -624,6 +639,10 @@ function Search:LandDelta(layout)
   end
   local delta = 0
   for _, land in ipairs(self.Lands) do delta = delta + SDP_Land.ScoreTaken(land, taken, #taken, {}) - land.Base end
+  if self.AppealModel ~= nil and #self.Lands > 0 then
+    local _, tiles = self:AppealParts(layout)
+    delta = delta + tiles
+  end
   return delta
 end
 
@@ -902,7 +921,7 @@ function Search:Model()
       for i = 1, n do
         if self.Legal[m][i] and self.AppealModel.Value[m] then
           layout[m] = i
-          appealSingle[m][i] = self:AppealDelta(layout)
+          appealSingle[m][i] = self:AppealSingle(layout)
           layout[m] = 0
         end
       end

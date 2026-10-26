@@ -264,6 +264,7 @@ function Session:PlanFor(layout)
       Unowned = c.Unowned, RemoveTech = c.RemoveTech, Swap = c.Swap, ClearFirst = c.ClearFirst,
       Auto = self.Auto[search.Types[m]], Picked = search.Optional[m],
       Appeal = a.Appeal, Housing = a.Housing, Tiles = a.Tiles, TilesCounted = a.TilesCounted,
+      TilesReason = a.TilesReason,
       Reach = self.Coverage and self.Coverage:Reach(search.Types[m], c.X, c.Y) or nil,
     }
     if search.Optional[m] then out.Picked[#out.Picked + 1] = search.Types[m] end
@@ -320,12 +321,15 @@ end
 --               required ones a city cannot have, the second left out; Other:
 --               the district it excludes), NO_LEGAL_PLOT, or NO_FREE_PLOT
 --               (the others took its plots: no layout places them all)
---   Gain        adjacency gain over the baseline plus the land part (<= 0)
---               plus the distance cost (<= 0) plus the coverage part plus the appeal part
---   Adjacency   adjacency gain alone; LandDelta, CostDelta: the land part and
---               the distance cost (0 when off); CoverageDelta: the coverage part
---               (0 when off), Covered, CoveredBy: as for SDP_Multi (nil when off);
---               AppealDelta: the appeal part
+--   Gain        adjacency gain over the baseline plus the land part plus the
+--               distance cost (<= 0) plus the coverage part plus the appeal part
+--               (the solver's objective; the panel shows the parts, issue 91)
+--   Adjacency   adjacency gain alone; LandDelta, CostDelta: the land part (a
+--               preserve's yields on the plots around it included, issue 91)
+--               and the distance cost (0 when off); CoverageDelta: the
+--               coverage part (0 when off), Covered, CoveredBy: as for
+--               SDP_Multi (nil when off); AppealDelta: the housing of
+--               neighborhoods and preserves
 --               (SDP_Appeal; nil when no district depends on appeal)
 --   ImprovementHousing  housing the city loses to districts built over its
 --               farms, pastures ... (SDP_Appeal.ImprovementHousing; negative,

@@ -364,7 +364,7 @@ function CmpOracle.Run(search, incumbentLayout, options)
         for i = 1, n do
           if search.Legal[m][i] then
             layout[m] = i
-            appealSingle[m][i] = search:AppealDelta(layout)
+            appealSingle[m][i] = search:AppealSingle(layout)
             layout[m] = 0
           end
         end

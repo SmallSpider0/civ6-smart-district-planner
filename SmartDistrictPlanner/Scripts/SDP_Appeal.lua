@@ -39,11 +39,15 @@
 --                  without these districts plus theirs, against the
 --                  population its districts need
 --   tile part    = for each placed district with Adjacent_AppealYieldChanges
---                  rows (the preserve; its buildings counted as built), each
---                  unimproved workable neighbour gets the rows' yields for its
---                  appeal. With the land part on they raise that plot's value
---                  in the land model (worked only if among the city's best
---                  plots), else they count in full, weighted.
+--                  rows (the preserve), each unimproved workable neighbour
+--                  gets the rows' yields for its appeal, from the buildings
+--                  the player can build now (TileRows). They belong to the
+--                  land part (issue 91, decided 2026-10-26): a plot next to a
+--                  preserve is worth the better of its improved value and its
+--                  unimproved value plus these yields, valued and weighted as
+--                  every plot (SDP_Land), and counts only when it is among
+--                  the city's best plots; with the land part off they do not
+--                  count.
 -- The part of a layout is its value minus the value of the empty layout, so
 -- that a plan is also charged for lowering a pinned or built neighborhood.
 -- Everything comes from GameInfo and the plots at run time, except the
@@ -56,7 +60,7 @@ local m_rules, m_rulesFor = nil, nil
 -- {
 --   Appeal       { [district type] = Districts.Appeal }; wonders use DISTRICT_WONDER's
 --   Housing      { [district type] = { Base = Districts.Housing, Rows = { { Min, Change } } highest Min first } }
---   Tiles        { [district type] = { { Min, Max, Yield, Change, Unimproved } } }
+--   Tiles        { [district type] = { { Min, Max, Yield, Change, Unimproved, Building } } }
 --   Feature      { [feature index] = Appeal } of the features a district clears
 --                (Removable; with RemoveTech: { [feature index] = technology index })
 --   RemoveTech   { [feature index] = technology index } for those that need one
@@ -91,8 +95,10 @@ function SDP_Appeal.Rules()
   if GameInfo.Adjacent_AppealYieldChanges ~= nil then
     for row in GameInfo.Adjacent_AppealYieldChanges() do
       local list = rules.Tiles[row.DistrictType] or {}
+      local building = row.BuildingType
+      if building == "NO_BUILDING" then building = nil end
       list[#list + 1] = { Min = row.MinimumValue, Max = row.MaximumValue, Yield = row.YieldType, Change = row.YieldChange,
-        Unimproved = row.Unimproved == true }
+        Unimproved = row.Unimproved == true, Building = building }
       rules.Tiles[row.DistrictType] = list
     end
   end
@@ -153,6 +159,42 @@ local function TileYields(rows, appeal, improved, into)
       into[row.Yield] = (into[row.Yield] or 0) + row.Change
     end
   end
+end
+
+-- The tile rows of `districtType` whose building the player can build now
+-- (issue 91): a row without a building, or one whose building's PrereqTech
+-- and PrereqCivic the player has, or whose prerequisites are the district's
+-- own (it comes with the district: the grove, Mysticism). In the game's
+-- rules the sanctuary needs Conservation. No player: every row.
+function SDP_Appeal.TileRows(rules, districtType, player)
+  local rows = rules.Tiles[districtType]
+  if rows == nil or player == nil then return rows end
+  local techs = player.GetTechs ~= nil and player:GetTechs() or nil
+  local culture = player.GetCulture ~= nil and player:GetCulture() or nil
+  local district = GameInfo.Districts[districtType]
+  local function Has(tech, civic)
+    if tech ~= nil then
+      local row = GameInfo.Technologies[tech]
+      if row == nil or techs == nil or not techs:HasTech(row.Index) then return false end
+    end
+    if civic ~= nil then
+      local row = GameInfo.Civics[civic]
+      if row == nil or culture == nil or not culture:HasCivic(row.Index) then return false end
+    end
+    return true
+  end
+  local ok = {}
+  local out = {}
+  for _, row in ipairs(rows) do
+    local building = row.Building
+    if building ~= nil and ok[building] == nil then
+      local b = GameInfo.Buildings ~= nil and GameInfo.Buildings[building] or nil
+      ok[building] = b == nil or Has(b.PrereqTech, b.PrereqCivic)
+        or (district ~= nil and b.PrereqTech == district.PrereqTech and b.PrereqCivic == district.PrereqCivic)
+    end
+    if building == nil or ok[building] then out[#out + 1] = row end
+  end
+  return out
 end
 
 -- Whether a slot type counts here (it has housing or tile rows).
@@ -227,15 +269,18 @@ end
 
 -- spec = {
 --   PlayerID       whose technologies decide which features building clears
+--                  and whose technologies and civics which preserve
+--                  buildings count (TileRows)
 --   Types, Kinds   the search's slots (SDP_Search after Singles)
 --   Candidates     { Index, X, Y } by position
 --   Fixed          SDP_Overlay.FixedSubjects of every city (built and pinned)
 --   Weights        the request's weights: HOUSING (default 1); the tile
---                  yields weigh as in the land part (SDP_Land.PLOT_WEIGHTS,
---                  times LAND when the land part is on: they raise its plots)
---   Lands          the search's land models (nil or empty: land part off)
---   Workable       { [plot index] = true } plots a city can work (the tile
---                  part's plots when the land part is off)
+--                  yields weigh as in the land part (SDP_Land.PLOT_WEIGHTS
+--                  times LAND: they raise its plots)
+--   Lands          the search's land models (nil or empty: land part off,
+--                  the tile yields only reported)
+--   Workable       { [plot index] = true } plots a city can work (the
+--                  reported tile yields)
 --   Optional       { [slot] = true } slots picked from the pool: a preserve
 --                  there gets its housing counted, but its grove and
 --                  sanctuary yields only reported (they need two buildings;
@@ -286,7 +331,14 @@ function SDP_Appeal.New(spec)
   local weights = spec.Weights or {}
   self.HousingWeight = weights.HOUSING == nil and 1 or weights.HOUSING
   self.Lands = spec.Lands or {}
-  self.TileWeights = SDP_Land.Weights(SDP_Land.PlotWeights(#self.Lands > 0 and SDP_Land.Scale(weights) or 1))
+  self.TileWeights = SDP_Land.Weights(SDP_Land.PlotWeights(SDP_Land.Scale(weights)))
+  -- Per slot: the tile rows of the buildings the player can build now.
+  self.TileRows = {}
+  for m = 1, self.K do
+    if spec.Kinds[m] == "DISTRICT" and rules.Tiles[spec.Types[m]] ~= nil then
+      self.TileRows[m] = SDP_Appeal.TileRows(rules, spec.Types[m], player)
+    end
+  end
   self.Workable = spec.Workable or {}
   -- Appeal before the plan: the game's, plus what the pinned districts and
   -- wonders will do to their neighbours once built.
@@ -366,11 +418,12 @@ function SDP_Appeal:AppealAt(index)
   return appeal
 end
 
--- Value of a layout (nil: the empty one): housing part plus, land part off,
--- the tile part; and, land part on, the tile yields per land model as
--- boosts { [land] = { [plot index] = weighted extra } } (nil when none).
--- `detail` (optional, reports): filled with { [slot] = { Appeal, Housing,
--- Tiles = { [yield] = n } } }.
+-- Value of a layout (nil: the empty one): the housing part; and the tile
+-- yields per land model as boosts { [land] = { [plot index] = weighted
+-- extra } } (nil when none; never with the land part off), which
+-- SDP_Land.ScoreTaken counts. `detail` (optional, reports): filled with
+-- { [slot] = { Appeal, Housing, Tiles = { [yield] = n }, TilesCounted,
+-- TilesReason = "POOL" | "LAND" when not counted } }.
 function SDP_Appeal:Score(layout, detail)
   local rules, candidates, at = self.Rules, self.Candidates, self.At
   local placedAt = {}
@@ -415,9 +468,10 @@ function SDP_Appeal:Score(layout, detail)
             value = value + housingWeight * housing
           end
         end
-        local rows = rules.Tiles[self.Types[m]]
+        local rows = self.TileRows[m]
         local tiles = nil
-        local counted = not self.Optional[m]
+        local reason = (self.Optional[m] and "POOL") or (#self.Lands == 0 and "LAND") or nil
+        local counted = reason == nil
         if rows ~= nil and (counted or detail ~= nil) then
           tiles = detail and {} or nil
           for _, q in ipairs(Neighbours(self.Cache, index)) do
@@ -442,8 +496,6 @@ function SDP_Appeal:Score(layout, detail)
                   local b = boosts[owner] or {}
                   boosts[owner] = b
                   b[q] = (b[q] or 0) + extra
-                elseif #self.Lands == 0 and self.Workable[q] then
-                  value = value + extra
                 end
               end
             end
@@ -451,7 +503,7 @@ function SDP_Appeal:Score(layout, detail)
         end
         if detail ~= nil then
           detail[m] = { Appeal = appeal, Housing = housing, Tiles = tiles }
-          if rows ~= nil then detail[m].TilesCounted = counted end
+          if rows ~= nil then detail[m].TilesCounted, detail[m].TilesReason = counted, reason end
         end
       end
     end

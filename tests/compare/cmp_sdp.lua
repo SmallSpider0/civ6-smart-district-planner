@@ -23,6 +23,9 @@
 --                                    of the scenario's districts; before
 --                                    _GROWTH when both
 --                                    (design 19)
+--   variant ..._DIST<nnn> (last)     the distance cost weight nnn / 100 (single
+--                                    and multi; the panel's default is
+--                                    _DIST050 since issue 91), else off
 --   variant ORACLE                   the exact reference (cmp_oracle.lua, issue
 --                                    48): the fine tier's plan, then branch and
 --                                    bound over the same search to the proven
@@ -76,8 +79,8 @@ local function ScaleLand(lambda)
   if lambda == 1 then return end
   local values = SDP_Land.PlotValues
   SDP_Land.PlotValues = function(plot, ctx)
-    local tile, once = values(plot, ctx)
-    return lambda * tile, lambda * once
+    local tile, once, bare = values(plot, ctx)
+    return lambda * tile, lambda * once, bare and lambda * bare
   end
   local scoreTaken = SDP_Land.ScoreTaken
   SDP_Land.ScoreTaken = function(model, taken, count, mark, boost)
@@ -195,6 +198,10 @@ function CmpAdapters.sdp(request, variant, w)
   local oracle = variant:match("^ORACLE") ~= nil
   local check = oracle and variant:match("_CHECK$") ~= nil
   if oracle then variant = "FINE" .. variant:gsub("_CHECK$", ""):gsub("^ORACLE", "") end
+  -- "..._DIST<nnn>": the distance cost weight nnn / 100 (issue 91).
+  local distance = tonumber(variant:match("_DIST(%d+)$") or "")
+  if distance ~= nil then distance = distance / 100 end
+  variant = variant:gsub("_DIST%d+$", "")
   -- "<TIER>_GROWTH" (sites): the sites tab's Growth first preset.
   local growth = variant:match("_GROWTH$") ~= nil
   variant = variant:gsub("_GROWTH$", "")
@@ -248,7 +255,7 @@ function CmpAdapters.sdp(request, variant, w)
     -- SDP_Multi with only this city (SDP_Panel's WonderRequest).
     local id = request.target:GetID()
     local r = SDP_Multi.Solve({ PlayerID = 0, Tier = variant, Districts = request.districts, Wonders = request.wonders,
-      Only = { [id] = true }, Weights = request.weights, Land = land, Swap = swap, Coverage = coverage })
+      Only = { [id] = true }, Weights = request.weights, Land = land, Swap = swap, Coverage = coverage, Distance = distance })
     if not r.Ok then out.notes[#out.notes + 1] = tostring(r.Error) end
     for _, p in ipairs(r.Plan or {}) do
       out.placements[#out.placements + 1] = { city = id, type = p.Type, x = p.X, y = p.Y, kind = p.Kind }
@@ -263,14 +270,14 @@ function CmpAdapters.sdp(request, variant, w)
       stats.method = "oracle"
       return out
     end
-    stats.sdpGain, stats.sdpAppeal = r.Adjacency, r.AppealDelta
+    stats.sdpGain, stats.sdpAppeal, stats.sdpLand, stats.sdpCost = r.Adjacency, r.AppealDelta, r.LandDelta, r.CostDelta
     if land then stats.sdpObjective = r.Gain end
     stats.sdpQuality = r.Quality -- design 7.4: Exhaustive, Bound, Gap, Converged, Truncated
     for _, u in ipairs(r.Unplaced or {}) do out.notes[#out.notes + 1] = "unplaced " .. tostring(u.Type) .. " " .. tostring(u.Reason) end
   elseif scn.kind == "single" then
     local r = SDP_Solver.Solve({ PlayerID = 0, CityID = request.target:GetID(), Districts = request.districts,
       Pool = request.pool, Count = request.count,
-      Land = land, Tier = variant, Weights = request.weights, Swap = swap, Coverage = coverage })
+      Land = land, Tier = variant, Weights = request.weights, Swap = swap, Coverage = coverage, Distance = distance })
     if not r.Ok then out.notes[#out.notes + 1] = tostring(r.Error) end
     Take(r.Plan, request.target:GetID())
     if longrun and r.Ok then
@@ -285,7 +292,7 @@ function CmpAdapters.sdp(request, variant, w)
       stats.method = "oracle"
       return out
     end
-    stats.sdpGain, stats.sdpAppeal = r.Adjacency, r.AppealDelta
+    stats.sdpGain, stats.sdpAppeal, stats.sdpLand, stats.sdpCost = r.Adjacency, r.AppealDelta, r.LandDelta, r.CostDelta
     -- The mod's own objective of its plan (with land on: adjacency + lambda x
     -- land part + housing), to set against ORACLE_LAND's optimum.
     if land then stats.sdpObjective = r.Gain end
@@ -317,7 +324,7 @@ function CmpAdapters.sdp(request, variant, w)
         end
       end
       local r = SDP_Multi.Solve({ PlayerID = 0, Tier = variant, Districts = plans and {} or request.districts, Plans = plans,
-        Existing = existing, Land = land, Weights = request.weights })
+        Existing = existing, Land = land, Weights = request.weights, Distance = distance })
       if not r.Ok then out.notes[#out.notes + 1] = tostring(r.Error) end
       local byKey = {}
       for _, c in ipairs(r.Cities or {}) do byKey[c.Key] = c.CityID end
@@ -342,7 +349,8 @@ function CmpAdapters.sdp(request, variant, w)
     -- the single-city tab would ask; city-center tacks do not take part.
     local only = #request.cities == 1 and existing or nil
     local r = SDP_Multi.Solve({ PlayerID = 0, Tier = variant, Districts = plans and {} or request.districts, Plans = plans,
-      Existing = existing, Only = only, Land = land, Weights = request.weights, Coverage = coverage, Swap = swap })
+      Existing = existing, Only = only, Land = land, Weights = request.weights, Coverage = coverage, Swap = swap,
+      Distance = distance })
     if not r.Ok then out.notes[#out.notes + 1] = tostring(r.Error) end
     local byKey = {}
     for _, c in ipairs(r.Cities or {}) do byKey[c.Key] = c.CityID end
@@ -362,7 +370,7 @@ function CmpAdapters.sdp(request, variant, w)
         out.placements[#out.placements + 1] = { city = byKey[p.City], type = p.Type, x = p.X, y = p.Y }
       end
     end
-    stats.sdpGain, stats.sdpAppeal = r.Adjacency, r.AppealDelta
+    stats.sdpGain, stats.sdpAppeal, stats.sdpLand, stats.sdpCost = r.Adjacency, r.AppealDelta, r.LandDelta, r.CostDelta
     if land then stats.sdpObjective = r.Gain end
     stats.sdpQuality = r.Quality -- design 7.4: Exhaustive, Bound, Gap, Converged, Truncated
     stats.sdpCovered = r.Covered

@@ -40,8 +40,12 @@ local VERSION = "v1.5.1"
 -- (SDP_Land.PLOT_WEIGHTS, issue 53), so food and the one-time yields of
 -- clearing and harvesting have no column here; LAND weighs the whole land
 -- part (0: off, in place of the switch it had). DISTANCE is the distance
--- cost weight (feedback item 9), 0 (off) by default. Every weight steps by
--- 0.5 (issue 53).
+-- cost weight (feedback item 9), 0.5 by default (issue 91, decided
+-- 2026-10-26: with the same adjacency, closer to the City Center is better,
+-- since outer tiles join the city later or cost Gold); 0 is off. Settings
+-- kept in a save hold only what differs from the default (SDP_Settings), so
+-- a player who never changed it gets 0.5 and one who set it keeps theirs.
+-- Every weight steps by 0.5 (issue 53).
 local WEIGHT_COLUMNS = {
   { Key = "YIELD_SCIENCE", Glyph = "[ICON_Science]" },
   { Key = "YIELD_CULTURE", Glyph = "[ICON_Culture]" },
@@ -49,7 +53,7 @@ local WEIGHT_COLUMNS = {
   { Key = "YIELD_GOLD", Glyph = "[ICON_Gold]" },
   { Key = "YIELD_PRODUCTION", Glyph = "[ICON_Production]" },
   { Key = "LAND", Glyph = "LOC_SDP_WEIGHT_LAND_SHORT", ToolTip = "LOC_SDP_LAND" },
-  { Key = "DISTANCE", Glyph = "LOC_SDP_WEIGHT_DISTANCE_SHORT", ToolTip = "LOC_SDP_WEIGHT_DISTANCE", Step = 0.5, Default = 0 },
+  { Key = "DISTANCE", Glyph = "LOC_SDP_WEIGHT_DISTANCE_SHORT", ToolTip = "LOC_SDP_WEIGHT_DISTANCE", Step = 0.5, Default = 0.5 },
   -- Housing of districts that depend on appeal (neighborhood, preserve; SDP_Appeal).
   -- Short text like the other non-yield columns: [ICON_Housing] is a
   -- black square in the game (seen 2026-10-21), as 20.5 found for others.
@@ -432,17 +436,26 @@ end
 -- Districts that take population default to POOL (OFF when the empire may
 -- have only one: those are never picked), the others to AUTO when they can
 -- be automatic, else OFF. A click goes POOL -> MUST -> OFF -> POOL, or
--- AUTO -> MUST -> OFF -> AUTO.
+-- AUTO -> MUST -> OFF -> AUTO. A district whose buildings give yields to
+-- the plots around it (Adjacent_AppealYieldChanges: the preserve) starts
+-- OFF and cycles as the POOL ones (issue 91, decided 2026-10-26: few
+-- civilizations build it; a player who wants it sets it to Must).
 -- ===========================================================================
 local function Limited(d) return d.MaxPerPlayer ~= nil and d.MaxPerPlayer > 0 end
 
-function SDP_UI.DefaultState(d)
+-- The state a click cycles back to.
+local function CycleState(d)
   if d.Specialty then return Limited(d) and "OFF" or "POOL" end
   return SDP_Rules.AutoKind(d.Type) ~= nil and "AUTO" or "OFF"
 end
 
+function SDP_UI.DefaultState(d)
+  if d.Specialty and SDP_Appeal.Rules().Tiles[d.Type] ~= nil then return "OFF" end
+  return CycleState(d)
+end
+
 function SDP_UI.NextState(d, state)
-  local first = SDP_UI.DefaultState(d)
+  local first = CycleState(d)
   if state == "MUST" then return "OFF" end
   if state == "OFF" then return first == "OFF" and "MUST" or first end
   return "MUST"
@@ -645,14 +658,26 @@ function SDP_UI.BuildWonders(pull, chipIM, chipStack, wonders, chosen, onSet)
   return count
 end
 
--- "Gain (adjacency, land, ...)": the parts that are on.
+-- The summary line (issue 91, decided 2026-10-26): the weighted adjacency
+-- first, then the other parts that are on, each on its own (tiles, distance,
+-- housing, reach, in the weight row's order). The sum the solutions are
+-- ranked by is not shown: late in the game the tiles the districts take can
+-- outweigh their adjacency, and a negative total read as a bad plan.
 function SDP_UI.SummaryText(s, parts)
-  local list = { Locale.Lookup("LOC_SDP_PART_ADJACENCY", Signed(s.Adjacency or 0)) }
+  local list = {}
   if parts.Land then list[#list + 1] = Locale.Lookup("LOC_SDP_PART_LAND", Signed(s.LandDelta or 0)) end
-  if parts.Coverage then list[#list + 1] = Locale.Lookup("LOC_SDP_PART_COVERAGE", Signed(s.CoverageDelta or 0)) end
   if parts.Distance then list[#list + 1] = Locale.Lookup("LOC_SDP_PART_DISTANCE", Signed(s.CostDelta or 0)) end
   if s.AppealDelta ~= nil then list[#list + 1] = Locale.Lookup("LOC_SDP_PART_APPEAL", Signed(s.AppealDelta)) end
-  return Locale.Lookup("LOC_SDP_RESULT_SUMMARY_PARTS", Signed(s.Gain or 0), Join(list))
+  if parts.Coverage then list[#list + 1] = Locale.Lookup("LOC_SDP_PART_COVERAGE", Signed(s.CoverageDelta or 0)) end
+  local adjacency = Signed(s.Adjacency or 0)
+  if #list == 0 then return Locale.Lookup("LOC_SDP_RESULT_SUMMARY_ADJACENCY", adjacency) end
+  return Locale.Lookup("LOC_SDP_RESULT_SUMMARY_OTHERS", adjacency, Join(list))
+end
+
+-- A solution button's label: its number and weighted adjacency, the
+-- summary's first figure (issue 91); its tooltip: the summary, then `detail`.
+function SDP_UI.SolutionLabel(n, s)
+  return Locale.Lookup("LOC_SDP_SOLUTION_N", n, Signed(s.Adjacency or 0))
 end
 
 -- A reminder's text: the districts and what each would lose.
@@ -978,8 +1003,12 @@ function SDP_UI.PlanDetail(p)
       end
     end
     if #tiles > 0 then
-      -- A preserve picked from the pool: shown, not scored (SDP_Appeal Optional).
-      local key = p.TilesCounted == false and "LOC_SDP_RESULT_TILES_UNCOUNTED" or "LOC_SDP_RESULT_TILES"
+      -- Shown, not scored: a preserve picked from the pool (SDP_Appeal
+      -- Optional), or the Tiles weight at 0 (they belong to the tiles, issue 91).
+      local key = "LOC_SDP_RESULT_TILES"
+      if p.TilesCounted == false then
+        key = p.TilesReason == "LAND" and "LOC_SDP_RESULT_TILES_LAND_OFF" or "LOC_SDP_RESULT_TILES_UNCOUNTED"
+      end
       parts[#parts + 1] = Locale.Lookup(key, table.concat(tiles, " "))
     end
   end
@@ -1038,19 +1067,21 @@ local function ShowResult()
     if solutions[m_solution] == nil then m_solution = 1 end
     local shown = solutions[m_solution] or result
     local request = result.Session and result.Session.Request or {}
-    Controls.Summary:SetText(SDP_UI.SummaryText(shown, { Land = request.Land,
-      Distance = (request.Distance or 0) > 0, Coverage = shown.Covered ~= nil }))
-    -- The cities the plan covers; the search's counts (result.Stats) are for
-    -- tests, not the player (issue 67).
-    Controls.Summary:SetToolTipString(shown.Covered ~= nil and table.concat(SDP_UI.CoverageLines(shown), "[NEWLINE]") or "")
+    local summaryParts = { Land = request.Land, Distance = (request.Distance or 0) > 0, Coverage = shown.Covered ~= nil }
+    Controls.Summary:SetText(SDP_UI.SummaryText(shown, summaryParts))
+    -- How the solutions are ranked, and the cities the plan covers; the
+    -- search's counts (result.Stats) are for tests, not the player (issue 67).
+    local tip = Locale.Lookup("LOC_SDP_RESULT_RANKED")
+    if shown.Covered ~= nil then tip = tip .. "[NEWLINE][NEWLINE]" .. table.concat(SDP_UI.CoverageLines(shown), "[NEWLINE]") end
+    Controls.Summary:SetToolTipString(tip)
     Controls.Quality:SetText(QualityText(result))
     -- The solutions (feedback item 1): a click shows one and previews it.
     if #solutions > 1 then
       for n, sol in ipairs(solutions) do
         local inst = m_solutionIM:GetInstance()
         m_solutionCells[n] = inst.Root
-        SDP_UI.SolutionRow(inst, Locale.Lookup("LOC_SDP_SOLUTION_N", n, Signed(sol.Gain)), SDP_UI.SolutionDetail(sol),
-          n == m_solution)
+        SDP_UI.SolutionRow(inst, SDP_UI.SolutionLabel(n, sol),
+          SDP_UI.SummaryText(sol, summaryParts) .. "[NEWLINE]" .. SDP_UI.SolutionDetail(sol), n == m_solution)
         inst.Root:RegisterCallback(Mouse.eLClick, function()
           m_solution = n
           m_lookNext = true

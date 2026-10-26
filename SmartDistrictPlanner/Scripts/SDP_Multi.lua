@@ -1183,6 +1183,7 @@ function Session:PlanFor(layout)
       Yields = item.Yields, ToolTip = item.ToolTip, Score = item.Score,
       Unowned = c.Unowned, RemoveTech = c.RemoveTech, Swap = swap, ClearFirst = c.ClearFirst,
       Appeal = a.Appeal, Housing = a.Housing, Tiles = a.Tiles, TilesCounted = a.TilesCounted,
+      TilesReason = a.TilesReason,
       Reach = self.Coverage and self.Coverage:Reach(search.Types[m], c.X, c.Y) or nil,
       Picked = search.Optional[m], Auto = (not spec.Wonder) and self.Participants[p].Auto[search.Types[m]] or nil,
       ForWonder = spec.ForWonder,
