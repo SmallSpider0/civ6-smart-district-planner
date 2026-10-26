@@ -309,6 +309,7 @@ def build(files=None, version=None, date=None, lang="zh"):
         "N_SINGLE": str(len(single)), "N_MULTI": str(len(multi)), "N_CIVS": "17",
         "SELF_CHECK": L("%d 次，%d 次不一致", "%d runs, %d differ") % (self_n, self_mis),
         "SIMILAR_FIG": diagrams.similar_svg(lang),
+        "CHOOSE_FIG": diagrams.decide_svg(lang),
     }
     late = by_best[-1]["values"] if by_best else {}
     texts["SINGLE_TEXT"] = ""

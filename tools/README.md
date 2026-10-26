@@ -283,7 +283,7 @@ python3 -I report/build.py --version v1.0.0 --site _site   # 另输出 GitHub Pa
 - 读 `tests/compare/results/` 里的结果（文件列表见 `RESULTS`），只取本模组的运行（`sdp:*`）和真最优，套进 `report/template.html`（附录 A 的结构图和算法来自 `part_arch.html`、`part_algo.html`，图表脚本 `charts.js`）。
 - 版本默认是提交号，日期是提交日期；`--version` 以 `v` 开头时，下载按钮指向这个版本的 Release，否则指向最新的 Release。
 - `index.html`、`en/index.html` 不带文档外壳，截图写成 `images/<文件名>`；`report.html`、`report_en.html` 是单文件版，截图内嵌，可直接用浏览器打开，`package.py` 打进压缩包（`REPORT.html`、`REPORT_EN.html`）；`--site DIR` 写出带外壳的 `DIR/index.html`、`DIR/en/index.html` 和用到的截图。
-- `report/diagrams.py`：自己画的示意图。`similar_svg(lang)` 是同类模组一节“各模组规划什么”的矩阵，页面里内联、跟随页面的深浅主题；`python3 -I report/diagrams.py` 另写出 README 用的 `docs/images/similar-mods-{zh,en}-{light,dark}.svg`（README 用 `<picture>` 按主题选）。改了对照表的事实，表格（模板和 README）和这里的 `SIMILAR` 一起改，再重写 SVG。
+- `report/diagrams.py`：自己画的示意图。`similar_svg(lang)` 是同类模组一节“各模组规划什么”的矩阵，`decide_svg(lang)` 是“怎么选”的决策图，页面里内联、跟随页面的深浅主题；`python3 -I report/diagrams.py` 另写出 README 用的 `docs/images/similar-mods[-choose]-{zh,en}-{light,dark}.svg`（README 用 `<picture>` 按主题选）。改了对照表的事实，表格（模板和 README）和这里的 `SIMILAR` 一起改，再重写 SVG。
 - 同样的输入得到同样的页面。线上的页面只在发布 Release 时更新（`.github/workflows/release.yml`，也可在 Actions 里手动运行）。
 
 ## run_tests.py — 游戏内测试

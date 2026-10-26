@@ -43,6 +43,10 @@ How close its plans come to the true optimum, its speed and known limitations: s
   <source media="(prefers-color-scheme: dark)" srcset="docs/images/similar-mods-en-dark.svg">
   <img src="docs/images/similar-mods-en-light.svg" width="760" alt="What each planner plans: districts, wonders, improvements, new city sites, cities together, whether it needs DMT">
 </picture>
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/similar-mods-choose-en-dark.svg">
+  <img src="docs/images/similar-mods-choose-en-light.svg" width="760" alt="How to choose: for improvements, Empire Planner or Auto Map Tacks Planner; otherwise District &amp; Wonder Planner or this mod">
+</picture>
 
 Other district planners on the Workshop each have their own focus. What they have and this mod does not comes first:
 
@@ -141,6 +145,10 @@ The development documents are in Chinese; issues and pull requests in English ar
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/images/similar-mods-zh-dark.svg">
   <img src="docs/images/similar-mods-zh-light.svg" width="760" alt="各模组规划什么：区域、奇观、改良设施、选新城址、多城一起规划、是否需要 DMT">
+</picture>
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/similar-mods-choose-zh-dark.svg">
+  <img src="docs/images/similar-mods-choose-zh-light.svg" width="760" alt="怎么选：要规划改良设施时看 Empire Planner 或 Auto Map Tacks Planner，否则看 District &amp; Wonder Planner 或本模组">
 </picture>
 
 创意工坊里还有几个自动规划区域的模组，取向各不相同。先列它们有、本模组没有的功能：
