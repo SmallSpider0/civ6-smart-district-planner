@@ -88,6 +88,7 @@ The development documents are in Chinese; issues and pull requests in English ar
 |------|------|
 | [docs/dev-macos.md](docs/dev-macos.md), [docs/dev-windows.md](docs/dev-windows.md) | The development setup on each platform |
 | [tools/README.md](tools/README.md) | Tools: validation, deployment, in-game tests, the offline comparison |
+| [docs/workflow.html](docs/workflow.html) | Development workflow overview (in Chinese), also published with each release: [web page](https://smallspider0.github.io/civ6-smart-district-planner/workflow/) |
 | [docs/workshop-upload.md](docs/workshop-upload.md) | Uploading the package to the Steam Workshop (Windows) |
 | [docs/design.md](docs/design.md) | The solver, the objective, the seam with DMT, the modules |
 | [docs/multicity-design.md](docs/multicity-design.md) | City sites, several cities, wonders, effort levels, offline benchmarks, and the changes made after each round of hands-on testing |
@@ -186,6 +187,7 @@ Detailed Map Tacks 不是规划器：它在地图钉上显示区域、奇观放�
 |------|------|
 | [docs/dev-macos.md](docs/dev-macos.md)、[docs/dev-windows.md](docs/dev-windows.md) | 两个平台的开发环境 |
 | [tools/README.md](tools/README.md) | 校验、部署、游戏内测试、离线对比等工具 |
+| [docs/workflow.html](docs/workflow.html) | 开发流程一览，发版时也发布到[网页](https://smallspider0.github.io/civ6-smart-district-planner/workflow/) |
 | [docs/workshop-upload.md](docs/workshop-upload.md) | 把提交包上传到 Steam 创意工坊（Windows） |
 | [docs/design.md](docs/design.md) | 求解算法、目标函数、与 DMT 的接缝、模块结构 |
 | [docs/multicity-design.md](docs/multicity-design.md) | 选城址、多城、奇观、求解档位、离线基准，以及历次实测反馈的改进 |

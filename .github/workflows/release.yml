@@ -1,7 +1,8 @@
 # When a release is published: attach the mod package, the one-file page and
 # the Steam Workshop upload package to it, and publish the page (introduction
-# and evaluation) on GitHub Pages. A pre-release (v1.1.0-rc.1) gets the files
-# but leaves the page alone. Run by hand (workflow_dispatch) it rebuilds the
+# and evaluation) and the workflow overview (docs/workflow.html, at /workflow/)
+# on GitHub Pages. A pre-release (v1.1.0-rc.1) gets the files but leaves the
+# pages alone. Run by hand (workflow_dispatch) it rebuilds the
 # page from the chosen ref. The Workshop upload itself is done by hand on
 # Windows (docs/workshop-upload.md).
 name: release

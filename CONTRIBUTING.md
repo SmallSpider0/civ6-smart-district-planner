@@ -10,6 +10,7 @@
 - [.claude/skills/](.claude/skills/)：Issue 处理、游戏内测试、离线重活、发版、监听的固定步骤，Claude Code 按需加载；人照着做也一样。
 - 当前平台的环境说明：[docs/dev-macos.md](docs/dev-macos.md) 或 [docs/dev-windows.md](docs/dev-windows.md)。
 - [tools/README.md](tools/README.md)：每个工具的用法。
+- [docs/workflow.html](docs/workflow.html)：开发流程一览（从 Issue 到发版、角色、共用资源、测试分层、自动化程度），随发版更新到[网页](https://smallspider0.github.io/civ6-smart-district-planner/workflow/)，最新的在仓库里。
 
 ## 需求、分支与提交
 
@@ -114,6 +115,7 @@
 - 例外：面板开关的悬停提示写给玩家，分三段（中间空一行）：这个开关做什么（背后的游戏规则）、收益、代价；不用“候选格”“求解”这类内部词，不重复勾选框已经显示的默认值。收益尽量写成实测的百分比（如“相邻加成平均高 x%”），代价写手动操作和耗时倍数。数字的出处（场景、档位、命令、结果文件）记在 [docs/notes/](docs/notes/) 里对应 Issue 的记录，结果文件放在 `tests/compare/results/`。改了算法、规则或测试集后，按发版清单重跑并更新这些数字。
 - 截图只截游戏画面，不带系统菜单栏、标题栏、任务栏或 Dock。放在 `docs/images/`，按 `v<轮次>-<内容>.jpg` 命名，英文界面的加 `-en-`；有中英文两版的画面两版都拍（`tools/shots.py`）。
 - 对外的文档（README、安装说明、介绍页、创意工坊简介和图片、测试者说明）只写本模组自己：能做什么、怎么用、不做什么、局限，数字只和真最优或本模组自己的设置比。别的模组只出现在“同类模组”对照表、“一局只开一个规划器”的提醒和致谢里：对照表只有一张，只列事实（规划什么、依赖、规则集、语言、同开限制，页面里有无用画的图标、README 用 ✓ / ◐ / —），表里没列的功能另列一行，不写“适合……”这类评语；链接对方页面，写明核对日期，不放分数、不排名次。表的内容在 `report/similar.py`，页面和 README 都从它来。配图用自己画的示意图和图表，不用游戏截图，图里同样只放事实。与别的规划模组的离线对比结果写在 [docs/notes/planner-comparison.md](docs/notes/planner-comparison.md)，措辞中性，对外页面不链接。（#82）
+- 改了工作流程的 PR（CONTRIBUTING.md、AGENTS.md 第 6 节、`.claude/skills/`，或调度、测试、发版工具的用法）在同一个 PR 里更新 [docs/workflow.html](docs/workflow.html)。
 - “介绍与评测”页由 `report/build.py` 生成，正文 7 节写给玩家，技术内容放在附录。中文页、英文页内容相同，附录也有英文版；改了一页就同步改另一页（`report/template.html` 与 `report/template_en.html`，附录里的图（`part_*_en.html`、`hexfig_en.svg.txt`）、`build.py` 生成的句子和表格、图表文字（`build.py` 的 `CHART_WORDS`）都要有英文）。用 Claude 做的页面（artifact）沿用这个页面的样式和写法。
 
 ## 许可证与第三方内容

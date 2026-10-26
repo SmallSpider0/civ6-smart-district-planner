@@ -50,7 +50,8 @@ civ6mod/
 │   ├── self-test-report.md           # 自测报告
 │   ├── dev-macos.md                  # macOS 开发环境与只在 Mac 上能用的工具
 │   ├── dev-windows.md                # Windows 开发环境
-│   └── workshop-upload.md            # 在 Windows 上把提交包上传到创意工坊（也是提交包里的 UPLOAD.md）
+│   ├── workshop-upload.md            # 在 Windows 上把提交包上传到创意工坊（也是提交包里的 UPLOAD.md）
+│   └── workflow.html                 # 开发流程一览（单页；report/build.py 复制到 GitHub Pages 的 workflow/，随发版更新）
 ├── SmartDistrictPlanner/             # 交付物 1：mod 本体，整目录复制到游戏 Mods 目录
 │   ├── SmartDistrictPlanner.modinfo
 │   ├── Text/                         # 本地化（数据库格式 XML）
