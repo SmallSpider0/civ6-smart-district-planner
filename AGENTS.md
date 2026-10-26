@@ -202,4 +202,4 @@ include("dmt_yieldcalculator");       -- 尾部会执行 DMT_Initialize()，见�
 - 不修改需求文档；设计决策写入 `docs/design.md` 或 `docs/multicity-design.md`，一个 Issue 的实现、实测与数字出处写进 `docs/notes/issue-<编号>-<主题>.md`，每段改动在 `CHANGELOG.md` 记一笔。
 - 不把 DMT/AMT/EP/游戏本体的源码或数据复制进仓库，更不能进 `SmartDistrictPlanner/` 发布目录（版权与依赖关系：DMT 作为依赖 mod 由玩家自行订阅）。仓库是公开的。
 - 回复与文档使用中文；代码标识符与注释用英文或中文均可，但单文件内保持一致。
-- 调研交给子 agent，一个 Issue 的开发交给子会话，几行的小修和协调留在主会话（CONTRIBUTING.md“需求、分支与提交”的“谁来做”）。
+- 调研和一个 Issue 的开发交给子 agent（维护者点名或改动很大的开发用子会话），几行的小修和协调留在主会话（CONTRIBUTING.md“需求、分支与提交”的“谁来做”）。
