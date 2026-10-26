@@ -171,3 +171,40 @@ test("the panel: the switch names the pair and starts on", function()
   T.eq(SDP_Panel.State().Apart, true, "on")
   T.eq(Controls.ApartCheck:IsChecked(), true, "ticked")
 end)
+
+-- Issue 106: with both the harbor and the commercial hub as candidates and
+-- one to pick, a city whose center is on the coast without fresh water takes
+-- the harbor (the side that stands on water), every other city the hub. The
+-- game's own Plot tests decide; the map decides which case the capital is.
+test("harbor or commercial hub by the city: the coastal one for a coastal city without fresh water", function()
+  local city = Capital()
+  local hub, harbor = Resolve("DISTRICT_COMMERCIAL_HUB"), Resolve("DISTRICT_HARBOR")
+  if SDP_Rules.Apart().Partners[harbor] == nil then T.skip("this civ's harbor keeps its own route") end
+  local plot = Map.GetPlot(city:GetX(), city:GetY())
+  local coastal, fresh = plot:IsCoastalLand(), plot:IsFreshWater()
+  local takesHarbor = coastal and not fresh
+  local want, other = takesHarbor and harbor or hub, takesHarbor and hub or harbor
+  local avoid = SDP_Rules.ApartAvoid(plot)
+  T.eq(avoid[other], true, "leaves out " .. other)
+  T.eq(avoid[want], nil, "keeps " .. want)
+  local request = { PlayerID = pid, CityID = city:GetID(), Districts = {}, Weights = ONES, Tier = "STANDARD",
+    Pool = { hub, harbor }, Count = 1 }
+  local result = SDP_Solver.Solve(request)
+  T.ok(result.Ok, tostring(result.Error))
+  T.ok(not result.Stats.Mismatch, "board and full evaluation agree")
+  local alone = SDP_Solver.Solve({ PlayerID = pid, CityID = city:GetID(), Districts = { want }, Weights = ONES })
+  local placeable = alone.Ok and Has(alone.Plan, want) ~= nil
+  print(string.format("  capital coastal %s, fresh water %s: picked %s (%s placeable: %s)", tostring(coastal), tostring(fresh),
+    table.concat(result.Picked, ","), want, tostring(placeable)))
+  for n, sol in ipairs(result.Solutions) do
+    if placeable then
+      T.ok(Has(sol.Plan, want) ~= nil and Has(sol.Plan, other) == nil, "solution " .. n .. ": " .. table.concat(sol.Picked, ","))
+    else
+      T.ok(Has(sol.Plan, want) == nil, "solution " .. n .. ": " .. want .. " has no plot")
+    end
+  end
+  request.Apart = false
+  local off = SDP_Solver.Solve(request)
+  T.ok(off.Ok, tostring(off.Error))
+  print(string.format("  switch off: %s", table.concat(off.Picked, ",")))
+end)

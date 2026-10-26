@@ -306,6 +306,36 @@ function SDP_Rules.ApartFor(playerID)
   return out
 end
 
+-- Which side of each pair (SDP_Rules.Apart) a city leaves out when both are
+-- candidates and it may take one (issue 106): a city whose center is on the
+-- coast without fresh water (the game's own Plot tests) takes the coastal
+-- side, the district that stands on water (Districts.Coast); every other
+-- city the other side. A pair with no coastal side, or two, is left to the
+-- score. Returns { [district type] = true }: the partner types to leave out
+-- (unique ones included), for the city centered on `plot`.
+function SDP_Rules.ApartAvoid(plot)
+  local avoid = {}
+  if plot == nil then return avoid end
+  local coastal = plot:IsCoastalLand() and not plot:IsFreshWater()
+  local apart = SDP_Rules.Apart()
+  local types = {}
+  for districtType in pairs(apart.Partners) do types[#types + 1] = districtType end
+  table.sort(types)
+  for _, pair in ipairs(apart.Pairs) do
+    local a, b = GameInfo.Districts[pair.A], GameInfo.Districts[pair.B]
+    local coastA, coastB = a ~= nil and a.Coast == true, b ~= nil and b.Coast == true
+    if coastA ~= coastB then
+      local water = coastA and pair.A or pair.B
+      local land = coastA and pair.B or pair.A
+      local leave = coastal and land or water
+      for _, districtType in ipairs(types) do
+        if BaseDistrict(districtType) == leave then avoid[districtType] = true end
+      end
+    end
+  end
+  return avoid
+end
+
 -- The pairs (SDP_Rules.Apart) a city ends up with both of, given the types
 -- a plan places there (a list) and the ones it has already (`present`, a
 -- set, may be nil); a pair the city had before the plan is left out:

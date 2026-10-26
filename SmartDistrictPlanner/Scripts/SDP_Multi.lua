@@ -677,8 +677,11 @@ function SDP_Multi.NewSession(request)
   -- Partner districts kept apart in each city (SDP_Rules.Apart).
   local apart = nil
   if request.Apart ~= false and pools ~= nil and #SDP_Rules.Apart().Pairs > 0 then
-    apart = { Partners = SDP_Rules.Apart().Partners, Present = {} }
-    for p, part in ipairs(participants) do apart.Present[p] = part.Present end
+    apart = { Partners = SDP_Rules.Apart().Partners, Present = {}, Avoid = {} }
+    for p, part in ipairs(participants) do
+      apart.Present[p] = part.Present
+      apart.Avoid[p] = SDP_Rules.ApartAvoid(Map.GetPlot(part.X, part.Y))
+    end
   end
   -- Each city's districts must stay joined to its territory, the other
   -- cities' planned districts in the way (issue 35; SDP_City.Reach).

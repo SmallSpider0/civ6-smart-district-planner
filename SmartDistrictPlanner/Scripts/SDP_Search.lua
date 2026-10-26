@@ -25,7 +25,8 @@
 --               best few exactly (Combos), tries swapping one candidate for
 --               another (TypeSwaps) and refines the best combinations.
 --               With Apart, a group never picks two partner districts, nor
---               one whose partner it has or requires, unless every
+--               one whose partner it has or requires, nor one its Avoid set
+--               names while a partner candidate can be placed, unless every
 --               combination would (then it may: ApartRelaxed). Two
 --               districts one city cannot have (spec.Exclusive) are never
 --               picked together, nor with a required one.
@@ -82,8 +83,12 @@ SDP_Search.Better = Better
 --               leave out the required and candidate ones the city cannot
 --               take with what it has)
 --   Apart       { Partners = { [type] = { [type] = true } } (SDP_Rules.Apart),
---                 Present = { [group] = { [type] = true } } (built or pinned) }
---               or nil (off): partner districts are not picked into one group
+--                 Present = { [group] = { [type] = true } } (built or pinned),
+--                 Avoid = { [group] = { [type] = true } } or nil
+--                 (SDP_Rules.ApartAvoid) }
+--               or nil (off): partner districts are not picked into one
+--               group; of two partner candidates a group takes the one its
+--               Avoid set leaves in (issue 106: by the city, not the score)
 --   Alternatives  keep this many distinct good layouts (SDP_Solver's
 --               solutions; 0 or nil: none)
 --   Reach       { [group] = { Start, Through } } plot index sets
@@ -1688,8 +1693,10 @@ function Search:Clashes(g, slots)
   local apart = self.Apart
   if apart == nil then return false end
   local partners, present = apart.Partners, (apart.Present and apart.Present[g]) or {}
+  local avoid = (apart.Avoid and apart.Avoid[g]) or {}
   for x, m in ipairs(slots) do
     local own = partners[self.Types[m]]
+    if own ~= nil and avoid[self.Types[m]] and self:PartnerCandidate(g, own) then return true end
     if own ~= nil then
       for other in pairs(own) do
         if present[other] then return true end -- a yes or no: the order does not matter
@@ -1699,6 +1706,19 @@ function Search:Clashes(g, slots)
       end
       for y = 1, x - 1 do
         if own[self.Types[slots[y]]] then return true end
+      end
+    end
+  end
+  return false
+end
+
+-- Whether group g has an optional slot of a type in `own` (a partner set)
+-- with a legal plot: the side a city takes instead of an avoided one.
+function Search:PartnerCandidate(g, own)
+  for _, m in ipairs(self.PoolSlots[g] or {}) do
+    if own[self.Types[m]] then
+      for i = 1, self.N do
+        if self.Legal[m][i] then return true end
       end
     end
   end
