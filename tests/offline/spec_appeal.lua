@@ -83,15 +83,18 @@ local function RefHousing(world, plan, weight)
 end
 
 -- What housing `total` adds to the test city (issue 55): its housing now
--- (water, 2 here) plus the plan's, valued 1 each up to its target
--- population (6: its population; one specialty district needs 1), half
--- the one before after that.
-local CITY_HOUSING, CITY_TARGET = 2, 6
+-- (water, 2 here) plus the plan's, valued 1 each up to the knee, the
+-- larger of its target population + 1 (6: its population; one specialty
+-- district needs 1) and its population + 2, half the one before after
+-- that; all of it times the size discount, growth threshold at 5 over that
+-- at its population (issue 91, plan B).
+local CITY_HOUSING, CITY_TARGET, CITY_POPULATION = 2, 6, 6
+local function Threshold(p) return 15 + 8 * (p - 1) + (p - 1) ^ 1.5 end
+local SCALE = Threshold(5) / Threshold(CITY_POPULATION)
 local function HousingWorth(total, weight)
   if weight == 0 then return 0 end
   local function Value(n)
-    -- The knee is one past the target (issue 91).
-    local knee = CITY_TARGET + 1
+    local knee = math.max(CITY_TARGET + 1, CITY_POPULATION + 2)
     if n <= knee then return n end
     local v, step = knee, 1
     for _ = knee + 1, math.floor(n) do
@@ -100,7 +103,7 @@ local function HousingWorth(total, weight)
     end
     return v
   end
-  return weight * (Value(CITY_HOUSING + total) - Value(CITY_HOUSING))
+  return weight * SCALE * (Value(CITY_HOUSING + total) - Value(CITY_HOUSING))
 end
 
 -- Best value over every placement of `districts`: DMT adjacency (fake) plus
@@ -168,11 +171,13 @@ test("a neighborhood goes to the most appealing plot; its housing is in the gain
   T.eq(p.X .. "," .. p.Y, "8,2", "on the breathtaking plot")
   T.eq(p.Appeal, 4, "its appeal")
   T.eq(p.Housing, 6, "six housing")
-  -- Housing 2 -> 8 against a target of 6, knee 7 (issues 55, 91): 5 + 0.5.
-  T.eq(result.AppealDelta, 5.5, "the appeal part")
-  T.eq(result.Gain, result.Adjacency + 5.5, "in the gain")
+  -- Housing 2 -> 8, knee max(6 + 1, 6 + 2) = 8: 6 points, times the size
+  -- discount of a city of 6 (issues 55, 91).
+  T.near(result.AppealDelta, 6 * SCALE, 1e-9, "the appeal part")
+  T.ok(SCALE < 1 and SCALE > 0.8, "a city of 6 is discounted a little: " .. SCALE)
+  T.near(result.Gain, result.Adjacency + 6 * SCALE, 1e-9, "in the gain")
   local double = SDP_Solver.Solve({ PlayerID = 0, CityID = 1, Districts = { HOOD }, Weights = Weights({ HOUSING = 2 }) })
-  T.eq(double.AppealDelta, 11, "weighted")
+  T.near(double.AppealDelta, 12 * SCALE, 1e-9, "weighted")
   local campus = SDP_Solver.Solve({ PlayerID = 0, CityID = 1, Districts = { "DISTRICT_CAMPUS" }, Weights = ONES })
   T.eq(campus.AppealDelta, nil, "no appeal part without such a district")
 end)
@@ -405,7 +410,8 @@ test("a preserve with the land part on: its yields are in the land part, raising
   T.eq(p.TilesCounted, true, "a required preserve's yields are scored")
   -- Issue 91: the appeal part is the housing alone; the yields raise the
   -- land part.
-  local housing = SDP_Land.HousingValue(CITY_HOUSING + p.Housing, CITY_TARGET) - SDP_Land.HousingValue(CITY_HOUSING, CITY_TARGET)
+  local housing = SDP_Land.HousingValue(CITY_HOUSING + p.Housing, CITY_TARGET, CITY_POPULATION)
+    - SDP_Land.HousingValue(CITY_HOUSING, CITY_TARGET, CITY_POPULATION)
   T.near(land.AppealDelta, housing, 1e-9, "the appeal part: the housing only")
   local search = land.Session.Search
   local layout = search.BestLayout

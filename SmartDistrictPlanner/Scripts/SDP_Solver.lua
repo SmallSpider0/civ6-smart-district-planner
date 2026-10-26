@@ -209,7 +209,7 @@ function SDP_Solver.NewSession(request, scan)
     CoverOwner = function() return "C" .. tostring(scan.CityID) end,
     Alternatives = params.Solutions or 3, Apart = apart, Exclusive = SDP_Rules.Exclusive(),
     Appeal = { Fixed = self.Fixed, Weights = request.Weights, Workable = workable,
-      Cities = { [1] = { Housing = SDP_Land.ScanHousing(scan), Target = population } },
+      Cities = { [1] = { Housing = SDP_Land.ScanHousing(scan), Target = population, Population = scan.Population } },
       -- A neighbouring city's district does not count in this city's housing.
       FixedGroup = function(index)
         local plot = Map.GetPlotByIndex(index)

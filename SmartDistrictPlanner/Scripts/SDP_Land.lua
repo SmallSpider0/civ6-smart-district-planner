@@ -488,22 +488,53 @@ end
 -- ===========================================================================
 -- A city grows at full speed while its housing is 2 or more above its
 -- population, at half and a quarter speed at 1 and 0, and stops a few past
--- it (GlobalParameters CITY_HOUSING_LEFT_*). Housing is worth most until
--- the city can reach the population its districts need, little after: the
--- city's k-th housing counts 1 up to its target population T plus
--- HOUSING_SPARE, each one past that knee K half the one before (0.5, 0.25,
--- ...). Summed, continuous between whole numbers:
---   HousingValue(n, T) = n                     n <= K
---                      = K + 1 - 0.5^(n - K)   n > K,   K = T + HOUSING_SPARE
--- HOUSING_SPARE (issue 91, decided 2026-10-26): with housing only equal to
--- the population, growth already slows by half, so the knee is one past the
--- target (it was T). Full speed needs 2 spare (CITY_HOUSING_LEFT_50PCT_GROWTH
--- is 1); the collaborator was asked whether to use 2: a one-line change.
-SDP_Land.HOUSING_SPARE = 1
-function SDP_Land.HousingValue(n, target)
-  local knee = target + SDP_Land.HOUSING_SPARE
-  if n <= knee then return n end
-  return knee + 1 - 0.5 ^ (n - knee)
+-- it (GlobalParameters CITY_HOUSING_LEFT_*). Housing is worth most while
+-- the city still has to grow, and less in a big city, which needs more
+-- food for each citizen (issue 91, plan B of docs/notes/
+-- issue-91-housing-value.md, decided 2026-10-26):
+--   - each Housing counts 1 up to the knee K, each one past it half the one
+--     before (0.5, 0.25, ...);
+--   - K = max(T + HOUSING_TARGET_SPARE, population + HOUSING_GROWTH_SPARE):
+--     to reach the target population T at full speed the last step, T - 1
+--     to T, needs housing T + 1; a city already past T needs its
+--     population + 2 to keep growing at full speed (housing left 2 or more,
+--     CITY_HOUSING_LEFT_50PCT_GROWTH = 1);
+--   - the whole value times min(1, GrowthThreshold(5) /
+--     GrowthThreshold(population)).
+-- Summed, continuous between whole numbers:
+--   HousingValue(n, T, pop) = S(pop) x n                        n <= K
+--                           = S(pop) x (K + 1 - 0.5^(n - K))     n > K
+-- `population` nil: T (a planned city's plan decides it); a city-center
+-- pin or a site is population 1.
+SDP_Land.HOUSING_TARGET_SPARE = 1
+SDP_Land.HOUSING_GROWTH_SPARE = 2
+SDP_Land.HOUSING_SCALE_POPULATION = 5 -- cities up to this size: no discount
+
+-- Food a city of `population` needs for its next citizen, from the game's
+-- GlobalParameters (CITY_GROWTH_THRESHOLD + MULTIPLIER x (p - 1) +
+-- (p - 1)^EXPONENT; the game speed scales every size alike, so the ratio
+-- below does not depend on it).
+function SDP_Land.GrowthThreshold(population)
+  local g = GlobalParameters or {}
+  local base, mult, exp = g.CITY_GROWTH_THRESHOLD or 15, g.CITY_GROWTH_MULTIPLIER or 8, g.CITY_GROWTH_EXPONENT or 1.5
+  local p = math.max(1, population) - 1
+  return base + mult * p + p ^ exp
+end
+
+function SDP_Land.HousingScale(population)
+  if population == nil then return 1 end
+  return math.min(1, SDP_Land.GrowthThreshold(SDP_Land.HOUSING_SCALE_POPULATION) / SDP_Land.GrowthThreshold(population))
+end
+
+function SDP_Land.HousingKnee(target, population)
+  return math.max(target + SDP_Land.HOUSING_TARGET_SPARE, (population or target) + SDP_Land.HOUSING_GROWTH_SPARE)
+end
+
+function SDP_Land.HousingValue(n, target, population)
+  local knee = SDP_Land.HousingKnee(target, population)
+  local value = n
+  if n > knee then value = knee + 1 - 0.5 ^ (n - knee) end
+  return SDP_Land.HousingScale(population) * value
 end
 
 -- The era a technology or civic belongs to (nil when unknown).

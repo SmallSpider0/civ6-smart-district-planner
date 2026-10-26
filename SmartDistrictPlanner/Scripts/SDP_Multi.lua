@@ -711,7 +711,9 @@ function SDP_Multi.NewSession(request)
   -- participant that owns its plot, an unowned one's to the nearest.
   local housingCities = {}
   for p, part in ipairs(participants) do
-    housingCities[p] = { Housing = SDP_Land.ScanHousing(part.Scan), Target = part.Population }
+    -- A city-center pin is a city of 1 (issue 91: SDP_Land.HousingValue).
+    housingCities[p] = { Housing = SDP_Land.ScanHousing(part.Scan), Target = part.Population,
+      Population = part.Kind == "CITY" and part.Scan.Population or 1 }
   end
   local function HousingGroup(index)
     local plot = Map.GetPlotByIndex(index)

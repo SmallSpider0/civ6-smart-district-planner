@@ -287,9 +287,11 @@ end
 --                  counted, a preserve near charming plots won nearly every
 --                  pick in late-game saves; the user's call, 2026-10-22)
 --   Groups         { [slot] = city } (the search's groups), with
---   Cities         { [city] = { Housing, Target } } (optional): the city's
---                  housing now, built neighborhoods included, and its
---                  target population; nil: each housing counts 1
+--   Cities         { [city] = { Housing, Target, Population } } (optional):
+--                  the city's housing now, built neighborhoods included, its
+--                  target population and its population now (1 for a
+--                  planned city; SDP_Land.HousingValue); nil: each housing
+--                  counts 1
 --   FixedGroup     function(plot index) -> city, for fixed districts
 -- }
 -- Returns a model, or nil when nothing in the problem has appeal rules.
@@ -374,7 +376,7 @@ function SDP_Appeal.New(spec)
   if spec.Cities ~= nil then
     self.Cities, self.CityOrder = {}, {}
     for g, c in pairs(spec.Cities) do
-      self.Cities[g] = { Housing = c.Housing, Target = c.Target }
+      self.Cities[g] = { Housing = c.Housing, Target = c.Target, Population = c.Population }
       self.CityOrder[#self.CityOrder + 1] = g
     end
     table.sort(self.CityOrder)
@@ -511,7 +513,7 @@ function SDP_Appeal:Score(layout, detail)
   if cities ~= nil then
     for _, g in ipairs(self.CityOrder) do
       local city = cities[g]
-      value = value + housingWeight * SDP_Land.HousingValue(city.Housing + (sums[g] or 0), city.Target)
+      value = value + housingWeight * SDP_Land.HousingValue(city.Housing + (sums[g] or 0), city.Target, city.Population)
       sums[g] = nil
     end
   end

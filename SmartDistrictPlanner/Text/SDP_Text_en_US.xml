@@ -389,7 +389,7 @@
       <Text>No Water</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SITES_WEIGHT_HOUSING" Language="en_US">
-      <Text>Housing: points for the Housing a site has over a site without water (water, Granary, and the Lighthouse and Seaport when the plan has a Harbor). Each Housing up to one more than the population the planned districts need counts 1 (with Housing only equal to the population, growth already slows by half), each one after it half the one before.</Text>
+      <Text>Housing: points for the Housing a site has over a site without water (water, Granary, and the Lighthouse and Seaport when the plan has a Harbor). A new city counts as population 1: each Housing up to the larger of 3 and one more than the population the planned districts need counts 1 (the city still grows at full speed), each one after it half the one before.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SITES_HOUSING" Language="en_US">
       <Text>Housing {1_Housing}</Text>
@@ -651,7 +651,7 @@
       <Text>Replace ({1_N})</Text>
     </Replace>
     <Replace Tag="LOC_SDP_WEIGHT_DISTANCE" Language="en_US">
-      <Text>Distance cost: each district and wonder loses this weight times (tiles to your nearest City Center - 1), in the same unit as adjacency; 0 is off. The game does not charge more for distant districts; distant tiles join the city later or cost more Gold to purchase. This expresses a wish to keep districts close.</Text>
+      <Text>Distance cost: each district and wonder loses this weight times (tiles to your nearest City Center - 1), in the same unit as adjacency, so with the same adjacency the closer tile wins; 0 is off.[NEWLINE][NEWLINE]Gain: a city grows outward, so its third ring comes later than its second; closer districts do not need tiles bought with Gold. On the 84 offline development scenes, 0.5 instead of 0 changed the plan in 52, moving nearly half the districts.[NEWLINE]Cost: 0.6% less adjacency on average and about 4% more lost tile yields; no extra time.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_MULTI_SITE_TOOLTIP" Language="en_US">
       <Text>Click to switch this site on or off. Left out, no districts are planned for it and it is not counted as a new city; the tack stays where it is and still counts as a neighbor.</Text>
@@ -702,7 +702,7 @@
       <Text>the {1_Building} gives no Trade Route capacity</Text>
     </Replace>
     <Replace Tag="LOC_SDP_WEIGHT_HOUSING" Language="en_US">
-      <Text>Housing: points per Housing. In each city, each Housing up to one more than the population its planned districts need counts 1 (with Housing only equal to the population, growth already slows by half), each one after it half the one before. A Neighborhood's or Preserve's Housing depends on the Appeal of its tile. The plan changes Appeal: a Holy Site or Theater Square gives adjacent tiles +1, an Industrial Zone or Encampment -1, and removing Woods -1 to the tiles around it. A Preserve's yields on adjacent tiles count under Tiles.</Text>
+      <Text>Housing: points per Housing. In each city, each Housing up to the larger of one more than the population its planned districts need and its population now plus 2 counts 1 (up to there the city grows at full speed), each one after it half the one before; bigger cities are discounted, since each citizen needs more Food (none up to population 5, about 0.5 at 10, 0.3 at 16). A City Center tack counts as population 1. A Neighborhood's or Preserve's Housing depends on the Appeal of its tile. The plan changes Appeal: a Holy Site or Theater Square gives adjacent tiles +1, an Industrial Zone or Encampment -1, and removing Woods -1 to the tiles around it. A Preserve's yields on adjacent tiles count under Tiles.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_RESULT_HOUSING" Language="en_US">
       <Text>Housing {1_Housing} (Appeal {2_Appeal})</Text>
