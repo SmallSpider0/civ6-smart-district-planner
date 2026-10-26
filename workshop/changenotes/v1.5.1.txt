@@ -1,0 +1,15 @@
+Changes since v1.5.0:
+- When the Harbor and the Commercial Hub are both in the pool and a city takes only one, the city decides, not the score: a city whose City Center is on the coast without fresh water (river, lake, oasis) takes the Harbor, every other city the Commercial Hub. Plans can change with the same settings: a coastal city on a river now takes the Commercial Hub even where the Harbor had more adjacency. Must districts are still built, and with Keep apart off the score decides as before.
+- Keep apart also appears in the base game (without Rise and Fall or Gathering Storm), where the Harbor itself gives the extra Trade Route only in a city without a Commercial Hub. The switch used to be missing there, so both could be picked for the same city. England's Royal Navy Dockyard keeps its Trade Route in the base game and is not limited by the switch.
+- The Housing column's tooltip no longer names the removed Land loss switch: what a Preserve gives nearby tiles is weighed by the fixed numbers and the Tiles weight.
+- The preset dropdown and the settings line show the preset the current weights and switches equal: raise Science to 1.5 from Balanced and it reads Science; when they equal none, it reads “Custom” instead of “(changed)”. The Reset button is gone: pick the preset again to bring its values back. The City sites tab works the same way, and picking a preset there also sets the distance cost back to 0.
+- City sites: Max distance defaults to 5 instead of 8, so new cities sit closer to your cities and more fit in the same area. Its tooltip says it counts tiles between the two City Centers and that the game needs at least 4. The number of new cities and the distance are kept in the save.
+- The README, the report page, the install guides and the Workshop description describe only this mod. The report's section 3 is a table of similar mods (what each plans, what it needs, rulesets, languages, which can run together, with their Workshop links), plus thanks; quality numbers are compared with proven best layouts only.
+
+自 v1.5.0 以来的变化：
+- 港口和商业中心都是候选、一座城只挑一个时，按城市挑：市中心靠海且没有淡水（河、湖、绿洲）的城挑港口，其他城挑商业中心，不再按相邻加成挑。同样的设置方案可能变：在河边的沿海城，以前港口相邻加成更高时挑港口，现在挑商业中心。必建的照建；关掉“港口、商业中心分城”后仍按分数挑。
+- 原版规则集（不开迭起兴衰、风云变幻）里也有“港口、商业中心分城”开关：原版的港口只在本城没有商业中心时加贸易路线，以前开关不出现，两者可能挑进同一座城。英国的皇家海军船坞在原版里自带贸易路线，不受这个开关限制。
+- “住房”列的悬停提示改正：保护区给周边地块的产出按固定倍数折算、乘“地块”权重，不再提已去掉的“计入占地”开关。
+- 预设下拉框和设置摘要显示和当前权重、开关相同的预设：从均衡把科学调到 1.5 就显示“科技”，和哪个预设都不同时显示“自定义”，不再写“（已改）”。去掉“恢复”按钮，在下拉框里再选一次预设就回到它的值。选城址页也一样，选预设时距离成本一起设回 0。
+- 选城址页的“最远距离”默认从 8 改成 5，新城离已有城市更近，同一片地方能多放城；悬停提示说明按两个城市中心之间的格数算、游戏规定至少 4 格。新城数量和最远距离记在存档里。
+- README、介绍页、安装说明和创意工坊简介只写本模组自己；介绍页第 3 节换成同类模组对照表（各自规划什么、依赖、规则集、语言、能否同开，附创意工坊链接），另加致谢；质量数字只和真最优比。
