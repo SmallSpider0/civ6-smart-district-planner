@@ -4,7 +4,7 @@
 
 <p>
 <img src="workshop/images/01-multi.jpg" width="49%" alt="Several cities planned together: +19 one city at a time, +29 together / 几座城一起规划"> <img src="workshop/images/02-plan.jpg" width="49%" alt="One city: the plan previewed on the map / 单城方案在地图上预览">
-<img src="workshop/images/03-wonders.jpg" width="49%" alt="Wonders planned with districts: the Temple of Artemis comes with its Camp / 奇观和区域一起规划"> <img src="workshop/images/04-sites.jpg" width="49%" alt="City sites and their tooltip / 选城址与悬停提示">
+<img src="workshop/images/03-wonders.jpg" width="49%" alt="Wonders planned with districts, a drawn diagram / 奇观和区域一起规划（示意图）"> <img src="workshop/images/04-sites.jpg" width="49%" alt="City sites and their tooltip / 选城址与悬停提示">
 <img src="workshop/images/05-reminders.jpg" width="49%" alt="Reminder tacks for woods to keep / 勿砍提醒钉"> <img src="workshop/images/06-panel.jpg" width="49%" alt="The panel's three tabs in English and Chinese / 面板三个页签，中英文界面">
 </p>
 
@@ -38,6 +38,11 @@ How close its plans come to the true optimum, its speed and known limitations: s
 > ⚠️ **One planner per game**: do not enable it together with Auto Map Tacks Planner, Empire Planner or another district planner; they disturb each other.
 
 ### Similar mods
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/similar-mods-en-dark.svg">
+  <img src="docs/images/similar-mods-en-light.svg" width="760" alt="What each planner plans: districts, wonders, improvements, new city sites, cities together, whether it needs DMT">
+</picture>
 
 Other district planners on the Workshop each have their own focus. What they have and this mod does not comes first:
 
@@ -132,6 +137,11 @@ The development documents are in Chinese; issues and pull requests in English ar
 > ⚠️ **一局只开一个规划器**：不要和 Auto Map Tacks Planner、Empire Planner 等区域规划模组同时启用，它们会互相干扰。
 
 ### 同类模组
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/similar-mods-zh-dark.svg">
+  <img src="docs/images/similar-mods-zh-light.svg" width="760" alt="各模组规划什么：区域、奇观、改良设施、选新城址、多城一起规划、是否需要 DMT">
+</picture>
 
 创意工坊里还有几个自动规划区域的模组，取向各不相同。先列它们有、本模组没有的功能：
 

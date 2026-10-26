@@ -1,7 +1,7 @@
 # 物品页上的图片，按顺序在网页的“添加/编辑图片和视频”里上传。每行：路径  说明
 workshop/images/01-multi.jpg        几座城一起规划：逐城 +19 与一起 +29（tests/compare/cmp_workshop_multi.lua）
 workshop/images/02-plan.jpg         单城：方案在地图上预览
-workshop/images/03-wonders.jpg      奇观和区域一起规划：阿耳忒弥斯神庙带上营地
+workshop/images/03-wonders.jpg      奇观和区域一起规划（示意图，不是截图）：补上的娱乐中心、营地
 workshop/images/04-sites.jpg        选城址与悬停提示
 workshop/images/05-reminders.jpg    勿砍提醒钉
 workshop/images/06-panel.jpg        面板三个页签，中英文界面

@@ -358,6 +358,7 @@ details.appx[open] > summary { margin-bottom: 8px; }
 
 <section id="similar"><div class="col">
   <h2 data-n="03">同类模组</h2>
+  <figure><div class="frame scroll">{{SIMILAR_FIG}}</div><figcaption>各模组规划什么（2026-10-26 按各自的创意工坊页面和模组文件核对）。下面的表还列了规则集、界面语言、同开限制和更新日期。</figcaption></figure>
   <p>创意工坊里还有几个自动规划区域的模组，取向各不相同，可以按想要的功能挑。先列它们有、本模组没有的功能：</p>
   <ul class="tight">
     <li><b><a href="https://steamcommunity.com/sharedfiles/filedetails/?id=3771382002">Auto Map Tacks Planner</a></b>：适合想把改良设施、特色改良设施和区域、奇观一起排，按人口做长期蓝图的玩家。本模组没有的：规划改良设施和特色改良设施；把你打的“移除地貌 / 采收 / 种树”钉当作规划指令；“只用已解锁的内容”和“长期蓝图”两种模式；繁体中文界面。</li>
@@ -393,6 +394,10 @@ details.appx[open] > summary { margin-bottom: 8px; }
   <h3>离最优多远</h3>
   <p>在离线环境里，用游戏导出的真实规则和 DMT 原样的代码，在模拟实际对局的场景上规划，按地图钉上显示的数打分，再与用分支定界求出的真最优比较（方法见附录 B.1）。{{QUALITY_TEXT}}</p>
   <p>{{OPTIMUM_TEXT}}</p>
+  <figure>
+    <div class="frame chart" id="ch-optimum"></div>
+    <figcaption>标准档的加成占真最优的平均比例，按场景类别。深色条：真最优已证明；浅色延长的部分：有场景没证明，比例在深色末端（按真最优的上界算）和浅色末端（按已知最好的方案算）之间。悬停看场景数。</figcaption>
+  </figure>
 </div>
 <div class="col tablewrap" style="margin-inline:auto">{{OPTIMUM_TABLE}}</div>
 <div class="col">

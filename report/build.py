@@ -43,6 +43,7 @@ OUT = os.path.join(REPO, "dist", "report")
 sys.path.insert(0, os.path.join(REPO, "tests", "compare"))
 sys.path.insert(0, HERE)
 import summarize  # noqa: E402
+import diagrams  # noqa: E402
 
 # Everything the report reads, so tools/package.py can refuse uncommitted changes to it.
 INPUTS = ["report", "tests/compare/results", "tests/compare/summarize.py", "docs/images", "tests/stress/results"]
@@ -122,6 +123,7 @@ CHART_WORDS = {
         "headWonders": ["档位", "奇观放下", "合法方案", "达到真最优", "平均质量"],
         "better": "没有一项更差、至少一项更好", "same": "两项都相同", "tradeoff": "一项更好、一项更差",
         "worse": "没有一项更好、至少一项更差", "excluded": "不比",
+        "ariaOptimum": "各类场景标准档的加成占真最优的比例",
         "ariaBest": "按阶段达到真最优的场景比例", "ariaQuality": "按阶段的平均质量",
         "ariaRobust": "各场景集达到真最优的比例", "ariaMRobust": "多城开发集与留出集达到参照的比例",
         "ariaWonders": "奇观放下的比例与达到真最优的比例", "ariaStrip": "多城场景的加成占该场景参照的百分比",
@@ -137,6 +139,7 @@ CHART_WORDS = {
         "headWonders": ["Effort level", "Wonders placed", "Valid plans", "At the optimum", "Mean quality"],
         "better": "None worse, at least one better", "same": "Both the same", "tradeoff": "One better, one worse",
         "worse": "None better, at least one worse", "excluded": "Not compared",
+        "ariaOptimum": "Standard's share of the true optimum in each kind of scenario",
         "ariaBest": "Share of scenarios at the true optimum, by stage", "ariaQuality": "Mean quality by stage",
         "ariaRobust": "Share of scenarios at the true optimum in each set",
         "ariaMRobust": "Share of several-city scenarios at the reference, development and held-out sets",
@@ -305,6 +308,7 @@ def build(files=None, version=None, date=None, lang="zh"):
         "DOWNLOAD_LABEL": (L("下载 ", "Download ") + version) if version.startswith("v") else L("下载最新版", "Download the latest version"),
         "N_SINGLE": str(len(single)), "N_MULTI": str(len(multi)), "N_CIVS": "17",
         "SELF_CHECK": L("%d 次，%d 次不一致", "%d runs, %d differ") % (self_n, self_mis),
+        "SIMILAR_FIG": diagrams.similar_svg(lang),
     }
     late = by_best[-1]["values"] if by_best else {}
     texts["SINGLE_TEXT"] = ""
@@ -573,7 +577,7 @@ def build(files=None, version=None, date=None, lang="zh"):
             return None
         return {"n": n, "low": statistics.mean(low), "known": statistics.mean(known), "worst": min(low), "hit": hit, "over": over, "fewer": fewer}
 
-    opt_rows, opt_data = [], {}
+    opt_rows, opt_data, opt_chart = [], {}, []
     for set_name, kind, zh, en, planners in OPT_SETS:
         sub = {sid: e for sid, e in summarize.subset(scenarios, set_name, kind).items() if e.get("reference") is not None}
         if not sub:
@@ -593,6 +597,16 @@ def build(files=None, version=None, date=None, lang="zh"):
         if all(v is None for v in data.values()):
             continue
         opt_data[(set_name, kind)] = {"n": len(sub), "proven": proven, "planners": data}
+        st = data.get("sdp:STANDARD")
+        if st:
+            opt_chart.append({"label": L(zh, en), "low": st["low"] * 100, "known": st["known"] * 100, "ranged": ranged > 0,
+                              "tip": (L("%s：标准档平均达到真最优的 %s，%d / %d 个正好是", "%s: Standard reaches %s of the optimum on average, "
+                                        "the optimum itself in %d of %d") % (L(zh, en), pct(st["low"], 1), st["hit"], len(sub)))
+                              if not ranged else
+                              (L("%s：%d 个场景里 %d 个已证明；标准档在真最优的 %s 到 %s 之间",
+                                 "%s: %d of %d scenarios proven; Standard is between %s and %s of the optimum")
+                               % (((L(zh, en), len(sub), proven) if not EN else (L(zh, en), proven, len(sub)))
+                                  + (pct(st["low"], 0), pct(st["known"], 0))))})
         label = L(zh, en)
         prov = L("%d / %d", "%d / %d") % (proven, len(sub))
         opt_rows.append("<tr><td>%s</td><td class=\"num\">%s</td>%s</tr>" % (
@@ -796,6 +810,7 @@ def build(files=None, version=None, date=None, lang="zh"):
         "byStage": {"best": by_best, "quality": by_q, "qMin": qmin, "qTicks": qticks},
         "correct": correct, "robust": robust_rows, "robustGroups": robust_groups, "robustMultiGroups": robust_multi_groups,
         "coverage": coverage, "wonders": wonder_rows, "wonderGroups": wonder_groups,
+        "optimum": opt_chart,
         "strip": {"rows": strip, "min": mmin, "max": 100, "ticks": list(range(mmin, 101, 10))},
     }
 

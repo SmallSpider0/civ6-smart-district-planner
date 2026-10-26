@@ -359,6 +359,7 @@ details.appx[open] > summary { margin-bottom: 8px; }
 
 <section id="similar"><div class="col">
   <h2 data-n="03">Similar mods</h2>
+  <figure><div class="frame scroll">{{SIMILAR_FIG}}</div><figcaption>What each planner plans (checked on 2026-10-26 against each mod's Workshop page and files). The table below also lists rulesets, interface languages, what not to enable together and update dates.</figcaption></figure>
   <p>The Steam Workshop has a few more mods that plan districts, each with its own focus; pick by the features you want. First, what they have and this mod does not:</p>
   <ul class="tight">
     <li><b><a href="https://steamcommunity.com/sharedfiles/filedetails/?id=3771382002">Auto Map Tacks Planner</a></b>: for players who want improvements and unique improvements laid out together with districts and wonders, as a long-term blueprint by population. This mod does not have: planning improvements and unique improvements; taking your “Remove Feature / Harvest Resource / Plant Woods” tacks as instructions; the two modes “only what is unlocked” and “long-term blueprint”; a Traditional Chinese interface.</li>
@@ -394,6 +395,10 @@ details.appx[open] > summary { margin-bottom: 8px; }
   <h3>How far from the best</h3>
   <p>Offline, with the real rules exported from the game and DMT's code as it is, the planner plans scenarios modeled on real games; each plan is scored by the numbers its map tacks show and set against the true optimum found by branch and bound (method in appendix B.1). {{QUALITY_TEXT}}</p>
   <p>{{OPTIMUM_TEXT}}</p>
+  <figure>
+    <div class="frame chart" id="ch-optimum"></div>
+    <figcaption>Standard's mean share of the true optimum, by kind of scenario. Dark bars: the optimum is proven; a lighter extension: some scenarios are not proven, and the share lies between the end of the dark part (against the optimum's upper bound) and the end of the light part (against the best plan known). Hover for the number of scenarios.</figcaption>
+  </figure>
 </div>
 <div class="col tablewrap" style="margin-inline:auto">{{OPTIMUM_TABLE}}</div>
 <div class="col">

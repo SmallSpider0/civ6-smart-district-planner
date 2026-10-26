@@ -112,6 +112,30 @@
       });
     });
   }
+  // One bar per row from cfg.min: solid to r.low, a lighter part on to r.known when r.ranged.
+  function rangeBars(id, cfg) {
+    if (!has(id)) return;
+    const host = document.getElementById(id);
+    const W = 640, left = labelRoom(cfg.rows.map(r => r.label), 150), right = 74, top = 8, rowH = 26;
+    const H = top + cfg.rows.length * rowH + 28;
+    const svg = el('svg', { viewBox: '0 0 ' + W + ' ' + H, role: 'img', 'aria-label': cfg.aria }, host);
+    const x = v => left + (Math.max(v, cfg.min) - cfg.min) / (cfg.max - cfg.min) * (W - left - right);
+    cfg.ticks.forEach(t => {
+      el('line', { x1: x(t), x2: x(t), y1: top, y2: H - 24, class: t === cfg.min ? 'base' : 'grid' }, svg);
+      txt(svg, x(t), H - 8, t + '%', 'ax', 'middle');
+    });
+    cfg.rows.forEach((r, i) => {
+      const y0 = top + i * rowH, bh = 14, by = y0 + 6;
+      txt(svg, left - 10, y0 + 17, r.label, 'ax-l', 'end');
+      const g = el('g', {}, svg);
+      if (r.ranged) el('rect', { x: x(cfg.min), y: by, width: Math.max(2, x(r.known) - x(cfg.min)), height: bh, rx: 3,
+        style: 'fill: var(--sdp); opacity: 0.3' }, g);
+      el('rect', { x: x(cfg.min), y: by, width: Math.max(2, x(r.low) - x(cfg.min)), height: bh, rx: 3, style: 'fill: var(--sdp)' }, g);
+      hover(g, r.tip);
+      txt(svg, x(r.ranged ? r.known : r.low) + 6, by + 11,
+        r.ranged ? r.low.toFixed(0) + '–' + r.known.toFixed(0) + '%' : r.low.toFixed(1) + '%', 'val', 'start');
+    });
+  }
   // One row per planner, one dot per scenario, a tick at the mean.
   function strip(id, cfg) {
     if (!has(id)) return;
@@ -192,6 +216,9 @@
       fmt: (v, l) => (l ? v.toFixed(1) : v.toFixed(0)) + '%', short: v => v.toFixed(0), aria: aria }, extra || {}));
   };
 
+  if (D.optimum && D.optimum.length) {
+    rangeBars('ch-optimum', { rows: D.optimum, min: 50, max: 100, ticks: [50, 60, 70, 80, 90, 100], aria: T.ariaOptimum });
+  }
   table('tb-overview', T.headOverview,
     D.overview.map(r => [r.label, r.best, r.quality, r.worst, r.legal, r.missing, r.time]));
 
