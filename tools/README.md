@@ -87,6 +87,8 @@ node tools/offline_tests.mjs -v -k k6 tests/offline/bench_single.lua   # 单城�
 
 ## compare.mjs — 与其他规划模组的离线对比
 
+方法和结果见 [docs/notes/planner-comparison.md](../docs/notes/planner-comparison.md)。介绍页只用本模组各档和真最优的行，不放对别的模组的结果。
+
 ```bash
 python3 -I tests/compare/export_gameinfo.py        # 一次：从游戏缓存导出规则数据库（tests/compare/.cache/，不入库）；要在有全部 DLC 的账号上导出，见 docs/dev-macos.md。已有导出、而游戏缓存里的文明比它少时拒绝覆盖（`--force` 强制）
 node tools/compare.mjs --list                       # 场景列表
@@ -99,7 +101,7 @@ node tools/compare.mjs --rejudge tests/compare/results/full.jsonl -j 4 --out NEW
 node tools/compare.mjs --crossscore RESULTS.jsonl --scorers amt,ep -j 4 --out CROSS.jsonl   # 用 AMT、EP 自己的目标函数给每个方案打分
 python3 -I tests/compare/summarize.py tests/compare/results/full_rejudged.jsonl tests/compare/results/land.jsonl   # 汇总（后面的文件覆盖前面的同名运行）
 node tools/compare.mjs --dump S01-rome-temperate-mid       # 场景地图的文字图
-node tools/compare.mjs --snapshot S01-rome-temperate-mid   # 场景地图数据（报告画图用）
+node tools/compare.mjs --snapshot S01-rome-temperate-mid   # 场景地图数据（JSON，画图或核对用）
 node tools/compare.mjs --probe FILE.lua                    # 在本 mod 的状态里跑一段 Lua（临时探针：先 include("cmp_lib")，CmpRun.Setup(场景) 建好世界）
 node tools/compare.mjs --refscore -s ^REF --weights tests/compare/refscenes/weights.jsonl -j 3 --out tests/compare/results/refscore.jsonl   # 参照布局与最优解，见 refscene.py 一节
 node tools/compare.mjs --refscore -s '^REF(0[4-9]|1\d|20)' --weights tests/compare/refscenes/grid53.jsonl -j 2 --out G.jsonl   # 权重 × 地块系数 λ 的网格（#53），python3 -I tests/compare/refgrid53.py G.jsonl 汇总
@@ -269,19 +271,19 @@ python3 -I tools/workshop.py vdf 解压目录      # 在解压后的提交包里
 - `pack` 的模组文件从 tag 导出（`git archive`），其余取最近一次提交，所以提交包总是和某个 Release 对应；缺更新说明、CHANGELOG 里没有这一版或 `workshop/` 有未提交的改动时拒绝打包。物品编号为空时生成“新建、私密”的配置，有编号时生成“更新已有物品”的配置。
 - 发布 Release 时工作流自动打包并附到 Release。上传在 Windows 上手动做，步骤见 [docs/workshop-upload.md](../docs/workshop-upload.md)；提交包里的 `UPLOAD.md` 就是它。
 
-## report/build.py — “介绍与评测”页
+## report/build.py — 介绍页
 
 ```bash
 python3 -I report/build.py                              # 输出 dist/report/ 下的中文页、英文页（en/）和两个单文件版
 python3 -I report/build.py --version v1.0.0 --site _site   # 另输出 GitHub Pages 用的 _site/（发布工作流这样用）
 ```
 
-- 页面结构：第 1–6 节写给玩家（能做什么、安装与使用、和其他规划器比、速度、已知限制、反馈与更新），附录 A 技术说明、附录 B 评估方法与完整数据默认折叠；页内链接指向附录时会自动展开。
+- 页面结构：第 1–7 节写给玩家（能做什么、安装与使用、同类模组、质量与速度、已知限制、反馈与更新、致谢），附录 A 技术说明、附录 B 评估方法与完整数据默认折叠；页内链接指向附录时会自动展开。页面只写本模组自己：数字只和真最优或本模组自己的设置比；同类模组一节是只列事实的对照表（手写在模板里，写明核对日期），不放分数。与其他规划模组的离线对比结果在 [docs/notes/planner-comparison.md](../docs/notes/planner-comparison.md)，页面不链接。
 - 英文页（Issue #5）：`build(lang="en")` 套 `report/template_en.html`，内容与中文页相同，附录也是英文；附录 A 的结构图、算法和六边形示意图用 `part_arch_en.html`、`part_algo_en.html`、`hexfig_en.svg.txt`。由脚本生成的句子、表格和图表文字（`charts.js` 从 `CHART_WORDS` 取）都在 `build.py` 里中英各一份，数字来自同一份数据。两页顶部互相链接。改了一页就同步改另一页。
-- 读 `tests/compare/results/` 里的对比结果（文件列表见 `RESULTS`），套进 `report/template.html`（附录 A 的结构图和算法来自 `part_arch.html`、`part_algo.html`，图表脚本 `charts.js`，地图案例 `hexmap.py`）。
+- 读 `tests/compare/results/` 里的结果（文件列表见 `RESULTS`），只取本模组的运行（`sdp:*`）和真最优，套进 `report/template.html`（附录 A 的结构图和算法来自 `part_arch.html`、`part_algo.html`，图表脚本 `charts.js`）。
 - 版本默认是提交号，日期是提交日期；`--version` 以 `v` 开头时，下载按钮指向这个版本的 Release，否则指向最新的 Release。
 - `index.html`、`en/index.html` 不带文档外壳，截图写成 `images/<文件名>`；`report.html`、`report_en.html` 是单文件版，截图内嵌，可直接用浏览器打开，`package.py` 打进压缩包（`REPORT.html`、`REPORT_EN.html`）；`--site DIR` 写出带外壳的 `DIR/index.html`、`DIR/en/index.html` 和用到的截图。
-- 案例地图的场景数据缓存在 `report/snaps/`，缺的会用 `node tools/compare.mjs --snapshot` 生成（需要 `tests/compare/.cache/`），生成后要提交；`package.py` 不生成，缺了就报错。
+- `report/similar.py`：同类模组对照表的唯一来源。`table_html(lang)` 给页面（有无用画的小图标，跟随页面的深浅主题），`python3 -I report/similar.py zh|en` 打印 README 用的 Markdown 表（✓ / ◐ / —），改了事实后贴回 README 两节。
 - 同样的输入得到同样的页面。线上的页面只在发布 Release 时更新（`.github/workflows/release.yml`，也可在 Actions 里手动运行）。
 
 ## run_tests.py — 游戏内测试

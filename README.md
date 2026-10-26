@@ -4,7 +4,7 @@
 
 <p>
 <img src="workshop/images/01-multi.jpg" width="49%" alt="Several cities planned together: +19 one city at a time, +29 together / 几座城一起规划"> <img src="workshop/images/02-plan.jpg" width="49%" alt="One city: the plan previewed on the map / 单城方案在地图上预览">
-<img src="workshop/images/03-compare.jpg" width="49%" alt="The same city with three planners / 同一座城，三个规划器"> <img src="workshop/images/04-sites.jpg" width="49%" alt="City sites and their tooltip / 选城址与悬停提示">
+<img src="workshop/images/03-wonders.jpg" width="49%" alt="Wonders planned with districts, a drawn diagram / 奇观和区域一起规划（示意图）"> <img src="workshop/images/04-sites.jpg" width="49%" alt="City sites and their tooltip / 选城址与悬停提示">
 <img src="workshop/images/05-reminders.jpg" width="49%" alt="Reminder tacks for woods to keep / 勿砍提醒钉"> <img src="workshop/images/06-panel.jpg" width="49%" alt="The panel's three tabs in English and Chinese / 面板三个页签，中英文界面">
 </p>
 
@@ -12,7 +12,7 @@
 
 A district planner for Civilization VI: pick a city and the districts you want, and it searches the city's 3 rings for the layout with the highest adjacency bonus and places it as map tacks with district icons in one click. It also chooses sites for new cities and plans several cities together. Placement rules and bonuses all come from [Detailed Map Tacks](https://steamcommunity.com/sharedfiles/filedetails/?id=2428969051) (DMT), so they match the numbers on the tacks.
 
-**[Steam Workshop](https://steamcommunity.com/sharedfiles/filedetails/?id=3824473635)** · **[Download](https://github.com/SmallSpider0/civ6-smart-district-planner/releases/latest)** · **[Overview and evaluation](https://smallspider0.github.io/civ6-smart-district-planner/en/)** · **[Install and use](docs/install-en.md)**
+**[Steam Workshop](https://steamcommunity.com/sharedfiles/filedetails/?id=3824473635)** · **[Download](https://github.com/SmallSpider0/civ6-smart-district-planner/releases/latest)** · **[Overview](https://smallspider0.github.io/civ6-smart-district-planner/en/)** · **[Install and use](docs/install-en.md)**
 
 ### What it does
 
@@ -33,9 +33,39 @@ On every tab:
 - Long computations run over several frames, so the game stays responsive, and they finish even if you close the panel. Placed tacks can be undone, also after loading a save. <kbd>Shift</kbd>+<kbd>L</kbd> opens the panel.
 - Base game, Rise and Fall, and Gathering Storm; the panel is in English and Chinese and follows the game's language.
 
-How it compares with Auto Map Tacks Planner and Empire Planner on the same positions, its speed and known limitations: see the [overview and evaluation](https://smallspider0.github.io/civ6-smart-district-planner/en/).
+How close its plans come to the true optimum, its speed and known limitations: see the [overview](https://smallspider0.github.io/civ6-smart-district-planner/en/).
 
 > ⚠️ **One planner per game**: do not enable it together with Auto Map Tacks Planner, Empire Planner or another district planner; they disturb each other.
+
+### Similar mods
+
+| | [Auto Map Tacks Planner](https://steamcommunity.com/sharedfiles/filedetails/?id=3771382002) | [Empire Planner](https://steamcommunity.com/sharedfiles/filedetails/?id=3793348626) | [District & Wonder Planner](https://steamcommunity.com/sharedfiles/filedetails/?id=3780936549) | This mod |
+|---|---|---|---|---|
+| Districts | ✓ | ✓ | ✓ up to 3 kinds at a time (plus Aqueduct and Government Plaza) | ✓ |
+| Wonders | ✓ | ✓ | ✓ up to 5 | ✓ |
+| Improvements | ✓ unique improvements included | ✓ | ◐ only the one a wonder needs | ◐ only the one a wonder needs (the Camp for the Temple of Artemis) |
+| New city sites | — future cities from your City Center tacks | ✓ 0–6 | — future cities from your City Center tacks | ✓ |
+| Cities planned together | ✓ up to 4 | ✓ every existing city and the new sites, in one go | ✓ all cities, with a tick | ✓ up to 8 (site tacks included) |
+| Places map tacks | ✓ | ✓ | ✓ | ✓ |
+| Needs DMT | ✓ | — the author advises turning DMT off | ✓ | ✓ |
+| Bonuses computed by | DMT | its own rules | DMT | DMT |
+| Rulesets | not stated | Rise and Fall, Gathering Storm (the author says the base game is untested) | not stated | Base game, Rise and Fall, Gathering Storm |
+| Interface languages | English, Simplified Chinese, Traditional Chinese | English | English, Simplified Chinese | English, Simplified Chinese |
+| Not to be enabled with (as the author states) | not stated | DMT | not stated | other district planners |
+| Updated on the Workshop | 2026-09-19 (r49) | 2026-09-10 | 2026-08-29 (v1.1) | 2026-10-25 |
+
+✓ yes · ◐ partly · — no
+
+Checked on 2026-10-26 against each mod's Workshop page and files; "not stated" means neither says. The Workshop titles are Fully Automatic Map Tacks Planner【Four-City Linked】, Empire Planner + (Auto Map Tacks) Advanced and District & Wonder Planner v1.1; they are updated over time, so their own pages are the reference.
+
+Features not in the table:
+
+- **Auto Map Tacks Planner**: takes your "Remove Feature / Harvest Resource / Plant Woods" tacks as instructions; two modes, "only what is unlocked" and "long-term blueprint".
+- **Empire Planner**: limits the plan to an era; keeps 3 layouts in the save.
+- **District & Wonder Planner**: weights districts by their order.
+- **This mod**: says whether a plan is the best or how far it may be from an upper bound.
+
+Detailed Map Tacks is not a planner: it shows on a map tack the yields and adjacency a district or wonder would get there.
 
 ### Install
 
@@ -64,6 +94,12 @@ The development documents are in Chinese; issues and pull requests in English ar
 | [docs/self-test-report.md](docs/self-test-report.md) | Self-test report: evidence for each acceptance item, test results, screenshots |
 | [civ6-mod-from-scratch-prompt.md](civ6-mod-from-scratch-prompt.md) | The requirements |
 
+### Acknowledgements
+
+- [Detailed Map Tacks](https://steamcommunity.com/sharedfiles/filedetails/?id=2428969051) (D, wltk): every placement check and adjacency bonus in this mod is computed by it, and it shows the numbers on the map tacks.
+- [Auto Map Tacks Planner](https://steamcommunity.com/sharedfiles/filedetails/?id=3771382002): these ideas come from it: the wonder dropdown sorted by era, then by cost; the "Good places" coloring; per-city lists and templates by yield on the Several cities tab; an empire-limited district going only to the cities whose list has it; coverage; undo records kept with the save; replacing this mod's earlier tacks; the Shift+L hotkey.
+- [Empire Planner](https://steamcommunity.com/sharedfiles/filedetails/?id=3793348626): checking plans on the tiles a city owns against the tiles the game engine allows comes from it.
+
 ### License
 
 [MIT](LICENSE). This repository contains no code or data of Detailed Map Tacks, other mods or the game; players subscribe to DMT themselves.
@@ -74,7 +110,7 @@ The development documents are in Chinese; issues and pull requests in English ar
 
 《文明6》区域规划模组：选一座城和想建的区域，它在城市三环内找相邻加成最高的摆法，一键打成带区域图标的地图钉；也能给新城选址，让几座城一起规划。合法性和加成全部由 [Detailed Map Tacks](https://steamcommunity.com/sharedfiles/filedetails/?id=2428969051)（DMT）计算，与地图钉上显示的数一致。
 
-**[创意工坊](https://steamcommunity.com/sharedfiles/filedetails/?id=3824473635)** · **[下载](https://github.com/SmallSpider0/civ6-smart-district-planner/releases/latest)** · **[介绍与评测](https://smallspider0.github.io/civ6-smart-district-planner/)** · **[安装与使用](docs/install-and-test.md)**
+**[创意工坊](https://steamcommunity.com/sharedfiles/filedetails/?id=3824473635)** · **[下载](https://github.com/SmallSpider0/civ6-smart-district-planner/releases/latest)** · **[介绍页](https://smallspider0.github.io/civ6-smart-district-planner/)** · **[安装与使用](docs/install-and-test.md)**
 
 ### 能做什么
 
@@ -95,9 +131,39 @@ The development documents are in Chinese; issues and pull requests in English ar
 - 耗时长的计算分帧进行，游戏不卡，关掉面板也会算完。可以撤销，撤销记录随存档保存。<kbd>Shift</kbd>+<kbd>L</kbd> 打开面板。
 - 原版、迭起兴衰、风云变幻都能用；界面中英双语，跟随游戏语言。
 
-和 Auto Map Tacks Planner、Empire Planner 在同样局面下的对比结果、速度和已知限制，见[介绍与评测](https://smallspider0.github.io/civ6-smart-district-planner/)。
+方案离真最优多远、速度和已知限制，见[介绍页](https://smallspider0.github.io/civ6-smart-district-planner/)。
 
 > ⚠️ **一局只开一个规划器**：不要和 Auto Map Tacks Planner、Empire Planner 等区域规划模组同时启用，它们会互相干扰。
+
+### 同类模组
+
+| | [Auto Map Tacks Planner](https://steamcommunity.com/sharedfiles/filedetails/?id=3771382002) | [Empire Planner](https://steamcommunity.com/sharedfiles/filedetails/?id=3793348626) | [District & Wonder Planner](https://steamcommunity.com/sharedfiles/filedetails/?id=3780936549) | 本模组 |
+|---|---|---|---|---|
+| 区域 | ✓ | ✓ | ✓ 一次最多 3 种（另加水渠、市政广场） | ✓ |
+| 奇观 | ✓ | ✓ | ✓ 最多 5 座 | ✓ |
+| 改良设施 | ✓ 含特色改良设施 | ✓ | ◐ 只规划奇观需要的那一种 | ◐ 只规划奇观需要的那一种（阿耳忒弥斯神庙旁的营地） |
+| 选新城址 | — 未来的城用你打的城市中心钉 | ✓ 0–6 处 | — 未来的城用你打的城市中心钉 | ✓ |
+| 几座城一起规划 | ✓ 最多 4 座 | ✓ 全部现有城市和新城址一次规划 | ✓ 可勾选全部城市 | ✓ 最多 8 座（含城址钉） |
+| 打地图钉 | ✓ | ✓ | ✓ | ✓ |
+| 需要 DMT | ✓ | — 作者建议关掉 DMT | ✓ | ✓ |
+| 加成由谁计算 | DMT | 自己的规则 | DMT | DMT |
+| 规则集 | 未写明 | 迭起兴衰、风云变幻（作者说原版没测过） | 未写明 | 原版、迭起兴衰、风云变幻 |
+| 界面语言 | 英文、简体中文、繁体中文 | 英文 | 英文、简体中文 | 英文、简体中文 |
+| 作者写明的同开限制 | 未写 | DMT | 未写 | 其他区域规划器 |
+| 创意工坊页面的更新日期 | 2026-09-19（r49） | 2026-09-10 | 2026-08-29（v1.1） | 2026-10-25 |
+
+✓ 是 · ◐ 部分 · — 否
+
+2026-10-26 按各模组的创意工坊页面和模组文件核对；页面和文件都没写的标“未写明”。创意工坊上的标题分别是 Fully Automatic Map Tacks Planner【Four-City Linked】、Empire Planner + (Auto Map Tacks) Advanced、District & Wonder Planner v1.1；它们会更新，以各自页面为准。
+
+表里没列的功能：
+
+- **Auto Map Tacks Planner**：把你打的“移除地貌 / 采收 / 种树”钉当作规划指令；“只用已解锁的内容”和“长期蓝图”两种模式。
+- **Empire Planner**：按时代限定规划范围；存档里保存 3 套布局。
+- **District & Wonder Planner**：按区域的先后顺序给权重。
+- **本模组**：结果注明是否最优或离上界多远。
+
+Detailed Map Tacks 不是规划器：它在地图钉上显示区域、奇观放在这一格时的产出和相邻加成。
 
 ### 安装
 
@@ -133,11 +199,17 @@ SmartDistrictPlanner/        模组本体：复制到游戏 Mods 目录即可运
   UI/SDP_Panel.xml/.lua      启动栏按钮与规划面板
   Scripts/                   规则、城市扫描、假想钉层、增量评估（SDP_Board）、搜索引擎（SDP_Search）、
                              单城/多城/城址求解器、档位、分帧任务、预览、打钉、提醒钉
-tests/                       游戏内测试（经 FireTuner 执行）；tests/offline 为离线测试与基准，tests/compare 为离线对比
+tests/                       游戏内测试（经 FireTuner 执行）；tests/offline 为离线测试与基准，tests/compare 为离线评估
 tools/                       校验、部署、测试运行器、游戏控制、打包、路径（paths.py）
-report/                      “介绍与评测”页面的生成脚本与模板（发布时由 GitHub Actions 生成并发布）
+report/                      介绍页的生成脚本与模板（发布时由 GitHub Actions 生成并发布）
 docs/                        设计、安装说明、自测报告、开发环境、截图
 ```
+
+### 致谢
+
+- [Detailed Map Tacks](https://steamcommunity.com/sharedfiles/filedetails/?id=2428969051)（D、wltk）：本模组的合法性判断和相邻加成全部由它计算，地图钉上的数也由它显示。
+- [Auto Map Tacks Planner](https://steamcommunity.com/sharedfiles/filedetails/?id=3771382002)：这些做法学自它：奇观下拉框按时代、再按造价排列；“好位置”着色；多城页签的逐城清单和按产出生成的模板；全帝国限量的区域只放进写了它的城；覆盖范围；撤销记录随存档保存；替换本模组之前打的钉；Shift+L 快捷键。
+- [Empire Planner](https://steamcommunity.com/sharedfiles/filedetails/?id=3793348626)：在城市已拥有的格上，用游戏引擎给出的可建格复核方案，学自它。
 
 ### 许可证
 

@@ -44,7 +44,7 @@
 
 已做到：第 1 条的城市总产出（`CmpRun.Judge` 的 `output = gain + worked`）、第 3 条的默认设置（AMT `DEFAULTW`、EP `DEFAULT`、本 mod `STANDARD_LAND`）、第 7 条的盲评与配对比较；裁判还区分漏放的区域“确实放不下”（`no_plot`）与“有位置却没放”（`placeable`：方案打成钉后城市仍有槽位，且 3 环内有一格 DMT 可放、不违反其他规则）。2026-10-20 的结果：单城 72 个场景本模组标准档 97% 拿到最高加成（AMT 54%、EP 26%），漏放中“有位置却没放”本模组 0、AMT 52、EP 75；城市总产出本模组（计入地块）83% 最高（AMT 58%、EP 35%）。
 
-随后（2026-10-20 傍晚）又做到：第 2 条交叉评分（`compare.mjs --crossscore`；`cmp_cross_amt.lua` 复现 AMT 的 `EvaluatePlan`，`cmp_cross_ep.lua` 复现 EP 的 `PlanTotal`，各自对自己方案的打分与它们运行时自报的一致）；第 4 条三组权重（`~SCI`、`~PROD`、`~FAITH`，某一项 ×3，规划器和裁判同用）；第 5 条留出集（`HS`/`HM`，种子 50000 起，改算法时不看）；第 7 条的置信区间（2000 次确定性自助重抽样）与符号检验。另加了奇观（`W`，24 个）与选城址（`C`，12 个，独立裁判 `JudgeSites`）的正面对比。结果见 [self-test-report.md](../self-test-report.md) 与“介绍与评测”页的附录 B。奇观对比发现本 mod 会漏放需要挨着某个区域的奇观，已加"补放"（4.5 第 6 步）。
+随后（2026-10-20 傍晚）又做到：第 2 条交叉评分（`compare.mjs --crossscore`；`cmp_cross_amt.lua` 复现 AMT 的 `EvaluatePlan`，`cmp_cross_ep.lua` 复现 EP 的 `PlanTotal`，各自对自己方案的打分与它们运行时自报的一致）；第 4 条三组权重（`~SCI`、`~PROD`、`~FAITH`，某一项 ×3，规划器和裁判同用）；第 5 条留出集（`HS`/`HM`，种子 50000 起，改算法时不看）；第 7 条的置信区间（2000 次确定性自助重抽样）与符号检验。另加了奇观（`W`，24 个）与选城址（`C`，12 个，独立裁判 `JudgeSites`）的正面对比。结果见 [self-test-report.md](../self-test-report.md) 与 [planner-comparison.md](planner-comparison.md)（2026-10-26 起介绍页只写本模组，对比结果移到那里，#82）。奇观对比发现本 mod 会漏放需要挨着某个区域的奇观，已加"补放"（4.5 第 6 步）。
 
 第 6 条引擎校准 2026-10-20 晚在游戏里做了（`tests/bench/calibrate_judge.lua`）：放置透镜的加成与 DMT 逐格比较，罗马、日本、高卢三局共 306 组，原因不明的差异 0；已建的 13 个相邻区域引擎与 DMT 逐项相同。唯一的差异是 DMT 把沉船算作海洋资源（AGENTS 坑 28），对所有规划器的裁判影响相同。
 

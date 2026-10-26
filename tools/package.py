@@ -81,8 +81,8 @@ def main(argv=None):
     guide = git("show", "HEAD:" + GUIDE).replace("{{VERSION}}", commit).replace("{{DATE}}", date)
     install = plain_links(git("show", "HEAD:" + INSTALL))
     install_en = plain_links(git("show", "HEAD:" + INSTALL_EN))
-    page, _data = report.build(make_snapshots=False, version=commit, date=date)
-    page_en, _data = report.build(make_snapshots=False, version=commit, date=date, lang="en")
+    page, _data = report.build(version=commit, date=date)
+    page_en, _data = report.build(version=commit, date=date, lang="en")
     image = lambda name: git("show", "HEAD:docs/images/" + name, text=False)  # noqa: E731
     report_html = report.standalone(page, image)
     report_en = report.standalone(page_en, image, "en")
