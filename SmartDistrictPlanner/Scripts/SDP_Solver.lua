@@ -205,6 +205,8 @@ function SDP_Solver.NewSession(request, scan)
     Candidates = scan.Candidates, Slots = slots, Lands = lands,
     Pools = pick > 0 and { [1] = pick } or nil,
     Costs = SDP_City.DistanceCosts(playerID, scan.Candidates, request.Distance), Coverage = self.Coverage,
+    -- The city being planned is not counted as covered (issue 91).
+    CoverOwner = function() return "C" .. tostring(scan.CityID) end,
     Alternatives = params.Solutions or 3, Apart = apart, Exclusive = SDP_Rules.Exclusive(),
     Appeal = { Fixed = self.Fixed, Weights = request.Weights, Workable = workable,
       Cities = { [1] = { Housing = SDP_Land.ScanHousing(scan), Target = population } },
@@ -265,7 +267,7 @@ function Session:PlanFor(layout)
       Auto = self.Auto[search.Types[m]], Picked = search.Optional[m],
       Appeal = a.Appeal, Housing = a.Housing, Tiles = a.Tiles, TilesCounted = a.TilesCounted,
       TilesReason = a.TilesReason,
-      Reach = self.Coverage and self.Coverage:Reach(search.Types[m], c.X, c.Y) or nil,
+      Reach = self.Coverage and self.Coverage:Reach(search.Types[m], c.X, c.Y, "C" .. tostring(self.Scan.CityID)) or nil,
     }
     if search.Optional[m] then out.Picked[#out.Picked + 1] = search.Types[m] end
   end

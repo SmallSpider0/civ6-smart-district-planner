@@ -116,17 +116,19 @@ test("site factors: water, luxuries, strategic resources", function()
     "weighted by housing")
   local small = SDP_Sites.Context(0, { Districts = { "DISTRICT_CAMPUS" } })
   T.eq(small.Population, 1, "one district needs population 1")
-  -- Housing 2 -> 5 against a target of 1: 0.25 + 0.125 + 0.0625.
+  -- Housing 2 -> 5 against a target of 1, knee 2 (issue 91): 0.5 + 0.25 + 0.125.
   T.eq(SDP_Sites.Coarse(small, { X = 2, Y = 3, Index = Map.GetPlotIndex(2, 3), Unrevealed = 0 }, centers).Parts.Water,
-    0.4375, "housing past the target is worth less")
+    0.875, "housing past the target is worth less")
 end)
 
-test("housing value: 1 each up to the target, half the one before after it", function()
+test("housing value: 1 each up to one past the target, half the one before after it (issue 91)", function()
+  T.eq(SDP_Land.HOUSING_SPARE, 1, "the knee is one past the target")
   T.eq(SDP_Land.HousingValue(5, 7), 5, "below the target")
   T.eq(SDP_Land.HousingValue(7, 7), 7, "at the target")
-  T.eq(SDP_Land.HousingValue(8, 7), 7.5, "one past")
-  T.eq(SDP_Land.HousingValue(10, 7), 7.875, "three past")
-  T.ok(math.abs(SDP_Land.HousingValue(7.5, 7) - (8 - 0.5 ^ 0.5)) < 1e-12, "continuous between whole numbers")
+  T.eq(SDP_Land.HousingValue(8, 7), 8, "one past the target still counts 1: housing = population slows growth by half")
+  T.eq(SDP_Land.HousingValue(9, 7), 8.5, "two past: half")
+  T.eq(SDP_Land.HousingValue(11, 7), 8.875, "four past")
+  T.ok(math.abs(SDP_Land.HousingValue(8.5, 7) - (9 - 0.5 ^ 0.5)) < 1e-12, "continuous between whole numbers")
 end)
 
 test("combinations: spacing, relay, distinct solutions; deterministic", function()

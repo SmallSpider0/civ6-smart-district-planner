@@ -72,6 +72,9 @@ SDP_Search.Better = Better
 --                   (Buildings.AdjacentImprovement, issue 51) }
 --   Lands       SDP_Land models whose part counts (each only sees its own plots)
 --   Coverage    SDP_Coverage model or nil (off)
+--   CoverOwner  function(search, m, i) -> the coverage target key of the city
+--               slot m on candidate i is planned for (not counted as covered
+--               by it, issue 91); nil: every city counts
 --   Pools       { [group] = count }: of the group's slots marked Optional,
 --               exactly `count` are placed (fewer when they do not fit)
 --   Costs       { [position] = cost } or nil: taken off per placed slot
@@ -110,6 +113,7 @@ function SDP_Search.New(spec)
   self.Candidates, self.N = spec.Candidates, #spec.Candidates
   self.Lands = spec.Lands or {}
   self.Coverage = spec.Coverage
+  self.CoverOwner = spec.CoverOwner
   self.PoolSpec, self.Costs = spec.Pools, spec.Costs
   self.Apart, self.ApartRelaxed = spec.Apart, {}
   self.Exclusive = spec.Exclusive or {}
@@ -552,7 +556,7 @@ end
 -- (nil: the slot has no reach).
 function Search:CoverList(m, i)
   local c = self.Candidates[i]
-  return self.Coverage:List(self.Types[m], c.Index, c.X, c.Y)
+  return self.Coverage:List(self.Types[m], c.Index, c.X, c.Y, self.CoverOwner and self.CoverOwner(self, m, i) or nil)
 end
 
 -- How many (city, group) pairs a layout newly covers.

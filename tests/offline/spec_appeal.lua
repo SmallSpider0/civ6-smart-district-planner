@@ -90,9 +90,11 @@ local CITY_HOUSING, CITY_TARGET = 2, 6
 local function HousingWorth(total, weight)
   if weight == 0 then return 0 end
   local function Value(n)
-    if n <= CITY_TARGET then return n end
-    local v, step = CITY_TARGET, 1
-    for _ = CITY_TARGET + 1, math.floor(n) do
+    -- The knee is one past the target (issue 91).
+    local knee = CITY_TARGET + 1
+    if n <= knee then return n end
+    local v, step = knee, 1
+    for _ = knee + 1, math.floor(n) do
       step = step / 2
       v = v + step
     end
@@ -166,11 +168,11 @@ test("a neighborhood goes to the most appealing plot; its housing is in the gain
   T.eq(p.X .. "," .. p.Y, "8,2", "on the breathtaking plot")
   T.eq(p.Appeal, 4, "its appeal")
   T.eq(p.Housing, 6, "six housing")
-  -- Housing 2 -> 8 against a target of 6: 4 + 0.5 + 0.25 (issue 55).
-  T.eq(result.AppealDelta, 4.75, "the appeal part")
-  T.eq(result.Gain, result.Adjacency + 4.75, "in the gain")
+  -- Housing 2 -> 8 against a target of 6, knee 7 (issues 55, 91): 5 + 0.5.
+  T.eq(result.AppealDelta, 5.5, "the appeal part")
+  T.eq(result.Gain, result.Adjacency + 5.5, "in the gain")
   local double = SDP_Solver.Solve({ PlayerID = 0, CityID = 1, Districts = { HOOD }, Weights = Weights({ HOUSING = 2 }) })
-  T.eq(double.AppealDelta, 9.5, "weighted")
+  T.eq(double.AppealDelta, 11, "weighted")
   local campus = SDP_Solver.Solve({ PlayerID = 0, CityID = 1, Districts = { "DISTRICT_CAMPUS" }, Weights = ONES })
   T.eq(campus.AppealDelta, nil, "no appeal part without such a district")
 end)

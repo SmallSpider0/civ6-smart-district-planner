@@ -389,7 +389,7 @@
       <Text>无水源</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SITES_WEIGHT_HOUSING" Language="zh_Hans_CN">
-      <Text>住房：城址的住房（水源、粮仓；计划里有港口时加上灯塔、海港）比无水城址多出的部分折合多少分。到建齐计划区域所需人口为止，每点住房算 1，之后每多一点减半。</Text>
+      <Text>住房：城址的住房（水源、粮仓；计划里有港口时加上灯塔、海港）比无水城址多出的部分折合多少分。到建齐计划区域所需人口加 1 为止，每点住房算 1（住房只等于人口时增长已减缓一半），之后每多一点减半。</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SITES_HOUSING" Language="zh_Hans_CN">
       <Text>住房 {1_Housing}</Text>
@@ -500,7 +500,7 @@
       <Text>覆盖</Text>
     </Replace>
     <Replace Tag="LOC_SDP_WEIGHT_COVERAGE" Language="zh_Hans_CN">
-      <Text>覆盖：让方案照顾工厂、电厂、动物园、体育场、水族馆这类惠及周边城市的区域。每新覆盖一座本方城市或城址钉，加这么多分；已被同类区域覆盖的城不算。0 为不计。[NEWLINE][NEWLINE]好处：被覆盖的城得到这些建筑的范围效果（生产力、宜居度）。单城实测 42 座真实城市，权重 1 时 3 座多覆盖了邻城，权重 3 时 6 座。[NEWLINE]代价：这些城的相邻加成少 0～3 点（权重 3 时最多 4 点）；计算约慢 5%。</Text>
+      <Text>覆盖：让方案照顾工厂、电厂、动物园、体育场、水族馆这类惠及周边城市的区域。每新覆盖一座本方城市或城址钉，加这么多分；正在规划的这座城自己不算（它的工业区总能覆盖到它），已被同类区域覆盖的城也不算。0 为不计。[NEWLINE][NEWLINE]好处：被覆盖的城得到这些建筑的范围效果（生产力、宜居度）。单城实测 42 座真实城市，权重 1 时 3 座多覆盖了邻城，权重 3 时 6 座。[NEWLINE]代价：这些城的相邻加成少 0～3 点（权重 3 时最多 4 点）；计算约慢 5%。</Text>
     </Replace>
     <Replace Tag="LOC_SDP_RESULT_SUMMARY_COVERAGE" Language="zh_Hans_CN">
       <Text>加权提升：{1_Gain}（相邻 {2_Adjacency}，地块 {3_Land}，覆盖 {4_Coverage}）</Text>
@@ -702,7 +702,7 @@
       <Text>{1_Building}不增加贸易路线</Text>
     </Replace>
     <Replace Tag="LOC_SDP_WEIGHT_HOUSING" Language="zh_Hans_CN">
-      <Text>住房：1 住房折合多少分。每座城的住房到建齐计划区域所需人口为止每点算 1，之后每多一点减半。社区、保护区的住房取决于所在格的魅力。方案会改变魅力：圣地、剧院让相邻格 +1，工业区、军营 -1，砍掉树林让周围格 -1。保护区给周边地块的产出算在“地块”里。</Text>
+      <Text>住房：1 住房折合多少分。每座城的住房到建齐计划区域所需人口加 1 为止每点算 1（住房只等于人口时增长已减缓一半），之后每多一点减半。社区、保护区的住房取决于所在格的魅力。方案会改变魅力：圣地、剧院让相邻格 +1，工业区、军营 -1，砍掉树林让周围格 -1。保护区给周边地块的产出算在“地块”里。</Text>
     </Replace>
     <Replace Tag="LOC_SDP_RESULT_HOUSING" Language="zh_Hans_CN">
       <Text>住房{1_Housing}（魅力 {2_Appeal}）</Text>

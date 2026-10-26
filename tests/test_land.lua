@@ -49,5 +49,5 @@ test("housing from the rules: granary for a new city, harbor buildings", functio
   T.ok(inland >= 2, "lighthouse and seaport")
   T.ok(coastal >= inland, "coastal at least as much")
   if SDP_Rules.Ruleset() == "RULESET_EXPANSION_2" then T.eq(coastal - inland, 2, "Gathering Storm: the lighthouse's +2") end
-  T.eq(SDP_Land.HousingValue(9, 7), 7.75, "two past the target")
+  T.eq(SDP_Land.HousingValue(9, 7), 8.5, "two past the target: the first past it counts 1 (issue 91)")
 end)

@@ -11,6 +11,12 @@
 --             (the single-city tab: every city-center pin, SiteTargets).
 --   Covered   what the player's built and pinned districts reach already
 --             (pins being replaced do not count).
+--   Own city  a planned district or wonder does not count the city it is
+--             planned for (issue 91, decided 2026-10-26): an industrial zone
+--             within 3 tiles always reaches its own city, so that pair was
+--             the same for every layout and only pushed the pool picks
+--             towards such districts. Other cities, participating ones
+--             included, count. Callers pass the owner's target key.
 -- A layout is worth Weight x the (city, group) pairs it newly covers; the
 -- search adds that to the DMT gain and the land part (SDP_Search).
 -- Everything is read from GameInfo; lists are sorted (constraint 6).
@@ -127,30 +133,34 @@ function SDP_Coverage.New(spec)
 end
 
 -- Pair numbers of every target within reach of `subjectType` at x, y (nil:
--- the type has no reach).
-function Model:InReach(subjectType, x, y)
+-- the type has no reach); `owner` (optional): the key of the target it is
+-- planned for, left out.
+function Model:InReach(subjectType, x, y, owner)
   local reach = self.Reaches[subjectType]
   if reach == nil then return nil end
   local g, count, out = self.GroupIndex[reach.Group], #self.Targets, {}
   for t, target in ipairs(self.Targets) do
-    if Map.GetPlotDistance(x, y, target.X, target.Y) <= reach.Range then out[#out + 1] = (g - 1) * count + t end
+    if target.Key ~= owner and Map.GetPlotDistance(x, y, target.X, target.Y) <= reach.Range then
+      out[#out + 1] = (g - 1) * count + t
+    end
   end
   return out
 end
 
--- The pairs a placement would newly cover on its own (cached per type and
--- plot); nil when the type has no reach.
-function Model:List(subjectType, plotIndex, x, y)
-  local byType = self.Lists[subjectType]
+-- The pairs a placement would newly cover on its own (cached per type,
+-- owner and plot); nil when the type has no reach. `owner` as for InReach.
+function Model:List(subjectType, plotIndex, x, y, owner)
+  local key = subjectType .. "|" .. (owner or "")
+  local byType = self.Lists[key]
   if byType == nil then
     if self.Reaches[subjectType] == nil then return nil end
     byType = {}
-    self.Lists[subjectType] = byType
+    self.Lists[key] = byType
   end
   local list = byType[plotIndex]
   if list == nil then
     list = {}
-    for _, id in ipairs(self:InReach(subjectType, x, y)) do
+    for _, id in ipairs(self:InReach(subjectType, x, y, owner)) do
       if not self.Covered[id] then list[#list + 1] = id end
     end
     byType[plotIndex] = list
@@ -181,10 +191,10 @@ function Model:Pair(id)
 end
 
 -- Keys of the targets `subjectType` at x, y newly covers (within reach and
--- not covered by a built or pinned district of its group), in target order;
--- nil when the type has no reach.
-function Model:Reach(subjectType, x, y)
-  local ids = self:InReach(subjectType, x, y)
+-- not covered by a built or pinned district of its group; not `owner`), in
+-- target order; nil when the type has no reach.
+function Model:Reach(subjectType, x, y, owner)
+  local ids = self:InReach(subjectType, x, y, owner)
   if ids == nil then return nil end
   local keys = {}
   for _, id in ipairs(ids) do

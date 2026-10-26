@@ -389,7 +389,7 @@
       <Text>No Water</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SITES_WEIGHT_HOUSING" Language="en_US">
-      <Text>Housing: points for the Housing a site has over a site without water (water, Granary, and the Lighthouse and Seaport when the plan has a Harbor). Each Housing up to the population the planned districts need counts 1, each one after it half the one before.</Text>
+      <Text>Housing: points for the Housing a site has over a site without water (water, Granary, and the Lighthouse and Seaport when the plan has a Harbor). Each Housing up to one more than the population the planned districts need counts 1 (with Housing only equal to the population, growth already slows by half), each one after it half the one before.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SITES_HOUSING" Language="en_US">
       <Text>Housing {1_Housing}</Text>
@@ -500,7 +500,7 @@
       <Text>Reach</Text>
     </Replace>
     <Replace Tag="LOC_SDP_WEIGHT_COVERAGE" Language="en_US">
-      <Text>Reach: lets the plan count districts whose buildings help nearby cities, such as Factories, Power Plants, Zoos, Stadiums and Aquariums. Each of your cities or City Center map tacks newly covered adds this many points; a city a district of the same kind already covers does not count. 0 leaves it out.[NEWLINE][NEWLINE]Gain: covered cities get those buildings' regional effects (Production, Amenities). Measured planning one city on 42 real cities: at weight 1, 3 of them covered more cities; at weight 3, 6.[NEWLINE]Cost: those cities lost 0 to 3 adjacency (up to 4 at weight 3); planning takes about 5% longer.</Text>
+      <Text>Reach: lets the plan count districts whose buildings help nearby cities, such as Factories, Power Plants, Zoos, Stadiums and Aquariums. Each of your cities or City Center map tacks newly covered adds this many points; the city being planned does not count (its own Industrial Zone always reaches it), nor does a city a district of the same kind already covers. 0 leaves it out.[NEWLINE][NEWLINE]Gain: covered cities get those buildings' regional effects (Production, Amenities). Measured planning one city on 42 real cities: at weight 1, 3 of them covered more cities; at weight 3, 6.[NEWLINE]Cost: those cities lost 0 to 3 adjacency (up to 4 at weight 3); planning takes about 5% longer.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_RESULT_SUMMARY_COVERAGE" Language="en_US">
       <Text>Weighted gain: {1_Gain} (adjacency {2_Adjacency}, tiles taken {3_Land}, reach {4_Coverage})</Text>
@@ -702,7 +702,7 @@
       <Text>the {1_Building} gives no Trade Route capacity</Text>
     </Replace>
     <Replace Tag="LOC_SDP_WEIGHT_HOUSING" Language="en_US">
-      <Text>Housing: points per Housing. In each city, each Housing up to the population its planned districts need counts 1, each one after it half the one before. A Neighborhood's or Preserve's Housing depends on the Appeal of its tile. The plan changes Appeal: a Holy Site or Theater Square gives adjacent tiles +1, an Industrial Zone or Encampment -1, and removing Woods -1 to the tiles around it. A Preserve's yields on adjacent tiles count under Tiles.</Text>
+      <Text>Housing: points per Housing. In each city, each Housing up to one more than the population its planned districts need counts 1 (with Housing only equal to the population, growth already slows by half), each one after it half the one before. A Neighborhood's or Preserve's Housing depends on the Appeal of its tile. The plan changes Appeal: a Holy Site or Theater Square gives adjacent tiles +1, an Industrial Zone or Encampment -1, and removing Woods -1 to the tiles around it. A Preserve's yields on adjacent tiles count under Tiles.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_RESULT_HOUSING" Language="en_US">
       <Text>Housing {1_Housing} (Appeal {2_Appeal})</Text>

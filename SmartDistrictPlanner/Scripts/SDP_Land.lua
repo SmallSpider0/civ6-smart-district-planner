@@ -490,14 +490,20 @@ end
 -- population, at half and a quarter speed at 1 and 0, and stops a few past
 -- it (GlobalParameters CITY_HOUSING_LEFT_*). Housing is worth most until
 -- the city can reach the population its districts need, little after: the
--- city's k-th housing counts 1 up to its target population T, each one past
--- it half the one before (0.5, 0.25, ...). Summed, continuous between whole
--- numbers:
---   HousingValue(n, T) = n                     n <= T
---                      = T + 1 - 0.5^(n - T)   n > T
+-- city's k-th housing counts 1 up to its target population T plus
+-- HOUSING_SPARE, each one past that knee K half the one before (0.5, 0.25,
+-- ...). Summed, continuous between whole numbers:
+--   HousingValue(n, T) = n                     n <= K
+--                      = K + 1 - 0.5^(n - K)   n > K,   K = T + HOUSING_SPARE
+-- HOUSING_SPARE (issue 91, decided 2026-10-26): with housing only equal to
+-- the population, growth already slows by half, so the knee is one past the
+-- target (it was T). Full speed needs 2 spare (CITY_HOUSING_LEFT_50PCT_GROWTH
+-- is 1); the collaborator was asked whether to use 2: a one-line change.
+SDP_Land.HOUSING_SPARE = 1
 function SDP_Land.HousingValue(n, target)
-  if n <= target then return n end
-  return target + 1 - 0.5 ^ (n - target)
+  local knee = target + SDP_Land.HOUSING_SPARE
+  if n <= knee then return n end
+  return knee + 1 - 0.5 ^ (n - knee)
 end
 
 -- The era a technology or civic belongs to (nil when unknown).

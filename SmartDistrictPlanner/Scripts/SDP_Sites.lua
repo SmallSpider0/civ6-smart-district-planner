@@ -260,7 +260,8 @@ local Water = function(plot) return SDP_City.WaterKind(plot) end
 -- worth over a dry site's, weighed by HOUSING. A site's housing is its water
 -- housing, the first-era city-center buildings' (granary), and the
 -- buildings' of the coast districts (harbor) among `districts`; its worth
--- is SDP_Land.HousingValue with the population the plan needs as target.
+-- is SDP_Land.HousingValue with the population the plan needs as target
+-- (its knee one past it, issue 91).
 function SDP_Sites.WaterPart(ctx, site, districts)
   local plot = Map.GetPlot(site.X, site.Y)
   local kind = site.Info.WaterKind

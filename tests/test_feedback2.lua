@@ -269,3 +269,18 @@ test("issue 91: the panel's summary leads with the adjacency, distance 0.5 by de
   SDP_Panel.SetTier("STANDARD")
   for _, d in ipairs(SDP_Rules.PlannableDistricts(pid)) do SDP_Panel.SetState(d.Type, SDP_UI.DefaultState(d)) end
 end)
+
+test("issue 91: an industrial zone does not count its own city as covered; housing counts 1 up to one past the target", function()
+  local city = Capital()
+  local zone = Resolve("DISTRICT_INDUSTRIAL_ZONE")
+  local r = SDP_Solver.Solve({ PlayerID = pid, CityID = city:GetID(), Districts = { zone }, Weights = ONES, Coverage = 1,
+    Tier = "FAST" })
+  T.ok(r.Ok, tostring(r.Error))
+  local p = Has(r.Plan, zone)
+  if p == nil then T.skip("no plot for an industrial zone") end
+  local own = "C" .. city:GetID()
+  for _, key in ipairs(p.Reach or {}) do T.ok(key ~= own, "the capital is not on its own zone's row") end
+  T.eq(r.Covered or 0, #(p.Reach or {}), "only other cities count")
+  T.eq(SDP_Land.HousingValue(8, 7), 8, "housing one past the target counts 1")
+  T.eq(SDP_Land.HousingValue(9, 7), 8.5, "the next one half")
+end)
