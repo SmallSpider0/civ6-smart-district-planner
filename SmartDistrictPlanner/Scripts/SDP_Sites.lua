@@ -114,7 +114,7 @@ function SDP_Sites.Candidates(playerID, options)
   for _, c in ipairs(centers) do
     if c.Own then hasOwn = true end
   end
-  local reach = hasOwn and (options.K or 3) * (options.D or 8) or nil
+  local reach = hasOwn and (options.K or 3) * (options.D or 5) or nil
   local minRange = SDP_Sites.MinRange()
   local visibility = PlayersVisibility[playerID]
   local list = {}

@@ -38,7 +38,7 @@ function SDP_SiteSolver.NewSession(request)
   self.PlayerID, self.Request = playerID, request
   self.Params = SDP_Tiers.Params(SDP_Tiers.Sites, request.Tier, request.Params)
   self.K = math.max(1, math.min(SDP_SiteSolver.MAX_K, request.K or 3))
-  self.D = request.D or 8
+  self.D = request.D or 5
   self.Stats = { Tier = self.Params.Tier, Candidates = 0, Refined = 0, Nodes = 0, Combinations = 0, Truncated = false,
     Continues = 0, Calls = 0, Tries = 0 }
   local ctx = SDP_Sites.Context(playerID, request)

@@ -39,7 +39,11 @@ local COLUMNS_B = {
   { Key = "APPEAL", Glyph = "LOC_SDP_WEIGHT_APPEAL_SHORT", ToolTip = "LOC_SDP_WEIGHT_APPEAL" },
 }
 
-local m_k, m_d = 3, 8
+-- Default distance 5 (issue 84, the maintainer's choice): sites land at the
+-- full distance (nothing in the score pulls them closer), and players space
+-- cities 4-6 apart.
+local DEFAULT_K, DEFAULT_D = 3, 5
+local m_k, m_d = DEFAULT_K, DEFAULT_D
 local MIN_D, MAX_D = 4, 15
 local m_planCount = 3 -- districts each site is scored with (feedback item 8)
 local MAX_PLAN = 6
@@ -55,13 +59,18 @@ local m_view = { Districts = {}, Solutions = {}, Results = {} }
 local m_lookNext = false -- move the camera to the first site when the next result shows (issue 67)
 local m_site = 1 -- the site of the solution the camera was last moved to (issue 75)
 
--- The preset, the weights and the tier, kept in the save (issue 57).
+-- The preset, the weights and the tier, kept in the save (issue 57); the
+-- number of new cities and the distance too (issue 84).
 local ALL_COLUMNS = {}
 for _, column in ipairs(COLUMNS_A) do ALL_COLUMNS[#ALL_COLUMNS + 1] = column end
 for _, column in ipairs(COLUMNS_B) do ALL_COLUMNS[#ALL_COLUMNS + 1] = column end
 local m_fold = false -- the preset and weights folded into one line (issue 71)
 local m_keeper = SDP_UI.Keeper({ Tab = "SITES", Columns = ALL_COLUMNS, Weights = m_weights, Tiers = SDP_Tiers.Sites,
-  Extra = { { Key = "FOLD", Default = false, Get = function() return m_fold end, Put = function(v) m_fold = v end } },
+  Extra = { { Key = "FOLD", Default = false, Get = function() return m_fold end, Put = function(v) m_fold = v end },
+    { Key = "K", Kind = "number", Min = 1, Max = SDP_SiteSolver.MAX_K, Default = DEFAULT_K,
+      Get = function() return m_k end, Put = function(v) m_k = math.floor(v) end },
+    { Key = "D", Kind = "number", Min = MIN_D, Max = MAX_D, Default = DEFAULT_D,
+      Get = function() return m_d end, Put = function(v) m_d = math.floor(v) end } },
   GetTier = function() return m_tier end, PutTier = function(tier) m_tier = tier end,
   Presets = SDP_Sites.PRESETS, Order = SDP_Sites.PRESET_ORDER })
 
@@ -138,6 +147,7 @@ function P.SetCount(k)
   if k ~= m_k then
     m_k = k
     ClearResult()
+    Remember()
   end
   ShowSteppers()
   UpdateEstimate()
@@ -159,6 +169,7 @@ function P.SetDistance(d)
   if d ~= m_d then
     m_d = d
     ClearResult()
+    Remember()
   end
   ShowSteppers()
 end
