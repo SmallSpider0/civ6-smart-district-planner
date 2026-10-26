@@ -44,7 +44,7 @@ Several sessions may run at once, each in its own worktree, and there is one gam
 ## Tests
 
 - One change: `python3 -I tools/run_tests.py tests/test_x.lua` (`-k` filters by name).
-- Before a PR: `python3 -I tools/run_tests.py` in Gathering Storm; before a release `--rulesets all` (base, Rise and Fall, Gathering Storm). Skips are tests whose content the ruleset or the account's DLC lacks; report them as skips, not passes.
+- For a PR: the test files related to the change (`run_tests.py tests/test_x.lua ...`); before a release the whole set with `--rulesets all` (base, Rise and Fall, Gathering Storm). Skips are tests whose content the ruleset or the account's DLC lacks; report them as skips, not passes.
 - English: `game.py quit` → `shots.py lang en` → launch → newgame → tests and English screenshots → `game.py quit` → `shots.py lang restore` (must print "identical").
 - Real clicks (macOS, UI changes): `python3 -I tools/realclick.py suite`. It brings the game forward per click and takes the mouse for a few minutes; say so first. "no Civilization VI window on screen": `open -b com.aspyr.civ6.steam`, retry.
 - Screenshots: `shots.py stage single|sites|multi`, then `shots.py capture v<round>-panel-<tab>` (and `-en-` for English). Look at every picture before using it. Without the screen recording grant for SDPClick: `shots.py region` and computer-use zoom, then `shots.py save`.

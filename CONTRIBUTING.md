@@ -17,15 +17,16 @@
 
 1. **记成 Issue**：维护者或合作者在 GitHub 上提；在对话里告诉 Claude 的，由它来提。打算放进下一版的挂到里程碑（如 `v1.1.0`），里程碑页面能看到这一版还剩几项。
 2. **先调研、再确认**（明显的 bug 修复除外）：功能和优化类的 Issue，先用子 agent 调研规则库与游戏本体代码、玩家社区的做法和对比模组的做法，整理成“已查证的规则 / 玩家共识 / 个别意见 / 建议方案”写进 Issue。要维护者拿主意的地方列在评论里（方案 A、B，附建议），合作者可以在 Issue 下评论；维护者在 Claude Code 里拍板后再开发。
-3. **本地分多个提交修**：一个分支修这一批 Issue，一个 Issue 一个或几个提交，提交信息里写 `#编号`。分支上随便推，不开 PR 就不跑 CI。
-4. **只开一个 PR**：这一批都修好、本地测过（`validate.py`、离线测试、游戏内测试）再开 PR，描述里每个 Issue 写一行 `Closes #编号`，合并时自动关闭。要发版时，发版准备（版本号、CHANGELOG、更新说明、截图、自测报告、压力测试结果）也放进这个 PR。
-5. **发版**：合并到 `main` 不会到玩家手里。只有修 bug 的小版本，攒够三个普通 bug、离第一个修复合并满七天，或修好一个严重 bug 时直接发；有功能或优化的版本，测过后由维护者决定什么时候发。然后发 Release、更新创意工坊（见下文“发版”）。
+3. **一个 Issue 一个分支、一个 PR**：分支上可以分几个提交，提交信息里写 `#编号`；分支上随便推，不开 PR 就不跑 CI。几个改同一块、拆开反而互相依赖的 Issue（比如同一套公式）合成一个 PR。PR 描述里每个 Issue 写一行 `Closes #编号`，合并时自动关闭。
+4. **测过就合并**：这个 Issue 相关的测试过了（`validate.py`、相关的离线测试和游戏内测试文件）就开 PR，CI 通过后合并。合并到 `main` 不会到玩家手里，所以不用等同一里程碑的其他 Issue。
+5. **里程碑是发版的单位**：一版的 Issue 都合并后，开一个发版准备的 PR（版本号、CHANGELOG、更新说明、截图、自测报告、压力测试结果），整套测试在这时跑一次（见“测试分工”）。
+6. **发版**：只有修 bug 的小版本，攒够三个普通 bug、离第一个修复合并满七天，或修好一个严重 bug 时直接发；有功能或优化的版本，测过后由维护者决定什么时候发。然后发 Release、更新创意工坊（见下文“发版”）。
 
-这样一轮只跑一次 CI（每次约 6 分钟；只在 PR 上跑，合并后 `main` 上不再重跑）：
+一个 PR 跑一次 CI（每次约 6 分钟；只在 PR 上跑，合并后 `main` 上不再重跑）。这是 2026-10-26 改的，之前是一批 Issue 一个 PR：大多数开源项目一个改动一个 PR，小 PR 好审、好回退，分支活得短不容易冲突，一项卡住也不拖累别的。
 
 - 后续修改推到已开的 PR 上，不另开 PR。往 PR 上推新提交会取消这个 PR 还没跑完的那一轮，所以攒几个提交一起推。
 - 只改文档的小修正不单独开 PR，带进下一个 PR。只改文档的 PR（`docs/`、`.md` 文件、问题模板）CI 只跑 `validate.py`，跳过离线测试。
-- 只有必须马上生效、不能等这一轮的改动（如发出去的版本有严重问题）才单独开 PR。
+- 游戏内测试只能晚些跑时（比如机器白天有人用），PR 先开着不开自动合并，测完再开。
 - `main` 受保护，所有改动（包括错字这类小的文档修正）都在分支上做、开 PR，CI 的两项检查 `offline (ubuntu-latest)`、`offline (windows-latest)`（validate 和离线测试）通过后才能合并。不能直接推送、强制推送或删除 `main`；仓库管理员可以绕过。
 - GitHub 不要求审批人数，但合并前请另一人看一下。
 - 仓库只允许 squash 合并：一个 PR 在 `main` 上只留一个提交，标题就是 PR 标题。所以 PR 标题用英文祈使句写清做了什么。
@@ -51,9 +52,9 @@
 | 界面缩放、分辨率、布局 | Windows | 改了界面 |
 | 压力测试 `stress.py` | 任一平台 | 发布前（只改界面的版本不跑） |
 
-- 本地测试也按批跑，整套只跑一次（离线测试几分钟，游戏内一种规则集约 2 分钟，离线对比十几到二十几分钟）：
-  - 每修完一个 Issue，只跑和它相关的测试文件：`node tools/offline_tests.mjs tests/offline/spec_xxx.lua`、`python3 -I tools/run_tests.py tests/test_xxx.lua`，可加 `-k` 按名字筛选。
-  - 这一批都修完、开 PR 之前，统一跑一次 `validate.py`、整套离线测试、游戏内测试（发版时三种规则集）、需要时再跑离线对比和真实点击。中途改了再补跑受影响的部分，不必整套重跑。
+- 每个 PR 跑和它相关的测试，整套留到发版前跑一次（离线测试几分钟，游戏内一种规则集约 2 分钟，离线对比十几到二十几分钟）：
+  - 每个 PR：`validate.py`，相关的测试文件（`node tools/offline_tests.mjs tests/offline/spec_xxx.lua`、`python3 -I tools/run_tests.py tests/test_xxx.lua`，可加 `-k` 按名字筛选），改了求解器或合法性规则时跑离线对比的开发集；整套离线测试 CI 会跑。
+  - 发版前：三种规则集的整套游戏内测试、真实点击、压力测试、需要时的离线对比，按发版清单跑一次。中途改了再补跑受影响的部分，不必整套重跑。
 - PR 里写明在哪个平台跑了哪些测试，没跑的写原因。
 - 先跑游戏内测试，再跑离线的重活。`compare.mjs` 多线程运行时，游戏会被拖到几分钟一回合。
 - 游戏内测试可以直接跑，不用事先问。改 `AppOptions.txt`、`Mods.sqlite` 前要先问，并且游戏要关着。
@@ -70,7 +71,7 @@
 
    一版攒几项改动再发，挂在同一个里程碑上，不为单项发版；只有线上版本的严重问题单独发（见下文“其他情况”）。modinfo 的 `version` 每次发版加 1；`SmartDistrictPlanner/UI/SDP_Panel.lua` 的 `VERSION` 改成新版本号，启动栏按钮的悬停提示显示它，`validate.py` 检查它和 CHANGELOG 最新的版本一致。
 2. 发版前测试：三种规则集的游戏内测试、macOS 真实点击、后期存档压力测试（只改界面、不动求解和计分的版本不跑；不用在 Windows 上手动测）；改了求解器还要跑离线对比。
-3. 准备文字：CHANGELOG 的“未发布”改成 `vX.Y.Z（日期）`；写 `workshop/changenotes/vX.Y.Z.txt`（英文在前、中文在后）；功能或限制变了，同步 README、`workshop/` 的中英简介（`description.bbcode`、`description_zh.bbcode`）和介绍与评测页。这些和这一轮的修复在同一个 PR 里。
+3. 准备文字：CHANGELOG 的“未发布”改成 `vX.Y.Z（日期）`；写 `workshop/changenotes/vX.Y.Z.txt`（英文在前、中文在后）；功能或限制变了，同步 README、`workshop/` 的中英简介（`description.bbcode`、`description_zh.bbcode`）和介绍与评测页。这些放在发版准备的 PR 里。
 4. 在 GitHub 发布 Release `vX.Y.Z`，发布说明写给玩家，英文在前、中文在后。`.github/workflows/release.yml` 会：
    - 打出 `SmartDistrictPlanner-vX.Y.Z.zip`（mod、中英安装与使用说明、`REPORT.html`、`REPORT_EN.html`；不带给测试者的说明），连同中英两个单文件页面一起附到 Release；
    - 打出 `SmartDistrictPlanner-vX.Y.Z-workshop.zip`（创意工坊提交包，`tools/workshop.py pack`）附到 Release；
