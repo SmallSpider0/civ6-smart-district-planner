@@ -113,7 +113,11 @@ local function EditedList()
   return m_shared
 end
 
-local function ListOf(list) return SDP_UI.ListRequest(Districts(), list.States, list.Count) end
+-- Empire-limited districts the player has built up to the limit (issue 108):
+-- shown as built, never asked for.
+local function Built() return SDP_City.EmpireBuilt(Game.GetLocalPlayer(), Districts()) end
+
+local function ListOf(list) return SDP_UI.ListRequest(Districts(), list.States, list.Count, Built()) end
 
 local function WonderTypes()
   local list = {}
@@ -296,7 +300,7 @@ end
 function P.SetCount(count)
   local list = OwnList()
   local before = ListOf(list).Count
-  local after = SDP_UI.ListRequest(Districts(), list.States, count).Count
+  local after = SDP_UI.ListRequest(Districts(), list.States, count, Built()).Count
   list.Count = after
   if after ~= before then ClearResult() end
   P.RefreshLists()
@@ -642,8 +646,9 @@ function P.RefreshLists()
   P.PopulatePlanPulls(participants)
   local list = EditedList()
   local districts = Districts()
+  local built = Built()
   local rows = SDP_UI.BuildCells(m_cellIM, m_utilityIM, Controls.MultiDistrictStack, Controls.MultiUtilityStack, districts,
-    function(d) return SDP_UI.StateOf(list.States, d) end, nil,
+    function(d) return SDP_UI.StateOf(list.States, d) end, function(d) return built[d.Type] end,
     function(d) P.SetState(d.Type, SDP_UI.NextState(d, SDP_UI.StateOf(list.States, d))) end)
   m_view.Districts = {}
   for _, row in ipairs(rows) do
@@ -652,7 +657,13 @@ function P.RefreshLists()
       if dd.Type == row.Type then d = dd end
     end
     local status = ""
-    if d.MaxPerPlayer and d.MaxPerPlayer > 0 then
+    if built[d.Type] then
+      -- Built up to the empire's limit (issue 108): greyed out, where it stands.
+      local where = SDP_Multi.WhereBuilt(playerID, d.Type)
+      status = Locale.Lookup("LOC_SDP_MULTI_EMPIRE_LIMIT", d.MaxPerPlayer)
+      if where ~= nil then status = status .. " " .. Locale.Lookup("LOC_SDP_MULTI_LIMITED_BUILT", Locale.Lookup(where)) end
+      row.Cell:SetToolTipString(status)
+    elseif d.MaxPerPlayer and d.MaxPerPlayer > 0 then
       -- Where an empire-limited district can go: the cities that require it.
       local planners = {}
       for _, part in ipairs(participants) do
@@ -670,7 +681,7 @@ function P.RefreshLists()
       row.Cell:SetToolTipString(status)
     end
     m_view.Districts[#m_view.Districts + 1] = { Type = row.Type, State = row.State, Status = status, Group = row.Group,
-      Cell = row.Cell }
+      Cell = row.Cell, Built = built[d.Type] ~= nil or nil }
   end
   local counts = ListOf(list)
   Controls.MultiCountValue:SetText(tostring(counts.Count))
