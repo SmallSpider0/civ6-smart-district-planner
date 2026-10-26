@@ -138,14 +138,18 @@ class Suite:
             self.failed.append(label)
 
 
+ROWS = {"SINGLE": "SDP_Panel.State().DistrictRows", "MULTI": "SDP_Panel.Multi.State().View.Districts",
+        "SITES": "SDP_Panel.Sites.State().View.Districts"}
+
+
 def cell_state(tab, district):
-    rows = "SDP_Panel.State().DistrictRows" if tab == "SINGLE" else "SDP_Panel.Multi.State().View.Districts"
+    rows = ROWS[tab]
     return value("(function() for _, r in ipairs(%s) do if r.Type == '%s' then return r.State end end end)()"
                  % (rows, district))
 
 
 def cell(tab, district):
-    rows = "SDP_Panel.State().DistrictRows" if tab == "SINGLE" else "SDP_Panel.Multi.State().View.Districts"
+    rows = ROWS[tab]
     return "(function() for _, r in ipairs(%s) do if r.Type == '%s' then return r.Cell end end end)()" % (rows, district)
 
 
@@ -299,7 +303,22 @@ SDP_Panel.Multi.Refresh()
     # peeking, go through its sites.
     click_control("Controls.SitesTab")
     s.check("sites tab by click", value("SDP_Panel.Tab()"), "SITES")
-    lua("SDP_Panel.Sites.SetCount(2); SDP_Panel.Sites.SetTier('FAST'); SDP_Panel.Sites.SetSelected('%s', true)" % campus)
+    # The district grid and count (issue 90): a candidate and an other
+    # district round their states, the count's arrows.
+    candidate = value("(function() for _, r in ipairs(SDP_Panel.Sites.State().View.Districts) do "
+                      "if r.State == 'POOL' and r.Status == nil then return r.Type end end end)()")
+    for district, states in ((candidate, ["POOL", "MUST", "OFF", "POOL"]), (aqueduct, ["OFF", "MUST", "OFF"])):
+        s.check("sites %s starts" % district, cell_state("SITES", district), states[0])
+        for want in states[1:]:
+            click_control(cell("SITES", district))
+            s.check("sites %s after a click" % district, cell_state("SITES", district), want)
+    s.check("sites district count", value("SDP_Panel.Sites.State().DistrictCount"), "3")
+    click_control("Controls.SitesPlanMore")
+    s.check("sites district count up by click", value("SDP_Panel.Sites.State().DistrictCount"), "4")
+    click_control("Controls.SitesPlanLess")
+    s.check("sites district count down by click", value("SDP_Panel.Sites.State().DistrictCount"), "3")
+    lua("SDP_Panel.Sites.SetCount(2); SDP_Panel.Sites.SetTier('FAST'); SDP_Panel.Sites.SetSelected('%s', true); "
+        "SDP_Panel.Sites.SetDistrictCount(1)" % campus)
     click_control("Controls.SitesSolveButton")
     for _ in range(120):
         if value("SDP_Panel.State().Running") == "false" and value("SDP_Panel.Sites.State().Result ~= nil") == "true":
@@ -319,7 +338,8 @@ SDP_Panel.Multi.Refresh()
         s.check("sites: next site gone with the peek", value("Controls.PeekNextSite:IsHidden()"), "true")
     else:
         s.check("sites: a plan with two sites", value("SDP_Panel.Sites.State().Result.Ok and #%s.Sites" % sol), "2")
-    lua("SDP_Panel.Sites.SetSelected('%s', false); SDP_Panel.Sites.SetTier('STANDARD')" % campus)
+    lua("SDP_Panel.Sites.SetSelected('%s', false); SDP_Panel.Sites.SetDistrictCount(3); "
+        "SDP_Panel.Sites.SetTier('STANDARD')" % campus)
     click_control("Controls.CloseButton")
     s.check("close by click", value("SDP_Panel.IsOpen()"), "false")
     # Issue 76: a city selected on the map since the panel last opened: it

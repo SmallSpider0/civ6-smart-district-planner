@@ -242,14 +242,15 @@ function SDP_UI.SettingFields(columns, switches, tiers, extra)
   end
   fields[#fields + 1] = { Key = "TIER", Kind = "choice", Choices = choices, Default = SDP_Tiers.DEFAULT }
   for _, flag in ipairs(extra or {}) do
-    fields[#fields + 1] = { Key = flag.Key, Kind = flag.Kind or "flag", Min = flag.Min, Max = flag.Max, Default = flag.Default }
+    fields[#fields + 1] = { Key = flag.Key, Kind = flag.Kind or "flag", Min = flag.Min, Max = flag.Max, Pattern = flag.Pattern,
+      Default = flag.Default }
   end
   return fields
 end
 
 -- A keeper (SDP_Settings.Keeper) for a tab: spec = { Tab, Columns, Weights
 -- (the tab's table), Switches and Extra ({ Key, Default, Get, Put; Kind "number"
--- with Min, Max, else a flag }), Tiers,
+-- with Min, Max, "list" with Pattern, else a flag }), Tiers,
 -- GetTier, PutTier, Presets and Order (default the planner's, SDP_Settings) }.
 function SDP_UI.Keeper(spec)
   local columns, weights = spec.Columns, spec.Weights

@@ -3,8 +3,8 @@
 -- into its context: uses its Controls and the SDP_UI helpers.
 --   Inputs    number of new cities K, relay distance D, a weight preset and
 --             the eleven weights plus the distance cost, the districts each site
---             is scored with: its best PlanCount of the ticked ones (feedback
---             item 8; default 3)
+--             is scored with: the single-city tab's grid (required, candidates,
+--             not wanted) and count, the tab's own (issue 90; SDP_Sites.DefaultState)
 --   Solve     over several frames (SDP_Task); up to three distinct site
 --             combinations; the selected one is previewed; "place" puts a
 --             city-center map tack on each site, which step 2 then plans.
@@ -13,7 +13,8 @@ SDP_PageSites = {}
 local P = SDP_PageSites
 P.Name = "SITES"
 
-local m_districtIM = InstanceManager:new("CheckCell", "Root", Controls.SitesDistrictStack)
+local m_cellIM = InstanceManager:new("DistrictCell", "Root", Controls.SitesDistrictStack)
+local m_utilityIM = InstanceManager:new("DistrictCell", "Root", Controls.SitesUtilityStack)
 local m_weightIM = InstanceManager:new("WeightColumn", "Root", Controls.SitesWeightStack)
 local m_weightIM2 = InstanceManager:new("WeightColumn", "Root", Controls.SitesWeightStack2)
 local m_solutionIM = InstanceManager:new("SolutionRow", "Root", Controls.SitesSolutionStack)
@@ -45,13 +46,15 @@ local COLUMNS_B = {
 local DEFAULT_K, DEFAULT_D = 3, 5
 local m_k, m_d = DEFAULT_K, DEFAULT_D
 local MIN_D, MAX_D = 4, 15
-local m_planCount = 3 -- districts each site is scored with (feedback item 8)
-local MAX_PLAN = 6
+-- The districts each site is scored with (issue 90): states as on the
+-- single-city tab, MUST / POOL / OFF, only the ones the player chose (the
+-- rest at SDP_Sites.DefaultState), and how many that take population.
+local m_states = {}
+local m_count = SDP_Sites.DEFAULT_COUNT
 local m_preset = "BALANCED"
 local m_weights = { DISTANCE = 0 }
 for key, value in pairs(SDP_Sites.PRESETS.BALANCED) do m_weights[key] = value end
 local m_views = {}
-local m_selected = {}
 local m_tier = SDP_Tiers.DEFAULT
 local m_result = nil
 local m_solution = 1
@@ -60,7 +63,24 @@ local m_lookNext = false -- move the camera to the first site when the next resu
 local m_site = 1 -- the site of the solution the camera was last moved to (issue 75)
 
 -- The preset, the weights and the tier, kept in the save (issue 57); the
--- number of new cities and the distance too (issue 84).
+-- number of new cities and the distance too (issue 84); the district states
+-- ("DISTRICT_CAMPUS:M,DISTRICT_PRESERVE:P", only the chosen ones) and the
+-- district count (issue 90).
+local STATE_CODE = { MUST = "M", POOL = "P", OFF = "O" }
+local CODE_STATE = { M = "MUST", P = "POOL", O = "OFF" }
+local function KeptStates()
+  local items = {}
+  for districtType, state in pairs(m_states) do items[#items + 1] = districtType .. ":" .. STATE_CODE[state] end
+  return SDP_Settings.List(table.concat(items, ","), "^[%w_]+:[MPO]$")
+end
+local function PutStates(text)
+  m_states = {}
+  local known = {}
+  for _, d in ipairs(SDP_Rules.PlannableDistricts(Game.GetLocalPlayer())) do known[d.Type] = true end
+  for districtType, code in tostring(text):gmatch("([%w_]+):([MPO])") do
+    if known[districtType] then m_states[districtType] = CODE_STATE[code] end
+  end
+end
 local ALL_COLUMNS = {}
 for _, column in ipairs(COLUMNS_A) do ALL_COLUMNS[#ALL_COLUMNS + 1] = column end
 for _, column in ipairs(COLUMNS_B) do ALL_COLUMNS[#ALL_COLUMNS + 1] = column end
@@ -70,7 +90,10 @@ local m_keeper = SDP_UI.Keeper({ Tab = "SITES", Columns = ALL_COLUMNS, Weights =
     { Key = "K", Kind = "number", Min = 1, Max = SDP_SiteSolver.MAX_K, Default = DEFAULT_K,
       Get = function() return m_k end, Put = function(v) m_k = math.floor(v) end },
     { Key = "D", Kind = "number", Min = MIN_D, Max = MAX_D, Default = DEFAULT_D,
-      Get = function() return m_d end, Put = function(v) m_d = math.floor(v) end } },
+      Get = function() return m_d end, Put = function(v) m_d = math.floor(v) end },
+    { Key = "COUNT", Kind = "number", Min = 0, Max = SDP_Sites.MAX_COUNT, Default = SDP_Sites.DEFAULT_COUNT,
+      Get = function() return m_count end, Put = function(v) m_count = math.floor(v) end },
+    { Key = "DISTRICTS", Kind = "list", Pattern = "^[%w_]+:[MPO]$", Default = "", Get = KeptStates, Put = PutStates } },
   GetTier = function() return m_tier end, PutTier = function(tier) m_tier = tier end,
   Presets = SDP_Sites.PRESETS, Order = SDP_Sites.PRESET_ORDER })
 
@@ -116,32 +139,69 @@ local function ClearResult()
   end
 end
 
-local function Plan()
-  local list = {}
-  for _, d in ipairs(SDP_Rules.PlannableDistricts(Game.GetLocalPlayer())) do
-    if m_selected[d.Type] then list[#list + 1] = d.Type end
-  end
-  return list
+local function Districts() return SDP_Rules.PlannableDistricts(Game.GetLocalPlayer()) end
+
+-- The state a district starts in on this tab (SDP_Sites.DefaultState).
+function P.DefaultState(d)
+  return SDP_Sites.DefaultState(d, SDP_Rules.Functional(Game.GetLocalPlayer()))
+end
+
+-- Why a district cannot be chosen here: one per empire would count once per site.
+local function StatusOf(d)
+  if d.MaxPerPlayer and d.MaxPerPlayer > 0 then return "NOT_PER_SITE" end
+  return nil
+end
+
+-- Every district's state: the chosen one, else the default.
+local function States()
+  local functional, states = SDP_Rules.Functional(Game.GetLocalPlayer()), {}
+  for _, d in ipairs(Districts()) do states[d.Type] = m_states[d.Type] or SDP_Sites.DefaultState(d, functional) end
+  return states
+end
+
+-- What the grid asks for (SDP_UI.ListRequest): Must, Pool, Count, Pick.
+local function List(count)
+  local districts, status = Districts(), {}
+  for _, d in ipairs(districts) do status[d.Type] = StatusOf(d) end
+  return SDP_UI.ListRequest(districts, States(), math.min(count or m_count, SDP_Sites.MAX_COUNT), status)
+end
+
+-- A click: as on the single-city tab, except that the districts without
+-- population have no automatic state here (a site is not a city yet): Must or Off.
+local function NextState(d, state)
+  if not d.Specialty then return state == "MUST" and "OFF" or "MUST" end
+  return SDP_UI.NextState(d, state)
 end
 
 function P.Request()
   local weights = {}
   for key, value in pairs(m_weights) do weights[key] = value end
-  return { PlayerID = Game.GetLocalPlayer(), Tier = m_tier, K = m_k, D = m_d, Districts = Plan(), Weights = weights,
-    PlanCount = m_planCount, Distance = m_weights.DISTANCE }
+  local list = List()
+  return { PlayerID = Game.GetLocalPlayer(), Tier = m_tier, K = m_k, D = m_d, Districts = list.Must, Pool = list.Pool,
+    Pick = list.Pick, Weights = weights, Distance = m_weights.DISTANCE }
+end
+
+-- The time estimate: each site places the required districts and, with a
+-- pool, solves a few combinations of the count (SDP_SiteSolver.EstimateUnits).
+local function Estimate(request, params, continue)
+  local districts = #request.Districts + #request.Pool
+  local picking = request.Pick > 0 and request.Pick < #request.Pool
+  return SDP_SiteSolver.EstimateUnits(picking and districts or #request.Districts + request.Pick, request.K, params, continue,
+    picking and (#request.Districts + request.Pick) or nil)
 end
 
 local function UpdateEstimate()
   local params = SDP_Tiers.Params(SDP_Tiers.Sites, m_tier)
-  Controls.SitesEstimate:SetText(SDP_UI.EstimateText(SDP_SiteSolver.EstimateUnits(#Plan(), m_k, params, false, m_planCount)))
+  Controls.SitesEstimate:SetText(SDP_UI.EstimateText(Estimate(P.Request(), params, false)))
 end
 
 local function ShowSteppers()
   Controls.SitesCount:SetText(tostring(m_k))
   Controls.SitesDistance:SetText(tostring(m_d))
-  Controls.SitesPlanValue:SetText(tostring(m_planCount))
-  Controls.SitesPlanLess:SetDisabled(m_planCount <= 1)
-  Controls.SitesPlanMore:SetDisabled(m_planCount >= MAX_PLAN)
+  local list = List()
+  Controls.SitesPlanValue:SetText(tostring(list.Count))
+  Controls.SitesPlanLess:SetDisabled(list.Count <= list.MustSpecialty)
+  Controls.SitesPlanMore:SetDisabled(list.Count >= math.min(SDP_Sites.MAX_COUNT, list.MustSpecialty + #list.Pool))
   Controls.SitesCountLess:SetDisabled(m_k <= 1)
   Controls.SitesCountMore:SetDisabled(m_k >= SDP_SiteSolver.MAX_K)
   Controls.SitesDistanceLess:SetDisabled(m_d <= MIN_D)
@@ -159,13 +219,15 @@ function P.SetCount(k)
   UpdateEstimate()
 end
 
--- How many districts each site is scored with (its best ones of the ticked).
-function P.SetPlanCount(n)
-  n = math.max(1, math.min(MAX_PLAN, n))
-  if n ~= m_planCount then
-    m_planCount = n
-    ClearResult()
-  end
+-- How many districts that take population each site is scored with,
+-- required ones included (clamped as on the single-city tab, at most
+-- SDP_Sites.MAX_COUNT).
+function P.SetDistrictCount(n)
+  local before = List().Count
+  local count = List(math.max(0, n)).Count
+  m_count = count
+  if count ~= before then ClearResult() end
+  Remember()
   ShowSteppers()
   UpdateEstimate()
 end
@@ -200,15 +262,28 @@ function P.SetPreset(name)
   Remember()
 end
 
-function P.SetSelected(districtType, on)
-  if (m_selected[districtType] == true) ~= (on == true) then
-    m_selected[districtType] = on or nil
-    ClearResult()
+local ShowCells -- defined below
+
+-- Set a district's state (MUST, POOL, OFF); its default is not kept.
+function P.SetState(districtType, state)
+  for _, d in ipairs(Districts()) do
+    if d.Type == districtType and StatusOf(d) == nil then
+      local before = States()[districtType]
+      if state == P.DefaultState(d) then m_states[districtType] = nil else m_states[districtType] = state end
+      if state ~= before then ClearResult() end
+      Remember()
+    end
   end
-  for _, row in ipairs(m_view.Districts) do
-    if row.Type == districtType and row.Check:IsChecked() ~= (on == true) then row.Check:SetCheck(on == true) end
-  end
+  ShowCells()
+  ShowSteppers()
   UpdateEstimate()
+end
+
+-- Tests and older callers: selected = MUST, unselected = the default state.
+function P.SetSelected(districtType, on)
+  for _, d in ipairs(Districts()) do
+    if d.Type == districtType then P.SetState(districtType, on and "MUST" or P.DefaultState(d)) end
+  end
 end
 
 function P.SetTier(tier)
@@ -222,6 +297,21 @@ function P.SetTier(tier)
   UpdateEstimate()
 end
 
+-- The two district grids (SDP_UI.BuildCells, as on the other tabs).
+ShowCells = function()
+  local states = States()
+  local rows = SDP_UI.BuildCells(m_cellIM, m_utilityIM, Controls.SitesDistrictStack, Controls.SitesUtilityStack, Districts(),
+    function(d) return states[d.Type] end, StatusOf,
+    function(d) P.SetState(d.Type, NextState(d, States()[d.Type])) end)
+  m_view.Districts = {}
+  for _, row in ipairs(rows) do
+    -- The only tooltip of a district cell (issue 67): why it is not counted.
+    if row.Status ~= nil then row.Cell:SetToolTipString(Locale.Lookup("LOC_SDP_SITES_NOT_PER_SITE")) end
+    m_view.Districts[#m_view.Districts + 1] = { Type = row.Type, State = row.State, Status = row.Status, Group = row.Group,
+      Cell = row.Cell }
+  end
+end
+
 function P.Refresh()
   P.Restore()
   ShowSteppers()
@@ -233,31 +323,7 @@ function P.Refresh()
   m_view.WeightCells = {} -- the weight columns' controls, for tests
   for _, cell in ipairs(cellsA) do m_view.WeightCells[#m_view.WeightCells + 1] = cell end
   for _, cell in ipairs(cellsB) do m_view.WeightCells[#m_view.WeightCells + 1] = cell end
-  -- Districts the sites are scored with (an empire-limited one would count once per site).
-  m_districtIM:ResetInstances()
-  m_view.Districts = {}
-  -- In name order, like the district grids of the other tabs.
-  local districts = SDP_Rules.PlannableDistricts(Game.GetLocalPlayer())
-  local names = {}
-  for _, d in ipairs(districts) do names[d.Type] = Locale.Lookup(d.Name) end
-  table.sort(districts, function(a, b)
-    if names[a.Type] ~= names[b.Type] then return Locale.Compare(names[a.Type], names[b.Type]) == -1 end
-    return a.Type < b.Type
-  end)
-  for _, d in ipairs(districts) do
-    local inst = m_districtIM:GetInstance()
-    local districtType = d.Type
-    local limited = d.MaxPerPlayer and d.MaxPerPlayer > 0
-    inst.Icon:SetIcon(d.Icon, 26)
-    SDP_UI.FitName(inst.Name, Locale.Lookup(d.Name), 100)
-    inst.Root:SetToolTipString(limited and Locale.Lookup("LOC_SDP_SITES_NOT_PER_SITE") or "")
-    inst.Check:SetDisabled(limited)
-    inst.Check:SetCheck(not limited and m_selected[districtType] == true)
-    inst.Root:SetAlpha(limited and 0.5 or 1)
-    inst.Check:RegisterCheckHandler(function() P.SetSelected(districtType, inst.Check:IsChecked()) end)
-    m_view.Districts[#m_view.Districts + 1] = { Type = districtType, Check = inst.Check }
-  end
-  Controls.SitesDistrictStack:CalculateSize()
+  ShowCells()
   SDP_UI.PopulateTierPull(Controls.SitesTierPull, m_tier, P.SetTier)
   UpdateEstimate()
   UpdateFold()
@@ -473,8 +539,7 @@ function P.Solve()
   m_lookNext = true
   P.SetFold(true) -- the results get the room (issue 71)
   SDP_Preview.Clear()
-  return SDP_UI.StartTask(function() return SDP_SiteSolver.SolveNow(request) end,
-    SDP_SiteSolver.EstimateUnits(#request.Districts, request.K, params, false, request.PlanCount),
+  return SDP_UI.StartTask(function() return SDP_SiteSolver.SolveNow(request) end, Estimate(request, params, false),
     function(result) m_result, m_solution = result, 1 end, P)
 end
 
@@ -486,7 +551,7 @@ function P.Continue()
     session:Continue()
     return session:Result()
   end, SDP_SiteSolver.EstimateUnits(#session.Ctx.Plan + #session.Ctx.Pool, session.K, session.Params, true,
-    session.Ctx.Pick > 0 and session.Ctx.Pick or nil),
+    session.Ctx.Pick > 0 and (#session.Ctx.Plan + session.Ctx.Pick) or nil),
     function(result) m_result = result end, P)
 end
 
@@ -518,7 +583,7 @@ end
 function P.State()
   return {
     Result = m_result, Solution = m_solution, Site = m_site, K = m_k, D = m_d, Tier = m_tier, Weights = m_weights, View = m_view,
-    PlanCount = m_planCount, Preset = m_preset, Fold = m_fold, FoldText = Controls.SitesFoldText:GetText(),
+    DistrictCount = List().Count, States = States(), Preset = m_preset, Fold = m_fold, FoldText = Controls.SitesFoldText:GetText(),
     EstimateText = Controls.SitesEstimate:GetText(), PlaceDisabled = Controls.SitesPlaceButton:IsDisabled(),
   }
 end
@@ -527,8 +592,8 @@ Controls.SitesCountLess:RegisterCallback(Mouse.eLClick, function() P.SetCount(m_
 Controls.SitesCountMore:RegisterCallback(Mouse.eLClick, function() P.SetCount(m_k + 1) end)
 Controls.SitesDistanceLess:RegisterCallback(Mouse.eLClick, function() P.SetDistance(m_d - 1) end)
 Controls.SitesDistanceMore:RegisterCallback(Mouse.eLClick, function() P.SetDistance(m_d + 1) end)
-Controls.SitesPlanLess:RegisterCallback(Mouse.eLClick, function() P.SetPlanCount(m_planCount - 1) end)
-Controls.SitesPlanMore:RegisterCallback(Mouse.eLClick, function() P.SetPlanCount(m_planCount + 1) end)
+Controls.SitesPlanLess:RegisterCallback(Mouse.eLClick, function() P.SetDistrictCount(List().Count - 1) end)
+Controls.SitesPlanMore:RegisterCallback(Mouse.eLClick, function() P.SetDistrictCount(List().Count + 1) end)
 Controls.SitesSolveButton:RegisterCallback(Mouse.eLClick, function() P.Solve() end)
 Controls.SitesContinueButton:RegisterCallback(Mouse.eLClick, function() P.Continue() end)
 Controls.SitesCancelButton:RegisterCallback(Mouse.eLClick, function() SDP_Task.Cancel() end)

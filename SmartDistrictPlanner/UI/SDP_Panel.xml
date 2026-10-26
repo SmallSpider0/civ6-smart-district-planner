@@ -192,17 +192,27 @@
           <Stack ID="SitesWeightStack2" Anchor="R,T" Offset="0,52" StackGrowth="Right" StackPadding="0"/>
         </Container>
         </Stack>
-        <!-- The districts each site is scored with: its best few (feedback 8) -->
+        <!-- The districts each site is scored with: the single-city tab's
+             grid (required, candidates, not wanted) and count (issue 90). -->
         <Container Size="480,24">
-          <Label Anchor="L,C" Style="BodyTextDark16" String="LOC_SDP_SITES_PLAN"/>
-          <Container Anchor="R,C" Size="170,24" ToolTip="LOC_SDP_SITES_PLAN_COUNT_TOOLTIP">
-            <Label Anchor="L,C" Style="BodyTextDark14" String="LOC_SDP_SITES_PLAN_COUNT"/>
+          <Label Anchor="L,C" Style="BodyTextDark16" String="LOC_SDP_SITES_PLAN" ToolTip="LOC_SDP_SITES_STATES_TOOLTIP"/>
+          <Container Anchor="R,C" Size="136,24" ToolTip="LOC_SDP_SITES_PLAN_COUNT_TOOLTIP">
+            <Label Anchor="L,C" Style="BodyTextDark14" String="LOC_SDP_COUNT"/>
             <Button ID="SitesPlanLess" Anchor="R,C" Offset="52,0" Style="ArrowButtonLeft"/>
             <Label ID="SitesPlanValue" Anchor="R,C" Offset="32,0" Style="BodyTextDark18"/>
             <Button ID="SitesPlanMore" Anchor="R,C" Offset="4,0" Style="ArrowButtonRight"/>
           </Container>
         </Container>
+        <Container Size="480,20">
+          <Label Anchor="L,C" Style="BodyTextDark16" String="LOC_SDP_GROUP_SPECIALTY" ToolTip="LOC_SDP_SITES_STATES_TOOLTIP"/>
+          <Label Anchor="R,C" Style="BodyTextDark14" String="LOC_SDP_STATES_LEGEND"/>
+        </Container>
         <Stack ID="SitesDistrictStack" StackGrowth="Right" WrapWidth="480" WrapGrowth="Bottom" StackPadding="4"/>
+        <Container Size="480,20">
+          <Label Anchor="L,C" Style="BodyTextDark16" String="LOC_SDP_GROUP_OTHER" ToolTip="LOC_SDP_SITES_STATES_OTHER_TOOLTIP"/>
+          <Label Anchor="R,C" Style="BodyTextDark14" String="LOC_SDP_SITES_STATES_LEGEND_OTHER"/>
+        </Container>
+        <Stack ID="SitesUtilityStack" StackGrowth="Right" WrapWidth="480" WrapGrowth="Bottom" StackPadding="4"/>
         <Container Size="480,42">
           <Stack Anchor="L,C" StackGrowth="Right" StackPadding="6">
             <Label Anchor="L,C" Style="BodyTextDark16" String="LOC_SDP_TIER_SHORT"/>
@@ -359,15 +369,6 @@
       <Label ID="State" Anchor="R,C" Offset="12,0" Style="FontNormal14"/>
       <Label ID="StateDark" Anchor="R,C" Offset="12,0" Style="BodyTextDark14" Hidden="1"/>
     </GridButton>
-  </Instance>
-
-  <!-- A district that can be ticked, in a three-column grid. -->
-  <Instance Name="CheckCell">
-    <Container ID="Root" Size="156,26">
-      <CheckBox ID="Check" Anchor="L,C" Style="MainCheckBox"/>
-      <Image ID="Icon" Anchor="L,C" Offset="24,0" Size="26,26"/>
-      <Label ID="Name" Anchor="L,C" Offset="52,0" Style="BodyTextDark14" TruncateWidth="100" TruncatedTooltip="1"/>
-    </Container>
   </Instance>
 
   <!-- A chosen wonder; a click takes it off the list. -->

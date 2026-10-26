@@ -9,8 +9,6 @@ if sites.State().Result == nil then
   SDP_Panel.Open()
   SDP_Panel.SelectTab("SITES")
   sites.SetCount(3)
-  for _, d in ipairs({ "DISTRICT_CAMPUS", "DISTRICT_HOLY_SITE", "DISTRICT_COMMERCIAL_HUB", "DISTRICT_THEATER",
-    "DISTRICT_INDUSTRIAL_ZONE" }) do sites.SetSelected(d, true) end
   sites.SetTier("STANDARD")
   sites.Solve()
   SDP_Panel.RunTask(5000)

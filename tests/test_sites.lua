@@ -144,6 +144,7 @@ test("the sites tab shows each site's resources and both distances", function()
   sites.SetTier("FAST")
   for _, d in ipairs(SDP_Rules.PlannableDistricts(pid)) do sites.SetSelected(d.Type, false) end
   sites.SetSelected("DISTRICT_CAMPUS", true)
+  sites.SetDistrictCount(1)
   T.ok(sites.Solve(), "started")
   SDP_Panel.RunTask(5000)
   local result = sites.State().Result
@@ -162,6 +163,68 @@ test("the sites tab shows each site's resources and both distances", function()
     end
     print(sites.State().View.Results[s].Name .. " | " .. sites.State().View.Results[s].Detail .. " | "
       .. tip:gsub("%[NEWLINE%]", " / "))
+  end
+  sites.SetSelected("DISTRICT_CAMPUS", false)
+  sites.SetDistrictCount(3)
+  SDP_Panel.SelectTab("SINGLE")
+end)
+
+-- Issue 90 (decided 2026-10-26): candidates by default, except the Preserve,
+-- the Encampment and the Aerodrome, which the rule finds from the game data
+-- (no adjacency yield, no amenities; SDP_Rules.Functional). Checked against
+-- the decision's three in every ruleset; the unique districts replacing
+-- them come along through their base district.
+test("issue 90: the districts left out by default are the decision's three", function()
+  local named = { DISTRICT_PRESERVE = true, DISTRICT_ENCAMPMENT = true, DISTRICT_AERODROME = true }
+  local functional = SDP_Rules.Functional(pid)
+  local list = {}
+  for _, d in ipairs(SDP_Rules.PlannableDistricts(pid)) do
+    local base = SDP_Rules.BaseDistrict(d.Type)
+    if d.Specialty and named[base] then T.ok(functional[d.Type], d.Type .. " left out by default") end
+    if functional[d.Type] then
+      T.ok(named[base], d.Type .. " is one of the three")
+      list[#list + 1] = d.Type
+    end
+  end
+  table.sort(list)
+  print(SDP_Rules.Ruleset() .. ": " .. table.concat(list, " "))
+end)
+
+test("issue 90: the sites tab's district grid through its cells; solved with the defaults", function()
+  if Players[pid]:GetCities():GetCapitalCity() == nil then T.skip("no capital") end
+  local sites = SDP_Panel.Sites
+  SDP_Panel.SelectTab("SITES")
+  local function Row(districtType)
+    for _, r in ipairs(sites.State().View.Districts) do
+      if r.Type == districtType then return r end
+    end
+  end
+  local campus = nil
+  for _, d in ipairs(SDP_Rules.PlannableDistricts(pid)) do
+    if SDP_Rules.BaseDistrict(d.Type) == "DISTRICT_CAMPUS" then campus = d.Type end
+  end
+  T.eq(Row(campus).State, "POOL", "campus: a candidate")
+  T.eq(sites.State().DistrictCount, 3, "count 3")
+  Row(campus).Cell:Click()
+  T.eq(Row(campus).State, "MUST", "a click: required")
+  T.eq(#sites.Request().Districts, 1, "sent as required")
+  T.eq(sites.Request().Pick, 2, "two more picked")
+  Row(campus).Cell:Click()
+  Row(campus).Cell:Click()
+  T.eq(Row(campus).State, "POOL", "round to a candidate")
+  sites.SetCount(2)
+  sites.SetTier("STANDARD")
+  T.ok(sites.Solve(), "started")
+  SDP_Panel.RunTask(5000)
+  local result = sites.State().Result
+  if result and not result.Ok and result.Error == "NO_SITE" then T.skip("no room for two sites yet") end
+  T.ok(result and result.Ok, "result: " .. tostring(result and result.Error))
+  for _, site in ipairs(result.Solutions[1].Sites) do
+    local types = {}
+    for _, d in ipairs(site.Districts or {}) do types[#types + 1] = d.Type end
+    T.ok(#types <= 3, "at most three districts: " .. table.concat(types, " "))
+    print(string.format("site %d,%d  %.1f  districts %.1f  %s", site.X, site.Y, site.Value, site.Parts.District or 0,
+      table.concat(types, " ")))
   end
   SDP_Panel.SelectTab("SINGLE")
 end)

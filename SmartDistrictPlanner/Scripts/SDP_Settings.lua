@@ -14,9 +14,10 @@
 -- default stands), so a value written by another version, or a damaged
 -- one, never breaks the panel.
 --
--- fields: list of { Key, Kind = "number" (Min, Max), "flag" or "choice"
---   (Choices = { [value] = true }), Default, Preset (a preset may set it) },
---   in a fixed order.
+-- fields: list of { Key, Kind = "number" (Min, Max), "flag", "choice"
+--   (Choices = { [value] = true }) or "list" (comma-separated items, each
+--   matching Pattern; the others dropped, the rest sorted: issue 90),
+--   Default, Preset (a preset may set it) }, in a fixed order.
 -- presets: { [name] = { [key] = value } } for some of the keys; the first
 --   name in `order` is the default.
 
@@ -72,6 +73,17 @@ function SDP_Settings.Encode(name, values, fields, presets)
   return table.concat(parts, ";")
 end
 
+-- A "list" value in its kept form: the items of `text` (comma-separated)
+-- that match `pattern`, sorted, joined by commas.
+function SDP_Settings.List(text, pattern)
+  local items = {}
+  for item in tostring(text or ""):gmatch("[^,]+") do
+    if item:match(pattern) then items[#items + 1] = item end
+  end
+  table.sort(items)
+  return table.concat(items, ",")
+end
+
 local function Parse(field, text)
   if field.Kind == "flag" then
     if text == "1" then return true end
@@ -87,6 +99,7 @@ local function Parse(field, text)
     if field.Choices[text] then return text end
     return nil
   end
+  if field.Kind == "list" then return SDP_Settings.List(text, field.Pattern) end
   return nil
 end
 

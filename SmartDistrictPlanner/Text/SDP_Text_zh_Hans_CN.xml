@@ -362,7 +362,7 @@
       <Text>用于给城址估算区域分的区域</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SITES_NOT_PER_SITE" Language="zh_Hans_CN">
-      <Text>不按城址计</Text>
+      <Text>全帝国限一个的区域只能建在一座城里，不按城址估分。</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SITES_NONE" Language="zh_Hans_CN">
       <Text>选择新城数量、最远距离和区域后点击“求解”。</Text>
@@ -650,11 +650,20 @@
     <Replace Tag="LOC_SDP_MULTI_SITE_TOOLTIP" Language="zh_Hans_CN">
       <Text>点击切换这个城址是否参与规划。不参与时不为它放区域，也不算作新城；钉本身不动，仍作为固定邻居影响周围的加成。</Text>
     </Replace>
-    <Replace Tag="LOC_SDP_SITES_PLAN_COUNT" Language="zh_Hans_CN">
-      <Text>每个城址按</Text>
+    <Replace Tag="LOC_SDP_STATUS_NOT_PER_SITE" Language="zh_Hans_CN">
+      <Text>不计入</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_STATES_TOOLTIP" Language="zh_Hans_CN">
+      <Text>必建：每个城址都按它估分。候选：区域数量多于必建个数时，每个城址各自挑区域分最高的。不建：不计。区域分按加权相邻加成算，减去区域占掉的地块产出。[NEWLINE][NEWLINE]默认：占人口名额的区域都是候选，只有既没有相邻加成、也不给宜居度的区域（保护区、军营、航空港）默认不建：这类区域按用途建，要算就设为必建或候选。市政广场这类全帝国限一个的区域不按城址计。</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_STATES_LEGEND_OTHER" Language="zh_Hans_CN">
+      <Text>点一下：不建 → 必建</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_STATES_OTHER_TOOLTIP" Language="zh_Hans_CN">
+      <Text>这些区域不占人口名额，不计入区域数量。设为必建时每个城址都放一个，计入它和邻近区域的相邻加成。</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SITES_PLAN_COUNT_TOOLTIP" Language="zh_Hans_CN">
-      <Text>每个城址按几个占人口名额的区域估算区域分。勾选的多于这个数时，每个城址各自挑区域分最高的几个；不多于时全部计入。</Text>
+      <Text>每个城址按几个占人口名额的区域估算区域分，必建的也算在内。多于必建的个数时，其余的由每个城址各自从“候选”里挑区域分最高的；等于必建个数时不挑。最多 6 个。[NEWLINE][NEWLINE]收益：按区域估分，选出的城址更适合建区域。12 个测试场景里，数量 3 与数量 0（不计区域）相比，选出的城址有 5 个场景不同，城址周围区域能拿到的相邻加成合计高 13%，没有一个场景变差。[NEWLINE][NEWLINE]代价：数量越大、候选越多，求解越慢。数量 3 约是数量 0 的 7 倍时间（只放 3 个必建区域时的 2.3 倍），数量 6 再多约 60%。</Text>
     </Replace>
     <Replace Tag="LOC_SDP_WEIGHT_DISTANCE_SHORT" Language="zh_Hans_CN">
       <Text>距离</Text>

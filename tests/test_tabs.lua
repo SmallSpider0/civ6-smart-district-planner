@@ -17,12 +17,15 @@ test("every tab opens and solves", function()
   local sites = SDP_Panel.Sites
   sites.SetCount(1)
   sites.SetSelected("DISTRICT_CAMPUS", true)
+  sites.SetDistrictCount(1)
   sites.SetTier("FAST")
   T.ok(sites.Solve(), "sites started")
   SDP_Panel.RunTask(200)
   local r = sites.State().Result
   T.ok(r ~= nil, "sites result")
   if r.Ok then T.ok(#r.Solutions >= 1, "solutions") end
+  sites.SetSelected("DISTRICT_CAMPUS", false)
+  sites.SetDistrictCount(3)
   SDP_Panel.SelectTab("SINGLE")
   SDP_Panel.Close()
 end)

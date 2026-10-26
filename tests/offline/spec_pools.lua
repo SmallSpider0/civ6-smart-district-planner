@@ -318,6 +318,42 @@ test("sites: with more districts ticked than PlanCount each site picks its best;
   for _, site in ipairs(c.Solutions[1].Sites) do
     T.ok(#(site.Districts or {}) <= 2, "at most two districts per site")
   end
+  -- Issue 90: required districts at every site, candidates fill up to the count.
+  local d = SDP_SiteSolver.Solve({ PlayerID = 0, K = 1, D = 5, Districts = { "DISTRICT_CAMPUS" },
+    Pool = { "DISTRICT_HOLY_SITE", "DISTRICT_THEATER", "DISTRICT_COMMERCIAL_HUB", "DISTRICT_GOVERNMENT", "DISTRICT_AQUEDUCT" },
+    Pick = 1, Tier = "FAST" })
+  T.ok(d.Ok, tostring(d.Error))
+  T.eq(d.Session.Ctx.Pick, 1, "one picked")
+  T.same(d.Session.Ctx.Pool, { "DISTRICT_HOLY_SITE", "DISTRICT_THEATER", "DISTRICT_COMMERCIAL_HUB" },
+    "the pool: no empire-limited district, none without population")
+  for _, solution in ipairs(d.Solutions) do
+    for _, site in ipairs(solution.Sites) do
+      local campus, others = 0, 0
+      for _, p in ipairs(site.Districts) do
+        if p.Type == "DISTRICT_CAMPUS" then campus = campus + 1 else others = others + 1 end
+      end
+      T.eq(campus, 1, "the required campus at every site")
+      T.ok(others <= 1, "one candidate at most")
+    end
+  end
+  -- A pick that takes the whole pool: the same as all required.
+  local e = SDP_SiteSolver.Solve({ PlayerID = 0, K = 1, D = 5, Districts = { "DISTRICT_CAMPUS" }, Pool = { "DISTRICT_HOLY_SITE" },
+    Pick = 3, Tier = "FAST" })
+  T.eq(e.Session.Ctx.Pick, 0, "nothing to pick")
+  T.eq(e.Solutions[1].Value, a.Solutions[1].Value, "the same as campus and holy site required")
+  -- A pick of none: only the required ones, the pool left out.
+  local f = SDP_SiteSolver.Solve({ PlayerID = 0, K = 1, D = 5, Districts = { "DISTRICT_CAMPUS", "DISTRICT_HOLY_SITE" },
+    Pool = { "DISTRICT_THEATER", "DISTRICT_COMMERCIAL_HUB" }, Pick = 0, Tier = "FAST" })
+  T.same(f.Session.Ctx.Pool, {}, "no pool")
+  T.eq(f.Solutions[1].Value, a.Solutions[1].Value, "the same as campus and holy site alone")
+  -- The tab's default grid (SDP_Sites.DefaultDistricts): no encampment, preserve or government plaza.
+  local default = SDP_Sites.DefaultDistricts(0)
+  T.eq(default.Pick, 3, "three per site")
+  for _, t in ipairs(default.Pool) do
+    T.ok(t ~= "DISTRICT_ENCAMPMENT" and t ~= "DISTRICT_PRESERVE" and t ~= "DISTRICT_GOVERNMENT", t .. " a candidate")
+  end
+  T.same(SDP_Rules.Functional(0), { DISTRICT_ENCAMPMENT = true, DISTRICT_PRESERVE = true },
+    "no adjacency yield and no amenities: the encampment and the preserve (no aerodrome in this world)")
 end)
 
 -- ===========================================================================

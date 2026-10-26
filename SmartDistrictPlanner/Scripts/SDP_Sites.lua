@@ -37,6 +37,32 @@ SDP_Sites.PRESETS = {
 }
 SDP_Sites.PRESET_ORDER = { "BALANCED", "GROWTH", "DISTRICTS" }
 
+-- The districts a site is scored with (issue 90, decided 2026-10-26): the
+-- states of the single-city tab's grid (MUST, POOL, OFF) and a count. By
+-- default every district that takes population is a candidate (POOL),
+-- except those that would count once per empire (OFF; the tab shows them
+-- as not counted) and those that give a city no adjacency yield and no
+-- amenities (SDP_Rules.Functional: Encampment, Aerodrome, Preserve), which
+-- players build for what they do; the others are OFF. `functional` is
+-- SDP_Rules.Functional(playerID).
+SDP_Sites.DEFAULT_COUNT = 3
+SDP_Sites.MAX_COUNT = 6
+
+function SDP_Sites.DefaultState(d, functional)
+  if not d.Specialty or (d.MaxPerPlayer and d.MaxPerPlayer > 0) or functional[d.Type] then return "OFF" end
+  return "POOL"
+end
+
+-- The request fields for the default grid: { Districts (required: none),
+-- Pool, Pick } with `count` (default DEFAULT_COUNT) districts per site.
+function SDP_Sites.DefaultDistricts(playerID, count)
+  local functional, pool = SDP_Rules.Functional(playerID), {}
+  for _, d in ipairs(SDP_Rules.PlannableDistricts(playerID)) do
+    if SDP_Sites.DefaultState(d, functional) == "POOL" then pool[#pool + 1] = d.Type end
+  end
+  return { Districts = {}, Pool = pool, Pick = count or SDP_Sites.DEFAULT_COUNT }
+end
+
 function SDP_Sites.Weights(weights)
   local out = {}
   for _, key in ipairs(SDP_Sites.WEIGHT_KEYS) do
@@ -158,11 +184,34 @@ function SDP_Sites.Context(playerID, request)
       if row.Specialty then specialty = specialty + 1 end
     end
   end
-  -- Each site scored with PlanCount districts that take population
-  -- (feedback item 8): with more ticked, each site picks its best ones.
-  -- Without PlanCount every ticked district counts, as before.
+  -- Issue 90: request.Pool, the candidates that take population, of which
+  -- each site picks its best request.Pick (the tab's count less the
+  -- required ones, which are in request.Districts). A pick of none leaves
+  -- the pool out; a pick that takes the whole pool needs no picking: those
+  -- count as required.
+  -- Else PlanCount (feedback item 8): with more ticked, each site picks its
+  -- best PlanCount of them; without either every ticked district counts.
   local pool, pick = {}, 0
-  if request.PlanCount ~= nil and specialty > request.PlanCount then
+  if request.Pool ~= nil then
+    for _, districtType in ipairs(request.Pool) do
+      local row = byType[districtType]
+      if row ~= nil and row.Specialty and not seen[districtType] and not (row.MaxPerPlayer and row.MaxPerPlayer > 0) then
+        seen[districtType] = true
+        pool[#pool + 1] = districtType
+      end
+    end
+    pick = math.max(0, math.min(request.Pick or 0, #pool))
+    if pick == 0 then
+      pool = {}
+    elseif pick == #pool then
+      for _, districtType in ipairs(pool) do plan[#plan + 1] = districtType end
+      pool, pick = {}, 0
+    end
+    specialty = pick
+    for _, districtType in ipairs(plan) do
+      if byType[districtType].Specialty then specialty = specialty + 1 end
+    end
+  elseif request.PlanCount ~= nil and specialty > request.PlanCount then
     local rest = {}
     for _, districtType in ipairs(plan) do
       if byType[districtType].Specialty then pool[#pool + 1] = districtType else rest[#rest + 1] = districtType end
