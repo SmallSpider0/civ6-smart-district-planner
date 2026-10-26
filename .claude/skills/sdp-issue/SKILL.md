@@ -54,6 +54,7 @@ Several changes go into one release; a single change is released alone only when
 
 ## 4. Working on it
 
+- Who does it (CONTRIBUTING.md, "谁来做"): an issue's development runs in a session of its own (a side session with its own worktree), started by the main session with the issue, the decided plan, the base branch and the tests to run; research and measurements run in subagents; a fix of a few lines (wording, a tooltip, a rule in the docs) stays in the main session. The main session relays later decisions to the side session and archives it when its PR has merged.
 - One branch and one PR per issue (`tools/worktree.py add ~/civ6mod-NAME mac/NAME`); issues that change the same thing and would depend on each other share one. Several commits, English imperative messages with `#N`, ending with the session's `Co-Authored-By` line. Keep commit signing as it is set up; never turn it off.
 - Run the tests related to the change (offline specs, in-game test files, the development set when the solver or legality changed); CI runs the full offline set. The full in-game set, real clicks and the stress test run once before a release (sdp-release).
 - Behaviour that players notice gets a line in CHANGELOG.md under 未发布, in players' words; update the docs that describe it (install guides zh/en, README zh/en, the report when numbers change).
