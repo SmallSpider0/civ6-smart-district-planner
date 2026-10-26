@@ -454,3 +454,82 @@ node tools/compare.mjs -s '^RS' -p sdp --only sdp:STANDARD,sdp:STANDARD_LAND -j 
 1.4 节的汇总只读已有结果：`tests/compare/results/oracle_single.jsonl`（只算相邻的真最优）、`land_oracle_v150.jsonl`（v1.5.0 地块倍数下计入地块的真最优），按场景对比 `stats.oracle.value` 与 `stats.oracle.adjacency`。
 
 例子里的场景 `S24-netherlands-coastal-mid`（荷兰，人口 16，自动加堤坝）没写成正文例子：默认相邻 17、地块 0；地块 0 时相邻 20，但占掉 12 分好地；其余设置的规律和例 2 相同。
+
+## 9. 定下的改动与实测（2026-10-26，分支 mac/objective-fixes）
+
+合作者在 #91 定的七项，按这些实现。“实测”都在第二台机器上跑，命令在本节末尾。
+
+### 9.1 结果行（第 1、7 题）
+
+计分不变。汇总行先写加权相邻加成，括号里再写打开的各项，顺序同权重行：地块、距离、住房、覆盖，如“加权相邻加成：+17（地块 -25；距离 -3.5）”。各项之和（求解比较用的 G）不再显示；汇总行的悬停提示说明方案按它排序、为什么不显示。方案按钮上的数字改成该方案的加权相邻加成，悬停先列各项再列挑出的区域。多城页悬停原来写“逐城依次规划时加权提升为 X”（也是个可能为负的和），改成“与逐城依次规划相比：+ΔG”。住房项的名字从“住房与魅力”改成“住房”（保护区周边产出已移走，见 9.2）。
+
+### 9.2 保护区（第 2 题）
+
+- 区域网格里默认“不建”，点一下变候选、再点必建（`SDP_UI.DefaultState`：有 `Adjacent_AppealYieldChanges` 行的特色区域）。选城址页的区域本来都不勾选，不变。
+- 古树林、避难所给周边未开发地块的产出从住房项移到地块项（`Search:AppealParts`、`LandDelta`），估值同其他地块：这块地值“修上最好的改良”和“不修改良（地貌保留）加保护区产出”中高的一种（`SDP_Land.PlotValues` 第三个返回值、`ScoreTaken` 里 `max(Tile, Bare + extra)`），挤进城市最好的 P 块才计入，乘地块权重；地块权重为 0 时不计（结果行标“‘地块’权重为 0，不计分”）。原来按 `Tile + extra` 算，修了矿的丘陵挨着保护区会被当成“矿 + 保护区产出”，这在游戏里拿不到。
+- 只算玩家现在能建的建筑（`SDP_Appeal.TileRows`）：建筑的 `PrereqTech`、`PrereqCivic` 玩家已有，或与区域本身的前置相同（随区域一起解锁）。风云变幻规则：保护区和古树林都要“神秘主义”，避难所要“保护地球”（`Buildings.PrereqCivic`，`DebugGameplay` 导出的规则库核对过），所以古树林总算，避难所学了“保护地球”才算。
+- 从候选里挑出的保护区照旧只计住房、周边产出只显示。
+- 选城址页给城址打分时本来就不建魅力模型（`SDP_Sites.Fine` 不传 `Appeal`），保护区的住房和周边产出都不计，这次不变。
+
+例 4 重算（`S01-rome-temperate-mid` 加社区、保护区，精细档，距离 0；生成场景的玩家有全部市政，所以避难所也算）：
+
+| 设置 | 总分 | 相邻 | 地块 | 住房 | 方案 |
+|---|---|---|---|---|---|
+| 原来（第 1.3 节） | 44.08 | 9 | 0 | 35.08（其中保护区周边 29.08） | — |
+| 默认 | 40.08 | 9 | 25.08（全部是保护区周边地块的增量） | 6 | 与原来相同 |
+| 地块 0 | 20 | 11 | 0 | 9 | 保护区换到 (11,9)，6 个区域都动了 |
+| 地块 0.5 / 2 / 3 | 27.54 / 65.17 / 90.25 | 9 | 12.54 / 50.17 / 75.25 | 6 | 与默认相同 |
+
+保护区周边一项从 29.08 降到 25.08（有的格修改良更值），仍比全部相邻加成（9）大得多；地块权重仍放大它（合作者定的“同样的权重”）。保护区默认不建以后，这只在玩家自己点成必建时出现。
+
+（上表“住房”列按当时的住房算法；9.5 改了住房后，默认设置的住房一项是 1.71，总分 35.79，方案不变。）
+
+### 9.3 距离默认 0.5（第 5 题）
+
+`WEIGHT_COLUMNS` 的 `DISTANCE` 默认 0 → 0.5，单城、多城页共用；预设都不设距离，跟着默认走。设置存档只记与默认不同的值（`SDP_Settings.Encode`），所以从没改过距离的存档读出来是 0.5，改过的（包括特意设成 0 的）保持原值，不需要迁移。选城址页的距离成本是另一列，默认仍是 0。
+
+开发集 84 个场景，地块开（面板默认），标准档，距离 0 对 0.5（`STANDARD_LAND` 对 `STANDARD_LAND_DIST050`）；“相邻”是裁判算的相邻加成，“地块”是本模组的地块项：
+
+| 阶段 | 场景 | 方案变了 | 动了的区域 | 相邻 0 → 0.5 | 地块 0 → 0.5 | 距离扣分（0.5 时） |
+|---|---|---|---|---|---|---|
+| 早期 | 24 | 6 | 9 / 48 | 119 → 119 | 0 → 0 | −14 |
+| 中期 | 24 | 13 | 41 / 100 | 289 → 287（−0.7%） | −12.8 → −13.8 | −24.5 |
+| 后期 | 24 | 21 | 77 / 165 | 423 → 420（−0.7%） | −233.4 → −236.4 | −61 |
+| 多城 | 12 | 12 | 99 / 171 | 413 → 410（−0.7%） | −56.5 → −64.2 | −59 |
+| 合计 | 84 | 52 | 226 / 484（47%） | 1244 → 1236（−0.6%） | −302.7 → −314.4（多占 3.9%） | −158.5 |
+
+相邻加成变低的场景 14 个、变高的 4 个（标准档是启发式，挑近的有时也碰到更好的）；没有新违规。裁判算的城市产出（`output`，计入占地）911 → 875。真实存档 14 座城（`RS01`–`RS14`）：4 座的方案变了，56 个区域动了 10 个，相邻合计 199 → 199（一座 −1、一座 +1），地块项 −117.25 → −118.25。耗时没有变化（开发集单城平均 4.7 秒对 4.8 秒，多城 49 秒对 47 秒，同一台机器）。
+
+### 9.4 覆盖不算本城（第 4 题）
+
+区域或奇观不再把它所属的那座城算作被覆盖（`SDP_Coverage` 的 `InReach`、`List`、`Reach` 多一个 owner；`SDP_Search` 的 `CoverOwner`：单城页是这座城，多城页是该槽位所属的参与城，奇观按它所在格属于哪座参与城）。别的城，包括别的参与规划的城，照算。覆盖结果文件全部重跑核对：`coverage_single`（42 行）、`coverage_sdp`（72 行）、`coverage_player`（84 行）方案都没变，因为这些场景的区域是必建的，本城那 1 分本来就对所有摆法一样；变化只在从候选里挑时出现。覆盖列悬停提示里的实测数字因此不用改。
+
+### 9.5 住房的分（第 6 题，方案 B）
+
+合作者选了 [issue-91-housing-value.md](issue-91-housing-value.md) 的方案 B，并把拐点定为“目标人口 + 1”（长到目标人口 T 的最后一步是 T − 1 → T，这时住房 T + 1 就满速）：
+
+```
+每点住房算 1，直到 K = max(T + HOUSING_TARGET_SPARE, 人口 + HOUSING_GROWTH_SPARE)，之后每点减半
+整项乘 S(人口) = min(1, 门槛(5) ÷ 门槛(人口))，门槛(p) = 15 + 8(p − 1) + (p − 1)^1.5（GlobalParameters）
+HOUSING_TARGET_SPARE = 1，HOUSING_GROWTH_SPARE = 2
+```
+
+城址钉、选城址页的新城按人口 1 算（`S = 1`）。没有乘“1 个人口值几分”（方案 B 例子里的 c = 3）：住房项的尺度仍由“住房”权重定，c 留到以后再议。游戏里 `CityGrowth:GetGrowthThreshold()` 只给城市当前人口的门槛，`S` 用规则表的公式算两头，游戏速度对两头一样，比值不受影响；游戏内测试 `test_land.lua` 核对公式和首都的 `GetGrowthThreshold()` 一致。
+
+例子（方案 B 的例子，c = 1）：人口 5、住房 6、目标 7 的城，+2 住房 2 分（原来 1.5）；人口 5、住房 6、目标不超过 5 的城，+2 住房 1.5 分（原来 0.38）；人口 16、住房 15、目标 16 的城，+2 住房 0.57 分（原来 1.5）。
+
+实测：开发集（`full_rejudged`，268 行）方案都没变；`land.jsonl`（84 行）、`real.jsonl`（81 行）里变了的行，除 `RM04` 外在 `main` 上重跑也一样（这两个文件存的结果比 `main` 旧，不是这次改动造成的）；`RM04-continents-netherlands-4c` 的标准、快速、精细档变了：住房项 2 → 0.20（后期大城打折），裁判算的相邻加成 37 → 38。选城址（`sites_v150`，24 行）方案都没变。例 4 的住房项 6 → 1.71（16 人口的城，S = 0.285），住房权重 3 时社区不再为多 1 点住房换格。
+
+### 9.6 命令
+
+```
+python3 -I tools/remote.py run i91c-dist -- node tools/compare.mjs -s '^[SM][0-9][0-9]-[^~]*$' -p sdp --add sdp:STANDARD_LAND,sdp:STANDARD_LAND_DIST050 --only sdp:STANDARD_LAND,sdp:STANDARD_LAND_DIST050 -j 3 --out logs/remote/i91c-dist.jsonl
+python3 -I tools/remote.py run i91c-rs -- node tools/compare.mjs -s '^RS' -p sdp --add sdp:STANDARD_LAND,sdp:STANDARD_LAND_DIST050 --only sdp:STANDARD_LAND,sdp:STANDARD_LAND_DIST050 -j 2 --out logs/remote/i91c-rs.jsonl
+python3 -I tools/remote.py run i91b-preserve -- node tools/compare.mjs --probe tests/compare/probe91.lua --arg 'SINGLE S01-rome-temperate-mid DISTRICT_CAMPUS,DISTRICT_THEATER,DISTRICT_COMMERCIAL_HUB,DISTRICT_INDUSTRIAL_ZONE,DISTRICT_NEIGHBORHOOD,DISTRICT_PRESERVE TIER=FINE|land=0,land=0.5,land=2,land=3,housing=0,housing=3'
+python3 -I tools/remote.py run i91e-check -- python3 -I tools/refresh_results.py --check -j 3
+python3 -I tools/remote.py run i91d-cov -- python3 -I tools/refresh_results.py --check -j 2 tests/compare/results/coverage_single.jsonl tests/compare/results/coverage_sdp.jsonl tests/compare/results/coverage_player.jsonl
+python3 -I tools/remote.py run i91e-land -- python3 -I tools/refresh_results.py --check -j 3 tests/compare/results/land.jsonl tests/compare/results/real.jsonl
+python3 -I tools/remote.py run i91e-sites -- python3 -I tools/refresh_results.py --check -j 1 tests/compare/results/sites_v150.jsonl
+```
+
+`_DIST<nnn>` 是 `cmp_sdp.lua` 新加的变体后缀（距离权重 nnn/100）；`probe91.lua` 的 `TIER=FINE` 选档位。距离的汇总按两份结果的方案逐个区域比位置、裁判的 `score.gain`、本模组的 `sdpLand`、`sdpCost`（这两项也是新记的）。
