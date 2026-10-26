@@ -286,7 +286,7 @@ footer { margin-top: 64px; border-top: 1px solid var(--line); padding-top: 16px;
   </div>
   <div class="cards">
     <div class="card"><h4>游戏锁</h4><p>游戏、调试连接、Mods 文件夹只有一套。碰游戏的工具（部署、测试、点击、截图）自己拿锁；别的工作树正拿着，就以退出码 4 停下，可以在后台等锁。退出游戏时放锁。</p><p class="refs"><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/tools/sdplock.py">tools/sdplock.py</a></p></div>
-    <div class="card"><h4>本机重活</h4><p>有第二台机器时，超过约一分钟的计算都排到它上面；本机只跑不到一分钟的小任务，或第二台机器格子全满又不能等的。本机上一次只跑一个，worker 上限按本机配置（白天、夜里可以不同），游戏锁被拿走时自动暂停。</p><p class="refs"><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/tools/README.md">tools/README.md「sdplock.py」</a></p></div>
+    <div class="card"><h4>本机重活</h4><p>有第二台机器时，超过约一分钟的计算都排到它上面；本机只跑不到一分钟的小任务，或第二台机器格子全满又不能等的。本机上一次只跑一个，worker 上限按本机配置（白天、夜里可以不同），游戏锁被拿走时自动暂停。不经这两个工具直接启动的计算不进排队，别的会话看不到它；子 agent 也照此办理。</p><p class="refs"><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/tools/README.md">tools/README.md「sdplock.py」</a></p></div>
     <div class="card"><h4>第二台机器</h4><p>可选，用 ssh 连接，不用装游戏。所有会话共用一个队列，按排队先后分格子；排在前面的任务放不下时，后面放得下的先跑，每个排队任务最多被越过 3 次，独占任务不被越过。任务在工作树的快照里跑，结果取回本机。</p><p class="refs"><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/tools/remote.py">tools/remote.py</a><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/tools/sdpsched.py">tools/sdpsched.py</a></p></div>
     <div class="card"><h4>夜间队列</h4><p>机器有人用时，占屏幕的步骤（真实点击、截图、压力测试、发版前的三种规则集）由各会话排进共用队列，由主会话在本机配置的夜间时段（工作日白天不开游戏）统一跑；游戏内测试也可以排进去。周末可按本机配置算作夜间。</p><p class="refs"><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/.claude/skills/sdp-game-test/SKILL.md">sdp-game-test</a></p></div>
   </div>
