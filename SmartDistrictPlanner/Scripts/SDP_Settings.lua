@@ -134,6 +134,17 @@ function SDP_Settings.Changed(name, values, fields, presets)
   return false
 end
 
+-- The preset `values` equal in every field a preset sets (issue 89): `name`
+-- when they equal it, else the first in `order` they equal; nil when they
+-- equal none (shown as "Custom").
+function SDP_Settings.Match(name, values, fields, presets, order)
+  if presets[name] ~= nil and not SDP_Settings.Changed(name, values, fields, presets) then return name end
+  for _, other in ipairs(order) do
+    if not SDP_Settings.Changed(other, values, fields, presets) then return other end
+  end
+  return nil
+end
+
 local function Config(playerID)
   if playerID == nil or playerID < 0 or PlayerConfigurations == nil then return nil end
   return PlayerConfigurations[playerID]
@@ -173,8 +184,8 @@ end
 -- reads the save once per local player (hot seat: each player their own)
 -- and returns { Preset, Values, Edited } then, nil when already read;
 -- Remember(name) keeps the values, only after Restore (so a change made
--- before the save was read never overwrites it); Changed(name) whether the
--- values differ from preset `name` (SDP_Settings.Changed).
+-- before the save was read never overwrites it); Match(name) the preset the
+-- values equal, nil for none (SDP_Settings.Match).
 function SDP_Settings.Keeper(spec)
   local keeper = { For = nil }
   function keeper.Restore()
@@ -185,8 +196,8 @@ function SDP_Settings.Keeper(spec)
     spec.Apply(kept.Values)
     return kept
   end
-  function keeper.Changed(name)
-    return SDP_Settings.Changed(name, spec.Values(), spec.Fields, spec.Presets)
+  function keeper.Match(name)
+    return SDP_Settings.Match(name, spec.Values(), spec.Fields, spec.Presets, spec.Order)
   end
   -- Set every field a preset may set to preset `name`'s value (the tier and
   -- the fold stay); false for an unknown preset.

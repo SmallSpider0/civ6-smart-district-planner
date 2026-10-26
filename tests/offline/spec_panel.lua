@@ -820,9 +820,9 @@ test("issue 71: the settings fold after a solve and a click unfolds them; kept i
   T.ok(c.FoldText:GetText():find("LOC_SDP_PRESET_BALANCED", 1, true) ~= nil, "the preset named: " .. c.FoldText:GetText())
   SDP_Panel.SetLand(false)
   T.ok(c.FoldText:GetText():find("LOC_SDP_FOLD_LAND_OFF", 1, true) ~= nil, "a switch not as usual is named")
-  T.ok(c.FoldText:GetText():find("LOC_SDP_FOLD_EDITED", 1, true) ~= nil, "the preset shows it was changed")
+  T.ok(c.FoldText:GetText():find("LOC_SDP_PRESET_CUSTOM", 1, true) ~= nil, "equal to no preset: Custom (issue 89)")
   SDP_Panel.SetLand(true)
-  T.ok(c.FoldText:GetText():find("LOC_SDP_FOLD_EDITED", 1, true) == nil, "back as the preset")
+  T.ok(c.FoldText:GetText():find("LOC_SDP_PRESET_BALANCED", 1, true) ~= nil, "back as the preset")
   SDP_Panel.SetTier("FAST")
   SDP_Panel.SetState("DISTRICT_CAMPUS", "MUST")
   SDP_Panel.SetState("DISTRICT_AQUEDUCT", "OFF")
@@ -974,20 +974,29 @@ test("issue 66: a wonder's district is supplied, shown, marked; not wanted stand
   SDP_Panel.SelectTab("SINGLE")
 end)
 
--- Issue 49: a preset from its pulldown entry sets the weights; a change
--- marks it changed; Reset puts it back; the save keeps the preset's name.
-test("issue 49: presets through their pulldown, changed, reset, kept", function()
+-- Issue 49: a preset from its pulldown entry sets the weights; the save
+-- keeps the preset's name. Issue 89: the pulldown and the fold line show the
+-- preset the values equal, else Custom; picking a preset puts it back (no
+-- Reset button).
+local function Entry(pull, name, order)
+  for i, other in ipairs(order or SDP_Settings.PRESET_ORDER) do
+    if other == name then return pull._entries[i] end
+  end
+end
+local function Cell(cells, key)
+  for _, cell in ipairs(cells) do
+    if cell.Key == key then return cell end
+  end
+end
+
+test("issue 49: presets through their pulldown, kept", function()
   SDP_Panel.Open()
   SDP_Panel.SelectTab("SINGLE")
   SDP_Panel.SelectCity(1)
   local c = UI_Mock.Controls
   SDP_Panel.SetPreset("BALANCED")
-  local entries = c.PresetPull._entries
-  T.eq(#entries, #SDP_Settings.PRESET_ORDER, "one entry a preset")
-  local science = nil
-  for i, name in ipairs(SDP_Settings.PRESET_ORDER) do
-    if name == "SCIENCE" then science = entries[i] end
-  end
+  T.eq(#c.PresetPull._entries, #SDP_Settings.PRESET_ORDER, "one entry a preset, no Custom entry")
+  local science = Entry(c.PresetPull, "SCIENCE")
   T.eq(science.Button:GetText(), "LOC_SDP_PRESET_SCIENCE", "named")
   science.Button:Click()
   local s = SDP_Panel.State()
@@ -995,26 +1004,106 @@ test("issue 49: presets through their pulldown, changed, reset, kept", function(
   T.eq(s.Weights.YIELD_SCIENCE, SDP_Settings.FOCUS.SCIENCE, "science weight")
   T.eq(s.Weights.YIELD_CULTURE, 1, "the others as balanced")
   T.eq(c.PresetPull:GetButton():GetText(), "LOC_SDP_PRESET_SCIENCE", "shown")
-  T.ok(c.PresetReset:IsDisabled(), "nothing to reset")
+  T.ok(c.PresetPull:GetButton():GetToolTipString():find("LOC_SDP_PRESET_SCIENCE_TOOLTIP", 1, true) ~= nil,
+    "its tooltip on the button")
   T.ok(PlayerConfigurations[0]:GetValue("SDP_Settings_SINGLE"):find("preset=SCIENCE", 1, true) ~= nil, "kept in the save")
   T.ok(PlayerConfigurations[0]:GetValue("SDP_Settings_SINGLE"):find("YIELD_SCIENCE", 1, true) == nil,
     "the preset's own value is not written as a change")
-  SDP_Panel.SetWeight("YIELD_GOLD", 2)
-  T.eq(c.PresetPull:GetButton():GetText(), "LOC_SDP_FOLD_EDITED(LOC_SDP_PRESET_SCIENCE)", "changed")
-  T.ok(c.FoldText:GetText():find("LOC_SDP_FOLD_EDITED(LOC_SDP_PRESET_SCIENCE)", 1, true) ~= nil, "on the fold line too")
-  T.eq(c.PresetReset:IsDisabled(), false, "reset offered")
-  c.PresetReset:Click()
-  T.eq(SDP_Panel.State().Weights.YIELD_GOLD, 1, "reset to the preset")
-  T.eq(SDP_Panel.State().Weights.YIELD_SCIENCE, SDP_Settings.FOCUS.SCIENCE, "its own value stays")
-  T.ok(c.PresetReset:IsDisabled(), "nothing left to reset")
   -- Several cities: its own preset.
   local multi = SDP_Panel.Multi
   SDP_Panel.SelectTab("MULTI")
-  multi.SetPreset("HALF_GOLD_FAITH")
+  Entry(c.MultiPresetPull, "HALF_GOLD_FAITH").Button:Click()
   T.eq(multi.State().Weights.YIELD_GOLD, 0.5, "half gold")
   T.eq(multi.State().Weights.YIELD_FAITH, 0.5, "half faith")
+  T.eq(c.MultiPresetPull:GetButton():GetText(), "LOC_SDP_PRESET_HALF_GOLD_FAITH", "shown")
   T.eq(SDP_Panel.State().Preset, "SCIENCE", "the single-city tab keeps its own")
   multi.SetPreset("BALANCED")
   SDP_Panel.SelectTab("SINGLE")
   SDP_Panel.SetPreset("BALANCED")
+end)
+
+test("issue 89: the preset the values equal, else Custom; a preset picked after edits", function()
+  SDP_Panel.Open()
+  SDP_Panel.SelectTab("SINGLE")
+  SDP_Panel.SelectCity(1)
+  local c = UI_Mock.Controls
+  Entry(c.PresetPull, "BALANCED").Button:Click()
+  local cells = SDP_Panel.State().WeightCells
+  -- Balanced with science raised to the Science preset's value: Science.
+  T.eq(SDP_Settings.FOCUS.SCIENCE, 1.5, "one step up from 1")
+  Cell(cells, "YIELD_SCIENCE").More:Click()
+  T.eq(c.PresetPull:GetButton():GetText(), "LOC_SDP_PRESET_SCIENCE", "equal to Science: shown as Science")
+  T.ok(c.FoldText:GetText():find("LOC_SDP_PRESET_SCIENCE", 1, true) ~= nil, "on the fold line too: " .. c.FoldText:GetText())
+  T.eq(SDP_Panel.State().Preset, "SCIENCE", "and remembered as the current one")
+  local text = PlayerConfigurations[0]:GetValue("SDP_Settings_SINGLE")
+  T.ok(text:find("preset=SCIENCE", 1, true) ~= nil and text:find("YIELD_SCIENCE", 1, true) == nil,
+    "the save keeps Science, nothing changed from it: " .. text)
+  -- A value equal to no preset: Custom, with its tooltip.
+  Cell(cells, "YIELD_GOLD").More:Click()
+  T.eq(c.PresetPull:GetButton():GetText(), "LOC_SDP_PRESET_CUSTOM", "Custom")
+  T.eq(c.PresetPull:GetButton():GetToolTipString(), "LOC_SDP_PRESET_CUSTOM_TOOLTIP", "its tooltip")
+  T.ok(c.FoldText:GetText():find("LOC_SDP_PRESET_CUSTOM", 1, true) ~= nil, "on the fold line too")
+  T.ok(c.FoldText:GetText():find("LOC_SDP_PRESET_SCIENCE", 1, true) == nil, "no preset named")
+  T.eq(SDP_Panel.State().Preset, "SCIENCE", "the last preset stays the current one")
+  text = PlayerConfigurations[0]:GetValue("SDP_Settings_SINGLE")
+  T.ok(text:find("preset=SCIENCE;", 1, true) ~= nil and text:find(";YIELD_GOLD=1.5", 1, true) ~= nil,
+    "the save: the preset and what differs (format unchanged): " .. text)
+  T.eq(#c.PresetPull._entries, #SDP_Settings.PRESET_ORDER, "still no Custom entry")
+  -- Picking a preset after edits: its values, shown by name.
+  Entry(c.PresetPull, "SCIENCE").Button:Click()
+  T.eq(SDP_Panel.State().Weights.YIELD_GOLD, 1, "the same preset again puts gold back")
+  T.eq(c.PresetPull:GetButton():GetText(), "LOC_SDP_PRESET_SCIENCE", "shown")
+  Cell(cells, "YIELD_GOLD").More:Click()
+  Entry(c.PresetPull, "CULTURE").Button:Click()
+  local s = SDP_Panel.State()
+  T.eq(s.Weights.YIELD_CULTURE, SDP_Settings.FOCUS.CULTURE, "another preset: its culture")
+  T.eq(s.Weights.YIELD_SCIENCE, 1, "science back to 1")
+  T.eq(s.Weights.YIELD_GOLD, 1, "gold back to 1")
+  T.eq(c.PresetPull:GetButton():GetText(), "LOC_SDP_PRESET_CULTURE", "shown")
+  -- A switch is part of a preset (issue 49): Custom, then back.
+  c.SwapCheck:Toggle()
+  T.eq(c.PresetPull:GetButton():GetText(), "LOC_SDP_PRESET_CUSTOM", "a switch changed: Custom")
+  c.SwapCheck:Toggle()
+  T.eq(c.PresetPull:GetButton():GetText(), "LOC_SDP_PRESET_CULTURE", "switched back: the preset again")
+  -- Several cities: the same.
+  SDP_Panel.SelectTab("MULTI")
+  Entry(c.MultiPresetPull, "BALANCED").Button:Click()
+  SDP_Panel.Multi.SetWeight("YIELD_GOLD", 0.5)
+  T.eq(c.MultiPresetPull:GetButton():GetText(), "LOC_SDP_PRESET_CUSTOM", "several cities: Custom")
+  SDP_Panel.Multi.SetWeight("YIELD_FAITH", 0.5)
+  T.eq(c.MultiPresetPull:GetButton():GetText(), "LOC_SDP_PRESET_HALF_GOLD_FAITH", "equal to a preset: shown")
+  T.eq(SDP_Panel.Multi.State().Preset, "HALF_GOLD_FAITH", "and current")
+  SDP_Panel.Multi.SetPreset("BALANCED")
+  SDP_Panel.SelectTab("SINGLE")
+  SDP_Panel.SetPreset("BALANCED")
+end)
+
+test("issue 89: city sites show Custom too; a preset puts the distance weight back", function()
+  SDP_Panel.Open()
+  SDP_Panel.SelectTab("SITES")
+  local c = UI_Mock.Controls
+  local sites = SDP_Panel.Sites
+  local order = SDP_Sites.PRESET_ORDER
+  T.eq(#c.SitesPresetPull._entries, #order, "one entry a preset")
+  Entry(c.SitesPresetPull, "GROWTH", order).Button:Click()
+  T.eq(c.SitesPresetPull:GetButton():GetText(), "LOC_SDP_PRESET_GROWTH", "shown")
+  local cells = sites.State().View.WeightCells
+  Cell(cells, "DISTANCE").More:Click()
+  T.eq(sites.State().Weights.DISTANCE, 0.5, "distance weight up")
+  T.eq(c.SitesPresetPull:GetButton():GetText(), "LOC_SDP_PRESET_CUSTOM", "Custom")
+  T.eq(c.SitesPresetPull:GetButton():GetToolTipString(), "LOC_SDP_SITES_PRESET_CUSTOM_TOOLTIP", "its own tooltip")
+  T.ok(sites.State().FoldText:find("LOC_SDP_PRESET_CUSTOM", 1, true) ~= nil, "on the fold line too")
+  local d = sites.State().D
+  Entry(c.SitesPresetPull, "DISTRICTS", order).Button:Click()
+  T.eq(sites.State().Weights.DISTANCE, 0, "the preset sets the distance weight back")
+  T.eq(sites.State().Weights.YIELD_SCIENCE, SDP_Sites.PRESETS.DISTRICTS.YIELD_SCIENCE, "and its weights")
+  T.eq(c.SitesPresetPull:GetButton():GetText(), "LOC_SDP_PRESET_DISTRICTS", "so it is not Custom")
+  T.ok(sites.State().FoldText:find("LOC_SDP_PRESET_DISTRICTS", 1, true) ~= nil, "on the fold line")
+  T.eq(sites.State().D, d, "the distance between cities stays")
+  -- Weights equal to another preset: that one.
+  for key, value in pairs(SDP_Sites.PRESETS.GROWTH) do sites.SetWeight(key, value) end
+  T.eq(c.SitesPresetPull:GetButton():GetText(), "LOC_SDP_PRESET_GROWTH", "equal to Growth")
+  T.eq(sites.State().Preset, "GROWTH", "and current")
+  sites.SetPreset("BALANCED")
+  SDP_Panel.SelectTab("SINGLE")
 end)

@@ -74,15 +74,21 @@ local m_keeper = SDP_UI.Keeper({ Tab = "SITES", Columns = ALL_COLUMNS, Weights =
   GetTier = function() return m_tier end, PutTier = function(tier) m_tier = tier end,
   Presets = SDP_Sites.PRESETS, Order = SDP_Sites.PRESET_ORDER })
 
--- The fold line (issue 71): the preset, "changed" when a weight is not the preset's.
+-- The fold line (issue 71) and the pulldown: the preset the weights equal,
+-- "Custom" when none (issue 89).
 local function UpdateFold()
+  local shown = m_keeper.Match(m_preset)
   SDP_UI.ShowFold(Controls.SitesFoldButton, Controls.SitesFoldText, Controls.SitesFoldAction, Controls.SitesSettingsStack,
-    m_fold, SDP_UI.FoldSummary("LOC_SDP_PRESET_" .. m_preset, m_keeper.Changed(m_preset), {}))
+    m_fold, SDP_UI.FoldSummary(shown, {}))
+  SDP_UI.ShowPreset(Controls.SitesPresetPull, shown, function(name) P.SetPreset(name) end,
+    { Order = SDP_Sites.PRESET_ORDER, CustomTip = "LOC_SDP_SITES_PRESET_CUSTOM_TOOLTIP" })
 end
 
 function P.FitPage() SDP_UI.FitResults(Controls.SitesBody, Controls.SitesPage, Controls.SitesResultScroll) end
 
+-- Weights equal to another preset make it the current one (issue 89).
 local function Remember()
+  m_preset = m_keeper.Match(m_preset) or m_preset
   m_keeper.Remember(m_preset)
   UpdateFold()
 end
@@ -97,7 +103,7 @@ function P.SetFold(on)
 end
 function P.Restore()
   local kept = m_keeper.Restore()
-  if kept ~= nil then m_preset = kept.Preset end
+  if kept ~= nil then m_preset = m_keeper.Match(kept.Preset) or kept.Preset end
 end
 
 local function ClearResult()
@@ -184,15 +190,14 @@ function P.SetWeight(key, value)
   if m_views[key] then m_views[key]() end
 end
 
+-- A preset: every weight, the distance too (issue 89), as on the other tabs;
+-- the number of new cities, the distance between them and the tier stay.
 function P.SetPreset(name)
-  local preset = SDP_Sites.PRESETS[name]
-  if preset == nil then return end
+  if not m_keeper.Use(name) then return end
   m_preset = name
+  ClearResult()
+  for _, view in pairs(m_views) do view() end
   Remember()
-  for _, key in ipairs(SDP_Sites.WEIGHT_KEYS) do
-    if preset[key] ~= nil then P.SetWeight(key, preset[key]) end
-  end
-  Controls.SitesPresetPull:GetButton():SetText(Locale.Lookup("LOC_SDP_PRESET_" .. name))
 end
 
 function P.SetSelected(districtType, on)
@@ -220,21 +225,14 @@ end
 function P.Refresh()
   P.Restore()
   ShowSteppers()
-  local pull = Controls.SitesPresetPull
-  pull:ClearEntries()
-  for _, name in ipairs(SDP_Sites.PRESET_ORDER) do
-    local entry = {}
-    pull:BuildEntry("InstanceOne", entry)
-    entry.Button:SetText(Locale.Lookup("LOC_SDP_PRESET_" .. name))
-    entry.Button:RegisterCallback(Mouse.eLClick, function() P.SetPreset(name) end)
-  end
-  pull:CalculateInternals()
-  pull:GetButton():SetText(Locale.Lookup("LOC_SDP_PRESET_" .. m_preset))
-  local a = SDP_UI.BuildWeights(m_weightIM, Controls.SitesWeightStack, COLUMNS_A, m_weights, nil, P.SetWeight)
-  local b = SDP_UI.BuildWeights(m_weightIM2, Controls.SitesWeightStack2, COLUMNS_B, m_weights, nil, P.SetWeight)
+  local a, cellsA = SDP_UI.BuildWeights(m_weightIM, Controls.SitesWeightStack, COLUMNS_A, m_weights, nil, P.SetWeight)
+  local b, cellsB = SDP_UI.BuildWeights(m_weightIM2, Controls.SitesWeightStack2, COLUMNS_B, m_weights, nil, P.SetWeight)
   m_views = {}
   for key, view in pairs(a) do m_views[key] = view end
   for key, view in pairs(b) do m_views[key] = view end
+  m_view.WeightCells = {} -- the weight columns' controls, for tests
+  for _, cell in ipairs(cellsA) do m_view.WeightCells[#m_view.WeightCells + 1] = cell end
+  for _, cell in ipairs(cellsB) do m_view.WeightCells[#m_view.WeightCells + 1] = cell end
   -- Districts the sites are scored with (an empire-limited one would count once per site).
   m_districtIM:ResetInstances()
   m_view.Districts = {}
