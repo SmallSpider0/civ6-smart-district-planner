@@ -681,7 +681,7 @@
       <Text>the {1_Building} gives no Trade Route capacity</Text>
     </Replace>
     <Replace Tag="LOC_SDP_WEIGHT_HOUSING" Language="en_US">
-      <Text>Housing: points per Housing. In each city, each Housing up to the population its planned districts need counts 1, each one after it half the one before. A Neighborhood's or Preserve's Housing depends on the Appeal of its tile. With the Preserve set to Must, the yields its Grove and Sanctuary give to adjacent unimproved tiles count too, with each yield's weight (with Land loss on, only on tiles the city works); when it is picked from the pool they are shown, not scored. The plan changes Appeal: a Holy Site or Theater Square gives adjacent tiles +1, an Industrial Zone or Encampment -1, and removing Woods -1 to the tiles around it.</Text>
+      <Text>Housing: points per Housing. In each city, each Housing up to the population its planned districts need counts 1, each one after it half the one before. A Neighborhood's or Preserve's Housing depends on the Appeal of its tile. With the Preserve set to Must, the yields its Grove and Sanctuary give to adjacent unimproved tiles count too, weighed by fixed numbers (Food and Production 1, Science and Culture 5/6, Faith 1/2, Gold 1/4): with the Tiles weight above 0 only on tiles the city works and times that weight, at 0 on all of them; when it is picked from the pool they are shown, not scored. The plan changes Appeal: a Holy Site or Theater Square gives adjacent tiles +1, an Industrial Zone or Encampment -1, and removing Woods -1 to the tiles around it.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_RESULT_HOUSING" Language="en_US">
       <Text>Housing {1_Housing} (Appeal {2_Appeal})</Text>
