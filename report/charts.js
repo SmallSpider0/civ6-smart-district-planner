@@ -3,7 +3,7 @@
   const has = id => document.getElementById(id) != null;
   // Every word the charts show comes from D.words (build.py CHART_WORDS), in the page's language.
   const T = D.words;
-  // fill(T.medianTip, a, b): a and b in place of {0} and {1}.
+  // fill(T.outcomeTip, a, b, …): the arguments in place of {0}, {1}, …
   const fill = (s, ...a) => s.replace(/\{(\d)\}/g, (m, i) => a[+i]);
   // Room for the row labels left of a horizontal chart: about 7 px a Latin letter, 12.5 px a Chinese one.
   const labelRoom = (labels, min) => Math.max(min, 16 + Math.max(0, ...labels.map(s =>
@@ -112,88 +112,6 @@
       });
     });
   }
-  // Scatter: our gain (x) vs a competitor's (y), with the y = x line.
-  function scatter(id, cfg) {
-    if (!has(id)) return;
-    const host = document.getElementById(id);
-    const W = 420, H = 380, left = 46, right = 14, top = 14, bottom = 44;
-    const svg = el('svg', { viewBox: '0 0 ' + W + ' ' + H, role: 'img', 'aria-label': cfg.aria }, host);
-    // In a frame narrower than the charts' usual minimum width, fit the frame instead of scrolling (else the last x tick is cut).
-    if (cfg.fit) svg.style.minWidth = '0';
-    const max = cfg.max, min = cfg.min || 0;
-    const x = v => left + (v - min) / (max - min) * (W - left - right);
-    const y = v => H - bottom - (v - min) / (max - min) * (H - top - bottom);
-    cfg.ticks.forEach(t => {
-      el('line', { x1: x(t), x2: x(t), y1: top, y2: H - bottom, class: 'grid' }, svg);
-      el('line', { x1: left, x2: W - right, y1: y(t), y2: y(t), class: 'grid' }, svg);
-      txt(svg, x(t), H - bottom + 16, t, 'ax', 'middle');
-      txt(svg, left - 8, y(t) + 4, t, 'ax', 'end');
-    });
-    el('line', { x1: x(min), y1: y(min), x2: x(max), y2: y(max), class: 'diag' }, svg);
-    txt(svg, (left + W - right) / 2, H - 6, cfg.xLabel || T.scatterX, 'ax-l', 'middle');
-    const ty = txt(svg, 14, (top + H - bottom) / 2, cfg.yLabel, 'ax-l', 'middle');
-    ty.setAttribute('transform', 'rotate(-90 14 ' + ((top + H - bottom) / 2) + ')');
-    // Jitter identical points a little so stacked scenarios stay visible.
-    const seen = {};
-    cfg.points.forEach(p => {
-      const k = p.x + ',' + p.y;
-      const n = seen[k] = (seen[k] || 0) + 1;
-      const off = (n - 1) * 3.2;
-      const c = el('circle', { cx: x(p.x) + off, cy: y(p.y) - off * 0.6, r: 5, class: 'ring',
-        style: 'fill: var(' + (p.bad ? '--bad' : cfg.color) + ')' }, svg);
-      hover(c, p.label);
-    });
-  }
-  // A horizontal bar from x0, rounded at its data end.
-  function hpath(x0, by, w, bh) {
-    const rr = Math.min(4, w / 2, bh / 2);
-    return 'M' + x0 + ',' + by + ' L' + (x0 + w - rr) + ',' + by + ' Q' + (x0 + w) + ',' + by + ' ' + (x0 + w) + ',' + (by + rr) +
-      ' L' + (x0 + w) + ',' + (by + bh - rr) + ' Q' + (x0 + w) + ',' + (by + bh) + ' ' + (x0 + w - rr) + ',' + (by + bh) + ' L' + x0 + ',' + (by + bh) + ' Z';
-  }
-  // One labelled horizontal bar per row, linear scale from 0.
-  function hlist(id, cfg) {
-    if (!has(id)) return;
-    const host = document.getElementById(id);
-    const W = 640, left = labelRoom(cfg.rows.map(r => r.label), 210), right = 50, top = 8, rowH = 30;
-    const H = top + cfg.rows.length * rowH + 28;
-    const svg = el('svg', { viewBox: '0 0 ' + W + ' ' + H, role: 'img', 'aria-label': cfg.aria }, host);
-    const x = v => left + v / cfg.max * (W - left - right);
-    cfg.ticks.forEach(t => {
-      el('line', { x1: x(t), x2: x(t), y1: top, y2: H - 24, class: t === 0 ? 'base' : 'grid' }, svg);
-      txt(svg, x(t), H - 8, cfg.fmt(t), 'ax', 'middle');
-    });
-    cfg.rows.forEach((r, i) => {
-      const y0 = top + i * rowH, bh = 16, by = y0 + 7;
-      txt(svg, left - 10, y0 + 19, r.label, 'ax-l', 'end');
-      const w = Math.max(2, x(r.value) - left);
-      const p = el('path', { d: hpath(left, by, w, bh), style: 'fill: var(' + r.color + ')' }, svg);
-      hover(p, r.tip);
-      txt(svg, left + w + 6, by + 12, cfg.fmt(r.value), 'val', 'start');
-    });
-  }
-  // Paired comparison as a point with its 95% interval, against a reference line.
-  function forest(id, cfg) {
-    if (!has(id)) return;
-    const host = document.getElementById(id);
-    const W = 640, left = labelRoom(cfg.rows.map(r => r.label), 150), right = 24, top = 8, rowH = 32;
-    const H = top + cfg.rows.length * rowH + 28;
-    const svg = el('svg', { viewBox: '0 0 ' + W + ' ' + H, role: 'img', 'aria-label': cfg.aria }, host);
-    const x = v => left + (v - cfg.min) / (cfg.max - cfg.min) * (W - left - right);
-    cfg.ticks.forEach(t => {
-      el('line', { x1: x(t), x2: x(t), y1: top, y2: H - 24, class: t === cfg.ref ? 'diag' : 'grid' }, svg);
-      txt(svg, x(t), H - 8, t + '%', 'ax', 'middle');
-    });
-    cfg.rows.forEach((r, i) => {
-      const cy = top + i * rowH + rowH / 2;
-      txt(svg, left - 12, cy + 4, r.label, 'ax-l', 'end');
-      const st = 'stroke: var(' + r.color + '); stroke-width: 2';
-      el('line', { x1: x(r.lo), x2: x(r.hi), y1: cy, y2: cy, style: st }, svg);
-      el('line', { x1: x(r.lo), x2: x(r.lo), y1: cy - 5, y2: cy + 5, style: st }, svg);
-      el('line', { x1: x(r.hi), x2: x(r.hi), y1: cy - 5, y2: cy + 5, style: st }, svg);
-      const c = el('circle', { cx: x(r.value), cy: cy, r: 6, class: 'ring', style: 'fill: var(' + r.color + ')' }, svg);
-      hover(c, r.tip);
-    });
-  }
   // One row per planner, one dot per scenario, a tick at the mean.
   function strip(id, cfg) {
     if (!has(id)) return;
@@ -254,32 +172,6 @@
       });
     });
   }
-  // Log-scale horizontal bars for the median times.
-  function timeBars(id, cfg) {
-    if (!has(id)) return;
-    const host = document.getElementById(id);
-    const W = 640, left = labelRoom(cfg.rows.map(r => r.label), 150), right = 60, top = 8, rowH = 26;
-    const H = top + cfg.rows.length * rowH + 30;
-    const svg = el('svg', { viewBox: '0 0 ' + W + ' ' + H, role: 'img', 'aria-label': cfg.aria }, host);
-    const lo = Math.log10(cfg.min), hi = Math.log10(cfg.max);
-    const x = v => left + (Math.log10(v) - lo) / (hi - lo) * (W - left - right);
-    cfg.ticks.forEach(t => {
-      el('line', { x1: x(t), x2: x(t), y1: top, y2: H - 24, class: 'grid' }, svg);
-      txt(svg, x(t), H - 8, t + T.sec, 'ax', 'middle');
-    });
-    cfg.rows.forEach((r, i) => {
-      const y0 = top + i * rowH;
-      txt(svg, left - 10, y0 + 17, r.label, 'ax-l', 'end');
-      const w = Math.max(2, x(Math.max(r.value, cfg.min)) - left);
-      const bh = 14, by = y0 + 6, rr = Math.min(4, w / 2);
-      const d = 'M' + left + ',' + by + ' L' + (left + w - rr) + ',' + by + ' Q' + (left + w) + ',' + by + ' ' + (left + w) + ',' + (by + rr) +
-        ' L' + (left + w) + ',' + (by + bh - rr) + ' Q' + (left + w) + ',' + (by + bh) + ' ' + (left + w - rr) + ',' + (by + bh) + ' L' + left + ',' + (by + bh) + ' Z';
-      const p = el('path', { d: d, style: 'fill: var(' + r.color + ')' }, svg);
-      hover(p, fill(T.medianTip, r.label, r.value.toFixed(1)));
-      txt(svg, left + w + 5, by + 11, r.value < 10 ? r.value.toFixed(1) : r.value.toFixed(0), 'val', 'start');
-    });
-  }
-
   // Hero stats.
   const hs = document.getElementById('hero-stats');
   D.hero.forEach(s => {
@@ -291,104 +183,48 @@
 
   const P = D.planners; // key -> { label, color }
   const main = D.mainSeries.map(k => ({ key: k, label: P[k].label, color: P[k].color, square: true }));
+  // The series a grouped bar chart actually has data for.
+  const present = groups => main.filter(s => groups.some(g => g.values[s.key] != null));
+  const pctBars = (id, lg, groups, aria, extra) => {
+    const series = present(groups);
+    legend(lg, series);
+    bars(id, Object.assign({ groups: groups, series: series, max: 100, ticks: [0, 25, 50, 75, 100],
+      fmt: (v, l) => (l ? v.toFixed(1) : v.toFixed(0)) + '%', short: v => v.toFixed(0), aria: aria }, extra || {}));
+  };
 
   table('tb-overview', T.headOverview,
     D.overview.map(r => [r.label, r.best, r.quality, r.worst, r.legal, r.missing, r.time]));
 
-  legend('lg-best', main);
-  bars('ch-best', { groups: D.byStage.best, series: main, max: 100, ticks: [0, 25, 50, 75, 100],
-    fmt: (v, l) => (l ? v.toFixed(1) : v.toFixed(0)) + '%', short: v => v.toFixed(0),
-    aria: T.ariaBest });
-  legend('lg-quality', main);
-  bars('ch-quality', { groups: D.byStage.quality, series: main, min: D.byStage.qMin, max: 100,
+  pctBars('ch-best', 'lg-best', D.byStage.best, T.ariaBest);
+  const qs = present(D.byStage.quality);
+  legend('lg-quality', qs);
+  bars('ch-quality', { groups: D.byStage.quality, series: qs, min: D.byStage.qMin, max: 100,
     ticks: D.byStage.qTicks, fmt: (v, l) => (l ? v.toFixed(1) : v.toFixed(0)) + '%', short: v => v.toFixed(0),
     aria: T.ariaQuality });
 
-  scatter('ch-scatter-amt', { points: D.scatter.amt, max: D.scatter.max, ticks: D.scatter.ticks, color: '--amt',
-    yLabel: T.scatterAmtY, aria: T.ariaScatterAmt });
-  scatter('ch-scatter-ep', { points: D.scatter.ep, max: D.scatter.max, ticks: D.scatter.ticks, color: '--ep',
-    yLabel: T.scatterEpY, aria: T.ariaScatterEp });
-  if (has('cap-scatter-amt')) document.getElementById('cap-scatter-amt').textContent = D.scatter.capAmt;
-  if (has('cap-scatter-ep')) document.getElementById('cap-scatter-ep').textContent = D.scatter.capEp;
-
   table('tb-correct', T.headCorrect,
     D.correct.map(r => [r.label, r.illegal, r.pins, r.missing, r.placeable, r.det]));
-  const intFmt = v => String(Math.round(v));
-  const pctFmt = v => v.toFixed(0) + '%';
-  if (D.missing && D.missing.length) {
-    const mx = Math.max(10, ...D.missing.map(r => r.value));
-    const step = mx > 60 ? 20 : 10;
-    const top = Math.ceil(mx / step) * step;
-    const ticks = []; for (let t = 0; t <= top; t += step) ticks.push(t);
-    hlist('ch-missing', { rows: D.missing, max: top, ticks: ticks, fmt: intFmt, aria: T.ariaMissing });
-  }
-  const pairHead = T.headPair;
-  const pairRow = r => [r.set, r.vs, r.best, r.wtl, r.mean, r.p];
-  if (D.robust && D.robust.length) table('tb-robust', pairHead, D.robust.map(pairRow), 2);
-  if (D.robustMulti && D.robustMulti.length) table('tb-robust-multi', pairHead, D.robustMulti.map(pairRow), 2);
-  if (D.robustGroups && D.robustGroups.length) {
-    legend('lg-robust', main);
-    bars('ch-robust', { groups: D.robustGroups, series: main, max: 100, ticks: [0, 25, 50, 75, 100], width: 640,
-      fmt: (v, l) => (l ? v.toFixed(1) : v.toFixed(0)) + '%', short: v => v.toFixed(0), aria: T.ariaRobust });
-  }
+  if (D.robust && D.robust.length) table('tb-robust', T.headRobust, D.robust);
+  if (D.robustGroups && D.robustGroups.length) pctBars('ch-robust', 'lg-robust', D.robustGroups, T.ariaRobust, { width: 640 });
   if (D.robustMultiGroups && D.robustMultiGroups.length) {
-    legend('lg-mrobust', main);
-    bars('ch-mrobust', { groups: D.robustMultiGroups, series: main, max: 100, ticks: [0, 25, 50, 75, 100], width: 640, height: 230,
-      fmt: (v, l) => (l ? v.toFixed(1) : v.toFixed(0)) + '%', short: v => v.toFixed(0), aria: T.ariaMRobust });
-  }
-  const crossHead = T.headCross;
-  const crossRow = r => [r.set, r.scorer, r.sdp, r.amt, r.ep, r.wtl, r.mean, r.p];
-  if (D.cross && D.cross.length) table('tb-cross', crossHead, D.cross.map(crossRow), 2);
-  if (D.crossMulti && D.crossMulti.length) table('tb-cross-multi', crossHead, D.crossMulti.map(crossRow), 2);
-  const scorers = [{ key: 'amt', label: T.byAmt, color: '--amt', square: true }, { key: 'ep', label: T.byEp, color: '--ep', square: true }];
-  if (D.forest && D.forest.rows.length) {
-    legend('lg-forest', scorers);
-    forest('ch-forest', { rows: D.forest.rows, min: D.forest.min, max: D.forest.max, ticks: D.forest.ticks, ref: 100,
-      aria: T.ariaForest });
-  }
-  if (D.forestMulti && D.forestMulti.rows.length) {
-    legend('lg-forest-multi', scorers);
-    forest('ch-forest-multi', { rows: D.forestMulti.rows, min: D.forestMulti.min, max: D.forestMulti.max, ticks: D.forestMulti.ticks, ref: 100,
-      aria: T.ariaForestMulti });
+    pctBars('ch-mrobust', 'lg-mrobust', D.robustMultiGroups, T.ariaMRobust, { width: 640, height: 230 });
   }
   if (D.wonders && D.wonders.length) {
     table('tb-wonders', T.headWonders,
-      D.wonders.map(r => [r.label, r.wonders, r.legal, r.best, r.quality, r.outBest]));
+      D.wonders.map(r => [r.label, r.wonders, r.legal, r.best, r.quality]));
   }
   if (D.wonderGroups && D.wonderGroups.length) {
-    legend('lg-wonders', main);
-    bars('ch-wonders', { groups: D.wonderGroups, series: main, max: 100, ticks: [0, 25, 50, 75, 100], width: 640, height: 240,
-      fmt: (v, l) => (l ? v.toFixed(1) : v.toFixed(0)) + '%', short: v => v.toFixed(0), aria: T.ariaWonders });
-  }
-  if (D.sites && D.sites.length) {
-    table('tb-sites', T.headSites,
-      D.sites.map(r => [r.label, r.legal, r.value, r.tiles, r.districts, r.water, r.lux, r.overlap]));
-  }
-  if (D.sitesScatter && D.sitesScatter.points.length) {
-    scatter('ch-sites', { points: D.sitesScatter.points, min: D.sitesScatter.min, max: D.sitesScatter.max, ticks: D.sitesScatter.ticks,
-      color: '--ep', xLabel: T.sitesX, yLabel: T.sitesY, aria: T.ariaSites, fit: true });
-  }
-  if (D.output && D.output.length) {
-    table('tb-output', T.headOutput,
-      D.output.map(r => [r.label, r.best, r.vs, r.ho]));
-  }
-  if (D.outputChart && D.outputChart.length) {
-    hlist('ch-output', { rows: D.outputChart, max: 100, ticks: [0, 25, 50, 75, 100], fmt: pctFmt, aria: T.ariaOutput });
+    pctBars('ch-wonders', 'lg-wonders', D.wonderGroups, T.ariaWonders, { width: 640, height: 240 });
   }
 
   strip('ch-multi', { rows: D.strip.rows, min: D.strip.min, max: D.strip.max, ticks: D.strip.ticks,
     aria: T.ariaStrip });
   if (D.coverage && D.coverage.rows.length) {
     const parts = [{ key: 'better', label: T.better, color: '--good' }, { key: 'same', label: T.same, color: '--opt' },
-      { key: 'tradeoff', label: T.tradeoff, color: '--warn' }, { key: 'worse', label: T.worse, color: '--bad' },
-      { key: 'excluded', label: T.excluded, color: '--line', ink: '--fg' }];
+      { key: 'tradeoff', label: T.tradeoff, color: '--warn' }, { key: 'worse', label: T.worse, color: '--bad' }];
     legend('lg-coverage', parts.map(p => ({ label: p.label, color: p.color, square: true })));
     outcomes('ch-coverage', { rows: D.coverage.rows, parts: parts, step: 2,
       aria: T.ariaCoverage });
     table('tb-coverage', D.coverage.head, D.coverage.table, 1);
   }
-
-  legend('lg-time', D.time.legend.map(k => ({ key: k, label: P[k].label, color: P[k].color, square: true })));
-  timeBars('ch-time', { rows: D.time.rows, min: D.time.min, max: D.time.max, ticks: D.time.ticks,
-    aria: T.ariaTime });
 })();

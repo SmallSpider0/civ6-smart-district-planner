@@ -20,8 +20,9 @@ Writes to dist/report/:
 DIR/en/index.html with the screenshots they use in DIR/images/ and
 DIR/en/images/ (.github/workflows/release.yml).
 
-Case-study maps come from `node tools/compare.mjs --snapshot ID`, cached in
-report/snaps/ (commit new snapshots: the package build does not make them).
+The page describes this mod on its own: its quality against the true
+optimum, its speed and its tests. The comparison with other planners is a
+developer note (docs/notes/planner-comparison.md), not part of the page.
 """
 import base64
 import json
@@ -42,7 +43,6 @@ OUT = os.path.join(REPO, "dist", "report")
 sys.path.insert(0, os.path.join(REPO, "tests", "compare"))
 sys.path.insert(0, HERE)
 import summarize  # noqa: E402
-import hexmap  # noqa: E402
 
 # Everything the report reads, so tools/package.py can refuse uncommitted changes to it.
 INPUTS = ["report", "tests/compare/results", "tests/compare/summarize.py", "docs/images", "tests/stress/results"]
@@ -75,13 +75,7 @@ PLANNERS = {
     "sdp:FINE": {"label": "本模组 精细档", "color": "--s3"},
     "sdp:STANDARD_LAND": {"label": "本模组 标准档·计入地块（面板默认）", "color": "--s3"},
     "sdp:CITY_BY_CITY": {"label": "本模组 逐城依次", "color": "--opt"},
-    "amt": {"label": "AMT r49", "color": "--amt"},
-    "amt:DEFAULTW": {"label": "AMT（默认权重）", "color": "--amt"},
-    "ep": {"label": "Empire Planner", "color": "--ep"},
-    "ep:DEFAULT": {"label": "EP（默认权重）", "color": "--ep"},
 }
-DNAME = {"DISTRICT_AQUEDUCT": "水渠", "DISTRICT_DAM": "堤坝", "DISTRICT_HARBOR": "港口", "DISTRICT_SEOWON": "书院",
-         "DISTRICT_CANAL": "运河", "DISTRICT_GOVERNMENT": "市政广场"}
 STAGES = [("early", "前期 · 2 个区域"), ("mid", "中期 · 4–5 个"), ("late", "后期 · 7–8 个")]
 PAGES_URL = "https://smallspider0.github.io/civ6-smart-district-planner/"
 
@@ -90,37 +84,14 @@ PAGES_URL = "https://smallspider0.github.io/civ6-smart-district-planner/"
 PLANNERS_EN = {
     "sdp:FAST": "This mod, Fast", "sdp:STANDARD": "This mod, Standard", "sdp:FINE": "This mod, Thorough",
     "sdp:STANDARD_LAND": "This mod, Standard + Land loss (panel default)", "sdp:CITY_BY_CITY": "This mod, city by city",
-    "amt": "AMT r49", "amt:DEFAULTW": "AMT (default weights)", "ep": "Empire Planner", "ep:DEFAULT": "EP (default weights)",
 }
-# Short labels for the time chart: the tiers are this mod's.
-SHORT_EN = {"sdp:FAST": "Fast", "sdp:STANDARD": "Standard", "sdp:FINE": "Thorough", "amt": "AMT", "ep": "EP"}
-DNAME_EN = {"DISTRICT_AQUEDUCT": "Aqueduct", "DISTRICT_DAM": "Dam", "DISTRICT_HARBOR": "Harbor", "DISTRICT_SEOWON": "Seowon",
-            "DISTRICT_CANAL": "Canal", "DISTRICT_GOVERNMENT": "Government Plaza"}
 STAGES_EN = [("early", "Early · 2 districts"), ("mid", "Middle · 4–5"), ("late", "Late · 7–8")]
-CIVN_EN = {"rome": "Rome", "japan": "Japan", "korea": "Korea", "germany": "Germany", "brazil": "Brazil",
-           "netherlands": "Netherlands", "gaul": "Gaul", "vietnam": "Vietnam", "greece": "Greece", "mali": "Mali",
-           "russia": "Russia", "indonesia": "Indonesia", "egypt": "Egypt", "byzantium": "Byzantium", "kongo": "Kongo",
-           "australia": "Australia", "maya": "Maya"}
-BION_EN = {"temperate": "temperate", "coastal": "coastal", "highland": "highland", "jungle": "rainforest", "desert": "desert",
-           "tundra": "tundra", "island": "island", "volcanic": "volcanic"}
-STN_EN = {"early": "early game", "mid": "mid game", "late": "late game"}
 MULTIPOOLS_ROW_EN = ["Several cities", "3", "Standard and Thorough reach the reference in all 3, better than picking "
                      "city by city and then planning together (96%–100%)"]
 
 
 def pct(v, digits=0):
     return ("%." + str(digits) + "f%%") % (v * 100)
-
-
-def snapshot(sid, make):
-    path = os.path.join(HERE, "snaps", sid + ".json")
-    if not os.path.exists(path):
-        if not make:
-            raise RuntimeError("report/snaps/%s.json is missing: run report/build.py and commit it" % sid)
-        out = subprocess.run(["node", "tools/compare.mjs", "--snapshot", sid], cwd=REPO,
-                             capture_output=True, encoding="utf-8", check=True)
-        open(path, "w", encoding="utf-8").write(out.stdout)
-    return json.load(open(path, encoding="utf-8"))
 
 
 MULTIPOOLS_TEXT = (
@@ -143,61 +114,35 @@ MULTIPOOLS_TEXT_EN = (
 # Words the charts (charts.js) show, by language.
 CHART_WORDS = {
     "zh": {
-        "colon": "：", "mean": "平均 ", "sec": " 秒", "medianTip": "{0}：中位 {1} 秒（离线）",
+        "colon": "：", "mean": "平均 ",
         "outcomeTip": "{0}：{1} {2} 个场景（共 {3} 个）",
-        "scatterX": "本模组标准档的加成", "scatterAmtY": "AMT r49 的加成", "scatterEpY": "Empire Planner 的加成",
-        "sitesX": "本模组的城址总值", "sitesY": "EP 的城址总值",
-        "headOverview": ["规划器", "达到真最优", "平均质量", "最差", "合法方案", "漏放区域", "中位耗时（离线）"],
-        "headCorrect": ["规划器", "违规方案", "压掉玩家的钉", "漏放区域", "其中有位置却没放", "同输入两次一致"],
-        "headPair": ["场景集", "对手", "达到真最优 本模组 / 对手", "本模组 胜 / 平 / 负", "平均差 [95% 区间]", "p"],
-        "headCross": ["场景集", "打分用", "本模组", "AMT", "EP", "本模组 vs 打分方 胜 / 平 / 负", "平均差 [95% 区间]", "p"],
-        "headWonders": ["规划器", "奇观放下", "合法方案", "达到真最优", "平均质量", "总产出最高"],
-        "headSites": ["规划器", "合法方案", "城址总值", "地块产出", "区域潜力", "淡水城址", "新奢侈种类", "重叠格"],
-        "headOutput": ["规划器", "拿到最高", "本模组（计入地块）高 / 平 / 低：开发集", "留出集"],
-        "byAmt": "按 AMT 的目标函数", "byEp": "按 EP 的目标函数",
+        "headOverview": ["档位", "达到真最优", "平均质量", "最差", "合法方案", "漏放区域", "中位耗时（离线）"],
+        "headCorrect": ["档位", "违规方案", "压掉玩家的钉", "漏放区域", "其中有位置却没放", "同输入两次一致"],
+        "headRobust": ["场景集", "达到真最优（标准档）", "平均质量", "最差"],
+        "headWonders": ["档位", "奇观放下", "合法方案", "达到真最优", "平均质量"],
         "better": "没有一项更差、至少一项更好", "same": "两项都相同", "tradeoff": "一项更好、一项更差",
-        "worse": "没有一项更好、至少一项更差", "excluded": "对手放了清单外的区域，不比",
+        "worse": "没有一项更好、至少一项更差", "excluded": "不比",
         "ariaBest": "按阶段达到真最优的场景比例", "ariaQuality": "按阶段的平均质量",
-        "ariaScatterAmt": "本模组与 AMT 的逐场景加成对比", "ariaScatterEp": "本模组与 Empire Planner 的逐场景加成对比",
-        "ariaMissing": "各规划器有位置却没放的区域数", "ariaRobust": "各场景集达到真最优的比例",
-        "ariaMRobust": "多城开发集与留出集达到参照的比例",
-        "ariaForest": "单城：按对手自己的目标函数，本模组方案得分占对手自己方案得分的百分比",
-        "ariaForestMulti": "多城：按对手自己的目标函数，本模组方案得分占对手自己方案得分的百分比",
-        "ariaWonders": "奇观放下的比例与达到真最优的比例", "ariaSites": "本模组与 EP 的逐场景城址总值",
-        "ariaOutput": "拿到最高城市总产出的场景比例", "ariaStrip": "多城场景各规划器的加成占该场景参照的百分比",
-        "ariaCoverage": "覆盖范围场景：覆盖城数与相邻加成两项一起比较的结果", "ariaTime": "离线中位耗时对比",
+        "ariaRobust": "各场景集达到真最优的比例", "ariaMRobust": "多城开发集与留出集达到参照的比例",
+        "ariaWonders": "奇观放下的比例与达到真最优的比例", "ariaStrip": "多城场景的加成占该场景参照的百分比",
+        "ariaCoverage": "覆盖范围场景：覆盖城数与相邻加成两项一起比较的结果",
     },
     "en": {
-        "colon": ": ", "mean": "mean ", "sec": " s", "medianTip": "{0}: median {1} s (offline)",
+        "colon": ": ", "mean": "mean ",
         "outcomeTip": "{0}: {1}, {2} of {3} scenarios",
-        "scatterX": "This mod's adjacency (Standard)", "scatterAmtY": "AMT r49's adjacency", "scatterEpY": "Empire Planner's adjacency",
-        "sitesX": "This mod's site value", "sitesY": "EP's site value",
-        "headOverview": ["Planner", "At the optimum", "Mean quality", "Worst", "Valid plans", "Left out", "Median time, offline"],
-        "headCorrect": ["Planner", "Plans not valid", "Player's tacks overwritten", "Districts left out", "Of them with a valid tile",
+        "headOverview": ["Effort level", "At the optimum", "Mean quality", "Worst", "Valid plans", "Left out", "Median time, offline"],
+        "headCorrect": ["Effort level", "Plans not valid", "Player's tacks overwritten", "Districts left out", "Of them with a valid tile",
                         "Same plan twice"],
-        "headPair": ["Set", "Rival", "At the optimum: this mod / rival", "This mod wins / ties / losses", "Mean difference [95% CI]", "p"],
-        "headCross": ["Set", "Scored by", "This mod", "AMT", "EP", "This mod vs scorer: wins / ties / losses",
-                      "Mean difference [95% CI]", "p"],
-        "headWonders": ["Planner", "Wonders placed", "Valid plans", "At the optimum", "Mean quality", "Highest output"],
-        "headSites": ["Planner", "Valid plans", "Site value", "Tile yields", "District potential", "Fresh Water sites",
-                      "New luxury kinds", "Overlapping tiles"],
-        "headOutput": ["Planner", "Highest", "This mod (Land loss) higher / level / lower: development set", "Held-out set"],
-        "byAmt": "By AMT's objective", "byEp": "By EP's objective",
+        "headRobust": ["Set", "At the optimum (Standard)", "Mean quality", "Worst"],
+        "headWonders": ["Effort level", "Wonders placed", "Valid plans", "At the optimum", "Mean quality"],
         "better": "None worse, at least one better", "same": "Both the same", "tradeoff": "One better, one worse",
-        "worse": "None better, at least one worse", "excluded": "Rival placed districts not on the list, not compared",
+        "worse": "None better, at least one worse", "excluded": "Not compared",
         "ariaBest": "Share of scenarios at the true optimum, by stage", "ariaQuality": "Mean quality by stage",
-        "ariaScatterAmt": "Adjacency per scenario, this mod against AMT",
-        "ariaScatterEp": "Adjacency per scenario, this mod against Empire Planner",
-        "ariaMissing": "Districts each planner left out although they had a valid tile",
         "ariaRobust": "Share of scenarios at the true optimum in each set",
         "ariaMRobust": "Share of several-city scenarios at the reference, development and held-out sets",
-        "ariaForest": "One city: by the rival's own objective, this mod's score as a percentage of the rival's own",
-        "ariaForestMulti": "Several cities: by the rival's own objective, this mod's score as a percentage of the rival's own",
         "ariaWonders": "Share of wonders placed and of scenarios at the true optimum",
-        "ariaSites": "Site value per scenario, this mod against EP",
-        "ariaOutput": "Share of scenarios with the highest city output",
-        "ariaStrip": "Each planner's adjacency in several-city scenarios as a percentage of the scenario's reference",
-        "ariaCoverage": "Coverage scenarios: cities covered and adjacency compared together", "ariaTime": "Median time offline",
+        "ariaStrip": "Adjacency in several-city scenarios as a percentage of the scenario's reference",
+        "ariaCoverage": "Coverage scenarios: cities covered and adjacency compared together",
     },
 }
 
@@ -216,7 +161,7 @@ def git(*args):
         return ""
 
 
-def build(files=None, make_snapshots=True, version=None, date=None, lang="zh"):
+def build(files=None, version=None, date=None, lang="zh"):
     """Return (page, data): the page (without the document skeleton) and its chart data.
 
     lang "zh" is the Chinese page, "en" the English one; both have every section and appendix."""
@@ -225,7 +170,6 @@ def build(files=None, make_snapshots=True, version=None, date=None, lang="zh"):
     def L(zh, en):
         return en if EN else zh
     PL = {k: dict(v, label=PLANNERS_EN[k]) for k, v in PLANNERS.items()} if EN else PLANNERS
-    dname = DNAME_EN if EN else DNAME
     version = version or git("rev-parse", "--short", "HEAD") or "dev"
     date = date or git("log", "-1", "--format=%cs") or ""
     download = (REPO_URL + "/releases/tag/" + version) if version.startswith("v") else (REPO_URL + "/releases/latest")
@@ -250,20 +194,15 @@ def build(files=None, make_snapshots=True, version=None, date=None, lang="zh"):
         requested = sum(raw[(sid, key)]["score"]["requested"] for sid, _ in rs)
         missing = sum(r.get("missing", 0) for _, r in rs)
         placeable = sum(r.get("missingPlaceable") or 0 for _, r in rs)
-        og = [r["outputGap"] for _, r in rs if r.get("outputGap") is not None]
-        ob = [1 if (r["legal"] and r["outputGap"] <= 1e-9) else 0 for _, r in rs if r.get("outputGap") is not None]
         return {
             "n": len(rs), "best": statistics.mean(best), "quality": statistics.mean(q) if q else 0, "worst": min(q) if q else 0,
             "legal": sum(1 for _, r in rs if r["legal"]), "missing": missing, "requested": requested,
             "missingPlaceable": placeable,
-            "outBest": statistics.mean(ob) if ob else None, "outGap": statistics.mean(og) if og else None,
             "time": statistics.median([r["seconds"] for _, r in rs]),
-            "pins": sum((r.get("violations") or {}).get("overwrites_pin", 0) for _, r in rs),
             "pinPlans": sum(1 for _, r in rs if (r.get("violations") or {}).get("overwrites_pin")),
-            "illegalKinds": defaultdict(int),
         }
 
-    order = ["sdp:FAST", "sdp:STANDARD", "sdp:FINE", "sdp:STANDARD_LAND", "amt", "amt:DEFAULTW", "ep", "ep:DEFAULT"]
+    order = ["sdp:FAST", "sdp:STANDARD", "sdp:FINE", "sdp:STANDARD_LAND"]
     S = {k: stats(single, k) for k in order}
     overview = []
     for k in order:
@@ -274,7 +213,7 @@ def build(files=None, make_snapshots=True, version=None, date=None, lang="zh"):
                          "worst": pct(s["worst"]), "legal": "%d / %d" % (s["legal"], s["n"]),
                          "missing": "%d / %d" % (s["missing"], s["requested"]), "time": L("%.1f 秒", "%.1f s") % s["time"]})
 
-    main_series = [k for k in ["sdp:STANDARD", "amt", "ep"] if S.get(k)]
+    main_series = [k for k in ["sdp:FAST", "sdp:STANDARD", "sdp:FINE"] if S.get(k)]
     by_best, by_q = [], []
     qmins = []
     for stage, label in (STAGES_EN if EN else STAGES):
@@ -291,99 +230,13 @@ def build(files=None, make_snapshots=True, version=None, date=None, lang="zh"):
     qmin = max(0, (int(min(qmins + [100]) // 10) - 1) * 10) if qmins else 50
     qticks = list(range(qmin, 101, 10 if 100 - qmin > 30 else 5))
 
-    # ---------------------------------------------------------------- scatter
-    pts = {"amt": [], "ep": []}
-    gmax = 1
-    for sid, e in sorted(single.items()):
-        us = e["runs"].get("sdp:STANDARD")
-        if not us or us.get("error"):
-            continue
-        for k in ("amt", "ep"):
-            o = e["runs"].get(k)
-            if not o or o.get("error") or o.get("gain") is None:
-                continue
-            gmax = max(gmax, us["gain"], o["gain"])
-            extra = []
-            if o.get("missing"):
-                extra.append(L("漏放 %d", "%d left out") % o["missing"])
-            if not o["legal"]:
-                extra.append(L("违规", "not valid"))
-            pts[k].append({"x": us["gain"], "y": o["gain"], "bad": not o["legal"],
-                           "label": L("%s：本模组 +%d，%s +%d%s", "%s: this mod +%d, %s +%d%s") % (
-                               sid, us["gain"], PL[k]["label"], o["gain"],
-                               (L("（", " (") + L("，", ", ").join(extra) + L("）", ")")) if extra else "")})
-    smax = int((gmax + 9) // 10 * 10)
-    ticks = list(range(0, smax + 1, 10 if smax <= 60 else 20))
-
-    def wtl(k):
-        w = t = l = 0
-        diffs = []
-        for sid, e in single.items():
-            us, o = e["runs"].get("sdp:STANDARD"), e["runs"].get(k)
-            if not us or not o or us.get("error") or o.get("error"):
-                continue
-            d = us["gain"] - o["gain"]
-            diffs.append(d)
-            if d > 1e-9:
-                w += 1
-            elif d < -1e-9:
-                l += 1
-            else:
-                t += 1
-        return w, t, l, diffs
-
-    cap = {}
-    for k, name in (("amt", "AMT"), ("ep", "Empire Planner")):
-        w, t, l, diffs = wtl(k)
-        n = w + t + l
-        rel = []
-        for sid, e in single.items():
-            us, o = e["runs"].get("sdp:STANDARD"), e["runs"].get(k)
-            if us and o and not us.get("error") and not o.get("error") and us["gain"] > 0:
-                rel.append((us["gain"] - o["gain"]) / us["gain"])
-        cap[k] = "%d 个场景中：本模组更高 %d 个，持平 %d 个，%s更高 %d 个；平均高出 %.1f（%s）。" % (
-            n, w, t, name, l, statistics.mean(diffs) if diffs else 0, pct(statistics.mean(rel), 0) if rel else "-")
-        cap[k + "_wtl"] = (w, t, l, statistics.mean(diffs) if diffs else 0, statistics.mean(rel) if rel else 0)
-
-    # ---------------------------------------------------------------- city output
-    def paired_output(a, b):
-        w = t = l = 0
-        diffs = []
-        for sid, e in single.items():
-            ra, rb = e["runs"].get(a), e["runs"].get(b)
-            if not ra or not rb or ra.get("error") or rb.get("error") or ra.get("output") is None or rb.get("output") is None:
-                continue
-            d = ra["output"] - rb["output"]
-            diffs.append(d)
-            if d > 1e-9:
-                w += 1
-            elif d < -1e-9:
-                l += 1
-            else:
-                t += 1
-        return w, t, l, (statistics.mean(diffs) if diffs else 0)
-
-    output_rows = []
-    ours_out = "sdp:STANDARD_LAND" if S.get("sdp:STANDARD_LAND") else "sdp:STANDARD"
-    for k in ["sdp:STANDARD", "sdp:STANDARD_LAND", "amt", "amt:DEFAULTW", "ep", "ep:DEFAULT"]:
-        s_ = S.get(k)
-        if not s_ or s_.get("outBest") is None:
-            continue
-        if k == ours_out:
-            vs = "—"
-        else:
-            w, t, l, d = paired_output(ours_out, k)
-            vs = L("%d / %d / %d（平均 %+.1f）", "%d / %d / %d (mean %+.1f)") % (w, t, l, d)
-        output_rows.append({"label": PL[k]["label"], "best": pct(s_["outBest"]), "gap": "%.1f" % s_["outGap"], "vs": vs})
-    out_pairs = {k: paired_output(ours_out, k) for k in ("amt", "amt:DEFAULTW", "ep", "ep:DEFAULT") if S.get(k)}
-
     # ---------------------------------------------------------------- correctness
     correct = []
     det_by = defaultdict(lambda: [0, 0])
     for d in det:
         det_by[d["planner"]][0] += 1 if d["same"] else 0
         det_by[d["planner"]][1] += 1
-    for k in ["sdp:STANDARD", "sdp:STANDARD_LAND", "amt", "amt:DEFAULTW", "ep", "ep:DEFAULT"]:
+    for k in order:
         s = S.get(k)
         if not s:
             continue
@@ -408,17 +261,16 @@ def build(files=None, make_snapshots=True, version=None, date=None, lang="zh"):
                         "det": ("%d / %d" % tuple(d)) if d[1] else "—"})
 
     # ---------------------------------------------------------------- multi
-    mseries = [k for k in ["sdp:STANDARD", "sdp:CITY_BY_CITY", "amt", "ep"] if any(k in e["runs"] for e in multi.values())]
+    mseries = [k for k in ["sdp:FAST", "sdp:STANDARD", "sdp:FINE", "sdp:CITY_BY_CITY"] if any(k in e["runs"] for e in multi.values())]
     mrows, mvals = [], []
     for sid, e in sorted(multi.items()):
         ref = e["reference"]
-        vals, bad, extra = {}, {}, {}
+        vals, extra = {}, {}
         for k in mseries:
             r = e["runs"].get(k)
             if r and not r.get("error") and ref:
                 vals[k] = r["gain"] / ref * 100
                 mvals.append(vals[k])
-                bad[k] = not r["legal"]
                 ex = ["+%d" % r["gain"], L("%.0f 秒", "%.0f s") % r["seconds"]]
                 if r.get("missing"):
                     ex.append(L("漏放 %d", "%d left out") % r["missing"])
@@ -427,122 +279,12 @@ def build(files=None, make_snapshots=True, version=None, date=None, lang="zh"):
                 extra[k] = L("，", ", ").join(ex)
         parts = sid.split("-")
         label = "%s %s %s %s" % (parts[0], parts[1], parts[3] if len(parts) > 3 else "", parts[4] if len(parts) > 4 else "")
-        mrows.append({"label": label.strip(), "values": vals, "bad": bad, "extra": extra})
+        mrows.append({"label": label.strip(), "values": vals, "extra": extra})
     mmin = max(0, (int(min(mvals + [100]) // 10)) * 10 - 10) if mvals else 50
     M = {k: stats(multi, k) for k in mseries}
 
-    # ---------------------------------------------------------------- time
-    trows = []
-    for k in ["sdp:FAST", "sdp:STANDARD", "sdp:FINE", "amt", "ep"]:
-        if S.get(k):
-            trows.append({"label": L("单城 " + PL[k]["label"], "One city, " + SHORT_EN[k]), "value": S[k]["time"], "color": PL[k]["color"]})
-    for k in ["sdp:STANDARD", "amt", "ep"]:
-        if M.get(k):
-            trows.append({"label": L("多城 " + PL[k]["label"], "Cities, " + SHORT_EN[k]), "value": M[k]["time"], "color": PL[k]["color"]})
-
-    # ---------------------------------------------------------------- cases
-    def case_svg(sid, title):
-        snap = snapshot(sid, make_snapshots)
-        city = [c for c in snap["cities"] if c["owner"] == 0][0]
-        panels = []
-        for k, cls in (("sdp:STANDARD", "sdp"), ("amt", "amt"), ("ep", "ep")):
-            r = raw.get((sid, k))
-            if not r or not r.get("score"):
-                continue
-            s = r["score"]
-            items = s.get("items") or []
-            bad = set()
-            for v in s["violations"]:
-                if v["kind"] in summarize.HARD and v.get("x") is not None:
-                    bad.add((v["x"], v["y"]))
-            miss = s.get("missing", 0)
-            t = "%s  +%d%s" % (PL[k]["label"], s["gain"], (L("  漏放 %d", ", %d left out") % miss) if miss else "")
-            panels.append({"title": t, "items": items, "bad": bad, "cls": cls})
-        w, h, body = hexmap.render(snap, panels, (city["x"], city["y"]), 3, lang=lang)
-        # tag each panel group for its color
-        groups = body.split("<g>")
-        out = groups[0]
-        for i, g in enumerate(groups[1:]):
-            out += '<g class="hm-panel-%s">' % panels[i]["cls"] + g
-        svg = '<svg viewBox="0 0 %.0f %.0f" role="img" aria-label="%s">%s</svg>' % (w, h, title, out)
-        return svg
-
-    def pick_cases():
-        cands = []
-        for sid, e in single.items():
-            us, a, p = e["runs"].get("sdp:STANDARD"), e["runs"].get("amt"), e["runs"].get("ep")
-            if not us or not a or not p or us.get("error") or a.get("error") or p.get("error"):
-                continue
-            cands.append((sid, us["gain"] - a["gain"], us["gain"] - p["gain"],
-                          (p.get("violations") or {}).get("overwrites_pin", 0), a.get("missing", 0), p.get("missing", 0)))
-        hero = max(cands, key=lambda c: (min(c[1], c[2]), c[1] + c[2])) if cands else None
-        amtc = max(cands, key=lambda c: (c[4] > 0, c[1])) if cands else None
-        pinc = max(cands, key=lambda c: (c[3] > 0, c[2])) if cands else None
-        out = []
-        for c in (hero, amtc, pinc):
-            if c and c[0] not in [x[0] for x in out]:
-                out.append(c)
-        return out
-
-    cases = pick_cases()
-    case_html = []
-    hero_svg, hero_cap = "", ""
-    CIVN = {"rome": "罗马", "japan": "日本", "korea": "高丽", "germany": "德国", "brazil": "巴西", "netherlands": "荷兰",
-            "gaul": "高卢", "vietnam": "越南", "greece": "希腊", "mali": "马里", "russia": "俄罗斯", "indonesia": "印尼",
-            "egypt": "埃及", "byzantium": "拜占庭", "kongo": "刚果", "australia": "澳大利亚", "maya": "玛雅"}
-    BION = {"temperate": "温带", "coastal": "沿海", "highland": "高地", "jungle": "雨林", "desert": "沙漠", "tundra": "苔原",
-            "island": "岛屿", "volcanic": "火山"}
-    STN = {"early": "前期", "mid": "中期", "late": "后期"}
-
-    if EN:
-        CIVN, BION, STN = CIVN_EN, BION_EN, STN_EN
-
-    def describe(sid):
-        p = sid.split("-")
-        return "%s · %s · %s" % (CIVN.get(p[1], p[1]), BION.get(p[2], p[2]), STN.get(p[3], p[3]))
-
-    for i, c in enumerate(cases):
-        sid = c[0]
-        svg = case_svg(sid, describe(sid))
-        notes = []
-        rs = raw.get((sid, "sdp:STANDARD"))
-        if rs and rs.get("score"):
-            mine = [v for v in rs["score"]["violations"] if v["kind"] == "missing"]
-            if mine and all(v.get("detail") == "no_plot" for v in mine):
-                names = L("、", ", ").join(dname.get(v.get("type"), v.get("type")) for v in mine)
-                notes.append(L("本模组漏放的%s在这座城没有合法位置", "the %s this mod left out has no valid tile in this city") % names)
-        for k in ("amt", "ep"):
-            r = raw.get((sid, k))
-            if r and r.get("score"):
-                for v in r["score"]["violations"]:
-                    if v["kind"] == "overwrites_pin":
-                        notes.append(L("%s 把玩家在 (%d,%d) 的钉压掉了", "%s overwrote the player's tack at (%d,%d)") % (PL[k]["label"], v["x"], v["y"]))
-                miss = [v.get("type", "").replace("DISTRICT_", "").lower() for v in r["score"]["violations"] if v["kind"] == "missing"]
-                if miss:
-                    placeable = sum(1 for v in r["score"]["violations"] if v["kind"] == "missing" and v.get("detail") == "placeable")
-                    if EN:
-                        notes.append("%s left out %d district%s%s" % (PL[k]["label"], len(miss), "" if len(miss) == 1 else "s",
-                                                                    (" (%d with a valid tile)" % placeable) if placeable else ""))
-                    else:
-                        notes.append("%s 漏放 %d 个区域%s" % (PL[k]["label"], len(miss),
-                                                           ("（其中 %d 个有合法位置）" % placeable) if placeable else ""))
-        if EN:
-            body = "; ".join(notes)
-            cap_txt = "%s (%s). %s" % (describe(sid), sid, (body[:1].upper() + body[1:] + ". ") if notes else "")
-            cap_txt = cap_txt[0].upper() + cap_txt[1:]
-        else:
-            cap_txt = "%s（%s）。%s" % (describe(sid), sid, "；".join(notes) + "。" if notes else "")
-        if i == 0:
-            hero_svg, hero_cap = svg, L("同一座城、同样的区域清单，三个规划器的方案：", "One city, the same district list, the plans of the three planners: ") + cap_txt + L(
-                "城=市中心，灰色=已建区域，彩色=新规划的区域（数字是它自己的相邻加成）。",
-                "C = City Center, gray = districts already built, colored = newly planned districts (the number is its own adjacency bonus).")
-        case_html.append('<figure><div class="frame scroll hexmap">%s</div><figcaption>%s</figcaption></figure>' % (svg, cap_txt))
-
     # ---------------------------------------------------------------- texts
-    sd, am, ep = S.get("sdp:STANDARD"), S.get("amt"), S.get("ep")
-    sl = S.get("sdp:STANDARD_LAND")
-    w_a, t_a, l_a, d_a, r_a = cap.get("amt_wtl", (0, 0, 0, 0, 0))
-    w_e, t_e, l_e, d_e, r_e = cap.get("ep_wtl", (0, 0, 0, 0, 0))
+    sd = S.get("sdp:STANDARD")
     self_mis = 0
     self_n = 0
     for r in rows:
@@ -558,298 +300,99 @@ def build(files=None, make_snapshots=True, version=None, date=None, lang="zh"):
                 L("方案违规 %d 个、压钉 %d 个、重复运行不一致 %d 个", "%d plans are not valid, %d overwrite a tack, %d runs do not repeat")
                 % (sd["n"] - sd["legal"], sd["pinPlans"], det_sd[1] - det_sd[0])) if sd else ""
 
-    def lower_in(n, who):
-        return ("没有一个场景低于 %s" % who) if n == 0 else ("只有 %d 个场景低于 %s" % (n, who))
-
     texts = {
         "VERSION": version, "DATE": date, "DOWNLOAD_URL": download, "REPO_URL": REPO_URL, "WORKSHOP_URL": WORKSHOP_URL, "PAGES_URL": PAGES_URL,
         "DOWNLOAD_LABEL": (L("下载 ", "Download ") + version) if version.startswith("v") else L("下载最新版", "Download the latest version"),
-        "SUMMARY_COMPARE": (L(
-            "在 %d 个模拟实际对局的单城场景上与 AMT r49、Empire Planner 对比：本模组标准档有 %s 的场景拿到最高加成（AMT %s，EP %s），%s。",
-            "On %d one-city scenarios modeled on real games, compared with AMT r49 and Empire Planner, this mod on Standard effort "
-            "reaches the highest adjacency in %s of them (AMT %s, EP %s), and %s.")
-            % (sd["n"], pct(sd["best"]), pct(am["best"]), pct(ep["best"]), sd_claim)) if sd and am and ep else "",
         "N_SINGLE": str(len(single)), "N_MULTI": str(len(multi)), "N_CIVS": "17",
         "SELF_CHECK": L("%d 次，%d 次不一致", "%d runs, %d differ") % (self_n, self_mis),
-        "AMT_QUALITY": L("单城场景中 %d 个低于本模组、%d 个持平、%d 个更高；平均质量 %s。",
-                         "One-city scenarios: %d below this mod, %d level, %d above; average quality %s.")
-        % (w_a, t_a, l_a, pct(am["quality"], 1)) if am else "",
-        "AMT_MISSING": L("单城场景共漏放 %d 个要求的区域，其中 %d 个在它的方案摆好后仍有合法位置和空槽位。",
-                         "Over the one-city scenarios it left out %d requested districts; %d of them still had a valid tile and a free "
-                         "slot after its plan was placed.") % (am["missing"], am["missingPlaceable"]) if am else "",
-        "AMT_MULTI_TIME": "",
-        "AMT_SLOTS": L("后期场景要 6 个以上特色区域时，超出的只能不选。",
-                       "Late-game scenarios that ask for more than 6 specialty districts have to drop the rest."),
-        "EP_QUALITY": L("单城场景中 %d 个低于本模组、%d 个持平、%d 个更高；平均质量 %s。",
-                        "One-city scenarios: %d below this mod, %d level, %d above; average quality %s.")
-        % (w_e, t_e, l_e, pct(ep["quality"], 1)) if ep else "",
-        "EP_MISSING": L("单城场景要求的 %d 个区域中漏放 %d 个（其中 %d 个有合法位置），%d 个方案一个区域都没放。",
-                        "Of the %d districts the one-city scenarios ask for it left out %d (%d of them had a valid tile); %d plans "
-                        "placed no district at all.") % (
-            ep["requested"], ep["missing"], ep["missingPlaceable"], sum(1 for _, r in runs_of(single, "ep") if r.get("placed") == 0)) if ep else "",
-        "EP_PINS": L("%d 个带手打钉的场景里，%d 个方案压到了玩家的钉。",
-                     "In the %d scenarios with tacks the player placed by hand, %d plans overwrote one of them.") % (
-            sum(1 for sid in single if int(sid[1:3]) % 3 == 0 and not sid.endswith("early")), ep["pinPlans"]) if ep else "",
     }
     late = by_best[-1]["values"] if by_best else {}
-
-    def below_en(na, ne):
-        if na == 0 and ne == 0:
-            return "this mod is below AMT or EP in no scenario"
-
-        def n_(n):
-            return "no scenario" if n == 0 else "only %d scenario%s" % (n, "" if n == 1 else "s")
-        return "this mod is below AMT in %s and below EP in %s" % (n_(na), n_(ne))
-
-    def late_share(who, v):
-        if EN:
-            return "none" if v < 0.5 else ("only %.0f%%" % v)
-        return ("%s 一个也没拿到" % who) if v < 0.5 else ("%s 只有 %.0f%%" % (who, v))
-    texts["SINGLE_TEXT"] = (L(
-        "本模组标准档在 %s 的场景达到真最优，AMT %s，EP %s。区域越多差距越大：后期场景（7–8 个区域）%s、%s。"
-        "逐场景看，本模组%s，%s。",
-        "This mod on Standard reaches the true optimum in %s of the scenarios, AMT in %s, EP in %s. The more districts, "
-        "the wider the gap: in the late-game scenarios (7–8 districts) AMT reaches it in %s, EP in %s. Scenario by scenario, %s.")
-        % ((pct(sd["best"]), pct(am["best"]), pct(ep["best"]), late_share("AMT", late.get("amt", 0)), late_share("EP", late.get("ep", 0)))
-           + ((below_en(l_a, l_e),) if EN else (lower_in(l_a, "AMT"), lower_in(l_e, "EP"))))) if sd and am and ep else ""
-    for k in ("amt", "ep"):
-        w, t, l, _, _ = cap.get(k + "_wtl", (0, 0, 0, 0, 0))
-        cap[k] = L("本模组更高 %d 个场景、持平 %d 个、%s更高 %d 个。", "This mod is higher in %d scenarios, level in %d, %shigher in %d.") % (
-            w, t, "AMT " if k == "amt" else "EP ", l)
+    texts["SINGLE_TEXT"] = ""
+    if sd:
+        texts["SINGLE_TEXT"] = L(
+            "标准档在 %s 的场景达到真最优，平均质量 %s，最差的场景 %s；快速档、精细档达到真最优的比例分别是 %s、%s。"
+            "后期场景（7–8 个区域）标准档 %s 达到真最优。",
+            "Standard reaches the true optimum in %s of the scenarios, with a mean quality of %s and %s in the worst scenario; "
+            "Fast and Thorough reach it in %s and %s. In the late-game scenarios (7–8 districts) Standard reaches it in %s.") % (
+            pct(sd["best"]), pct(sd["quality"], 1), pct(sd["worst"]),
+            pct(S["sdp:FAST"]["best"]) if S.get("sdp:FAST") else "-", pct(S["sdp:FINE"]["best"]) if S.get("sdp:FINE") else "-",
+            "%.0f%%" % late.get("sdp:STANDARD", 0))
 
     # Correctness: districts left off although they had a place.
     no_plot = sd["missing"] - sd["missingPlaceable"] if sd else 0
     texts["CORRECT_TEXT"] = (L(
-        "本模组%s，%s。AMT 和 EP 分别漏放了 %d 个和 %d 个其实有位置的区域（原因见第 3 节）%s。",
-        "This mod: %s; %s. AMT and EP left out %d and %d districts that did have a valid tile (the reasons are in section 3)%s.") % (
+        "标准档%s，%s。没放下的 %d 个区域（%d 个场景共要求 %d 个）在那座城都确实没有合法位置。",
+        "On Standard, %s; %s. The %d districts not placed (of %d asked for over the %d scenarios) really have no valid tile "
+        "in their city.") % (
             sd_claim, L("能放下的区域都放了", "every district that fits is placed") if sd["missingPlaceable"] == 0 else
             L("但有 %d 个区域有位置却没放", "but %d districts with a valid tile were left out") % sd["missingPlaceable"],
-            am["missingPlaceable"], ep["missingPlaceable"],
-            (L("；EP 还有 %d 个方案压掉了玩家事先打的钉", "; in %d plans EP also overwrote tacks the player had placed")
-             % ep["pinPlans"]) if ep["pinPlans"] else "")) if sd and am and ep else ""
-    texts["MISSING_CAP"] = (L(
-        "有位置却没放的区域数（%d 个场景共要求 %d 个区域）。地图上确实放不下的区域（本模组漏放的 %d 个都是这种）不计。",
-        "Districts left out although they had a valid tile (the %d scenarios ask for %d districts in all). Districts that really "
-        "do not fit on the map (all %d this mod left out are of this kind) are not counted.") % (
-        sd["n"], sd["requested"], no_plot)) if sd else ""
-    missing_chart = [{"label": PL[k]["label"], "value": S[k]["missingPlaceable"], "color": PL[k]["color"],
-                      "tip": L("%s：漏放 %d 个，其中有位置却没放 %d 个", "%s: %d left out, %d of them with a valid tile")
-                      % (PL[k]["label"], S[k]["missing"], S[k]["missingPlaceable"])}
-                     for k in ("sdp:STANDARD", "amt", "ep") if S.get(k)]
-
-    # City output.
-    output_chart = []
-    for k in ("sdp:STANDARD_LAND", "sdp:STANDARD", "amt", "ep"):
-        s_ = S.get(k)
-        if s_ and s_.get("outBest") is not None:
-            label = L("本模组 计入地块（面板默认）", "This mod, Land loss (panel default)") if k == "sdp:STANDARD_LAND" else PL[k]["label"]
-            output_chart.append({"label": label, "value": s_["outBest"] * 100, "color": PL[k]["color"],
-                                 "tip": L("%s：%s 的场景拿到最高总产出", "%s: the highest city output in %s of the scenarios")
-                                 % (label, pct(s_["outBest"]))})
-    texts["OUTPUT_TEXT"] = ""
-    if sl and sl.get("outBest") is not None and am and ep:
-        texts["OUTPUT_TEXT"] = L(
-            "换成不属于任何一方的城市总产出，本模组用面板默认的“计入地块”仍最常拿到最高（%s，AMT %s，EP %s）。只看相邻加成的标准档是 %s："
-            "“计入地块”确实把占好地的代价算了进去。",
-            "Measured by city output, which belongs to none of the planners, this mod with the panel's default Land loss still "
-            "reaches the highest most often (%s; AMT %s, EP %s). Standard, which counts adjacency only, reaches %s: Land loss "
-            "does count the cost of taking good tiles.") % (
-                pct(sl["outBest"]), pct(am["outBest"] or 0), pct(ep["outBest"] or 0),
-                pct(sd["outBest"] or 0) if sd and sd.get("outBest") is not None else "-")
-    if sd and am and ep:
-        texts["SPEED_TEXT"] = L(
-            "游戏里实测，单城 6–8 个区域标准档不到 0.3 秒；3 城联合 2.7 秒（之后标准档加了宽束联合起点，游戏内同规模实测多约 10%%），经面板分帧时游戏照常响应。离线环境里同样的单城规划，"
-            "AMT 慢约 %.0f 倍，EP 慢约 %.0f 倍。",
-            "Measured in the game: one city with 6–8 districts takes under 0.3 s on Standard effort; three cities planned together "
-            "take 2.7 s (Standard has since gained a wide joint start, about 10%% more at the same size), and the game keeps "
-            "responding while the panel computes over several frames. Offline, the same one-city planning takes AMT about %.0f times "
-            "and EP about %.0f times as long. ") % (am["time"] / sd["time"], ep["time"] / sd["time"])
+            no_plot, *((sd["requested"], sd["n"]) if EN else (sd["n"], sd["requested"])))) if sd else ""
+    texts["SPEED_TEXT"] = L(
+        "游戏里实测，单城 6–8 个区域标准档不到 0.3 秒；3 城联合 2.7 秒（之后标准档加了宽束联合起点，游戏内同规模实测多约 10%），"
+        "经面板分帧时游戏照常响应。",
+        "Measured in the game: one city with 6–8 districts takes under 0.3 s on Standard effort; three cities planned together "
+        "take 2.7 s (Standard has since gained a wide joint start, about 10% more at the same size), and the game keeps "
+        "responding while the panel computes over several frames. ")
     # Picking districts per city on the multi tab: tests/offline/bench_multipools.lua, run by hand
     # (docs/self-test-report.md, fifth round).
     texts["MULTIPOOLS_TEXT"] = L(MULTIPOOLS_TEXT, MULTIPOOLS_TEXT_EN)
-    hero = []
-    if sd and am and ep:
-        hero = [
-            {"value": pct(sd["best"]), "label": L("单城场景达到真最优（标准档）；AMT %s，EP %s",
-                                                  "of one-city scenarios at the true optimum (Standard effort); AMT %s, EP %s")
-             % (pct(am["best"]), pct(ep["best"]))},
-            {"value": "+%s / +%s" % (pct(r_a, 0).rstrip("%") + "%", pct(r_e, 0).rstrip("%") + "%"),
-             "label": L("平均比 AMT / Empire Planner 多出的相邻加成", "more adjacency than AMT / Empire Planner on average")},
-            {"value": L("0 违规", "0 violations"), "label": L("方案全部合法，不压玩家的钉，同输入同结果",
-                                                            "every plan valid, no tack of the player overwritten, same input, same plan")},
-            {"value": L("0.25 秒", "0.25 s"), "label": L("游戏内单城 6 个区域（标准档）", "one city, 6 districts, in the game (Standard effort)")},
-        ]
 
     # ---------------------------------------------------------------- robustness
-    def fmt_pair(pr):
-        lo, hi = pr["ci"]
-        p = pr["p"]
-        ptxt = "< 0.001" if p < 0.001 else "%.3f" % p
-        return {"n": str(pr["n"]), "wtl": "%d / %d / %d" % (pr["wins"], pr["ties"], pr["losses"]),
-                "mean": "%+.2f [%+.2f, %+.2f]" % (pr["mean"], lo, hi), "p": ptxt}
-
     robust_best = {}
-    pairs = {}
+    robust_quality = {}
 
-    def robust(sets):
+    def robust(sets, kind):
         table_rows, groups = [], []
-        for set_name, kind, label in sets:
-            sub = summarize.subset(scenarios, set_name, kind)
-            if not sub:
-                continue
-            tab = summarize.per_planner(sub)
-            best = {k: tab[k]["bestShare"] for k in ("sdp:STANDARD", "amt", "ep") if k in tab and tab[k]["bestShare"] is not None}
-            robust_best[set_name + "/" + kind] = best
-            groups.append({"label": label, "key": set_name, "values": {k: v * 100 for k, v in best.items()}})
-            for other, oname in (("amt", "AMT"), ("ep", "EP")):
-                pr = summarize.paired(sub, "sdp:STANDARD", other, "gain")
-                if pr["n"]:
-                    pairs[(set_name, kind, other)] = pr
-                    table_rows.append(dict({"set": L("%s（%d）", "%s (%d)") % (label, len(sub)), "vs": oname,
-                                            "best": "%s / %s" % (pct(best.get("sdp:STANDARD") or 0), pct(best.get(other) or 0))},
-                                           **fmt_pair(pr)))
-        return table_rows, groups
-
-    DEV, HELD = L("开发集", "Development"), L("留出集", "Held-out")
-    robust_rows, robust_groups = robust([("dev", "single", DEV), ("heldout", "single", HELD),
-                                         ("profile:SCI", "single", L("科研 ×3", "Science ×3")),
-                                         ("profile:PROD", "single", L("生产 ×3", "Production ×3")),
-                                         ("profile:FAITH", "single", L("信仰 ×3", "Faith ×3"))])
-    robust_multi_rows, robust_multi_groups = robust([("dev", "multi", DEV), ("heldout", "multi", HELD)])
-    single_pairs = [pr for (s_, kind, o), pr in pairs.items() if kind == "single"]
-    if robust_groups:
-        mins = min(g["values"].get("sdp:STANDARD", 0) for g in robust_groups)
-        amax = max(g["values"].get("amt", 0) for g in robust_groups)
-        emax = max(g["values"].get("ep", 0) for g in robust_groups)
-        all_sig = all(pr["ci"][0] > 0 for pr in single_pairs)
-        texts["ROBUST_TEXT"] = L(
-            "换成开发时没看过的地图，或把一项产出的权重调到 3，结论不变：每一组里本模组达到真最优的比例都不低于 %.0f%%，AMT 不超过 %.0f%%，EP 不超过 %.0f%%%s。",
-            "On maps not looked at during development, or with one yield's weight at 3, the result holds: in every set this mod "
-            "reaches the true optimum in at least %.0f%% of the scenarios, AMT in at most %.0f%%, EP in at most %.0f%%%s.") % (
-                mins, amax, emax, L("；逐场景配对，每一组本模组都显著更高", "; paired by scenario, this mod is significantly higher in every set")
-                if all_sig else "")
-    else:
-        texts["ROBUST_TEXT"] = ""
-
-    # Pinned-pin output pairs for the output table (development set).
-    out_rows_pairs = {}
-    for set_name in ("dev", "heldout"):
-        sub = summarize.subset(scenarios, set_name, "single")
-        for other in ("amt", "ep"):
-            pr = summarize.paired(sub, "sdp:STANDARD_LAND", other, "output")
-            if pr["n"]:
-                out_rows_pairs[(set_name, other)] = pr
-
-    # ---------------------------------------------------------------- cross scoring
-    def cross(kind, sets):
-        table_rows, forest = [], []
         for set_name, label in sets:
             sub = summarize.subset(scenarios, set_name, kind)
             if not sub:
                 continue
-            for scorer, sname in (("amt", "AMT"), ("ep", "EP")):
-                field = "cross_" + scorer
-                means = {}
-                for k in ("sdp:STANDARD", "amt", "ep"):
-                    vals = [e["runs"][k][field] for e in sub.values() if k in e["runs"] and e["runs"][k].get(field) is not None]
-                    if vals:
-                        means[k] = statistics.mean(vals)
-                pr = summarize.paired(sub, "sdp:STANDARD", scorer, field)
-                if not pr["n"] or scorer not in means or "sdp:STANDARD" not in means:
-                    continue
-                row = {"set": L("%s（%d）", "%s (%d)") % (label, len(sub)), "scorer": L("%s 的目标函数", "%s's objective") % sname,
-                       "sdp": "%.2f" % means["sdp:STANDARD"], "amt": "%.2f" % means["amt"] if "amt" in means else "-",
-                       "ep": "%.2f" % means["ep"] if "ep" in means else "-"}
-                row.update(fmt_pair(pr))
-                table_rows.append(row)
-                own = means[scorer]
-                lo, hi = pr["ci"]
-                forest.append({"label": L("%s · 按 %s 的", "%s · by %s") % (label, sname), "scorer": scorer, "color": PL[scorer]["color"],
-                               "value": 100 * (1 + pr["mean"] / own), "lo": 100 * (1 + lo / own), "hi": 100 * (1 + hi / own),
-                               "tip": L("%s · 按 %s 的目标函数：本模组 %.2f，%s 自己 %.2f；逐场景胜 %d 平 %d 负 %d，平均差 %+.2f [%+.2f, %+.2f]",
-                                        "%s · by %s's objective: this mod %.2f, %s's own %.2f; per scenario %d wins, %d ties, %d losses, "
-                                        "mean difference %+.2f [%+.2f, %+.2f]") % (
-                                   label, sname, means["sdp:STANDARD"], sname, own, pr["wins"], pr["ties"], pr["losses"], pr["mean"], lo, hi)})
-        return table_rows, forest
+            tab = summarize.per_planner(sub)
+            best = {k: tab[k]["bestShare"] for k in main_series if k in tab and tab[k]["bestShare"] is not None}
+            robust_best[set_name + "/" + kind] = best
+            st = tab.get("sdp:STANDARD")
+            if st:
+                robust_quality[set_name + "/" + kind] = st["qualityMean"]
+                table_rows.append([L("%s（%d）", "%s (%d)") % (label, len(sub)), pct(st["bestShare"] or 0),
+                                   pct(st["qualityMean"] or 0, 1), pct(st["qualityMin"] or 0)])
+            groups.append({"label": label, "key": set_name, "values": {k: v * 100 for k, v in best.items()}})
+        return table_rows, groups
 
-    def cross_claim(forest, scorer):
-        rs = [r for r in forest if r["scorer"] == scorer]
-        if not rs:
-            return ""
-        who = "AMT" if scorer == "amt" else "EP"
-        d = [r["value"] - 100 for r in rs]
-        lo_, hi_ = min(d), max(d)
-        rng = ("%.0f%%" % abs(lo_)) if round(lo_) == round(hi_) else ("%.0f–%.0f%%" % (abs(lo_), abs(hi_)) if lo_ >= 0 else
-                                                                      L("%+.0f%% 到 %+.0f%%", "%+.0f%% to %+.0f%%") % (lo_, hi_))
-        pos = sum(1 for r in rs if r["lo"] > 100)
-        neg = sum(1 for r in rs if r["hi"] < 100)
-        if EN:
-            head = "scored by %s's own objective, " % who
-            if pos == len(rs):
-                return head + "this mod's plans beat %s's own by %s, significant in every set" % (who, rng)
-            if neg == len(rs):
-                return head + "this mod's plans are %s below %s's own" % (rng, who)
-            if neg == 0 and pos > 0:
-                return head + "this mod's plans are a little higher (%s), but not significantly so in every set" % rng
-            if neg == 0:
-                return head + "the two are level (%s apart, not significant)" % rng
-            return head + "each is ahead in some sets"
-        if pos == len(rs):
-            return "按 %s 的，本模组的方案比 %s 自己的方案高 %s，各组都显著" % (who, who, rng)
-        if neg == len(rs):
-            return "按 %s 的，本模组的方案比 %s 自己的方案低 %s" % (who, who, rng)
-        if neg == 0 and pos > 0:
-            return "按 %s 的，本模组的方案略高（%s），但不是每组都显著" % (who, rng)
-        if neg == 0:
-            return "按 %s 的，两者持平（相差 %s，不显著）" % (who, rng)
-        return "按 %s 的，两者互有高低" % who
-
-    cross_rows, forest_single = cross("single", [("dev", DEV), ("heldout", HELD)])
-    cross_multi_rows, forest_multi = cross("multi", [("dev", DEV), ("heldout", HELD)])
-
-    def cap1(t):
-        return t[:1].upper() + t[1:]
-    texts["CROSS_TEXT"] = (L(
-        "AMT、EP 各有自己的目标函数：AMT 把特色区域的产出放大 6–10.5 倍再减地块损失，EP 用自己的规则引擎并扣 0.15 倍地块产出。"
-        "用它们自己的目标函数给方案打分，%s；%s。",
-        "AMT and EP each have an objective of their own: AMT multiplies specialty districts' yields by 6–10.5 and subtracts the "
-        "land loss; EP uses its own rules engine and subtracts 0.15 × the tiles' yields. %s; %s.") % (
-        L(cross_claim(forest_single, "amt"), cap1(cross_claim(forest_single, "amt"))), cross_claim(forest_single, "ep"))) if forest_single else ""
-    texts["CROSS_MULTI_TEXT"] = (L("%s；%s。", "%s; %s.") % (
-        L(cross_claim(forest_multi, "ep"), cap1(cross_claim(forest_multi, "ep"))), cross_claim(forest_multi, "amt"))) if forest_multi else ""
-    texts["FOREST_CAP"] = L("按对手自己的目标函数，本模组方案的平均分占打分方自己方案平均分的百分比；横线是 95% 置信区间。"
-                            "点在 100% 右边表示按对手自己的标准，本模组的方案也更好；横线跨过 100% 表示差别不显著。",
-                            "By the rival's own objective, this mod's mean score as a percentage of the scoring rival's own plans; "
-                            "the horizontal lines are 95% confidence intervals. A point right of 100% means this mod's plans are better by "
-                            "the rival's own standard too; a line across 100% means the difference is not significant.")
+    DEV, HELD = L("开发集", "Development"), L("留出集", "Held-out")
+    robust_rows, robust_groups = robust([("dev", DEV), ("heldout", HELD), ("profile:SCI", L("科研 ×3", "Science ×3")),
+                                         ("profile:PROD", L("生产 ×3", "Production ×3")),
+                                         ("profile:FAITH", L("信仰 ×3", "Faith ×3"))], "single")
+    _, robust_multi_groups = robust([("dev", DEV), ("heldout", HELD)], "multi")
+    texts["ROBUST_TEXT"] = ""
+    if robust_groups:
+        vals = [g["values"].get("sdp:STANDARD", 0) for g in robust_groups]
+        quals = [robust_quality[k] for k in robust_quality if k.endswith("/single") and robust_quality[k] is not None]
+        texts["ROBUST_TEXT"] = L(
+            "换成开发时没看过的地图，或把一项产出的权重调到 3，标准档达到真最优的比例在 %.0f%%–%.0f%% 之间，每一组的平均质量都不低于 %s。",
+            "On maps not looked at during development, or with one yield's weight at 3, Standard reaches the true optimum in "
+            "%.0f%%–%.0f%% of the scenarios, and the mean quality of every set is at least %s.") % (
+                min(vals), max(vals), pct(min(quals), 1) if quals else "-")
 
     # ---------------------------------------------------------------- multi texts
     texts["MULTI_TEXT"] = ""
+    mb = robust_best.get("dev/multi", {})
     if M.get("sdp:STANDARD"):
-        mb = robust_best.get("dev/multi", {})
         every = mb.get("sdp:STANDARD") == 1
         texts["MULTI_TEXT"] = L(
-            "联合规划在%s达到参照。用单城页签一座一座规划，平均只有参照的 %s：差的是跨城互惠和市政广场的位置。AMT 也做联合规划，平均 %s；EP %s。",
-            "Joint planning reaches the reference in %s. Planning the cities one at a time on the One city tab reaches on average "
-            "only %s of it: what it misses is the bonuses across cities and where the Government Plaza goes. AMT also "
-            "plans cities together, %s on average; EP %s.") % (
+            "标准档的联合规划在%s达到参照，平均是参照的 %s。用单城页签一座一座规划，平均只有参照的 %s：差的是跨城互惠和市政广场的位置。",
+            "Joint planning on Standard reaches the reference in %s, %s of it on average. Planning the cities one at a time on "
+            "the One city tab reaches on average only %s of it: what it misses is the bonuses across cities and where the "
+            "Government Plaza goes.") % (
                 (L("全部 %d 个场景里都", "all %d scenarios") % M["sdp:STANDARD"]["n"]) if every else
                 (L(" %s 的场景", "%s of the scenarios") % pct(mb.get("sdp:STANDARD") or 0)),
-                pct(M["sdp:CITY_BY_CITY"]["quality"]) if M.get("sdp:CITY_BY_CITY") else "-",
-                pct(M["amt"]["quality"]) if M.get("amt") else "-", pct(M["ep"]["quality"]) if M.get("ep") else "-")
-        if M.get("amt"):
-            texts["AMT_MULTI_TIME"] = L("多城联合离线中位 %.0f 秒，是本模组标准档的 %.0f 倍。",
-                                        "Several cities together: median %.0f s offline, %.0f times this mod's Standard.") % (
-                M["amt"]["time"], M["amt"]["time"] / max(M["sdp:STANDARD"]["time"], 0.1))
+                pct(M["sdp:STANDARD"]["quality"], 1),
+                pct(M["sdp:CITY_BY_CITY"]["quality"]) if M.get("sdp:CITY_BY_CITY") else "-")
     hom = robust_best.get("heldout/multi", {})
-    multi_losses = sum(pr["losses"] for (s_, kind, o), pr in pairs.items() if kind == "multi")
     texts["MULTI_ROBUST_TEXT"] = (L(
-        "留出集的 %d 个新地图上，本模组 %s 的场景达到参照，AMT %s，EP %s%s。",
-        "On the %d new maps of the held-out set, this mod reaches the reference in %s of the scenarios, AMT in %s, EP in %s%s.") % (
-            len(summarize.subset(scenarios, "heldout", "multi")), pct(hom["sdp:STANDARD"]), pct(hom.get("amt") or 0), pct(hom.get("ep") or 0),
-            L("；逐场景配对，开发集和留出集里本模组都没有输过一个场景",
-              "; paired by scenario, this mod loses no scenario in either the development or the held-out set")
-            if multi_losses == 0 else "")) if hom.get("sdp:STANDARD") is not None else ""
+        "留出集的 %d 个新地图上，标准档 %s 的场景达到参照，平均是参照的 %s。",
+        "On the %d new maps of the held-out set, Standard reaches the reference in %s of the scenarios, %s of it on average.") % (
+            len(summarize.subset(scenarios, "heldout", "multi")), pct(hom["sdp:STANDARD"]),
+            pct(robust_quality.get("heldout/multi") or 0, 1))) if hom.get("sdp:STANDARD") is not None else ""
     strip = []
     for k in mseries:
         pts_ = [{"v": r["values"][k], "tip": L("%s · %s：%.1f%%（%s）", "%s · %s: %.1f%% (%s)") % (
@@ -878,23 +421,10 @@ def build(files=None, make_snapshots=True, version=None, date=None, lang="zh"):
         room = [sid for sid in sorted(vsub) if sid not in saturated]
         comps = [("sdp:STANDARD_COV1", "sdp:STANDARD", L("覆盖权重 1 对 不计（标准档）", "Weight 1 vs off (Standard)")),
                  ("sdp:STANDARD_COV3", "sdp:STANDARD", L("覆盖权重 3 对 不计（标准档）", "Weight 3 vs off (Standard)")),
-                 ("sdp:FINE_COV1", "sdp:FINE", L("覆盖权重 1 对 不计（精细档）", "Weight 1 vs off (Thorough)")),
-                 ("sdp:STANDARD", "amt", L("本模组（不计覆盖）对 AMT", "This mod (off) vs AMT")),
-                 ("sdp:STANDARD_COV1", "amt", L("本模组（覆盖权重 1）对 AMT", "This mod (weight 1) vs AMT")),
-                 ("sdp:STANDARD_COV3", "amt", L("本模组（覆盖权重 3）对 AMT", "This mod (weight 3) vs AMT"))]
-        # A plan with a district a city did not ask for (AMT: reach requests
-        # open to every city) gets adjacency it should not have: such
-        # scenarios are counted apart, not compared.
-        def asked_only(sid, k):
-            r = vrun(sid, k)
-            return r is not None and not (r.get("violations") or {}).get("not_requested")
-        par = {}
+                 ("sdp:FINE_COV1", "sdp:FINE", L("覆盖权重 1 对 不计（精细档）", "Weight 1 vs off (Thorough)"))]
         for a, b, label in comps:
-            fair = {sid: e for sid, e in vsub.items() if asked_only(sid, a) and asked_only(sid, b)}
-            pr = summarize.pareto(fair, a, b)
-            pr["excluded"] = sum(1 for sid in vsub if vrun(sid, a) and vrun(sid, b) and sid not in fair)
-            pr["n"] += pr["excluded"]
-            par[(a, b)] = pr
+            pr = summarize.pareto(vsub, a, b)
+            pr["excluded"] = 0
             if pr["n"]:
                 coverage["rows"].append(dict(pr, label=label))
 
@@ -908,10 +438,6 @@ def build(files=None, make_snapshots=True, version=None, date=None, lang="zh"):
             return dc, dg
         c1, g1 = deltas("sdp:STANDARD_COV1", "sdp:STANDARD", room)
         c3, g3 = deltas("sdp:STANDARD_COV3", "sdp:STANDARD", room)
-        f1, fg1 = deltas("sdp:FINE_COV1", "sdp:FINE", sorted(vsub))
-        amt_runs = [vrun(sid, "amt") for sid in sorted(vsub) if vrun(sid, "amt")]
-        amt_not_req = sum((r.get("violations") or {}).get("not_requested", 0) for r in amt_runs)
-        amt_scn_not_req = sum(1 for r in amt_runs if (r.get("violations") or {}).get("not_requested", 0) > 0)
         # Scenarios where weight 1 lost adjacency without reaching more cities
         # (a search wobble of the standard tier when the fine tier trades).
         wobble = [sid for sid in room if vrun(sid, "sdp:STANDARD_COV1") and vrun(sid, "sdp:STANDARD")
@@ -923,9 +449,7 @@ def build(files=None, make_snapshots=True, version=None, date=None, lang="zh"):
                        "more1": sum(1 for d in c1 if d > 0),
                        "loss1": sum(1 for dc, dg in zip(c1, g1) if dc > 0 and dg < 0),
                        "more3": sum(1 for d in c3 if d > 0), "gain3": statistics.mean(g3) if g3 else 0,
-                       "cov3": max(c3) if c3 else 0, "amt": len(amt_runs), "amtNotReq": amt_not_req, "amtScnNotReq": amt_scn_not_req}
-        pa = par.get(("sdp:STANDARD_COV1", "amt"))
-        pa3 = par.get(("sdp:STANDARD_COV3", "amt"))
+                       "cov3": max(c3) if c3 else 0}
         gain3 = ("%+.1f" % cov_summary["gain3"]).replace("-", "−")
         if EN:
             text = ("In %d of the %d scenarios every city is covered even with coverage off: the cities all lie within 6 tiles of "
@@ -938,25 +462,7 @@ def build(files=None, make_snapshots=True, version=None, date=None, lang="zh"):
                     text += "; in %d more Standard covers no more cities and loses a little adjacency%s" % (
                         len(wobble), " (on Thorough it is the usual trade, a little less adjacency for 1 more city covered: a wobble "
                         "of Standard's search)" if len(fine_trades) == len(wobble) else "")
-                text += ". Weight 3 covers at most %d more and changes adjacency by %s on average. " % (cov_summary["cov3"], gain3)
-            if amt_runs and pa and pa["n"]:
-                text += "AMT has coverage of its own and gets the same per-city lists. %s" % (
-                    ("In %d scenario%s it put a district into a city whose list did not have it, the problem described in section 3, "
-                     "so %s not compared; " % (amt_scn_not_req, "" if amt_scn_not_req == 1 else "s",
-                                               "that scenario is" if amt_scn_not_req == 1 else "those scenarios are")) if amt_not_req else "")
-
-                def outcome(pr):
-                    return join_en(["%d %s" % (pr[k], w) for k, w in (("better", "better"), ("same", "the same"),
-                                                                      ("tradeoff", "a trade-off"), ("worse", "worse")) if pr[k]])
-                text += "%s %d scenarios, on both measures together, this mod at weight 1 is %s" % (
-                    "in the other" if amt_not_req else "In the", pa["n"] - pa["excluded"], outcome(pa))
-                shown = [pa]
-                if pa3 and pa3["n"]:
-                    text += "; at weight 3, %s" % outcome(pa3)
-                    shown.append(pa3)
-                if all(pr["worse"] == 0 for pr in shown):
-                    text += "; %s" % ("worse in none at either weight" if len(shown) > 1 else "worse in none")
-                text += "."
+                text += ". Weight 3 covers at most %d more and changes adjacency by %s on average." % (cov_summary["cov3"], gain3)
         else:
             text = "%d 个场景里，%d 个不计覆盖也已全部覆盖：几座城都在工业区、娱乐中心 6 格以内，放在哪都够得着。" % (len(vsub), len(saturated))
             if room:
@@ -967,31 +473,14 @@ def build(files=None, make_snapshots=True, version=None, date=None, lang="zh"):
                     text += "；另 %d 个标准档没多覆盖、相邻加成反而略降%s" % (
                         len(wobble), "，精细档下是正常的“相邻略降、覆盖多 1 座”，属于标准档搜索的波动" if len(fine_trades) == len(wobble) else "")
                 text += "。权重 3 时最多多覆盖 %d 座，相邻加成平均 %s。" % (cov_summary["cov3"], gain3)
-            if amt_runs and pa and pa["n"]:
-                text += "AMT 自带覆盖，用同样的逐城清单。%s" % (
-                    ("它在 %d 个场景里把区域放进了清单上没有它的城市，这正是第 3 节说的问题，这%s场景不比；" % (
-                        amt_scn_not_req, "个" if amt_scn_not_req == 1 else "些")) if amt_not_req else "")
-
-                def outcome(pr):
-                    parts = [("%d 个" + w) % pr[k] for k, w in (("better", "更好"), ("same", "相同"), ("tradeoff", "各有胜负"), ("worse", "更差")) if pr[k]]
-                    return "、".join(parts)
-                text += "其余 %d 个场景两项一起比，本模组权重 1 时 %s" % (pa["n"] - pa["excluded"], outcome(pa))
-                shown = [pa]
-                if pa3 and pa3["n"]:
-                    text += "；权重 3 时 %s" % outcome(pa3)
-                    shown.append(pa3)
-                if all(pr["worse"] == 0 for pr in shown):
-                    text += "；%s没有更差的" % ("两种权重都" if len(shown) > 1 else "")
-                text += "。"
         texts["COVERAGE_TEXT"] = text
-        coverage["head"] = L(["场景", "不计覆盖", "覆盖权重 1", "覆盖权重 3", "AMT"],
-                             ["Scenario", "Coverage off", "Coverage weight 1", "Coverage weight 3", "AMT"])
+        coverage["head"] = L(["场景", "不计覆盖", "覆盖权重 1", "覆盖权重 3"],
+                             ["Scenario", "Coverage off", "Coverage weight 1", "Coverage weight 3"])
         for sid in sorted(vsub):
             cells = [sid]
-            for k in ("sdp:STANDARD", "sdp:STANDARD_COV1", "sdp:STANDARD_COV3", "amt"):
+            for k in ("sdp:STANDARD", "sdp:STANDARD_COV1", "sdp:STANDARD_COV3"):
                 r = vrun(sid, k)
-                cells.append("%g / %d%s" % (r["gain"], r["coverage"], L("（%d 个放错城）", " (%d in the wrong city)") % r["violations"]["not_requested"]
-                                              if (r.get("violations") or {}).get("not_requested") else "") if r else "—")
+                cells.append("%g / %d" % (r["gain"], r["coverage"]) if r else "—")
             coverage["table"].append(cells)
 
     # ---------------------------------------------------------------- wonders
@@ -1000,17 +489,16 @@ def build(files=None, make_snapshots=True, version=None, date=None, lang="zh"):
     wsub = summarize.subset(scenarios, "wonders", "single")
     if wsub:
         wtab = summarize.per_planner(wsub)
-        for k in ("sdp:STANDARD", "sdp:STANDARD_LAND", "amt", "ep"):
+        for k in ("sdp:STANDARD", "sdp:STANDARD_LAND"):
             if k not in wtab:
                 continue
             placed = sum((e["runs"][k].get("wondersPlaced") or 0) for e in wsub.values() if k in e["runs"])
             wanted = sum((e["runs"][k].get("wondersRequested") or 0) for e in wsub.values() if k in e["runs"])
             v = wtab[k]
-            wnum[k] = (placed, wanted, v["bestShare"] or 0)
+            wnum[k] = (placed, wanted, v["bestShare"] or 0, v["qualityMean"] or 0)
             wonder_rows.append({"label": PL.get(k, {"label": k})["label"], "wonders": "%d / %d" % (placed, wanted),
                                 "legal": "%d / %d" % (round((v["legalShare"] or 0) * (v["runs"] - v["errors"])), v["runs"]),
-                                "best": pct(v["bestShare"] or 0), "quality": pct(v["qualityMean"] or 0, 1),
-                                "outBest": pct(v["outputBestShare"]) if v.get("outputBestShare") is not None else "-"})
+                                "best": pct(v["bestShare"] or 0), "quality": pct(v["qualityMean"] or 0, 1)})
     why = {"NO_LEGAL_PLOT": 0, "NO_FREE_PLOT": 0}
     for sid in wsub:
         r = raw.get((sid, "sdp:STANDARD"))
@@ -1020,107 +508,48 @@ def build(files=None, make_snapshots=True, version=None, date=None, lang="zh"):
                 why[parts[2]] += 1
     wonder_groups = []
     texts["WONDER_TEXT"] = ""
-    if all(k in wnum for k in ("sdp:STANDARD", "amt", "ep")):
-        ws, wa, we = wnum["sdp:STANDARD"], wnum["amt"], wnum["ep"]
-        wonder_groups = [{"label": L("放下的奇观", "Wonders placed"),
-                          "values": {k: wnum[k][0] / max(wnum[k][1], 1) * 100 for k in ("sdp:STANDARD", "amt", "ep")}},
-                         {"label": L("达到真最优的场景", "Scenarios at the true optimum"),
-                          "values": {k: wnum[k][2] * 100 for k in ("sdp:STANDARD", "amt", "ep")}}]
-        left = ws[1] - ws[0]
+    if "sdp:STANDARD" in wnum:
+        ws = wnum["sdp:STANDARD"]
+        wonder_groups = [{"label": L("放下的奇观", "Wonders placed"), "values": {"sdp:STANDARD": ws[0] / max(ws[1], 1) * 100}},
+                         {"label": L("达到真最优的场景", "Scenarios at the true optimum"), "values": {"sdp:STANDARD": ws[2] * 100}}]
         texts["WONDER_TEXT"] = L(
-            "%s，EP 只放下 %d 座；连同区域的加成一起比，本模组在 %s 的场景达到真最优，AMT %s，EP %s。本模组没放下的 %d 座里，%d 座在城市 3 环内根本没有合法格。",
-            "%s, EP only %d. Counting the districts' adjacency too, this mod reaches the true optimum in %s of the scenarios, AMT in %s, "
-            "EP in %s. Of the %d wonders this mod did not place, %d have no valid tile at all within the city's 3 rings.") % (
-                (L("本模组与 AMT 都放下了 %d 座奇观中的 %d 座", "This mod and AMT both place %d of the %d wonders") % (
-                    (ws[1], ws[0]) if not EN else (ws[0], ws[1]))) if ws[0] == wa[0] else
-                (L("本模组放下了 %d 座奇观中的 %d 座，AMT %d 座", "This mod places %d of the %d wonders, AMT %d") % (
-                    (ws[1], ws[0], wa[0]) if not EN else (ws[0], ws[1], wa[0]))),
-                we[0], pct(ws[2]), pct(wa[2]), pct(we[2]), left, why["NO_LEGAL_PLOT"])
+            "标准档放下了 %d 座奇观中的 %d 座；没放下的 %d 座里，%d 座在城市 3 环内根本没有合法格。连同区域的加成一起，%s 的场景达到真最优，平均质量 %s。",
+            "Standard places %d of the %d wonders; of the %d it does not place, %d have no valid tile at all within the city's "
+            "3 rings. Counting the districts' adjacency too, it reaches the true optimum in %s of the scenarios, with a mean "
+            "quality of %s.") % (
+                ((ws[0], ws[1]) if EN else (ws[1], ws[0])) + (ws[1] - ws[0], why["NO_LEGAL_PLOT"], pct(ws[2]), pct(ws[3], 1)))
 
-    # ---------------------------------------------------------------- sites
-    site_rows = []
-    site_pts = []
-    csub = summarize.subset(scenarios, "sites", "sites")
-    texts["SITES_TEXT"] = ""
-    smin, smax_, sticks = 0, 100, [0, 50, 100]
-    if csub:
-        for k in ("sdp:STANDARD", "ep"):
-            runs = [e["runs"][k] for e in csub.values() if k in e["runs"] and not e["runs"][k].get("error")]
-            if not runs:
-                continue
-
-            def avg(f, runs=runs):
-                vals = [r.get(f) for r in runs if r.get(f) is not None]
-                return statistics.mean(vals) if vals else 0
-            site_rows.append({"label": PL.get(k, {"label": k})["label"],
-                              "legal": "%d / %d" % (sum(1 for r in runs if r["legal"]), len(runs)),
-                              "value": "%.1f" % avg("siteValue"), "tiles": "%.1f" % avg("tileValue"),
-                              "districts": "%.1f" % avg("districtPotential"), "water": "%.2f" % avg("freshWater"),
-                              "lux": "%.2f" % avg("newLuxuries"), "overlap": "%.1f" % avg("overlap")})
-        vals = []
-        for sid, e in sorted(csub.items()):
-            us, o = e["runs"].get("sdp:STANDARD"), e["runs"].get("ep")
-            if us and o and us.get("siteValue") is not None and o.get("siteValue") is not None:
-                site_pts.append({"x": us["siteValue"], "y": o["siteValue"], "bad": not o["legal"],
-                                 "label": L("%s：本模组 %.1f，EP %.1f", "%s: this mod %.1f, EP %.1f") % (sid, us["siteValue"], o["siteValue"])})
-                vals += [us["siteValue"], o["siteValue"]]
-        if vals:
-            smin = int((min(vals) - 3) // 10 * 10)
-            smax_ = int(((max(vals) + 3) // 10 + 1) * 10)
-            sticks = list(range(smin, smax_ + 1, 10))
-        pr = summarize.paired(csub, "sdp:STANDARD", "ep", "gain")
-        if pr["n"] and len(site_rows) == 2:
-            us, ep_row = site_rows
-            ours, theirs = [], []
-            for f, better, low in (("tiles", L("地块产出更高", "higher tile yields"), False),
-                                   ("districts", L("区域潜力更高", "higher district potential"), False),
-                                   ("water", L("更常有淡水", "Fresh Water more often"), False),
-                                   ("lux", L("新的奢侈资源更多", "more new luxury resources"), False),
-                                   ("overlap", L("与已有城市重叠更少", "less overlap with existing cities"), True)):
-                a_, b_ = float(us[f]), float(ep_row[f])
-                if a_ == b_:
-                    continue
-                ((ours if (a_ < b_) == low else theirs)).append(better)
-            if EN:
-                texts["SITES_TEXT"] = (
-                    "AMT does not choose city sites, so only EP is compared. Over %d scenarios this mod's site value wins %d, ties %d "
-                    "and loses %d. This mod's sites have %s; EP's have %s." % (
-                        pr["n"], pr["wins"], pr["ties"], pr["losses"], join_en(ours) or "no part ahead", join_en(theirs) or "no part ahead"))
-            else:
-                texts["SITES_TEXT"] = (
-                    "AMT 不自动选城址，只比 EP。%d 个场景里本模组的城址总值胜 %d、平 %d、负 %d。本模组的城址%s；EP 的城址%s。" % (
-                        pr["n"], pr["wins"], pr["ties"], pr["losses"], "、".join(ours) or "没有占优的分项", "、".join(theirs) or "没有占优的分项"))
-
-    # ---------------------------------------------------------------- overview table (5.1)
     # ---------------------------------------------------------------- true optimum (issue 48)
     # Every category against its reference: the proven optimum where the
     # oracle proved one, else the range [best known, upper end] (the oracle
     # cut at its node limit, or the long-run reference for several cities,
-    # issue 40). A planner's share of the optimum is at least gain / upper
+    # issue 40). A tier's share of the optimum is at least gain / upper
     # and at most gain / best known; with every scene proven the two agree.
+    TIERS = ["sdp:FAST", "sdp:STANDARD", "sdp:FINE"]
     OPT_SETS = [
-        ("dev", "single", "单城·开发集", "One city, development set", ["sdp:FAST", "sdp:STANDARD", "sdp:FINE", "amt", "ep"]),
-        ("heldout", "single", "单城·留出集", "One city, held-out set", ["sdp:FAST", "sdp:STANDARD", "sdp:FINE", "amt", "ep"]),
-        ("profile:SCI", "single", "偏科技（科技 ×3）", "Science weighted 3", ["sdp:STANDARD", "amt", "ep"]),
-        ("profile:PROD", "single", "偏生产力（×3）", "Production weighted 3", ["sdp:STANDARD", "amt", "ep"]),
-        ("profile:FAITH", "single", "偏信仰（×3）", "Faith weighted 3", ["sdp:STANDARD", "amt", "ep"]),
-        ("real", "single", "真实存档·单城", "Real saves, one city", ["sdp:FAST", "sdp:STANDARD", "sdp:FINE", "amt", "ep"]),
-        ("large", "single", "大城（9–12 个区域）·开发集", "Large city (9–12 districts), development", ["sdp:FAST", "sdp:STANDARD", "sdp:FINE", "amt", "ep"]),
-        ("large/heldout", "single", "大城·留出集", "Large city, held-out", ["sdp:FAST", "sdp:STANDARD", "sdp:FINE", "amt", "ep"]),
-        ("pools", "single", "从候选里挑·开发集", "Picking from the pool, development", ["sdp:FAST", "sdp:STANDARD", "sdp:FINE"]),
-        ("pools/heldout", "single", "从候选里挑·留出集", "Picking from the pool, held-out", ["sdp:FAST", "sdp:STANDARD", "sdp:FINE"]),
-        ("wonders", "single", "奇观与区域·开发集", "Wonders with districts, development", ["sdp:STANDARD", "amt", "ep"]),
-        ("wonders/heldout", "single", "奇观与区域·留出集", "Wonders with districts, held-out", ["sdp:STANDARD", "amt", "ep"]),
-        ("smallmulti", "multi", "小多城（2–4 城）·开发集", "Small several cities (2–4), development", ["sdp:FAST", "sdp:STANDARD", "sdp:FINE", "sdp:CITY_BY_CITY", "amt", "ep"]),
-        ("smallmulti/heldout", "multi", "小多城·留出集", "Small several cities, held-out", ["sdp:FAST", "sdp:STANDARD", "sdp:FINE", "sdp:CITY_BY_CITY", "amt", "ep"]),
-        ("dev", "multi", "多城（3–4 城）·开发集", "Several cities (3–4), development", ["sdp:FAST", "sdp:STANDARD", "sdp:FINE", "sdp:CITY_BY_CITY", "amt", "ep"]),
-        ("heldout", "multi", "多城·留出集", "Several cities, held-out", ["sdp:FAST", "sdp:STANDARD", "sdp:FINE", "sdp:CITY_BY_CITY", "amt", "ep"]),
+        ("dev", "single", "单城·开发集", "One city, development set", TIERS),
+        ("heldout", "single", "单城·留出集", "One city, held-out set", TIERS),
+        ("profile:SCI", "single", "偏科技（科技 ×3）", "Science weighted 3", ["sdp:STANDARD"]),
+        ("profile:PROD", "single", "偏生产力（×3）", "Production weighted 3", ["sdp:STANDARD"]),
+        ("profile:FAITH", "single", "偏信仰（×3）", "Faith weighted 3", ["sdp:STANDARD"]),
+        ("real", "single", "真实存档·单城", "Real saves, one city", TIERS),
+        ("large", "single", "大城（9–12 个区域）·开发集", "Large city (9–12 districts), development", TIERS),
+        ("large/heldout", "single", "大城·留出集", "Large city, held-out", TIERS),
+        ("pools", "single", "从候选里挑·开发集", "Picking from the pool, development", TIERS),
+        ("pools/heldout", "single", "从候选里挑·留出集", "Picking from the pool, held-out", TIERS),
+        ("wonders", "single", "奇观与区域·开发集", "Wonders with districts, development", ["sdp:STANDARD"]),
+        ("wonders/heldout", "single", "奇观与区域·留出集", "Wonders with districts, held-out", ["sdp:STANDARD"]),
+        ("smallmulti", "multi", "小多城（2–4 城）·开发集", "Small several cities (2–4), development", TIERS + ["sdp:CITY_BY_CITY"]),
+        ("smallmulti/heldout", "multi", "小多城·留出集", "Small several cities, held-out", TIERS + ["sdp:CITY_BY_CITY"]),
+        ("dev", "multi", "多城（3–4 城）·开发集", "Several cities (3–4), development", TIERS + ["sdp:CITY_BY_CITY"]),
+        ("heldout", "multi", "多城·留出集", "Several cities, held-out", TIERS + ["sdp:CITY_BY_CITY"]),
     ]
+    OPT_COLS = TIERS + ["sdp:CITY_BY_CITY"]
     OPT_HEAD = {"sdp:FAST": L("快速", "Fast"), "sdp:STANDARD": L("标准", "Standard"), "sdp:FINE": L("精细", "Thorough"),
-                "sdp:CITY_BY_CITY": L("逐城依次", "City by city"), "amt": "AMT", "ep": "EP"}
+                "sdp:CITY_BY_CITY": L("逐城依次", "City by city")}
 
     def optimum_stats(sub, k):
-        """Shares of the reference for planner k over the scenes of `sub` that have a reference."""
+        """Shares of the reference for tier k over the scenes of `sub` that have a reference."""
         low, known, hit, n, over, fewer = [], [], 0, 0, 0, 0
         for sid, e in sorted(sub.items()):
             r = e["runs"].get(k)
@@ -1152,7 +581,7 @@ def build(files=None, make_snapshots=True, version=None, date=None, lang="zh"):
         proven = sum(1 for e in sub.values() if e.get("optimum") is not None)
         ranged = len(sub) - proven
         cells, data = [], {}
-        for k in ["sdp:FAST", "sdp:STANDARD", "sdp:FINE", "sdp:CITY_BY_CITY", "amt", "ep"]:
+        for k in OPT_COLS:
             st = optimum_stats(sub, k) if k in planners else None
             data[k] = st
             if st is None:
@@ -1171,10 +600,9 @@ def build(files=None, make_snapshots=True, version=None, date=None, lang="zh"):
     texts["OPTIMUM_TABLE"] = (
         '<table class="opt"><thead><tr><th>%s</th><th class="num">%s</th>%s</tr></thead><tbody>%s</tbody></table>' % (
             L("场景", "Scenarios"), L("已证明", "Proven"),
-            "".join('<th class="num">%s</th>' % OPT_HEAD[k] for k in ["sdp:FAST", "sdp:STANDARD", "sdp:FINE", "sdp:CITY_BY_CITY", "amt", "ep"]),
+            "".join('<th class="num">%s</th>' % OPT_HEAD[k] for k in OPT_COLS),
             "".join(opt_rows))) if opt_rows else ""
     over_total = sum((st or {}).get("over", 0) for d in opt_data.values() for st in d["planners"].values())
-    texts["OPTIMUM_OVER"] = str(over_total)
     fewer_total = sum((st or {}).get("fewer", 0) for d in opt_data.values() for st in d["planners"].values())
     # The oracle's own checks over every reference run (cmp_oracle.lua).
     ref_runs = viol = brute_n = brute_ok = climb_n = climb_above = 0
@@ -1201,7 +629,7 @@ def build(files=None, make_snapshots=True, version=None, date=None, lang="zh"):
     pl = [opt_data.get(("pools", "single")), opt_data.get(("pools/heldout", "single"))]
     pl = [d for d in pl if d]
     texts["POOLS_OPT_TEXT"] = ""
-    if pl and all(d["planners"].get(k) for d in pl for k in ("sdp:FAST", "sdp:STANDARD", "sdp:FINE")):
+    if pl and all(d["planners"].get(k) for d in pl for k in TIERS):
         n_ = sum(d["n"] for d in pl)
         pr_ = sum(d["proven"] for d in pl)
 
@@ -1211,9 +639,9 @@ def build(files=None, make_snapshots=True, version=None, date=None, lang="zh"):
         def hits(k):
             return sum(d["planners"][k]["hit"] for d in pl)
         texts["POOLS_OPT_TEXT"] = L(
-            "离线对比另有 %d 个从候选里挑的场景（开发集 P、留出集 HP：中期一座城必建学院、商业中心，再从剧院广场、工业区、娱乐中心和港口或军营里挑 2 或 3 个），"
+            "离线评估另有 %d 个从候选里挑的场景（开发集 P、留出集 HP：中期一座城必建学院、商业中心，再从剧院广场、工业区、娱乐中心和港口或军营里挑 2 或 3 个），"
             "真最优对每种组合各做一次分支定界，%d 个已证明：快速档平均达到真最优的 %s（%d 个正好是），标准档 %s（%d 个），精细档 %s（%d 个）。",
-            "The offline comparison also has %d picking scenarios (development set P, held-out set HP: a mid-game city must have a "
+            "The offline evaluation also has %d picking scenarios (development set P, held-out set HP: a mid-game city must have a "
             "Campus and a Commercial Hub and picks 2 or 3 more from a Theater Square, an Industrial Zone, an Entertainment Complex "
             "and a Harbor or Encampment); the optimum runs the branch and bound once for every combination, and %d are proven: "
             "Fast reaches %s of the optimum on average (the optimum itself in %d), Standard %s (%d), Thorough %s (%d).") % (
@@ -1226,23 +654,13 @@ def build(files=None, make_snapshots=True, version=None, date=None, lang="zh"):
             if line.strip() and (json.loads(line).get("plan") or {}).get("stats", {}).get("oracle", {}).get("proven"):
                 n_land += 1
     texts["N_LAND_ORACLE"] = str(n_land)
-    dv, ho = opt_data.get(("dev", "single")), opt_data.get(("heldout", "single"))
-    if dv and dv["proven"] == dv["n"] and all(dv["planners"].get(k) for k in ("sdp:STANDARD", "amt", "ep")):
-        s_, a_, e_ = (dv["planners"][k] for k in ("sdp:STANDARD", "amt", "ep"))
-        texts["SUMMARY_COMPARE"] = L(
-            "在 %d 个模拟实际对局的单城场景上与 AMT r49、Empire Planner 对比，每个场景的真最优都先用分支定界求出并证明（附录 B.1）："
-            "本模组标准档平均达到真最优的 %s，%d 个场景正好是真最优；AMT %s、%d 个，EP %s、%d 个。本模组%s。",
-            "On %d one-city scenarios modeled on real games, compared with AMT r49 and Empire Planner, the true optimum of every "
-            "scenario was first found and proven by branch and bound (appendix B.1): this mod on Standard effort reaches %s of it "
-            "on average and the optimum itself in %d scenarios; AMT %s and %d, EP %s and %d. This mod: %s.") % (
-                dv["n"], pct(s_["low"], 1), s_["hit"], pct(a_["low"], 1), a_["hit"], pct(e_["low"], 1), e_["hit"], sd_claim)
     proven_all = sum(d["proven"] for d in opt_data.values())
     n_all = sum(d["n"] for d in opt_data.values())
     texts["OPTIMUM_TEXT"] = L(
-        "下表把每类场景里各规划器的加成和真最优比：平均达到真最优的百分之几，以及正好是真最优的场景数。%d 个场景里 %d 个的真最优已证明；"
+        "下表按场景类别列出各档的加成占真最优的比例：平均百分之几，以及正好是真最优的场景数。%d 个场景里 %d 个的真最优已证明；"
         "没证明的（多是 10–12 个区域的大城，以及 3–4 座城的多城）给的是范围：前一个数按真最优的上界算，是比例的下限，后一个数按已知最好的方案算。"
         "%s",
-        "The table sets each planner's adjacency against the true optimum in every kind of scenario: the mean share of the "
+        "The table sets each effort level's adjacency against the true optimum in every kind of scenario: the mean share of the "
         "optimum and the number of scenarios at the optimum itself. Of %d scenarios, %d have a proven optimum; for the others "
         "(mostly large cities of 10–12 districts, and 3–4 cities together) the table gives a range: the first number is against the "
         "optimum's upper bound, a floor of the share, the second against the best plan known. %s") % (
@@ -1259,91 +677,103 @@ def build(files=None, make_snapshots=True, version=None, date=None, lang="zh"):
     texts["OPTIMUM_NOTE"] = L(
         "真最优的求法：在本模组搜索用的候选格和合法性上做分支定界，上界 = 每个区域单独的值 + 相邻区域两两的配对值，配对值取 DMT "
         "在那两格上的实测和查表里大的一个，凑满几个邻居才给加成的规则按份额计。每个算过的方案都检查不超过它的上界，超过就不算证明；"
-        "小场景与逐一枚举全部方案对照，另有不依赖上界的爬山检查。大城的“已知最好”是各规划器和分支定界找到的最好方案，"
+        "小场景与逐一枚举全部方案对照，另有不依赖上界的爬山检查。大城的“已知最好”是所有离线运行和分支定界找到的最好方案，"
         "多城的是精细档再继续优化 20 次、模拟退火 20 万次后由分支定界接着改进的结果（附录 B.1）。",
         "How the optimum is found: branch and bound over the candidate tiles and validity rules this mod's search uses; the "
         "upper bound is each district's value alone plus every two neighbouring districts' pair value, the larger of DMT's "
         "measured value on those two tiles and the rules table, with rules that need several neighbours counted by their "
         "share. Every plan evaluated is checked against its bound, and one above it voids the proof; small scenarios are "
         "checked against trying every layout, and a hill climb that does not use the bound checks the rest. The best known "
-        "plan of a large city is the best of the planners and the branch and bound; that of several cities is the Thorough "
+        "plan of a large city is the best of every offline run and the branch and bound; that of several cities is the Thorough "
         "plan continued 20 times, then 200,000 steps of simulated annealing, then improved by the branch and bound "
         "(appendix B.1).")
 
+    # ---------------------------------------------------------------- quality summary (section 4) and hero
+    def cap1(t):
+        return t[:1].upper() + t[1:]
+
+    dv, hd = opt_data.get(("dev", "single")), opt_data.get(("heldout", "single"))
+    sm = opt_data.get(("smallmulti", "multi"))
+    texts["QUALITY_TEXT"] = ""
+    if dv and dv["proven"] == dv["n"] and dv["planners"].get("sdp:STANDARD"):
+        s_ = dv["planners"]["sdp:STANDARD"]
+        parts = [L("%d 个单城场景的真最优都已求出并证明：标准档平均达到真最优的 %s，%d 个场景正好是真最优；%s",
+                   "In %d one-city scenarios every true optimum was found and proven: Standard reaches %s "
+                   "of it on average and the optimum itself in %d scenarios; %s") % (dv["n"], pct(s_["low"], 1), s_["hit"], sd_claim)]
+        if hd and hd["proven"] == hd["n"] and hd["planners"].get("sdp:STANDARD"):
+            parts.append(L("开发时没用过的留出集上平均达到 %s", "on held-out maps not used during development it reaches %s on average")
+                         % pct(hd["planners"]["sdp:STANDARD"]["low"], 1))
+        if sm and sm["proven"] == sm["n"] and sm["planners"].get("sdp:STANDARD"):
+            parts.append(L("2–4 座城一起规划的 %d 个场景里 %d 个正好是真最优", "planning 2–4 cities together it reaches the optimum itself in %d of %d scenarios")
+                         % ((sm["n"], sm["planners"]["sdp:STANDARD"]["hit"]) if not EN else (sm["planners"]["sdp:STANDARD"]["hit"], sm["n"])))
+        if "sdp:STANDARD" in wnum:
+            parts.append(L("与区域一起放奇观，放下 %d / %d 座", "placing wonders together with districts, it places %d of %d wonders")
+                         % wnum["sdp:STANDARD"][:2])
+        texts["QUALITY_TEXT"] = (". ".join(cap1(p) for p in parts) + ".") if EN else ("；".join(parts) + "。")
+    hero = []
+    if dv and dv["planners"].get("sdp:STANDARD"):
+        s_ = dv["planners"]["sdp:STANDARD"]
+        hero.append({"value": pct(s_["low"], 1), "label": L(
+            "单城场景平均达到真最优的比例（标准档；%d 个场景的真最优都已证明，%d 个正好是）",
+            "of the true optimum on average in one-city scenarios (Standard effort; all %d optima proven, %d reached exactly)")
+            % (dv["n"], s_["hit"])})
+    if sm and sm["planners"].get("sdp:STANDARD"):
+        hero.append({"value": "%d / %d" % (sm["planners"]["sdp:STANDARD"]["hit"], sm["n"]), "label": L(
+            "2–4 座城一起规划，标准档正好达到真最优的场景", "scenarios with 2–4 cities planned together at the true optimum (Standard)")})
+    hero += [
+        {"value": L("0 违规", "0 violations"), "label": L("方案全部合法，不压玩家的钉，同输入同结果",
+                                                        "every plan valid, no tack of the player overwritten, same input, same plan")},
+        {"value": L("0.25 秒", "0.25 s"), "label": L("游戏内单城 6 个区域（标准档）", "one city, 6 districts, in the game (Standard effort)")},
+    ]
+
+    # ---------------------------------------------------------------- results table (section 4)
     def tr(cells):
         return "<tr>" + "".join("<td>%s</td>" % c for c in cells) + "</tr>"
 
     def grp(anchor, title):
         return '<tr class="grp"><td colspan="3"><a href="#%s">%s</a></td></tr>' % (anchor, title)
-
-    def vs(a, b, c):
-        return L("%s，AMT %s，EP %s", "%s, AMT %s, EP %s") % (a, b, c)
     srows = [grp("e-single", L("B.2 单城", "B.2 One city"))]
-    if sd and am and ep:
+    if sd:
         srows.append(tr([L("相邻加成", "Adjacency"), L("开发集 %d", "development set, %d") % sd["n"],
-                         L("达到真最优：本模组 ", "at the true optimum: this mod ") + vs(pct(sd["best"]), pct(am["best"]), pct(ep["best"]))]))
+                         L("达到真最优：", "at the true optimum: ") + L("、", ", ").join(
+                             L("%s %s", "%s %s") % (OPT_HEAD[k], pct(S[k]["best"])) for k in main_series)]))
         srows.append(tr([L("合法与完整", "Valid and complete"), "%d" % sd["n"],
-                         L("本模组%s；有位置却没放的区域：AMT %d 个，EP %d 个", "this mod: %s; districts left out although they had a valid tile: AMT %d, EP %d") % (
-            L("零违规、能放的都放了", "no violation, every district that fits placed") if sd_clean and sd["missingPlaceable"] == 0 else L("见 B.2", "see B.2"),
-            am["missingPlaceable"], ep["missingPlaceable"])]))
-    if robust_groups:
-        rg = {g["key"]: g["values"] for g in robust_groups}
-        if "heldout" in rg:
-            v = rg["heldout"]
-            srows.append(tr([L("换地图", "Other maps"), L("留出集 %d", "held-out set, %d") % len(summarize.subset(scenarios, "heldout", "single")),
-                             L("达到真最优：本模组 ", "at the true optimum: this mod ") + vs("%.0f%%" % v.get("sdp:STANDARD", 0), "%.0f%%" % v.get("amt", 0), "%.0f%%" % v.get("ep", 0))]))
-        prof = [g for g in robust_groups if g["key"].startswith("profile:")]
-        if prof:
-            srows.append(tr([L("换权重", "Other weights"), "3 × %d" % len(single),
-                             L("达到真最优：本模组 %.0f%%–%.0f%%，AMT、EP 都不超过 %.0f%%", "at the true optimum: this mod %.0f%%–%.0f%%, AMT and EP at most %.0f%%") % (
-                min(g["values"]["sdp:STANDARD"] for g in prof), max(g["values"]["sdp:STANDARD"] for g in prof),
-                max(max(g["values"].get("amt", 0), g["values"].get("ep", 0)) for g in prof))]))
-    if sl and sl.get("outBest") is not None:
-        srows.append(tr([L("城市总产出", "City output"), "%d" % sl["n"],
-                         L("拿到最高：本模组（计入地块）", "highest: this mod (Land loss) ") + vs(pct(sl["outBest"]), pct(am["outBest"] or 0), pct(ep["outBest"] or 0))]))
-    if forest_single:
-        srows.append(tr([L("对手的目标函数", "The rivals' own objectives"), L("开发集、留出集各 %d", "development and held-out sets, %d each") % len(single),
-                         L("%s；%s", "%s; %s") % (cross_claim(forest_single, "amt"), cross_claim(forest_single, "ep"))]))
+                         L("零违规、能放的都放了", "no violation, every district that fits placed") if sd_clean and sd["missingPlaceable"] == 0
+                         else L("见 B.2", "see B.2")]))
+    rg = {g["key"]: g["values"] for g in robust_groups}
+    if "heldout" in rg:
+        srows.append(tr([L("换地图", "Other maps"), L("留出集 %d", "held-out set, %d") % len(summarize.subset(scenarios, "heldout", "single")),
+                         L("达到真最优：标准档 %.0f%%", "at the true optimum: Standard %.0f%%") % rg["heldout"].get("sdp:STANDARD", 0)]))
+    prof = [g for g in robust_groups if g["key"].startswith("profile:")]
+    if prof:
+        srows.append(tr([L("换权重", "Other weights"), "3 × %d" % len(single),
+                         L("达到真最优：标准档 %.0f%%–%.0f%%", "at the true optimum: Standard %.0f%%–%.0f%%") % (
+                             min(g["values"]["sdp:STANDARD"] for g in prof), max(g["values"]["sdp:STANDARD"] for g in prof))]))
     srows.append(grp("e-multi", L("B.3 多城", "B.3 Several cities")))
     if M.get("sdp:STANDARD"):
         srows.append(tr([L("联合规划", "Joint planning"), L("开发集 %d", "development set, %d") % len(multi),
-                         L("平均达到参照的：本模组 ", "average share of the reference: this mod ") + vs(
-            pct(M["sdp:STANDARD"]["quality"]), pct(M["amt"]["quality"]) if M.get("amt") else "-", pct(M["ep"]["quality"]) if M.get("ep") else "-")
-            + ((L("；逐城依次规划 %s", "; city by city %s") % pct(M["sdp:CITY_BY_CITY"]["quality"])) if M.get("sdp:CITY_BY_CITY") else "")]))
+                         L("平均达到参照的：标准档 %s", "average share of the reference: Standard %s") % pct(M["sdp:STANDARD"]["quality"])
+                         + ((L("；逐城依次规划 %s", "; city by city %s") % pct(M["sdp:CITY_BY_CITY"]["quality"])) if M.get("sdp:CITY_BY_CITY") else "")]))
     if hom.get("sdp:STANDARD") is not None:
         srows.append(tr([L("换地图", "Other maps"), L("留出集 %d", "held-out set, %d") % len(summarize.subset(scenarios, "heldout", "multi")),
-                         L("达到参照：本模组 ", "at the reference: this mod ") + vs(pct(hom["sdp:STANDARD"]), pct(hom.get("amt") or 0), pct(hom.get("ep") or 0))]))
-    if forest_multi:
-        srows.append(tr([L("对手的目标函数", "The rivals' own objectives"), L("开发集、留出集各 %d", "development and held-out sets, %d each") % len(multi),
-                         L("%s；%s", "%s; %s") % (cross_claim(forest_multi, "ep"), cross_claim(forest_multi, "amt"))]))
+                         L("达到参照：标准档 %s", "at the reference: Standard %s") % pct(hom["sdp:STANDARD"])]))
     if cov_summary:
-        pa = par.get(("sdp:STANDARD_COV1", "amt")) or {}
         srows.append(tr([L("覆盖范围", "Coverage"), "%d" % cov_summary["n"], L(
-            "有取舍余地的 %d 个场景里，覆盖权重 1 时 %d 个多覆盖了城市；覆盖、相邻两项一起与 AMT 比，%d 个更好、%d 个更差",
-            "of the %d scenarios that leave room for it, coverage weight 1 covers more cities in %d; on coverage and adjacency together "
-            "against AMT, %d better, %d worse") % (cov_summary["room"], cov_summary["more1"], pa.get("better", 0), pa.get("worse", 0))]))
-    if wnum.get("sdp:STANDARD"):
+            "有取舍余地的 %d 个场景里，覆盖权重 1 时 %d 个多覆盖了城市",
+            "of the %d scenarios that leave room for it, coverage weight 1 covers more cities in %d") % (cov_summary["room"], cov_summary["more1"])]))
+    if "sdp:STANDARD" in wnum:
         srows.append(grp("e-wonders", L("B.4 奇观", "B.4 Wonders")))
         srows.append(tr([L("奇观与区域", "Wonders with districts"), "%d" % len(wsub),
-                         L("放下的奇观：本模组 %s；达到真最优：本模组 %s", "wonders placed: this mod %s; at the true optimum: this mod %s") % (
-            vs("%d/%d" % wnum["sdp:STANDARD"][:2], "%d" % wnum["amt"][0], "%d" % wnum["ep"][0]),
-            vs(pct(wnum["sdp:STANDARD"][2]), pct(wnum["amt"][2]), pct(wnum["ep"][2])))]))
-    if csub:
-        spr = summarize.paired(csub, "sdp:STANDARD", "ep", "gain")
-        srows.append(grp("e-sites", L("B.5 选城址", "B.5 City sites")))
-        srows.append(tr([L("两座新城（只比 EP）", "Two new cities (against EP only)"), "%d" % spr["n"],
-                         L("城址总值逐场景：本模组胜 %d、平 %d、负 %d", "site value per scenario: this mod wins %d, ties %d, loses %d")
-                         % (spr["wins"], spr["ties"], spr["losses"])]))
-    srows.append(grp("e-pools", L("B.6 从候选里挑", "B.6 Picking from the pool")))
+                         L("放下的奇观 %d/%d；达到真最优 %s", "wonders placed %d/%d; at the true optimum %s") % (
+                             wnum["sdp:STANDARD"][0], wnum["sdp:STANDARD"][1], pct(wnum["sdp:STANDARD"][2]))]))
+    srows.append(grp("e-pools", L("B.5 从候选里挑", "B.5 Picking from the pool")))
     srows.append(tr([L("单城挑选", "One city"), L("4 种情形 × 4", "4 cases × 4"),
                      L("标准档 16 个全部挑中最好的组合，约 0.4–1.0 秒；快速档平均 98%",
                        "Standard picks the best combination in all 16, in about 0.4–1.0 s; Fast 98% on average")]))
     srows.append(tr(MULTIPOOLS_ROW_EN if EN else MULTIPOOLS_ROW))
-    srows.append(grp("e-tests", L("速度（第 4 节）· B.7 本模组自身的测试", "Speed (section 4) · B.7 This mod's own tests")))
-    if sd and am and ep:
-        srows.append(tr([L("速度", "Speed"), L("游戏内实测", "measured in the game"),
-                         L("单城不到 0.3 秒，3 城联合约 3 秒；离线比 AMT 快约 %.0f 倍",
-                           "one city under 0.3 s, three cities together about 3 s; offline about %.0f times as fast as AMT") % (am["time"] / sd["time"])]))
+    srows.append(grp("e-tests", L("速度（第 4 节）· B.6 本模组自身的测试", "Speed (section 4) · B.6 This mod's own tests")))
+    srows.append(tr([L("速度", "Speed"), L("游戏内实测", "measured in the game"),
+                     L("单城不到 0.3 秒，3 城联合约 3 秒", "one city under 0.3 s, three cities together about 3 s")]))
     srows.append(tr([L("自身的测试", "Own tests"), L("游戏内 103 项、离线 121 项、真实点击 34 项", "103 in the game, 121 offline, 34 real clicks"),
                      L("全部通过；裁判与游戏引擎逐格一致（沉船一处已知偏差）；魅力逐格校准",
                        "all pass; the judge agrees with the game engine tile by tile (one known difference, at a shipwreck); Appeal "
@@ -1351,7 +781,7 @@ def build(files=None, make_snapshots=True, version=None, date=None, lang="zh"):
     stress_text, stress_table, stress_row = stress_section(lang=lang)
     texts["STRESS_TEXT"], texts["STRESS_TABLE"] = stress_text, stress_table
     if stress_row:
-        srows.append(grp("e-stress", L("B.8 后期存档压力测试", "B.8 Late-game saves")))
+        srows.append(grp("e-stress", L("B.7 后期存档压力测试", "B.7 Late-game saves")))
         srows.append(tr(stress_row))
     texts["EVAL_SUMMARY"] = ('<table><thead><tr><th>%s</th><th>%s</th><th>%s</th></tr></thead><tbody>%s</tbody></table>' % (
         L("实验", "Experiment"), L("场景", "Scenarios"), L("结论", "Result"), "".join(srows)))
@@ -1359,81 +789,14 @@ def build(files=None, make_snapshots=True, version=None, date=None, lang="zh"):
     texts["N_HS"] = str(len(summarize.subset(scenarios, "heldout", "single")))
     texts["N_HM"] = str(len(summarize.subset(scenarios, "heldout", "multi")))
     texts["N_W"] = str(len(wsub))
-    texts["N_C"] = str(len(csub))
-    texts["N_ALL"] = str(len(single) + len(multi) + int(texts["N_HS"]) + int(texts["N_HM"]) + 3 * len(single) + len(wsub) + len(csub)
-                         + len(vsub))
-
-    # SUMMARY (section 01) extras
-    extra = []
-    ho = robust_best.get("heldout/single", {})
-    hd = opt_data.get(("heldout", "single"))
-    if hd and hd["proven"] == hd["n"] and all(hd["planners"].get(k) for k in ("sdp:STANDARD", "amt", "ep")):
-        extra.append(L("开发时没用过的留出集上，平均达到真最优的 %s（AMT %s，EP %s）",
-                       "On held-out maps not used during development it reaches %s of the optimum on average (AMT %s, EP %s)")
-                     % tuple(pct(hd["planners"][k]["low"], 1) for k in ("sdp:STANDARD", "amt", "ep")))
-    elif ho.get("sdp:STANDARD") is not None:
-        extra.append(L("开发时没用过的留出集上为 %s（AMT %s，EP %s）",
-                       "On held-out maps not used during development it reaches %s (AMT %s, EP %s)")
-                     % (pct(ho["sdp:STANDARD"]), pct(ho.get("amt") or 0), pct(ho.get("ep") or 0)))
-    if wnum.get("sdp:STANDARD") and wnum.get("amt"):
-        extra.append(L("与区域一起放奇观，放下 %d / %d 座（AMT %d，EP %d）",
-                       "Placing wonders together with districts, it places %d of %d wonders (AMT %d, EP %d)")
-                     % (wnum["sdp:STANDARD"][0], wnum["sdp:STANDARD"][1], wnum["amt"][0], wnum.get("ep", (0,))[0]))
-    if csub:
-        spr = summarize.paired(csub, "sdp:STANDARD", "ep", "gain")
-        if spr["n"]:
-            extra.append(L("选城址 %d 个场景对 EP 胜 %d、平 %d、负 %d",
-                           "Choosing city sites in %d scenarios, it wins %d, ties %d and loses %d against EP")
-                         % (spr["n"], spr["wins"], spr["ties"], spr["losses"]))
-    if cov_summary and cov_summary["room"]:
-        pa = par.get(("sdp:STANDARD_COV1", "amt")) or {}
-        better = pa.get("n") and pa.get("worse") == 0
-        extra.append(L("覆盖范围（多城页签可选，默认关）在有取舍余地的 %d 个场景里，权重 1 时 %d 个多覆盖了城市",
-                       "With the coverage weight (Several cities tab, off by default) at 1, it covers more cities in %d of the %d "
-                       "scenarios that leave room for it") % (
-            (cov_summary["room"], cov_summary["more1"]) if not EN else (cov_summary["more1"], cov_summary["room"]))
-            + ((L("；覆盖、相邻两项一起与 AMT 比没有更差的", "; on coverage and adjacency together it is never worse than AMT")) if better else ""))
-    if extra and texts["SUMMARY_COMPARE"]:
-        texts["SUMMARY_COMPARE"] += (" " + ". ".join(extra) + ".") if EN else ("；".join(extra) + "。")
-
-    # Output table: add the paired comparison with its interval.
-    lab2key = {PL[k]["label"]: k for k in ("amt", "ep")}
-    for row in output_rows:
-        k = lab2key.get(row["label"])
-        row["ho"] = "—"
-        if k and ("dev", k) in out_rows_pairs:
-            pr = out_rows_pairs[("dev", k)]
-            row["vs"] = L("%d / %d / %d（%+.2f [%+.2f, %+.2f]）", "%d / %d / %d (%+.2f [%+.2f, %+.2f])") % (
-                pr["wins"], pr["ties"], pr["losses"], pr["mean"], pr["ci"][0], pr["ci"][1])
-        if k and ("heldout", k) in out_rows_pairs:
-            pr = out_rows_pairs[("heldout", k)]
-            row["ho"] = L("%d / %d / %d（%+.2f [%+.2f, %+.2f]）", "%d / %d / %d (%+.2f [%+.2f, %+.2f])") % (
-                pr["wins"], pr["ties"], pr["losses"], pr["mean"], pr["ci"][0], pr["ci"][1])
-
-    def fmt_forest_axis(rows_):
-        if not rows_:
-            return {"min": 80, "max": 120, "ticks": [80, 100, 120]}
-        lo_ = min(min(r["lo"] for r in rows_), 100)
-        hi_ = max(max(r["hi"] for r in rows_), 100)
-        lo_ = int(lo_ // 5 * 5)
-        hi_ = int(-(-hi_ // 5) * 5)
-        step = 5 if hi_ - lo_ <= 40 else 10
-        return {"min": lo_, "max": hi_, "ticks": list(range(lo_, hi_ + 1, step))}
+    texts["N_ALL"] = str(len(single) + len(multi) + int(texts["N_HS"]) + int(texts["N_HM"]) + 3 * len(single) + len(wsub) + len(vsub))
 
     data = {
         "lang": lang, "words": CHART_WORDS[lang], "hero": hero, "planners": PL, "mainSeries": main_series, "overview": overview,
         "byStage": {"best": by_best, "quality": by_q, "qMin": qmin, "qTicks": qticks},
-        "scatter": {"amt": pts["amt"], "ep": pts["ep"], "max": smax, "ticks": ticks, "capAmt": cap.get("amt", ""), "capEp": cap.get("ep", "")},
-        "correct": correct, "missing": missing_chart, "output": output_rows, "outputChart": output_chart,
-        "robust": robust_rows, "robustGroups": robust_groups, "robustMulti": robust_multi_rows, "robustMultiGroups": robust_multi_groups,
-        "cross": cross_rows, "crossMulti": cross_multi_rows,
-        "forest": dict({"rows": forest_single}, **fmt_forest_axis(forest_single)),
-        "forestMulti": dict({"rows": forest_multi}, **fmt_forest_axis(forest_multi)),
-        "coverage": coverage,
-        "wonders": wonder_rows, "wonderGroups": wonder_groups,
-        "sites": site_rows, "sitesScatter": {"points": site_pts, "min": smin, "max": smax_, "ticks": sticks},
+        "correct": correct, "robust": robust_rows, "robustGroups": robust_groups, "robustMultiGroups": robust_multi_groups,
+        "coverage": coverage, "wonders": wonder_rows, "wonderGroups": wonder_groups,
         "strip": {"rows": strip, "min": mmin, "max": 100, "ticks": list(range(mmin, 101, 10))},
-        "time": {"rows": trows, "legend": [], "min": 0.5, "max": 3000, "ticks": [1, 10, 100, 1000]},
     }
 
     def part(name):
@@ -1451,8 +814,6 @@ def build(files=None, make_snapshots=True, version=None, date=None, lang="zh"):
         if n != 1:
             raise RuntimeError("no heading for " + sn)
     out = tpl.replace("{{ARCH}}", arch).replace("{{ALGO}}", algo)
-    out = out.replace("{{CASE_HERO}}", hero_svg).replace("{{CASE_HERO_CAP}}", hero_cap)
-    out = out.replace("{{CASES}}", "\n".join(case_html[1:]))
     for k, v in texts.items():
         out = out.replace("{{%s}}" % k, v)
     out = out.replace("{{DATA}}", json.dumps(data, ensure_ascii=False).replace("</", "<\\/"))

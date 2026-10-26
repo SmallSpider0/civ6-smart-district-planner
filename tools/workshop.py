@@ -18,7 +18,7 @@ workshop/ holds what goes to the item page:
   item.json                       app id and, once the item exists, its id (publishedfileid)
   images.txt                      the pictures to add on the item page, in order
   preview.jpg                     the preview image (rendered from src/preview.html)
-  images/                         the gallery pictures rendered from src/g*.html and src/compare.html (slide.css)
+  images/                         the gallery pictures rendered from src/g*.html (slide.css)
 
 pack takes the mod from the release tag (git archive) and everything else from
 the last commit, so a package always matches a release.
@@ -176,23 +176,6 @@ def shoot(html_path, out_jpg, width, height):
     print("%s: %dx%d, %d KB" % (os.path.relpath(out_jpg, ROOT), width, height, os.path.getsize(out_jpg) // 1024))
 
 
-def compare_page():
-    """src/compare.html with the report's case map and styles filled in."""
-    sys.path.insert(0, os.path.join(ROOT, "report"))
-    import build as report  # noqa: E402
-    page, _ = report.build(make_snapshots=False)
-    svg = re.search(r'<div class="frame scroll hexmap" id="case-hero">(.*?)</div>\s*<figcaption', page, re.S).group(1)
-    svg = svg.replace("本模组 标准档", "Smart District Planner")
-    svg = re.sub(r"漏放 (\d+)", lambda m: "· %s left out" % m.group(1), svg)
-    tpl = read(os.path.join(ROOT, "report", "template.html"))
-    css = tpl[tpl.index("<style>") + 7:tpl.index("</style>")]
-    src = read(os.path.join(WS, "src", "compare.html")).replace("{{CSS}}", css).replace("{{SVG}}", svg)
-    out = os.path.join(WS, "src", ".compare.rendered.html")  # next to src/ so relative paths resolve
-    with open(out, "w", encoding="utf-8") as fh:
-        fh.write(src)
-    return out
-
-
 CITY_COLORS = ["#2f8fb5", "#e0703a", "#9a5cc8"]
 TERRAIN_FILL = {"TERRAIN_GRASS": "#8fae5a", "TERRAIN_PLAINS": "#c2b170", "TERRAIN_GRASS_HILLS": "#7d9450",
                 "TERRAIN_COAST": "#6fa8c7"}
@@ -290,9 +273,8 @@ def multi_page(probe):
 
 def render(_args):
     """The preview (src/preview.html, 1024 x 1024), then the gallery
-    pictures: src/g<n>-<name>.html, src/g1-multi.html (with the probe's plans
-    drawn in) and src/compare.html (picture 03) -> images/<n>-<name>.jpg,
-    1920 x 1080."""
+    pictures: src/g<n>-<name>.html and src/g1-multi.html (with the probe's
+    plans drawn in) -> images/<n>-<name>.jpg, 1920 x 1080."""
     shoot(os.path.join(WS, "src", "preview.html"), os.path.join(WS, "preview.jpg"), 1024, 1024)
     probe = multi_probe()
     os.makedirs(os.path.join(WS, "images"), exist_ok=True)
@@ -300,11 +282,11 @@ def render(_args):
         m = re.match(r"g(\d)-([a-z]+)\.html$", name)
         if m and name != "g1-multi.html":
             shoot(os.path.join(WS, "src", name), os.path.join(WS, "images", "0%s-%s.jpg" % m.groups()), 1920, 1080)
-    for page, out in ((multi_page(probe), "01-multi.jpg"), (compare_page(), "03-compare.jpg")):
-        try:
-            shoot(page, os.path.join(WS, "images", out), 1920, 1080)
-        finally:
-            os.remove(page)
+    page = multi_page(probe)
+    try:
+        shoot(page, os.path.join(WS, "images", "01-multi.jpg"), 1920, 1080)
+    finally:
+        os.remove(page)
     return 0
 
 

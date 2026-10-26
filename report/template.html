@@ -5,12 +5,12 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Noto+Sans+SC:wght@400;500;700&family=Noto+Serif+SC:wght@600;700&display=swap">
 <style>
 /* One reading column (~46rem) for prose; figures, charts and screenshots widen to ~66rem.
-   Palette: map-room ink on cool paper, brass accent; the three planners keep fixed hues. */
+   Palette: map-room ink on cool paper, brass accent; this mod's effort levels keep fixed hues. */
 :root {
   --bg: #f3f5f6; --surface: #ffffff; --fg: #14202a; --muted: #56646e; --faint: #8794a0; --line: #d4dce1;
   --accent: #946510; --accent-soft: #f4e8cf; --teal: #1d6470; --teal-soft: #dcecef; --code-bg: #eaeff2;
   --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s0: #8b969d;
-  --sdp: #1d6470; --amt: #eb6834; --ep: #8a5cc4; --opt: #8b969d;
+  --sdp: #1d6470; --opt: #8b969d;
   --good: #1a7f37; --warn: #a35f00; --bad: #c0392b;
   --t-grass: #bcd59a; --t-plains: #dccf98; --t-desert: #efe1b4; --t-tundra: #c9cbb8; --t-snow: #eef1f3;
   --t-coast: #a9d2e3; --t-ocean: #7fb2cf; --t-lake: #9fd0e6; --t-mtn: #8f8f8a; --river: #2a78d6;
@@ -23,7 +23,7 @@
     --bg: #0e161b; --surface: #15212a; --fg: #e3eaee; --muted: #9fb0ba; --faint: #73848f; --line: #2a3a44;
     --accent: #dcae4c; --accent-soft: #3a2e15; --teal: #6ab9c6; --teal-soft: #173039; --code-bg: #1a2730;
     --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s0: #7c8990;
-    --sdp: #4fb3c2; --amt: #e0743f; --ep: #a986de; --opt: #7c8990;
+    --sdp: #4fb3c2; --opt: #7c8990;
     --good: #4cb36a; --warn: #e1a33a; --bad: #ef6f62;
     --t-grass: #4f6a3a; --t-plains: #6e6440; --t-desert: #7c6f4a; --t-tundra: #575a4c; --t-snow: #8a9095;
     --t-coast: #2f5e72; --t-ocean: #234a5e; --t-lake: #2f6378; --t-mtn: #4d4d4a; --river: #5aa2f0;
@@ -34,7 +34,7 @@
   --bg: #0e161b; --surface: #15212a; --fg: #e3eaee; --muted: #9fb0ba; --faint: #73848f; --line: #2a3a44;
   --accent: #dcae4c; --accent-soft: #3a2e15; --teal: #6ab9c6; --teal-soft: #173039; --code-bg: #1a2730;
   --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s0: #7c8990;
-  --sdp: #4fb3c2; --amt: #e0743f; --ep: #a986de; --opt: #7c8990;
+  --sdp: #4fb3c2; --opt: #7c8990;
   --good: #4cb36a; --warn: #e1a33a; --bad: #ef6f62;
   --t-grass: #4f6a3a; --t-plains: #6e6440; --t-desert: #7c6f4a; --t-tundra: #575a4c; --t-snow: #8a9095;
   --t-coast: #2f5e72; --t-ocean: #234a5e; --t-lake: #2f6378; --t-mtn: #4d4d4a; --river: #5aa2f0;
@@ -86,14 +86,14 @@ table { border-collapse: collapse; width: 100%; font-size: 0.92rem; font-variant
 th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
 th { color: var(--muted); font-weight: 500; font-size: 0.84rem; letter-spacing: 0.02em; }
 td.num, th.num { text-align: right; white-space: nowrap; }
-table.compare td:first-child { color: var(--muted); white-space: nowrap; }
-table.compare td.us { background: color-mix(in srgb, var(--sdp) 7%, transparent); }
+table.similar td:first-child { color: var(--muted); min-width: 6.5em; }
 .tag { display: inline-block; font-size: 0.72rem; padding: 0 7px; border-radius: 999px; font-weight: 500; white-space: nowrap; vertical-align: 1px; margin-right: 4px; }
 .tag.src { color: var(--teal); background: var(--teal-soft); }
 .tag.run { color: var(--accent); background: var(--accent-soft); }
 .tag.goal { color: var(--fg); background: var(--code-bg); }
 .yes { color: var(--good); font-weight: 600; }
 .no { color: var(--bad); font-weight: 600; }
+.nil { color: var(--faint); }
 .part { color: var(--warn); font-weight: 600; }
 details { margin: 8px 0 0; font-size: 0.9rem; }
 details summary { cursor: pointer; color: var(--teal); }
@@ -106,10 +106,6 @@ pre.code .f { color: var(--accent); }
 .goals li { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; font-size: 0.94rem; min-width: 0; }
 .goals b { display: block; font-family: var(--font-display); font-size: 1.02rem; margin-bottom: 2px; }
 .goals b span { font-family: var(--font-mono); color: var(--accent); font-size: 0.85em; margin-right: 6px; }
-.flaws { margin: 10px 0; padding: 0; list-style: none; }
-.flaws li { padding: 9px 0 9px 0; border-bottom: 1px solid var(--line); }
-.flaws li b { font-weight: 600; }
-.flaws .ev { display: block; color: var(--muted); font-size: 0.86rem; margin-top: 2px; }
 .shots { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 18px; }
 .shots figure { margin: 0; min-width: 0; }
 .shots img { display: block; width: 100%; height: auto; border-radius: 6px; border: 1px solid var(--line); background: var(--surface); }
@@ -137,24 +133,6 @@ svg text { font-family: var(--font-body); }
 .hx-t { fill: var(--fg); font-size: 12px; font-weight: 500; }
 .hx-t-move { fill: var(--surface); font-weight: 700; }
 .hx-t-far { fill: var(--muted); }
-/* hex maps */
-.hx { stroke: var(--surface); stroke-width: 1; }
-.tg { fill: var(--t-grass); } .tp { fill: var(--t-plains); } .td { fill: var(--t-desert); } .tt { fill: var(--t-tundra); }
-.ts { fill: var(--t-snow); } .tc { fill: var(--t-coast); } .to { fill: var(--t-ocean); } .tl { fill: var(--t-lake); } .tm { fill: var(--t-mtn); }
-.hills { filter: brightness(0.9); } .unowned { opacity: 0.55; }
-.hx-city { fill: var(--accent); stroke: var(--surface); stroke-width: 1.5; } .hx-city.foreign { fill: var(--bad); }
-.hx-built { fill: var(--muted); } .hx-pin { fill: none; stroke: var(--fg); stroke-dasharray: 3 2; stroke-width: 1.4; }
-.hx-plan { fill: var(--sdp); stroke: var(--surface); stroke-width: 1.5; } .hx-plan.bad { fill: var(--bad); }
-.hm-panel-amt .hx-plan { fill: var(--amt); } .hm-panel-ep .hx-plan { fill: var(--ep); }
-.hexmap text { text-anchor: middle; font-size: 11px; }
-.hexmap .hm-title { text-anchor: start; font-size: 13px; font-weight: 700; fill: var(--fg); }
-.hm-city, .hm-built, .hm-plan { fill: #fff; font-weight: 700; font-size: 12px; } .hm-pin { fill: var(--fg); font-size: 11px; }
-.hm-adj { fill: #fff; font-size: 8.5px; }
-.hm-wood { fill: #2f6b2a; } .hm-jungle { fill: #1f5a2a; } .hm-marsh { fill: #3b6f8a; } .hm-flood { fill: #7a5a1a; }
-.hm-reef { fill: #2a6f8a; } .hm-volcano { fill: #b03a2e; } .hm-mtn { fill: #f3f3f3; font-size: 10px; } .hm-nw { fill: var(--accent); }
-.hm-water { fill: var(--river); } .hm-soil { fill: #6b3a2a; } .hexmap .hm-hill { fill: #5a5a40; font-size: 9px; text-anchor: start; }
-.hm-river { stroke: var(--river); stroke-width: 3; stroke-linecap: round; }
-.hm-res { stroke: #fff; stroke-width: 0.8; } .hm-res.lux { fill: #8a3fb5; } .hm-res.str { fill: var(--bad); } .hm-res.bon { fill: #7a5a1a; }
 /* charts */
 .ax { fill: var(--muted); font-size: 11.5px; font-variant-numeric: tabular-nums; }
 .ax-l { fill: var(--fg); font-size: 12.5px; }
@@ -222,10 +200,11 @@ details.appx[open] > summary { margin-bottom: 8px; }
 <nav class="toc"><div class="wide"><ol>
   <li><a href="#what">能做什么</a></li>
   <li><a href="#use">安装与使用</a></li>
-  <li><a href="#compare">和其他规划器比</a></li>
-  <li><a href="#speed">速度</a></li>
+  <li><a href="#similar">同类模组</a></li>
+  <li><a href="#quality">质量与速度</a></li>
   <li><a href="#limits">已知限制</a></li>
   <li><a href="#feedback">反馈与更新</a></li>
+  <li><a href="#thanks">致谢</a></li>
   <li class="app"><a href="#how">附录 A 技术说明</a></li>
   <li class="app"><a href="#eval">附录 B 评估方法与完整数据</a></li>
 </ol></div></nav>
@@ -240,7 +219,7 @@ details.appx[open] > summary { margin-bottom: 8px; }
     <li><b>多城牵连</b>：相邻的城可以共享加成，也会抢同一格；市政广场这类区域全帝国只能有一个。</li>
     <li><b>已有的东西要尊重</b>：已经建好的区域、玩家自己打的钉、奢侈与战略资源都不能被挪动或压掉。</li>
   </ul>
-    <p>本模组把这些都算进去。面板有三个页签：单城、选城址、多城。下面列出每个页签里你设置什么、得到什么；标 <span class="tag from">AMT</span><span class="tag from">EP</span> 的是借鉴这两个模组的做法（第 3 节）。</p>
+    <p>本模组把这些都算进去。面板有三个页签：单城、选城址、多城。下面列出每个页签里你设置什么、得到什么。</p>
 
     <h3>三个页签</h3>
     <h4 class="tab">单城</h4>
@@ -249,7 +228,7 @@ details.appx[open] > summary { margin-bottom: 8px; }
         <li>城市（名字前带编号，与钉名一致）</li>
         <li>区域：分两组排成网格，点一下切换状态。占人口名额的区域是“候选 → 必建 → 不建”；不占名额的（水渠、堤坝、运河、社区……）是“自动 → 必建 → 不建”。已建的置灰，已达帝国上限、本文明不能建的写明原因</li>
         <li>区域数量：要规划几个占人口名额的区域（含必建的）。多于必建个数时，多出的由求解器从候选里挑；旁边显示特色区域名额（已建、本次数量、当前人口上限），超出时只提示</li>
-        <li>要一起放的奇观，可以选多个，选中的显示成标签；下拉框按时代、再按造价排列 <span class="tag from">AMT</span></li>
+        <li>要一起放的奇观，可以选多个，选中的显示成标签；下拉框按时代、再按造价排列</li>
         <li>权重（0–3，每点 0.5）：科、文、信、金、产（默认 1）；地块（默认 1，乘在占地损失上，0 表示不计；地块的各项产出按固定倍数折算：食物、生产力 1，科技、文化 5/6，信仰 1/2，金币 1/4）；距离成本（默认 0）；住房（默认 1）；覆盖范围（默认 0，同多城页签）。预设：均衡、科技（科学 1.5）、文化（文化 3）、宗教（信仰 3）、金币信仰减半，倍数由真最优实验定</li>
         <li>占地损失：地块按修上最好的改良后的产出算，先砍伐、收获再建。开关：让能从别的本方城市换来的格也可以用（默认关闭）；允许砍伐树林、雨林、沼泽；替换本模组之前给这座城打的钉；提醒钉；港口与商业中心分城（默认打开）</li>
       </ul></div>
@@ -263,7 +242,7 @@ details.appx[open] > summary { margin-bottom: 8px; }
         <li>受影响的已有区域：加权分从多少变成多少</li>
         <li>没放下的区域及原因：范围内没有合法位置、本城已建、已达帝国上限、本文明不能建、候选不够</li>
         <li>港口和商业中心同在一座城时（必建，或不这样就凑不够数量），提示“灯塔不增加贸易路线”</li>
-        <li>“好位置”：选一个区域，地图上把它能放的格按单独放下时的加成分四档着色并标出数值 <span class="tag from">AMT</span></li>
+        <li>“好位置”：选一个区域，地图上把它能放的格按单独放下时的加成分四档着色并标出数值</li>
       </ul></div>
     </div>
 
@@ -286,10 +265,10 @@ details.appx[open] > summary { margin-bottom: 8px; }
     <div class="io">
       <div><p class="lbl">你设置</p><ul class="tight">
         <li>参与城市：全部城址钉，加上离任一新城 7 格内的现有城市（最多 8 座）。每一项都可以取消勾选：城址钉取消后不参与规划，钉还在，仍作邻居；现有城市取消后只作邻居（不给它规划，但它的区域照样计入相邻）</li>
-        <li>区域清单：所有城市共用一张，或给某座城单独一张；网格与单城相同。每城数量：多于必建个数时，为每座城从候选里挑。可套用按产出生成的模板（“科技城”“生产力城”……，由本文明的相邻规则推出），也可清空、改回共用 <span class="tag from">AMT</span></li>
-        <li>全帝国限量的区域（市政广场等）：只写进一座城的清单就只放在那座城，写进几座城就在其中自动选 <span class="tag from">AMT</span></li>
+        <li>区域清单：所有城市共用一张，或给某座城单独一张；网格与单城相同。每城数量：多于必建个数时，为每座城从候选里挑。可套用按产出生成的模板（“科技城”“生产力城”……，由本文明的相邻规则推出），也可清空、改回共用</li>
+        <li>全帝国限量的区域（市政广场等）：只写进一座城的清单就只放在那座城，写进几座城就在其中自动选</li>
         <li>奇观（标签加下拉框）、产出、地块与住房权重、距离成本，预设同单城；开关：替换本模组之前为参与城市打的钉、提醒钉、港口与商业中心分城（按城判断）</li>
-        <li>覆盖范围的权重（0–3，默认 0 不计）：工厂、电厂、动物园、体育场、水族馆和斗兽场等奇观惠及一定距离内的本方城市（规则数据里多为 6 格），规划时把新覆盖的城市也算进去，从候选里挑区域时也算；单城页签同样有这一列 <span class="tag from">AMT</span></li>
+        <li>覆盖范围的权重（0–3，默认 0 不计）：工厂、电厂、动物园、体育场、水族馆和斗兽场等奇观惠及一定距离内的本方城市（规则数据里多为 6 格），规划时把新覆盖的城市也算进去，从候选里挑区域时也算；单城页签同样有这一列</li>
       </ul></div>
       <div><p class="lbl">得到</p><ul class="tight">
         <li>三套彼此有明显差别的方案，各有总分；每套列出城市、区域、奇观的个数，以及每座城新区域的加权相邻</li>
@@ -321,19 +300,19 @@ details.appx[open] > summary { margin-bottom: 8px; }
           <tr><td>区域钉</td><td>每个区域、奇观一个带图标的钉，DMT 照常在钉上显示加成；钉名是所属城市的编号</td></tr>
           <tr><td>地图预览</td><td>三个页签的方案都能先在地图上看：区域图标和加成（选城址是三环），点另一套方案随之切换；切换页签、关闭面板、进入游戏的区域放置模式时清除</td></tr>
           <tr><td>提醒钉</td><td>方案里的区域靠旁边的树林、雨林拿相邻加成时，在这些格上打“移除地貌”图标的钉，钉名写明砍掉会少什么（如“3 勿砍：圣地 信-1”）。判断方法是让 DMT 看不到这格的地貌再算一次，文明、万神殿的地貌修正都计入；撤销时一起删除</td></tr>
-          <tr><td>撤销</td><td>撤销最近一批钉，可以连续撤销；记录随存档保存，读档后仍能撤销 <span class="tag from">AMT</span></td></tr>
-          <tr><td>替换旧钉 <span class="tag from">AMT</span></td><td>勾选后，本模组之前打的、你没改过的钉在规划时当作不存在，打新钉时删掉，撤销会放回；你自己打的钉、改过的钉不动</td></tr>
+          <tr><td>撤销</td><td>撤销最近一批钉，可以连续撤销；记录随存档保存，读档后仍能撤销</td></tr>
+          <tr><td>替换旧钉</td><td>勾选后，本模组之前打的、你没改过的钉在规划时当作不存在，打新钉时删掉，撤销会放回；你自己打的钉、改过的钉不动</td></tr>
           <tr class="grp"><td colspan="2">规则与合法性</td></tr>
           <tr><td>数值来自 DMT</td><td>合法性与相邻加成都由 DMT 计算，面板、悬停和钉上显示的是同一个数；相邻规则从规则数据库读取，不写死</td></tr>
           <tr><td>文明与领袖特性</td><td>日本区域互邻、巴西雨林、荷兰河流、高卢矿山与“特色区域不挨市中心”、越南“特色区域只建在树林、雨林、沼泽上”等全部计入</td></tr>
           <tr><td>补上游戏规则</td><td>DMT 不查的也查：不压奢侈与战略资源，帝国上限（含已打钉的），城市 3 环与归属，同城不重复</td></tr>
-          <tr><td>引擎复核 <span class="tag from">EP</span></td><td>城市已拥有的格上，再用游戏引擎给出的可建格复核，游戏不允许的格（如不连通水域的运河）不进方案</td></tr>
+          <tr><td>引擎复核</td><td>城市已拥有的格上，再用游戏引擎给出的可建格复核，游戏不允许的格（如不连通水域的运河）不进方案</td></tr>
           <tr class="grp"><td colspan="2">已有的东西</td></tr>
           <tr><td>不挪不压</td><td>已建区域置灰；玩家的钉不挪不压，作为邻居计分</td></tr>
           <tr class="grp"><td colspan="2">兼容与操作</td></tr>
           <tr><td>规则集与语言</td><td>原版、迭起兴衰、风云变幻（运河、堤坝只在风云变幻）；中英双语，跟随游戏语言</td></tr>
           <tr><td>界面</td><td>区域按是否占人口名额分两组排成网格，单城页的区域不用滚动；奇观是标签加下拉框；权重的五种产出和食物用游戏的同一套圆形产出图标，其余写短字；开关并成一行，悬停看说明</td></tr>
-          <tr><td>快捷键 <span class="tag from">AMT</span></td><td><kbd>Shift</kbd>+<kbd>L</kbd> 打开或关闭面板，可在游戏选项里改键</td></tr>
+          <tr><td>快捷键</td><td><kbd>Shift</kbd>+<kbd>L</kbd> 打开或关闭面板，可在游戏选项里改键</td></tr>
         </tbody>
       </table>
     </div>
@@ -369,7 +348,7 @@ details.appx[open] > summary { margin-bottom: 8px; }
     </ul>
   <h3>注意</h3>
   <ul class="tight">
-    <li><b>一局只开一个规划器</b>：AMT、Empire Planner 等都会替换地图钉相关的全局函数做模拟，同开会互相干扰。改相邻规则、区域规则的模组也会让结果和你看到的对不上。</li>
+    <li><b>一局只开一个规划器</b>：Auto Map Tacks Planner、Empire Planner 等规划器各自模拟、新建和删除地图钉，同开会互相干扰（第 3 节）。改相邻规则、区域规则的模组也会让结果和你看到的对不上。</li>
     <li><b>规则集与语言</b>：原版、迭起兴衰、风云变幻都能用；运河、堤坝只在风云变幻出现。界面中英双语，跟随游戏语言。</li>
     <li><b>存档</b>：打出的钉就是普通地图钉，停用本模组后存档照常能读。</li>
     <li><b>多人游戏</b>没有测试过。</li>
@@ -377,29 +356,42 @@ details.appx[open] > summary { margin-bottom: 8px; }
   <p class="note">更详细的用法和排错见<a href="{{REPO_URL}}/blob/main/docs/install-and-test.md">安装与使用说明</a>。</p>
 </div></section>
 
-<section id="compare"><div class="col">
-  <h2 data-n="03">和其他规划器比</h2>
-  <p>创意工坊里另有两个自动规划区域的模组：Auto Map Tacks Planner（AMT，测的是 r49）和 Empire Planner（EP，测的是 94 版）。它们各有本模组没有的功能：AMT 和 EP 都能规划改良设施，EP 还能一键规划整个帝国（城址、区域、奇观、改良一起）。本模组只规划奇观要挨着的改良设施（阿耳忒弥斯神庙旁的营地），选城址和多城规划分两步做。下面只比三者都做的事：区域摆放、奇观，以及选城址（只有 EP 能比）。</p>
-  <h3>做法</h3>
+<section id="similar"><div class="col">
+  <h2 data-n="03">同类模组</h2>
+  <p>创意工坊里还有几个自动规划区域的模组，取向各不相同，可以按想要的功能挑。先列它们有、本模组没有的功能：</p>
+  <ul class="tight">
+    <li><b><a href="https://steamcommunity.com/sharedfiles/filedetails/?id=3771382002">Auto Map Tacks Planner</a></b>：适合想把改良设施、特色改良设施和区域、奇观一起排，按人口做长期蓝图的玩家。本模组没有的：规划改良设施和特色改良设施；把你打的“移除地貌 / 采收 / 种树”钉当作规划指令；“只用已解锁的内容”和“长期蓝图”两种模式；繁体中文界面。</li>
+    <li><b><a href="https://steamcommunity.com/sharedfiles/filedetails/?id=3793348626">Empire Planner</a></b>：适合想一次把所有城市和几处新城址连同改良设施排好、不装 DMT 的玩家。本模组没有的：规划改良设施；全部现有城市一次规划，不限城数；按时代限定规划范围；存档里保存 3 套布局；不依赖 DMT。</li>
+    <li><b><a href="https://steamcommunity.com/sharedfiles/filedetails/?id=3780936549">District &amp; Wonder Planner</a></b>：适合想要简单面板、勾上全部城市一起排几个核心区域和奇观的玩家。本模组没有的：全部城市一起规划，不限城数；按区域的先后顺序给权重。</li>
+    <li><b>本模组</b>：适合主要关心区域和奇观的相邻加成、想知道结果是否最优或离上界多远的玩家；也能给新城选址，再和附近的城一起规划。</li>
+  </ul>
   <div class="tablewrap">
-    <table class="compare">
-      <thead><tr><th></th><th>DMT</th><th>AMT r49</th><th>Empire Planner</th><th>本模组</th></tr></thead>
+    <table class="similar">
+      <thead><tr><th></th><th>Auto Map Tacks Planner</th><th>Empire Planner</th><th>District &amp; Wonder Planner</th><th>本模组</th></tr></thead>
       <tbody>
-        <tr><td>规划什么</td><td>不规划，只在钉上显示加成</td><td>单城：区域、改良、奇观；多城（1–4 城）联合</td><td>整个帝国一次规划：新城址、区域、奇观、改良</td><td class="us">单城（含奇观）、多城联合（含奇观）、选城址</td></tr>
-        <tr><td>加成怎么算</td><td>自己的规则引擎</td><td>调用 DMT</td><td>自写的相邻规则引擎；DMT 只用来否决不合法的格</td><td class="us">调用 DMT，再补上游戏规则 DMT 没查的部分</td></tr>
-        <tr><td>优化目标</td><td>—</td><td>DMT 产出 × 倍率（特色区域 6–10.5 倍）− 地块损失，排序先比"槽位填满数"再比分数</td><td>自己算的加成 − 0.15 × 地块产出；加成低于 2 的区域不放</td><td class="us">DMT 显示的加权相邻加成；地块损失可选</td></tr>
-        <tr><td>搜索方法</td><td>—</td><td>每个区域取单独得分前 12 格，宽 64 的集束搜索</td><td>贪心 + 交换爬山 + 3 次带种子的随机重启</td><td class="us">小规模穷举；大规模模型集束搜索 + 精确局部搜索 + 扰动重建</td></tr>
-        <tr><td>能否证明最优</td><td>—</td><td>否</td><td>否（注释自述"不是最优分配"）</td><td class="us">穷举时是；否则给出离上界的差距</td></tr>
+        <tr><td>区域</td><td><span class="yes">✓</span></td><td><span class="yes">✓</span></td><td><span class="yes">✓</span> 一次最多 3 种（另加水渠、市政广场）</td><td><span class="yes">✓</span></td></tr>
+        <tr><td>奇观</td><td><span class="yes">✓</span></td><td><span class="yes">✓</span></td><td><span class="yes">✓</span> 最多 5 座</td><td><span class="yes">✓</span></td></tr>
+        <tr><td>改良设施</td><td><span class="yes">✓</span> 含特色改良设施</td><td><span class="yes">✓</span></td><td>只规划奇观需要的那一种</td><td>只规划奇观需要的那一种（阿耳忒弥斯神庙旁的营地）</td></tr>
+        <tr><td>选新城址</td><td><span class="nil">✗</span> 未来的城用你打的城市中心钉</td><td><span class="yes">✓</span> 0–6 处</td><td><span class="nil">✗</span> 未来的城用你打的城市中心钉</td><td><span class="yes">✓</span></td></tr>
+        <tr><td>几座城一起规划</td><td>最多 4 座</td><td>全部现有城市和新城址一次规划</td><td>可勾选全部城市</td><td>最多 8 座（含城址钉）</td></tr>
+        <tr><td>结果</td><td>地图钉</td><td>地图钉</td><td>地图钉</td><td>地图钉</td></tr>
+        <tr><td>加成由谁计算</td><td>DMT</td><td>自己的规则</td><td>DMT</td><td>DMT</td></tr>
+        <tr><td>依赖</td><td>DMT</td><td>无；作者建议关掉 DMT</td><td>DMT</td><td>DMT</td></tr>
+        <tr><td>规则集</td><td>未写明</td><td>迭起兴衰、风云变幻（作者说原版没测过）</td><td>未写明</td><td>原版、迭起兴衰、风云变幻</td></tr>
+        <tr><td>界面语言</td><td>英文、简体中文、繁体中文</td><td>英文</td><td>英文、简体中文</td><td>英文、简体中文</td></tr>
+        <tr><td>作者写明的同开限制</td><td>未写</td><td>关掉 DMT</td><td>未写</td><td>不与其他区域规划器同开</td></tr>
+        <tr><td>创意工坊页面的更新日期</td><td>2026-09-19（r49）</td><td>2026-09-10</td><td>2026-08-29（v1.1）</td><td>2026-10-25</td></tr>
       </tbody>
     </table>
   </div>
-  <h3>实测结果</h3>
-  <p>在离线环境里，用游戏导出的真实规则和三个模组原样的代码，在同样的局面下各自规划，再由只加载 DMT 的裁判按地图钉上显示的数打分（方法见附录 B.1）。{{SUMMARY_COMPARE}}</p>
-  <figure class="wide-figure">
-    <div class="frame scroll hexmap" id="case-hero">{{CASE_HERO}}</div>
-    <figcaption id="case-hero-cap">{{CASE_HERO_CAP}}</figcaption>
-  </figure>
-  <h3>和真最优比</h3>
+  <p class="note">2026-10-26 按各模组的创意工坊页面和模组文件核对；页面和文件都没写的标“未写明”。创意工坊上的标题分别是 Fully Automatic Map Tacks Planner【Four-City Linked】、Empire Planner + (Auto Map Tacks) Advanced、District &amp; Wonder Planner v1.1。它们会更新，以各自页面为准。</p>
+  <p>Detailed Map Tacks（DMT）不是规划器：它在地图钉上显示区域、奇观放在这一格时的产出和相邻加成。几个规划器各自模拟、新建和删除地图钉，<b>一局只开一个</b>，同开会互相干扰。</p>
+</div></section>
+
+<section id="quality"><div class="col">
+  <h2 data-n="04">质量与速度</h2>
+  <h3>离最优多远</h3>
+  <p>在离线环境里，用游戏导出的真实规则和 DMT 原样的代码，在模拟实际对局的场景上规划，按地图钉上显示的数打分，再与用分支定界求出的真最优比较（方法见附录 B.1）。{{QUALITY_TEXT}}</p>
   <p>{{OPTIMUM_TEXT}}</p>
 </div>
 <div class="col tablewrap" style="margin-inline:auto">{{OPTIMUM_TABLE}}</div>
@@ -409,33 +401,7 @@ details.appx[open] > summary { margin-bottom: 8px; }
 </div>
 <div class="col tablewrap" style="margin-inline:auto">{{EVAL_SUMMARY}}</div>
 <div class="col">
-  <h3>做法上的差异</h3>
-  <p>读两个模组的 Lua 源码，并在离线对比里观察到的。<span class="tag run">实测</span> 后面是对比中的数据。</p>
-  <h4 class="tab">AMT r49</h4>
-  <ul class="flaws">
-    <li><b>候选格有上限。</b>每个区域只在单独得分最高的 12 格里挑，再用宽 64 的集束搜索逐个放；排序先比区域优先级的计数，再比分数。区域之间的互相加成只在这 12 格里考虑。<span class="ev"><span class="tag run">实测</span>{{AMT_QUALITY}}</span></li>
-    <li><b>优化的不是钉上的数。</b>评分把特色区域的产出乘 6–10.5 倍、其他区域乘 2 倍，再减去占用地块的产出；产出权重都设成 1 时，它找的也不是地图钉上相邻加成最高的方案。</li>
-    <li><b>合法性检查之间不清缓存。</b>逐格检查合法性时不清空 DMT 的地块缓存，前一个区域的假想位置会影响后面的检查，有合法位置的区域可能被判为放不下（例：剧院被判“不能放在堤坝上”）。<span class="ev"><span class="tag run">实测</span>{{AMT_MISSING}}</span></li>
-    <li><b>多城先比槽位。</b>联合规划的排序先比槽位填满数和“覆盖缺口”，产出排在第 6 层；工业区、娱乐中心的覆盖请求对所有城开放，区域可能放进没选它的城；各城的产出偏好合成一组。作者把多城联合标为实验功能，评估超过 20 万次时不给方案。</li>
-    <li><b>全帝国唯一的区域。</b>AUTO 模式给市政广场单独一个槽位，但它仍占人口名额；帝国上限在不同的路径里分别按“已建加已打钉”或“只算已建”计算；单城模式不隐藏已达上限的市政广场、外交区。</li>
-    <li><b>多城一次算完。</b>多城的准备阶段对每座城、每个请求、每个合法格做一次完整的 DMT 评估，一次做完，期间游戏不响应。</li>
-    <li><b>每城最多 6 个特色区域。</b>{{AMT_SLOTS}}</li>
-  </ul>
-  <details><summary>源码出处</summary><p class="note">amt_autoplanner.lua：候选格 13523–13593、13922–14086、13930–13948；评分 EvaluatePlan 12275–12562；多城排序 3344–3364、19974–19998、18802–18829、3667–3669 及 OnPlan 附近的注释；唯一区域 4906–4916、19587、19549 / 19779 / 19266、8994；多城准备阶段 20618–20625。</p></details>
-  <h4 class="tab">Empire Planner</h4>
-  <ul class="flaws">
-    <li><b>贪心加爬山。</b>逐个放，再做交换和移动的爬山，外加 3 次带种子的随机重启；作者在注释里写明这不是最优分配。<span class="ev"><span class="tag run">实测</span>{{EP_QUALITY}}</span></li>
-    <li><b>加成低于 2 的区域不放。</b>一个特色区域连同它给邻居带来的加成低于 2 就不放，连续几次后停止这座城的规划，所以地形一般的城会少放。<span class="ev"><span class="tag run">实测</span>{{EP_MISSING}}</span></li>
-    <li><b>不读已有的地图钉。</b>规划时不把玩家的钉当作占用或邻居；打钉时用“找到或新建”，格上原有的钉会改成它的图标、记为它的钉，以后“清除”会一并删掉。<span class="ev"><span class="tag run">实测</span>{{EP_PINS}}</span></li>
-    <li><b>用自己的规则引擎打分。</b>DMT 只在提交前用来否决不合法的格，作者建议玩家关掉 DMT。离线对比的测试场景里，它的引擎与 DMT 没有出现差异；不过地图钉上显示的数和它优化的数来自两套代码。</li>
-    <li><b>每城区域数是一个全局数字。</b>不看人口；运河、堤坝只要合法就每座城都放。</li>
-    <li><b>关面板即取消。</b>关闭面板或按 Esc 会终止正在进行的规划；第 2–5 套城址方案的布局与先看哪一套有关。</li>
-  </ul>
-  <details><summary>源码出处</summary><p class="note">ep_planner.lua：搜索 730–1009、275–276、976；阈值 EP_Meta.MIN_DISTRICT_ADJACENCY、760–817；每城数量 775–776；城址方案 2403–2411。ep_panel.lua：地图钉 660–687、799–819；每城数量 217–231；取消 2087–2093。ep_rules.lua：规则引擎 445–461、1608、1844–1944。</p></details>
-</div></section>
-
-<section id="speed"><div class="col">
-  <h2 data-n="04">速度</h2>
+  <h3 id="speed">速度</h3>
   <p>{{SPEED_TEXT}}关掉面板也会算完，算完时启动栏按钮出现标记并有提示音。</p>
   <p><b>游戏内实测</b>（macOS，风云变幻）：</p>
       <div class="tablewrap">
@@ -449,11 +415,7 @@ details.appx[open] > summary { margin-bottom: 8px; }
           </tbody>
         </table>
       </div>
-      <p class="note">多城标准档此后加了宽束联合起点（附录 A.3）。2026-10-21 在另一张图上同规模实测：标准档关闭这个起点 1.6 秒、开启 1.7 秒，多约 10%；精细档 3.7 秒。</p>
-    <figure>
-      <div class="frame chart" id="ch-time"></div>
-      <figcaption>离线环境里一次规划的中位耗时（秒，对数刻度）。离线的 Lua 虚拟机比游戏慢 10–20 倍，只用来比较三者的相对快慢。</figcaption>
-    </figure>
+      <p class="note">多城标准档此后加了宽束联合起点（附录 A.3）。2026-10-21 在另一张图上同规模实测：标准档关闭这个起点 1.6 秒、开启 1.7 秒，多约 10%；精细档 3.7 秒。后期存档上各页签的耗时见附录 B.7。</p>
 </div></section>
 
 <section id="limits"><div class="col">
@@ -462,7 +424,7 @@ details.appx[open] > summary { margin-bottom: 8px; }
     <li>改良设施只规划奇观要挨着的那种（阿耳忒弥斯神庙旁的营地，和神庙一起打钉）；其余的不规划：地块按它能建的最好改良计值，但不打改良钉。</li>
     <li>多城页签没有“禁止砍伐”开关，始终允许砍伐树林、雨林、沼泽。</li>
     <li>每种区域只规划一个；社区这类可以重复建造的区域要多个时，需分次求解。</li>
-    <li><b>魅力</b>：方案之外以后才建的改良设施不在模型里；保护区周边产出假设那些地块一直不开发；打钉的保护区只计住房。后期存档复核的 9 个社区格，魅力和住房都与游戏相同（附录 B.8）。</li>
+    <li><b>魅力</b>：方案之外以后才建的改良设施不在模型里；保护区周边产出假设那些地块一直不开发；打钉的保护区只计住房。后期存档复核的 9 个社区格，魅力和住房都与游戏相同（附录 B.7）。</li>
     <li><b>保护区周边产出只在必建时计分</b>：惊艳、迷人的地块多时，一个保护区的周边产出可达 40–70 点；这些产出要建古树林、避难所才有，计入挑选会让候选里几乎总是先挑保护区。所以从候选里挑时只计它的住房，周边产出只显示。</li>
     <li><b>一次打很多钉</b>：DMT 每收到一个新钉就更新它和周围的钉，每次都把整张钉数据表读出再存回，钉越多越慢。地图上已有约 100 个钉时一次打 80 多个，游戏忙约 12 秒；正常一次打 15 个约 0.25 秒。</li>
     <li>从候选里挑时只比目标函数（相邻加成、住房，打开时加上地块、覆盖、距离成本），区域里建筑本身的产出不计：军营、航空港这类没有相邻加成的区域放在候选里不会被挑中，需要时设为必建。</li>
@@ -480,9 +442,18 @@ details.appx[open] > summary { margin-bottom: 8px; }
     <li><b>反馈问题</b>：在 <a href="{{REPO_URL}}/issues/new?template=bug.md">GitHub Issues</a> 提交，写上版本号、规则集、同时启用的其他模组和复现步骤，最好附上截图和 <code>Lua.log</code> 里出错位置附近的几十行。</li>
     <li><b>更新记录</b>：见 <a href="{{REPO_URL}}/blob/main/CHANGELOG.md">CHANGELOG</a>；各版本的下载在<a href="{{REPO_URL}}/releases">发布页</a>。</li>
     <li><b>考虑中的功能</b>：与区域互相加成的改良设施（玛雅天文台与农场、拜占庭圣地与农场、高卢矿山、荷兰圩田）；规划时考虑玩家打的“移除地貌 / 采收 / 种树”钉；把选城址和多城两步串成一步的按钮。</li>
-    <li><b>源代码与许可证</b>：<a href="{{REPO_URL}}">GitHub</a>，MIT 许可证。仓库里也有完整的测试与对比框架，可以自己重跑本页的数据。</li>
+    <li><b>源代码与许可证</b>：<a href="{{REPO_URL}}">GitHub</a>，MIT 许可证。仓库里也有完整的测试与评估框架，可以自己重跑本页的数据。</li>
   </ul>
 </div></section>
+<section id="thanks"><div class="col">
+  <h2 data-n="07">致谢</h2>
+  <ul class="tight">
+    <li><b><a href="https://steamcommunity.com/sharedfiles/filedetails/?id=2428969051">Detailed Map Tacks</a></b>（D、wltk）：本模组的合法性判断和相邻加成全部由它计算，地图钉上的数也由它显示。</li>
+    <li><b><a href="https://steamcommunity.com/sharedfiles/filedetails/?id=3771382002">Auto Map Tacks Planner</a></b>：这些做法学自它：奇观下拉框按时代、再按造价排列；“好位置”着色；多城页签的逐城清单和按产出生成的模板；全帝国限量的区域只放进写了它的城；覆盖范围；撤销记录随存档保存；替换本模组之前打的钉；<kbd>Shift</kbd>+<kbd>L</kbd> 快捷键。</li>
+    <li><b><a href="https://steamcommunity.com/sharedfiles/filedetails/?id=3793348626">Empire Planner</a></b>：在城市已拥有的格上，用游戏引擎给出的可建格复核方案（附录 A.8 第三道关），学自它。</li>
+  </ul>
+</div></section>
+
 
 <section id="how" class="appendix"><div class="wide">
   <h2 data-n="附录 A">技术说明</h2>
@@ -562,58 +533,53 @@ details.appx[open] > summary { margin-bottom: 8px; }
 
 <section id="eval" class="appendix"><div class="wide">
   <h2 data-n="附录 B">评估方法与完整数据</h2>
-  <p class="col" style="margin-inline:auto">第 3 节对比结果的方法和逐项数据（B.1–B.6），本模组自身的测试与后期存档压力测试（B.7–B.8），以及评估的局限（B.9）。与 AMT、EP 的对比都在离线环境里完成；游戏内的数据是速度实测、本模组自身的测试和压力测试。</p>
+  <p class="col" style="margin-inline:auto">第 4 节质量数据的方法和逐项数据（B.1–B.5），本模组自身的测试与后期存档压力测试（B.6–B.7），以及评估的局限（B.8）。质量数据都在离线环境里得到；游戏内的数据是速度实测、本模组自身的测试和压力测试。</p>
   <details class="appx col" style="margin-inline:auto"><summary>展开附录 B</summary></details>
   <div class="appx-body" hidden>
   <div class="col">
     <h3 id="e-method"><span class="sn">B.1</span>方法</h3>
-    <p>三个规划器在完全相同的局面下各自给出方案，再由同一个裁判打分。为了可复现、覆盖面广，评估在离线环境里进行，没有启动游戏：</p>
+    <p>为了可复现、覆盖面广，质量评估在离线环境里进行，没有启动游戏：</p>
     <ul class="tight">
       <li><b>真实规则</b>：区域、相邻、地形、地貌、资源、文明与领袖特性、修正（modifier）全部来自游戏自己导出的风云变幻规则数据库，不是手写的简化版。</li>
-      <li><b>真实代码</b>：DMT、AMT r49、Empire Planner 的 Lua 源码原样加载、不做任何修改；每个规划器在自己独立的 Lua 状态里运行（和游戏里各自的界面上下文一样），像玩家一样点它们自己的按钮。</li>
+      <li><b>真实代码</b>：DMT 和本模组的 Lua 代码原样加载、不做任何修改；本模组在自己独立的 Lua 状态里运行（和游戏里的界面上下文一样），像玩家一样点面板的按钮。</li>
       <li><b>模拟的引擎</b>：地图、城市、地图钉、可见性、河流与泛滥平原、文明特性修正（GameEffects）由测试框架模拟；规划器能调用的游戏接口都按游戏的语义实现。</li>
-      <li><b>同一个裁判</b>：方案打成地图钉后，由一个只加载 DMT 的独立状态打分——也就是玩家在地图钉上看到的数。另外检查游戏规则：DMT 的合法性、不能压资源、城市范围与归属、每城一个、帝国上限、人口槽位、是否压掉玩家的钉、想要的区域是否都放了。</li>
-      <li><b>同样的要求</b>：三者拿到同样的区域清单和产出权重（除“换权重”一项外都是全 1），裁判按同一组权重计分；对两个对手而言，这比它们面板的默认设置更贴近评分标准。另外也跑了它们面板的默认设置，代表玩家实际得到的结果（见各项的完整数据）。</li>
-      <li><b>不只用一种指标</b>：DMT 相邻加成是本模组的目标，AMT、EP 还照顾地块产出和区域优先级，只用它评分对它们不利。所以另用不属于任何一方的城市总产出，以及 AMT、EP 各自的目标函数（交叉评分）复核。</li>
+      <li><b>独立的裁判</b>：方案打成地图钉后，由一个只加载 DMT 的独立状态打分——也就是玩家在地图钉上看到的数。另外检查游戏规则：DMT 的合法性、不能压资源、城市范围与归属、每城一个、帝国上限、人口槽位、是否压掉玩家的钉、想要的区域是否都放了。</li>
+      <li><b>和真最优比</b>：每个场景的真最优用分支定界另外求出，同样由 DMT 打分（见下面的“真最优”）。场景给定区域清单和产出权重（除“换权重”一项外都是全 1），裁判按同一组权重计分。</li>
     </ul>
     <figure>
       <div class="frame scroll">
-        <svg viewBox="0 0 880 170" role="img" aria-label="评估流程：场景生成地图，三个规划器各自在独立状态里出方案，方案打成地图钉后由只加载 DMT 的裁判打分并检查规则">
+        <svg viewBox="0 0 880 150" role="img" aria-label="评估流程：场景生成地图，本模组和求真最优的分支定界各自在独立状态里出方案，方案打成地图钉后由只加载 DMT 的裁判打分并检查规则">
           <defs><marker id="ae" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="d-arrow" d="M0,0 L10,5 L0,10 z"/></marker></defs>
-          <rect class="d-box" x="10" y="50" width="150" height="76" rx="8"/>
-          <text class="d-title" x="85" y="78" text-anchor="middle">场景</text>
-          <text class="d-sub" x="85" y="98" text-anchor="middle">文明 · 地形 · 阶段</text>
-          <text class="d-sub" x="85" y="114" text-anchor="middle">想建的区域</text>
-          <rect class="d-box ext" x="190" y="50" width="150" height="76" rx="8"/>
-          <text class="d-title" x="265" y="78" text-anchor="middle">模拟的游戏</text>
-          <text class="d-sub" x="265" y="98" text-anchor="middle">真实规则数据库</text>
-          <text class="d-sub" x="265" y="114" text-anchor="middle">同种子 → 同一张图</text>
-          <rect class="d-box key" x="370" y="10" width="170" height="44" rx="8"/>
-          <text class="d-title" x="455" y="37" text-anchor="middle">本模组（三档）</text>
-          <rect class="d-box" x="370" y="66" width="170" height="44" rx="8"/>
-          <text class="d-title" x="455" y="93" text-anchor="middle">AMT r49</text>
-          <rect class="d-box" x="370" y="122" width="170" height="44" rx="8"/>
-          <text class="d-title" x="455" y="149" text-anchor="middle">Empire Planner</text>
-          <rect class="d-box key" x="570" y="50" width="140" height="76" rx="8"/>
-          <text class="d-title" x="640" y="78" text-anchor="middle">裁判</text>
-          <text class="d-sub" x="640" y="98" text-anchor="middle">只加载 DMT</text>
-          <text class="d-sub" x="640" y="114" text-anchor="middle">+ 游戏规则检查</text>
-          <rect class="d-box" x="740" y="50" width="130" height="76" rx="8"/>
-          <text class="d-title" x="805" y="78" text-anchor="middle">指标</text>
-          <text class="d-sub" x="805" y="98" text-anchor="middle">加成 · 合法 · 完整</text>
-          <text class="d-sub" x="805" y="114" text-anchor="middle">确定性 · 耗时</text>
-          <path class="d-edge" d="M160 88 L186 88" marker-end="url(#ae)"/>
-          <path class="d-edge" d="M340 88 L355 88 Q362 88 362 81 L362 39 Q362 32 366 32" marker-end="url(#ae)"/>
-          <path class="d-edge" d="M340 88 L366 88" marker-end="url(#ae)"/>
-          <path class="d-edge" d="M340 88 L355 88 Q362 88 362 95 L362 137 Q362 144 366 144" marker-end="url(#ae)"/>
-          <path class="d-edge" d="M540 32 L553 32 Q560 32 560 39 L560 81 Q560 88 566 88" marker-end="url(#ae)"/>
-          <path class="d-edge" d="M540 88 L566 88" marker-end="url(#ae)"/>
-          <path class="d-edge" d="M540 144 L553 144 Q560 144 560 137 L560 95 Q560 88 566 88" marker-end="url(#ae)"/>
-          <path class="d-edge" d="M710 88 L736 88" marker-end="url(#ae)"/>
-          <text class="d-lab" x="553" y="166" text-anchor="middle">方案 = 地图钉</text>
+          <rect class="d-box" x="10" y="38" width="150" height="76" rx="8"/>
+          <text class="d-title" x="85" y="66" text-anchor="middle">场景</text>
+          <text class="d-sub" x="85" y="86" text-anchor="middle">文明 · 地形 · 阶段</text>
+          <text class="d-sub" x="85" y="102" text-anchor="middle">想建的区域</text>
+          <rect class="d-box ext" x="190" y="38" width="150" height="76" rx="8"/>
+          <text class="d-title" x="265" y="66" text-anchor="middle">模拟的游戏</text>
+          <text class="d-sub" x="265" y="86" text-anchor="middle">真实规则数据库</text>
+          <text class="d-sub" x="265" y="102" text-anchor="middle">同种子 → 同一张图</text>
+          <rect class="d-box key" x="370" y="14" width="170" height="44" rx="8"/>
+          <text class="d-title" x="455" y="41" text-anchor="middle">本模组（三档）</text>
+          <rect class="d-box" x="370" y="94" width="170" height="44" rx="8"/>
+          <text class="d-title" x="455" y="121" text-anchor="middle">真最优（分支定界）</text>
+          <rect class="d-box key" x="570" y="38" width="140" height="76" rx="8"/>
+          <text class="d-title" x="640" y="66" text-anchor="middle">裁判</text>
+          <text class="d-sub" x="640" y="86" text-anchor="middle">只加载 DMT</text>
+          <text class="d-sub" x="640" y="102" text-anchor="middle">+ 游戏规则检查</text>
+          <rect class="d-box" x="740" y="38" width="130" height="76" rx="8"/>
+          <text class="d-title" x="805" y="66" text-anchor="middle">指标</text>
+          <text class="d-sub" x="805" y="86" text-anchor="middle">离最优 · 合法 · 完整</text>
+          <text class="d-sub" x="805" y="102" text-anchor="middle">确定性 · 耗时</text>
+          <path class="d-edge" d="M160 76 L186 76" marker-end="url(#ae)"/>
+          <path class="d-edge" d="M340 76 L355 76 Q362 76 362 69 L362 43 Q362 36 366 36" marker-end="url(#ae)"/>
+          <path class="d-edge" d="M340 76 L355 76 Q362 76 362 83 L362 109 Q362 116 366 116" marker-end="url(#ae)"/>
+          <path class="d-edge" d="M540 36 L553 36 Q560 36 560 43 L560 69 Q560 76 566 76" marker-end="url(#ae)"/>
+          <path class="d-edge" d="M540 116 L553 116 Q560 116 560 109 L560 83 Q560 76 566 76" marker-end="url(#ae)"/>
+          <path class="d-edge" d="M710 76 L736 76" marker-end="url(#ae)"/>
+          <text class="d-lab" x="640" y="138" text-anchor="middle">方案 = 地图钉</text>
         </svg>
       </div>
-      <figcaption>每个规划器在自己的 Lua 状态里运行，互不干扰；裁判是又一个独立状态，只认地图钉，和游戏里 DMT 显示数值的方式相同。</figcaption>
+      <figcaption>本模组和分支定界各在自己的 Lua 状态里运行；裁判是又一个独立状态，只认地图钉，和游戏里 DMT 显示数值的方式相同。</figcaption>
     </figure>
     <p>场景共 {{N_ALL}} 个，分六组：</p>
   </div>
@@ -626,13 +592,12 @@ details.appx[open] > summary { margin-bottom: 8px; }
         <tr><td>留出集</td><td class="num">{{N_HS}} + {{N_HM}}</td><td>构成同开发集，换了地图种子</td><td>复核：改算法时没看过</td></tr>
         <tr><td>换权重</td><td class="num">3 × {{N_SINGLE}}</td><td>开发集单城的地图，科研、生产或信仰的权重设为 3</td><td>复核：换一组目标</td></tr>
         <tr><td>奇观</td><td class="num">{{N_W}}</td><td>中期单城，2 座奇观 + 4–5 个区域</td><td>奇观与区域联合规划</td></tr>
-        <tr><td>选城址</td><td class="num">{{N_C}}</td><td>中期首都，选 2 座新城，最远 8 格</td><td>选城址（只比 EP）</td></tr>
-        <tr><td>覆盖范围</td><td class="num">{{N_V}}</td><td>后期 3–4 座城，每座城自己一张清单，只有一两座城要工业区、娱乐中心</td><td>覆盖范围（只比 AMT）</td></tr>
+        <tr><td>覆盖范围</td><td class="num">{{N_V}}</td><td>后期 3–4 座城，每座城自己一张清单，只有一两座城要工业区、娱乐中心</td><td>覆盖范围的权重</td></tr>
       </tbody>
     </table>
   </div>
   <div class="col">
-    <p>开发集的地形有温带河谷、沿海、高地、雨林、沙漠泛滥平原、苔原、岛屿、火山；文明里有日本、高丽、高卢、越南、巴西、荷兰、希腊、马里、印尼、埃及、拜占庭等改写了区域规则的文明。有的场景还有邻国城市、城邦、自然奇观、尚未探索的格子，以及玩家事先手打的钉。前期要 2 个区域，中期 4–5 个（已建 1 个），后期 7–8 个（已建 2 个，含水渠、市政广场，沙漠里含堤坝）。</p>
+    <p>开发集的地形有温带河谷、沿海、高地、雨林、沙漠泛滥平原、苔原、岛屿、火山；文明里有日本、高丽、高卢、越南、巴西、荷兰、希腊、马里、印尼、埃及、拜占庭等改写了区域规则的文明。有的场景还有邻国城市、城邦、自然奇观、尚未探索的格子，以及玩家事先手打的钉。前期要 2 个区域，中期 4–5 个（已建 1 个），后期 7–8 个（已建 2 个，含水渠、市政广场，沙漠里含堤坝）。另有大城（9–12 个区域）、小多城（2–4 城）、从候选里挑、真实存档等几组，只用来和真最优比，见第 4 节的表。</p>
     <p><b>指标</b></p>
     <ul class="tight">
       <li><b>加成</b>：方案打成钉后，玩家全部区域与区域钉在 DMT 里的相邻加成之和（按场景的产出权重），减去规划之前的和。</li>
@@ -641,13 +606,12 @@ details.appx[open] > summary { margin-bottom: 8px; }
       <li><b>漏放</b>：要求的区域没出现在方案里（不算违规，但算进完整度）。其中“有位置却没放”由裁判判定：方案打成钉之后，城市还有空槽位，且 3 环内有一格 DMT 判为可放、又不违反上面任何一条规则。</li>
       <li><b>覆盖</b>：玩家的城市被工业区、娱乐中心覆盖的个数（城市中心在区域的覆盖半径内即算，两类分别计，同类不重复），取方案带来的增量。裁判按规则数据里建筑的覆盖半径独立计算。</li>
       <li><b>确定性</b>：同一场景同样输入跑两次，方案是否完全相同。</li>
-      <li><b>逐场景配对</b>：同一场景里本模组标准档的分数减去对手的分数，数出胜 / 平 / 负；平均差给 95% 自助法置信区间（2000 次重抽样），p 是符号检验（只看胜负场数）。正文说“显著”指区间不跨 0。</li>
     </ul>
     <p><b>真最优</b></p>
     <ul class="tight">
       <li><b>求法</b>：分支定界，候选格和合法性与本模组的搜索相同，每个方案由同一个 DMT 打分。上界 = 每个区域单独放时的值 + 每两个相邻区域的配对值；配对值取 DMT 在那两格上的实测与规则表里大的一个，“每凑满两个邻居 +1”这类规则按份额计，还没放的区域之间的配对不超过六边形格能有的边数。奇观也是一个槽位，从候选里挑时每种组合各搜一遍。</li>
       <li><b>自查</b>：{{ORACLE_CHECK_TEXT}}</li>
-      <li><b>证明不了的</b>：10–12 个区域的大城在 500 万个节点内多数证明不了，3–4 座城的多城更大，给的是范围：下端是已知最好的方案（大城：各规划器和分支定界找到的最好的一个；多城：精细档再继续优化 20 次、模拟退火 20 万步，再由分支定界改进），上端是分支定界没搜完的部分里最大的上界。</li>
+      <li><b>证明不了的</b>：10–12 个区域的大城在 500 万个节点内多数证明不了，3–4 座城的多城更大，给的是范围：下端是已知最好的方案（大城：所有离线运行和分支定界找到的最好的一个；多城：精细档再继续优化 20 次、模拟退火 20 万步，再由分支定界改进），上端是分支定界没搜完的部分里最大的上界。</li>
       <li><b>可以复核</b>：每个场景的结果带真最优的方案、值、是否证明、节点数，以及规则库、DMT 和代码的指纹，用 DMT 就能逐个核对；场景按固定种子生成，开发集、留出集之外另有只在发版时跑的封存集。</li>
     </ul>
   </div>
@@ -655,7 +619,7 @@ details.appx[open] > summary { margin-bottom: 8px; }
   <!-- B.2 single city -->
   <div class="col">
     <h3 id="e-single"><span class="sn">B.2</span>单城</h3>
-    <p>主实验是开发集的 {{N_SINGLE}} 个场景，看相邻加成、合法与完整，并给两个案例；最后三项从不同角度复核：换地图和权重、换一种指标、用对手自己的目标函数打分。</p>
+    <p>主实验是开发集的 {{N_SINGLE}} 个场景，看相邻加成、合法与完整；最后换地图和权重复核。</p>
     <p class="exp"><b>相邻加成。</b>{{SINGLE_TEXT}}</p>
   </div>
   <div class="twocharts">
@@ -670,59 +634,21 @@ details.appx[open] > summary { margin-bottom: 8px; }
       <figcaption>平均质量（加成 ÷ 该场景的真最优），按游戏阶段分组。</figcaption>
     </figure>
   </div>
-  <div class="twocharts">
-    <figure>
-      <div class="frame chart" id="ch-scatter-amt"></div>
-      <figcaption id="cap-scatter-amt"></figcaption>
-    </figure>
-    <figure>
-      <div class="frame chart" id="ch-scatter-ep"></div>
-      <figcaption id="cap-scatter-ep"></figcaption>
-    </figure>
-  </div>
-  <div class="col"><details><summary>完整数据：各档与对手的面板默认设置</summary><div class="tablewrap" id="tb-overview"></div></details></div>
+  <div class="col"><details><summary>完整数据：各档</summary><div class="tablewrap" id="tb-overview"></div></details></div>
 
   <div class="col">
     <p class="exp"><b>合法与完整。</b>{{CORRECT_TEXT}}</p>
-    <figure>
-      <div class="frame chart" id="ch-missing"></div>
-      <figcaption>{{MISSING_CAP}}</figcaption>
-    </figure>
     <details><summary>完整数据：违规、压钉、漏放、确定性</summary><div class="tablewrap" id="tb-correct"></div></details>
   </div>
-
-  <div class="col">
-    <p class="exp"><b>两个案例。</b>同一座城、同样的区域清单，三个规划器的方案画在一起。数字是该区域自己在 DMT 里的相邻加成；虚线框是玩家原有的钉。</p>
-  </div>
-  {{CASES}}
 
   <div class="col">
     <p class="exp"><b>换地图、换权重。</b>{{ROBUST_TEXT}}</p>
     <figure>
       <div class="legend" id="lg-robust"></div>
       <div class="frame chart" id="ch-robust"></div>
-      <figcaption>达到真最优的场景比例。开发集是改算法时看的那一组；留出集换了地图种子；后三组用开发集的地图，把一项产出的权重设为 3。</figcaption>
+      <figcaption>标准档达到真最优的场景比例。开发集是改算法时看的那一组；留出集换了地图种子；后三组用开发集的地图，把一项产出的权重设为 3。</figcaption>
     </figure>
-    <details><summary>完整数据：逐场景配对</summary><div class="tablewrap" id="tb-robust"></div></details>
-  </div>
-
-  <div class="col">
-    <p class="exp"><b>换一种指标：城市总产出。</b>{{OUTPUT_TEXT}}</p>
-    <figure>
-      <div class="frame chart" id="ch-output"></div>
-      <figcaption>拿到最高城市总产出的场景比例（开发集）。城市总产出 = 相邻加成 + 市民耕作最好的若干块地（人口多少就算几块，各产出权重 1），由裁判独立计算。</figcaption>
-    </figure>
-    <details><summary>完整数据：含对手的默认设置与逐场景配对</summary><div class="tablewrap" id="tb-output"></div></details>
-  </div>
-
-  <div class="col">
-    <p class="exp"><b>用对手自己的目标函数打分。</b>{{CROSS_TEXT}}</p>
-    <figure>
-      <div class="legend" id="lg-forest"></div>
-      <div class="frame chart" id="ch-forest"></div>
-      <figcaption>{{FOREST_CAP}}</figcaption>
-    </figure>
-    <details><summary>完整数据：三个规划器的平均分与逐场景配对</summary><div class="tablewrap" id="tb-cross"></div></details>
+    <details><summary>完整数据：各场景集</summary><div class="tablewrap" id="tb-robust"></div></details>
   </div>
 
   <!-- B.3 multi city -->
@@ -732,7 +658,7 @@ details.appx[open] > summary { margin-bottom: 8px; }
     <p class="exp"><b>联合规划。</b>{{MULTI_TEXT}}</p>
     <figure>
       <div class="frame chart" id="ch-multi"></div>
-      <figcaption>每个点是一个多城场景，横轴是该规划器的加成占这个场景参照（已知最好的方案）的百分比；竖线是平均值。“逐城依次”是用本模组的单城页签一座一座规划（前一座的钉留着）。悬停看场景。</figcaption>
+      <figcaption>每个点是一个多城场景，横轴是加成占这个场景参照（已知最好的方案）的百分比；竖线是平均值。“逐城依次”是用本模组的单城页签一座一座规划（前一座的钉留着）。悬停看场景。</figcaption>
     </figure>
   </div>
 
@@ -743,17 +669,6 @@ details.appx[open] > summary { margin-bottom: 8px; }
       <div class="frame chart" id="ch-mrobust"></div>
       <figcaption>达到参照（已知最好的方案）的多城场景比例。</figcaption>
     </figure>
-    <details><summary>完整数据：逐场景配对</summary><div class="tablewrap" id="tb-robust-multi"></div></details>
-  </div>
-
-  <div class="col">
-    <p class="exp"><b>用对手自己的目标函数打分。</b>{{CROSS_MULTI_TEXT}}</p>
-    <figure>
-      <div class="legend" id="lg-forest-multi"></div>
-      <div class="frame chart" id="ch-forest-multi"></div>
-      <figcaption>{{FOREST_CAP}}</figcaption>
-    </figure>
-    <details><summary>完整数据：三个规划器的平均分与逐场景配对</summary><div class="tablewrap" id="tb-cross-multi"></div></details>
   </div>
 
   <div class="col">
@@ -775,25 +690,14 @@ details.appx[open] > summary { margin-bottom: 8px; }
       <div class="frame chart" id="ch-wonders"></div>
       <figcaption>{{N_W}} 个中期单城场景，每个要两座奇观和 4–5 个区域。</figcaption>
     </figure>
-    <p class="note">裁判把奇观也打成钉，用 DMT 判断奇观的合法性，奇观给相邻区域的加成一并计入。各规划器按自己面板的方式要奇观：AMT 在“奇观”页签点选这两座；EP 在奇观清单里只勾这两座、调高每城每时代的限额，它在区域摆好之后才放奇观。</p>
+    <p class="note">裁判把奇观也打成钉，用 DMT 判断奇观的合法性，奇观给相邻区域的加成一并计入。</p>
     <details><summary>完整数据</summary><div class="tablewrap" id="tb-wonders"></div></details>
   </div>
 
-  <!-- B.5 sites -->
+  <!-- B.5 pools -->
   <div class="col">
-    <h3 id="e-sites"><span class="sn">B.5</span>选城址</h3>
-    <p>{{SITES_TEXT}}</p>
-    <figure>
-      <div class="frame chart" id="ch-sites" style="max-width:480px;margin-inline:auto"></div>
-      <figcaption>每个点是一个场景：横轴是本模组选的两座新城的城址总值，纵轴是 EP 的。点落在虚线下方表示 EP 更低。城址总值 = 每座新城最好 8 块地的产出 + 三个区域在 DMT 下的最好相邻加成（区域潜力），由裁判独立计算，不用任何一方的评分。</figcaption>
-    </figure>
-    <details><summary>完整数据：分项平均</summary><div class="tablewrap" id="tb-sites"></div></details>
-  </div>
-
-  <!-- B.6 pools -->
-  <div class="col">
-    <h3 id="e-pools"><span class="sn">B.6</span>从候选里挑</h3>
-    <p>AMT、EP 都没有“给个数、自动挑区域”的功能，这一项只和本模组自己的参照比。参照是把每个组合单独求解（标准档再加 3 次继续优化）后取最好的那个：挑选的结果达到它，就说明既挑对了组合，也把这个组合摆好了。场景是随机地图上一座 10 人口的城，7 种有相邻加成的区域作候选，4 种情形各 4 个种子（<code>tests/offline/bench_pools.lua</code>）。</p>
+    <h3 id="e-pools"><span class="sn">B.5</span>从候选里挑</h3>
+    <p>这一项和本模组自己的参照比。参照是把每个组合单独求解（标准档再加 3 次继续优化）后取最好的那个：挑选的结果达到它，就说明既挑对了组合，也把这个组合摆好了。场景是随机地图上一座 10 人口的城，7 种有相邻加成的区域作候选，4 种情形各 4 个种子（<code>tests/offline/bench_pools.lua</code>）。</p>
   </div>
   <div class="col tablewrap" style="margin-inline:auto">
     <table>
@@ -810,11 +714,11 @@ details.appx[open] > summary { margin-bottom: 8px; }
     <p class="note">百分比是达到参照的平均比例；耗时是按游戏内实测单价折算的一次算完时间，挑选时一律分帧计算，游戏照常响应。精细档最初逐个组合穷举，约 4.6 秒；改成粗解时穷举上限 3000、只对前三名穷举后降到约 2.3 秒，质量不变。</p>
     <p>{{POOLS_OPT_TEXT}}</p>
     <p>{{MULTIPOOLS_TEXT}}</p>
-    <p><b>不挑时结果不变</b>：请求里不带挑选、距离、自动区域这些字段时，求解与以前完全相同。用改动后的代码重跑开发集（本模组全部设置，352 次运行），方案与入库结果逐个相同，所以 B.2–B.5 的对比数据仍然有效。游戏内另有 7 项测试覆盖挑选与三套方案、地图预览、距离成本、自动水渠堤坝、提醒钉与 DMT 一致、城址钉取消、选城址按个数估分（B.7）。</p>
+    <p><b>不挑时结果不变</b>：请求里不带挑选、距离、自动区域这些字段时，求解与以前完全相同。用改动后的代码重跑开发集（本模组全部设置，352 次运行），方案与入库结果逐个相同，所以 B.2–B.4 的数据仍然有效。游戏内另有 7 项测试覆盖挑选与三套方案、地图预览、距离成本、自动水渠堤坝、提醒钉与 DMT 一致、城址钉取消、选城址按个数估分（B.6）。</p>
   </div>
-  <!-- B.7 own tests -->
+  <!-- B.6 own tests -->
   <div class="col">
-    <h3 id="e-tests"><span class="sn">B.7</span>本模组自身的测试</h3>
+    <h3 id="e-tests"><span class="sn">B.6</span>本模组自身的测试</h3>
   </div>
   <div class="col tablewrap" style="margin-inline:auto">
     <table>
@@ -823,18 +727,18 @@ details.appx[open] > summary { margin-bottom: 8px; }
         <tr><td>游戏内（经 FireTuner 在游戏的 Lua 状态里断言）</td><td>风云变幻 103 项（原版、迭起兴衰少几项该规则集没有的），三种规则集各跑一遍，其中 73 项曾另以日本、高卢各跑一遍（2026-10-20，有全部 DLC 的账号）：与暴力枚举最优一致、假想摆放与真实 DMT 钉逐项一致、确定性、锁定钉、打钉撤销、分帧与关闭面板、多城与选城址合法；单城奇观、补放、好位置、钉的记录与替换、逐城清单与限量区域、覆盖范围、快捷键；从候选里挑与三套方案、地图预览、距离成本、自动水渠堤坝、提醒钉与 DMT 一致、城址钉取消、选城址按个数估分；游戏规则里的港口 / 商业中心配对、候选池不同城挑两者、社区住房与游戏的魅力一致且挑在可建格里魅力最高处、取消城址钉与替换旧钉不动市中心钉；城址一环留给新城、帝国限建区域分给前几座城、启动栏提示显示版本号；候选格与城市领土连通、未拥有的格和缺科技的地貌有标注、多城各城的区域绕开别城的区域仍连得上；改良规则从游戏读出、空地的值不低于现在的产出、粮仓与港口建筑的住房</td><td>0 失败（该规则集没有的内容或地图条件不满足时跳过 1–6 项，如原版没有市政广场、地图全部已探索）</td></tr>
         <tr><td>增量评估 vs 全量评估</td><td>记忆化的增量评估与真实 DMT 全量评估逐项比对</td><td>300 次，0 不一致</td></tr>
         <tr><td>离线逻辑测试</td><td>121 项：求解器与暴力枚举、增量记账、分帧、面板流程、规则补充、引擎复核、钉的记录与替换、逐城清单、奇观、补放与好位置、覆盖范围；从候选里挑（与逐个组合的暴力枚举一致、三套组合不同）、距离成本、自动水渠堤坝、提醒钉、选城址按个数估分、多城按城挑选；多城的宽束联合起点；港口与商业中心分城（开关两种结果、必建与已打钉挡住配对、凑不够时放行、多城按城）；魅力与住房（与独立写的暴力枚举逐个相同、清掉地貌要有对应科技、水面不变、本格与邻格）；界面经控件自己的点击回调（区域格两页各点一圈、勾选框、选城址打钉后多城替换不动市中心钉）；互斥区域（娱乐中心与水上乐园）、必建区域抢同一块地时放下能放的、拥挤城市候选一个合法格都没有、占掉改良设施少的住房；城址一环留给新城、帝国限建区域分给前几座城；领土连通（被别国领土隔开的格不选、未拥有与缺科技的标注、多城里被别城区域围住的布局不合法、各城区域连得上）；地块按最好的改良计值、住房按城市缺口计、从本方其他城换格</td><td>全部通过</td></tr>
-        <tr><td>离线对比自检</td><td>本模组自己算的加成与裁判独立算的加成</td><td>{{SELF_CHECK}}</td></tr>
+        <tr><td>离线评估自检</td><td>本模组自己算的加成与裁判独立算的加成</td><td>{{SELF_CHECK}}</td></tr>
         <tr><td>引擎可建格复核（探针）</td><td>给玩家全部科技与市政、首都拥有 3 环后，逐区域逐格比较“本模组候选格 + DMT 可放”与游戏引擎的可建格（<code>CityManager.GetOperationTargets</code>）；罗马、日本、高卢三局</td><td>1836 组中 1797 组一致：日本 576/576、高卢 612/612；罗马 13 组为运河（DMT 漏查），26 组落在测试遗留的两个钉上（本模组按设计不动玩家的钉，留钉的测试已修）。加了引擎复核后在罗马局重跑：本模组放行引擎不允许的格为 0</td></tr>
         <tr><td>真实鼠标点击（macOS）</td><td>用系统鼠标事件点击游戏窗口（<code>tools/realclick.py</code>），点哪里由面板控件自己报告的位置换算；每点一下从面板状态读回结果核对：区域格在两页的循环与自动格、城址钉勾选框、两个分城开关、两个换格开关、页签、求解、方案行、打钉、撤销、关闭</td><td>34 项全部通过。对照：只把区域格的选中底色换回旧写法，同一套点击复现了测试者报告的现象，确认了点不动的原因</td></tr>
-        <tr><td>魅力校准</td><td>游戏建出方案（剧院、工业区、圣地、社区、保护区）后，读游戏自己的魅力和住房，与预测比较（<code>tests/bench/calibrate_appeal.py</code>）</td><td>首都 4 格内 61 格魅力全部相同，社区、保护区的住房相同。校准中找到并加进模型的规则：清掉地貌要有对应科技，水面魅力不变，区域所在格的魅力不随清掉的地貌变（v1.3.1 按后期存档实测改正，原来树林扣 1），两个例外：学了“自然保护”后原生林给本格的 +1 随树林清掉，被掠夺的改良设施给本格和邻格的 -1 随它拆掉（v1.4.0）。后期存档复核见 B.8</td></tr>
+        <tr><td>魅力校准</td><td>游戏建出方案（剧院、工业区、圣地、社区、保护区）后，读游戏自己的魅力和住房，与预测比较（<code>tests/bench/calibrate_appeal.py</code>）</td><td>首都 4 格内 61 格魅力全部相同，社区、保护区的住房相同。校准中找到并加进模型的规则：清掉地貌要有对应科技，水面魅力不变，区域所在格的魅力不随清掉的地貌变（v1.3.1 按后期存档实测改正，原来树林扣 1），两个例外：学了“自然保护”后原生林给本格的 +1 随树林清掉，被掠夺的改良设施给本格和邻格的 -1 随它拆掉（v1.4.0）。后期存档复核见 B.7</td></tr>
         <tr><td>裁判校准</td><td>放置透镜（游戏引擎）给出的相邻加成与 DMT 逐格比较；再在首都旁建一组相邻区域，比较实际加成；罗马、日本、高卢三局（<code>tests/bench/calibrate_judge.lua</code>）</td><td>306 组中原因不明的差异 0，1 组是 DMT 的已知偏差（港口挨着沉船，见第 5 节）；已建的 13 个区域逐项相同</td></tr>
       </tbody>
     </table>
   </div>
 
-  <!-- B.8 stress -->
+  <!-- B.7 stress -->
   <div class="col">
-    <h3 id="e-stress"><span class="sn">B.8</span>后期存档压力测试</h3>
+    <h3 id="e-stress"><span class="sn">B.7</span>后期存档压力测试</h3>
     <p>{{STRESS_TEXT}}</p>
   </div>
   <div class="col tablewrap" style="margin-inline:auto">{{STRESS_TABLE}}</div>
@@ -845,31 +749,31 @@ details.appx[open] > summary { margin-bottom: 8px; }
     <figure class="tall"><img src="images/v5-late-multi.jpg" alt="后期存档的多城页签：两个城址和仙台一起规划，学院必建，每城数量 3" loading="lazy"><figcaption>同一存档的多城页签：两个新城址和仙台一起规划，学院必建、每城 3 个。地图上是两个城址的三环和区域预览。</figcaption></figure>
   </div>
 
-  <!-- B.9 limits -->
+  <!-- B.8 limits -->
   <div class="col">
-    <h3 id="e-limits"><span class="sn">B.9</span>局限</h3>
+    <h3 id="e-limits"><span class="sn">B.8</span>局限</h3>
     <p>分三组：已经核对过的、正在规划的、暂不打算做的。</p>
     <p><b>已核对过的</b></p>
     <ul class="tight">
-      <li><b>引擎是模拟的</b>：地图生成、城市、可见性、修正系统由测试框架实现，规则数据和三个规划器、DMT 的代码都是原样的，三者看到同一个模拟世界。核对过两处：从真实存档导出的场景（RS、RM）与游戏里逐格比较，DMT 的判定 0 差异；游戏内引擎审计在大陆存档上 1368 组里 1361 组与引擎一致，余下 7 组都是运河（第 5 节）。模拟的引擎不给可建格，所以离线对比里没有引擎复核。</li>
-      <li><b>裁判</b>：DMT 与游戏引擎的相邻加成逐格一致（B.7）；唯一的已知偏差（沉船）对三个规划器相同。</li>
-      <li><b>真最优按本模组的合法范围求</b>：AMT、EP 认为合法而本模组不认的格不在真最优的搜索里。离线对比里它们的合法方案超过证明过的真最优 {{OPTIMUM_OVER}} 次，这一点没有影响结论。</li>
+      <li><b>引擎是模拟的</b>：地图生成、城市、可见性、修正系统由测试框架实现，规则数据和本模组、DMT 的代码都是原样的。核对过两处：从真实存档导出的场景（RS、RM）与游戏里逐格比较，DMT 的判定 0 差异；游戏内引擎审计在大陆存档上 1368 组里 1361 组与引擎一致，余下 7 组都是运河（第 5 节）。模拟的引擎不给可建格，所以离线评估里没有引擎复核。</li>
+      <li><b>裁判</b>：DMT 与游戏引擎的相邻加成逐格一致（B.6）；唯一的已知偏差是沉船（第 5 节）。</li>
+      <li><b>真最优按本模组的合法范围求</b>：DMT 认为可放、而本模组按游戏规则排除的格（压资源、超出领土等，附录 A.8）不在真最优的搜索里。</li>
     </ul>
     <p><b>正在规划的</b></p>
     <ul class="tight">
-      <li><b>大城和多城只有范围</b>：10–12 个区域的大城、3–4 座城的多城算不出证明过的真最优，第 3 节给的是范围；把上界再收紧、证明更多场景还没做。</li>
+      <li><b>大城和多城只有范围</b>：10–12 个区域的大城、3–4 座城的多城算不出证明过的真最优，第 4 节给的是范围；把上界再收紧、证明更多场景还没做。</li>
       <li><b>主指标只看相邻加成</b>：面板默认的目标还计入地块潜力和住房缺口，方案有时为此让出一些相邻加成：开发集 84 个场景里，标准档计入地块的方案有 31 个相邻加成低于只看相邻的方案，平均是后者的 94%，最低 62%。“城市总产出”按市民现在耕作的最好地块计，不算改良后的潜力，也反映不出这部分：同样 84 个场景里，计入地块的方案城市总产出高的 23 个、低的 15 个，平均几乎相同。裁判另报按修上改良后计的潜力产出；按面板默认目标（相邻 + 地块 + 住房）的真最优也已在 {{N_LAND_ORACLE}} 个单城场景上算出（设计记录 <code>docs/notes/issue-48-land-oracle.md</code>），本页的主指标仍是相邻加成。</li>
       <li><b>耗时</b>：离线耗时与游戏耗时不同，只看相对快慢；每行结果另记与机器无关的 DMT 调用次数，本页还没用它。</li>
-      <li><b>真实场景不多</b>：真实集是两张存档里日本、荷兰的 14 个单城、5 个多城场景，面板“换格”提示里的百分比就来自这些场景；从社区存档还原的参照布局（<code>docs/reference-scenes.md</code>）用来定权重，不进本页的对比。</li>
-      <li><b>权重</b>：评测用默认的全 1 权重，另有偏科研、偏生产、偏信仰三组；默认权重该怎么定在<a href="{{REPO_URL}}/milestone/7">目标与权重</a>里程碑。</li>
-      <li><b>改良设施</b>：AMT 和 EP 还能规划改良设施；本模组只按最好的改良给地块计值，不打改良钉，所以这部分不比。奇观要挨着的改良（阿耳忒弥斯神庙旁的营地）和奇观一起规划，离线对比的 WA 组 8 个场景检查营地放得是否合法。</li>
+      <li><b>真实场景不多</b>：真实集是两张存档里日本、荷兰的 14 个单城、5 个多城场景，面板“换格”提示里的百分比就来自这些场景；从社区存档还原的参照布局（<code>docs/reference-scenes.md</code>）用来定权重，不进本页的评估。</li>
+      <li><b>权重</b>：评估用默认的全 1 权重，另有偏科研、偏生产、偏信仰三组；默认权重该怎么定在<a href="{{REPO_URL}}/milestone/7">目标与权重</a>里程碑。</li>
+      <li><b>改良设施</b>：本模组只按最好的改良给地块计值，不打改良钉，所以评估不看改良设施。奇观要挨着的改良（阿耳忒弥斯神庙旁的营地）和奇观一起规划，离线评估的 WA 组 8 个场景检查营地放得是否合法。</li>
     </ul>
     <p><b>暂不打算做的</b></p>
     <ul class="tight">
-      <li><b>规则集</b>：离线对比只用风云变幻的规则库；迭起兴衰、原版只做游戏内测试（三种规则集各跑一遍）。三者的求解代码相同，区别在规则数据。</li>
+      <li><b>规则集</b>：离线评估只用风云变幻的规则库；迭起兴衰、原版只做游戏内测试（三种规则集各跑一遍）。三者的求解代码相同，区别在规则数据。</li>
       <li><b>测试环境</b>：游戏内测试只在一台 Mac、维护者的 DLC 组合上跑（缺 16 个 DLC）；Windows 上由合作者手动测。</li>
     </ul>
-    <p><b>代码版本</b>：AMT r49（2026-09-19）、Empire Planner 94、DMT 2024-01-17，均为测试时（2026 年 10 月）创意工坊上的版本。</p>
+    <p><b>代码版本</b>：DMT 2024-01-17，测试时（2026 年 10 月）创意工坊上的版本。</p>
   </div>
   </div>
 </div></section>

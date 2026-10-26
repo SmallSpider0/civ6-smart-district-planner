@@ -1,10 +1,10 @@
 # Smart District Planner: install and use
 
-The Chinese guide ([install-and-test.md](install-and-test.md) in the repository, `INSTALL_AND_USE.md` in the download) has more detail and the acceptance checklist. What the planner does, how it compares with other planners and its speed are on the [overview page](https://smallspider0.github.io/civ6-smart-district-planner/en/).
+The Chinese guide ([install-and-test.md](install-and-test.md) in the repository, `INSTALL_AND_USE.md` in the download) has more detail and the acceptance checklist. What the planner does, how close its plans come to the true optimum and its speed are on the [overview page](https://smallspider0.github.io/civ6-smart-district-planner/en/); what other district planners do is in the README's [similar mods](../README.md#similar-mods).
 
 ## One planner per game
 
-Do not enable Smart District Planner together with Auto Map Tacks Planner, Empire Planner or another mod that plans map tacks. They replace the same Detailed Map Tacks functions and create and delete tacks themselves, so two planners in one game spoil each other's plans.
+Do not enable Smart District Planner together with Auto Map Tacks Planner, Empire Planner or another mod that plans map tacks. They each simulate, create and delete map tacks, so two planners in one game spoil each other's plans.
 
 ## Requirements
 
