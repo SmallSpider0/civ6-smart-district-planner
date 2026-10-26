@@ -23,7 +23,8 @@ local cfg = PlayerConfigurations[0]
 cfg:SetValue("SDP_Settings_SINGLE", "v1;preset=BALANCED;LAND=0;YIELD_GOLD=3;TIER=FINE;HOUSING=9;BOGUS=1;SWAP=yes")
 -- Several cities: a save written by v1.5.0 with a change from Science (issue 89).
 cfg:SetValue("SDP_Settings_MULTI", "v1;preset=SCIENCE;YIELD_GOLD=2")
-cfg:SetValue("SDP_Settings_SITES", "v1;preset=GROWTH;APPEAL=1;K=2;D=9")
+cfg:SetValue("SDP_Settings_SITES",
+  "v1;preset=GROWTH;APPEAL=1;K=2;D=9;COUNT=4;DISTRICTS=DISTRICT_PRESERVE:P,DISTRICT_CAMPUS:M,bad entry,DISTRICT_NOPE:M")
 UI_Mock.Install()
 include("SDP_Panel")
 
@@ -105,7 +106,19 @@ test("a loaded save: each tab gets back what it kept", function()
   T.eq(sites.K, 2, "the number of new cities (issue 84)")
   T.eq(sites.D, 9, "and the distance")
   T.eq(UI_Mock.Controls.SitesDistance:GetText(), "9", "the distance shown")
+  -- Issue 90: the district states and the count.
+  T.eq(sites.DistrictCount, 4, "the district count")
+  T.eq(UI_Mock.Controls.SitesPlanValue:GetText(), "4", "shown")
+  local states = {}
+  for _, row in ipairs(sites.View.Districts) do states[row.Type] = row.State end
+  T.eq(states.DISTRICT_CAMPUS, "MUST", "a required campus")
+  T.eq(states.DISTRICT_PRESERVE, "POOL", "a preserve set to candidate")
+  T.eq(states.DISTRICT_HOLY_SITE, "POOL", "the rest: their defaults")
+  T.eq(states.DISTRICT_ENCAMPMENT, "OFF", "the rest: their defaults")
   SDP_Panel.SelectTab("SINGLE")
+  for _, row in ipairs(SDP_Panel.State().DistrictRows) do
+    if row.Type == "DISTRICT_CAMPUS" then T.eq(row.State, "POOL", "the single-city tab has its own states") end
+  end
 end)
 
 test("a change through the controls is kept at once, with no broadcast", function()
@@ -127,6 +140,36 @@ test("a change through the controls is kept at once, with no broadcast", functio
   T.ok(cfg:GetValue("SDP_Settings_MULTI"):find(";YIELD_FAITH=0", 1, true) ~= nil, "several cities: kept under its own key")
   T.ok(cfg:GetValue("SDP_Settings_SINGLE"):find("YIELD_FAITH", 1, true) == nil, "not on the single-city tab")
   T.eq(broadcasts, 0, "nothing broadcast")
+end)
+
+test("a list field: items that match, sorted; nothing kept is the empty default (issue 90)", function()
+  local fields = { { Key = "L", Kind = "list", Pattern = "^[%w_]+:[MPO]$", Default = "" } }
+  T.eq(SDP_Settings.Encode("BALANCED", { L = "" }, fields, PRESETS), "v1;preset=BALANCED", "empty: not written")
+  T.eq(SDP_Settings.Encode("BALANCED", { L = "A:M,B:O" }, fields, PRESETS), "v1;preset=BALANCED;L=A:M,B:O", "written")
+  T.eq(SDP_Settings.Decode("v1;preset=BALANCED;L=B:O,x y,A:M,C:Q", fields, PRESETS, ORDER).Values.L, "A:M,B:O",
+    "bad items dropped, sorted")
+end)
+
+test("city sites: the district grid and count are kept under the tab's key (issue 90)", function()
+  SDP_Panel.SelectTab("SITES")
+  local function Row(districtType)
+    for _, row in ipairs(SDP_Panel.Sites.State().View.Districts) do
+      if row.Type == districtType then return row end
+    end
+  end
+  Row("DISTRICT_THEATER").Cell:Click()
+  local text = cfg:GetValue("SDP_Settings_SITES")
+  T.ok(text:find("DISTRICT_THEATER:M", 1, true) ~= nil, "a required theater kept: " .. text)
+  T.ok(text:find("DISTRICT_CAMPUS:M", 1, true) ~= nil, "the campus still")
+  T.ok(text:find(";COUNT=4", 1, true) ~= nil, "the count")
+  Row("DISTRICT_THEATER").Cell:Click()
+  Row("DISTRICT_THEATER").Cell:Click()
+  text = cfg:GetValue("SDP_Settings_SITES")
+  T.ok(text:find("DISTRICT_THEATER", 1, true) == nil, "back to a candidate, its default: not written: " .. text)
+  UI_Mock.Controls.SitesPlanLess:Click()
+  T.ok(cfg:GetValue("SDP_Settings_SITES"):find("COUNT=", 1, true) == nil, "back to 3: not written")
+  T.ok(cfg:GetValue("SDP_Settings_SINGLE"):find("DISTRICT", 1, true) == nil, "nothing on the single-city tab's key")
+  SDP_Panel.SelectTab("SINGLE")
 end)
 
 test("city sites: the number of new cities and the distance are kept, the default 5 is not written (issue 84)", function()

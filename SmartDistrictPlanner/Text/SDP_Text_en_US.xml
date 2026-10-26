@@ -362,7 +362,7 @@
       <Text>Districts each site is scored with</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SITES_NOT_PER_SITE" Language="en_US">
-      <Text>not per site</Text>
+      <Text>A district limited to one per empire goes into one city only; sites are not scored with it.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SITES_NONE" Language="en_US">
       <Text>Choose how many new cities, how far they may go and the districts, then press Solve.</Text>
@@ -650,11 +650,20 @@
     <Replace Tag="LOC_SDP_MULTI_SITE_TOOLTIP" Language="en_US">
       <Text>Click to switch this site on or off. Left out, no districts are planned for it and it is not counted as a new city; the tack stays where it is and still counts as a neighbor.</Text>
     </Replace>
-    <Replace Tag="LOC_SDP_SITES_PLAN_COUNT" Language="en_US">
-      <Text>Per site</Text>
+    <Replace Tag="LOC_SDP_STATUS_NOT_PER_SITE" Language="en_US">
+      <Text>Off</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_STATES_TOOLTIP" Language="en_US">
+      <Text>Must: every site is scored with it. Pool: when the count is above the required number, each site picks the best of the pool. Off: left out. The district score is the weighted adjacency less the yields of the tiles the districts take.[NEWLINE][NEWLINE]By default every specialty district is in the pool, except those with no adjacency bonus and no Amenities (Preserve, Encampment, Aerodrome): they are built for what they do, so they start Off; set them to Must or Pool to count them. Districts limited to one per empire (Government Plaza) are not counted per site.</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_STATES_LEGEND_OTHER" Language="en_US">
+      <Text>Click: Off &gt; Must</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_STATES_OTHER_TOOLTIP" Language="en_US">
+      <Text>These districts have no Population requirement and do not count toward the number. Set to Must, every site places one, with its adjacency and that of the districts next to it.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SITES_PLAN_COUNT_TOOLTIP" Language="en_US">
-      <Text>How many specialty districts each site is scored with. With more ticked, each site picks its best ones; otherwise all of them count.</Text>
+      <Text>How many specialty districts each site is scored with, required ones included. Above the required number each site picks the rest from the pool, best district score first; at the required number nothing is picked. At most 6.[NEWLINE][NEWLINE]Gain: sites scored with districts suit districts better. In 12 test scenes a count of 3, against 0 (no districts), chose other sites in 5 scenes, with 13% more adjacency in total for the districts around the sites and no scene worse.[NEWLINE][NEWLINE]Cost: a higher count and a larger pool take longer. A count of 3 takes about 7 times as long as 0 (2.3 times as long as 3 Must districts and no pool); 6 takes about 60% more again.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_WEIGHT_DISTANCE_SHORT" Language="en_US">
       <Text>Dist.</Text>

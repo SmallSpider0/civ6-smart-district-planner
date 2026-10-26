@@ -17,6 +17,11 @@
 --                                    when they can be swapped (issue 54)
 --   variant <TIER>_COV<n>            multi: the coverage part on, weight n
 --   variant <TIER>_GROWTH            sites: the Growth first preset (SDP_Sites.PRESETS)
+--   variant <TIER>_GRID[n]           sites: the tab's default district grid
+--                                    (issue 90: every candidate the rules
+--                                    allow, n per site, default 3) in place
+--                                    of the scenario's districts; before
+--                                    _GROWTH when both
 --                                    (design 19)
 --   variant ORACLE                   the exact reference (cmp_oracle.lua, issue
 --                                    48): the fine tier's plan, then branch and
@@ -193,6 +198,9 @@ function CmpAdapters.sdp(request, variant, w)
   -- "<TIER>_GROWTH" (sites): the sites tab's Growth first preset.
   local growth = variant:match("_GROWTH$") ~= nil
   variant = variant:gsub("_GROWTH$", "")
+  -- "<TIER>_GRID[n]" (sites): the tab's default grid, n districts per site.
+  local grid = variant:match("_GRID(%d*)$")
+  variant = variant:gsub("_GRID%d*$", "")
   -- "<TIER>_LAND[nnn]": the land part on (the panel's default), scaled by
   -- nnn / 100; else adjacency only.
   local coverage = tonumber(variant:match("_COV(%d)$") or "")
@@ -224,8 +232,12 @@ function CmpAdapters.sdp(request, variant, w)
   end
   if scn.kind == "sites" then
     -- The sites tab: K sites within D, scored with the scenario's districts.
+    local districts = { Districts = request.districts }
+    if grid ~= nil then districts = SDP_Sites.DefaultDistricts(0, tonumber(grid)) end
     local r = SDP_SiteSolver.Solve({ PlayerID = 0, Tier = variant, K = request.sites.count, D = request.sites.distance,
-      Districts = request.districts, Weights = growth and SDP_Sites.PRESETS.GROWTH or nil })
+      Districts = districts.Districts, Pool = districts.Pool, Pick = districts.Pick,
+      Weights = growth and SDP_Sites.PRESETS.GROWTH or nil })
+    if grid ~= nil then stats.sdpPool = districts.Pool end
     if not r.Ok then out.notes[#out.notes + 1] = tostring(r.Error) end
     for _, site in ipairs((r.Ok and r.Solutions[1] and r.Solutions[1].Sites) or {}) do
       out.placements[#out.placements + 1] = { kind = "SITE", x = site.X, y = site.Y }

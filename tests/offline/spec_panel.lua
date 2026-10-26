@@ -234,6 +234,112 @@ test("single-city tab: wonders go with the districts; the good-places map; the o
   SDP_Panel.SetState("DISTRICT_AQUEDUCT", "AUTO")
 end)
 
+-- Issue 90: the city sites tab scores each site with the single-city tab's
+-- district grid (Must / Pool / Off) and count, its own settings. Through the
+-- cells' and arrows' own callbacks.
+test("issue 90: city sites tab: the district grid and the count, defaults, clicks, the request", function()
+  local singleCampus, singleAqueduct = nil, nil
+  for _, r in ipairs(SDP_Panel.State().DistrictRows) do
+    if r.Type == "DISTRICT_CAMPUS" then singleCampus = r.State end
+    if r.Type == "DISTRICT_AQUEDUCT" then singleAqueduct = r.State end
+  end
+  SDP_Panel.SelectTab("SITES")
+  local sites = SDP_Panel.Sites
+  local c = UI_Mock.Controls
+  local function Row(districtType)
+    for _, r in ipairs(sites.State().View.Districts) do
+      if r.Type == districtType then return r end
+    end
+    error("no row " .. districtType)
+  end
+  local function Has(list, districtType)
+    for _, t in ipairs(list) do
+      if t == districtType then return true end
+    end
+    return false
+  end
+  -- Defaults: candidates, except what gives no adjacency and no amenities.
+  T.eq(Row("DISTRICT_CAMPUS").State, "POOL", "campus: a candidate")
+  T.eq(Row("DISTRICT_HARBOR").State, "POOL", "harbor: a candidate")
+  T.eq(Row("DISTRICT_ENTERTAINMENT_COMPLEX").State, "POOL", "entertainment complex (amenities): a candidate")
+  T.eq(Row("DISTRICT_ENCAMPMENT").State, "OFF", "encampment: no adjacency, no amenities: not wanted")
+  T.eq(Row("DISTRICT_PRESERVE").State, "OFF", "preserve: likewise")
+  T.eq(Row("DISTRICT_GOVERNMENT").Status, "NOT_PER_SITE", "one per empire: not counted per site")
+  T.eq(Row("DISTRICT_AQUEDUCT").State, "OFF", "other districts: not wanted")
+  T.eq(Row("DISTRICT_AQUEDUCT").Group, "OTHER", "in the other grid")
+  T.eq(c.SitesPlanValue:GetText(), "3", "count 3")
+  local request = sites.Request()
+  T.same(request.Districts, {}, "nothing required")
+  T.eq(request.Pick, 3, "three picked")
+  T.ok(Has(request.Pool, "DISTRICT_CAMPUS") and Has(request.Pool, "DISTRICT_ENTERTAINMENT_COMPLEX"), "candidates in the pool")
+  T.ok(not Has(request.Pool, "DISTRICT_ENCAMPMENT") and not Has(request.Pool, "DISTRICT_PRESERVE")
+    and not Has(request.Pool, "DISTRICT_GOVERNMENT"), "not wanted ones not")
+  local estimate = c.SitesEstimate:GetText()
+  T.ok(estimate ~= "", "an estimate")
+  -- A click goes round the states as on the single-city tab.
+  local function Round(districtType, want)
+    for n, state in ipairs(want) do
+      if n > 1 then Row(districtType).Cell:Click() end
+      T.eq(Row(districtType).State, state, districtType)
+    end
+  end
+  T.ok(Row("DISTRICT_CAMPUS").Click == rawget(Row("DISTRICT_CAMPUS").Cell, "_callbacks")[1],
+    "a row's Click is the cell's own click callback (in-game tests call it)")
+  Round("DISTRICT_CAMPUS", { "POOL", "MUST", "OFF", "POOL" })
+  Round("DISTRICT_PRESERVE", { "OFF", "POOL", "MUST", "OFF" })
+  Round("DISTRICT_AQUEDUCT", { "OFF", "MUST", "OFF" })
+  Row("DISTRICT_GOVERNMENT").Cell:Click()
+  T.eq(Row("DISTRICT_GOVERNMENT").Status, "NOT_PER_SITE", "the government plaza takes no click")
+  T.ok(not Has(sites.Request().Districts, "DISTRICT_GOVERNMENT"), "and is never sent")
+  -- Required districts count toward the number; candidates fill up the rest.
+  Row("DISTRICT_CAMPUS").Cell:Click()
+  Row("DISTRICT_AQUEDUCT").Cell:Click()
+  request = sites.Request()
+  T.ok(Has(request.Districts, "DISTRICT_CAMPUS") and Has(request.Districts, "DISTRICT_AQUEDUCT"), "required: in the plan")
+  T.ok(not Has(request.Pool, "DISTRICT_CAMPUS"), "not in the pool")
+  T.eq(request.Pick, 2, "3 less the required campus (the aqueduct takes no population)")
+  -- The count: up to 6, down to the required ones.
+  for _ = 1, 5 do c.SitesPlanMore:Click() end
+  T.eq(c.SitesPlanValue:GetText(), "6", "at most 6")
+  T.eq(c.SitesPlanMore:IsDisabled(), true, "more: greyed out at 6")
+  T.eq(sites.Request().Pick, 5, "6 less the campus")
+  T.ok(c.SitesEstimate:GetText() ~= estimate, "the estimate follows")
+  for _ = 1, 8 do c.SitesPlanLess:Click() end
+  T.eq(c.SitesPlanValue:GetText(), "1", "down to the one required")
+  T.eq(c.SitesPlanLess:IsDisabled(), true, "less: greyed out there")
+  T.eq(sites.Request().Pick, 0, "nothing picked")
+  -- Solved with the grid: every site gets its required campus and one more.
+  c.SitesPlanMore:Click()
+  sites.SetTier("FAST")
+  T.ok(sites.Solve(), "started")
+  SDP_Panel.RunTask(200)
+  local result = sites.State().Result
+  T.ok(result and result.Ok, "result: " .. tostring(result and result.Error))
+  for _, site in ipairs(result.Solutions[1].Sites) do
+    local types = {}
+    for _, d in ipairs(site.Districts) do types[#types + 1] = d.Type end
+    T.ok(Has(types, "DISTRICT_CAMPUS"), "the campus at every site")
+    T.ok(#types <= 3, "campus, aqueduct and one candidate at most: " .. table.concat(types, " "))
+  end
+  -- The single-city tab keeps its own states.
+  SDP_Panel.SelectTab("SINGLE")
+  SDP_Panel.SelectCity(1)
+  for _, r in ipairs(SDP_Panel.State().DistrictRows) do
+    if r.Type == "DISTRICT_CAMPUS" then T.eq(r.State, singleCampus, "single-city tab: campus as it was") end
+    if r.Type == "DISTRICT_AQUEDUCT" then T.eq(r.State, singleAqueduct, "single-city tab: aqueduct as it was") end
+  end
+  -- Back to the defaults for the tests below.
+  SDP_Panel.SelectTab("SITES")
+  Row("DISTRICT_CAMPUS").Cell:Click()
+  Row("DISTRICT_CAMPUS").Cell:Click()
+  Row("DISTRICT_AQUEDUCT").Cell:Click()
+  c.SitesPlanMore:Click()
+  sites.SetTier("STANDARD")
+  T.eq(Row("DISTRICT_CAMPUS").State, "POOL", "campus back to a candidate")
+  T.eq(c.SitesPlanValue:GetText(), "3", "count back to 3")
+  SDP_Panel.SelectTab("SINGLE")
+end)
+
 test("city sites tab: solve, select, place the site tacks", function()
   SDP_Panel.SelectTab("SITES")
   T.eq(SDP_Panel.Tab(), "SITES", "tab")
@@ -243,6 +349,10 @@ test("city sites tab: solve, select, place the site tacks", function()
   sites.SetDistance(7)
   sites.SetSelected("DISTRICT_CAMPUS", true)
   sites.SetSelected("DISTRICT_HOLY_SITE", true)
+  -- Only the required ones (issue 90): nothing picked, as fast as before;
+  -- the tests below keep this.
+  sites.SetDistrictCount(0)
+  T.eq(sites.State().DistrictCount, 2, "down to the two required")
   T.ok(sites.State().EstimateText ~= "", "estimate")
   T.ok(sites.Solve(), "started")
   SDP_Panel.RunTask(200)

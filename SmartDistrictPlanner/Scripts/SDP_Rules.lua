@@ -136,6 +136,42 @@ function SDP_Rules.Templates(playerID)
   return out
 end
 
+-- Districts that take population but give a city neither an adjacency
+-- yield (no District_Adjacencies row the player's traits keep) nor
+-- amenities (Districts.Entertainment): in the game's rules the Encampment,
+-- the Aerodrome, the Preserve and the uniques replacing them. Players build
+-- them for what they do, not for their yields; the city sites tab leaves
+-- them out unless the player asks for them (issue 90, decided 2026-10-26).
+-- Techs and civics are not checked, so the set does not change in a game.
+-- Returns { [district type] = true } for the player's plannable districts;
+-- those limited per empire (Government Plaza) are left out, as the sites
+-- tab never counts them.
+function SDP_Rules.Functional(playerID)
+  local traits = MapTacks.PlayerTraits(playerID)
+  local excluded = {}
+  for row in GameInfo.ExcludedAdjacencies() do
+    excluded[row.YieldChangeId] = excluded[row.YieldChangeId] or {}
+    table.insert(excluded[row.YieldChangeId], row.TraitType)
+  end
+  local gives = {}
+  for link in GameInfo.District_Adjacencies() do
+    local row = GameInfo.Adjacency_YieldChanges[link.YieldChangeId]
+    local kept = row ~= nil and row.YieldChange > 0
+    for _, trait in ipairs(kept and excluded[row.ID] or {}) do
+      if traits[trait] then kept = false end
+    end
+    if kept then gives[link.DistrictType] = true end
+  end
+  local out = {}
+  for _, d in ipairs(SDP_Rules.PlannableDistricts(playerID)) do
+    local row = GameInfo.Districts[d.Type]
+    if d.Specialty and not (d.MaxPerPlayer and d.MaxPerPlayer > 0) and not gives[d.Type] and (row.Entertainment or 0) <= 0 then
+      out[d.Type] = true
+    end
+  end
+  return out
+end
+
 -- Districts a plan may add on its own when the city needs them (feedback
 -- item 4), read from GameInfo, never by name:
 --   "WATER"  Districts.Aqueduct (the aqueduct and the uniques replacing it):

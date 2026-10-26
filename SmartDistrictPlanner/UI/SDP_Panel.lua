@@ -242,14 +242,15 @@ function SDP_UI.SettingFields(columns, switches, tiers, extra)
   end
   fields[#fields + 1] = { Key = "TIER", Kind = "choice", Choices = choices, Default = SDP_Tiers.DEFAULT }
   for _, flag in ipairs(extra or {}) do
-    fields[#fields + 1] = { Key = flag.Key, Kind = flag.Kind or "flag", Min = flag.Min, Max = flag.Max, Default = flag.Default }
+    fields[#fields + 1] = { Key = flag.Key, Kind = flag.Kind or "flag", Min = flag.Min, Max = flag.Max, Pattern = flag.Pattern,
+      Default = flag.Default }
   end
   return fields
 end
 
 -- A keeper (SDP_Settings.Keeper) for a tab: spec = { Tab, Columns, Weights
 -- (the tab's table), Switches and Extra ({ Key, Default, Get, Put; Kind "number"
--- with Min, Max, else a flag }), Tiers,
+-- with Min, Max, "list" with Pattern, else a flag }), Tiers,
 -- GetTier, PutTier, Presets and Order (default the planner's, SDP_Settings) }.
 function SDP_UI.Keeper(spec)
   local columns, weights = spec.Columns, spec.Weights
@@ -569,7 +570,7 @@ end
 
 -- Fill the two district grids (districts that take population, the others)
 -- in name order. stateOf(d), statusOf(d) (or nil), onClick(d). Returns the
--- rows { Type, Name, State, Status, Group, Cell } (tests).
+-- rows { Type, Name, State, Status, Group, Cell, Click } (tests).
 function SDP_UI.BuildCells(im, otherIM, stack, otherStack, districts, stateOf, statusOf, onClick)
   im:ResetInstances()
   otherIM:ResetInstances()
@@ -585,9 +586,12 @@ function SDP_UI.BuildCells(im, otherIM, stack, otherStack, districts, stateOf, s
     local inst = (d.Specialty and im or otherIM):GetInstance()
     local state, status = stateOf(d), statusOf and statusOf(d) or nil
     SDP_UI.ShowCell(inst, d, state, status)
-    inst.Root:RegisterCallback(Mouse.eLClick, function() onClick(d) end)
+    local click = function() onClick(d) end
+    inst.Root:RegisterCallback(Mouse.eLClick, click)
+    -- Click: the function the cell calls on a click (in-game tests; the
+    -- game's controls cannot be clicked from Lua).
     rows[#rows + 1] = { Type = d.Type, Name = entry.Name, State = state, Status = status,
-      Group = d.Specialty and "SPECIALTY" or "OTHER", Cell = inst.Root }
+      Group = d.Specialty and "SPECIALTY" or "OTHER", Cell = inst.Root, Click = click }
   end
   stack:CalculateSize()
   otherStack:CalculateSize()

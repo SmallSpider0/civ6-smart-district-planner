@@ -147,7 +147,7 @@ local function BuildGameInfo()
     District("DISTRICT_THEATER", { RequiresPopulation = true, Appeal = 1 }),
     District("DISTRICT_COMMERCIAL_HUB", { RequiresPopulation = true }),
     District("DISTRICT_INDUSTRIAL_ZONE", { RequiresPopulation = true, Appeal = -1 }),
-    District("DISTRICT_ENTERTAINMENT_COMPLEX", { RequiresPopulation = true, Appeal = 1 }),
+    District("DISTRICT_ENTERTAINMENT_COMPLEX", { RequiresPopulation = true, Appeal = 1, Entertainment = 1 }),
     District("DISTRICT_ENCAMPMENT", { RequiresPopulation = true, NoAdjacentCity = true, Appeal = -1 }),
     District("DISTRICT_GOVERNMENT", { RequiresPopulation = true, MaxPerPlayer = 1 }),
     District("DISTRICT_AQUEDUCT", { Aqueduct = true }),
@@ -162,7 +162,7 @@ local function BuildGameInfo()
       TraitType = "TRAIT_CIVILIZATION_DISTRICT_COTHON" }),
     District("DISTRICT_PRESERVE", { RequiresPopulation = true, NoAdjacentCity = true, Housing = 1, Appeal = 1 }),
     District("DISTRICT_WATER_ENTERTAINMENT_COMPLEX", { RequiresPopulation = true, Coast = true, AdjacentToLand = true,
-      Appeal = 1 }),
+      Appeal = 1, Entertainment = 1 }),
   }, "DistrictType")
   -- One city cannot have both (the game's MutuallyExclusiveDistricts).
   gi.MutuallyExclusiveDistricts = Table({
