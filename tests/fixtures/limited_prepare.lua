@@ -19,4 +19,7 @@ end
 local row = GameInfo.Districts[types[1]]
 if row.PrereqTech ~= nil then player:GetTechs():SetTech(GameInfo.Technologies[row.PrereqTech].Index, true) end
 if row.PrereqCivic ~= nil then player:GetCulture():SetCivic(GameInfo.Civics[row.PrereqCivic].Index, true) end
-print("prepared " .. row.DistrictType)
+local civic = row.PrereqCivic == nil or player:GetCulture():HasCivic(GameInfo.Civics[row.PrereqCivic].Index)
+local tech = row.PrereqTech == nil or player:GetTechs():HasTech(GameInfo.Technologies[row.PrereqTech].Index)
+print("prepared " .. row.DistrictType .. "; the game core has the civic: " .. tostring(civic)
+  .. ", the technology: " .. tostring(tech))

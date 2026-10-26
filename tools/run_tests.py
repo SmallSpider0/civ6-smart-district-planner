@@ -11,9 +11,11 @@ A test file (tests/test_*.lua) is a chunk that receives `test` and `T`:
                                       run a Lua file in a state before / after
                                       the tests (teardown always runs); several
                                       @setup lines run in order, SETUP_PAUSE
-                                      seconds apart (an order given in a UI
-                                      state reaches the game core a few frames
-                                      later)
+                                      seconds apart, closing the popups a step
+                                      opened (an order given in a UI state
+                                      reaches the game core a few frames later,
+                                      and not while a popup holds the event
+                                      queue: AGENTS pitfall 24)
     local test, T = ...
 
     test("campus next to a mountain gets science", function()
@@ -160,6 +162,15 @@ REPEATED = ("setup", "teardown")
 SETUP_PAUSE = 2.0
 
 
+def settle():
+    """Between two setup steps: wait, then close the popups a step opened
+    (granting a civic can queue one; while it is open the UI states see no
+    new game data and orders wait, AGENTS pitfall 24)."""
+    time.sleep(SETUP_PAUSE)
+    import game  # tools/game.py: closes each popup with its own Close
+    game.close_popups()
+
+
 def headers(body):
     """Read `-- @key value` lines from the comment block at the top."""
     found = {}
@@ -181,7 +192,10 @@ def run_fixtures(specs, label):
     problem = None
     for i, spec in enumerate(specs):
         if i > 0:
-            time.sleep(SETUP_PAUSE)
+            if label == "setup":
+                settle()
+            else:
+                time.sleep(SETUP_PAUSE)
         error = run_fixture(spec, label)
         if error and problem is None:
             problem = error
@@ -242,7 +256,7 @@ def run_file(path, name_filter, verbose):
                 run_fixtures(opts["teardown"], "teardown")
             return counts, None
         if len(opts["setup"]) > 1:
-            time.sleep(SETUP_PAUSE)  # the UI states see the last step a few frames later
+            settle()  # the UI states see the last step a few frames later
     started = time.monotonic()
     resp = civ6tuner.request({"op": "exec", "state": state, "code": build(path, body, name_filter),
                               "timeout": float(opts.get("timeout", 30))})
