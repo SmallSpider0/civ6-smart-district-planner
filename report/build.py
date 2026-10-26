@@ -15,10 +15,13 @@ Writes to dist/report/:
                 the English page, appendices included (template_en.html,
                 part_arch_en.html, part_algo_en.html, hexfig_en.svg.txt),
                 from the same data
+  workflow/index.html
+                a copy of docs/workflow.html, the development workflow
+                overview (a complete document, not built from the results)
 
 --site DIR also writes the pages for GitHub Pages: DIR/index.html and
 DIR/en/index.html with the screenshots they use in DIR/images/ and
-DIR/en/images/ (.github/workflows/release.yml).
+DIR/en/images/, and DIR/workflow/index.html (.github/workflows/release.yml).
 
 The page describes this mod on its own: its quality against the true
 optimum, its speed and its tests. The similar-mods table (section 03) comes
@@ -38,6 +41,7 @@ from collections import defaultdict
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(HERE)
 IMAGES = os.path.join(REPO, "docs", "images")
+WORKFLOW = os.path.join(REPO, "docs", "workflow.html")
 REPO_URL = "https://github.com/SmallSpider0/civ6-smart-district-planner"
 WORKSHOP_URL = "https://steamcommunity.com/sharedfiles/filedetails/?id=3824473635"
 OUT = os.path.join(REPO, "dist", "report")
@@ -1071,14 +1075,18 @@ def main():
 
     single = standalone(page, read_image)
     single_en = standalone(page_en, read_image, "en")
+    os.makedirs(os.path.join(OUT, "workflow"), exist_ok=True)
+    shutil.copyfile(WORKFLOW, os.path.join(OUT, "workflow", "index.html"))
     if args.site:
         site(page, args.site)
         site(page_en, os.path.join(args.site, "en"), "en")
-        print("site: %s/index.html, %s/en/index.html" % (args.site, args.site))
+        os.makedirs(os.path.join(args.site, "workflow"), exist_ok=True)
+        shutil.copyfile(WORKFLOW, os.path.join(args.site, "workflow", "index.html"))
+        print("site: %s/index.html, %s/en/index.html, %s/workflow/index.html" % (args.site, args.site, args.site))
     open(os.path.join(OUT, "report.html"), "w", encoding="utf-8").write(single)
     open(os.path.join(OUT, "report_en.html"), "w", encoding="utf-8").write(single_en)
     json.dump(data, open(os.path.join(OUT, "data.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
-    print("report: dist/report/index.html (%d KB), report.html (%d KB, self-contained), en/index.html, report_en.html (%d KB)"
+    print("report: dist/report/index.html (%d KB), report.html (%d KB, self-contained), en/index.html, report_en.html (%d KB), workflow/index.html"
           % (len(page.encode("utf-8")) // 1024, len(single.encode("utf-8")) // 1024, len(single_en.encode("utf-8")) // 1024))
 
 

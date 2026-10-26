@@ -274,7 +274,7 @@ python3 -I tools/workshop.py vdf 解压目录      # 在解压后的提交包里
 ## report/build.py — 介绍页
 
 ```bash
-python3 -I report/build.py                              # 输出 dist/report/ 下的中文页、英文页（en/）和两个单文件版
+python3 -I report/build.py                              # 输出 dist/report/ 下的中文页、英文页（en/）、两个单文件版和流程页（workflow/）
 python3 -I report/build.py --version v1.0.0 --site _site   # 另输出 GitHub Pages 用的 _site/（发布工作流这样用）
 ```
 
@@ -283,6 +283,7 @@ python3 -I report/build.py --version v1.0.0 --site _site   # 另输出 GitHub Pa
 - 读 `tests/compare/results/` 里的结果（文件列表见 `RESULTS`），只取本模组的运行（`sdp:*`）和真最优，套进 `report/template.html`（附录 A 的结构图和算法来自 `part_arch.html`、`part_algo.html`，图表脚本 `charts.js`）。
 - 版本默认是提交号，日期是提交日期；`--version` 以 `v` 开头时，下载按钮指向这个版本的 Release，否则指向最新的 Release。
 - `index.html`、`en/index.html` 不带文档外壳，截图写成 `images/<文件名>`；`report.html`、`report_en.html` 是单文件版，截图内嵌，可直接用浏览器打开，`package.py` 打进压缩包（`REPORT.html`、`REPORT_EN.html`）；`--site DIR` 写出带外壳的 `DIR/index.html`、`DIR/en/index.html` 和用到的截图。
+- 流程页：[docs/workflow.html](../docs/workflow.html)（开发流程一览，完整的 HTML 文件，不由结果生成）原样复制到 `dist/report/workflow/index.html`，有 `--site` 时也复制到 `DIR/workflow/index.html`，发版后在 <https://smallspider0.github.io/civ6-smart-district-planner/workflow/>。不进模组压缩包和创意工坊提交包。
 - `report/similar.py`：同类模组对照表的唯一来源。`table_html(lang)` 给页面（有无用画的小图标，跟随页面的深浅主题），`python3 -I report/similar.py zh|en` 打印 README 用的 Markdown 表（✓ / ◐ / —），改了事实后贴回 README 两节。
 - 同样的输入得到同样的页面。线上的页面只在发布 Release 时更新（`.github/workflows/release.yml`，也可在 Actions 里手动运行）。
 
