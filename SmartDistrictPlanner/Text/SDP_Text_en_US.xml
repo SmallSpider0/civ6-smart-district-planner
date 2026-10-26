@@ -760,9 +760,6 @@
     <Replace Tag="LOC_SDP_FOLD_JOIN" Language="en_US">
       <Text>{1_A} · {2_B}</Text>
     </Replace>
-    <Replace Tag="LOC_SDP_FOLD_EDITED" Language="en_US">
-      <Text>{1_Preset} (changed)</Text>
-    </Replace>
     <Replace Tag="LOC_SDP_FOLD_LAND_OFF" Language="en_US">
       <Text>no land loss</Text>
     </Replace>
@@ -807,11 +804,14 @@
     <Replace Tag="LOC_SDP_PRESET_TITLE" Language="en_US">
       <Text>Preset</Text>
     </Replace>
-    <Replace Tag="LOC_SDP_PRESET_RESET" Language="en_US">
-      <Text>Reset</Text>
+    <Replace Tag="LOC_SDP_PRESET_CUSTOM" Language="en_US">
+      <Text>Custom</Text>
     </Replace>
-    <Replace Tag="LOC_SDP_PRESET_RESET_TOOLTIP" Language="en_US">
-      <Text>Put the weights and switches back to this preset (Effort stays)</Text>
+    <Replace Tag="LOC_SDP_PRESET_CUSTOM_TOOLTIP" Language="en_US">
+      <Text>The weights or switches differ from every preset. Pick a preset in the list to set the weights and switches to its values (Effort stays).</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_PRESET_CUSTOM_TOOLTIP" Language="en_US">
+      <Text>The weights differ from every preset. Pick a preset in the list to set all weights (Dist. included) to its values; New cities, Max distance and Effort stay.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_PRESET_BALANCED_TOOLTIP" Language="en_US">
       <Text>Every yield weighs 1; every switch as it comes.</Text>

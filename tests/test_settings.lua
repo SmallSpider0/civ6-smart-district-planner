@@ -18,19 +18,22 @@ end)
 
 test("a weight changed on the panel is written at once", function()
   SDP_Panel.Refresh()
-  local key = SDP_Settings.CONFIG_KEY .. "SINGLE"
+  local function Kept()
+    local columns = {}
+    for _, column in ipairs(SDP_UI.WEIGHT_COLUMNS) do columns[#columns + 1] = column end
+    columns[#columns + 1] = SDP_UI.COVERAGE_COLUMN
+    return SDP_Settings.Load(pid, "SINGLE", SDP_UI.SettingFields(columns, {}, SDP_Tiers.Single),
+      SDP_Settings.PRESETS, SDP_Settings.PRESET_ORDER)
+  end
   local old = SDP_Panel.State().Weights.YIELD_CULTURE
-  SDP_Panel.SetWeight("YIELD_CULTURE", old == 3 and 2 or 3)
-  local text = cfg:GetValue(key)
-  T.ok(type(text) == "string" and text:find("YIELD_CULTURE=" .. (old == 3 and "2" or "3"), 1, true) ~= nil,
-    "kept: " .. tostring(text))
+  local new = old == 3 and 2 or 3
+  SDP_Panel.SetWeight("YIELD_CULTURE", new)
+  -- Read back, not searched in the text: values equal to a preset are kept
+  -- as that preset's name (issue 89; Balanced with culture 3 is Culture).
+  local text = cfg:GetValue(SDP_Settings.CONFIG_KEY .. "SINGLE")
+  local written = Kept()
   SDP_Panel.SetWeight("YIELD_CULTURE", old)
-  local kept = SDP_Settings.Load(pid, "SINGLE", SDP_UI.SettingFields(
-    (function()
-      local columns = {}
-      for _, column in ipairs(SDP_UI.WEIGHT_COLUMNS) do columns[#columns + 1] = column end
-      columns[#columns + 1] = SDP_UI.COVERAGE_COLUMN
-      return columns
-    end)(), {}, SDP_Tiers.Single), SDP_Settings.PRESETS, SDP_Settings.PRESET_ORDER)
-  T.eq(kept.Values.YIELD_CULTURE, old, "back as it was")
+  local back = Kept()
+  T.eq(written and written.Values.YIELD_CULTURE, new, "kept: " .. tostring(text))
+  T.eq(back and back.Values.YIELD_CULTURE, old, "back as it was")
 end)

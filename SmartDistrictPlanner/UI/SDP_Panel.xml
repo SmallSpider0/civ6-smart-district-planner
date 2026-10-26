@@ -99,15 +99,12 @@
 
         <!-- Weights, one icon family (feedback 3), and the distance cost (feedback 9) -->
         <!-- The weights' title and the preset (issue 49): a preset sets the
-             weights and switches; Reset puts them back to it. -->
+             weights and switches; picking it again puts them back (issue 89). -->
         <Container Size="480,26">
           <Label Anchor="L,C" Style="BodyTextDark14" String="LOC_SDP_WEIGHTS_TITLE" ToolTip="LOC_SDP_WEIGHTS_TOOLTIP"/>
           <Stack Anchor="R,C" StackGrowth="Right" StackPadding="4">
             <Label Anchor="L,C" Style="BodyTextDark14" String="LOC_SDP_PRESET_TITLE"/>
             <PullDown ID="PresetPull" Anchor="L,C" Style="PullDownBlue" Size="170,24"/>
-            <GridButton ID="PresetReset" Size="80,24" Style="ButtonControl" ToolTip="LOC_SDP_PRESET_RESET_TOOLTIP">
-              <Label Anchor="C,C" Style="FontNormal14" String="LOC_SDP_PRESET_RESET"/>
-            </GridButton>
           </Stack>
         </Container>
         <Stack ID="WeightStack" Anchor="C,T" StackGrowth="Right" StackPadding="0"/>
@@ -292,15 +289,12 @@
         <!-- The districts the chosen wonders need, and which city gets them (issue 66). -->
         <Label ID="MultiSupplyNote" Style="BodyTextDark14" WrapWidth="480" Hidden="1"/>
         <!-- The weights' title and the preset (issue 49): a preset sets the
-             weights and switches; Reset puts them back to it. -->
+             weights and switches; picking it again puts them back (issue 89). -->
         <Container Size="480,26">
           <Label Anchor="L,C" Style="BodyTextDark14" String="LOC_SDP_WEIGHTS_TITLE" ToolTip="LOC_SDP_WEIGHTS_TOOLTIP"/>
           <Stack Anchor="R,C" StackGrowth="Right" StackPadding="4">
             <Label Anchor="L,C" Style="BodyTextDark14" String="LOC_SDP_PRESET_TITLE"/>
             <PullDown ID="MultiPresetPull" Anchor="L,C" Style="PullDownBlue" Size="170,24"/>
-            <GridButton ID="MultiPresetReset" Size="80,24" Style="ButtonControl" ToolTip="LOC_SDP_PRESET_RESET_TOOLTIP">
-              <Label Anchor="C,C" Style="FontNormal14" String="LOC_SDP_PRESET_RESET"/>
-            </GridButton>
           </Stack>
         </Container>
         <Stack ID="MultiWeightStack" Anchor="C,T" StackGrowth="Right" StackPadding="0"/>

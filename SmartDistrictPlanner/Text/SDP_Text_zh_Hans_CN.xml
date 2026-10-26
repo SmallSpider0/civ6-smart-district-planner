@@ -760,9 +760,6 @@
     <Replace Tag="LOC_SDP_FOLD_JOIN" Language="zh_Hans_CN">
       <Text>{1_A} · {2_B}</Text>
     </Replace>
-    <Replace Tag="LOC_SDP_FOLD_EDITED" Language="zh_Hans_CN">
-      <Text>{1_Preset}（已改）</Text>
-    </Replace>
     <Replace Tag="LOC_SDP_FOLD_LAND_OFF" Language="zh_Hans_CN">
       <Text>不计占地</Text>
     </Replace>
@@ -807,11 +804,14 @@
     <Replace Tag="LOC_SDP_PRESET_TITLE" Language="zh_Hans_CN">
       <Text>预设</Text>
     </Replace>
-    <Replace Tag="LOC_SDP_PRESET_RESET" Language="zh_Hans_CN">
-      <Text>恢复</Text>
+    <Replace Tag="LOC_SDP_PRESET_CUSTOM" Language="zh_Hans_CN">
+      <Text>自定义</Text>
     </Replace>
-    <Replace Tag="LOC_SDP_PRESET_RESET_TOOLTIP" Language="zh_Hans_CN">
-      <Text>把权重和开关恢复成这个预设的值（档位不变）</Text>
+    <Replace Tag="LOC_SDP_PRESET_CUSTOM_TOOLTIP" Language="zh_Hans_CN">
+      <Text>权重或开关和每个预设都不同。在下拉框里选一个预设，权重和开关就换成它的值（档位不变）。</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_PRESET_CUSTOM_TOOLTIP" Language="zh_Hans_CN">
+      <Text>权重和每个预设都不同。在下拉框里选一个预设，全部权重（含距离）就换成它的值；新城数量、最远距离和档位不变。</Text>
     </Replace>
     <Replace Tag="LOC_SDP_PRESET_BALANCED_TOOLTIP" Language="zh_Hans_CN">
       <Text>各产出权重都是 1，开关都是默认。</Text>

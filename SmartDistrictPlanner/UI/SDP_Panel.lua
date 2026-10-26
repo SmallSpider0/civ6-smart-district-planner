@@ -287,33 +287,45 @@ function SDP_UI.ShowFold(button, label, action, stack, folded, text)
   stack:SetHide(folded)
 end
 
--- The preset pulldown (issue 49): the presets with what each changes as
--- tooltip, the current one ("changed" when the values differ from it);
--- Reset is greyed out unless they do. onSelect(name).
-function SDP_UI.ShowPreset(pull, reset, current, changed, onSelect)
+-- A preset's name on the pulldown and the fold line: `shown` (SDP_Settings.Match),
+-- "Custom" when nil (issue 89).
+function SDP_UI.PresetName(shown)
+  if shown == nil then return Locale.Lookup("LOC_SDP_PRESET_CUSTOM") end
+  return Locale.Lookup("LOC_SDP_PRESET_" .. shown)
+end
+
+-- The preset pulldown (issue 49): an entry a preset, the button shows the
+-- preset the values equal (`shown`, nil for "Custom", issue 89).
+-- spec = { Order (default the planner's presets), Tips (each preset's
+-- LOC_SDP_PRESET_<name>_TOOLTIP, with SDP_Settings.FOCUS), CustomTip }.
+-- onSelect(name).
+function SDP_UI.ShowPreset(pull, shown, onSelect, spec)
+  spec = spec or {}
+  local function Tip(name)
+    if not spec.Tips then return "" end
+    return Locale.Lookup("LOC_SDP_PRESET_" .. name .. "_TOOLTIP", Number(SDP_Settings.FOCUS[name] or 1))
+  end
   pull:ClearEntries()
-  for _, name in ipairs(SDP_Settings.PRESET_ORDER) do
+  for _, name in ipairs(spec.Order or SDP_Settings.PRESET_ORDER) do
     local entry = {}
     pull:BuildEntry("InstanceOne", entry)
     entry.Button:SetText(Locale.Lookup("LOC_SDP_PRESET_" .. name))
-    entry.Button:SetToolTipString(Locale.Lookup("LOC_SDP_PRESET_" .. name .. "_TOOLTIP", Number(SDP_Settings.FOCUS[name] or 1)))
+    entry.Button:SetToolTipString(Tip(name))
     entry.Button:RegisterCallback(Mouse.eLClick, function() onSelect(name) end)
   end
   pull:CalculateInternals()
-  local label = Locale.Lookup("LOC_SDP_PRESET_" .. current)
-  if changed then label = Locale.Lookup("LOC_SDP_FOLD_EDITED", label) end
-  pull:GetButton():SetText(label)
-  pull:GetButton():SetToolTipString(Locale.Lookup("LOC_SDP_PRESET_" .. current .. "_TOOLTIP",
-    Number(SDP_Settings.FOCUS[current] or 1)))
-  reset:SetDisabled(not changed)
+  pull:GetButton():SetText(SDP_UI.PresetName(shown))
+  if shown == nil then
+    pull:GetButton():SetToolTipString(Locale.Lookup(spec.CustomTip or "LOC_SDP_PRESET_CUSTOM_TOOLTIP"))
+  else
+    pull:GetButton():SetToolTipString(Tip(shown))
+  end
 end
 
--- The summary: the preset's name (`nameKey`, "changed" when `changed`),
--- then `parts`, the settings that are not as usual.
-function SDP_UI.FoldSummary(nameKey, changed, parts)
-  local name = Locale.Lookup(nameKey)
-  if changed then name = Locale.Lookup("LOC_SDP_FOLD_EDITED", name) end
-  local list = { name }
+-- The summary: the preset's name (`shown`, nil for "Custom"), then `parts`,
+-- the settings that are not as usual.
+function SDP_UI.FoldSummary(shown, parts)
+  local list = { SDP_UI.PresetName(shown) }
   for _, part in ipairs(parts) do list[#list + 1] = part end
   return Locale.Lookup("LOC_SDP_FOLD_SUMMARY", Join(list, "LOC_SDP_FOLD_JOIN"))
 end
@@ -349,7 +361,9 @@ local m_keeper = SDP_UI.Keeper({ Tab = "SINGLE", Columns = SINGLE_COLUMNS, Weigh
 local UpdateFold, SetPreset -- defined below (inputs)
 -- Keep the tab's settings in the save after a change (issue 57), and show
 -- them on the fold line.
+-- Values equal to another preset make it the current one (issue 89).
 local function Remember()
+  m_preset = m_keeper.Match(m_preset) or m_preset
   m_keeper.Remember(m_preset)
   UpdateFold()
 end
@@ -357,7 +371,7 @@ local function FitPage() SDP_UI.FitResults(Controls.Body, Controls.SinglePage, C
 -- Read them from the save the first time the panel shows for this player.
 local function Restore()
   local kept = m_keeper.Restore()
-  if kept ~= nil then m_preset = kept.Preset end
+  if kept ~= nil then m_preset = m_keeper.Match(kept.Preset) or kept.Preset end
 end
 
 -- How a coverage target (SDP_Coverage key) is called: one of the player's
@@ -1442,14 +1456,14 @@ UpdateFold = function()
   local wonders = #SelectedWonders()
   if wonders > 0 then parts[#parts + 1] = Locale.Lookup("LOC_SDP_FOLD_WONDERS", wonders) end
   if m_heat ~= nil then parts[#parts + 1] = Locale.Lookup("LOC_SDP_FOLD_HEAT", TypeName(m_heat)) end
-  local changed = m_keeper.Changed(m_preset)
+  local shown = m_keeper.Match(m_preset)
   SDP_UI.ShowFold(Controls.FoldButton, Controls.FoldText, Controls.FoldAction, Controls.SettingsStack, m_fold,
-    SDP_UI.FoldSummary("LOC_SDP_PRESET_" .. m_preset, changed, parts))
-  SDP_UI.ShowPreset(Controls.PresetPull, Controls.PresetReset, m_preset, changed, function(name) SetPreset(name) end)
+    SDP_UI.FoldSummary(shown, parts))
+  SDP_UI.ShowPreset(Controls.PresetPull, shown, function(name) SetPreset(name) end, { Tips = true })
 end
 
 -- A preset (issue 49): its weights and switches; the tier and the fold stay.
--- The same preset again puts back what was changed.
+-- The same preset again puts back what was changed (issue 89: no Reset).
 SetPreset = function(name)
   if not m_keeper.Use(name) then return end
   m_preset = name
@@ -2045,7 +2059,6 @@ Controls.PeekButton:RegisterCallback(Mouse.eLClick, function() SetPeek(true) end
 Controls.PeekReturn:RegisterCallback(Mouse.eLClick, function() SetPeek(false) end)
 Controls.PeekNextSite:RegisterCallback(Mouse.eLClick, function() SDP_PageSites.NextSite() end)
 Controls.FoldButton:RegisterCallback(Mouse.eLClick, function() SetFold(not m_fold) end)
-Controls.PresetReset:RegisterCallback(Mouse.eLClick, function() SetPreset(m_preset) end)
 Controls.CloseButton:RegisterCallback(Mouse.eMouseEnter, function()
   UI.PlaySound("Main_Menu_Mouse_Over")
 end)

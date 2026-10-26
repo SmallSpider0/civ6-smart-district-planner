@@ -74,13 +74,15 @@ local m_keeper = SDP_UI.Keeper({ Tab = "MULTI", Columns = COLUMNS, Weights = m_w
   Extra = { { Key = "FOLD", Default = false, Get = function() return m_fold end, Put = function(v) m_fold = v end } },
   Tiers = SDP_Tiers.Multi, GetTier = function() return m_tier end, PutTier = function(tier) m_tier = tier end })
 local UpdateFold, FitPage -- defined below
+-- Values equal to another preset make it the current one (issue 89).
 local function Remember()
+  m_preset = m_keeper.Match(m_preset) or m_preset
   m_keeper.Remember(m_preset)
   UpdateFold()
 end
 function P.Restore()
   local kept = m_keeper.Restore()
-  if kept ~= nil then m_preset = kept.Preset end
+  if kept ~= nil then m_preset = m_keeper.Match(kept.Preset) or kept.Preset end
 end
 
 -- How a participant is called: its number (the name its pins get, see
@@ -510,10 +512,10 @@ UpdateFold = function()
   if m_replace then parts[#parts + 1] = Locale.Lookup("LOC_SDP_FOLD_REPLACE") end
   local wonders = #WonderTypes()
   if wonders > 0 then parts[#parts + 1] = Locale.Lookup("LOC_SDP_FOLD_WONDERS", wonders) end
-  local changed = m_keeper.Changed(m_preset)
+  local shown = m_keeper.Match(m_preset)
   SDP_UI.ShowFold(Controls.MultiFoldButton, Controls.MultiFoldText, Controls.MultiFoldAction, Controls.MultiSettingsStack,
-    m_fold, SDP_UI.FoldSummary("LOC_SDP_PRESET_" .. m_preset, changed, parts))
-  SDP_UI.ShowPreset(Controls.MultiPresetPull, Controls.MultiPresetReset, m_preset, changed, function(name) P.SetPreset(name) end)
+    m_fold, SDP_UI.FoldSummary(shown, parts))
+  SDP_UI.ShowPreset(Controls.MultiPresetPull, shown, function(name) P.SetPreset(name) end, { Tips = true })
 end
 
 -- A preset (issue 49), as on the single-city tab.
@@ -1025,4 +1027,3 @@ Controls.MultiCancelButton:RegisterCallback(Mouse.eLClick, function() SDP_Task.C
 Controls.MultiPlaceButton:RegisterCallback(Mouse.eLClick, function() P.Place() end)
 Controls.MultiUndoButton:RegisterCallback(Mouse.eLClick, function() P.Undo() end)
 Controls.MultiFoldButton:RegisterCallback(Mouse.eLClick, function() P.SetFold(not m_fold) end)
-Controls.MultiPresetReset:RegisterCallback(Mouse.eLClick, function() P.SetPreset(m_preset) end)

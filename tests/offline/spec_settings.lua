@@ -21,7 +21,8 @@ local broadcasts = 0
 Network.BroadcastPlayerInfo = function() broadcasts = broadcasts + 1 end
 local cfg = PlayerConfigurations[0]
 cfg:SetValue("SDP_Settings_SINGLE", "v1;preset=BALANCED;LAND=0;YIELD_GOLD=3;TIER=FINE;HOUSING=9;BOGUS=1;SWAP=yes")
-cfg:SetValue("SDP_Settings_MULTI", "v1;preset=NOT_A_PRESET;REMIND=0;COVERAGE=2")
+-- Several cities: a save written by v1.5.0 with a change from Science (issue 89).
+cfg:SetValue("SDP_Settings_MULTI", "v1;preset=SCIENCE;YIELD_GOLD=2")
 cfg:SetValue("SDP_Settings_SITES", "v1;preset=GROWTH;APPEAL=1;K=2;D=9")
 UI_Mock.Install()
 include("SDP_Panel")
@@ -59,6 +60,20 @@ test("decode: back to the values; what is unknown or out of range keeps the defa
   T.eq(SDP_Settings.Changed("HIGH", { A = 3, B = true, TIER = "STANDARD" }, FIELDS, PRESETS), true, "a weight does")
 end)
 
+test("match: the preset the values equal, the current one first, else none (issue 89)", function()
+  local function Values(a, b, tier) return { A = a, B = b, TIER = tier or "STANDARD" } end
+  T.eq(SDP_Settings.Match("BALANCED", Values(1, true, "FAST"), FIELDS, PRESETS, ORDER), "BALANCED",
+    "equal to the current one; the tier does not count")
+  T.eq(SDP_Settings.Match("BALANCED", Values(2, true), FIELDS, PRESETS, ORDER), "HIGH", "equal to another one")
+  T.eq(SDP_Settings.Match("HIGH", Values(1, true), FIELDS, PRESETS, ORDER), "BALANCED", "back to the default one")
+  T.eq(SDP_Settings.Match("HIGH", Values(3, true), FIELDS, PRESETS, ORDER), nil, "a weight equal to no preset: none")
+  T.eq(SDP_Settings.Match("HIGH", Values(2, false), FIELDS, PRESETS, ORDER), nil, "a switch counts too")
+  local twins, twinOrder = { BALANCED = {}, SAME = {} }, { "BALANCED", "SAME" }
+  T.eq(SDP_Settings.Match("SAME", Values(1, true), FIELDS, twins, twinOrder), "SAME", "two equal: the current one")
+  T.eq(SDP_Settings.Match("NOPE", Values(1, true), FIELDS, twins, twinOrder), "BALANCED",
+    "an unknown current one: the first in order")
+end)
+
 test("a loaded save: each tab gets back what it kept", function()
   SDP_Panel.Open()
   SDP_Panel.SelectCity(1)
@@ -73,12 +88,18 @@ test("a loaded save: each tab gets back what it kept", function()
   T.eq(s.Remind, true, "what was not kept: the default")
   SDP_Panel.SelectTab("MULTI")
   local m = SDP_Panel.Multi.State()
-  T.eq(m.Remind, false, "several cities: its own reminder switch")
+  T.eq(m.Weights.YIELD_GOLD, 2, "several cities: its own gold weight")
+  T.eq(m.Weights.YIELD_SCIENCE, SDP_Settings.FOCUS.SCIENCE, "and the preset's science")
+  T.eq(m.Remind, true, "and its own reminder switch")
   T.eq(m.Land, true, "and its own land switch")
-  T.eq(m.Weights.COVERAGE, 2, "and coverage")
+  T.eq(m.Preset, "SCIENCE", "the preset read stays the current one")
+  T.eq(UI_Mock.Controls.MultiPresetPull:GetButton():GetText(), "LOC_SDP_PRESET_CUSTOM",
+    "a v1.5.0 save with a change: Custom (issue 89)")
+  T.ok(m.FoldText:find("LOC_SDP_PRESET_CUSTOM", 1, true) ~= nil, "on the fold line too")
   SDP_Panel.SelectTab("SITES")
   local sites = SDP_Panel.Sites.State()
   T.eq(sites.Preset, "GROWTH", "city sites: the preset")
+  T.eq(UI_Mock.Controls.SitesPresetPull:GetButton():GetText(), "LOC_SDP_PRESET_CUSTOM", "a change: Custom")
   T.eq(sites.Weights.YIELD_FOOD, SDP_Sites.PRESETS.GROWTH.YIELD_FOOD, "its weights")
   T.eq(sites.Weights.APPEAL, 1, "and the change")
   T.eq(sites.K, 2, "the number of new cities (issue 84)")
