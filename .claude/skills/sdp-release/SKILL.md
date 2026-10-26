@@ -12,7 +12,7 @@ Who decides (CONTRIBUTING.md "需求、分支与提交" 5 and "发版"):
 
 Bug-fix PRs merge into `main` as usual in the meantime: `main` reaches no player. Windows is not tested before a release. The checklist template (.github/ISSUE_TEMPLATE/release.md) lists the same items.
 
-## 1. Before the PR (on the batch's branch, or a release branch when the fixes are already merged)
+## 1. Before the PR (on a release branch: the milestone's issues are merged one PR each)
 
 0. Keep the screen from locking from the start of the release work (sdp-game-test, Before 1): it runs for hours and touches the game.
 1. Every issue of the milestone is closed by this PR or moved on. Version digit: sdp-issue §3.
