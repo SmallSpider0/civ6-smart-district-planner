@@ -1251,6 +1251,9 @@ test("issue 91: the preserve starts off, distance 0.5, the summary leads with th
   end
   T.eq(SDP_Panel.State().Weights.DISTANCE, 0.5, "distance 0.5 by default")
   T.eq(distance.Value:GetText(), "0.5", "shown")
+  -- The presets leave distance at its default (issue 89's matching): 0.5 is Balanced.
+  SDP_Panel.SetPreset("BALANCED")
+  T.eq(UI_Mock.Controls.PresetPull:GetButton():GetText(), "LOC_SDP_PRESET_BALANCED", "0.5 matches Balanced, not Custom")
   SDP_Panel.SetState("DISTRICT_CAMPUS", "MUST")
   SDP_Panel.SetState("DISTRICT_HOLY_SITE", "MUST")
   SDP_Panel.SetState("DISTRICT_AQUEDUCT", "OFF")
