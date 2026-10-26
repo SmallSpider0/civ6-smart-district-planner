@@ -35,7 +35,8 @@
 
 Every command takes the game lock for this worktree (tools/sdplock.py) and
 refuses, with exit code 4, while another worktree holds it; quit releases it
-and stops this worktree's Tuner daemon.
+and stops this worktree's Tuner daemon. launch, newgame and load start that
+daemon (civ6tuner.py serve, output in logs/tuner-serve.out) when none answers.
 
 quit, menu, popups and newgame work through the tuner on macOS and Windows.
 launch opens Steam on both; the launcher click and keeping the game out of
@@ -94,6 +95,31 @@ MUTE = 'Options.SetAudioOption("Sound", "Master Volume", 0, 0)'
 
 
 game_running = sdplock.game_running
+SERVE_OUT = os.path.join(ROOT, "logs", "tuner-serve.out")
+
+
+def ensure_serve(wait=15.0):
+    """Start this worktree's Tuner daemon (civ6tuner.py serve) unless one
+    answers. quit stops it; without it, the direct connections newgame and
+    load fall back to are refused while the game loads (2026-10-26)."""
+    if civ6tuner.daemon_request({"op": "states"}, 2.0) is not None:
+        return
+    os.makedirs(os.path.dirname(SERVE_OUT), exist_ok=True)
+    out = open(SERVE_OUT, "ab")
+    flags = {"creationflags": subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP} \
+        if sys.platform == "win32" else {"start_new_session": True}
+    proc = subprocess.Popen([sys.executable, "-I", os.path.join(ROOT, "tools", "civ6tuner.py"), "serve"],
+                            stdin=subprocess.DEVNULL, stdout=out, stderr=out, **flags)
+    out.close()
+    deadline = time.time() + wait
+    while time.time() < deadline:
+        if civ6tuner.daemon_request({"op": "states"}, 2.0) is not None:
+            print("started the Tuner daemon (pid %d, output %s)" % (proc.pid, SERVE_OUT), flush=True)
+            return
+        if proc.poll() is not None:
+            break
+        time.sleep(0.5)
+    print("the Tuner daemon did not come up (see %s); going on with direct connections" % SERVE_OUT, flush=True)
 
 
 def front_app():
@@ -261,6 +287,7 @@ def cmd_popups(args):
 
 def cmd_launch(args):
     sdplock.claim_or_exit(ROOT)
+    ensure_serve()
     front = None if args.stay else front_app()
     forget_front()
     if front is not None and front != CIV6_BUNDLE:
@@ -292,6 +319,8 @@ def cmd_newgame(args):
     if guard:
         guard.start()
     try:
+        sdplock.claim_or_exit(ROOT)
+        ensure_serve()
         return start_game(args)
     finally:
         if guard:
@@ -341,6 +370,8 @@ Network.LoadGame({ Name = "%s", Location = SaveLocations.LOCAL_STORAGE, Type = S
 
 
 def cmd_load(args):
+    sdplock.claim_or_exit(ROOT)
+    ensure_serve()
     if has_state("InGame") and cmd_menu(args) != 0:
         return 2
     if not wait_for("main menu", lambda: has_state("MainMenu"), args.timeout):
