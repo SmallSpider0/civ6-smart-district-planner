@@ -51,7 +51,7 @@ The panel has three tabs: **One city**, **City sites** and **Several cities**. T
 
 ## City sites
 
-1. **New cities** (1–6) and **Max distance** (4–15 tiles from one of your cities or from another new site).
+1. **New cities** (1–6) and **Max distance** (4–15, 5 by default: how many tiles a new city may be from one of your cities, a City Center map tack or another new city, counted between the City Centers; new cities usually land at exactly this distance). Both are kept in the save like the weights.
 2. A weight preset (Balanced, Growth first, Districts first), or set each weight (each click 0.5); like the One city tab's settings, they hide under one line after each solve. A site's tile yields are weighed by the fixed numbers of the One city tab's **Tiles** column, times this tab's weight for the same yield (Growth first's Food 2 doubles Food tiles). Housing scores a site's Housing from water (plus the Granary, and the Lighthouse and Seaport when the plan has a Harbor): each Housing up to the population the planned districts need counts 1, each one after it half the one before.
 3. Tick the **districts each site is scored with**. **Per site** (default 3) is how many of them each site is scored with when you tick more.
 4. **Solve**: up to three plans. Click one to preview its sites' 3 rings on the map and move the camera to its first site; click it again for the next site, and after the last, the first. Click a site row to move the camera to that site. While you **View map**, **Next site** is beside **Back to planner**. Hover a site row for its water, its distances to your nearest city or site tack and to the other sites, the Luxury and Strategic resources it gets, its features and the districts it picked.

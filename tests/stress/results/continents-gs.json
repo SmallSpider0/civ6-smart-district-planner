@@ -376,7 +376,7 @@
   },
   {
    "Label": "single 海牙 FAST pool",
-   "Seconds": 0.044,
+   "Seconds": 0.043,
    "Data": {
     "Adjacency": 6,
     "Appeal": 0,
@@ -464,7 +464,7 @@
   },
   {
    "Label": "single 鹿特丹 FAST pool",
-   "Seconds": 0.034,
+   "Seconds": 0.033,
    "Data": {
     "Adjacency": 7,
     "Appeal": 0,
@@ -494,7 +494,7 @@
   },
   {
    "Label": "single 鹿特丹 STANDARD pool",
-   "Seconds": 0.06,
+   "Seconds": 0.059,
    "Data": {
     "Adjacency": 7,
     "Appeal": 0,
@@ -552,7 +552,7 @@
   },
   {
    "Label": "single 胡伊利部�� FAST pool",
-   "Seconds": 0.124,
+   "Seconds": 0.123,
    "Data": {
     "Adjacency": 13,
     "Appeal": 0,
@@ -584,7 +584,7 @@
   },
   {
    "Label": "single 胡伊利部�� STANDARD pool",
-   "Seconds": 0.407,
+   "Seconds": 0.404,
    "Data": {
     "Adjacency": 13,
     "Appeal": 0,
@@ -617,7 +617,7 @@
   },
   {
    "Label": "single 胡伊利部�� must",
-   "Seconds": 0.058,
+   "Seconds": 0.044,
    "Data": {
     "Adjacency": 10,
     "Appeal": 0,
@@ -644,7 +644,7 @@
   },
   {
    "Label": "single 奈梅亨 FAST pool",
-   "Seconds": 0.038,
+   "Seconds": 0.022,
    "Data": {
     "Adjacency": 5,
     "Appeal": 0,
@@ -674,7 +674,7 @@
   },
   {
    "Label": "single 奈梅亨 STANDARD pool",
-   "Seconds": 0.055,
+   "Seconds": 0.042,
    "Data": {
     "Adjacency": 5,
     "Appeal": 0,
@@ -705,7 +705,7 @@
   },
   {
    "Label": "single 奈梅亨 must",
-   "Seconds": 0.042,
+   "Seconds": 0.027,
    "Data": {
     "Adjacency": 10,
     "Appeal": 0,
@@ -732,7 +732,7 @@
   },
   {
    "Label": "single �尔堡 FAST pool",
-   "Seconds": 0.049,
+   "Seconds": 0.034,
    "Data": {
     "Adjacency": 6,
     "Asked": 2,
@@ -762,7 +762,7 @@
   },
   {
    "Label": "single �尔堡 STANDARD pool",
-   "Seconds": 0.076,
+   "Seconds": 0.064,
    "Data": {
     "Adjacency": 6,
     "Asked": 2,
@@ -819,7 +819,7 @@
   },
   {
    "Label": "single 阿姆斯特丹 appeal",
-   "Seconds": 0.021,
+   "Seconds": 0.015,
    "Data": {
     "Adjacency": 0,
     "Appeal": 0.0004730224609,
@@ -865,7 +865,7 @@
   },
   {
    "Label": "single 阿姆斯特丹 harbor",
-   "Seconds": 0.027,
+   "Seconds": 0.024,
    "Data": {
     "Adjacency": 1,
     "Appeal": 0,
@@ -894,7 +894,7 @@
   },
   {
    "Label": "single 海牙 appeal",
-   "Seconds": 0.031,
+   "Seconds": 0.033,
    "Data": {
     "Adjacency": 0,
     "Appeal": 0.003662109375,
@@ -1015,115 +1015,116 @@
    }
   },
   {
-   "Label": "sites 3 within 8",
-   "Seconds": 0.371,
+   "Label": "sites 3 within 5",
+   "Seconds": 0.033,
    "Data": {
-    "Calls": 3919,
-    "D": 8,
-    "Found": 3,
+    "Calls": 0,
+    "D": 5,
+    "Error": "NO_SITE",
+    "Found": 0,
     "K": 3,
-    "Ok": true,
-    "Solutions": 3,
+    "Ok": false,
+    "Solutions": 0,
     "Step": "Sites",
     "Tier": "STANDARD"
    }
   },
   {
    "Label": "place sites",
-   "Seconds": 0.026,
+   "Seconds": 0.033,
    "Data": {
-    "Placed": 3,
+    "Placed": 0,
     "Step": "PlaceSites"
    }
   },
   {
    "Label": "multi 4 cities standard",
-   "Seconds": 2.188,
+   "Seconds": 0.605,
    "Data": {
-    "Adjacency": 53,
+    "Adjacency": 28,
     "Appeal": 0,
-    "Calls": 4896,
-    "Cities": 7,
+    "Calls": 2113,
+    "Cities": 4,
     "Count": 3,
     "EngineBad": 0,
     "Exhaustive": false,
-    "Gain": 26,
+    "Gain": 1,
     "Land": -27,
     "Method": "multi",
     "Mismatch": false,
     "Ok": true,
-    "Placed": 17,
+    "Placed": 8,
     "Step": "Multi",
     "Tier": "STANDARD",
     "Together": 0,
-    "Tries": 16089,
+    "Tries": 6763,
     "Unplaced": 2
    }
   },
   {
    "Label": "place multi",
-   "Seconds": 0.038,
+   "Seconds": 0.029,
    "Data": {
-    "Placed": 17,
+    "Placed": 8,
     "Step": "PlaceMulti"
    }
   },
   {
    "Label": "settle after place multi",
-   "Seconds": 0.206,
+   "Seconds": 0.046,
    "Data": null
   },
   {
    "Label": "multi 8 cities standard",
-   "Seconds": 1.007,
+   "Seconds": 0.818,
    "Data": {
     "Adjacency": 34,
     "Appeal": 1,
-    "Calls": 2504,
+    "Calls": 1939,
     "Cities": 8,
     "Count": 3,
     "EngineBad": 0,
     "Exhaustive": false,
-    "Gain": 6.25,
-    "Land": -28.75,
+    "Gain": 2.5,
+    "Land": -32.5,
     "Method": "multi",
     "Mismatch": false,
     "Ok": true,
-    "Placed": 15,
+    "Placed": 14,
     "Step": "Multi",
     "Tier": "STANDARD",
     "Together": 0,
-    "Tries": 7441,
-    "Unplaced": 2
+    "Tries": 7040,
+    "Unplaced": 4
    }
   },
   {
    "Label": "multi 4 cities fine",
-   "Seconds": 1.076,
+   "Seconds": 0.079,
    "Data": {
-    "Adjacency": 22,
+    "Adjacency": 4,
     "Appeal": 0,
-    "Calls": 2080,
-    "Cities": 7,
+    "Calls": 322,
+    "Cities": 4,
     "Count": 3,
     "EngineBad": 0,
     "Exhaustive": false,
-    "Gain": 7.25,
-    "Land": -14.75,
+    "Gain": -3.5,
+    "Land": -7.5,
     "Method": "multi",
     "Mismatch": false,
     "Ok": true,
-    "Placed": 11,
+    "Placed": 2,
     "Step": "Multi",
     "Tier": "FINE",
     "Together": 0,
-    "Tries": 12685,
+    "Tries": 3080,
     "Unplaced": 4
    }
   },
   {
    "Label": "heavy pins",
-   "Seconds": 0.484,
+   "Seconds": 0.41,
    "Data": {
     "Placed": 103,
     "Step": "HeavyPins"
@@ -1131,12 +1132,12 @@
   },
   {
    "Label": "settle after heavy pins",
-   "Seconds": 16.418,
+   "Seconds": 13.673,
    "Data": null
   },
   {
    "Label": "single 阿姆斯特丹 pool, crowded",
-   "Seconds": 0.155,
+   "Seconds": 0.062,
    "Data": {
     "Adjacency": 0,
     "Asked": 2,
@@ -1161,31 +1162,30 @@
   },
   {
    "Label": "multi 4 cities, crowded",
-   "Seconds": 0.55,
+   "Seconds": 0.029,
    "Data": {
-    "Adjacency": 18,
-    "Appeal": 0,
-    "Calls": 2048,
-    "Cities": 7,
+    "Adjacency": 0,
+    "Calls": 112,
+    "Cities": 0,
     "Count": 3,
     "EngineBad": 0,
     "Exhaustive": false,
-    "Gain": 10.75,
-    "Land": -7.25,
-    "Method": "multi",
+    "Gain": 0,
+    "Land": 0,
+    "Method": "none",
     "Mismatch": false,
     "Ok": true,
-    "Placed": 9,
+    "Placed": 0,
     "Step": "Multi",
     "Tier": "STANDARD",
     "Together": 0,
-    "Tries": 4361,
-    "Unplaced": 2
+    "Tries": 0,
+    "Unplaced": 1
    }
   },
   {
    "Label": "panel",
-   "Seconds": 0.076,
+   "Seconds": 0.086,
    "Data": {
     "Ok": true,
     "Step": "Panel"
@@ -1193,14 +1193,14 @@
   },
   {
    "Label": "undo",
-   "Seconds": 0.34,
+   "Seconds": 0.276,
    "Data": {
-    "Removed": 123,
+    "Removed": 111,
     "Step": "UndoAll"
    }
   }
  ],
- "When": "2026-10-26 02:12",
+ "When": "2026-10-27 00:01",
  "AppealCheck": [
   {
    "City": 65536,

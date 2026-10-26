@@ -78,7 +78,7 @@
  "Steps": [
   {
    "Label": "load steps",
-   "Seconds": 0.066,
+   "Seconds": 0.056,
    "Data": {
     "Step": "Loaded"
    }
@@ -198,7 +198,7 @@
   },
   {
    "Label": "single 迈锡尼 STANDARD pool",
-   "Seconds": 0.09,
+   "Seconds": 0.08,
    "Data": {
     "Adjacency": 6,
     "Asked": 2,
@@ -229,7 +229,7 @@
   },
   {
    "Label": "single 迈锡尼 must",
-   "Seconds": 0.054,
+   "Seconds": 0.053,
    "Data": {
     "Adjacency": 12,
     "Asked": 6,
@@ -255,7 +255,7 @@
   },
   {
    "Label": "single 斯巴达 FAST pool",
-   "Seconds": 0.025,
+   "Seconds": 0.026,
    "Data": {
     "Adjacency": 9,
     "Asked": 2,
@@ -285,7 +285,7 @@
   },
   {
    "Label": "single 斯巴达 STANDARD pool",
-   "Seconds": 0.056,
+   "Seconds": 0.055,
    "Data": {
     "Adjacency": 9,
     "Asked": 2,
@@ -316,7 +316,7 @@
   },
   {
    "Label": "single 斯巴达 must",
-   "Seconds": 0.073,
+   "Seconds": 0.066,
    "Data": {
     "Adjacency": 15,
     "Asked": 6,
@@ -342,7 +342,7 @@
   },
   {
    "Label": "single 法����斯 FAST pool",
-   "Seconds": 0.047,
+   "Seconds": 0.046,
    "Data": {
     "Adjacency": 5,
     "Asked": 2,
@@ -372,7 +372,7 @@
   },
   {
    "Label": "single 法����斯 STANDARD pool",
-   "Seconds": 0.108,
+   "Seconds": 0.106,
    "Data": {
     "Adjacency": 5,
     "Asked": 2,
@@ -430,7 +430,7 @@
   },
   {
    "Label": "single 雅典 FAST pool",
-   "Seconds": 0.033,
+   "Seconds": 0.052,
    "Data": {
     "Adjacency": 7,
     "Asked": 2,
@@ -460,7 +460,7 @@
   },
   {
    "Label": "single 雅典 STANDARD pool",
-   "Seconds": 0.062,
+   "Seconds": 0.056,
    "Data": {
     "Adjacency": 7,
     "Asked": 2,
@@ -491,7 +491,7 @@
   },
   {
    "Label": "single 雅典 must",
-   "Seconds": 0.05,
+   "Seconds": 0.046,
    "Data": {
     "Adjacency": 7,
     "Asked": 6,
@@ -517,7 +517,7 @@
   },
   {
    "Label": "single 迈锡尼 appeal",
-   "Seconds": 0.015,
+   "Seconds": 0.016,
    "Data": {
     "Adjacency": 3,
     "Appeal": 0.984375,
@@ -598,7 +598,7 @@
   },
   {
    "Label": "single 斯巴达 appeal",
-   "Seconds": 0.033,
+   "Seconds": 0.03,
    "Data": {
     "Adjacency": 6,
     "Appeal": 0.984375,
@@ -731,7 +731,7 @@
   },
   {
    "Label": "single 法����斯 harbor",
-   "Seconds": 0.034,
+   "Seconds": 0.033,
    "Data": {
     "Adjacency": 7,
     "Asked": 2,
@@ -760,7 +760,7 @@
   },
   {
    "Label": "single 迈锡尼 fine",
-   "Seconds": 0.05,
+   "Seconds": 0.049,
    "Data": {
     "Adjacency": 6,
     "Asked": 2,
@@ -789,11 +789,11 @@
    }
   },
   {
-   "Label": "sites 3 within 8",
-   "Seconds": 0.822,
+   "Label": "sites 3 within 5",
+   "Seconds": 0.273,
    "Data": {
-    "Calls": 13287,
-    "D": 8,
+    "Calls": 3815,
+    "D": 5,
     "Found": 3,
     "K": 3,
     "Ok": true,
@@ -804,7 +804,7 @@
   },
   {
    "Label": "place sites",
-   "Seconds": 0.054,
+   "Seconds": 0.019,
    "Data": {
     "Placed": 3,
     "Step": "PlaceSites"
@@ -812,16 +812,16 @@
   },
   {
    "Label": "multi 4 cities standard",
-   "Seconds": 1.93,
+   "Seconds": 1.467,
    "Data": {
-    "Adjacency": 53,
-    "Calls": 4718,
+    "Adjacency": 52,
+    "Calls": 3782,
     "Cities": 7,
     "Count": 3,
     "EngineBad": 0,
     "Exhaustive": false,
-    "Gain": 27.25,
-    "Land": -25.75,
+    "Gain": 20.75,
+    "Land": -31.25,
     "Method": "multi",
     "Mismatch": false,
     "Ok": true,
@@ -829,13 +829,13 @@
     "Step": "Multi",
     "Tier": "STANDARD",
     "Together": 0,
-    "Tries": 18251,
+    "Tries": 14890,
     "Unplaced": 0
    }
   },
   {
    "Label": "place multi",
-   "Seconds": 0.034,
+   "Seconds": 0.037,
    "Data": {
     "Placed": 21,
     "Step": "PlaceMulti"
@@ -843,80 +843,80 @@
   },
   {
    "Label": "settle after place multi",
-   "Seconds": 0.308,
+   "Seconds": 0.314,
    "Data": null
   },
   {
    "Label": "multi 8 cities standard",
-   "Seconds": 0.578,
+   "Seconds": 0.199,
    "Data": {
-    "Adjacency": 27,
-    "Calls": 2494,
+    "Adjacency": 20,
+    "Calls": 1409,
     "Cities": 7,
     "Count": 3,
     "EngineBad": 0,
     "Exhaustive": false,
-    "Gain": 10.75,
-    "Land": -16.25,
+    "Gain": -3.25,
+    "Land": -23.25,
     "Method": "multi",
     "Mismatch": false,
     "Ok": true,
-    "Placed": 14,
+    "Placed": 11,
     "Step": "Multi",
     "Tier": "STANDARD",
     "Together": 4,
-    "Tries": 6571,
-    "Unplaced": 2
+    "Tries": 2703,
+    "Unplaced": 4
    }
   },
   {
    "Label": "multi 4 cities fine",
-   "Seconds": 0.945,
+   "Seconds": 0.299,
    "Data": {
-    "Adjacency": 27,
-    "Calls": 2499,
+    "Adjacency": 20,
+    "Calls": 1411,
     "Cities": 7,
     "Count": 3,
     "EngineBad": 0,
     "Exhaustive": false,
-    "Gain": 10.75,
-    "Land": -16.25,
+    "Gain": -3.25,
+    "Land": -23.25,
     "Method": "multi",
     "Mismatch": false,
     "Ok": true,
-    "Placed": 14,
+    "Placed": 11,
     "Step": "Multi",
     "Tier": "FINE",
     "Together": 4,
-    "Tries": 14278,
-    "Unplaced": 2
+    "Tries": 5931,
+    "Unplaced": 4
    }
   },
   {
    "Label": "heavy pins",
-   "Seconds": 0.143,
+   "Seconds": 0.15,
    "Data": {
-    "Placed": 47,
+    "Placed": 46,
     "Step": "HeavyPins"
    }
   },
   {
    "Label": "settle after heavy pins",
-   "Seconds": 3.027,
+   "Seconds": 2.905,
    "Data": null
   },
   {
    "Label": "single 迈锡尼 pool, crowded",
-   "Seconds": 0.034,
+   "Seconds": 0.039,
    "Data": {
-    "Adjacency": 2,
+    "Adjacency": 3,
     "Appeal": 0,
     "Asked": 2,
     "Calls": 310,
     "City": 131073,
     "EngineBad": 0,
     "Exhaustive": true,
-    "Gain": -0.25,
+    "Gain": 0.75,
     "Land": -2.25,
     "Method": "pools",
     "Mismatch": false,
@@ -936,31 +936,31 @@
   },
   {
    "Label": "multi 4 cities, crowded",
-   "Seconds": 0.571,
+   "Seconds": 0.144,
    "Data": {
-    "Adjacency": 16,
+    "Adjacency": 9,
     "Appeal": 0,
-    "Calls": 2561,
+    "Calls": 1386,
     "Cities": 7,
     "Count": 3,
     "EngineBad": 0,
     "Exhaustive": false,
-    "Gain": 12.5,
-    "Land": -3.5,
+    "Gain": -1.5,
+    "Land": -10.5,
     "Method": "multi",
     "Mismatch": false,
     "Ok": true,
-    "Placed": 9,
+    "Placed": 6,
     "Step": "Multi",
     "Tier": "STANDARD",
     "Together": 0,
-    "Tries": 4823,
-    "Unplaced": 4
+    "Tries": 1213,
+    "Unplaced": 8
    }
   },
   {
    "Label": "panel",
-   "Seconds": 0.057,
+   "Seconds": 0.058,
    "Data": {
     "Ok": true,
     "Step": "Panel"
@@ -970,12 +970,12 @@
    "Label": "undo",
    "Seconds": 0.109,
    "Data": {
-    "Removed": 71,
+    "Removed": 70,
     "Step": "UndoAll"
    }
   }
  ],
- "When": "2026-10-26 02:13",
+ "When": "2026-10-27 00:01",
  "AppealCheck": [
   {
    "City": 131073,

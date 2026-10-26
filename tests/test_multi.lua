@@ -16,7 +16,7 @@ end
 
 -- A free land plot 5 plots from the capital for a city-center pin.
 local function SitePlot(city)
-  local list, centers = SDP_Sites.Candidates(pid, { K = 1, D = 8 })
+  local list, centers = SDP_Sites.Candidates(pid, { K = 1, D = 5 })
   for _, c in ipairs(list) do
     if Map.GetPlotDistance(c.X, c.Y, city:GetX(), city:GetY()) == 5 then return c end
   end
@@ -94,7 +94,7 @@ end)
 -- capital's three rings.
 local function WithNearSitePin(fn)
   local city = Capital()
-  local list = SDP_Sites.Candidates(pid, { K = 1, D = 8 })
+  local list = SDP_Sites.Candidates(pid, { K = 1, D = 5 })
   local site = nil
   for _, c in ipairs(list) do
     if site == nil and Map.GetPlotDistance(c.X, c.Y, city:GetX(), city:GetY()) == 4 then site = c end

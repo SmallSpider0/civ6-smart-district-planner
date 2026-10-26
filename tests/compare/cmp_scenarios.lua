@@ -285,7 +285,7 @@ for n, entry in ipairs(SITES) do
     id = string.format("C%02d-%s-%s", n, civKey, biome), kind = "sites", title = civ[3] .. "; new city sites",
     seed = cseed, biome = biome, civKey = civKey, civ = civ[1], leader = civ[2], stage = "mid", cities = 1,
     districts = { "DISTRICT_CAMPUS", "DISTRICT_HOLY_SITE", "DISTRICT_COMMERCIAL_HUB" }, built = { {} }, population = 10,
-    sites = { count = 2, distance = 8 }, set = "C",
+    sites = { count = 2, distance = 5 }, set = "C",
     runs = { { planner = "sdp", variant = "STANDARD" }, { planner = "ep", variant = "" } },
   })
 end

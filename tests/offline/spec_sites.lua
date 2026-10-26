@@ -66,7 +66,7 @@ end)
 
 test("the minimum city distance comes from the game data", function()
   NewWorld(7, { cityMinRange = 4 })
-  local list, centers = SDP_Sites.Candidates(0, { K = 3, D = 8 })
+  local list, centers = SDP_Sites.Candidates(0, { K = 3, D = 5 })
   for _, c in ipairs(list) do
     for _, center in ipairs(centers) do
       T.ok(Map.GetPlotDistance(c.X, c.Y, center.X, center.Y) > 4, "CITY_MIN_RANGE 4")

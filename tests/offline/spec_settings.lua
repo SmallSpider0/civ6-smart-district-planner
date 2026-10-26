@@ -22,7 +22,7 @@ Network.BroadcastPlayerInfo = function() broadcasts = broadcasts + 1 end
 local cfg = PlayerConfigurations[0]
 cfg:SetValue("SDP_Settings_SINGLE", "v1;preset=BALANCED;LAND=0;YIELD_GOLD=3;TIER=FINE;HOUSING=9;BOGUS=1;SWAP=yes")
 cfg:SetValue("SDP_Settings_MULTI", "v1;preset=NOT_A_PRESET;REMIND=0;COVERAGE=2")
-cfg:SetValue("SDP_Settings_SITES", "v1;preset=GROWTH;APPEAL=1")
+cfg:SetValue("SDP_Settings_SITES", "v1;preset=GROWTH;APPEAL=1;K=2;D=9")
 UI_Mock.Install()
 include("SDP_Panel")
 
@@ -81,6 +81,9 @@ test("a loaded save: each tab gets back what it kept", function()
   T.eq(sites.Preset, "GROWTH", "city sites: the preset")
   T.eq(sites.Weights.YIELD_FOOD, SDP_Sites.PRESETS.GROWTH.YIELD_FOOD, "its weights")
   T.eq(sites.Weights.APPEAL, 1, "and the change")
+  T.eq(sites.K, 2, "the number of new cities (issue 84)")
+  T.eq(sites.D, 9, "and the distance")
+  T.eq(UI_Mock.Controls.SitesDistance:GetText(), "9", "the distance shown")
   SDP_Panel.SelectTab("SINGLE")
 end)
 
@@ -103,4 +106,23 @@ test("a change through the controls is kept at once, with no broadcast", functio
   T.ok(cfg:GetValue("SDP_Settings_MULTI"):find(";YIELD_FAITH=0", 1, true) ~= nil, "several cities: kept under its own key")
   T.ok(cfg:GetValue("SDP_Settings_SINGLE"):find("YIELD_FAITH", 1, true) == nil, "not on the single-city tab")
   T.eq(broadcasts, 0, "nothing broadcast")
+end)
+
+test("city sites: the number of new cities and the distance are kept, the default 5 is not written (issue 84)", function()
+  SDP_Panel.SelectTab("SITES")
+  for _ = 1, 4 do UI_Mock.Controls.SitesDistanceLess:Click() end
+  T.eq(SDP_Panel.Sites.State().D, 5, "9 down to 5")
+  local text = cfg:GetValue("SDP_Settings_SITES")
+  T.ok(text:find("D=", 1, true) == nil, "the default distance is not written: " .. text)
+  T.ok(text:find(";K=2", 1, true) ~= nil, "the number of new cities still kept")
+  UI_Mock.Controls.SitesDistanceLess:Click()
+  UI_Mock.Controls.SitesCountMore:Click()
+  text = cfg:GetValue("SDP_Settings_SITES")
+  T.ok(text:find(";D=4", 1, true) ~= nil, "4 kept: " .. text)
+  T.ok(text:find("K=", 1, true) == nil, "back to 3 new cities: not written")
+  local fields = SDP_UI.SettingFields({}, {}, SDP_Tiers.Sites,
+    { { Key = "K", Kind = "number", Min = 1, Max = 6, Default = 3 }, { Key = "D", Kind = "number", Min = 4, Max = 15, Default = 5 } })
+  T.same(SDP_Settings.Decode("v1;preset=BALANCED;D=20;K=0", fields, SDP_Sites.PRESETS, SDP_Sites.PRESET_ORDER).Edited, {},
+    "a number field from Extra keeps its range: out of range, the defaults")
+  SDP_Panel.SelectTab("SINGLE")
 end)

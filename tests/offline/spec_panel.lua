@@ -238,6 +238,7 @@ test("city sites tab: solve, select, place the site tacks", function()
   SDP_Panel.SelectTab("SITES")
   T.eq(SDP_Panel.Tab(), "SITES", "tab")
   local sites = SDP_Panel.Sites
+  T.eq(sites.State().D, 5, "default distance 5 (issue 84)")
   sites.SetCount(2)
   sites.SetDistance(7)
   sites.SetSelected("DISTRICT_CAMPUS", true)

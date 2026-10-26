@@ -308,12 +308,12 @@ test("sites: with more districts ticked than PlanCount each site picks its best;
   })
   local _ = w
   local two = { "DISTRICT_CAMPUS", "DISTRICT_HOLY_SITE" }
-  local a = SDP_SiteSolver.Solve({ PlayerID = 0, K = 1, D = 8, Districts = two, Tier = "FAST" })
-  local b = SDP_SiteSolver.Solve({ PlayerID = 0, K = 1, D = 8, Districts = two, PlanCount = 3, Tier = "FAST" })
+  local a = SDP_SiteSolver.Solve({ PlayerID = 0, K = 1, D = 5, Districts = two, Tier = "FAST" })
+  local b = SDP_SiteSolver.Solve({ PlayerID = 0, K = 1, D = 5, Districts = two, PlanCount = 3, Tier = "FAST" })
   T.ok(a.Ok and b.Ok, "solved")
   T.eq(a.Solutions[1].Value, b.Solutions[1].Value, "two ticked, count 3: the same scores")
   local four = { "DISTRICT_CAMPUS", "DISTRICT_HOLY_SITE", "DISTRICT_THEATER", "DISTRICT_COMMERCIAL_HUB" }
-  local c = SDP_SiteSolver.Solve({ PlayerID = 0, K = 1, D = 8, Districts = four, PlanCount = 2, Tier = "FAST" })
+  local c = SDP_SiteSolver.Solve({ PlayerID = 0, K = 1, D = 5, Districts = four, PlanCount = 2, Tier = "FAST" })
   T.ok(c.Ok, tostring(c.Error))
   for _, site in ipairs(c.Solutions[1].Sites) do
     T.ok(#(site.Districts or {}) <= 2, "at most two districts per site")
