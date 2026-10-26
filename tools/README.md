@@ -355,7 +355,7 @@ python3 -I tools/run_tests.py -v tests/bench/audit_engine.lua   # 读存档后�
 
 ## game.py — 启动与进入对局
 
-`quit`、`menu`、`popups`、`newgame` 经 Tuner 执行，两个平台相同。`launch` 在 macOS 上用 `open`，在 Windows 上用 `os.startfile` 打开 Steam 链接；下面讲的启动器点击和前台切换只在 macOS 上有。
+`quit`、`menu`、`popups`、`newgame` 经 Tuner 执行，两个平台相同。`launch`、`newgame`、`load` 发现本工作树的 `civ6tuner.py serve` 没在跑就自己启动它（输出写到 `logs/tuner-serve.out`）：`quit` 会连带停掉它，没有它时直连游戏的请求在加载期间被拒，开局会失败（2026-10-26）。`launch` 在 macOS 上用 `open`，在 Windows 上用 `os.startfile` 打开 Steam 链接；下面讲的启动器点击和前台切换只在 macOS 上有。
 
 ```bash
 python3 -I tools/game.py quit                          # 经 Tuner 退出游戏并等待进程结束
@@ -449,7 +449,7 @@ python3 -I tools/shots.py capture v10-panel-single   # 截面板 -> docs/images/
 python3 -I tools/shots.py region                 # 没有录屏权限时：打印面板的屏幕区域，用 computer-use 缩放截图后
 python3 -I tools/shots.py save 截图文件 v10-panel-single
 python3 -I tools/shots.py lang en                # 游戏关着时：显示语言改英文（备份 AppOptions.txt）
-python3 -I tools/shots.py lang restore           # 恢复备份，核对逐字节相同
+python3 -I tools/shots.py lang restore           # 恢复备份，核对逐字节相同，然后放游戏锁
 ```
 
 - `capture` 经 SDPClick.app 截下整个游戏窗口（游戏留在后台、在别的桌面空间也行），再按游戏给出的面板位置裁出面板；截不了时退回“把游戏切到前台、截面板那块、再切回原来的应用”。要在“系统设置 → 隐私与安全性 → 录屏与系统录音”里允许 SDPClick 一次。

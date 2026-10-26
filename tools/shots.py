@@ -20,7 +20,8 @@ screen's width) and pass the file to `save`, which cuts 5 px off the sides
 single.jpg, v<round>-en-panel-multi.jpg.
 
 English shots: quit the game, `lang en`, launch, new game, stage, capture,
-quit, `lang restore` (prints whether the file is identical to the backup).
+quit, `lang restore` (prints whether the file is identical to the backup,
+then releases the game lock).
 The backup is logs/AppOptions.backup.txt; `lang en` refuses to overwrite an
 existing backup, so a forgotten restore is not lost.
 """
@@ -203,6 +204,9 @@ def lang(args):
         print("restored %s: %s" % (path, "identical to the backup" if same else "DIFFERS"))
         if same:
             os.remove(BACKUP)
+        # restore is the last step of the English shots: the game is closed,
+        # so the lock taken above would otherwise stay with this worktree
+        print(sdplock.release(ROOT))
         return 0 if same else 1
     if os.path.exists(BACKUP):
         raise SystemExit("a backup is already there (%s): run `lang restore` first" % BACKUP)

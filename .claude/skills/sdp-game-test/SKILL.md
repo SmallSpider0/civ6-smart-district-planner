@@ -37,7 +37,7 @@ Several sessions may run at once, each in its own worktree, and there is one gam
 
 ## Start
 
-- `python3 -I tools/civ6tuner.py serve` in the background (one Tuner client at a time).
+- The Tuner daemon (`civ6tuner.py serve`, one Tuner client at a time) is started by `game.py launch`, `newgame` and `load` when none runs; `game.py quit` stops it.
 - Not running: `python3 -I tools/game.py launch`, then press the launcher's 开始 (macOS: computer-use `app_click` on bundle `com.aspyr.civ6.steam`, the button's AX element), then `python3 -I tools/game.py newgame --state SDP_Panel --capital --reveal` (waits for the main menu, mutes, fixed map, Rome).
 - `run_tests.py` stops when the game loads the Workshop copy of the mod (pitfall 38): move that copy out, never test it.
 
