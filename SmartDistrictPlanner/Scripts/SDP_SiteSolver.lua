@@ -177,7 +177,7 @@ function Session:Value(chosen)
       end
     end
     local value = site.Parts.District + land + site.Parts.Water + site.Parts.Appeal - site.Parts.Penalty
-    details[#details + 1] = { Site = site, Land = land, Value = value, Resources = owned }
+    details[#details + 1] = { Site = site, Land = land, Value = value, Resources = owned, Taken = taken, Once = once }
     total = total + value
   end
   local resources = w.AMENITY * SDP_Sites.LuxuryValue(ctx, luxury, {}) + w.STRATEGIC * SDP_Sites.StrategicValue(ctx, strategic, {})
@@ -360,6 +360,7 @@ local function SolutionSites(ctx, entry)
     local site = d.Site
     local parts = {}
     for key, value in pairs(site.Parts) do parts[key] = value end
+    if d.Taken ~= nil then parts.Farm, parts.Feature = SDP_Sites.LandParts(site.Land, d.Taken, d.Once) end
     sites[n] = { X = site.X, Y = site.Y, Index = site.Index, Value = d.Value, Land = d.Land, Parts = parts,
       Districts = site.Districts, Info = site.Info, Owned = d.Resources, OwnDistance = site.Info.OwnDistance }
   end
@@ -373,7 +374,9 @@ local function SolutionSites(ctx, entry)
       copies[r.Type] = (copies[r.Type] or 0) + r.Count
     end
     site.NewKinds = {}
-    for kind in pairs(luxury) do site.NewKinds[kind] = not ctx.Owned[kind] and not takenLuxury[kind] or nil end
+    for kind in pairs(luxury) do
+      site.NewKinds[kind] = not ctx.Owned[kind] and not (takenLuxury[kind] and takenLuxury[kind].New) or nil
+    end
     for kind in pairs(strategic) do site.NewKinds[kind] = not ctx.Owned[kind] and not takenStrategic[kind] or nil end
     site.Parts.Luxury = w.AMENITY * SDP_Sites.LuxuryValue(ctx, luxury, takenLuxury)
     site.Parts.Strategic = w.STRATEGIC * SDP_Sites.StrategicValue(ctx, strategic, takenStrategic)

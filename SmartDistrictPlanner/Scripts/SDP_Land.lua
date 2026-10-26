@@ -208,15 +208,21 @@ end
 
 -- What the land part needs to value plots for one player (issue 52):
 --   W              SDP_Land.Weights(weights)
+--   OnceW          what one-time yields weigh: options.OnceWeights (the
+--                  city sites tab, issue 88: without its land weight), else W
+--   Turns          one-time yields count as this many turns of yield:
+--                  options.Turns, else HARVEST_TURNS
 --   AllowRemoval   whether districts may clear features (constraint 5; when
 --                  not, a featured plot keeps its feature)
 -- plus the rules, the player's technologies and civics for improvement
 -- bonuses, which resources the player sees and whether it may harvest.
 -- One-time yields grow with progress: x (1 + ONE_TIME_GROWTH x progress).
 SDP_Land.ONE_TIME_GROWTH = 9
-function SDP_Land.Context(playerID, weights, allowRemoval)
+function SDP_Land.Context(playerID, weights, allowRemoval, options)
+  options = options or {}
   local ctx = { W = SDP_Land.Weights(weights), AllowRemoval = allowRemoval ~= false, OneTime = SDP_Land.OneTimeYields(),
-    Rules = ImprovementRules(), PlayerID = playerID }
+    Rules = ImprovementRules(), PlayerID = playerID, Turns = options.Turns or SDP_Land.HARVEST_TURNS }
+  ctx.OnceW = options.OnceWeights ~= nil and SDP_Land.Weights(options.OnceWeights) or ctx.W
   ctx.Growth = 1 + SDP_Land.ONE_TIME_GROWTH * Progress(playerID)
   ctx.Harvest = not HarvestPrevented(playerID)
   local player = playerID ~= nil and Players[playerID] or nil
@@ -291,11 +297,12 @@ local function BestImprovement(ctx, sea, terrain, feature, resource)
 end
 
 -- A plot's value, its one-time value (what removing its feature and
--- harvesting its resource would give, weighted, per turn) and its value
+-- harvesting its resource would give, weighted, per turn), its value
 -- left unimproved with its feature kept (issue 91: a preserve's grove and
 -- sanctuary give yields only to unimproved plots, so a plot next to one is
--- worth the better of its improved value and this plus those yields).
--- `ctx` from SDP_Land.Context.
+-- worth the better of its improved value and this plus those yields) and
+-- the part of the one-time value its best use forgoes (what it keeps: its
+-- value is already lowered by it; issue 88). `ctx` from SDP_Land.Context.
 function SDP_Land.PlotValues(plot, ctx)
   local w, rules = ctx.W, ctx.Rules
   local now = 0
@@ -310,14 +317,14 @@ function SDP_Land.PlotValues(plot, ctx)
     now = now - Weighted(rules.ResourceYields[resourceRow.ResourceType] or {}, w)
     resourceRow = nil
   end
-  local scale = w.FEATURE * ctx.Growth / SDP_Land.HARVEST_TURNS
+  local scale = w.FEATURE * ctx.Growth / ctx.Turns
   local feature, featureOnce, removable = nil, 0, false
   if featureRow ~= nil then
     feature = featureRow.FeatureType
     -- With removal off (constraint 5) the player keeps features.
     if featureRow.Removable and ctx.AllowRemoval then
       removable = true
-      featureOnce = Weighted(ctx.OneTime.Features[feature] or {}, w) * scale
+      featureOnce = Weighted(ctx.OneTime.Features[feature] or {}, ctx.OnceW) * scale
     end
   end
   local resource, resourceOnce, harvestable = nil, 0, false
@@ -325,43 +332,46 @@ function SDP_Land.PlotValues(plot, ctx)
     resource = resourceRow.ResourceType
     if ctx.OneTime.Resources[resource] ~= nil and ctx.Harvest then
       harvestable = true
-      resourceOnce = Weighted(ctx.OneTime.Resources[resource], w) * scale
+      resourceOnce = Weighted(ctx.OneTime.Resources[resource], ctx.OnceW) * scale
     end
   end
   local improved = plot:GetImprovementType() ~= -1
   if improved or Unimprovable(plot, resourceRow) then
     -- The game's yields include the improvement (removing or harvesting
     -- would undo it), or none can go there.
-    return now, featureOnce + resourceOnce, now
+    return now, featureOnce + resourceOnce, now, 0
   end
   local sea = plot:IsWater()
   local terrain = GameInfo.Terrains[plot:GetTerrainType()].TerrainType
   local featureYield = feature ~= nil and Weighted(rules.FeatureYields[feature] or {}, w) or 0
   local resourceYield = resource ~= nil and Weighted(rules.ResourceYields[resource] or {}, w) or 0
-  local best, bare = nil, nil
+  local best, bare, forgone = nil, nil, 0
   for _, removeFeature in ipairs(removable and { false, true } or { false }) do
     for _, harvest in ipairs(harvestable and { false, true } or { false }) do
-      local value = now
+      local value, kept = now, 0
       local f, r = feature, resource
-      if removeFeature then value, f = value - featureYield, nil else value = value - featureOnce end
-      if harvest then value, r = value - resourceYield, nil else value = value - resourceOnce end
+      if removeFeature then value, f = value - featureYield, nil else kept = kept + featureOnce end
+      if harvest then value, r = value - resourceYield, nil else kept = kept + resourceOnce end
+      value = value - kept
       if not removeFeature and (bare == nil or value > bare) then bare = value end
       value = value + BestImprovement(ctx, sea, terrain, f, r)
-      if best == nil or value > best then best = value end
+      if best == nil or value > best then best, forgone = value, kept end
     end
   end
-  return best, featureOnce + resourceOnce, bare
+  return best, featureOnce + resourceOnce, bare, forgone
 end
 
--- Land model of one city. plots: { Index, Tile, Once, Bare } for every
--- plot it can work (Bare: its value left unimproved, PlotValues; nil: the
--- same as Tile). Returns { Plots (best tile first, ties by plot index), P,
--- Base, Loss = { [plot index] = what taking that plot alone costs },
--- OnceTotal (the plots' one-time values: the city gets them whatever is
--- built) }.
+-- Land model of one city. plots: { Index, Tile, Once, Bare, Forgone } for
+-- every plot it can work (Bare: its value left unimproved, PlotValues; nil:
+-- the same as Tile; Forgone optional, see PlotValues). Returns { Plots (best
+-- tile first, ties by plot index), P, Base, Loss = { [plot index] = what
+-- taking that plot alone costs }, OnceTotal (the plots' one-time values: the
+-- city gets them whatever is built) }.
 function SDP_Land.Model(plots, population)
   local sorted = {}
-  for i, p in ipairs(plots) do sorted[i] = { Index = p.Index, Tile = p.Tile, Once = p.Once, Bare = p.Bare or p.Tile } end
+  for i, p in ipairs(plots) do
+    sorted[i] = { Index = p.Index, Tile = p.Tile, Once = p.Once, Bare = p.Bare or p.Tile, Forgone = p.Forgone or 0 }
+  end
   table.sort(sorted, function(a, b)
     if a.Tile ~= b.Tile then return a.Tile > b.Tile end
     return a.Index < b.Index
@@ -429,6 +439,24 @@ function SDP_Land.ScoreTaken(model, taken, count, mark, boost)
   end
   for t = 1, count do mark[taken[t]] = nil end
   return worked
+end
+
+-- The worked plots of ScoreTaken (no boost) split for display (issue 88):
+-- what they yield each turn as kept or cleared, and the one-time value they
+-- forgo by being kept. ScoreTaken = yield - forgone.
+function SDP_Land.WorkedParts(model, taken, count)
+  local mark = {}
+  for t = 1, count do mark[taken[t]] = true end
+  local yield, forgone, used = 0, 0, 0
+  for _, p in ipairs(model.Plots) do
+    if used >= model.P then break end
+    if not mark[p.Index] then
+      yield = yield + p.Tile + p.Forgone
+      forgone = forgone + p.Forgone
+      used = used + 1
+    end
+  end
+  return yield, forgone
 end
 
 -- Land score with the plots in `taken` ({ [plot index] = true }) built on.
