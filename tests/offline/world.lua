@@ -427,6 +427,35 @@ function World.New(spec)
       { ImprovementType = "IMPROVEMENT_CAMP", ResourceType = "RESOURCE_DEER" },
     })
   end
+  -- The base game's trade route rows (Base Districts.xml), on request
+  -- (issue 107): the capacity sits on the districts, not on the market and
+  -- the lighthouse. The commercial hub adds a route; the harbor adds one
+  -- when the city has no commercial hub; the unique harbor (the cothon here,
+  -- standing for the base game's Royal Navy Dockyard) adds one always.
+  if spec.baseTradeRoutes then
+    gi.Modifiers = Table({
+      { ModifierId = "COMMERCIAL_HUB_TRADE_ROUTE_CAPACITY", ModifierType = "MODIFIER_PLAYER_ADJUST_TRADE_ROUTE_CAPACITY" },
+      { ModifierId = "HARBOR_TRADE_ROUTE_CAPACITY", ModifierType = "MODIFIER_PLAYER_ADJUST_TRADE_ROUTE_CAPACITY",
+        SubjectRequirementSetId = "HARBOR_TRADE_ROUTE_CAPACITY_REQUIREMENTS" },
+      { ModifierId = "COTHON_TRADE_ROUTE_CAPACITY", ModifierType = "MODIFIER_PLAYER_ADJUST_TRADE_ROUTE_CAPACITY" },
+    }, "ModifierId")
+    gi.BuildingModifiers = Table({})
+    gi.DistrictModifiers = Table({
+      { DistrictType = "DISTRICT_COMMERCIAL_HUB", ModifierId = "COMMERCIAL_HUB_TRADE_ROUTE_CAPACITY" },
+      { DistrictType = "DISTRICT_HARBOR", ModifierId = "HARBOR_TRADE_ROUTE_CAPACITY" },
+      { DistrictType = "DISTRICT_COTHON", ModifierId = "COTHON_TRADE_ROUTE_CAPACITY" },
+    })
+    gi.RequirementSetRequirements = Table({
+      { RequirementSetId = "HARBOR_TRADE_ROUTE_CAPACITY_REQUIREMENTS", RequirementId = "REQUIRES_NO_COMMERCIAL_HUB" },
+    })
+    gi.Requirements = Table({
+      { RequirementId = "REQUIRES_NO_COMMERCIAL_HUB", RequirementType = "REQUIREMENT_CITY_HAS_DISTRICT", Inverse = true },
+    }, "RequirementId")
+    gi.RequirementArguments = Table({
+      { RequirementId = "REQUIRES_NO_COMMERCIAL_HUB", Name = "DistrictType", Value = "DISTRICT_COMMERCIAL_HUB" },
+      { RequirementId = "REQUIRES_NO_COMMERCIAL_HUB", Name = "MustBeFunctioning", Value = "false" },
+    })
+  end
   -- A wonder that must be next to a camp, as the Temple of Artemis (issue
   -- 51), on request: added last, so the other rows keep their indices.
   if spec.campWonder then

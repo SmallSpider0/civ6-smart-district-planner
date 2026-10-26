@@ -157,3 +157,52 @@ test("several cities: no city picks both; with the rule off one does", function(
   end
   T.ok(together > 0, "off: some city has both")
 end)
+
+-- Issue 107: the base game puts the rule on the districts (Base
+-- Districts.xml, DistrictModifiers): the harbor adds a route only in a city
+-- without a commercial hub; the hub always; the Royal Navy Dockyard always
+-- (the cothon stands for it here). Only the base harbor is kept apart.
+test("the base game: the rule sits on the districts; a unique harbor with its own route has no partner", function()
+  NewWorld({ baseTradeRoutes = true })
+  local apart = SDP_Rules.Apart()
+  T.eq(#apart.Pairs, 1, "one pair")
+  local pair = apart.Pairs[1] or {}
+  T.same({ pair.A, pair.B, pair.Building, pair.Other }, { HARBOR, HUB, HARBOR, HUB }, "the harbor loses its route to a hub")
+  T.ok(apart.Partners[HARBOR] and apart.Partners[HARBOR][HUB] and apart.Partners[HUB] and apart.Partners[HUB][HARBOR],
+    "both ways")
+  T.eq(apart.Partners.DISTRICT_COTHON, nil, "the unique harbor's route has no condition")
+  T.ok(apart.Partners[HUB] == nil or not apart.Partners[HUB].DISTRICT_COTHON, "nor is it the hub's partner")
+  T.eq(#SDP_Rules.Together({ HARBOR, HUB }), 1, "the harbor with a hub")
+  T.eq((SDP_Rules.Together({ HARBOR, HUB })[1] or {}).Building, HARBOR, "the harbor gives no route")
+  T.eq(#SDP_Rules.Together({ "DISTRICT_COTHON", HUB }), 0, "the unique harbor with a hub: nothing")
+  T.eq(#SDP_Rules.Together({ HUB }, { DISTRICT_COTHON = true }), 0, "nor when the city has it")
+  T.eq(#SDP_Rules.ApartFor(0), 1, "the player builds harbors: the switch applies")
+  NewWorld({ baseTradeRoutes = true, traits = { "TRAIT_CIVILIZATION_DISTRICT_COTHON" } })
+  T.eq(#SDP_Rules.ApartFor(0), 0, "the player builds the unique harbor instead: nothing to keep apart")
+  NewWorld({ traits = { "TRAIT_CIVILIZATION_DISTRICT_COTHON" } })
+  T.eq(#SDP_Rules.ApartFor(0), 1, "with the lighthouse's rule the unique harbor is kept apart too")
+end)
+
+test("the base game: the search keeps the harbor and the hub apart, not the unique harbor", function()
+  NewWorld({ baseTradeRoutes = true })
+  local off = Single({ Apart = false })
+  T.ok(off.Ok, tostring(off.Error))
+  T.ok(Has(off.Plan, HUB) and Has(off.Plan, HARBOR), "off: together")
+  local on = Single()
+  T.ok(on.Ok, tostring(on.Error))
+  for n, sol in ipairs(on.Solutions) do
+    T.ok(not (Has(sol.Plan, HUB) and Has(sol.Plan, HARBOR)), "solution " .. n .. " keeps them apart")
+  end
+  -- With the cothon in place of the harbor, nothing is kept apart.
+  NewWorld({ baseTradeRoutes = true, traits = { "TRAIT_CIVILIZATION_DISTRICT_COTHON" } })
+  local pool = { "DISTRICT_CAMPUS", HUB, "DISTRICT_COTHON", "DISTRICT_HOLY_SITE" }
+  local free = Single({ Pool = pool, Apart = false })
+  local kept = Single({ Pool = pool })
+  T.ok(free.Ok and kept.Ok, tostring(free.Error or kept.Error))
+  T.same(kept.Picked, free.Picked, "the same picks with the switch on")
+  T.eq(kept.Gain, free.Gain, "the same gain")
+  T.eq(#(kept.Together or {}), 0, "nothing reported")
+  local both = Single({ Pool = { HUB, "DISTRICT_COTHON" } })
+  T.ok(Has(both.Plan, HUB) and Has(both.Plan, "DISTRICT_COTHON"), "both picked")
+  T.eq(#both.Together, 0, "and not reported: the unique harbor keeps its route")
+end)
