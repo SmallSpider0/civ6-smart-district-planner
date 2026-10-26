@@ -27,14 +27,14 @@ The mod does something wrong, or a test or document is wrong. Fix it without ask
 
 ### Feature or optimisation
 
-New behaviour, changed defaults, UI changes. Code only after the maintainer decides.
+New behaviour, changed defaults, UI changes. Code only after the plan is decided (step 6).
 
 1. Several at once: group the related ones and research them together. A subagent researches: the rules database (`Cache/DebugGameplay.sqlite`, `pragma table_info` for column names), the game's and DMT's code (`reference/`), the other planners (AMT, Empire Planner, District & Wonder Planner in `reference/`), player communities (CivFanatics, Zhihu, Steam Workshop comments). Give it the goal, the files, what is ruled out; it writes a note and reports back.
 2. One comment on the issue, in Chinese, with these headings: **已查证的规则 / 玩家共识 / 个别意见 / 建议方案** (options 方案 A, B…, the recommended one first), then **待定问题** — each with a recommendation — and the effect on the version number and a rough amount of work. Measured numbers where there are any (time, gain), with their source.
 3. Tell the maintainer what waits for their decision (the comment's link, the options, the recommendation).
 4. While it waits, prepare what does not touch `main`: more measurements, offline experiments (sdp-offline-runs), a prototype on a branch without a PR.
 5. Collaborator comments refine the plan: comment again only when the plan changes.
-6. The maintainer decides ("#70 按方案 A"); agreement in a comment from someone else is input, not the decision. Then comment "维护者已定：…" on the issue, put the issue in its milestone (create it now if that version has none, §3) and implement as decided; comment if the work deviates.
+6. The plan is decided by the maintainer in Claude Code ("#70 按方案 A"), or by a collaborator's explicit reply on the issue: a comment that picks an option or answers the open questions ("采取方案 A", "1. 遵循建议"). Only from a collaborator account the agent never posts from (check the comment's author with `gh api`); a comment from the account the agent shares is never a decision. Answered points are decided, unanswered ones still wait; when the maintainer and a collaborator disagree, the maintainer's word holds. A reply that adds a requirement decides it too when it is explicit; when it raises a question instead, answer on the issue. Then comment "维护者已定：…" or "合作者已定：…（链接）" on the issue, put the issue in its milestone (create it now if that version has none, §3) and implement as decided; comment if the work deviates.
 7. Not doing it: comment the reason and close it as not planned (`gh issue close N --reason "not planned"`). Later: label it `later` and leave it without a milestone; take the label off when it is picked up again.
 
 ## 3. Milestone and version
@@ -49,7 +49,7 @@ The version digit follows the size of the change (CONTRIBUTING.md "发版", sinc
 
 The digit no longer says whether plans change: a change that gives different plans for the same settings says so in CHANGELOG and the change note. The digit does not decide who releases either: only a bug-fix-only milestone goes out without asking (sdp-release); a third-digit milestone with a default or layout change waits for the maintainer like any other.
 
-Several changes go into one release; a single change is released alone only when the live version is badly broken. Bug-fix milestones are released when due; everything else when the maintainer says (sdp-release, "Who decides"). When an issue goes into a milestone: a bug when it is confirmed, a feature or optimisation when the maintainer decides it; issues still in research or waiting for a decision have none. Put it in the open milestone of that version (`gh issue edit N --milestone vX.Y.Z`); create the milestone then if needed, with a one-line description. Research-only milestones (评测基线) hold no mod changes until the maintainer decides.
+Several changes go into one release; a single change is released alone only when the live version is badly broken. Bug-fix milestones are released when due; everything else when the maintainer says (sdp-release, "Who decides"). When an issue goes into a milestone: a bug when it is confirmed, a feature or optimisation when its plan is decided (§2 step 6); issues still in research or waiting for a decision have none. Put it in the open milestone of that version (`gh issue edit N --milestone vX.Y.Z`); create the milestone then if needed, with a one-line description. Research-only milestones (评测基线) hold no mod changes until the maintainer decides.
 
 ## 4. Working on it
 
