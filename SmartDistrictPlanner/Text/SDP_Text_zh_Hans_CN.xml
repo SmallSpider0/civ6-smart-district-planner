@@ -457,6 +457,9 @@
     <Replace Tag="LOC_SDP_MULTI_LIMITED_AUTO" Language="zh_Hans_CN">
       <Text>· {1_N} 座城中自动选</Text>
     </Replace>
+    <Replace Tag="LOC_SDP_MULTI_LIMITED_BUILT" Language="zh_Hans_CN">
+      <Text>· 已建在{1_City}</Text>
+    </Replace>
     <Replace Tag="LOC_SDP_REASON_ENGINE" Language="zh_Hans_CN">
       <Text>游戏不允许在此建造该区域</Text>
     </Replace>

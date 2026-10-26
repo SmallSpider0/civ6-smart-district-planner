@@ -457,6 +457,9 @@
     <Replace Tag="LOC_SDP_MULTI_LIMITED_AUTO" Language="en_US">
       <Text>· best of {1_N} cities</Text>
     </Replace>
+    <Replace Tag="LOC_SDP_MULTI_LIMITED_BUILT" Language="en_US">
+      <Text>· built in {1_City}</Text>
+    </Replace>
     <Replace Tag="LOC_SDP_REASON_ENGINE" Language="en_US">
       <Text>The game does not allow this district here</Text>
     </Replace>

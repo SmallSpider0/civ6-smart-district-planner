@@ -649,13 +649,19 @@ end
 -- district's MaxPerPlayer elsewhere (e.g. one Government Plaza per empire),
 -- counting the player's pins of it too: a pinned Government Plaza in another
 -- city is where the plan already has it (SDP_Multi counts them the same way).
-function SDP_City.DistrictStatus(scan, districts)
-  local builtHere, builtByPlayer = {}, {}
-  for _, built in ipairs(scan.Built) do builtHere[built.Type] = true end
-  for _, district in Players[scan.PlayerID]:GetDistricts():Members() do
+-- How many of each district type the player has, complete or not, in any city.
+local function BuiltByPlayer(playerID)
+  local count = {}
+  for _, district in Players[playerID]:GetDistricts():Members() do
     local districtType = GameInfo.Districts[district:GetType()].DistrictType
-    builtByPlayer[districtType] = (builtByPlayer[districtType] or 0) + 1
+    count[districtType] = (count[districtType] or 0) + 1
   end
+  return count
+end
+
+function SDP_City.DistrictStatus(scan, districts)
+  local builtHere, builtByPlayer = {}, BuiltByPlayer(scan.PlayerID)
+  for _, built in ipairs(scan.Built) do builtHere[built.Type] = true end
   for _, pin in ipairs(PlayerConfigurations[scan.PlayerID]:GetMapPins()) do
     local key = (pin:GetIconName() or ""):gsub("^ICON_", "")
     local plot = Map.GetPlot(pin:GetHexX(), pin:GetHexY())
@@ -676,6 +682,22 @@ function SDP_City.DistrictStatus(scan, districts)
     elseif district.MaxPerPlayer and district.MaxPerPlayer > 0
         and (builtByPlayer[district.Type] or 0) >= district.MaxPerPlayer then
       status[district.Type] = "MAX_PER_PLAYER"
+    end
+  end
+  return status
+end
+
+-- The districts with an empire limit (Districts.MaxPerPlayer, e.g. the
+-- Government Plaza) the player has built up to that limit, complete or not,
+-- in any of their cities: { [DistrictType] = "BUILT" } (issue 108). The
+-- Several cities tab shows them as built and plans none. Pins do not count:
+-- a new plan may move them (the solver counts them, SDP_Multi).
+function SDP_City.EmpireBuilt(playerID, districts)
+  local builtByPlayer, status = BuiltByPlayer(playerID), {}
+  for _, district in ipairs(districts) do
+    if district.MaxPerPlayer and district.MaxPerPlayer > 0
+        and (builtByPlayer[district.Type] or 0) >= district.MaxPerPlayer then
+      status[district.Type] = "BUILT"
     end
   end
   return status

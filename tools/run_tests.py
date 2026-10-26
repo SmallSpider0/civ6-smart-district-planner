@@ -9,7 +9,11 @@ A test file (tests/test_*.lua) is a chunk that receives `test` and `T`:
     -- @setup GameCore_Tuner tests/fixtures/build_campus.lua
     -- @teardown GameCore_Tuner tests/fixtures/destroy_campus.lua
                                       run a Lua file in a state before / after
-                                      the tests (teardown always runs)
+                                      the tests (teardown always runs); several
+                                      @setup lines run in order, SETUP_PAUSE
+                                      seconds apart (an order given in a UI
+                                      state reaches the game core a few frames
+                                      later)
     local test, T = ...
 
     test("campus next to a mountain gets science", function()
@@ -149,6 +153,13 @@ def build(path, body, name_filter):
                           filter=lua_string(name_filter) if name_filter else "nil")
 
 
+# Header keys that may appear more than once: a list, in file order.
+REPEATED = ("setup", "teardown")
+# Seconds between two fixtures of one file (tools/stress.py waits as long
+# between ordering a district and finishing it).
+SETUP_PAUSE = 2.0
+
+
 def headers(body):
     """Read `-- @key value` lines from the comment block at the top."""
     found = {}
@@ -157,8 +168,26 @@ def headers(body):
             break
         m = re.match(r"--\s*@(\w+)\s+(.+?)\s*$", line)
         if m:
-            found[m.group(1)] = m.group(2)
+            if m.group(1) in REPEATED:
+                found.setdefault(m.group(1), []).append(m.group(2))
+            else:
+                found[m.group(1)] = m.group(2)
     return found
+
+
+def run_fixtures(specs, label):
+    """Run each `STATE FILE` of a @setup/@teardown list in order; returns the
+    first error or None. Teardowns all run even after an error."""
+    problem = None
+    for i, spec in enumerate(specs):
+        if i > 0:
+            time.sleep(SETUP_PAUSE)
+        error = run_fixture(spec, label)
+        if error and problem is None:
+            problem = error
+            if label == "setup":
+                break
+    return problem
 
 
 def run_fixture(spec, label):
@@ -205,18 +234,20 @@ def run_file(path, name_filter, verbose):
     opts = headers(body)
     state = opts.get("state", "InGame")
     if "setup" in opts:
-        problem = run_fixture(opts["setup"], "setup")
+        problem = run_fixtures(opts["setup"], "setup")
         if problem:
             print("%s  [%s]\n  ERROR  %s" % (rel, state, problem))
             counts["ERROR"] += 1
             if "teardown" in opts:
-                run_fixture(opts["teardown"], "teardown")
+                run_fixtures(opts["teardown"], "teardown")
             return counts, None
+        if len(opts["setup"]) > 1:
+            time.sleep(SETUP_PAUSE)  # the UI states see the last step a few frames later
     started = time.monotonic()
     resp = civ6tuner.request({"op": "exec", "state": state, "code": build(path, body, name_filter),
                               "timeout": float(opts.get("timeout", 30))})
     if "teardown" in opts:
-        problem = run_fixture(opts["teardown"], "teardown")
+        problem = run_fixtures(opts["teardown"], "teardown")
         if problem:
             print("  ERROR  %s" % problem)
             counts["ERROR"] += 1

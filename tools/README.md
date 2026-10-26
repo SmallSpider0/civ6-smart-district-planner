@@ -310,7 +310,7 @@ test("名称", function()
 end)
 ```
 
-- `@setup <状态> <文件>` / `@teardown <状态> <文件>`：在测试前后到指定 Lua 状态执行脚本，teardown 总会执行。例如 `test_built.lua` 先在 `GameCore_Tuner` 里用 `tests/fixtures/build_campus.lua` 建一座学院，测完再拆除。
+- `@setup <状态> <文件>` / `@teardown <状态> <文件>`：在测试前后到指定 Lua 状态执行脚本，teardown 总会执行。例如 `test_built.lua` 先在 `GameCore_Tuner` 里用 `tests/fixtures/build_campus.lua` 建一座学院，测完再拆除。可以写几行 `@setup`，按顺序执行，每两步之间停 2 秒（界面状态里下的建造命令要过几帧才到核心状态）：`test_unique.lua` 按正常流程建市政广场这类全帝国限建的区域（坑 36），先在核心状态解锁前置，再在界面状态下令，最后在核心状态建完。
 - `tests/fixtures/` 下是测试前置脚本（不以 `test_` 开头，不会被当成测试跑），如 `found_capital.lua`：新开局还没有城市时用开拓者建首都，`game.py newgame --capital` 会调用它。
 - `T.dump(v)` 把值序列化为按键排序的文本，`T.same` 用它比较，适合检查"同输入同输出"。
 - 文件内容经 `loadstring` 以文件名作 chunk 名加载，错误信息带 `tests/xxx.lua:行号`，并去掉 harness 自身的调用栈帧。
