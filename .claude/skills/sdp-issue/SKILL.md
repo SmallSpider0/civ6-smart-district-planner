@@ -22,7 +22,7 @@ The mod does something wrong, or a test or document is wrong. Fix it without ask
 1. Reproduce it (offline test, or in-game; real clicks go to the night queue, sdp-game-test). If it cannot be reproduced, ask on the issue for the save or the log and change nothing.
 2. Still a bug if the fix only corrects plans that were wrong (an illegal tile, a miscounted bonus). If the fix needs a default changed, the requirement document changed, something removed, or changes plans in ordinary cases, treat it as a feature.
 3. Write a test that fails on the old code, fix, run the related tests, commit with `#N`.
-4. Put it in the next patch milestone (§3; create it when none is open). If the fix changes plans in many scenes, say so in the milestone's description: the version digit is settled when releasing.
+4. Put it in the next patch milestone (§3; create it when none is open). If the fix changes plans in many scenes, say so in the milestone's description and in CHANGELOG.
 5. Comment: cause, fix, how it was tested, which version it will ship in. A milestone of bug fixes only is released when it is due (sdp-release, "Who decides"); a question the maintainer must settle goes on the issue and holds that fix back.
 
 ### Feature or optimisation
@@ -38,13 +38,15 @@ New behaviour, changed defaults, UI changes. Code only after the maintainer deci
 
 ## 3. Milestone and version
 
-The version digit follows what players get with their old settings (CONTRIBUTING.md "发版"):
+The version digit follows the size of the change (CONTRIBUTING.md "发版", since 2026-10-26):
 
 | Change | Version |
 |---|---|
-| fixes, wording, tooltips, display, an option that is off by default and touches one place | third digit |
-| the solver or scoring gives different plans for the same settings, a default changes, a new kind of capability | second digit |
-| a large incompatible change | first digit |
+| bug fixes; wording, tooltips; small layout changes; defaults, parameters, weights and preset values; local improvements to solving or scoring (even when plans change); performance | third digit |
+| a new kind of capability (a tab, a play-style switch, a new thing to plan), or a part reworked (the objective, a scoring system) | second digit |
+| saves or settings no longer compatible, a dependency changes, a rewrite | first digit |
+
+The digit no longer says whether plans change: a change that gives different plans for the same settings says so in CHANGELOG and the change note. The digit does not decide who releases either: only a bug-fix-only milestone goes out without asking (sdp-release); a third-digit milestone with a default or layout change waits for the maintainer like any other.
 
 Several changes go into one release; a single change is released alone only when the live version is badly broken. Bug-fix milestones are released when due; everything else when the maintainer says (sdp-release, "Who decides"). Put the issue in the open milestone of that version (`gh issue edit N --milestone vX.Y.Z`); create the milestone when needed, with a one-line description. Research-only milestones (评测基线) hold no mod changes until the maintainer decides.
 

@@ -8,7 +8,7 @@ description: Release a version of the Smart District Planner (civ6mod) — tests
 Who decides (CONTRIBUTING.md "需求、分支与提交" 5 and "发版"):
 
 - **Bug fixes only**: a patch milestone that holds only bug fixes (text and document fixes count with them) is released when one of these holds: three ordinary bug fixes are merged and not released; seven days have passed since the first unreleased bug fix was merged; a critical bug is fixed (the live version crashes the game, the panel cannot be used, or plans break the game's rules for ordinary setups), released as soon as it is fixed and tested. If fixing a bug raises a question the maintainer must settle (a default, a requirement, a trade-off), that fix waits for the answer like a feature.
-- **Anything else** (a feature or an optimisation, any second- or first-digit version) is released when the maintainer decides. Until then: when its issues are done, do §1 steps 0–6 (tests, screenshots, version, notes, report), report it ready (what is in it, what the tests showed, what is left) and go on with other work. After the decision: §1 step 7 and §2.
+- **Anything else** (a feature, an optimisation, a default, parameter or layout change — whatever the version digit) is released when the maintainer decides. Until then: when its issues are done, do §1 steps 0–6 (tests, screenshots, version, notes, report), report it ready (what is in it, what the tests showed, what is left) and go on with other work. After the decision: §1 step 7 and §2.
 
 Bug-fix PRs merge into `main` as usual in the meantime: `main` reaches no player. Windows is not tested before a release. The checklist template (.github/ISSUE_TEMPLATE/release.md) lists the same items.
 
