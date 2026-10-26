@@ -72,8 +72,11 @@ test("the panel solves exactly what the solver does, whatever the click order", 
   local fromPanel = SDP_Panel.Solve()
   local ordered = { a, b }
   table.sort(ordered)
+  -- The panel sends its distance weight too (0.5 by default since issue 91).
   local direct = SDP_Solver.Solve({ PlayerID = pid, CityID = city:GetID(), Districts = ordered, Land = true, Tier = "STANDARD",
-    Weights = { YIELD_SCIENCE = 1, YIELD_CULTURE = 3, YIELD_FAITH = 1, YIELD_GOLD = 1, YIELD_PRODUCTION = 1 } })
+    Weights = { YIELD_SCIENCE = 1, YIELD_CULTURE = 3, YIELD_FAITH = 1, YIELD_GOLD = 1, YIELD_PRODUCTION = 1 },
+    Distance = SDP_Panel.State().Weights.DISTANCE })
+  T.eq(fromPanel.Session.Request.Distance, SDP_Panel.State().Weights.DISTANCE, "the panel sends its distance weight")
   T.same(fromPanel.Plan, direct.Plan, "plan")
   T.eq(fromPanel.Gain, direct.Gain, "gain")
 end)
