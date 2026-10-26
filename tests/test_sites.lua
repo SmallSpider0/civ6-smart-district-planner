@@ -19,7 +19,7 @@ end)
 
 test("candidates follow the rules on the real map", function()
   if Players[pid]:GetCities():GetCapitalCity() == nil then T.skip("no capital") end
-  local list, centers = SDP_Sites.Candidates(pid, { K = 2, D = 8 })
+  local list, centers = SDP_Sites.Candidates(pid, { K = 2, D = 5 })
   if #list == 0 then T.skip("no candidate: explore first (game.py newgame --capital --reveal)") end
   local minRange = SDP_Sites.MinRange()
   for _, c in ipairs(list) do
@@ -35,7 +35,7 @@ end)
 
 test("two sites: spaced, linked back, deterministic", function()
   if Players[pid]:GetCities():GetCapitalCity() == nil then T.skip("no capital") end
-  local request = { PlayerID = pid, Tier = "FAST", K = 2, D = 8, Districts = { "DISTRICT_CAMPUS", "DISTRICT_HOLY_SITE" } }
+  local request = { PlayerID = pid, Tier = "FAST", K = 2, D = 5, Districts = { "DISTRICT_CAMPUS", "DISTRICT_HOLY_SITE" } }
   local a = SDP_SiteSolver.Solve(request)
   if not a.Ok and a.Error == "NO_SITE" then T.skip("no room for two sites yet") end
   T.ok(a.Ok, tostring(a.Error))
@@ -110,7 +110,7 @@ end
 
 test("each site's resources and distances, as on the map (issues 8, 9)", function()
   if Players[pid]:GetCities():GetCapitalCity() == nil then T.skip("no capital") end
-  local request = { PlayerID = pid, Tier = "FAST", K = 3, D = 8, Districts = { "DISTRICT_CAMPUS", "DISTRICT_HOLY_SITE" } }
+  local request = { PlayerID = pid, Tier = "FAST", K = 3, D = 5, Districts = { "DISTRICT_CAMPUS", "DISTRICT_HOLY_SITE" } }
   local result = SDP_SiteSolver.Solve(request)
   if not result.Ok and result.Error == "NO_SITE" then T.skip("no room for three sites yet") end
   T.ok(result.Ok, tostring(result.Error))

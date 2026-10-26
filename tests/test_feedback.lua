@@ -265,7 +265,7 @@ test("sites: each site is scored with its best districts when more are ticked", 
   for _, base in ipairs({ "DISTRICT_CAMPUS", "DISTRICT_HOLY_SITE", "DISTRICT_THEATER", "DISTRICT_COMMERCIAL_HUB" }) do
     districts[#districts + 1] = Resolve(base)
   end
-  local result = SDP_SiteSolver.Solve({ PlayerID = pid, K = 1, D = 8, Districts = districts, PlanCount = 2, Tier = "FAST" })
+  local result = SDP_SiteSolver.Solve({ PlayerID = pid, K = 1, D = 5, Districts = districts, PlanCount = 2, Tier = "FAST" })
   T.ok(result.Ok, tostring(result.Error))
   for _, s in ipairs(result.Solutions[1].Sites) do
     T.ok(#(s.Districts or {}) <= 2, "at most two districts")

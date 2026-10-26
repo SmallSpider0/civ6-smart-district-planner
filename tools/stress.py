@@ -208,7 +208,7 @@ def cmd_run(args):
             r.step("single %s harbor" % c["Name"], 'SDP_Stress.Single(%d, "HARBOR", "STANDARD")' % c["ID"])
     if big:
         r.step("single %s fine" % big[0]["Name"], 'SDP_Stress.Single(%d, "POOL", "FINE")' % big[0]["ID"])
-    r.step("sites 3 within 8", 'SDP_Stress.Sites(3, 8, "STANDARD")')
+    r.step("sites 3 within 5", 'SDP_Stress.Sites(3, 5, "STANDARD")')
     r.step("place sites", "SDP_Stress.PlaceSites()")
     r.step("multi 4 cities standard", 'SDP_Stress.Multi(4, 3, "STANDARD")')
     r.step("place multi", "SDP_Stress.PlaceMulti()")

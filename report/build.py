@@ -929,12 +929,16 @@ def stress_section(markdown=False, lang="zh"):
         lambda r: times(r, label_has("single", "harbor"), True))
     row(L("单城 · 精细档", "One city · Thorough"), lambda r: times(r, label_has("single", "fine")))
 
+    # The distance the stress runs used (5 since #84, 8 before), from their own records.
+    site_d = next(((st["Data"] or {}).get("D") for r in runs for st in steps(r, label_has("sites"))
+                   if (st["Data"] or {}).get("D")), 5)
+
     def sites(r):
         st = steps(r, label_has("sites"))
         if st and (st[0]["Data"] or {}).get("Error") == "NO_SITE":
-            return L("%s（8 格内没有可建城址）", "%s (no site within 8 tiles)") % fmt_s(st[0]["Seconds"])
+            return L("%s（%d 格内没有可建城址）", "%s (no site within %d tiles)") % (fmt_s(st[0]["Seconds"]), site_d)
         return times(r, label_has("sites"))
-    row(L("选城址 · 3 个、8 格内", "City sites · 3, within 8 tiles"), sites)
+    row(L("选城址 · 3 个、%d 格内", "City sites · 3, within %d tiles") % site_d, sites)
     row(L("多城 · 4 城 · 标准档", "Several cities · 4 cities · Standard"), lambda r: times(r, label_has("multi 4 cities standard")))
     row(L("多城 · 4 城 · 精细档", "Several cities · 4 cities · Thorough"), lambda r: times(r, label_has("multi 4 cities fine")))
     row(L("多城 · 8 城 · 标准档", "Several cities · 8 cities · Standard"), lambda r: times(r, label_has("multi 8 cities standard")))
