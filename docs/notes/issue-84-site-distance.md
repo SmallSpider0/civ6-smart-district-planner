@@ -114,3 +114,11 @@ python3 -I tools/sdplock.py heavy issue84-sitesD -- node tools/compare.mjs -s '^
 - 维护者先定方案 A（默认 6），随后改为默认 **5**，并定“所有涉及这个参数的地方都同步为 5”（DracoYus 在 issue 里也认为按 8 测的结果对新默认没有意义）：离线对比的 `C` 场景（`cmp_scenarios.lua`，`sites.jsonl` 用 `refresh_results.py` 重跑）、压力测试的选城址一步（`stress.py`，介绍页和自测报告的行标题从结果里读距离）、游戏内和离线测试里写死的 8 都改成 5。其余照方案 A：“最远距离”加悬停提示（中英各一条，耗时比较按上表：D8 比 D5 约多三分之一），新城数量 K 和最远距离 D 记在存档里（`SDP_PageSites.lua` 的 keeper `Extra`，`SDP_UI.SettingFields` 让 Extra 也能是带范围的数）。
 - 求解器、候选范围在请求里没给 D 时也按 5（`SDP_SiteSolver.lua`、`SDP_Sites.lua`）。
 - 测试：`spec_panel` 断言默认 5；`spec_settings` 读档恢复 K、D，经按钮改回默认不写，越界回默认。
+
+## 8. 选城址对比结果按 5 重跑（2026-10-26）
+
+命令：`python3 -I tools/refresh_results.py -j 4 tests/compare/results/sites.jsonl`（第二台机器，经 `tools/remote.py run`），12 个 `C` 场景，本模组标准档重跑，全部 24 行用当前裁判重评。
+
+- 本模组：0 违规；城址分合计 858 → 840（−2.1%），6 个场景变高、5 个变低、1 个不变。与第 5 节的试算（D5 比 D8 低 0.2%）方向一致，幅度不同是因为入库的旧行是更早的代码跑的（第 5 节的 D8 与 `sites_v150.jsonl` 相同）。裁判只看每城最好 8 块地和区域潜力，量不到多放城的好处。
+- Empire Planner：方案不变（它没有最远距离设置，只在本方城市 10 格内找城址），但裁判按 5 检查间距，12 个场景里 6 个出现“离本方城市超过 5 格”的违规（共 9 个城址）。这是请求的距离变了，不是 EP 的方案变了。
+- 耗时字段是第二台机器上的，和旧行不是同一台机器，不能直接比。
