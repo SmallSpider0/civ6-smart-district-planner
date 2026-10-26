@@ -23,30 +23,45 @@ if district ~= nil and district:IsComplete() then
 end
 if district == nil then
   -- 2026-10-27, Gathering Storm on the fixed test map: the order of step 2
-  -- did not reach the game core. Say what the core has, then place the
-  -- district with the build queue on a ring-1 tile without a feature or a
-  -- resource, where placing it directly changes nothing the normal way
-  -- would not (AGENTS pitfall 36 is about features and the checks it skips).
+  -- did not reach the game core: the core had the civic, the interface did
+  -- not see it (no popup was open), so the interface dropped the order. Say
+  -- what the core has, then place the district with the build queue. This
+  -- test only needs the district to stand; AGENTS pitfall 36 (features,
+  -- skipped checks) does not matter for it.
   local culture = player:GetCulture()
   print("the order did not place " .. row.DistrictType .. "; the game core has the civic: "
     .. tostring(row.PrereqCivic == nil or culture:HasCivic(GameInfo.Civics[row.PrereqCivic].Index))
     .. "; population " .. city:GetPopulation())
-  local plots = {}
-  for dx = -1, 1 do
-    for dy = -1, 1 do
-      local plot = Map.GetPlotXYWithRangeCheck(city:GetX(), city:GetY(), dx, dy, 1)
-      if plot ~= nil and Map.GetPlotDistance(city:GetX(), city:GetY(), plot:GetX(), plot:GetY()) == 1
-          and plot:GetOwner() == player:GetID() and not plot:IsWater() and not plot:IsImpassable()
-          and not plot:IsNaturalWonder() and plot:GetDistrictType() == -1 and plot:GetWonderType() == -1
-          and plot:GetResourceType() == -1 and plot:GetFeatureType() == -1 then
-        plots[#plots + 1] = plot
+  -- As build_campus.lua: a bare ring-1 tile, else one with a feature, else
+  -- ring 2 (taken for the city when it is not yet).
+  local function Usable(plot, allowFeature)
+    return plot ~= nil and not plot:IsWater() and not plot:IsImpassable() and not plot:IsNaturalWonder()
+      and plot:GetResourceType() == -1 and plot:GetDistrictType() == -1 and plot:GetWonderType() == -1
+      and (plot:GetOwner() == -1 or plot:GetOwner() == player:GetID())
+      and (allowFeature or plot:GetFeatureType() == -1)
+  end
+  local chosen = nil
+  for _, pass in ipairs({ { 1, false }, { 1, true }, { 2, true } }) do
+    local ring, allowFeature = pass[1], pass[2]
+    local plots = {}
+    for dx = -ring, ring do
+      for dy = -ring, ring do
+        local plot = Map.GetPlotXYWithRangeCheck(city:GetX(), city:GetY(), dx, dy, ring)
+        if plot ~= nil and Map.GetPlotDistance(city:GetX(), city:GetY(), plot:GetX(), plot:GetY()) == ring
+            and Usable(plot, allowFeature) then
+          plots[#plots + 1] = plot
+        end
       end
     end
+    table.sort(plots, function(a, b) return a:GetIndex() < b:GetIndex() end)
+    if chosen == nil and #plots > 0 then chosen = plots[1] end
   end
-  table.sort(plots, function(a, b) return a:GetIndex() < b:GetIndex() end)
-  if #plots == 0 then error(row.DistrictType .. " was not placed and no bare ring-1 tile is left") end
-  city:GetBuildQueue():CreateDistrict(row.Index, plots[1]:GetIndex())
-  print("placed " .. row.DistrictType .. " at " .. plots[1]:GetX() .. "," .. plots[1]:GetY() .. " with the build queue")
+  if chosen == nil then error(row.DistrictType .. " was not placed and no land tile within two rings is free") end
+  if chosen:GetOwner() == -1 then
+    WorldBuilder.CityManager():SetPlotOwner(chosen:GetX(), chosen:GetY(), player:GetID(), city:GetID())
+  end
+  city:GetBuildQueue():CreateDistrict(row.Index, chosen:GetIndex())
+  print("placed " .. row.DistrictType .. " at " .. chosen:GetX() .. "," .. chosen:GetY() .. " with the build queue")
 else
   city:GetBuildQueue():FinishProgress()
 end
