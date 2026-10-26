@@ -107,7 +107,7 @@ python3 -I tools/sdplock.py heavy issue84-sitesD -- node tools/compare.mjs -s '^
 
 工作量（A 或 B）：改 3 处默认值（`SDP_PageSites.lua:42`、`SDP_SiteSolver.lua:41`、`SDP_Sites.lua:117`），中英悬停提示各一条，`docs/multicity-design.md` 3.1 和第 11 节、中英安装说明、CHANGELOG；离线 `spec_panel` 加默认值断言；游戏内 `test_sites` 跑一遍。约半天。对比场景 `C` 和压力测试都显式传 8，可以不动（介绍页的“选城址 · 3 个、8 格内”照旧）；若要跟默认一致，再重跑 `sites.jsonl` 和压力测试。记住 K、D 另加约 1 小时。
 
-版本：默认值变了，同样的设置给出不同方案 → 第二位（下一个 v1.6.0）。
+版本：调研时按当时的规则（默认值变了 → 第二位）写的是 v1.6.0；2026-10-26 版本号规则改成按改动大小分（PR #93），默认值调整属于第三位，所以进 v1.5.1。
 
 ## 7. 决定与实现（2026-10-26）
 
