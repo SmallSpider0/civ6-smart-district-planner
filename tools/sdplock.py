@@ -40,7 +40,7 @@ $SDP_LOCAL_CONFIG, else ~/.config/sdp/local.json; all keys are optional:
 
     {"workers_day": 4,            # heavy local job workers (default 4)
      "workers_night": 6,          # in the night window (default: workers_day)
-     "night": "22:00-07:00",      # the night window (default: none)
+     "night": "00:00-08:00",      # the night window (default: none)
      "weekend_is_night": true,    # Saturday and Sunday count as night (default false)
      "remote": "build-box",       # tools/remote.py's host when $SDP_REMOTE is not set
      "remote_slots": 8,           # the second machine's slots (default: its cores - 2)
