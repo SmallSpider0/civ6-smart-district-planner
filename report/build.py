@@ -21,7 +21,8 @@ DIR/en/index.html with the screenshots they use in DIR/images/ and
 DIR/en/images/ (.github/workflows/release.yml).
 
 The page describes this mod on its own: its quality against the true
-optimum, its speed and its tests. The comparison with other planners is a
+optimum, its speed and its tests. The similar-mods table (section 03) comes
+from report/similar.py, facts only. The comparison with other planners is a
 developer note (docs/notes/planner-comparison.md), not part of the page.
 """
 import base64
@@ -43,7 +44,7 @@ OUT = os.path.join(REPO, "dist", "report")
 sys.path.insert(0, os.path.join(REPO, "tests", "compare"))
 sys.path.insert(0, HERE)
 import summarize  # noqa: E402
-import diagrams  # noqa: E402
+import similar  # noqa: E402
 
 # Everything the report reads, so tools/package.py can refuse uncommitted changes to it.
 INPUTS = ["report", "tests/compare/results", "tests/compare/summarize.py", "docs/images", "tests/stress/results"]
@@ -308,8 +309,7 @@ def build(files=None, version=None, date=None, lang="zh"):
         "DOWNLOAD_LABEL": (L("下载 ", "Download ") + version) if version.startswith("v") else L("下载最新版", "Download the latest version"),
         "N_SINGLE": str(len(single)), "N_MULTI": str(len(multi)), "N_CIVS": "17",
         "SELF_CHECK": L("%d 次，%d 次不一致", "%d runs, %d differ") % (self_n, self_mis),
-        "SIMILAR_FIG": diagrams.similar_svg(lang),
-        "CHOOSE_FIG": diagrams.decide_svg(lang),
+        "SIMILAR_TABLE": similar.table_html(lang),
     }
     late = by_best[-1]["values"] if by_best else {}
     texts["SINGLE_TEXT"] = ""

@@ -1,6 +1,6 @@
 # Smart District Planner: install and use
 
-The Chinese guide ([install-and-test.md](install-and-test.md) in the repository, `INSTALL_AND_USE.md` in the download) has more detail and the acceptance checklist. What the planner does, how close its plans come to the true optimum and its speed are on the [overview page](https://smallspider0.github.io/civ6-smart-district-planner/en/); what other district planners do is in the README's [similar mods](../README.md#similar-mods).
+The Chinese guide ([install-and-test.md](install-and-test.md) in the repository, `INSTALL_AND_USE.md` in the download) has more detail and the acceptance checklist. What the planner does, how close its plans come to the true optimum and its speed are on the [overview page](https://smallspider0.github.io/civ6-smart-district-planner/en/); what other district planners plan is in the README's [similar mods](../README.md#similar-mods).
 
 ## One planner per game
 

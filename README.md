@@ -39,38 +39,33 @@ How close its plans come to the true optimum, its speed and known limitations: s
 
 ### Similar mods
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/images/similar-mods-en-dark.svg">
-  <img src="docs/images/similar-mods-en-light.svg" width="760" alt="What each planner plans: districts, wonders, improvements, new city sites, cities together, whether it needs DMT">
-</picture>
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/images/similar-mods-choose-en-dark.svg">
-  <img src="docs/images/similar-mods-choose-en-light.svg" width="760" alt="How to choose: for improvements, Empire Planner or Auto Map Tacks Planner; otherwise District &amp; Wonder Planner or this mod">
-</picture>
-
-Other district planners on the Workshop each have their own focus. What they have and this mod does not comes first:
-
-- **[Auto Map Tacks Planner](https://steamcommunity.com/sharedfiles/filedetails/?id=3771382002)**: for players who want improvements and unique improvements laid out together with districts and wonders, as a long-term blueprint by population. This mod does not have: planning improvements and unique improvements; taking your "Remove Feature / Harvest Resource / Plant Woods" tacks as instructions; the two modes "only what is unlocked" and "long-term blueprint"; a Traditional Chinese interface.
-- **[Empire Planner](https://steamcommunity.com/sharedfiles/filedetails/?id=3793348626)**: for players who want every city and a few new city sites, improvements included, laid out in one go, without DMT. This mod does not have: planning improvements; every existing city planned in one go, with no limit on their number; limiting the plan to an era; 3 layouts saved in the save; working without DMT.
-- **[District & Wonder Planner](https://steamcommunity.com/sharedfiles/filedetails/?id=3780936549)**: for players who want a simple panel and a tick to plan a few core districts and wonders across all their cities. This mod does not have: all cities planned together with no limit on their number; weights by the order of the districts.
-- **This mod**: for players who care mostly about the adjacency bonuses of districts and wonders and want to know whether a plan is the best or how far it may be from an upper bound; it also chooses sites for new cities and then plans them with the cities nearby.
-
-| | Auto Map Tacks Planner | Empire Planner | District & Wonder Planner | This mod |
+| | [Auto Map Tacks Planner](https://steamcommunity.com/sharedfiles/filedetails/?id=3771382002) | [Empire Planner](https://steamcommunity.com/sharedfiles/filedetails/?id=3793348626) | [District & Wonder Planner](https://steamcommunity.com/sharedfiles/filedetails/?id=3780936549) | This mod |
 |---|---|---|---|---|
 | Districts | ✓ | ✓ | ✓ up to 3 kinds at a time (plus Aqueduct and Government Plaza) | ✓ |
 | Wonders | ✓ | ✓ | ✓ up to 5 | ✓ |
-| Improvements | ✓ unique improvements included | ✓ | only the one a wonder needs | only the one a wonder needs (the Camp for the Temple of Artemis) |
-| New city sites | ✗ future cities from your City Center tacks | ✓ 0–6 | ✗ future cities from your City Center tacks | ✓ |
-| Cities planned together | up to 4 | every existing city and the new sites, in one go | all cities, with a tick | up to 8 (site tacks included) |
-| Result | map tacks | map tacks | map tacks | map tacks |
+| Improvements | ✓ unique improvements included | ✓ | ◐ only the one a wonder needs | ◐ only the one a wonder needs (the Camp for the Temple of Artemis) |
+| New city sites | — future cities from your City Center tacks | ✓ 0–6 | — future cities from your City Center tacks | ✓ |
+| Cities planned together | ✓ up to 4 | ✓ every existing city and the new sites, in one go | ✓ all cities, with a tick | ✓ up to 8 (site tacks included) |
+| Places map tacks | ✓ | ✓ | ✓ | ✓ |
+| Needs DMT | ✓ | — the author advises turning DMT off | ✓ | ✓ |
 | Bonuses computed by | DMT | its own rules | DMT | DMT |
-| Requires | DMT | nothing; the author advises turning DMT off | DMT | DMT |
 | Rulesets | not stated | Rise and Fall, Gathering Storm (the author says the base game is untested) | not stated | Base game, Rise and Fall, Gathering Storm |
 | Interface languages | English, Simplified Chinese, Traditional Chinese | English | English, Simplified Chinese | English, Simplified Chinese |
 | Not to be enabled with (as the author states) | not stated | DMT | not stated | other district planners |
 | Updated on the Workshop | 2026-09-19 (r49) | 2026-09-10 | 2026-08-29 (v1.1) | 2026-10-25 |
 
-Checked on 2026-10-26 against each mod's Workshop page and files; "not stated" means neither says. The Workshop titles are Fully Automatic Map Tacks Planner【Four-City Linked】, Empire Planner + (Auto Map Tacks) Advanced and District & Wonder Planner v1.1; they are updated over time, so their own pages are the reference. Detailed Map Tacks is not a planner: it shows on a map tack the yields and adjacency a district or wonder would get there.
+✓ yes · ◐ partly · — no
+
+Checked on 2026-10-26 against each mod's Workshop page and files; "not stated" means neither says. The Workshop titles are Fully Automatic Map Tacks Planner【Four-City Linked】, Empire Planner + (Auto Map Tacks) Advanced and District & Wonder Planner v1.1; they are updated over time, so their own pages are the reference.
+
+Features not in the table:
+
+- **Auto Map Tacks Planner**: takes your "Remove Feature / Harvest Resource / Plant Woods" tacks as instructions; two modes, "only what is unlocked" and "long-term blueprint".
+- **Empire Planner**: limits the plan to an era; keeps 3 layouts in the save.
+- **District & Wonder Planner**: weights districts by their order.
+- **This mod**: says whether a plan is the best or how far it may be from an upper bound.
+
+Detailed Map Tacks is not a planner: it shows on a map tack the yields and adjacency a district or wonder would get there.
 
 ### Install
 
@@ -142,38 +137,33 @@ The development documents are in Chinese; issues and pull requests in English ar
 
 ### 同类模组
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/images/similar-mods-zh-dark.svg">
-  <img src="docs/images/similar-mods-zh-light.svg" width="760" alt="各模组规划什么：区域、奇观、改良设施、选新城址、多城一起规划、是否需要 DMT">
-</picture>
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/images/similar-mods-choose-zh-dark.svg">
-  <img src="docs/images/similar-mods-choose-zh-light.svg" width="760" alt="怎么选：要规划改良设施时看 Empire Planner 或 Auto Map Tacks Planner，否则看 District &amp; Wonder Planner 或本模组">
-</picture>
-
-创意工坊里还有几个自动规划区域的模组，取向各不相同。先列它们有、本模组没有的功能：
-
-- **[Auto Map Tacks Planner](https://steamcommunity.com/sharedfiles/filedetails/?id=3771382002)**：适合想把改良设施、特色改良设施和区域、奇观一起排，按人口做长期蓝图的玩家。本模组没有的：规划改良设施和特色改良设施；把你打的“移除地貌 / 采收 / 种树”钉当作规划指令；“只用已解锁的内容”和“长期蓝图”两种模式；繁体中文界面。
-- **[Empire Planner](https://steamcommunity.com/sharedfiles/filedetails/?id=3793348626)**：适合想一次把所有城市和几处新城址连同改良设施排好、不装 DMT 的玩家。本模组没有的：规划改良设施；全部现有城市一次规划，不限城数；按时代限定规划范围；存档里保存 3 套布局；不依赖 DMT。
-- **[District & Wonder Planner](https://steamcommunity.com/sharedfiles/filedetails/?id=3780936549)**：适合想要简单面板、勾上全部城市一起排几个核心区域和奇观的玩家。本模组没有的：全部城市一起规划，不限城数；按区域的先后顺序给权重。
-- **本模组**：适合主要关心区域和奇观的相邻加成、想知道结果是否最优或离上界多远的玩家；也能给新城选址，再和附近的城一起规划。
-
-| | Auto Map Tacks Planner | Empire Planner | District & Wonder Planner | 本模组 |
+| | [Auto Map Tacks Planner](https://steamcommunity.com/sharedfiles/filedetails/?id=3771382002) | [Empire Planner](https://steamcommunity.com/sharedfiles/filedetails/?id=3793348626) | [District & Wonder Planner](https://steamcommunity.com/sharedfiles/filedetails/?id=3780936549) | 本模组 |
 |---|---|---|---|---|
 | 区域 | ✓ | ✓ | ✓ 一次最多 3 种（另加水渠、市政广场） | ✓ |
 | 奇观 | ✓ | ✓ | ✓ 最多 5 座 | ✓ |
-| 改良设施 | ✓ 含特色改良设施 | ✓ | 只规划奇观需要的那一种 | 只规划奇观需要的那一种（阿耳忒弥斯神庙旁的营地） |
-| 选新城址 | ✗ 未来的城用你打的城市中心钉 | ✓ 0–6 处 | ✗ 未来的城用你打的城市中心钉 | ✓ |
-| 几座城一起规划 | 最多 4 座 | 全部现有城市和新城址一次规划 | 可勾选全部城市 | 最多 8 座（含城址钉） |
-| 结果 | 地图钉 | 地图钉 | 地图钉 | 地图钉 |
+| 改良设施 | ✓ 含特色改良设施 | ✓ | ◐ 只规划奇观需要的那一种 | ◐ 只规划奇观需要的那一种（阿耳忒弥斯神庙旁的营地） |
+| 选新城址 | — 未来的城用你打的城市中心钉 | ✓ 0–6 处 | — 未来的城用你打的城市中心钉 | ✓ |
+| 几座城一起规划 | ✓ 最多 4 座 | ✓ 全部现有城市和新城址一次规划 | ✓ 可勾选全部城市 | ✓ 最多 8 座（含城址钉） |
+| 打地图钉 | ✓ | ✓ | ✓ | ✓ |
+| 需要 DMT | ✓ | — 作者建议关掉 DMT | ✓ | ✓ |
 | 加成由谁计算 | DMT | 自己的规则 | DMT | DMT |
-| 依赖 | DMT | 无；作者建议关掉 DMT | DMT | DMT |
 | 规则集 | 未写明 | 迭起兴衰、风云变幻（作者说原版没测过） | 未写明 | 原版、迭起兴衰、风云变幻 |
 | 界面语言 | 英文、简体中文、繁体中文 | 英文 | 英文、简体中文 | 英文、简体中文 |
-| 作者写明的同开限制 | 未写 | 关掉 DMT | 未写 | 不与其他区域规划器同开 |
+| 作者写明的同开限制 | 未写 | DMT | 未写 | 其他区域规划器 |
 | 创意工坊页面的更新日期 | 2026-09-19（r49） | 2026-09-10 | 2026-08-29（v1.1） | 2026-10-25 |
 
-2026-10-26 按各模组的创意工坊页面和模组文件核对；页面和文件都没写的标“未写明”。创意工坊上的标题分别是 Fully Automatic Map Tacks Planner【Four-City Linked】、Empire Planner + (Auto Map Tacks) Advanced、District & Wonder Planner v1.1；它们会更新，以各自页面为准。Detailed Map Tacks 不是规划器：它在地图钉上显示区域、奇观放在这一格时的产出和相邻加成。
+✓ 是 · ◐ 部分 · — 否
+
+2026-10-26 按各模组的创意工坊页面和模组文件核对；页面和文件都没写的标“未写明”。创意工坊上的标题分别是 Fully Automatic Map Tacks Planner【Four-City Linked】、Empire Planner + (Auto Map Tacks) Advanced、District & Wonder Planner v1.1；它们会更新，以各自页面为准。
+
+表里没列的功能：
+
+- **Auto Map Tacks Planner**：把你打的“移除地貌 / 采收 / 种树”钉当作规划指令；“只用已解锁的内容”和“长期蓝图”两种模式。
+- **Empire Planner**：按时代限定规划范围；存档里保存 3 套布局。
+- **District & Wonder Planner**：按区域的先后顺序给权重。
+- **本模组**：结果注明是否最优或离上界多远。
+
+Detailed Map Tacks 不是规划器：它在地图钉上显示区域、奇观放在这一格时的产出和相邻加成。
 
 ### 安装
 
