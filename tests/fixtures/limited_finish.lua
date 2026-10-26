@@ -1,6 +1,6 @@
 -- @state GameCore_Tuner
 -- Step 3 (see limited_prepare.lua): finish what the capital is building,
--- the district ordered in step 2.
+-- the district ordered in step 2. An error when it was not placed at all.
 local player = Players[Game.GetLocalPlayer()]
 local city = player:GetCities():GetCapitalCity()
 if city == nil then error("no capital: run found_capital.lua first") end
@@ -14,9 +14,15 @@ if #types == 0 then
   return
 end
 local row = GameInfo.Districts[types[1]]
-if city:GetDistricts():HasDistrict(row.Index) then
-  print(row.DistrictType .. " already in the capital")
+-- The order places the district at once (not finished); finish it.
+local district = city:GetDistricts():GetDistrict(row.Index)
+if district ~= nil and district:IsComplete() then
+  print(row.DistrictType .. " already finished in the capital")
   return
 end
 city:GetBuildQueue():FinishProgress()
-print("finished " .. tostring(city:GetDistricts():HasDistrict(row.Index)))
+district = city:GetDistricts():GetDistrict(row.Index)
+if district == nil then
+  error(row.DistrictType .. " was not placed: see limited_order.lua's output")
+end
+print("finished " .. row.DistrictType .. ": " .. tostring(district:IsComplete()))

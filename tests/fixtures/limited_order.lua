@@ -35,16 +35,51 @@ table.sort(plots, function(a, b)
   if a.Ring ~= b.Ring then return a.Ring < b.Ring end
   return a.Plot:GetIndex() < b.Plot:GetIndex()
 end)
-for _, entry in ipairs(plots) do
+local function Params(plot)
   local t = {}
-  t[CityOperationTypes.PARAM_X] = entry.Plot:GetX()
-  t[CityOperationTypes.PARAM_Y] = entry.Plot:GetY()
+  t[CityOperationTypes.PARAM_X] = plot:GetX()
+  t[CityOperationTypes.PARAM_Y] = plot:GetY()
   t[CityOperationTypes.PARAM_DISTRICT_TYPE] = row.Hash
   t[CityOperationTypes.PARAM_INSERT_MODE] = CityOperationTypes.VALUE_EXCLUSIVE
-  if CityManager.CanStartOperation(city, CityOperationTypes.BUILD, t) then
+  return t
+end
+local reasons, seen = {}, {}
+for _, entry in ipairs(plots) do
+  local t = Params(entry.Plot)
+  local can, results = CityManager.CanStartOperation(city, CityOperationTypes.BUILD, t, true)
+  if can then
     CityManager.RequestOperation(city, CityOperationTypes.BUILD, t)
     print("ordered " .. row.DistrictType .. " at " .. entry.Plot:GetX() .. "," .. entry.Plot:GetY())
     return
   end
+  -- Why not (the production panel's own failure reasons), once each.
+  local key = CityOperationResults ~= nil and CityOperationResults.FAILURE_REASONS or nil
+  local failures = (results ~= nil and key ~= nil and results[key]) or {}
+  for _, reason in ipairs(failures) do
+    local text = Locale.Lookup(reason)
+    if not seen[text] then
+      seen[text] = true
+      reasons[#reasons + 1] = text
+    end
+  end
 end
-error("the capital cannot start " .. row.DistrictType .. " on any tile within three rings")
+-- 2026-10-27, Gathering Storm on the fixed test map: no tile passed this
+-- check two seconds after limited_prepare.lua, while Rise and Fall's did.
+-- Print what the interface thinks, then order on the first owned land tile
+-- the district can stand on anyway: the game core checks the order against
+-- its own state, and limited_finish.lua reports whether the district stands.
+local culture = Players[pid]:GetCulture()
+print("no tile passed CanStartOperation; civic seen here: "
+  .. tostring(row.PrereqCivic == nil or culture:HasCivic(GameInfo.Civics[row.PrereqCivic].Index))
+  .. "; population " .. city:GetPopulation() .. "; reasons: " .. table.concat(reasons, " | "))
+for _, entry in ipairs(plots) do
+  local plot = entry.Plot
+  if entry.Ring == 1 and plot:GetOwner() == pid and not plot:IsWater() and not plot:IsImpassable()
+      and not plot:IsNaturalWonder() and plot:GetDistrictType() == -1 and plot:GetWonderType() == -1
+      and plot:GetResourceType() == -1 then
+    CityManager.RequestOperation(city, CityOperationTypes.BUILD, Params(plot))
+    print("ordered " .. row.DistrictType .. " at " .. plot:GetX() .. "," .. plot:GetY() .. " without the interface's check")
+    return
+  end
+end
+error("the capital cannot start " .. row.DistrictType .. " on any tile within three rings: " .. table.concat(reasons, " | "))
