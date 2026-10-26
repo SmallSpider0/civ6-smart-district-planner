@@ -308,7 +308,7 @@ ShowCells = function()
     -- The only tooltip of a district cell (issue 67): why it is not counted.
     if row.Status ~= nil then row.Cell:SetToolTipString(Locale.Lookup("LOC_SDP_SITES_NOT_PER_SITE")) end
     m_view.Districts[#m_view.Districts + 1] = { Type = row.Type, State = row.State, Status = row.Status, Group = row.Group,
-      Cell = row.Cell }
+      Cell = row.Cell, Click = row.Click }
   end
 end
 

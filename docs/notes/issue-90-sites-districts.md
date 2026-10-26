@@ -11,7 +11,7 @@ Issue：<https://github.com/SmallSpider0/civ6-smart-district-planner/issues/90>�
 - **界面**（`SDP_PageSites.lua`、`SDP_Panel.xml`）：勾选框换成单城页的 `DistrictCell` 两组格子（占名额 / 不占名额），用 `SDP_UI.BuildCells`、`SDP_UI.ShowCell`、`SDP_UI.ListRequest`、`SDP_UI.NextState`，没有另写一套。“每个城址按 N 个”换成“区域数量”（`LOC_SDP_COUNT`），上限 `SDP_Sites.MAX_COUNT` = 6，下限是必建个数（同单城页）。原来的 `CheckCell` 模板删掉。
 - **和单城页不同的两处**：
   - 不占名额的区域（水渠、堤坝、社区……）没有“自动”：城址还不是城市，不判断缺不缺淡水。默认不建，点一下必建，再点不建（`NextState`）。原来这一组默认也不勾，行为不变。
-  - 全帝国限一个的区域（市政广场、外交区）标“不计入”、不能点，悬停说明不按城址估分；原来是灰掉的勾选框。
+  - 全帝国限一个的区域（市政广场、外交区）标“不计入”、不能点，悬停说明不按城址估分；原来是灰掉的勾选框。英文标 “Off”：第一夜截图里 “Not used” 压在两行的 “Government Plaza” 上，格子右边只放得下三个字母左右。
 - **默认不建的规则**（`SDP_Rules.Functional`）：占人口名额、不受帝国限量的区域里，既没有一条本方特性不排除的 `District_Adjacencies` 相邻产出（`YieldChange > 0`），`Districts.Entertainment`（宜居度）也是 0 的，默认不建；其余默认候选（`SDP_Sites.DefaultState`）。不看科技和市政，所以一局里默认不会变。按缓存的规则库（风云变幻）筛出来是军营、航空港、保护区，外加祖鲁的伊坎达（军营的替代）；娱乐中心、水上乐园、街头狂欢（宜居度）、越南的 Thanh（不占名额）不在内。游戏内测试 `test_sites.lua`“the districts left out by default are the decision's three”在每种规则集里核对：筛出的每个区域的基础区域都是决定里的三个之一，三个里玩家能建的都被筛出。
   - 没用单纯的“没有相邻加成”：那样娱乐中心、水上乐园也会默认不建，和决定（只三个）不一致。
 - **存档**（`SDP_Settings`）：新增 `list` 类字段（逗号分隔、逐项按 `Pattern` 校验、排序）。选城址页的 keeper 多两项：`COUNT`（0–6，默认 3）和 `DISTRICTS`（如 `DISTRICT_CAMPUS:M,DISTRICT_PRESERVE:P`，只记和默认不同的）。键仍是 `SDP_Settings_SITES`，和单城页 `SDP_Settings_SINGLE` 分开；读到本局没有的区域类型时丢掉。单城页的三态本来就不记存档，这次不动。
@@ -45,4 +45,6 @@ python3 -I tools/remote.py run i90-grid --slots 3 -- node tools/compare.mjs -s '
 
 - 离线（经控件自己的回调）：`spec_panel.lua`“issue 90: city sites tab: the district grid and the count…”（默认状态、点一圈、限量区域点不动、必建计入数量、上限 6 下限必建、求解后每个城址都有必建的学院、单城页不受影响）；`spec_settings.lua`（`list` 字段、读档恢复三态和数量、点格子后立刻记下、回到默认不写）；`spec_pools.lua`（求解器：必建在每个城址、候选补足、池子里去掉限量和不占名额的、挑满等于全必建、`SDP_Rules.Functional`）。
 - 之后的选城址离线测试把数量降到必建个数（`SetDistrictCount(0)`），保持原来的耗时。
+- 真实点击（2026-10-26 夜，a96af34）：`realclick.py` 67 项全过，含选城址区域格一圈和数量箭头 3→4→3。
+- 游戏内第一夜（a96af34）：原版、风云变幻各 9 过 1 败，败的是 `test_sites` 里经格子点击那项：游戏的控件没有 `Click`（只有离线替身有）。改成调用格子行带出的 `Click`，它就是格子注册的点击回调（`SDP_UI.BuildCells`，离线测试核对两者是同一个函数）。`test_sites` 文件耗时 1.2 秒。
 - 游戏内（夜间队列）：`test_sites.lua`（默认不建的三个、经格子点击、默认格子求解）、`test_tabs.lua`、`test_settings.lua`；真实点击 `realclick.py` 加了选城址页的区域格一圈和数量箭头。

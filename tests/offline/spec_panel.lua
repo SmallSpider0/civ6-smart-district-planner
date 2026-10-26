@@ -283,6 +283,8 @@ test("issue 90: city sites tab: the district grid and the count, defaults, click
       T.eq(Row(districtType).State, state, districtType)
     end
   end
+  T.ok(Row("DISTRICT_CAMPUS").Click == rawget(Row("DISTRICT_CAMPUS").Cell, "_callbacks")[1],
+    "a row's Click is the cell's own click callback (in-game tests call it)")
   Round("DISTRICT_CAMPUS", { "POOL", "MUST", "OFF", "POOL" })
   Round("DISTRICT_PRESERVE", { "OFF", "POOL", "MUST", "OFF" })
   Round("DISTRICT_AQUEDUCT", { "OFF", "MUST", "OFF" })

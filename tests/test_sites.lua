@@ -190,6 +190,8 @@ test("issue 90: the districts left out by default are the decision's three", fun
   print(SDP_Rules.Ruleset() .. ": " .. table.concat(list, " "))
 end)
 
+-- A cell's Click is the function the cell itself calls on a click (the
+-- game's controls cannot be clicked from Lua; realclick.py clicks them).
 test("issue 90: the sites tab's district grid through its cells; solved with the defaults", function()
   if Players[pid]:GetCities():GetCapitalCity() == nil then T.skip("no capital") end
   local sites = SDP_Panel.Sites
@@ -205,12 +207,12 @@ test("issue 90: the sites tab's district grid through its cells; solved with the
   end
   T.eq(Row(campus).State, "POOL", "campus: a candidate")
   T.eq(sites.State().DistrictCount, 3, "count 3")
-  Row(campus).Cell:Click()
+  Row(campus).Click()
   T.eq(Row(campus).State, "MUST", "a click: required")
   T.eq(#sites.Request().Districts, 1, "sent as required")
   T.eq(sites.Request().Pick, 2, "two more picked")
-  Row(campus).Cell:Click()
-  Row(campus).Cell:Click()
+  Row(campus).Click()
+  Row(campus).Click()
   T.eq(Row(campus).State, "POOL", "round to a candidate")
   sites.SetCount(2)
   sites.SetTier("STANDARD")

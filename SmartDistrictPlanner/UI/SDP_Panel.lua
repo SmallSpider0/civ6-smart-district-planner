@@ -570,7 +570,7 @@ end
 
 -- Fill the two district grids (districts that take population, the others)
 -- in name order. stateOf(d), statusOf(d) (or nil), onClick(d). Returns the
--- rows { Type, Name, State, Status, Group, Cell } (tests).
+-- rows { Type, Name, State, Status, Group, Cell, Click } (tests).
 function SDP_UI.BuildCells(im, otherIM, stack, otherStack, districts, stateOf, statusOf, onClick)
   im:ResetInstances()
   otherIM:ResetInstances()
@@ -586,9 +586,12 @@ function SDP_UI.BuildCells(im, otherIM, stack, otherStack, districts, stateOf, s
     local inst = (d.Specialty and im or otherIM):GetInstance()
     local state, status = stateOf(d), statusOf and statusOf(d) or nil
     SDP_UI.ShowCell(inst, d, state, status)
-    inst.Root:RegisterCallback(Mouse.eLClick, function() onClick(d) end)
+    local click = function() onClick(d) end
+    inst.Root:RegisterCallback(Mouse.eLClick, click)
+    -- Click: the function the cell calls on a click (in-game tests; the
+    -- game's controls cannot be clicked from Lua).
     rows[#rows + 1] = { Type = d.Type, Name = entry.Name, State = state, Status = status,
-      Group = d.Specialty and "SPECIALTY" or "OTHER", Cell = inst.Root }
+      Group = d.Specialty and "SPECIALTY" or "OTHER", Cell = inst.Root, Click = click }
   end
   stack:CalculateSize()
   otherStack:CalculateSize()

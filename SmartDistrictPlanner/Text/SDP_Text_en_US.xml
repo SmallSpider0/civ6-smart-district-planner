@@ -651,7 +651,7 @@
       <Text>Click to switch this site on or off. Left out, no districts are planned for it and it is not counted as a new city; the tack stays where it is and still counts as a neighbor.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_STATUS_NOT_PER_SITE" Language="en_US">
-      <Text>Not used</Text>
+      <Text>Off</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SITES_STATES_TOOLTIP" Language="en_US">
       <Text>Must: every site is scored with it. Pool: when the count is above the required number, each site picks the best of the pool. Off: left out. The district score is the weighted adjacency less the yields of the tiles the districts take.[NEWLINE][NEWLINE]By default every specialty district is in the pool, except those with no adjacency bonus and no Amenities (Preserve, Encampment, Aerodrome): they are built for what they do, so they start Off; set them to Must or Pool to count them. Districts limited to one per empire (Government Plaza) are not counted per site.</Text>
