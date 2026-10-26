@@ -905,9 +905,9 @@ end
 -- The switch for partner districts (SDP_Rules.Apart, 2026-10-21 feedback):
 -- the label names the pair (several pairs: a general label), the tooltip
 -- gives the rule as the game's data states it; hidden when the rules have
--- no such pair.
+-- no such pair for the player's districts (SDP_Rules.ApartFor).
 function SDP_UI.ShowApart(box, check, label, on)
-  local pairs = SDP_Rules.Apart().Pairs
+  local pairs = SDP_Rules.ApartFor(Game.GetLocalPlayer())
   box:SetHide(#pairs == 0)
   check:SetCheck(on)
   if #pairs == 0 then return end

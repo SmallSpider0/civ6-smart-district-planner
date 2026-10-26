@@ -169,14 +169,22 @@ end
 
 -- ===========================================================================
 -- Districts kept apart (2026-10-21 feedback: the harbor and the commercial
--- hub). A building gives the player one more trade route only when its city
--- has no building B: a MODIFIER_PLAYER_ADJUST_TRADE_ROUTE_CAPACITY modifier
--- whose requirement sets hold an inverted REQUIREMENT_CITY_HAS_BUILDING on B
--- (in the game's rules the lighthouse's, B = the market). Both districts in
--- one city then give one trade route, in two cities two.
+-- hub). A building or a district gives the player one more trade route only
+-- when its city has no building or district B: a
+-- MODIFIER_PLAYER_ADJUST_TRADE_ROUTE_CAPACITY modifier whose requirement
+-- sets hold an inverted REQUIREMENT_CITY_HAS_BUILDING or
+-- REQUIREMENT_CITY_HAS_DISTRICT on B. Rise and Fall and Gathering Storm put
+-- it on the lighthouse (BuildingModifiers, B = the market); the base game
+-- on the harbor district (DistrictModifiers, B = the commercial hub; issue
+-- 107). Both in one city then give one trade route, in two cities two.
+-- A building's rule holds in every district of its kind (a unique harbor
+-- has a lighthouse too); a district's rule only in that district type
+-- (the base game's Royal Navy Dockyard has its own route with no condition).
 -- Returns {
---   Pairs     { { A, B, Building, Other } }: base district types; A's
---             Building loses its route when the city has B's Other. Sorted.
+--   Pairs     { { A, B, Building, Other, Types } }: A and B base district
+--             types; Building (a building or a district) loses its route
+--             when the city has Other; Types the set of district types
+--             Building's rule holds in. Sorted by A, B.
 --   Partners  { [district type] = { [district type] = true } }: both ways,
 --             a unique district standing for the one it replaces
 -- }, both empty when the rules have no such modifier.
@@ -189,65 +197,113 @@ local function BaseDistrict(districtType)
 end
 SDP_Rules.BaseDistrict = BaseDistrict
 
+-- The district a building or district type stands in (nil: neither, or a
+-- building outside districts, as a wonder).
+local function CarrierDistrict(typeName)
+  local building = GameInfo.Buildings[typeName]
+  if building ~= nil then return building.PrereqDistrict end
+  if GameInfo.Districts[typeName] ~= nil then return typeName end
+  return nil
+end
+
 function SDP_Rules.Apart()
   if m_apart ~= nil and m_apartFor == GameInfo then return m_apart end
   m_apart, m_apartFor = { Pairs = {}, Partners = {} }, GameInfo
-  if GameInfo.BuildingModifiers == nil or GameInfo.RequirementSetRequirements == nil then return m_apart end
-  local sets, argument = {}, {}
-  for row in GameInfo.RequirementSetRequirements() do
-    sets[row.RequirementSetId] = sets[row.RequirementSetId] or {}
-    table.insert(sets[row.RequirementSetId], row.RequirementId)
-  end
-  for row in GameInfo.RequirementArguments() do
-    if row.Name == "BuildingType" then argument[row.RequirementId] = row.Value end
-  end
-  local pairs, seen = {}, {}
-  for row in GameInfo.BuildingModifiers() do
-    local modifier = GameInfo.Modifiers[row.ModifierId]
-    if modifier ~= nil and modifier.ModifierType == "MODIFIER_PLAYER_ADJUST_TRADE_ROUTE_CAPACITY" then
-      for _, setId in ipairs({ modifier.SubjectRequirementSetId or "", modifier.OwnerRequirementSetId or "" }) do
-        for _, requirementId in ipairs(sets[setId] or {}) do
-          local requirement = GameInfo.Requirements[requirementId]
-          local other = argument[requirementId]
-          if requirement ~= nil and requirement.RequirementType == "REQUIREMENT_CITY_HAS_BUILDING" and requirement.Inverse
-              and other ~= nil then
-            local a, b = GameInfo.Buildings[row.BuildingType], GameInfo.Buildings[other]
-            if a ~= nil and b ~= nil and a.PrereqDistrict ~= nil and b.PrereqDistrict ~= nil then
-              local da, db = BaseDistrict(a.PrereqDistrict), BaseDistrict(b.PrereqDistrict)
-              local key = da .. "|" .. db
-              if da ~= db and not seen[key] then
-                seen[key] = true
-                pairs[#pairs + 1] = { A = da, B = db, Building = a.BuildingType, Other = b.BuildingType }
-              end
-            end
-          end
-        end
-      end
-    end
-  end
-  table.sort(pairs, function(x, y)
-    if x.A ~= y.A then return x.A < y.A end
-    return x.B < y.B
-  end)
+  if GameInfo.Modifiers == nil or GameInfo.RequirementSetRequirements == nil then return m_apart end
   local byBase = {}
   for row in GameInfo.Districts() do
     local base = BaseDistrict(row.DistrictType)
     byBase[base] = byBase[base] or {}
     table.insert(byBase[base], row.DistrictType)
   end
-  local partners = {}
-  local function Link(x, y)
-    for _, tx in ipairs(byBase[x] or {}) do
-      partners[tx] = partners[tx] or {}
-      for _, ty in ipairs(byBase[y] or {}) do partners[tx][ty] = true end
+  local sets, argument = {}, {}
+  for row in GameInfo.RequirementSetRequirements() do
+    sets[row.RequirementSetId] = sets[row.RequirementSetId] or {}
+    table.insert(sets[row.RequirementSetId], row.RequirementId)
+  end
+  for row in GameInfo.RequirementArguments() do
+    if row.Name == "BuildingType" or row.Name == "DistrictType" then argument[row.RequirementId] = row.Value end
+  end
+  local NOT_IN_CITY = { REQUIREMENT_CITY_HAS_BUILDING = true, REQUIREMENT_CITY_HAS_DISTRICT = true }
+  local pairs, byKey = {}, {}
+  -- carrier: the building or district the modifier belongs to; types: the
+  -- district types its rule holds in.
+  local function Read(modifierId, carrier, types)
+    local modifier = GameInfo.Modifiers[modifierId]
+    if modifier == nil or modifier.ModifierType ~= "MODIFIER_PLAYER_ADJUST_TRADE_ROUTE_CAPACITY" then return end
+    local own = CarrierDistrict(carrier)
+    if own == nil then return end
+    for _, setId in ipairs({ modifier.SubjectRequirementSetId or "", modifier.OwnerRequirementSetId or "" }) do
+      for _, requirementId in ipairs(sets[setId] or {}) do
+        local requirement = GameInfo.Requirements[requirementId]
+        local other = argument[requirementId]
+        local otherDistrict = other and CarrierDistrict(other)
+        if requirement ~= nil and NOT_IN_CITY[requirement.RequirementType] and requirement.Inverse
+            and otherDistrict ~= nil then
+          local da, db = BaseDistrict(own), BaseDistrict(otherDistrict)
+          local key = da .. "|" .. db
+          if da ~= db then
+            local pair = byKey[key]
+            if pair == nil then
+              pair = { A = da, B = db, Building = carrier, Other = other, Types = {} }
+              byKey[key] = pair
+              pairs[#pairs + 1] = pair
+            end
+            for _, t in ipairs(types) do pair.Types[t] = true end
+          end
+        end
+      end
     end
   end
+  if GameInfo.BuildingModifiers ~= nil then
+    for row in GameInfo.BuildingModifiers() do
+      local building = GameInfo.Buildings[row.BuildingType]
+      if building ~= nil and building.PrereqDistrict ~= nil then
+        Read(row.ModifierId, row.BuildingType, byBase[BaseDistrict(building.PrereqDistrict)] or {})
+      end
+    end
+  end
+  if GameInfo.DistrictModifiers ~= nil then
+    for row in GameInfo.DistrictModifiers() do
+      Read(row.ModifierId, row.DistrictType, { row.DistrictType })
+    end
+  end
+  table.sort(pairs, function(x, y)
+    if x.A ~= y.A then return x.A < y.A end
+    return x.B < y.B
+  end)
+  local partners = {}
+  local function Link(x, y)
+    partners[x] = partners[x] or {}
+    partners[x][y] = true
+  end
   for _, pair in ipairs(pairs) do
-    Link(pair.A, pair.B)
-    Link(pair.B, pair.A)
+    for _, tx in ipairs(byBase[pair.A] or {}) do
+      if pair.Types[tx] then
+        for _, ty in ipairs(byBase[pair.B] or {}) do
+          Link(tx, ty)
+          Link(ty, tx)
+        end
+      end
+    end
   end
   m_apart, m_apartFor = { Pairs = pairs, Partners = partners }, GameInfo
   return m_apart
+end
+
+-- The pairs (SDP_Rules.Apart) the player can end up with: one of the
+-- player's districts loses its route (the base game's England builds the
+-- Royal Navy Dockyard, not a harbor). In Pairs order.
+function SDP_Rules.ApartFor(playerID)
+  local out = {}
+  for _, pair in ipairs(SDP_Rules.Apart().Pairs) do
+    local found = false
+    for _, d in ipairs(SDP_Rules.PlannableDistricts(playerID)) do
+      if pair.Types[d.Type] then found = true end
+    end
+    if found then out[#out + 1] = pair end
+  end
+  return out
 end
 
 -- The pairs (SDP_Rules.Apart) a city ends up with both of, given the types
@@ -271,7 +327,7 @@ function SDP_Rules.Together(types, present)
   end
   local out = {}
   for _, pair in ipairs(SDP_Rules.Apart().Pairs) do
-    if have[pair.A] and have[pair.B] and (planned[pair.A] or planned[pair.B]) then
+    if have[pair.A] and pair.Types[have[pair.A]] and have[pair.B] and (planned[pair.A] or planned[pair.B]) then
       out[#out + 1] = { A = have[pair.A], B = have[pair.B], Building = pair.Building, Other = pair.Other }
     end
   end

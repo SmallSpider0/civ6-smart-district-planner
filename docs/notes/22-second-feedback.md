@@ -21,7 +21,7 @@
 
 ### 22.2 港口与商业中心分城（默认打开）
 
-**依据**（规则从数据读，`SDP_Rules.Apart`）：找建筑上的 `MODIFIER_PLAYER_ADJUST_TRADE_ROUTE_CAPACITY` 修正，其要求集合里有取反的 `REQUIREMENT_CITY_HAS_BUILDING`（参数 `BuildingType`）时，这个建筑所需的区域与参数建筑所需的区域配成一对。游戏规则里只有一对：灯塔（港口）的贸易路线容量要求本城没有市场（商业中心）。所以两者建在同一座城只多 1 条贸易路线，分在两座城多 2 条。特色区域按 `DistrictReplaces` 算作它替代的区域（英国皇家海军船坞、腓尼基U型港、马里曼丁哥市场）。
+**依据**（规则从数据读，`SDP_Rules.Apart`）：找建筑上的 `MODIFIER_PLAYER_ADJUST_TRADE_ROUTE_CAPACITY` 修正，其要求集合里有取反的 `REQUIREMENT_CITY_HAS_BUILDING`（参数 `BuildingType`）时，这个建筑所需的区域与参数建筑所需的区域配成一对。游戏规则里只有一对：灯塔（港口）的贸易路线容量要求本城没有市场（商业中心）。所以两者建在同一座城只多 1 条贸易路线，分在两座城多 2 条。特色区域按 `DistrictReplaces` 算作它替代的区域（英国皇家海军船坞、腓尼基U型港、马里曼丁哥市场）。原版把这条规则写在区域上，这里原先没读到，见 [issue-107](issue-107-base-game-apart.md)。
 
 **行为**：
 - 只约束"从候选里挑"：同一座城不挑两个配对的区域；城里已经有其中一个（已建、城市三环内已打钉、或设为必建）就不挑另一个。

@@ -36,17 +36,27 @@ local function Has(plan, districtType)
   return nil
 end
 
-test("the game's rules: the lighthouse needs a city without a market; housing and preserve yields by appeal", function()
+test("the game's rules: the harbor's route needs a city without a commercial hub; housing and preserve yields by appeal", function()
   local apart = SDP_Rules.Apart()
   local found = nil
   for _, pair in ipairs(apart.Pairs) do
     if pair.A == "DISTRICT_HARBOR" and pair.B == "DISTRICT_COMMERCIAL_HUB" then found = pair end
   end
-  -- The base game's lighthouse and market give no trade route capacity: no pair there.
+  T.ok(found ~= nil, "the harbor / commercial hub pair is read from the modifiers")
+  found = found or {}
   if SDP_Rules.Ruleset() == "RULESET_STANDARD" then
-    T.eq(#apart.Pairs, 0, "no pair in the base game")
+    -- The base game: the harbor district adds a route only in a city without
+    -- a commercial hub (DistrictModifiers, issue 107); the Royal Navy
+    -- Dockyard adds one always.
+    T.eq(#apart.Pairs, 1, "one pair in the base game")
+    T.eq(found.Building, "DISTRICT_HARBOR", "the harbor loses its route")
+    T.eq(found.Other, "DISTRICT_COMMERCIAL_HUB", "to a commercial hub")
+    for row in GameInfo.DistrictReplaces() do
+      if row.ReplacesDistrictType == "DISTRICT_HARBOR" then
+        T.eq(apart.Partners[row.CivUniqueDistrictType], nil, row.CivUniqueDistrictType .. " keeps its own route")
+      end
+    end
   else
-    T.ok(found ~= nil, "the harbor / commercial hub pair is read from the modifiers")
     T.eq(found.Building, "BUILDING_LIGHTHOUSE", "the lighthouse loses its route")
     T.eq(found.Other, "BUILDING_MARKET", "to a market")
     for row in GameInfo.DistrictReplaces() do
@@ -149,8 +159,8 @@ test("the panel: the switch names the pair and starts on", function()
   Capital()
   SDP_Panel.SelectTab("SINGLE")
   SDP_Panel.Refresh()
-  if #SDP_Rules.Apart().Pairs == 0 then
-    T.eq(Controls.ApartBox:IsHidden(), true, "hidden where the rules have no such pair")
+  if #SDP_Rules.ApartFor(pid) == 0 then
+    T.eq(Controls.ApartBox:IsHidden(), true, "hidden where the player's districts have no such pair")
     T.skip("no harbor / commercial hub rule in this ruleset")
   end
   T.eq(Controls.ApartBox:IsHidden(), false, "shown")
