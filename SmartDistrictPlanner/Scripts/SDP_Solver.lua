@@ -184,7 +184,8 @@ function SDP_Solver.NewSession(request, scan)
   self.Present = SDP_City.PresentDistricts(scan)
   local apart = nil
   if request.Apart ~= false and pick > 0 and #SDP_Rules.Apart().Pairs > 0 then
-    apart = { Partners = SDP_Rules.Apart().Partners, Present = { [1] = self.Present } }
+    apart = { Partners = SDP_Rules.Apart().Partners, Present = { [1] = self.Present },
+      Avoid = { [1] = SDP_Rules.ApartAvoid(Map.GetPlot(scan.X, scan.Y)) } }
   end
 
   local workable = {}
