@@ -1,0 +1,7 @@
+Changes since v1.5.3:
+- City sites: Districts no longer makes sites disappear. Sites with free tiles for fewer than half the set number of districts used to be left out, so on late game maps a count of 3 or 6 could find no site where 0 found several. Such sites are now compared as well and scored by the districts that fit (each one that does not fit still counts against the site).
+- One city: when there are fewer free tiles around the city than the number of districts set, the planner used to place no candidate district and report that no valid layout exists. It now picks as many as fit.
+
+自 v1.5.3 以来的变化：
+- 选城址页：“区域数量”不再让城址消失。以前周围空地不到所设数量一半的城址会被排除，后期地图上数量 0 找得到城址，数量 3、6 时可能一个都找不到；现在这样的城址照样参与比较，按放得下的区域打分（放不下的每个照旧扣分）。
+- 单城页：城市周围空地比所设的区域数量少时，以前一个候选区域都不放、提示没有可行布局，现在放得下几个就挑几个。
