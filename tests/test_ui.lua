@@ -57,7 +57,15 @@ test("solving from the panel lists the plan with DMT tooltips", function()
   for i, p in ipairs(result.Plan) do
     local row = state.ResultRows[#result.Unplaced + i]
     local expected = p.ToolTip ~= "" and p.ToolTip or Locale.Lookup("LOC_SDP_NO_ADJACENCY")
-    T.eq(row.ToolTip, expected, p.Type .. " tooltip")
+    -- The tooltip is the district's own parts line (issue 126), a blank line,
+    -- then DMT's tooltip untouched (requirement 8).
+    local request = result.Session.Request
+    local parts = { Land = request.Land, Distance = (request.Distance or 0) > 0, Coverage = false }
+    local first = SDP_UI.PartsText(p.Parts, parts, "LOC_SDP_PARTS_DISTRICT")
+    T.ok(first ~= nil and first ~= "", p.Type .. " has a parts line")
+    local head = first .. "[NEWLINE][NEWLINE]"
+    T.eq(string.sub(row.ToolTip, 1, #head), head, p.Type .. " tooltip starts with its parts line")
+    T.eq(string.sub(row.ToolTip, #head + 1), expected, p.Type .. " tooltip continues with DMT's tooltip")
     T.ok(string.find(row.Name, "(" .. p.X .. ", " .. p.Y .. ")", 1, true) ~= nil, p.Type .. " coordinates")
   end
   T.eq(state.PlaceDisabled, false, "place button disabled with a plan")

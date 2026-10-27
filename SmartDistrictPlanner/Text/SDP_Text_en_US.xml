@@ -690,7 +690,7 @@
       <Text>Weighted adjacency: {1_Adjacency} ({2_Parts})</Text>
     </Replace>
     <Replace Tag="LOC_SDP_RESULT_RANKED" Language="en_US">
-      <Text>Plans are ranked by the adjacency plus the items in brackets. Tiles is what the tiles the districts take would have given (a Preserve's extra yields on the tiles around it count here too). Late in the game the tiles often outweigh the adjacency and the sum is negative; that does not make the plan poor: districts always take tiles.</Text>
+      <Text>Plans are ranked by the adjacency plus the items in brackets. Tiles is what the tiles the districts take would have given (a Preserve's extra yields on the tiles around it count here too). Late in the game the tiles often outweigh the adjacency and the sum is negative; that does not make the plan poor: districts always take tiles. Each district's own parts are on the first line of its row's tooltip.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_RESULT_TILES_LAND_OFF" Language="en_US">
       <Text>adjacent tiles {1_Yields} (Tiles weight 0, not scored)</Text>
@@ -926,6 +926,27 @@
     </Replace>
     <Replace Tag="LOC_SDP_PRESET_HALF_GOLD_FAITH_TOOLTIP" Language="en_US">
       <Text>Gold and Faith weigh 0.5, the rest as in Balanced. Purchase prices: what 1 Production buys costs 4 Gold or 2 Faith.</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_PARTS_DISTRICT" Language="en_US">
+      <Text>This district: weighted adjacency {1_Adjacency}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_PARTS_DISTRICT_OTHERS" Language="en_US">
+      <Text>This district: weighted adjacency {1_Adjacency} ({2_Parts})</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_MULTI_CITY_GAIN_OTHERS" Language="en_US">
+      <Text>weighted adjacency of its new districts {1_Gain} ({2_Parts})</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_MULTI_CITY_TIP" Language="en_US">
+      <Text>The sum of the parts of this city's new districts. Each district's own parts are in its row's tooltip.</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_BY_YIELD" Language="en_US">
+      <Text>Adjacency by yield: {1_Yields}; with weights: {2_Weighted}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_REST" Language="en_US">
+      <Text>Not in the districts' parts: {1_Parts}. Existing districts is the adjacency the plan adds to the districts already there and to locked map tacks. Tiles, Housing and reach go to each district as how much the part comes back when that district alone is left out; when several districts compete for the same tiles, their shares fall short of the total by this much.</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_PART_EXISTING" Language="en_US">
+      <Text>existing districts {1_Value}</Text>
     </Replace>
   </LocalizedText>
 </GameData>
