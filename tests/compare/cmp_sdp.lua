@@ -23,6 +23,9 @@
 --                                    of the scenario's districts; before
 --                                    _GROWTH when both
 --                                    (design 19)
+--   variant <TIER>_KNEW<n>           sites: the first plot of a new strategic
+--                                    kind counts n times (SDP_Sites.KIND_NEW,
+--                                    issue 86: 2, 3 and 4 measured); before _DIST
 --   variant ..._DIST<nnn> (last)     the distance cost weight nnn / 100 (single
 --                                    and multi; the panel's default is
 --                                    _DIST050 since issue 91; sites too,
@@ -204,6 +207,9 @@ function CmpAdapters.sdp(request, variant, w)
   local distance = tonumber(variant:match("_DIST(%d+)$") or "")
   if distance ~= nil then distance = distance / 100 end
   variant = variant:gsub("_DIST%d+$", "")
+  -- "<TIER>_KNEW<n>" (sites, issue 86): the new strategic kind's factor.
+  local knew = tonumber(variant:match("_KNEW(%d)$") or "")
+  variant = variant:gsub("_KNEW%d$", "")
   -- "<TIER>_GROWTH" (sites): the sites tab's Growth first preset.
   local growth = variant:match("_GROWTH$") ~= nil
   variant = variant:gsub("_GROWTH$", "")
@@ -227,6 +233,7 @@ function CmpAdapters.sdp(request, variant, w)
   local sharedList = variant:match("_GROUP%d+S$") ~= nil
   variant = variant:gsub("_GROUP%d+S?$", "")
   LoadSDP()
+  if knew ~= nil then SDP_Sites.KIND_NEW = knew end
   if land then ScaleLand(lambda) end
   w.Events.LoadGameViewStateDone()
   local stats = {}
