@@ -233,7 +233,7 @@ footer { margin-top: 64px; border-top: 1px solid var(--line); padding-top: 16px;
     <div class="legend" aria-hidden="true"><span><i class="c1"></i>脚本或 CI 全自动</span><span><i class="c2"></i>代理自动完成</span><span><i class="c3"></i>代理做，看规则或等人一句话</span><span><i class="c4"></i>人来决定</span></div>
     <figcaption>bug 和功能走两条路，在开发处会合。每个 Issue 的 PR 单独合并；一个里程碑的 Issue 都合并后做发版准备，只修 bug 的版本按规则自动发，其余的等维护者说“发”。</figcaption>
   </figure>
-  <p class="refs">参考：<a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/CONTRIBUTING.md">CONTRIBUTING.md</a><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/.claude/skills/sdp-issue/SKILL.md">sdp-issue</a><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/issues/82">Issue 示例：#82 的调研与决定</a></p>
+  <p class="refs">参考：<a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/docs/maintaining.md#2-一轮工作的流程">docs/maintaining.md「一轮工作的流程」</a><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/.claude/skills/sdp-issue/SKILL.md">sdp-issue</a><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/issues/82">Issue 示例：#82 的调研与决定</a></p>
 </section>
 
 <!-- 02 -->
@@ -289,7 +289,7 @@ footer { margin-top: 64px; border-top: 1px solid var(--line); padding-top: 16px;
   <h2><span class="n">03</span>子 agent 怎么派</h2>
   <div class="prose">
     <ul class="overview">
-      <li>子 agent 每调用一次工具，都要把整个上下文重读一遍。2026-10-27 统计了已有的子 agent，重读占了花费的绝大部分，思考和输出只占小头。所以省钱先靠上下文短，其次才是选模型和思考强度。统计的数字只写在 <a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/CONTRIBUTING.md#需求分支与提交">CONTRIBUTING.md</a> 里。</li>
+      <li>子 agent 每调用一次工具，都要把整个上下文重读一遍。2026-10-27 统计了已有的子 agent，重读占了花费的绝大部分，思考和输出只占小头。所以省钱先靠上下文短，其次才是选模型和思考强度。统计的数字只写在 <a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/docs/maintaining.md#4-子-agent-怎么派">docs/maintaining.md</a> 里。</li>
       <li>主会话每派一个子 agent、开一个子会话，都按任务选模型和思考强度，并在要求里写上下面的交接规则。</li>
     </ul>
   </div>
@@ -366,7 +366,7 @@ footer { margin-top: 64px; border-top: 1px solid var(--line); padding-top: 16px;
     <li>PR 合并后：从 Claude Code 的 PR 栏移除，拉取 main，清理工作树和本地分支。子 agent 开的 PR 也挂在主会话的 PR 栏上，它自己移不掉，所以子 agent 报告合并后、每次发版后，主会话查一遍 PR 栏，把已合并、已关闭的都移除。</li>
     <li>夜间队列里的一项谁跑谁关：跑完马上标成完成并写上结果，白天经维护者同意提前跑的也一样；没关的一项会一直显示在排队。</li>
   </ul>
-  <p class="refs">参考：<a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/CONTRIBUTING.md#需求分支与提交">CONTRIBUTING.md「需求、分支与提交」里的“子 agent 怎么派”（含统计数字）</a><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/tree/main/docs/notes">docs/notes/</a><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/tools/remote.py">tools/remote.py</a></p>
+  <p class="refs">参考：<a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/docs/maintaining.md#4-子-agent-怎么派">docs/maintaining.md「子 agent 怎么派」（含统计数字）</a><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/tree/main/docs/notes">docs/notes/</a><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/tools/remote.py">tools/remote.py</a></p>
 </section>
 
 <!-- 04 -->
@@ -464,7 +464,7 @@ footer { margin-top: 64px; border-top: 1px solid var(--line); padding-top: 16px;
     <li><code>release.py workshop</code> 用 SteamCMD 上传，再下载回来逐字节比对（也可由合作者在 Windows 上传）。简体中文的标题、简介和图片在物品页上改。</li>
     <li>没做完的 Issue 移到下一个里程碑，关掉这个里程碑，告诉维护者发了什么、查过什么、没查什么。</li>
   </ol>
-  <p class="refs">参考：<a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/.claude/skills/sdp-release/SKILL.md">sdp-release</a><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/tools/release.py">tools/release.py</a><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/.github/workflows/release.yml">release.yml</a><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/.github/ISSUE_TEMPLATE/release.md">发版清单</a><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/releases/tag/v1.5.0">示例：v1.5.0</a></p>
+  <p class="refs">参考：<a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/.claude/skills/sdp-release/SKILL.md">sdp-release</a><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/tools/release.py">tools/release.py</a><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/.github/workflows/release.yml">release.yml</a><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/releases/tag/v1.5.0">示例：v1.5.0</a></p>
 </section>
 
 <!-- 07 -->
@@ -506,7 +506,7 @@ footer { margin-top: 64px; border-top: 1px solid var(--line); padding-top: 16px;
     <div class="card"><h4>结束前安排好叫醒</h4><p>CI 通过、自动合并都不会叫醒会话。还有活要做时，结束前在后台挂一个等待的命令，做法见<a href="#dispatch">第 03 节</a>最后一段。</p></div>
     <div class="card"><h4>收尾不留尾巴</h4><p>PR 合并后，解除会话和 PR 的绑定、拉取 main、清掉工作树和本地分支（<code>worktree.py prune</code>）；子会话做完由主会话归档，只留正在进行的工作。</p></div>
   </div>
-  <p class="refs">参考：<a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/CONTRIBUTING.md#写作规则">写作规则</a><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/CONTRIBUTING.md#需求分支与提交">子 agent 怎么派（模型、交接、等待）</a><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/docs/pitfalls.md">Civ6 Modding 的坑（45 条）</a><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/tree/main/docs/notes">每个 Issue 的实现记录</a></p>
+  <p class="refs">参考：<a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/docs/maintaining.md#10-只对内的写作规则">写作规则</a><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/docs/maintaining.md#4-子-agent-怎么派">子 agent 怎么派（模型、交接、等待）</a><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/docs/pitfalls.md">Civ6 Modding 的坑（45 条）</a><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/tree/main/docs/notes">每个 Issue 的实现记录</a></p>
 </section>
 
 <!-- 10 -->
@@ -516,7 +516,8 @@ footer { margin-top: 64px; border-top: 1px solid var(--line); padding-top: 16px;
     <div class="card">
       <h4>公开仓库里（合作者克隆后即可使用）</h4>
       <ul>
-        <li><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/CONTRIBUTING.md">CONTRIBUTING.md</a>：分支、提交、谁来做、测试分工、发版、写作规则</li>
+        <li><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/CONTRIBUTING.md">CONTRIBUTING.md</a>：给外部开发者的中英文说明，含开工前、环境、检查、代码约定、提交 PR</li>
+        <li><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/docs/maintaining.md">docs/maintaining.md</a>：维护手册，含一轮工作的流程、谁来做、子 agent 怎么派、共用资源、PR 与 CI、Codex 审查、测试分工、发版、对内写作规则</li>
         <li><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/AGENTS.md">AGENTS.md</a>：需求约束、技术方案、坑的速查表、开发环境与每轮改动流程</li>
         <li><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/tree/main/.claude/skills">.claude/skills/</a>：5 份固定步骤，Claude Code 会按需读入</li>
         <li><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/tree/main/.github">.github/</a>：CI、发版流水线、Issue 与 PR 模板</li>
@@ -537,7 +538,7 @@ footer { margin-top: 64px; border-top: 1px solid var(--line); padding-top: 16px;
 </section>
 
 <footer>
-  项目：<a href="https://github.com/SmallSpider0/civ6-smart-district-planner">SmallSpider0/civ6-smart-district-planner</a> · 本页按 <a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/CONTRIBUTING.md">CONTRIBUTING.md</a> 整理，流程改了随它在同一个 PR 里更新；两者不一致时以 CONTRIBUTING.md 为准。
+  项目：<a href="https://github.com/SmallSpider0/civ6-smart-district-planner">SmallSpider0/civ6-smart-district-planner</a> · 本页按 <a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/docs/maintaining.md">docs/maintaining.md</a> 整理，流程改了随它在同一个 PR 里更新；两者不一致时以 docs/maintaining.md 为准。
 </footer>
 </div>
 

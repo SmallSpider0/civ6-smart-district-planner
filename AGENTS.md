@@ -30,15 +30,16 @@
 ```
 civ6mod/
 ├── AGENTS.md                         # 本文件（代理工作约定）
-├── CLAUDE.md                         # 让 Claude Code 读入 AGENTS.md 和 CONTRIBUTING.md
+├── CLAUDE.md                         # 让 Claude Code 读入 AGENTS.md、CONTRIBUTING.md 和 docs/maintaining.md
 ├── .claude/skills/                   # 固定流程：Issue 处理、游戏内测试、离线重活、发版、监听（sdp-*/SKILL.md）
-├── CONTRIBUTING.md                   # 协作约定：分支、提交、测试分工、写作规则
+├── CONTRIBUTING.md                   # 给外部开发者：开工前、环境、检查、代码约定、提交 PR（中英文）
 ├── CHANGELOG.md                      # 各阶段与各版本改了什么
 ├── README.md                         # 项目简介（GitHub 首页）
 ├── LICENSE                           # MIT
 ├── civ6-mod-from-scratch-prompt.md   # 需求文档（锁定，勿改）
 ├── .github/                          # CI（validate + 离线测试，Ubuntu 和 Windows）、Issue 与 PR 模板
 ├── docs/
+│   ├── maintaining.md                # 维护手册：流程、谁来做、子 agent、共用资源、PR 与 CI、Codex 审查、测试分工、发版、对内写作规则
 │   ├── design.md                     # 交付物 3：算法结构 / 目标函数 / DMT 接缝
 │   ├── pitfalls.md                   # Civ6 Modding 的坑：完整说明（AGENTS 第 5 节是要点）
 │   ├── multicity-design.md           # 选城址、多城、奇观、档位、离线基准的设计（第 1–14 节）
@@ -157,7 +158,7 @@ include("dmt_yieldcalculator");       -- 尾部会执行 DMT_Initialize()，见�
 
 ## 6. 开发环境与工作流
 
-开发在 macOS 和 Windows 两台机器上进行。**开工前读当前平台的环境说明**：macOS 见 [docs/dev-macos.md](docs/dev-macos.md)，Windows 见 [docs/dev-windows.md](docs/dev-windows.md)。分支、提交、测试分工和写作规则见 [CONTRIBUTING.md](CONTRIBUTING.md)。
+开发在 macOS 和 Windows 两台机器上进行。**开工前读当前平台的环境说明**：macOS 见 [docs/dev-macos.md](docs/dev-macos.md)，Windows 见 [docs/dev-windows.md](docs/dev-windows.md)。外部开发者的约定见 [CONTRIBUTING.md](CONTRIBUTING.md)；分支、提交、测试分工、发版和写作规则见 [docs/maintaining.md](docs/maintaining.md)。
 
 **两个平台共用**
 - 工具：`node`（`cd tools && npm ci` 装 luaparse、fengari）、Python 3.8 以上、`git`；`xmllint` 可选。文档里的命令写作 `python3 -I`，Windows 上换成 `py -3 -I`。
@@ -175,7 +176,7 @@ include("dmt_yieldcalculator");       -- 尾部会执行 DMT_Initialize()，见�
 - **测试用 mod 组**：AMT（hook `GetMapPinSubject`）、Empire Planner（会自建/删除地图钉）及改相邻/区域规则的 mod 会干扰测试。在"额外内容"里建一个只开官方内容、DMT 和本 mod 的 mod 组再测。新 mod 在新建的组里**默认禁用**，可在主菜单用 `Modding.EnableMod(handle, true)` 启用、`Modding.DisableMod(handle)` 停用（游戏自己的启用逻辑，见 Base `FrontEnd/Mods.lua`）。开发机不要订阅本模组的创意工坊版（3824473635），否则游戏可能加载创意工坊那份，测的是旧代码（坑 38）。取消订阅后 Steam 不一定马上删掉下载的文件夹（`steamapps/workshop/content/289070/3824473635`），游戏仍会扫到它，要自己移走。`run_tests.py` 开测前检查加载的是哪一份，是创意工坊那份就停下。
   - **mod 列表的名称**：mod 未启用时，`FrontEndActions` 的文本不加载，列表显示 `LOC_SDP_MOD_NAME` 原文；列表和详情（`Modding.GetModText`）读的是 modinfo 内嵌的 `<LocalizedText>`。所以名称、简介、描述在 modinfo 里也写一份，validate.py 检查两份一致。
 
-**每轮改动流程**（命令细节见 [tools/README.md](tools/README.md)）。一个 Issue 一个 PR（CONTRIBUTING.md“需求、分支与提交”）：每个 PR 跑和它相关的测试文件，整套的 0–3 在发版前统一跑一次。
+**每轮改动流程**（命令细节见 [tools/README.md](tools/README.md)）。一个 Issue 一个 PR（docs/maintaining.md“一轮工作的流程”）：每个 PR 跑和它相关的测试文件，整套的 0–3 在发版前统一跑一次。
 0. 离线：`node tools/offline_tests.mjs` 跑 `tests/offline/spec_*.lua`（不开游戏，几分钟；CI 上 Ubuntu 约 3.5 分钟、Windows 约 5 分钟）。改求解算法时再跑 `tests/offline/bench_single.lua` 对比质量与预计耗时；
 1. 校验：`python3 -I tools/validate.py`。检查 XML 格式、modinfo 与磁盘文件一致、双语文本键一致、`LOC_SDP_*` 引用都有定义、UI XML 只用游戏本体出现过的控件和属性（坑 8，需要 `reference/`）、Lua 语法（luaparse 5.3 模式解析，再禁掉 5.1 没有的写法）与禁用全局、确定性（禁 `math.random`/`os.time`）；
 2. 部署：`python3 -I tools/deploy.py`。先校验，再把 `SmartDistrictPlanner/` 同步到游戏的 Mods 目录（增量复制，并删除已不存在的文件）；
@@ -204,9 +205,9 @@ include("dmt_yieldcalculator");       -- 尾部会执行 DMT_Initialize()，见�
 - 不修改需求文档；设计决策写入 `docs/design.md` 或 `docs/multicity-design.md`，一个 Issue 的实现、实测与数字出处写进 `docs/notes/issue-<编号>-<主题>.md`，每段改动在 `CHANGELOG.md` 记一笔。
 - 不把 DMT/AMT/EP/游戏本体的源码或数据复制进仓库，更不能进 `SmartDistrictPlanner/` 发布目录（版权与依赖关系：DMT 作为依赖 mod 由玩家自行订阅）。仓库是公开的。
 - 回复与文档使用中文；代码标识符与注释用英文或中文均可，但单文件内保持一致。
-- 调研和一个 Issue 的开发交给子 agent（维护者点名或改动很大的开发用子会话），几行的小修和协调留在主会话（CONTRIBUTING.md“需求、分支与提交”的“谁来做”）。
-- 派子 agent 时按任务选模型和思考强度，任务停在检查点，后续的活交给带交接说明的新子 agent；结束一轮前在后台安排好会叫醒自己的等待（CONTRIBUTING.md“子 agent 怎么派”）。
-- 改了代码的 PR 合并前请 Codex 审，意见逐条核实后再改或回复（CONTRIBUTING.md“Codex 审查”）。
+- 调研和一个 Issue 的开发交给子 agent（维护者点名或改动很大的开发用子会话），几行的小修和协调留在主会话（docs/maintaining.md“谁来做”）。
+- 派子 agent 时按任务选模型和思考强度，任务停在检查点，后续的活交给带交接说明的新子 agent；结束一轮前在后台安排好会叫醒自己的等待（docs/maintaining.md“子 agent 怎么派”）。
+- 改了代码的 PR 合并前请 Codex 审，意见逐条核实后再改或回复（docs/maintaining.md“Codex 审查”）。
 
 ## 9. 代码审查要点
 
