@@ -91,7 +91,8 @@ test("site factors: water, luxuries, strategic resources", function()
       { 3, 4, "RESOURCE_IRON", 1 } },
   })
   local _ = w
-  local ctx = SDP_Sites.Context(0, { Districts = PLAN })
+  -- Per-turn values (Raw: no points, see the points test below).
+  local ctx = SDP_Sites.Context(0, { Districts = PLAN, K = 3, Raw = true })
   local centers = SDP_Sites.Centers(0)
   local river = SDP_Sites.Coarse(ctx, { X = 2, Y = 3, Index = Map.GetPlotIndex(2, 3), Unrevealed = 0 }, centers)
   T.eq(river.Info.WaterKind, "FRESH", "river")
@@ -99,27 +100,41 @@ test("site factors: water, luxuries, strategic resources", function()
   local coast = SDP_Sites.Coarse(ctx, { X = 6, Y = 3, Index = Map.GetPlotIndex(6, 3), Unrevealed = 0 }, centers)
   T.eq(coast.Info.WaterKind, "COAST", "coast")
   T.eq(river.Luxury.RESOURCE_WINE, 2, "two wine copies")
-  T.eq(river.Parts.Luxury, 4 + 1, "a new kind: Happiness 4, the second copy 1")
-  T.eq(river.Strategic.RESOURCE_HORSES, 2, "Gathering Storm extraction rate")
+  T.eq(ctx.Cities, 1 + 3, "one city and three new ones")
+  T.eq(river.Parts.Luxury, 4, "a new kind: an amenity in 4 cities; the second copy has no buyer")
+  T.eq(river.Strategic.RESOURCE_HORSES, 1, "strategic resources count plots, whatever each yields")
   T.eq(river.Strategic.RESOURCE_IRON, nil, "iron is not visible without its tech")
   T.ok(river.Info.UnknownStrategic, "unknown strategic resources hinted")
-  T.eq(river.Parts.Strategic, 2 + 2, "amount plus a new kind")
+  T.eq(river.Parts.Strategic, 2 * 2, "a plot of a new kind revealed in the player's era: era 2 x new 2")
 
   -- Housing (issues 55, 56): its own weight, not food's; worth 1 each up to
   -- the population the plan needs (three specialty districts: 7), half the
   -- one before after that.
-  local food = SDP_Sites.Context(0, { Districts = PLAN, Weights = { YIELD_FOOD = 3 } })
+  local food = SDP_Sites.Context(0, { Districts = PLAN, Weights = { YIELD_FOOD = 3 }, Raw = true })
   T.eq(SDP_Sites.Coarse(food, { X = 2, Y = 3, Index = Map.GetPlotIndex(2, 3), Unrevealed = 0 }, centers).Parts.Water, 3,
     "the food weight leaves the water part alone")
-  local housing = SDP_Sites.Context(0, { Districts = PLAN, Weights = { HOUSING = 2 } })
+  local housing = SDP_Sites.Context(0, { Districts = PLAN, Weights = { HOUSING = 2 }, Raw = true })
   T.eq(SDP_Sites.Coarse(housing, { X = 2, Y = 3, Index = Map.GetPlotIndex(2, 3), Unrevealed = 0 }, centers).Parts.Water, 6,
     "weighted by housing")
-  local small = SDP_Sites.Context(0, { Districts = { "DISTRICT_CAMPUS" } })
+  local small = SDP_Sites.Context(0, { Districts = { "DISTRICT_CAMPUS" }, Raw = true })
   T.eq(small.Population, 1, "one district needs population 1")
   -- Housing 2 -> 5, a new city of 1 against a target of 1: knee max(1 + 1,
   -- 1 + 2) = 3 (issue 91): 1 + 0.5 + 0.25.
   T.eq(SDP_Sites.Coarse(small, { X = 2, Y = 3, Index = Map.GetPlotIndex(2, 3), Unrevealed = 0 }, centers).Parts.Water,
     1.75, "housing past the knee is worth less")
+
+  -- Points (issue 88): ITEM_POINTS for what a good site has in each part.
+  local points = SDP_Sites.Context(0, { Districts = PLAN, K = 3 })
+  local scored = SDP_Sites.Coarse(points, { X = 2, Y = 3, Index = Map.GetPlotIndex(2, 3), Unrevealed = 0 }, centers)
+  local n, ref = SDP_Sites.ITEM_POINTS, SDP_Sites.REFERENCE
+  T.near(scored.Parts.Water, n * 3 / ref.Housing, 1e-9, "fresh water: 3 housing")
+  T.near(scored.Parts.Luxury, n * 4 / ref.Luxury, 1e-9, "a new luxury in 4 cities")
+  T.near(scored.Parts.Strategic, n * 4 / ref.Strategic, 1e-9, "a new strategic of the player's era")
+  T.near(scored.Parts.Feature, river.Parts.Feature * n / (points.Land.Growth * ref.Feature), 1e-9,
+    "one-time yields per unit of their growth")
+  local twice = SDP_Sites.Context(0, { Districts = PLAN, K = 3, Weights = { HOUSING = 2 } })
+  T.near(SDP_Sites.Coarse(twice, { X = 2, Y = 3, Index = Map.GetPlotIndex(2, 3), Unrevealed = 0 }, centers).Parts.Water,
+    2 * scored.Parts.Water, 1e-9, "the part's weight on top")
 end)
 
 test("housing value (issue 91, plan B): 1 each up to max(target + 1, population + 2), half after; big cities discounted", function()
@@ -303,14 +318,66 @@ end)
 test("a resource kind new to the player is new at one site only", function()
   -- Two wine plots, one near each of two sites: the first site (by plot) gets
   -- the new kind's amenities, the other a copy's worth.
-  local ctx = { Owned = {}, Weights = SDP_Sites.Weights() }
+  -- One civilization could buy a copy (issue 86).
+  local ctx = { Owned = {}, Amount = {}, Cities = 9, Buyers = { RESOURCE_WINE = 1 }, Weights = SDP_Sites.Weights() }
   local taken = {}
+  NewWorld()
   local first = SDP_Sites.LuxuryValue(ctx, { RESOURCE_WINE = 1 }, taken)
   local second = SDP_Sites.LuxuryValue(ctx, { RESOURCE_WINE = 1 }, taken)
-  NewWorld()
+  local third = SDP_Sites.LuxuryValue(ctx, { RESOURCE_WINE = 1 }, taken)
   T.eq(first, GameInfo.Resources.RESOURCE_WINE.Happiness, "first: the kind's amenities")
-  T.eq(second, SDP_Sites.DUPLICATE_VALUE, "second: a duplicate")
-  T.eq(first + second, SDP_Sites.LuxuryValue(ctx, { RESOURCE_WINE = 2 }, {}), "same as counted together")
+  T.eq(second, SDP_Sites.DUPLICATE_VALUE, "second: sold to the one buyer")
+  T.eq(third, 0, "third: nobody left to buy it")
+  T.eq(first + second + third, SDP_Sites.LuxuryValue(ctx, { RESOURCE_WINE = 3 }, {}), "same as counted together")
+  ctx.Cities = 2
+  T.eq(SDP_Sites.LuxuryValue(ctx, { RESOURCE_WINE = 1 }, {}), 2, "a new kind: an amenity in each city, here 2")
+  -- A kind the player has: its spare copies are sold first.
+  ctx.Owned.RESOURCE_WINE, ctx.Amount.RESOURCE_WINE = true, 2
+  T.eq(SDP_Sites.LuxuryValue(ctx, { RESOURCE_WINE = 1 }, {}), 0, "the player's spare copy took the buyer")
+end)
+
+test("strategic plots: era x kind (issue 86)", function()
+  local ctx = { Owned = { RESOURCE_IRON = true, RESOURCE_HORSES = true }, Short = { RESOURCE_IRON = true },
+    EraFactor = { RESOURCE_IRON = 1, RESOURCE_HORSES = 1, RESOURCE_NITER = 2 } }
+  T.eq(SDP_Sites.StrategicValue(ctx, { RESOURCE_NITER = 2 }, {}), 2 * (SDP_Sites.KIND_NEW + 1),
+    "a new recent kind: the first plot new, the second had")
+  T.eq(SDP_Sites.StrategicValue(ctx, { RESOURCE_IRON = 2 }, {}), 1 * 2 * SDP_Sites.KIND_SHORT, "had but short")
+  T.eq(SDP_Sites.StrategicValue(ctx, { RESOURCE_HORSES = 2 }, {}), 2, "had and enough")
+  local taken = {}
+  SDP_Sites.StrategicValue(ctx, { RESOURCE_NITER = 1 }, taken)
+  T.eq(SDP_Sites.StrategicValue(ctx, { RESOURCE_NITER = 1 }, taken), 2, "new at one site only")
+end)
+
+test("the era of a strategic resource against the player's (issue 86)", function()
+  -- Iron needs an ancient technology; horses here none (seen from the start).
+  NewWorld(nil, { era = 1 })
+  local ctx = SDP_Sites.Context(0, { Districts = PLAN })
+  T.eq(ctx.EraFactor.RESOURCE_IRON, SDP_Sites.ERA_RECENT, "classical player: ancient iron is the era before")
+  T.eq(ctx.EraFactor.RESOURCE_HORSES, SDP_Sites.ERA_RECENT, "no technology: the first era")
+  NewWorld(nil, { era = 2 })
+  ctx = SDP_Sites.Context(0, { Districts = PLAN })
+  T.eq(ctx.EraFactor.RESOURCE_IRON, 1, "medieval player: ancient iron is older")
+end)
+
+test("a site's land: worked plots and one-time yields, on one scale (issue 88)", function()
+  NewWorld()
+  local ctx = SDP_Sites.Context(0, { Districts = PLAN })
+  T.eq(ctx.Land.Turns, SDP_Sites.HARVEST_TURNS, "one-time yields over 50 turns")
+  local list, centers = SDP_Sites.Candidates(0, { K = 3, D = 8 })
+  local some = 0
+  for _, c in ipairs(list) do
+    local site = SDP_Sites.Coarse(ctx, c, centers)
+    T.near(site.Parts.Farm + site.Parts.Feature, site.Land.Base + site.Land.OnceTotal, 1e-9, "the two parts add up")
+    T.ok(site.Parts.Feature <= site.Land.OnceTotal + 1e-9, "features: at most every plot cleared")
+    if site.Land.OnceTotal > 0 then some = some + 1 end
+  end
+  T.ok(some > 0, "the test needs sites with features")
+  local off = SDP_Sites.Context(0, { Districts = PLAN, Weights = { FEATURE = 0 } })
+  local site = SDP_Sites.Coarse(off, list[1], centers)
+  T.eq(site.Parts.Feature, 0, "feature weight 0: no one-time yields")
+  local double = SDP_Sites.Context(0, { Districts = PLAN, Weights = { LAND = 2 } })
+  local one, two = SDP_Sites.Coarse(ctx, list[1], centers), SDP_Sites.Coarse(double, list[1], centers)
+  T.ok(two.Parts.Farm >= 2 * one.Parts.Farm - 1e-9, "land weight 2: the plots' yields at least twice (fewer cleared)")
 end)
 
 test("one site: no distance to other sites", function()
@@ -322,16 +389,63 @@ end)
 
 test("a site's plot yields weigh the fixed numbers times the tab's weights (issue 53)", function()
   NewWorld()
-  local balanced = SDP_Sites.PlotWeights(SDP_Sites.Weights(nil))
+  local balanced, once = SDP_Sites.PlotWeights(SDP_Sites.Weights(nil))
   T.eq(balanced.YIELD_GOLD, 1 / 4, "gold: 1/4")
   T.eq(balanced.YIELD_FAITH, 1 / 2, "faith: 1/2")
   T.eq(balanced.YIELD_SCIENCE, 5 / 6, "science: 5/6")
   T.eq(balanced.YIELD_FOOD, 1, "food: 1")
   T.eq(balanced.FEATURE, 1, "one-time yields: the tab's weight")
+  T.eq(once.YIELD_GOLD, 1 / 4, "one-time gold: 1/4")
   local growth = SDP_Sites.PlotWeights(SDP_Sites.Weights(SDP_Sites.PRESETS.GROWTH))
   T.eq(growth.YIELD_FOOD, 2, "growth first: food leans twice")
-  local ctx = SDP_Sites.Context(0, { Districts = PLAN, Weights = { YIELD_GOLD = 2 } })
-  T.eq(ctx.Land.W.YIELD_GOLD, 2 / 4, "the context's land part: gold 2 x 1/4")
+  local ctx = SDP_Sites.Context(0, { Districts = PLAN, Weights = { YIELD_GOLD = 2, LAND = 3 }, Raw = true })
+  T.eq(ctx.Land.W.YIELD_GOLD, 3 * 2 / 4, "the plots: land 3 x gold 2 x 1/4")
+  T.eq(ctx.Land.OnceW.YIELD_GOLD, 2 / 4, "one-time yields: without the land weight")
+end)
+
+-- A request without K plans the solver's default count (3): the luxury
+-- part counts that many new cities too (Codex review of PR 125).
+test("without K: the new cities a luxury reaches are the sites the solver plans", function()
+  NewWorld()
+  local result = SDP_SiteSolver.Solve({ PlayerID = 0, D = 6, Districts = PLAN, Tier = "FAST" })
+  T.ok(result.Ok, tostring(result.Error))
+  local session = result.Session
+  T.eq(session.K, 3, "the default count")
+  local own = Players[0]:GetCities():GetCount() + #SDP_Multi.Sites(0)
+  T.eq(session.Ctx.Cities, own + session.K, "our cities and tacks plus the planned sites")
+end)
+
+-- The distance cost is part of the districts part: scaled by its weight
+-- like the adjacency, so a districts weight of 0 leaves nothing of it and
+-- the parts shown (those with a weight) add up to the site's score (Codex
+-- review of PR 125).
+test("the districts weight scales the distance cost; at 0 none is left in the score", function()
+  NewWorld()
+  local function Solve(weights)
+    local result = SDP_SiteSolver.Solve({ PlayerID = 0, K = 2, D = 6, Districts = PLAN, Tier = "FAST",
+      Weights = weights, Distance = 0.5 })
+    T.ok(result.Ok, tostring(result.Error))
+    return result, result.Session.Ctx
+  end
+  local _, one = Solve({})
+  T.ok(one.Distance > 0, "a cost at weight 1")
+  local _, two = Solve({ DISTRICT = 2 })
+  T.near(two.Distance, 2 * one.Distance, 1e-9, "twice at weight 2")
+  local result, zero = Solve({ DISTRICT = 0 })
+  T.eq(zero.Distance or 0, 0, "none at weight 0")
+  local w = SDP_Sites.Weights({ DISTRICT = 0 })
+  local parts = { District = "DISTRICT", Farm = "LAND", Feature = "FEATURE", Water = "HOUSING", Luxury = "AMENITY",
+    Strategic = "STRATEGIC", Appeal = "APPEAL" }
+  for _, solution in ipairs(result.Solutions) do
+    for _, site in ipairs(solution.Sites) do
+      T.eq(site.Parts.District or 0, 0, "no districts part")
+      local sum = 0
+      for part, key in pairs(parts) do
+        if w[key] > 0 then sum = sum + (site.Parts[part] or 0) end
+      end
+      T.near(sum - (site.Parts.Penalty or 0), site.Value, 1e-6, "the parts with a weight add up to the score")
+    end
+  end
 end)
 
 test("issue 133: the district count never removes a site; a cramped site is scored with what fits", function()

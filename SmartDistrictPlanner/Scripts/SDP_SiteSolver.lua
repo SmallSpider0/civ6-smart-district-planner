@@ -41,7 +41,7 @@ function SDP_SiteSolver.NewSession(request)
   self.D = request.D or 5
   self.Stats = { Tier = self.Params.Tier, Candidates = 0, Refined = 0, Nodes = 0, Combinations = 0, Truncated = false,
     Continues = 0, Calls = 0, Tries = 0 }
-  local ctx = SDP_Sites.Context(playerID, request)
+  local ctx = SDP_Sites.Context(playerID, request, self.K)
   self.Ctx = ctx
   local candidates, centers = SDP_Sites.Candidates(playerID, { K = self.K, D = self.D })
   self.Centers = centers
@@ -116,7 +116,7 @@ end
 -- self.Pool), with the corrections of the header. Returns the value and
 -- the per-site details.
 function Session:Value(chosen)
-  local ctx, w = self.Ctx, self.Ctx.Weights
+  local ctx = self.Ctx
   local pool = self.Pool
   -- Who works each plot two sites could reach: the one that loses most
   -- without it, then the nearer center, then the smaller plot index.
@@ -177,10 +177,11 @@ function Session:Value(chosen)
       end
     end
     local value = site.Parts.District + land + site.Parts.Water + site.Parts.Appeal - site.Parts.Penalty
-    details[#details + 1] = { Site = site, Land = land, Value = value, Resources = owned }
+    details[#details + 1] = { Site = site, Land = land, Value = value, Resources = owned, Taken = taken, Once = once }
     total = total + value
   end
-  local resources = w.AMENITY * SDP_Sites.LuxuryValue(ctx, luxury, {}) + w.STRATEGIC * SDP_Sites.StrategicValue(ctx, strategic, {})
+  local resources = ctx.Items.AMENITY * SDP_Sites.LuxuryValue(ctx, luxury, {})
+    + ctx.Items.STRATEGIC * SDP_Sites.StrategicValue(ctx, strategic, {})
   total = total + resources - conflict
   return total, details, resources, conflict
 end
@@ -354,12 +355,12 @@ end
 -- solution's (less the conflicts). Also the distance to the nearest other
 -- site of the solution (issue 9).
 local function SolutionSites(ctx, entry)
-  local w = ctx.Weights
   local sites = {}
   for n, d in ipairs(entry.Details) do
     local site = d.Site
     local parts = {}
     for key, value in pairs(site.Parts) do parts[key] = value end
+    if d.Taken ~= nil then parts.Farm, parts.Feature = SDP_Sites.LandParts(site.Land, d.Taken, d.Once) end
     sites[n] = { X = site.X, Y = site.Y, Index = site.Index, Value = d.Value, Land = d.Land, Parts = parts,
       Districts = site.Districts, Info = site.Info, Owned = d.Resources, OwnDistance = site.Info.OwnDistance }
   end
@@ -373,10 +374,12 @@ local function SolutionSites(ctx, entry)
       copies[r.Type] = (copies[r.Type] or 0) + r.Count
     end
     site.NewKinds = {}
-    for kind in pairs(luxury) do site.NewKinds[kind] = not ctx.Owned[kind] and not takenLuxury[kind] or nil end
+    for kind in pairs(luxury) do
+      site.NewKinds[kind] = not ctx.Owned[kind] and not (takenLuxury[kind] and takenLuxury[kind].New) or nil
+    end
     for kind in pairs(strategic) do site.NewKinds[kind] = not ctx.Owned[kind] and not takenStrategic[kind] or nil end
-    site.Parts.Luxury = w.AMENITY * SDP_Sites.LuxuryValue(ctx, luxury, takenLuxury)
-    site.Parts.Strategic = w.STRATEGIC * SDP_Sites.StrategicValue(ctx, strategic, takenStrategic)
+    site.Parts.Luxury = ctx.Items.AMENITY * SDP_Sites.LuxuryValue(ctx, luxury, takenLuxury)
+    site.Parts.Strategic = ctx.Items.STRATEGIC * SDP_Sites.StrategicValue(ctx, strategic, takenStrategic)
     site.Value = site.Value + site.Parts.Luxury + site.Parts.Strategic
     site.Luxury, site.Strategic = {}, {}
     for kind, count in pairs(copies) do
@@ -401,6 +404,9 @@ end
 --                OwnDistance (to the nearest city or city-center pin of the player),
 --                SiteDistance (to the nearest other site of the solution; nil for one site) }
 --              Value = the sum of the sites' values - Conflict.
+--   Weights, Items, Points  the weights the score used and each part's points
+--              per unit with and without its weight (SDP_Sites.ItemWeights),
+--              for the tooltips' per-turn values (issue 88)
 -- }
 function Session:Result()
   local ctx = self.Ctx
@@ -408,7 +414,8 @@ function Session:Result()
     self.Stats.Calls = ctx.Board.Calls
     ctx.Board:Clear()
   end
-  local result = { Ok = true, Stats = self.Stats, Session = self, Solutions = {} }
+  local result = { Ok = true, Stats = self.Stats, Session = self, Solutions = {}, Weights = ctx.Weights, Items = ctx.Items,
+    Points = ctx.Points }
   for _, entry in ipairs(self:Distinct(self.Params.Solutions or 3)) do
     result.Solutions[#result.Solutions + 1] = { Value = entry.Value, Resources = entry.Resources, Conflict = entry.Conflict,
       Sites = SolutionSites(ctx, entry) }

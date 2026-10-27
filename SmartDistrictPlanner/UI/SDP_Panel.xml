@@ -182,14 +182,19 @@
           <Label ID="SitesFoldAction" Anchor="R,C" Offset="10,0" Style="FontNormal14"/>
         </GridButton>
         <Stack ID="SitesSettingsStack" StackGrowth="Bottom" StackPadding="4">
-        <Container Size="480,28">
-          <Label Anchor="L,C" Style="BodyTextDark16" String="LOC_SDP_SITES_PRESET"/>
-          <PullDown ID="SitesPresetPull" Anchor="L,C" Offset="100,0" Style="PullDownBlue" Size="180,24"/>
+        <!-- As on the single-city tab: the title on the left, the preset on
+             the right, the weight grid below over the full width, so a
+             value such as 0.5 fits between its arrows (issue 88). -->
+        <Container Size="480,26">
+          <Label Anchor="L,C" Style="BodyTextDark14" String="LOC_SDP_WEIGHTS_TITLE" ToolTip="LOC_SDP_WEIGHTS_TOOLTIP"/>
+          <Stack Anchor="R,C" StackGrowth="Right" StackPadding="4">
+            <Label Anchor="L,C" Style="BodyTextDark14" String="LOC_SDP_PRESET_TITLE"/>
+            <PullDown ID="SitesPresetPull" Anchor="L,C" Style="PullDownBlue" Size="170,24"/>
+          </Stack>
         </Container>
         <Container Size="480,104">
-          <Label Anchor="L,C" Style="BodyTextDark14" WrapWidth="110" String="LOC_SDP_WEIGHTS_TITLE" ToolTip="LOC_SDP_WEIGHTS_TOOLTIP"/>
-          <Stack ID="SitesWeightStack" Anchor="R,T" StackGrowth="Right" StackPadding="0"/>
-          <Stack ID="SitesWeightStack2" Anchor="R,T" Offset="0,52" StackGrowth="Right" StackPadding="0"/>
+          <Stack ID="SitesWeightStack" Anchor="C,T" StackGrowth="Right" StackPadding="0"/>
+          <Stack ID="SitesWeightStack2" Anchor="C,T" Offset="0,52" StackGrowth="Right" StackPadding="0"/>
         </Container>
         </Stack>
         <!-- The districts each site is scored with: the single-city tab's

@@ -675,6 +675,20 @@ function CmpGame.New(spec)
     if type(p.techs) == "table" then for _, t in ipairs(p.techs) do techs[gi.Technologies[t].Index] = true end end
     local civics = p.civics == "all" and allCivics or {}
     if type(p.civics) == "table" then for _, c in ipairs(p.civics) do civics[gi.Civics[c].Index] = true end end
+    -- p.era (an EraType): every technology and civic up to that era, and
+    -- the player in that era (issue 88: not the whole tree).
+    local era = 3
+    if p.era ~= nil then
+      local last = gi.Eras[p.era].ChronologyIndex
+      era = gi.Eras[p.era].Index
+      techs, civics = {}, {}
+      for row in gi.Technologies() do
+        if gi.Eras[row.EraType].ChronologyIndex <= last then techs[row.Index] = true end
+      end
+      for row in gi.Civics() do
+        if gi.Eras[row.EraType].ChronologyIndex <= last then civics[row.Index] = true end
+      end
+    end
     local myCities = {}
     for _, c in ipairs(cityList) do
       if c.owner == pid then myCities[#myCities + 1] = c end
@@ -767,7 +781,7 @@ function CmpGame.New(spec)
           { __index = function(_, k) Missing("PlayerUnits", k) return function() return nil end end })
       end,
       GetProperty = function() return nil end,
-      GetEra = function() return 3 end,
+      GetEra = function() return era end,
       GetDiplomacy = function() return Stub end,
     }, PlayerClass)
   end
