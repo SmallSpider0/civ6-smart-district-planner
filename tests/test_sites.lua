@@ -161,6 +161,14 @@ test("the sites tab shows each site's resources and both distances", function()
         T.ok(tip:find(item, 1, true), kind .. " in the tooltip")
       end
     end
+    -- The parts in points (issue 88): every text found in the game's
+    -- language (no key left), the districts part on the row.
+    local row = sites.State().View.Results[s]
+    T.ok(not row.Detail:find("LOC_SDP_", 1, true), "row text found: " .. row.Detail)
+    T.ok(not tip:find("LOC_SDP_", 1, true), "tooltip text found")
+    local district = Locale.Lookup("LOC_SDP_SITES_ITEM_SHORT", Locale.Lookup("LOC_SDP_SITES_W_DISTRICT_SHORT"),
+      SDP_UI.Number(math.floor(site.Parts.District * 10 + 0.5) / 10))
+    T.ok(row.Detail:find(district, 1, true), "the districts part: " .. district)
     print(sites.State().View.Results[s].Name .. " | " .. sites.State().View.Results[s].Detail .. " | "
       .. tip:gsub("%[NEWLINE%]", " / "))
   end
