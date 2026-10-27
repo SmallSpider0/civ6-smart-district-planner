@@ -78,14 +78,14 @@
  "Steps": [
   {
    "Label": "load steps",
-   "Seconds": 0.083,
+   "Seconds": 0.073,
    "Data": {
     "Step": "Loaded"
    }
   },
   {
    "Label": "census",
-   "Seconds": 0.035,
+   "Seconds": 0.037,
    "Data": {
     "Cities": [
      {
@@ -155,7 +155,7 @@
   },
   {
    "Label": "preserves",
-   "Seconds": 0.03,
+   "Seconds": 0.034,
    "Data": {
     "Expected": 0,
     "List": [],
@@ -168,7 +168,7 @@
   },
   {
    "Label": "single 迈锡尼 FAST pool",
-   "Seconds": 0.113,
+   "Seconds": 0.12,
    "Data": {
     "Adjacency": 6,
     "Asked": 2,
@@ -198,7 +198,7 @@
   },
   {
    "Label": "single 迈锡尼 STANDARD pool",
-   "Seconds": 0.305,
+   "Seconds": 0.241,
    "Data": {
     "Adjacency": 6,
     "Asked": 2,
@@ -229,7 +229,7 @@
   },
   {
    "Label": "single 迈锡尼 must",
-   "Seconds": 0.178,
+   "Seconds": 0.13,
    "Data": {
     "Adjacency": 12,
     "Asked": 6,
@@ -255,7 +255,7 @@
   },
   {
    "Label": "single 斯巴达 FAST pool",
-   "Seconds": 0.078,
+   "Seconds": 0.059,
    "Data": {
     "Adjacency": 9,
     "Asked": 2,
@@ -285,7 +285,7 @@
   },
   {
    "Label": "single 斯巴达 STANDARD pool",
-   "Seconds": 0.142,
+   "Seconds": 0.121,
    "Data": {
     "Adjacency": 9,
     "Asked": 2,
@@ -316,7 +316,7 @@
   },
   {
    "Label": "single 斯巴达 must",
-   "Seconds": 0.187,
+   "Seconds": 0.158,
    "Data": {
     "Adjacency": 15,
     "Asked": 6,
@@ -342,7 +342,7 @@
   },
   {
    "Label": "single 法����斯 FAST pool",
-   "Seconds": 0.143,
+   "Seconds": 0.101,
    "Data": {
     "Adjacency": 5,
     "Asked": 2,
@@ -372,7 +372,7 @@
   },
   {
    "Label": "single 法����斯 STANDARD pool",
-   "Seconds": 0.26,
+   "Seconds": 0.247,
    "Data": {
     "Adjacency": 5,
     "Asked": 2,
@@ -403,7 +403,7 @@
   },
   {
    "Label": "single 法����斯 must",
-   "Seconds": 0.14,
+   "Seconds": 0.121,
    "Data": {
     "Adjacency": 14,
     "Asked": 6,
@@ -430,7 +430,7 @@
   },
   {
    "Label": "single 雅典 FAST pool",
-   "Seconds": 0.046,
+   "Seconds": 0.045,
    "Data": {
     "Adjacency": 4,
     "Asked": 2,
@@ -460,7 +460,7 @@
   },
   {
    "Label": "single 雅典 STANDARD pool",
-   "Seconds": 0.116,
+   "Seconds": 0.095,
    "Data": {
     "Adjacency": 4,
     "Asked": 2,
@@ -491,7 +491,7 @@
   },
   {
    "Label": "single 雅典 must",
-   "Seconds": 0.081,
+   "Seconds": 0.095,
    "Data": {
     "Adjacency": 7,
     "Asked": 6,
@@ -517,16 +517,16 @@
   },
   {
    "Label": "single 迈锡尼 appeal",
-   "Seconds": 0.025,
+   "Seconds": 0.027,
    "Data": {
     "Adjacency": 3,
-    "Appeal": 0.984375,
+    "Appeal": 1.158296333,
     "Asked": 2,
     "Calls": 202,
     "City": 131073,
     "EngineBad": 0,
     "Exhaustive": true,
-    "Gain": 2.984375,
+    "Gain": 3.158296333,
     "Housing": [
      {
       "Appeal": 6,
@@ -569,7 +569,7 @@
   },
   {
    "Label": "single 迈锡尼 harbor",
-   "Seconds": 0.034,
+   "Seconds": 0.037,
    "Data": {
     "Adjacency": 8,
     "Asked": 2,
@@ -598,16 +598,16 @@
   },
   {
    "Label": "single 斯巴达 appeal",
-   "Seconds": 0.021,
+   "Seconds": 0.025,
    "Data": {
     "Adjacency": 6,
-    "Appeal": 0.984375,
+    "Appeal": 1.275935533,
     "Asked": 2,
     "Calls": 171,
     "City": 262147,
     "EngineBad": 0,
     "Exhaustive": true,
-    "Gain": 1.484375,
+    "Gain": 1.775935533,
     "Housing": [
      {
       "Appeal": 4,
@@ -650,7 +650,7 @@
   },
   {
    "Label": "single 斯巴达 harbor",
-   "Seconds": 0.033,
+   "Seconds": 0.036,
    "Data": {
     "Adjacency": 9,
     "Asked": 2,
@@ -679,16 +679,16 @@
   },
   {
    "Label": "single 法����斯 appeal",
-   "Seconds": 0.037,
+   "Seconds": 0.038,
    "Data": {
     "Adjacency": 5,
-    "Appeal": 0.484375,
+    "Appeal": 0.9347587719,
     "Asked": 2,
     "Calls": 260,
     "City": 196610,
     "EngineBad": 0,
     "Exhaustive": true,
-    "Gain": 3.484375,
+    "Gain": 3.934758772,
     "Housing": [
      {
       "Appeal": 2,
@@ -731,7 +731,7 @@
   },
   {
    "Label": "single 法����斯 harbor",
-   "Seconds": 0.036,
+   "Seconds": 0.043,
    "Data": {
     "Adjacency": 7,
     "Asked": 2,
@@ -760,7 +760,7 @@
   },
   {
    "Label": "single 迈锡尼 fine",
-   "Seconds": 0.068,
+   "Seconds": 0.082,
    "Data": {
     "Adjacency": 6,
     "Asked": 2,
@@ -790,7 +790,7 @@
   },
   {
    "Label": "sites 3 within 5",
-   "Seconds": 0.5,
+   "Seconds": 0.503,
    "Data": {
     "Calls": 3815,
     "D": 5,
@@ -812,7 +812,7 @@
   },
   {
    "Label": "multi 4 cities standard",
-   "Seconds": 2.108,
+   "Seconds": 2.345,
    "Data": {
     "Adjacency": 45,
     "Calls": 3793,
@@ -843,12 +843,12 @@
   },
   {
    "Label": "settle after place multi",
-   "Seconds": 0.347,
+   "Seconds": 0.362,
    "Data": null
   },
   {
    "Label": "multi 8 cities standard",
-   "Seconds": 0.21,
+   "Seconds": 0.215,
    "Data": {
     "Adjacency": 27,
     "Calls": 1450,
@@ -871,7 +871,7 @@
   },
   {
    "Label": "multi 4 cities fine",
-   "Seconds": 0.327,
+   "Seconds": 0.344,
    "Data": {
     "Adjacency": 27,
     "Calls": 1450,
@@ -894,7 +894,7 @@
   },
   {
    "Label": "heavy pins",
-   "Seconds": 0.153,
+   "Seconds": 0.159,
    "Data": {
     "Placed": 45,
     "Step": "HeavyPins"
@@ -902,12 +902,12 @@
   },
   {
    "Label": "settle after heavy pins",
-   "Seconds": 3.037,
+   "Seconds": 3.183,
    "Data": null
   },
   {
    "Label": "single 迈锡尼 pool, crowded",
-   "Seconds": 0.04,
+   "Seconds": 0.051,
    "Data": {
     "Adjacency": 1,
     "Appeal": 0,
@@ -936,7 +936,7 @@
   },
   {
    "Label": "multi 4 cities, crowded",
-   "Seconds": 0.136,
+   "Seconds": 0.14,
    "Data": {
     "Adjacency": 12,
     "Appeal": 0,
@@ -960,7 +960,7 @@
   },
   {
    "Label": "panel",
-   "Seconds": 0.066,
+   "Seconds": 0.067,
    "Data": {
     "Ok": true,
     "Step": "Panel"
@@ -968,65 +968,12 @@
   },
   {
    "Label": "undo",
-   "Seconds": 0.126,
+   "Seconds": 0.132,
    "Data": {
     "Removed": 69,
     "Step": "UndoAll"
    }
   }
  ],
- "When": "2026-10-27 01:39",
- "AppealCheck": [
-  {
-   "City": 131073,
-   "Built": "DISTRICT_INDUSTRIAL_ZONE=false,DISTRICT_NEIGHBORHOOD=false",
-   "HousingPredicted": 6,
-   "HousingGame": 0.0,
-   "HousingDistricts": 0.0,
-   "HousingImprovements": 0.0,
-   "ImprovementsPredicted": -1,
-   "Districts": [],
-   "Skipped": "the game did not build the whole plan"
-  },
-  {
-   "City": 262147,
-   "Built": "DISTRICT_INDUSTRIAL_ZONE=true,DISTRICT_NEIGHBORHOOD=true",
-   "HousingPredicted": 6,
-   "HousingGame": 6.0,
-   "HousingDistricts": 6.0,
-   "HousingImprovements": 0.0,
-   "ImprovementsPredicted": 0,
-   "Districts": [
-    {
-     "Type": "DISTRICT_NEIGHBORHOOD",
-     "X": 10,
-     "Y": 33,
-     "AppealPredicted": 4,
-     "AppealGame": 4,
-     "Housing": 6
-    }
-   ],
-   "Ok": true
-  },
-  {
-   "City": 196610,
-   "Built": "DISTRICT_INDUSTRIAL_ZONE=true,DISTRICT_NEIGHBORHOOD=true",
-   "HousingPredicted": 5,
-   "HousingGame": 4.0,
-   "HousingDistricts": 5.0,
-   "HousingImprovements": -1.0,
-   "ImprovementsPredicted": -1,
-   "Districts": [
-    {
-     "Type": "DISTRICT_NEIGHBORHOOD",
-     "X": 18,
-     "Y": 38,
-     "AppealPredicted": 2,
-     "AppealGame": 2,
-     "Housing": 5
-    }
-   ],
-   "Ok": true
-  }
- ]
+ "When": "2026-10-27 07:51"
 }
