@@ -377,6 +377,26 @@ test("city sites tab: solve, select, place the site tacks", function()
       local item = site.NewKinds[kind] and ("LOC_SDP_SITES_NEW_KIND(" .. name .. "," .. count .. ")") or (name .. " " .. count)
       T.ok(tip:find(item, 1, true), kind .. " listed")
     end
+    -- The parts in points (issue 88): the row lists the six with a weight
+    -- (appeal is 0 by default), the tooltip each one's per-turn value and
+    -- what 10 points take.
+    local row = sites.State().View.Results[s]
+    local round = function(v) return SDP_UI.Number(math.floor(v * 10 + 0.5) / 10) end
+    T.ok(row.Detail:find("LOC_SDP_SITES_ITEM_SHORT(LOC_SDP_SITES_W_DISTRICT_SHORT," .. round(site.Parts.District) .. ")",
+      1, true), "districts on the row: " .. row.Detail)
+    T.ok(row.Detail:find("LOC_SDP_SITES_ITEM_SHORT(LOC_SDP_WEIGHT_LAND_SHORT," .. round(site.Parts.Farm) .. ")", 1, true),
+      "tiles on the row")
+    T.ok(row.Detail:find("LOC_SDP_WEIGHT_APPEAL_SHORT", 1, true) == nil, "no appeal with weight 0")
+    local ten = round(SDP_Sites.ITEM_POINTS / result.Points.HOUSING)
+    T.eq(ten, "3", "10 points of housing: 3 more than a dry site")
+    T.ok(tip:find("LOC_SDP_SITES_ITEM_HOUSING(" .. round(site.Parts.Water) .. ","
+      .. round(site.Parts.Water / result.Items.HOUSING) .. "," .. ten .. ")", 1, true), "housing line: " .. tip)
+    T.ok(tip:find("LOC_SDP_SITES_ITEM_FEATURE(", 1, true) ~= nil, "features line")
+    local sum = 0
+    for _, key in ipairs({ "District", "Farm", "Feature", "Water", "Luxury", "Strategic", "Appeal" }) do
+      sum = sum + (site.Parts[key] or 0)
+    end
+    T.near(sum - (site.Parts.Penalty or 0), site.Value, 1e-6, "the parts add up to the site's score")
   end
   local pins = #w:Pins()
   T.eq(sites.Place(), 2, "two site tacks")

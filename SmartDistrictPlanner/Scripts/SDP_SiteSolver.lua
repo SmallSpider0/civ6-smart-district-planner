@@ -404,6 +404,9 @@ end
 --                OwnDistance (to the nearest city or city-center pin of the player),
 --                SiteDistance (to the nearest other site of the solution; nil for one site) }
 --              Value = the sum of the sites' values - Conflict.
+--   Weights, Items, Points  the weights the score used and each part's points
+--              per unit with and without its weight (SDP_Sites.ItemWeights),
+--              for the tooltips' per-turn values (issue 88)
 -- }
 function Session:Result()
   local ctx = self.Ctx
@@ -411,7 +414,8 @@ function Session:Result()
     self.Stats.Calls = ctx.Board.Calls
     ctx.Board:Clear()
   end
-  local result = { Ok = true, Stats = self.Stats, Session = self, Solutions = {} }
+  local result = { Ok = true, Stats = self.Stats, Session = self, Solutions = {}, Weights = ctx.Weights, Items = ctx.Items,
+    Points = ctx.Points }
   for _, entry in ipairs(self:Distinct(self.Params.Solutions or 3)) do
     result.Solutions[#result.Solutions + 1] = { Value = entry.Value, Resources = entry.Resources, Conflict = entry.Conflict,
       Sites = SolutionSites(ctx, entry) }

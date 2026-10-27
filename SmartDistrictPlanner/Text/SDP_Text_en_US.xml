@@ -373,8 +373,68 @@
     <Replace Tag="LOC_SDP_SITES_MODEL_NOTE" Language="en_US">
       <Text>site scores are estimates; step 2 plans the districts exactly</Text>
     </Replace>
-    <Replace Tag="LOC_SDP_SITES_PARTS" Language="en_US">
-      <Text>districts {1_District}, tiles {2_Land}, water {3_Water}, luxuries {4_Luxury}, strategics {5_Strategic}</Text>
+    <Replace Tag="LOC_SDP_SITES_W_DISTRICT_SHORT" Language="en_US">
+      <Text>Distr.</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_W_FEATURE_SHORT" Language="en_US">
+      <Text>Feat.</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_W_AMENITY_SHORT" Language="en_US">
+      <Text>Lux.</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_W_DISTRICT" Language="en_US">
+      <Text>Districts: the adjacency bonuses of the planned districts placed at their best around the site, less the distance cost, weighed by the yield weights in the row above. An average of +4 a planned district is 10 points.</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_W_LAND" Language="en_US">
+      <Text>Tiles: what the best tiles the city works once it has the planned districts yield each turn with their best improvements (Food and Production 1, Science and Culture 5/6, Faith 1/2, Gold 1/4, times the yield weights in the row above). An average of about 4.3 a worked tile at the start of the game, up to 7.2 with every technology and civic, is 10 points; it follows your progress in technologies and civics.</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_W_FEATURE" Language="en_US">
+      <Text>Features: the one-time yields of removing Woods, Rainforest and Marsh and harvesting Bonus resources within 3 tiles (they grow with your technologies and civics), spread over 50 turns; tiles the city works that are better kept do not count. About 12 Woods tiles are 10 points, about 0.8 a Woods tile, at any point of the game.</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_W_HOUSING" Language="en_US">
+      <Text>Housing: the Housing a site has over a site without water (water, Granary, and the Lighthouse and Seaport when the plan has a Harbor). A new city counts as population 1: each Housing up to the larger of 3 and one more than the population the planned districts need counts 1 (the city still grows at full speed), each one after it half the one before. 3 more (a river or lake) is 10 points.</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_W_AMENITY" Language="en_US">
+      <Text>Luxuries: the Luxury resources within 3 tiles. The first copy of a kind you lack counts the cities that get its Amenities (up to 4); each further copy counts 1, up to the number of civilizations you could sell it to (met, without that resource). A new kind for 4 cities is 10 points.</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_W_STRATEGIC" Language="en_US">
+      <Text>Strategics: the Strategic resource tiles within 3 tiles. Each counts 1, times 2 when the technology that reveals it is in your era or the one before; the first tile of a kind you lack counts twice that, a tile of a kind you are short of (Gathering Storm: a stockpile under a quarter of the cap, or no income) 1.5 times. A new kind revealed near your era is 10 points.</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_W_APPEAL" Language="en_US">
+      <Text>Appeal: the average Appeal of the tiles districts can take, 1 point each (off by default).</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_ITEM_SHORT" Language="en_US">
+      <Text>{1_Name} {2_Points}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_ITEM_PENALTY" Language="en_US">
+      <Text>Missing −{1_Points}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_ITEM_PENALTY_LONG" Language="en_US">
+      <Text>Too few usable tiles for the planned districts: −{1_Points} points ({2_Each} a missing tile)</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_ITEM_DISTRICT" Language="en_US">
+      <Text>Districts {1_Points} points: adjacency (less the distance cost) worth {2_Value}; 10 points take {3_Ten}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_ITEM_LAND" Language="en_US">
+      <Text>Tiles {1_Points} points: the worked tiles yield {2_Value} a turn; 10 points take {3_Ten}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_ITEM_FEATURE" Language="en_US">
+      <Text>Features {1_Points} points: chopping and harvesting worth {2_Value} a turn; 10 points take {3_Ten}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_ITEM_HOUSING" Language="en_US">
+      <Text>Housing {1_Points} points: Housing over a site without water worth {2_Value}; 10 points take {3_Ten}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_ITEM_AMENITY" Language="en_US">
+      <Text>Luxuries {1_Points} points: Amenities of new kinds and copies you can sell, {2_Value}; 10 points take {3_Ten}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_ITEM_STRATEGIC" Language="en_US">
+      <Text>Strategics {1_Points} points: tiles by era and kind, {2_Value}; 10 points take {3_Ten}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_ITEM_APPEAL" Language="en_US">
+      <Text>Appeal {1_Points} points: average Appeal {2_Value} of the tiles districts can take</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_WEIGHTED" Language="en_US">
+      <Text>{1_Line} (weight {2_Weight})</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SITES_PLACE" Language="en_US">
       <Text>Place site tacks</Text>
@@ -388,9 +448,6 @@
     <Replace Tag="LOC_SDP_SITES_WATER_NONE" Language="en_US">
       <Text>No Water</Text>
     </Replace>
-    <Replace Tag="LOC_SDP_SITES_WEIGHT_HOUSING" Language="en_US">
-      <Text>Housing: points for the Housing a site has over a site without water (water, Granary, and the Lighthouse and Seaport when the plan has a Harbor). A new city counts as population 1: each Housing up to the larger of 3 and one more than the population the planned districts need counts 1 (the city still grows at full speed), each one after it half the one before.</Text>
-    </Replace>
     <Replace Tag="LOC_SDP_SITES_HOUSING" Language="en_US">
       <Text>Housing {1_Housing}</Text>
     </Replace>
@@ -401,10 +458,10 @@
       <Text>{1_Distance} tiles from the nearest other site of this plan</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SITES_LUXURY" Language="en_US">
-      <Text>Luxury resources (score {1_Score}): {2_List}</Text>
+      <Text>Luxury resources: {1_List}</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SITES_STRATEGIC" Language="en_US">
-      <Text>Strategic resources (score {1_Score}): {2_List}</Text>
+      <Text>Strategic resources: {1_List}</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SITES_NEW_KIND" Language="en_US">
       <Text>{1_Name} {2_Count} (new)</Text>

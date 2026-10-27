@@ -2,7 +2,7 @@
 -- (docs/multicity-design.md section 3, step 1). Included by SDP_Panel.lua
 -- into its context: uses its Controls and the SDP_UI helpers.
 --   Inputs    number of new cities K, relay distance D, a weight preset and
---             the eleven weights plus the distance cost, the districts each site
+--             the thirteen weights plus the distance cost, the districts each site
 --             is scored with: the single-city tab's grid (required, candidates,
 --             not wanted) and count, the tab's own (issue 90; SDP_Sites.DefaultState)
 --   Solve     over several frames (SDP_Task); up to three distinct site
@@ -20,26 +20,38 @@ local m_weightIM2 = InstanceManager:new("WeightColumn", "Root", Controls.SitesWe
 local m_solutionIM = InstanceManager:new("SolutionRow", "Root", Controls.SitesSolutionStack)
 local m_resultIM = InstanceManager:new("ResultRow", "Root", Controls.SitesResultStack)
 
--- The eleven site weights (design 3.3) and the distance cost, in two rows: the
--- yields with the game's font icons, the others with a short word (feedback
--- item 3, as on the single-city tab).
+-- The site weights (design 3.3, issue 88) and the distance cost, in two
+-- rows: the six yields with the game's font icons and the distance cost,
+-- then one weight per part of a site's score, with a short word (feedback
+-- item 3, as on the single-city tab). Seven columns a row, narrower than the
+-- default so they fit beside the row's title.
 local COLUMNS_A = {
   { Key = "YIELD_SCIENCE", Glyph = "[ICON_Science]" },
   { Key = "YIELD_CULTURE", Glyph = "[ICON_Culture]" },
   { Key = "YIELD_FAITH", Glyph = "[ICON_Faith]" },
   { Key = "YIELD_GOLD", Glyph = "[ICON_Gold]" },
   { Key = "YIELD_PRODUCTION", Glyph = "[ICON_Production]" },
+  { Key = "YIELD_FOOD", Glyph = "[ICON_Food]" },
   { Key = "DISTANCE", Glyph = "LOC_SDP_WEIGHT_DISTANCE_SHORT", ToolTip = "LOC_SDP_WEIGHT_DISTANCE", Step = 0.5,
     Default = SDP_Sites.DEFAULT_DISTANCE },
 }
-local COLUMNS_B = {
-  { Key = "YIELD_FOOD", Glyph = "[ICON_Food]" },
-  { Key = "HOUSING", Glyph = "LOC_SDP_WEIGHT_HOUSING_SHORT", ToolTip = "LOC_SDP_SITES_WEIGHT_HOUSING" },
-  { Key = "AMENITY", Glyph = "LOC_SDP_WEIGHT_AMENITY_SHORT", ToolTip = "LOC_SDP_WEIGHT_AMENITY" },
-  { Key = "STRATEGIC", Glyph = "LOC_SDP_WEIGHT_STRATEGIC_SHORT", ToolTip = "LOC_SDP_WEIGHT_STRATEGIC" },
-  { Key = "FEATURE", Glyph = "LOC_SDP_WEIGHT_FEATURE_SHORT", ToolTip = "LOC_SDP_WEIGHT_FEATURE" },
-  { Key = "APPEAL", Glyph = "LOC_SDP_WEIGHT_APPEAL_SHORT", ToolTip = "LOC_SDP_WEIGHT_APPEAL" },
+-- The parts of a site's score (issue 88): their weight, the part in
+-- site.Parts, the short word of the column and the result row, the
+-- tooltip line with its per-turn value.
+local ITEMS = {
+  { Key = "DISTRICT", Part = "District", Short = "LOC_SDP_SITES_W_DISTRICT_SHORT" },
+  { Key = "LAND", Part = "Farm", Short = "LOC_SDP_WEIGHT_LAND_SHORT" },
+  { Key = "FEATURE", Part = "Feature", Short = "LOC_SDP_SITES_W_FEATURE_SHORT" },
+  { Key = "HOUSING", Part = "Water", Short = "LOC_SDP_WEIGHT_HOUSING_SHORT" },
+  { Key = "AMENITY", Part = "Luxury", Short = "LOC_SDP_SITES_W_AMENITY_SHORT" },
+  { Key = "STRATEGIC", Part = "Strategic", Short = "LOC_SDP_WEIGHT_STRATEGIC_SHORT" },
+  { Key = "APPEAL", Part = "Appeal", Short = "LOC_SDP_WEIGHT_APPEAL_SHORT" },
 }
+local COLUMNS_B = {}
+for _, item in ipairs(ITEMS) do
+  COLUMNS_B[#COLUMNS_B + 1] = { Key = item.Key, Glyph = item.Short, ToolTip = "LOC_SDP_SITES_W_" .. item.Key }
+end
+local WEIGHT_WIDTH = 50
 
 -- Default distance 5 (issue 84, the maintainer's choice): sites land at the
 -- full distance (nothing in the score pulls them closer), and players space
@@ -316,8 +328,10 @@ end
 function P.Refresh()
   P.Restore()
   ShowSteppers()
-  local a, cellsA = SDP_UI.BuildWeights(m_weightIM, Controls.SitesWeightStack, COLUMNS_A, m_weights, nil, P.SetWeight)
-  local b, cellsB = SDP_UI.BuildWeights(m_weightIM2, Controls.SitesWeightStack2, COLUMNS_B, m_weights, nil, P.SetWeight)
+  local a, cellsA = SDP_UI.BuildWeights(m_weightIM, Controls.SitesWeightStack, COLUMNS_A, m_weights, nil, P.SetWeight,
+    WEIGHT_WIDTH)
+  local b, cellsB = SDP_UI.BuildWeights(m_weightIM2, Controls.SitesWeightStack2, COLUMNS_B, m_weights, nil, P.SetWeight,
+    WEIGHT_WIDTH)
   m_views = {}
   for key, view in pairs(a) do m_views[key] = view end
   for key, view in pairs(b) do m_views[key] = view end
@@ -334,10 +348,41 @@ end
 -- ===========================================================================
 -- Results
 -- ===========================================================================
-local function SiteDetail(site)
-  local parts = site.Parts
-  return Locale.Lookup("LOC_SDP_SITES_PARTS", SDP_UI.Number(parts.District or 0), SDP_UI.Number(site.Land or 0),
-    SDP_UI.Number(parts.Water), SDP_UI.Number(parts.Luxury), SDP_UI.Number(parts.Strategic))
+local function Round(value) return SDP_UI.Number(math.floor(value * 10 + 0.5) / 10) end
+
+-- The parts of a site's score in points (issue 88), those with a weight:
+-- "Distr. 8.3  Tiles 10.1 ...", and what too few usable tiles cost.
+local function SiteDetail(site, result)
+  local weights = result.Weights or {}
+  local items = {}
+  for _, item in ipairs(ITEMS) do
+    if (weights[item.Key] or 0) > 0 then
+      items[#items + 1] = Locale.Lookup("LOC_SDP_SITES_ITEM_SHORT", Locale.Lookup(item.Short), Round(site.Parts[item.Part] or 0))
+    end
+  end
+  if (site.Parts.Penalty or 0) > 0 then items[#items + 1] = Locale.Lookup("LOC_SDP_SITES_ITEM_PENALTY", Round(site.Parts.Penalty)) end
+  return table.concat(items, "  ")
+end
+
+-- A line a part for the tooltip (issue 88): its points, the per-turn value
+-- behind them and the value 10 points take; its weight when not 1.
+local function ItemLines(site, result)
+  local lines = {}
+  local weights, items, points = result.Weights or {}, result.Items or {}, result.Points or {}
+  for _, item in ipairs(ITEMS) do
+    local w, scale, unit = weights[item.Key] or 0, items[item.Key] or 0, points[item.Key] or 1
+    if w > 0 and scale > 0 then
+      local part = site.Parts[item.Part] or 0
+      local line = Locale.Lookup("LOC_SDP_SITES_ITEM_" .. item.Key, Round(part), Round(part / scale),
+        Round(SDP_Sites.ITEM_POINTS / unit))
+      if w ~= 1 then line = Locale.Lookup("LOC_SDP_SITES_WEIGHTED", line, SDP_UI.Number(w)) end
+      lines[#lines + 1] = line
+    end
+  end
+  if (site.Parts.Penalty or 0) > 0 then
+    lines[#lines + 1] = Locale.Lookup("LOC_SDP_SITES_ITEM_PENALTY_LONG", Round(site.Parts.Penalty), SDP_Sites.MISSING_PLOT)
+  end
+  return lines
 end
 
 -- "Silk 2 (new), Spices 1": resource copies by name; "new" for a kind the
@@ -355,8 +400,8 @@ end
 
 -- Risk notes, the resources it works and the planned districts, for a
 -- site's tooltip (design 3.3; issues 8, 9).
-local function SiteToolTip(site)
-  local lines = {}
+local function SiteToolTip(site, result)
+  local lines = ItemLines(site, result)
   local info = site.Info
   lines[#lines + 1] = Locale.Lookup("LOC_SDP_SITES_WATER_" .. info.WaterKind)
   if info.Housing ~= nil then lines[#lines + 1] = Locale.Lookup("LOC_SDP_SITES_HOUSING", SDP_UI.Number(info.Housing)) end
@@ -364,12 +409,10 @@ local function SiteToolTip(site)
   if own ~= nil and own < math.huge then lines[#lines + 1] = Locale.Lookup("LOC_SDP_SITES_OWN_DISTANCE", own) end
   if site.SiteDistance ~= nil then lines[#lines + 1] = Locale.Lookup("LOC_SDP_SITES_SITE_DISTANCE", site.SiteDistance) end
   if next(site.Luxury or {}) ~= nil then
-    lines[#lines + 1] = Locale.Lookup("LOC_SDP_SITES_LUXURY", SDP_UI.Number(math.floor(site.Parts.Luxury * 10 + 0.5) / 10),
-      ResourceList(site.Luxury, site.NewKinds))
+    lines[#lines + 1] = Locale.Lookup("LOC_SDP_SITES_LUXURY", ResourceList(site.Luxury, site.NewKinds))
   end
   if next(site.Strategic or {}) ~= nil then
-    lines[#lines + 1] = Locale.Lookup("LOC_SDP_SITES_STRATEGIC",
-      SDP_UI.Number(math.floor(site.Parts.Strategic * 10 + 0.5) / 10), ResourceList(site.Strategic, site.NewKinds))
+    lines[#lines + 1] = Locale.Lookup("LOC_SDP_SITES_STRATEGIC", ResourceList(site.Strategic, site.NewKinds))
   end
   if info.Unrevealed > 0 then lines[#lines + 1] = Locale.Lookup("LOC_SDP_SITES_UNREVEALED", info.Unrevealed) end
   if info.Loyalty ~= nil and info.Loyalty ~= "LOW" then lines[#lines + 1] = Locale.Lookup("LOC_SDP_SITES_LOYALTY_" .. info.Loyalty) end
@@ -496,7 +539,7 @@ function P.Render()
         .. SDP_UI.Number(math.floor(site.Value * 10 + 0.5) / 10)
       local inst = m_resultIM:GetInstance()
       m_view.Results[#m_view.Results + 1] = SDP_UI.ResultRow(inst, "ICON_DISTRICT_CITY_CENTER", name,
-        SiteDetail(site), SiteToolTip(site), site.X, site.Y)
+        SiteDetail(site, result), SiteToolTip(site, result), site.X, site.Y)
       -- A click on a site also sets where "next site" goes on from.
       inst.Root:RegisterCallback(Mouse.eLClick, function() P.LookAtSite(s) end)
     end
