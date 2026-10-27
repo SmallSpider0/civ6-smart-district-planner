@@ -113,6 +113,8 @@ def cmd_prepare(args):
         return 2
     if not game.wait_for("main menu", lambda: game.has_state("MainMenu"), 300):
         return 2
+    if not game.check_mod_enabled():  # the save records the enabled mods
+        return 3
     exec_lua("MainMenu", game.MUTE + "; " + SETUP % sc + "Automation.SetAutoStartEnabled(true); OnPlayCiv6()")
     if not game.wait_for("in game", lambda: game.exec_lua("InGame", "print(1)").get("ok"), 600, 5):
         return 2
@@ -157,6 +159,8 @@ def cmd_load(args):
             return 2
     if not game.wait_for("main menu", lambda: game.has_state("MainMenu"), 300):
         return 2
+    if not game.check_mod_enabled():
+        return 3
     # Auto start: the load screen presses its own continue button
     # (LoadScreen.lua OnLoadGameViewStateDone), as for a new game.
     exec_lua("MainMenu", game.MUTE + """

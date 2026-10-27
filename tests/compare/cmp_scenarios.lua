@@ -290,6 +290,28 @@ for n, entry in ipairs(SITES) do
   })
 end
 
+-- The same kind of situation on more maps and at three points of the game
+-- (issue 88): technologies and civics up to the classical, the
+-- renaissance or the last era, four seeds per civ and biome, only to
+-- measure what each part of a site's score is worth
+-- (tests/compare/probe88.lua); no planner runs. "ZSnn-civ-biome-era".
+local zseed = 47000
+local ZERAS = { { "ERA_CLASSICAL", "classical" }, { "ERA_RENAISSANCE", "renaissance" }, { "ERA_FUTURE", "all" } }
+for n = 1, 4 * #SITES do
+  local entry = SITES[(n - 1) % #SITES + 1]
+  local civKey, biome = entry[1], entry[2]
+  zseed = zseed + 29
+  local civ = CIVS[civKey]
+  local era = ZERAS[((n - 1) + math.floor((n - 1) / #SITES)) % #ZERAS + 1] -- each civ and biome at every era
+  Add({
+    id = string.format("ZS%02d-%s-%s-%s", n, civKey, biome, era[2]), kind = "sites", era = era[1],
+    title = civ[3] .. "; site score calibration", seed = zseed, biome = biome, civKey = civKey, civ = civ[1],
+    leader = civ[2], stage = "mid", cities = 1,
+    districts = { "DISTRICT_CAMPUS", "DISTRICT_HOLY_SITE", "DISTRICT_COMMERCIAL_HUB" }, built = { {} }, population = 10,
+    sites = { count = 2, distance = 5 }, set = "ZS", runs = {},
+  })
+end
+
 -- Coverage (design 19.5): late game, three or four cities, each with its own
 -- list. Only one or two of them want an industrial zone or an entertainment
 -- complex, so where those go decides how many cities they reach (Factory,

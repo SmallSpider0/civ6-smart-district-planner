@@ -8,7 +8,15 @@
 --               within K * D of one of the player's cities.
 --   Coarse      every candidate, no DMT: worked plots, fresh water, luxury
 --               and strategic resources, one-time yields, appeal, a penalty
---               when too few plots can take districts.
+--               per planned district without a plot (never a reason to
+--               drop a site: the district count only changes scores).
+-- Each part is first worked out per turn (issue 88, decided 2026-10-26):
+-- yields weigh SDP_Land.PLOT_WEIGHTS (adjacency: 1 a yield) times the tab's
+-- yield weights. Then it is turned into points by a fixed rule (decided
+-- 2026-10-27, so that every part weighs about the same and a site always
+-- gets the same score): ITEM_POINTS for what a good site has in that part
+-- (REFERENCE, measured on many generated maps), times the part's own weight
+-- (DISTRICT, LAND, FEATURE, HOUSING, AMENITY, STRATEGIC, APPEAL).
 --   Fine        the best M candidates: the planned districts placed by the
 --               single-city search (SDP_Search) around a hypothetical city
 --               center; the district gain and the plots they take enter the
@@ -19,21 +27,74 @@
 
 SDP_Sites = {}
 
-SDP_Sites.DUPLICATE_VALUE = 1  -- amenities a luxury copy is worth when it is not a new kind (trade)
-SDP_Sites.NEW_STRATEGIC = 2    -- bonus per strategic resource kind the player does not have yet
-SDP_Sites.MISSING_PLOT = 2     -- penalty per planned district without a usable plot
+SDP_Sites.DUPLICATE_VALUE = 1  -- a luxury copy that is not a new kind: traded, while a met civilization lacks it (issue 86)
+-- Strategic resources (issue 86, decided 2026-10-26): each plot is worth
+-- era x kind. Era: ERA_RECENT when the resource is revealed in the player's
+-- era or the one before, else 1. Kind: KIND_NEW for the first plot of a kind
+-- the player does not have, KIND_SHORT for a kind it has but runs short of
+-- (Gathering Storm: stockpile under SHORT_SHARE of the cap or no income),
+-- else 1.
+SDP_Sites.ERA_RECENT = 2
+SDP_Sites.KIND_NEW = 2
+SDP_Sites.KIND_SHORT = 1.5
+SDP_Sites.SHORT_SHARE = 0.25
+SDP_Sites.MISSING_PLOT = 5     -- penalty (points) per planned district without a usable plot
+-- One-time yields of clearing and harvesting are spread over this many turns
+-- (issue 88, decided 2026-10-26: 50 at standard speed, other speeds in
+-- proportion). The game scales those yields by the speed in the same
+-- proportion, so the two cancel and 50 holds at every speed.
+SDP_Sites.HARVEST_TURNS = 50
 SDP_Sites.LOYALTY_RANGE = 9    -- cities this close press on a city's loyalty (R&F, GS)
 
--- The weights a site score uses, with their defaults (design 3.3).
+-- Points of a part (issue 88): ITEM_POINTS x (its per-turn value / what a
+-- good site has). What a good site has, about the 90th percentile of the
+-- refined sites of 48 generated maps at three points of the game
+-- (docs/notes/issue-88-sites-score.md):
+--   District   adjacency per planned district
+--   Farm       yield per worked plot, from Farm at the start of the game
+--              to FarmLate with every technology and civic (improvements
+--              yield more), in proportion to the player's progress
+--   Feature    one-time yields per turn per unit of their growth
+--              (SDP_Land.Growth): 0.4 a woods plot (20 production over 50
+--              turns), so a woods plot is worth 0.8 points at any time
+--   Housing    housing over a dry site's (fresh water: 3)
+--   Luxury     one new kind for four cities
+--   Strategic  the first plot of a new kind revealed in the player's era
+SDP_Sites.ITEM_POINTS = 10
+SDP_Sites.REFERENCE = { District = 4, Farm = 4.3, FarmLate = 7.2, Feature = 5, Housing = 3, Luxury = 4, Strategic = 4 }
+
+-- [weight key] = the part's weight times its points per unit (above), for
+-- the request's plan and the player's progress. request.Raw: per-turn
+-- values, no points (measurements).
+function SDP_Sites.ItemWeights(ctx, request, districts)
+  local w, ref = ctx.Weights, SDP_Sites.REFERENCE
+  local out = { DISTRICT = w.DISTRICT, LAND = w.LAND, FEATURE = w.FEATURE, HOUSING = w.HOUSING, AMENITY = w.AMENITY,
+    STRATEGIC = w.STRATEGIC, APPEAL = w.APPEAL }
+  ctx.Points = { DISTRICT = 1, LAND = 1, FEATURE = 1, HOUSING = 1, AMENITY = 1, STRATEGIC = 1, APPEAL = 1 }
+  if not request.Raw then
+    local n, growth = SDP_Sites.ITEM_POINTS, SDP_Land.Growth(ctx.PlayerID)
+    local progress = (growth - 1) / SDP_Land.ONE_TIME_GROWTH
+    local farm = ref.Farm + (ref.FarmLate - ref.Farm) * progress
+    ctx.Points = { DISTRICT = n / (math.max(1, districts) * ref.District), LAND = n / (math.max(1, ctx.Population) * farm),
+      FEATURE = n / (growth * ref.Feature), HOUSING = n / ref.Housing, AMENITY = n / ref.Luxury,
+      STRATEGIC = n / ref.Strategic, APPEAL = 1 }
+  end
+  for key, value in pairs(ctx.Points) do out[key] = out[key] * value end
+  return out
+end
+
+-- The weights a site score uses, with their defaults (design 3.3): the six
+-- yields, then one per part (issue 88): districts, land (the worked plots),
+-- features (one-time yields), housing, luxuries (AMENITY), strategics, appeal.
 SDP_Sites.WEIGHT_KEYS = { "YIELD_SCIENCE", "YIELD_CULTURE", "YIELD_FAITH", "YIELD_GOLD", "YIELD_PRODUCTION",
-  "YIELD_FOOD", "HOUSING", "AMENITY", "STRATEGIC", "FEATURE", "APPEAL" }
+  "YIELD_FOOD", "DISTRICT", "LAND", "FEATURE", "HOUSING", "AMENITY", "STRATEGIC", "APPEAL" }
 SDP_Sites.PRESETS = {
   BALANCED = { YIELD_SCIENCE = 1, YIELD_CULTURE = 1, YIELD_FAITH = 1, YIELD_GOLD = 1, YIELD_PRODUCTION = 1,
-    YIELD_FOOD = 1, HOUSING = 1, AMENITY = 1, STRATEGIC = 1, FEATURE = 1, APPEAL = 0 },
+    YIELD_FOOD = 1, DISTRICT = 1, LAND = 1, FEATURE = 1, HOUSING = 1, AMENITY = 1, STRATEGIC = 1, APPEAL = 0 },
   GROWTH = { YIELD_SCIENCE = 1, YIELD_CULTURE = 1, YIELD_FAITH = 1, YIELD_GOLD = 1, YIELD_PRODUCTION = 1,
-    YIELD_FOOD = 2, HOUSING = 2, AMENITY = 1, STRATEGIC = 1, FEATURE = 1, APPEAL = 0 },
-  DISTRICTS = { YIELD_SCIENCE = 2, YIELD_CULTURE = 2, YIELD_FAITH = 2, YIELD_GOLD = 2, YIELD_PRODUCTION = 2,
-    YIELD_FOOD = 1, HOUSING = 1, AMENITY = 1, STRATEGIC = 0, FEATURE = 1, APPEAL = 0 },
+    YIELD_FOOD = 2, DISTRICT = 1, LAND = 1, FEATURE = 1, HOUSING = 2, AMENITY = 1, STRATEGIC = 1, APPEAL = 0 },
+  DISTRICTS = { YIELD_SCIENCE = 1, YIELD_CULTURE = 1, YIELD_FAITH = 1, YIELD_GOLD = 1, YIELD_PRODUCTION = 1,
+    YIELD_FOOD = 1, DISTRICT = 2, LAND = 1, FEATURE = 1, HOUSING = 1, AMENITY = 1, STRATEGIC = 0, APPEAL = 0 },
 }
 SDP_Sites.PRESET_ORDER = { "BALANCED", "GROWTH", "DISTRICTS" }
 -- The distance weight's default for placing districts around a site (issue
@@ -80,13 +141,17 @@ end
 -- 2026-10-25 for this tab): the fixed numbers of the district planner's
 -- land part (SDP_Land.PLOT_WEIGHTS) times the tab's own weight of that
 -- yield, which only leans on it (all 1: the fixed numbers; Growth first:
--- food twice). FEATURE weighs the one-time yields as before.
-function SDP_Sites.PlotWeights(w)
-  local out = { FEATURE = w.FEATURE }
+-- food twice). Per-turn plot yields also times the land weight, one-time
+-- yields (second table) times FEATURE instead (issue 88).
+function SDP_Sites.PlotWeights(w, items)
+  items = items or w
+  local tile, once = { FEATURE = items.FEATURE }, { FEATURE = items.FEATURE }
+  local land = items.LAND or 1
   for _, yieldType in ipairs(SDP_Land.TILE_YIELDS) do
-    out[yieldType] = SDP_Land.PLOT_WEIGHTS[yieldType] * (w[yieldType] or 1)
+    once[yieldType] = SDP_Land.PLOT_WEIGHTS[yieldType] * (w[yieldType] or 1)
+    tile[yieldType] = once[yieldType] * land
   end
-  return out
+  return tile, once
 end
 
 -- Closest distance at which two cities may stand (game data, not DMT's 3).
@@ -171,10 +236,9 @@ end
 -- Scores
 -- ===========================================================================
 
--- What is shared by every site of one request.
-function SDP_Sites.Context(playerID, request)
+-- What is shared by every site of one request; k: the sites it plans.
+function SDP_Sites.Context(playerID, request, k)
   local ctx = { PlayerID = playerID, Weights = SDP_Sites.Weights(request.Weights) }
-  ctx.Land = SDP_Land.Context(playerID, SDP_Sites.PlotWeights(ctx.Weights), true)
   local plannable, byType = SDP_Rules.PlannableDistricts(playerID), {}
   for _, d in ipairs(plannable) do byType[d.Type] = d end
   -- The plan every site is scored with. A district with an empire limit
@@ -223,20 +287,21 @@ function SDP_Sites.Context(playerID, request)
     plan, pick, specialty = rest, request.PlanCount, request.PlanCount
   end
   ctx.Plan, ctx.Pool, ctx.Pick, ctx.Population = plan, pool, pick, SDP_Land.RequiredPopulation(specialty)
-  ctx.Distance = request.Distance
+  ctx.Items = SDP_Sites.ItemWeights(ctx, request, #plan + pick)
+  local tileWeights, onceWeights = SDP_Sites.PlotWeights(ctx.Weights, ctx.Items)
+  ctx.Land = SDP_Land.Context(playerID, tileWeights, true, { OnceWeights = onceWeights, Turns = SDP_Sites.HARVEST_TURNS })
+  -- The distance cost is in adjacency: in points and weighted like it, so a
+  -- districts weight of 0 leaves none of it in the districts part.
+  ctx.Distance = request.Distance and request.Distance * ctx.Items.DISTRICT
   -- Resources the player has (amounts) and can see.
   local resources = Players[playerID]:GetResources()
-  ctx.Owned, ctx.Visible = {}, {}
+  ctx.Owned, ctx.Visible, ctx.Amount = {}, {}, {}
   for row in GameInfo.Resources() do
-    ctx.Owned[row.ResourceType] = resources:GetResourceAmount(row.Index) > 0
+    ctx.Amount[row.ResourceType] = resources:GetResourceAmount(row.Index)
+    ctx.Owned[row.ResourceType] = ctx.Amount[row.ResourceType] > 0
     ctx.Visible[row.ResourceType] = resources:IsResourceVisible(row.Hash)
   end
-  -- Strategic amount per plot: Gathering Storm's per-turn extraction rate,
-  -- else the resource count on the plot.
-  ctx.Extraction = {}
-  if GameInfo.Resource_Consumption ~= nil then
-    for row in GameInfo.Resource_Consumption() do ctx.Extraction[row.ResourceType] = row.ImprovedExtractionRate end
-  end
+  SDP_Sites.ResourceContext(ctx, playerID, request, k)
   ctx.Loyalty = SDP_Rules.Ruleset() ~= "RULESET_STANDARD"
   ctx.UnknownStrategic = false
   for row in GameInfo.Resources() do
@@ -255,6 +320,66 @@ function SDP_Sites.Context(playerID, request)
     if row.Coast then ctx.CoastDistricts[row.DistrictType] = true end
   end
   return ctx
+end
+
+-- What the resource parts need (issue 86):
+--   Cities      the player's cities and city-center pins plus the k new ones
+--               (the solver's count; else request.K):
+--               a new luxury gives an amenity to at most this many
+--   Buyers      [luxury type] = met major civilizations (not city-states,
+--               which do not trade) that do not have it: copies beyond the
+--               first are worth DUPLICATE_VALUE up to this many
+--   EraFactor   [strategic type] = ERA_RECENT or 1
+--   Short       [strategic type] = true: had but short (Gathering Storm)
+function SDP_Sites.ResourceContext(ctx, playerID, request, k)
+  local player = Players[playerID]
+  ctx.Cities = player:GetCities():GetCount() + #SDP_Multi.Sites(playerID) + (k or request.K or 1)
+  ctx.Buyers = SDP_Sites.Buyers(playerID)
+  local era = player.GetEra ~= nil and player:GetEra() or 0
+  local resources = player:GetResources()
+  local stockpiles = SDP_Rules.Ruleset() == "RULESET_EXPANSION_2" and resources.GetResourceStockpileCap ~= nil
+  ctx.EraFactor, ctx.Short = {}, {}
+  for row in GameInfo.Resources() do
+    if row.ResourceClassType == "RESOURCECLASS_STRATEGIC" then
+      -- Revealed by its technology's era; without one, from the start.
+      local tech = row.PrereqTech and GameInfo.Technologies[row.PrereqTech] or nil
+      local techEra = tech and GameInfo.Eras[tech.EraType] or nil
+      local revealed = techEra ~= nil and techEra.Index or 0
+      ctx.EraFactor[row.ResourceType] = revealed >= era - 1 and SDP_Sites.ERA_RECENT or 1
+      if stockpiles and ctx.Owned[row.ResourceType] then
+        local cap = resources:GetResourceStockpileCap(row.Index) or 0
+        local income = resources.GetResourceAccumulationPerTurn ~= nil and resources:GetResourceAccumulationPerTurn(row.Index) or 1
+        ctx.Short[row.ResourceType] = ctx.Amount[row.ResourceType] < SDP_Sites.SHORT_SHARE * cap or income <= 0
+      end
+    end
+  end
+end
+
+-- [luxury type] = met major civilizations that lack it, read like the
+-- game's World Resources screen (GlobalResourcePopup: what each can trade).
+-- Empty when the deal manager is not there (nobody to sell to).
+function SDP_Sites.Buyers(playerID)
+  local out = {}
+  local diplomacy = Players[playerID].GetDiplomacy ~= nil and Players[playerID]:GetDiplomacy() or nil
+  if diplomacy == nil or DealManager == nil or DealItemTypes == nil or PlayerManager == nil then return out end
+  local luxuries = {}
+  for row in GameInfo.Resources() do
+    if row.ResourceClassType == "RESOURCECLASS_LUXURY" then luxuries[#luxuries + 1] = row.ResourceType end
+  end
+  for _, other in ipairs(PlayerManager.GetAliveMajorIDs()) do
+    if other ~= playerID and diplomacy:HasMet(other) then
+      local has = {}
+      local deal = DealManager.GetWorkingDeal(DealDirection.OUTGOING, playerID, other)
+      for _, entry in ipairs(DealManager.GetPossibleDealItems(other, other, DealItemTypes.RESOURCES, deal) or {}) do
+        local row = GameInfo.Resources[entry.ForType]
+        if row ~= nil then has[row.ResourceType] = true end
+      end
+      for _, kind in ipairs(luxuries) do
+        if not has[kind] then out[kind] = (out[kind] or 0) + 1 end
+      end
+    end
+  end
+  return out
 end
 
 -- Fresh water, coast or neither at a site (housing, design 3.3).
@@ -276,13 +401,15 @@ function SDP_Sites.WaterPart(ctx, site, districts)
   end
   site.Info.Housing = housing
   local dry = ctx.Housing.None + ctx.Housing.Center
-  return ctx.Weights.HOUSING * (SDP_Land.HousingValue(housing, ctx.Population, 1) - SDP_Land.HousingValue(dry, ctx.Population, 1))
+  return ctx.Items.HOUSING * (SDP_Land.HousingValue(housing, ctx.Population, 1) - SDP_Land.HousingValue(dry, ctx.Population, 1))
 end
 
 -- The coarse score of a site (no DMT). Returns a site table:
 --   X, Y, Index, Scan, Land (SDP_Land model of its workable plots)
 --   Parts = { Farm, Water, Luxury, Strategic, Feature, Appeal, Penalty } (weighted)
---   Coarse  sum of the parts; Valid false when too few plots take districts
+--   Coarse  sum of the parts. A site with fewer plots for districts than
+--     planned is kept (issue 133): Penalty lowers it per missing plot and
+--     the fine score places the districts that fit.
 --   Luxury = { [type] = copies }, Strategic = { [type] = amount }
 --   Resources = { { Index, Type, Luxury (bool), Count (copies), Amount } }: the
 --     visible luxury and strategic resources on its workable plots
@@ -299,8 +426,8 @@ function SDP_Sites.Coarse(ctx, candidate, centers)
   local plots, featureCount, disaster = {}, {}, false
   for _, index in ipairs(SDP_Land.Workable(scan)) do
     local plot = Map.GetPlotByIndex(index)
-    local tile, once = SDP_Land.PlotValues(plot, ctx.Land)
-    plots[#plots + 1] = { Index = index, Tile = tile, Once = once }
+    local tile, once, bare, forgone = SDP_Land.PlotValues(plot, ctx.Land)
+    plots[#plots + 1] = { Index = index, Tile = tile, Once = once, Forgone = forgone }
     local feature = plot:GetFeatureType()
     if feature ~= -1 then
       local row = GameInfo.Features[feature]
@@ -318,24 +445,22 @@ function SDP_Sites.Coarse(ctx, candidate, centers)
           site.Resources[#site.Resources + 1] = { Index = index, Type = row.ResourceType, Luxury = true, Count = count,
             Amount = count }
         elseif row.ResourceClassType == "RESOURCECLASS_STRATEGIC" then
-          local amount = ctx.Extraction[row.ResourceType] or count
-          site.Strategic[row.ResourceType] = (site.Strategic[row.ResourceType] or 0) + amount
+          -- Plots, whatever each yields (issue 86).
+          site.Strategic[row.ResourceType] = (site.Strategic[row.ResourceType] or 0) + 1
           site.Resources[#site.Resources + 1] = { Index = index, Type = row.ResourceType, Luxury = false, Count = count,
-            Amount = amount }
+            Amount = 1 }
         end
       end
     end
   end
   site.Land = SDP_Land.Model(plots, ctx.Population)
-  local once = site.Land.OnceTotal
-  site.Parts.Farm = site.Land.Base
-  site.Parts.Feature = once
+  site.Parts.Farm, site.Parts.Feature = SDP_Sites.LandParts(site.Land, {}, site.Land.OnceTotal)
 
   site.Info.WaterKind = Water(Map.GetPlot(x, y))
   site.Parts.Water = SDP_Sites.WaterPart(ctx, site, ctx.Plan)
 
-  site.Parts.Luxury = w.AMENITY * SDP_Sites.LuxuryValue(ctx, site.Luxury, {})
-  site.Parts.Strategic = w.STRATEGIC * SDP_Sites.StrategicValue(ctx, site.Strategic, {})
+  site.Parts.Luxury = ctx.Items.AMENITY * SDP_Sites.LuxuryValue(ctx, site.Luxury, {})
+  site.Parts.Strategic = ctx.Items.STRATEGIC * SDP_Sites.StrategicValue(ctx, site.Strategic, {})
 
   -- Appeal of the plots districts could take.
   local appeal, usable = 0, 0
@@ -349,7 +474,6 @@ function SDP_Sites.Coarse(ctx, candidate, centers)
   site.Parts.Appeal = usable > 0 and w.APPEAL * appeal / usable or 0
   local planned = #ctx.Plan + ctx.Pick
   site.Parts.Penalty = math.max(0, planned - usable) * SDP_Sites.MISSING_PLOT
-  site.Valid = usable * 2 >= planned
   site.Info.Usable = usable
   site.Info.Unrevealed = candidate.Unrevealed
   site.Info.Disaster = disaster
@@ -362,10 +486,25 @@ function SDP_Sites.Coarse(ctx, candidate, centers)
   return site
 end
 
--- Amenity value of luxury copies { [type] = copies }: a kind the player does
--- not have and `taken` (kinds already counted elsewhere) does not hold is
--- new: its first copy is worth its Happiness, every other copy
--- DUPLICATE_VALUE. Marks the new kinds in `taken`.
+-- The land of a site split into its two parts (issue 88), with the plots
+-- `taken` (indices) built on or worked by another site and `once` the
+-- one-time values of the plots it keeps:
+--   Farm     what its best P plots yield each turn, each kept or cleared,
+--            whichever is worth more
+--   Feature  the one-time yields of the plots it clears (every plot it does
+--            not work, and the worked ones worth more cleared), per turn
+-- Farm + Feature = SDP_Land.ScoreTaken + once.
+function SDP_Sites.LandParts(model, taken, once)
+  local yield, forgone = SDP_Land.WorkedParts(model, taken, #taken)
+  return yield, once - forgone
+end
+
+-- Amenity value of luxury copies { [type] = copies } (issue 86): the first
+-- copy of a kind the player does not have and `taken` has not counted is
+-- new, worth one amenity in each city up to its Happiness (4 in the rules);
+-- every other copy is worth DUPLICATE_VALUE while a met civilization lacks
+-- the kind and has not been sold one (the player's own spare copies sold
+-- first). `taken` = { [type] = { New, Sold } } is updated.
 function SDP_Sites.LuxuryValue(ctx, copies, taken)
   local kinds = {}
   for kind in pairs(copies) do kinds[#kinds + 1] = kind end
@@ -373,28 +512,37 @@ function SDP_Sites.LuxuryValue(ctx, copies, taken)
   local value = 0
   for _, kind in ipairs(kinds) do
     local count = copies[kind]
-    if not ctx.Owned[kind] and not taken[kind] then
-      value = value + (GameInfo.Resources[kind].Happiness or 0) + (count - 1) * SDP_Sites.DUPLICATE_VALUE
-      taken[kind] = true
-    else
-      value = value + count * SDP_Sites.DUPLICATE_VALUE
+    local t = taken[kind]
+    if t == nil then
+      t = { New = false, Sold = math.max(0, (ctx.Amount[kind] or 0) - 1) }
+      taken[kind] = t
     end
+    if not ctx.Owned[kind] and not t.New then
+      value = value + math.min(GameInfo.Resources[kind].Happiness or 0, ctx.Cities)
+      t.New, count = true, count - 1
+    end
+    local sold = math.max(0, math.min(count, (ctx.Buyers[kind] or 0) - t.Sold))
+    value = value + sold * SDP_Sites.DUPLICATE_VALUE
+    t.Sold = t.Sold + sold
   end
   return value
 end
 
--- Strategic value { [type] = amount }: the amounts plus NEW_STRATEGIC per
--- kind the player does not have and `taken` does not hold.
-function SDP_Sites.StrategicValue(ctx, amounts, taken)
+-- Strategic value { [type] = plots } (issue 86): each plot era x kind (see
+-- KIND_NEW); `taken` = { [type] = true } marks the kinds already counted as
+-- new and is updated.
+function SDP_Sites.StrategicValue(ctx, plots, taken)
   local kinds = {}
-  for kind in pairs(amounts) do kinds[#kinds + 1] = kind end
+  for kind in pairs(plots) do kinds[#kinds + 1] = kind end
   table.sort(kinds)
   local value = 0
   for _, kind in ipairs(kinds) do
-    value = value + amounts[kind]
+    local n, era = plots[kind], ctx.EraFactor[kind] or 1
     if not ctx.Owned[kind] and not taken[kind] then
-      value = value + SDP_Sites.NEW_STRATEGIC
+      value = value + era * (SDP_Sites.KIND_NEW + (n - 1))
       taken[kind] = true
+    else
+      value = value + era * n * (ctx.Short[kind] and SDP_Sites.KIND_SHORT or 1)
     end
   end
   return value
@@ -444,8 +592,10 @@ function SDP_Sites.Board(ctx, sites)
     end
   end
   table.sort(fixed, function(a, b) return Map.GetPlotIndex(a.X, a.Y) < Map.GetPlotIndex(b.X, b.Y) end)
+  -- Adjacency: 1 a yield, as on the single-city tab (issue 88), times the
+  -- tab's yield weights and the district weight.
   ctx.AdjacencyWeights = {}
-  for _, y in ipairs(SDP_Rules.YIELDS) do ctx.AdjacencyWeights[y] = ctx.Weights[y] end
+  for _, y in ipairs(SDP_Rules.YIELDS) do ctx.AdjacencyWeights[y] = ctx.Weights[y] * ctx.Items.DISTRICT end
   ctx.Board = SDP_Board.New(ctx.PlayerID, fixed, ctx.AdjacencyWeights)
   return ctx.Board
 end
@@ -489,7 +639,7 @@ function SDP_Sites.Fine(ctx, site, params)
       end
       local land = SDP_Land.ScoreTaken(site.Land, taken, #taken, {})
       site.Parts.District = search.BestGain - (land - site.Land.Base)
-      site.Parts.Farm = land
+      site.Parts.Farm, site.Parts.Feature = SDP_Sites.LandParts(site.Land, taken, site.Land.OnceTotal)
       local types = {}
       for _, d in ipairs(site.Districts) do types[#types + 1] = d.Type end
       site.Parts.Water = SDP_Sites.WaterPart(ctx, site, types)

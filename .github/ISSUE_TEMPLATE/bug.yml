@@ -1,0 +1,28 @@
+name: 问题反馈 / Bug report
+description: 规划结果不对、面板异常、报错或卡住 / Wrong plans, a broken panel, errors or freezes
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: 发生了什么 / What happened
+      description: 中文或英文都可以。截图或存档（压缩成 zip）拖进来最快。 / Chinese or English. Dragging in a screenshot or a zipped save is quickest.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: 模组版本 / Mod version
+      description: 不填按最新版。鼠标停在左上角那排按钮最后的六边形按钮上可以看到。 / Leave empty for the latest. Hover the hexagon button at the end of the toolbar at the upper left.
+  - type: markdown
+    attributes:
+      value: |
+        <details><summary>可能有用 / Might help</summary>
+
+        - 不是全部 DLC 都开着时，写一句用的是哪个规则集。 / If you don't play with all DLC, say which ruleset.
+        - 一局只开一个规划模组：和 Auto Map Tacks Planner、Empire Planner 等同时启用时结果会互相干扰。 / Use one planner per game: Auto Map Tacks Planner, Empire Planner and the like interfere with each other.
+        - 本模组的创意工坊版和手动放进 Mods 文件夹的不要同时装。 / Don't have both the Workshop copy and a copy in the Mods folder.
+        - 存档 / Saves: Windows `Documents\My Games\Sid Meier's Civilization VI\Saves\Single`, macOS `~/Library/Application Support/Sid Meier's Civilization VI/Sid Meier's Civilization VI/Saves/Single`
+        - Windows 日志 / log: Steam 启动选项加 `-log` / add `-log` to the launch options, then `%LOCALAPPDATA%\Firaxis Games\Sid Meier's Civilization VI\Logs\Lua.log`, search `Runtime Error` and `SDP_`.
+
+        </details>

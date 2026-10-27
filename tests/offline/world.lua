@@ -975,6 +975,7 @@ function World.New(spec)
         return { Members = function() return ipairs(all) end }
       end,
       GetTechs = function() return { HasTech = function(_, i) return p.techs[i] == true end } end,
+      GetEra = function() return spec.era or 0 end,
       GetCulture = function() return { HasCivic = function(_, i) return p.civics[i] == true end } end,
       GetResources = function()
         return {

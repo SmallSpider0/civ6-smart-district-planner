@@ -11,11 +11,11 @@
 | `validate.py` | 静态校验 mod 与测试文件 | 0 通过；1 有错误；2 缺工具 |
 | `luacheck.mjs` | Lua 语法与陷阱检查（validate 会调用它） | 0 无错误；1 有错误 |
 | `offline_tests.mjs` | 不开游戏跑求解逻辑测试与基准（`tests/offline/`） | 0 全过；1 有失败；2 用法错误 |
-| `deploy.py` | 校验后把 mod 同步到游戏 Mods 目录 | 0 成功；1 校验失败；2 找不到 Mods 目录；4 游戏被别的工作树占着 |
+| `deploy.py` | 校验后把 mod 同步到游戏 Mods 目录 | 0 成功；1 校验失败；2 找不到 Mods 目录；4 游戏被别的工作树占着；5 modinfo 版本号会降低 |
 | `workshop.py` | 创意工坊素材检查、预览图和示意图渲染、提交包（不连接 Steam） | 0 成功；1 超出限制；2 缺 tag、更新说明或有未提交的改动 |
 | `package.py` | 从最近一次提交打出压缩包（mod、安装说明、测试说明、“介绍与评测”页）；发布 Release 时由工作流以 `--release` 调用，不带测试说明 | 0 成功；1 校验失败；2 有未提交的改动 |
 | `run_tests.py` | 经 Tuner 在游戏内跑 `tests/test_*.lua`；Mods 里部署的不是本工作树的代码时停下 | 0 全过；1 有失败；2 连接问题；3 超时；4 游戏被占 |
-| `game.py` | 退出游戏、经 Steam 启动、从主菜单快速开局（可选建首都）；启动时的前台切换仅 macOS | 0 成功；2 超时；4 游戏被占 |
+| `game.py` | 退出游戏、经 Steam 启动、从主菜单快速开局（可选建首都）；启动时的前台切换仅 macOS | 0 成功；2 超时；3 本模组没装或没勾上；4 游戏被占 |
 | `realclick.py` | 仅 macOS：用系统鼠标事件真实点击面板，每步从面板状态读回核对 | 0 全过；1 有失败；2 环境问题 |
 | `stress.py` | 发布前在后期存档上做压力测试：AI 自动打出存档、逐步计时、魅力复核 | 0 全过；1 有问题步骤；2 环境问题 |
 | `refscene.py` | 手写的参照布局（社区公认布局）转成对比场景，画回文字或图片核对 | 0 成功；1 有错误；2 找不到场景 |
@@ -246,6 +246,7 @@ python3 -I tools/deploy.py              # 校验通过后同步
 - 目标：`paths.py` 给出的 Mods 目录下的 `SmartDistrictPlanner/`（Mac 在 `~/Library/Application Support/Sid Meier's Civilization VI/Sid Meier's Civilization VI/Mods/`，Windows 在 `文档\My Games\Sid Meier's Civilization VI\Mods\`）；`--mods-dir` 可改。
 - 增量复制，并删除部署目录里源目录已没有的文件；只动 `Mods/SmartDistrictPlanner/` 内部。
 - 结尾提示重载方式：改了 modinfo 或 `Text/` 要重启游戏，否则回主菜单重新进入对局即可。
+- 要部署的 modinfo `version` 比 Mods 目录里那份低时不部署（退出码 5）：游戏会因此把本模组记成停用（坑 45）。先把 `main` 并进分支；确实要降时加 `--allow-downgrade`。
 
 ## package.py — 压缩包
 
@@ -372,6 +373,8 @@ python3 -I tools/game.py newgame --state SDP_Panel --capital --reveal   # 另外
 python3 -I tools/game.py load SDP_ref_aw-curtin-232        # 读 Saves/Single 里的单人存档（不带扩展名），等对局可用、关掉弹窗；缺内容的存档停在游戏的提示上（超时）
 ```
 
+`newgame`、`load`（以及 `stress.py prepare`、`load` 和 `covscene.py`）到主菜单后先查本模组在“额外内容”里勾没勾上，没勾上立刻停下、退出码 3，并给出要执行的 `Modding.EnableMod(句柄, true)`；重新勾上会写 `Mods.sqlite`，先问维护者（坑 45）。
+
 **不占用户的屏幕**：启动器和游戏窗口出现时会把自己切到前台（`activateIgnoringOtherApps`）。
 
 - `launch` 先用 `lsappinfo` 记下前台应用（存在 `logs/front-app.txt`），再用 `open -g` 打开 Steam，Steam 不会被带到前台。`--stay` 不做记录，游戏留在前台。
@@ -459,7 +462,7 @@ python3 -I tools/shots.py lang restore           # 恢复备份，核对逐字�
 - `capture` 经 SDPClick.app 截下整个游戏窗口（游戏留在后台、在别的桌面空间也行），再按游戏给出的面板位置裁出面板；截不了时退回“把游戏切到前台、截面板那块、再切回原来的应用”。要在“系统设置 → 隐私与安全性 → 录屏与系统录音”里允许 SDPClick 一次。
 - 真实点击必须让游戏在前台：直接发给游戏进程的鼠标事件（不切前台）游戏不理（2026-10-25 试过）。
 - SDPClick 只在 `tools/click/sdp-click.swift` 改了时才重新编译（`realclick.py build`，`--force` 强制）。临时签名每次编译都会变，macOS 随之收回辅助功能和录屏两项授权，要重新允许。登录钥匙串里有名为 `SDPClick Local Signing` 的自签名代码签名证书时（或 `SDP_CODESIGN_ID` 指定的证书），编译脚本用它签名，签名身份不变，授权就会保留。
-- 截图左右各裁掉 5 像素，存成质量 90 的 JPEG，命名见 CONTRIBUTING 的写作规则。
+- 截图左右各裁掉 5 像素，存成质量 90 的 JPEG，命名见 docs/maintaining.md 的写作规则。
 - `multi` 会先把选城址页的方案打成城址钉，奇观选阿耳忒弥斯神庙（原版选大图书馆），并把结果列表滚到奇观那一行。
 
 ## release.py — 发版
@@ -544,7 +547,7 @@ python3 -I tools/codex_review.py findings 125             # 列出 Codex 没解�
 python3 -I tools/codex_review.py reply 线程ID "已修，见 abc1234"   # 回复一条并标为已解决
 ```
 
-- 什么时候用、意见怎么处理见 CONTRIBUTING.md“Codex 审查”。
+- 什么时候用、意见怎么处理见 docs/maintaining.md“Codex 审查”。
 - 判断审完读三处：Codex 汇总评论里的状态、它对最新提交发的审查、它在 PR 上点的 👍（没有意见时）。网络出错会重试。
 
 ## worktree.py — 工作树

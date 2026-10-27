@@ -76,7 +76,8 @@ SDP_Search.Better = Better
 --               slot m on candidate i is planned for (not counted as covered
 --               by it, issue 91); nil: every city counts
 --   Pools       { [group] = count }: of the group's slots marked Optional,
---               exactly `count` are placed (fewer when they do not fit)
+--               exactly `count` are placed (fewer when they do not fit:
+--               the count is capped by PoolRoom, issue 133)
 --   Costs       { [position] = cost } or nil: taken off per placed slot
 --   Appeal      { Fixed (SDP_Overlay.FixedSubjects), Weights (the request's),
 --                 Workable = { [plot index] = true } } or nil: the appeal part
@@ -358,16 +359,56 @@ function Search:Singles()
     if not self.Optional[m] then selected = selected + 1 end
   end
   for g, list in pairs(self.PoolSlots) do
-    local count = math.min((self.PoolSpec and self.PoolSpec[g]) or 0, #list)
+    local wanted = math.min((self.PoolSpec and self.PoolSpec[g]) or 0, #list)
+    -- No more than fit on the group's plots beside its required slots
+    -- (issue 133: three asked for, one plot free: one, not none). A group
+    -- capped to none still runs as a pool: its one combination is the
+    -- required slots alone.
+    local count = math.min(wanted, self:PoolRoom(g))
     self.PoolCount[g] = count
     selected = selected + count
-    if count > 0 then self.PoolGroups[#self.PoolGroups + 1] = g end
+    if wanted > 0 then self.PoolGroups[#self.PoolGroups + 1] = g end
   end
   table.sort(self.PoolGroups)
   self.Selected = selected
   self.AltNeed = math.max(2, math.ceil(0.2 * selected))
   self:PrepareReach()
   return dropped
+end
+
+-- How many slots of `slots` can stand at once, each on its own legal plot:
+-- a maximum matching of slots to candidate plots (augmenting paths, slots
+-- and plots in order, so the same input gives the same answer).
+function Search:MaxPlaced(slots)
+  local legal, n, plotOf = self.Legal, self.N, {}
+  local function Augment(m, seen)
+    for i = 1, n do
+      if legal[m][i] and not seen[i] then
+        seen[i] = true
+        if plotOf[i] == nil or Augment(plotOf[i], seen) then
+          plotOf[i] = m
+          return true
+        end
+      end
+    end
+    return false
+  end
+  local placed = 0
+  for _, m in ipairs(slots) do
+    if Augment(m, {}) then placed = placed + 1 end
+  end
+  return placed
+end
+
+-- How many optional slots of group g fit beside as many of its required
+-- slots as fit: the matching of all its slots less that of the required
+-- ones (a largest set of required slots that fit extends to a largest
+-- matching of all, so the difference is reached with them in place).
+function Search:PoolRoom(g)
+  local required, all = self.RequiredSlots[g] or {}, {}
+  for _, m in ipairs(required) do all[#all + 1] = m end
+  for _, m in ipairs(self.PoolSlots[g] or {}) do all[#all + 1] = m end
+  return self:MaxPlaced(all) - self:MaxPlaced(required)
 end
 
 -- Reach (spec.Reach): for each group, its Start plots in order, which

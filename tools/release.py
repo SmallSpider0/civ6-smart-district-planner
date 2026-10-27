@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""release - the scripted part of a release (CONTRIBUTING.md "发版", .claude/skills/sdp-release).
+"""release - the scripted part of a release (docs/maintaining.md "发版", .claude/skills/sdp-release).
 
     python3 -I tools/release.py prep X.Y.Z        # on the release branch, before the PR
     python3 -I tools/release.py notes X.Y.Z       # logs/release-vX.Y.Z.md from the change note

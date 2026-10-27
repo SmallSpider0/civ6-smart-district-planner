@@ -1,0 +1,11 @@
+name: 建议 / Suggestion
+description: 想让规划器多做或换个做法 / Something the planner should do, or do differently
+labels: [enhancement]
+body:
+  - type: textarea
+    id: want
+    attributes:
+      label: 想做什么 / What you want
+      description: 中文或英文都可以。在游戏里想达到什么，最好举一个例子（截图或存档可以拖进来）。 / Chinese or English. What you want to achieve in the game, ideally with an example (screenshots or saves can be dragged in).
+    validations:
+      required: true

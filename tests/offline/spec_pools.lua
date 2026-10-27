@@ -356,6 +356,38 @@ test("sites: with more districts ticked than PlanCount each site picks its best;
     "no adjacency yield and no amenities: the encampment and the preserve (no aerodrome in this world)")
 end)
 
+test("issue 133: a count above the free plots places as many candidates as fit, not none", function()
+  -- The capital at (3, 4) among mountains with two free plots, (4, 4) and (3, 3).
+  World.New({
+    rows = {
+      "MMMMMMMM",
+      "MMMMMMMM",
+      "MMMMMMMM",
+      "MMM.MMMM",
+      "MMM..MMM",
+      "MMMMMMMM",
+      "MMMMMMMM",
+    },
+    cities = { { id = 1, x = 3, y = 4, population = 7, capital = true, radius = 1 } },
+  })
+  for _, tier in ipairs({ "FAST", "STANDARD" }) do
+    local r = SDP_Solver.Solve({ PlayerID = 0, CityID = 1, Districts = {}, Pool = POOL, Count = 3, Weights = ONES, Tier = tier })
+    T.ok(r.Ok, tier .. ": " .. tostring(r.Error))
+    T.eq(#r.Plan, 2, tier .. ": two of the three asked for, one per free plot")
+    T.eq(#r.Picked, 2, tier .. ": both picked")
+    -- A required district takes one plot: one candidate beside it.
+    local m = SDP_Solver.Solve({ PlayerID = 0, CityID = 1, Districts = { "DISTRICT_CAMPUS" }, Pool = POOL, Count = 3,
+      Weights = ONES, Tier = tier })
+    T.ok(m.Ok, tier .. ": " .. tostring(m.Error))
+    T.eq(#m.Plan, 2, tier .. ": the campus and one candidate")
+    local campus = 0
+    for _, p in ipairs(m.Plan) do
+      if p.Type == "DISTRICT_CAMPUS" then campus = campus + 1 end
+    end
+    T.eq(campus, 1, tier .. ": the required campus is placed")
+  end
+end)
+
 -- ===========================================================================
 -- Several cities
 -- ===========================================================================

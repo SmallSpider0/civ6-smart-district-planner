@@ -16,7 +16,7 @@ Security > Screen & System Audio Recording (the first capture asks). Without
 that, capture with computer-use's full-screen zoom of the rectangle `region`
 prints (screen points; multiply by the screenshot frame's width / the
 screen's width) and pass the file to `save`, which cuts 5 px off the sides
-(the zoom catches the map beside the frame). Both write a JPEG of quality 90. Names follow CONTRIBUTING: v<round>-panel-
+(the zoom catches the map beside the frame). Both write a JPEG of quality 90. Names follow docs/maintaining.md: v<round>-panel-
 single.jpg, v<round>-en-panel-multi.jpg.
 
 English shots: quit the game, `lang en`, launch, new game, stage, capture,
