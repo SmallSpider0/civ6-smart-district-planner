@@ -48,8 +48,8 @@ function SDP_SiteSolver.NewSession(request)
   self.Stats.Candidates = #candidates
   local sites = {}
   for _, candidate in ipairs(candidates) do
-    local site = SDP_Sites.Coarse(ctx, candidate, centers)
-    if site.Valid then sites[#sites + 1] = site end
+    -- Every candidate stays, whatever the district count (issue 133).
+    sites[#sites + 1] = SDP_Sites.Coarse(ctx, candidate, centers)
     if SDP_Task ~= nil then SDP_Task.Tick(0.2) end
   end
   table.sort(sites, function(a, b)

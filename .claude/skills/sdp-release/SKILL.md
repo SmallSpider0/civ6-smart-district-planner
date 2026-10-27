@@ -5,12 +5,12 @@ description: Release a version of the Smart District Planner (civ6mod) — tests
 
 # Releasing vX.Y.Z
 
-Who decides (CONTRIBUTING.md "需求、分支与提交" 5 and "发版"):
+Who decides (docs/maintaining.md "一轮工作的流程" 5 and "发版"):
 
 - **Bug fixes only**: a patch milestone that holds only bug fixes (text and document fixes count with them) is released when one of these holds: three ordinary bug fixes are merged and not released; seven days have passed since the first unreleased bug fix was merged; a critical bug is fixed (the live version crashes the game, the panel cannot be used, or plans break the game's rules for ordinary setups), released as soon as it is fixed and tested. If fixing a bug raises a question the maintainer must settle (a default, a requirement, a trade-off), that fix waits for the answer like a feature.
 - **Anything else** (a feature, an optimisation, a default, parameter or layout change — whatever the version digit) is released when the maintainer decides. Until then: when its issues are done, do §1 steps 0–6 (tests, screenshots, version, notes, report), report it ready (what is in it, what the tests showed, what is left) and go on with other work. After the decision: §1 step 7 and §2.
 
-Bug-fix PRs merge into `main` as usual in the meantime: `main` reaches no player. Windows is not tested before a release. The checklist template (.github/ISSUE_TEMPLATE/release.md) lists the same items.
+Bug-fix PRs merge into `main` as usual in the meantime: `main` reaches no player. Windows is not tested before a release. This file is the release checklist; the issue template that repeated it was removed on 2026-10-27.
 
 ## 1. Before the PR (on a release branch: the milestone's issues are merged one PR each)
 
@@ -23,11 +23,11 @@ Bug-fix PRs merge into `main` as usual in the meantime: `main` reaches no player
    - `python3 -I tools/refresh_results.py --check` when the solver or legality changed; explain any lower gain or new violation;
    - tooltip numbers whose source changed (the records in docs/notes/ name them);
    - stress test: load/run/check on the three saves, `tools/refresh_stress_md.py`. Skipped when the release changes only the interface: `git diff vLAST..HEAD -- SmartDistrictPlanner/Scripts` touches nothing but `SDP_Page*.lua` and `SDP_Preview.lua`, and the panel's changes do not alter what is sent to the solver. Say in the self-test report that it was skipped and why.
-3. Screenshots when the UI changed: `shots.py` (zh and en, new round number in the name), point README, the report templates (`report/template.html`, `template_en.html`: image names, alt text and captions) and `workshop/src/*.html` at them, `tools/workshop.py render`, look at `workshop/images/`.
+3. Screenshots when the UI changed: `shots.py` (zh and en, new round number in the name), point README, the report templates (`report/template.html`, `template_en.html`: image names, alt text and captions) and `workshop/src/*.html` at them, `tools/workshop.py render`, look at `workshop/images/`. Open `workshop/preview.jpg` too: the cover must be the one the Workshop item uses now (a new cover needs the item's owner).
 4. `python3 -I tools/release.py prep X.Y.Z`, then write the change note's English half and shorten the Chinese half (players' words, no issue numbers). Typographic quotes in the note (`workshop.py check` refuses `"`).
 5. When features or limits changed: README (en and zh), `workshop/description.bbcode` and `description_zh.bbcode`, the report pages.
 6. Self-test report: a short block for this round at the top of "自动化测试结果" (tests and counts, what was checked by hand, what was not). Keep only the last two rounds there (git has the rest).
-7. Commit ("Prepare vX.Y.Z"), push, one PR (title in English imperative; `Closes #N`; tests and platform; generated files and commands; ends with the session's PR footer). Auto-merge (squash) and Auto-fix on. Then wait in the background for the merge (`gh pr checks N --watch`, then a loop until `gh pr view N --json state -q .state` is `MERGED`) and go on to §2 when it exits: a green CI run or an auto-merge wakes nobody (CONTRIBUTING.md, "子 agent 怎么派" 3).
+7. Commit ("Prepare vX.Y.Z"), push, one PR (title in English imperative; `Closes #N`; tests and platform; generated files and commands; ends with the session's PR footer). Auto-merge (squash) and Auto-fix on. Then wait in the background for the merge (`gh pr checks N --watch`, then a loop until `gh pr view N --json state -q .state` is `MERGED`) and go on to §2 when it exits: a green CI run or an auto-merge wakes nobody (docs/maintaining.md, "子 agent 怎么派" 3).
 
 ## 2. After the merge
 

@@ -82,7 +82,7 @@ How to use each tab, known limitations and troubleshooting: [install and use](do
 
 ### Development
 
-The development documents are in Chinese; issues and pull requests in English are welcome. Start with [CONTRIBUTING.md](CONTRIBUTING.md) (branches, commits, who runs which tests, writing rules) and [AGENTS.md](AGENTS.md) (requirements, design constraints, modding pitfalls, workflow).
+The development documents are in Chinese; issues and pull requests in English are welcome. Start with [CONTRIBUTING.md](CONTRIBUTING.md), in English and Chinese: the hard constraints, setup, the checks you can run with and without the game, code conventions and how to submit a pull request. [AGENTS.md](AGENTS.md) has the requirements, design constraints, modding pitfalls and workflow.
 
 | Document | Contents |
 |------|------|
@@ -181,7 +181,7 @@ Detailed Map Tacks 不是规划器：它在地图钉上显示区域、奇观放�
 
 ### 参与开发
 
-先读 [CONTRIBUTING.md](CONTRIBUTING.md)（分支、提交、测试分工、写作规则）和 [AGENTS.md](AGENTS.md)（需求约束、技术方案、模组开发的坑、工作流程）。
+先读 [CONTRIBUTING.md](CONTRIBUTING.md)（中英文：硬约束、环境、开不开游戏都能跑的检查、代码约定、怎么提交 PR）和 [AGENTS.md](AGENTS.md)（需求约束、技术方案、模组开发的坑、工作流程）。维护者的流程、分工和发版写在 [docs/maintaining.md](docs/maintaining.md)。
 
 | 文档 | 内容 |
 |------|------|
