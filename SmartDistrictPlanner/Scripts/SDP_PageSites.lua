@@ -19,6 +19,7 @@ local m_weightIM = InstanceManager:new("WeightColumn", "Root", Controls.SitesWei
 local m_weightIM2 = InstanceManager:new("WeightColumn", "Root", Controls.SitesWeightStack2)
 local m_solutionIM = InstanceManager:new("SolutionRow", "Root", Controls.SitesSolutionStack)
 local m_resultIM = InstanceManager:new("ResultRow", "Root", Controls.SitesResultStack)
+local m_siteRowIM = InstanceManager:new("SiteRow", "Root", Controls.SitesResultStack)
 
 -- The site weights (design 3.3, issue 88) and the distance cost, in two
 -- rows: the six yields with the game's font icons and the distance cost,
@@ -60,6 +61,16 @@ local WEIGHT_WIDTH = 68
 local DEFAULT_K, DEFAULT_D = 3, 5
 local m_k, m_d = DEFAULT_K, DEFAULT_D
 local MIN_D, MAX_D = 4, 15
+-- Dense packing (issue 87, decided 2026-10-26): its own number of new
+-- cities (default 12) and distance, kept in the save; switching it off
+-- brings the usual ones back. Its sites are ticked one by one (none by
+-- default) and only the ticked ones get a tack.
+local m_dense = false
+local m_dk, m_dd = SDP_SiteSolver.DENSE_MAX_K, DEFAULT_D
+local m_ticked = {} -- [site number in the solution] = true
+local function K() return m_dense and m_dk or m_k end
+local function D() return m_dense and m_dd or m_d end
+local function MaxK() return m_dense and SDP_SiteSolver.DENSE_MAX_K or SDP_SiteSolver.MAX_K end
 -- The districts each site is scored with (issue 90): states as on the
 -- single-city tab, MUST / POOL / OFF, only the ones the player chose (the
 -- rest at SDP_Sites.DefaultState), and how many that take population.
@@ -107,7 +118,12 @@ local m_keeper = SDP_UI.Keeper({ Tab = "SITES", Columns = ALL_COLUMNS, Weights =
       Get = function() return m_d end, Put = function(v) m_d = math.floor(v) end },
     { Key = "COUNT", Kind = "number", Min = 0, Max = SDP_Sites.MAX_COUNT, Default = SDP_Sites.DEFAULT_COUNT,
       Get = function() return m_count end, Put = function(v) m_count = math.floor(v) end },
-    { Key = "DISTRICTS", Kind = "list", Pattern = "^[%w_]+:[MPO]$", Default = "", Get = KeptStates, Put = PutStates } },
+    { Key = "DISTRICTS", Kind = "list", Pattern = "^[%w_]+:[MPO]$", Default = "", Get = KeptStates, Put = PutStates },
+    { Key = "DENSE", Default = false, Get = function() return m_dense end, Put = function(v) m_dense = v end },
+    { Key = "DK", Kind = "number", Min = 1, Max = SDP_SiteSolver.DENSE_MAX_K, Default = SDP_SiteSolver.DENSE_MAX_K,
+      Get = function() return m_dk end, Put = function(v) m_dk = math.floor(v) end },
+    { Key = "DD", Kind = "number", Min = MIN_D, Max = MAX_D, Default = DEFAULT_D,
+      Get = function() return m_dd end, Put = function(v) m_dd = math.floor(v) end } },
   GetTier = function() return m_tier end, PutTier = function(tier) m_tier = tier end,
   Presets = SDP_Sites.PRESETS, Order = SDP_Sites.PRESET_ORDER })
 
@@ -146,6 +162,7 @@ end
 local function ClearResult()
   local job = SDP_Task.Current()
   if job ~= nil and job.Page == P.Name then SDP_Task.Cancel() end
+  m_ticked = {}
   if m_result ~= nil then
     m_result = nil
     SDP_Preview.Clear()
@@ -191,8 +208,8 @@ function P.Request()
   local weights = {}
   for key, value in pairs(m_weights) do weights[key] = value end
   local list = List()
-  return { PlayerID = Game.GetLocalPlayer(), Tier = m_tier, K = m_k, D = m_d, Districts = list.Must, Pool = list.Pool,
-    Pick = list.Pick, Weights = weights, Distance = m_weights.DISTANCE }
+  return { PlayerID = Game.GetLocalPlayer(), Tier = m_tier, K = K(), D = D(), Districts = list.Must, Pool = list.Pool,
+    Pick = list.Pick, Weights = weights, Distance = m_weights.DISTANCE, Dense = m_dense }
 end
 
 -- The time estimate: each site places the required districts and, with a
@@ -201,7 +218,7 @@ local function Estimate(request, params, continue)
   local districts = #request.Districts + #request.Pool
   local picking = request.Pick > 0 and request.Pick < #request.Pool
   return SDP_SiteSolver.EstimateUnits(picking and districts or #request.Districts + request.Pick, request.K, params, continue,
-    picking and (#request.Districts + request.Pick) or nil)
+    picking and (#request.Districts + request.Pick) or nil, request.Dense)
 end
 
 local function UpdateEstimate()
@@ -210,22 +227,36 @@ local function UpdateEstimate()
 end
 
 local function ShowSteppers()
-  Controls.SitesCount:SetText(tostring(m_k))
-  Controls.SitesDistance:SetText(tostring(m_d))
+  Controls.SitesCount:SetText(tostring(K()))
+  Controls.SitesDistance:SetText(tostring(D()))
+  Controls.SitesDenseCheck:SetCheck(m_dense)
   local list = List()
   Controls.SitesPlanValue:SetText(tostring(list.Count))
   Controls.SitesPlanLess:SetDisabled(list.Count <= list.MustSpecialty)
   Controls.SitesPlanMore:SetDisabled(list.Count >= math.min(SDP_Sites.MAX_COUNT, list.MustSpecialty + #list.Pool))
-  Controls.SitesCountLess:SetDisabled(m_k <= 1)
-  Controls.SitesCountMore:SetDisabled(m_k >= SDP_SiteSolver.MAX_K)
-  Controls.SitesDistanceLess:SetDisabled(m_d <= MIN_D)
-  Controls.SitesDistanceMore:SetDisabled(m_d >= MAX_D)
+  Controls.SitesCountLess:SetDisabled(K() <= 1)
+  Controls.SitesCountMore:SetDisabled(K() >= MaxK())
+  Controls.SitesDistanceLess:SetDisabled(D() <= MIN_D)
+  Controls.SitesDistanceMore:SetDisabled(D() >= MAX_D)
 end
 
 function P.SetCount(k)
-  k = math.max(1, math.min(SDP_SiteSolver.MAX_K, k))
-  if k ~= m_k then
-    m_k = k
+  k = math.max(1, math.min(MaxK(), k))
+  if k ~= K() then
+    if m_dense then m_dk = k else m_k = k end
+    ClearResult()
+    Remember()
+  end
+  ShowSteppers()
+  UpdateEstimate()
+end
+
+-- Dense packing on or off (issue 87): the number of new cities and the
+-- distance are each mode's own.
+function P.SetDense(on)
+  on = on == true
+  if on ~= m_dense then
+    m_dense = on
     ClearResult()
     Remember()
   end
@@ -248,8 +279,8 @@ end
 
 function P.SetDistance(d)
   d = math.max(MIN_D, math.min(MAX_D, d))
-  if d ~= m_d then
-    m_d = d
+  if d ~= D() then
+    if m_dense then m_dd = d else m_d = d end
     ClearResult()
     Remember()
   end
@@ -501,6 +532,7 @@ function P.SelectSolution(n)
     return
   end
   m_solution = n
+  m_ticked = {}
   m_lookNext = true
   P.Render()
 end
@@ -508,6 +540,7 @@ end
 function P.Render()
   m_solutionIM:ResetInstances()
   m_resultIM:ResetInstances()
+  m_siteRowIM:ResetInstances()
   m_view.Solutions, m_view.Results = {}, {}
   Controls.SitesQuality:SetText("")
   local result = m_result
@@ -522,6 +555,14 @@ function P.Render()
     local solution = result.Solutions[m_solution] or result.Solutions[1]
     Controls.SitesSummary:SetText(Locale.Lookup("LOC_SDP_SITES_SUMMARY", SDP_UI.Number(math.floor(solution.Value * 10 + 0.5) / 10),
       result.Stats.Candidates, result.Stats.Refined))
+    if result.Dense then
+      local ticked = 0
+      for _ in pairs(m_ticked) do ticked = ticked + 1 end
+      Controls.SitesSummary:SetText(Locale.Lookup("LOC_SDP_SITES_SUMMARY_DENSE", #solution.Sites,
+        SDP_UI.Number(math.floor(solution.Value * 10 + 0.5) / 10), ticked))
+      Controls.SitesAllButton:SetText(Locale.Lookup(ticked == #solution.Sites and "LOC_SDP_SITES_TICK_NONE"
+        or "LOC_SDP_SITES_TICK_ALL"))
+    end
     Controls.SitesQuality:SetText(SDP_UI.Join({ SDP_UI.QualityText(result), Locale.Lookup("LOC_SDP_SITES_MODEL_NOTE") }))
     for n, s in ipairs(result.Solutions) do
       local inst = m_solutionIM:GetInstance()
@@ -538,9 +579,16 @@ function P.Render()
     for s, site in ipairs(solution.Sites) do
       local name = Locale.Lookup("LOC_SDP_SITE_N", numbers[s]) .. "  " .. SDP_UI.Where(site.X, site.Y) .. "  "
         .. SDP_UI.Number(math.floor(site.Value * 10 + 0.5) / 10)
-      local inst = m_resultIM:GetInstance()
-      m_view.Results[#m_view.Results + 1] = SDP_UI.ResultRow(inst, "ICON_DISTRICT_CITY_CENTER", name,
+      local inst = result.Dense and m_siteRowIM:GetInstance() or m_resultIM:GetInstance()
+      local row = SDP_UI.ResultRow(inst, "ICON_DISTRICT_CITY_CENTER", name,
         SiteDetail(site, result), SiteToolTip(site, result), site.X, site.Y)
+      m_view.Results[#m_view.Results + 1] = row
+      if result.Dense then
+        -- Ticked for its tack (issue 87): none by default.
+        inst.Check:SetCheck(m_ticked[s] == true)
+        inst.Check:RegisterCheckHandler(function() P.SetTicked(s, inst.Check:IsChecked()) end)
+        row.Check = inst.Check
+      end
       -- A click on a site also sets where "next site" goes on from.
       inst.Root:RegisterCallback(Mouse.eLClick, function() P.LookAtSite(s) end)
     end
@@ -569,7 +617,10 @@ function P.UpdateButtons()
   Controls.SitesContinueButton:SetDisabled(running or not ok or not m_result.Quality.CanContinue or m_result.Placed == true)
   Controls.SitesContinueButton:SetHide(running)
   Controls.SitesCancelButton:SetHide(not running)
-  Controls.SitesPlaceButton:SetDisabled(running or not ok or m_result.Placed == true)
+  local none = m_dense and ok and next(m_ticked) == nil
+  Controls.SitesPlaceButton:SetDisabled(running or not ok or m_result.Placed == true or none)
+  Controls.SitesAllButton:SetHide(not (ok and m_result.Dense))
+  Controls.SitesAllButton:SetDisabled(running or not ok or m_result.Placed == true)
   Controls.SitesUndoButton:SetDisabled(running or not SDP_Pins.CanUndo())
 end
 
@@ -580,12 +631,15 @@ function P.Solve()
   if SDP_Task.IsRunning() then return false end
   local request = P.Request()
   local params = SDP_Tiers.Params(SDP_Tiers.Sites, m_tier)
-  m_result, m_solution = nil, 1
+  m_result, m_solution, m_ticked = nil, 1, {}
   m_lookNext = true
   P.SetFold(true) -- the results get the room (issue 71)
   SDP_Preview.Clear()
   return SDP_UI.StartTask(function() return SDP_SiteSolver.SolveNow(request) end, Estimate(request, params, false),
-    function(result) m_result, m_solution = result, 1 end, P)
+    function(result)
+      m_result, m_solution = result, 1
+      if result.Ok then result.Dense = request.Dense end
+    end, P)
 end
 
 function P.Continue()
@@ -609,13 +663,37 @@ function P.Place()
   local numbers = SiteNumbers(solution)
   local entries = {}
   for s, site in ipairs(solution.Sites) do
-    entries[s] = { Type = "DISTRICT_CITY_CENTER", X = site.X, Y = site.Y, Name = tostring(numbers[s]) }
+    if not m_result.Dense or m_ticked[s] then
+      entries[#entries + 1] = { Type = "DISTRICT_CITY_CENTER", X = site.X, Y = site.Y, Name = tostring(numbers[s]) }
+    end
   end
+  if #entries == 0 then return 0 end
   local placed = SDP_Pins.Place(Game.GetLocalPlayer(), entries)
   m_result.Placed = true
   SDP_Preview.Clear()
   SDP_UI.UpdateAllButtons()
   return placed
+end
+
+-- Dense packing (issue 87): tick a site for its tack, or every site.
+function P.SetTicked(s, on)
+  if m_result == nil or not m_result.Ok or not m_result.Dense then return end
+  m_ticked[s] = on and true or nil
+  P.Render()
+end
+
+function P.TickAll()
+  local solution = m_result and m_result.Ok and m_result.Solutions[m_solution]
+  if solution == nil or not m_result.Dense then return end
+  local all = true
+  for s = 1, #solution.Sites do
+    if not m_ticked[s] then all = false end
+  end
+  m_ticked = {}
+  if not all then
+    for s = 1, #solution.Sites do m_ticked[s] = true end
+  end
+  P.Render()
 end
 
 function P.Undo()
@@ -627,16 +705,19 @@ end
 
 function P.State()
   return {
-    Result = m_result, Solution = m_solution, Site = m_site, K = m_k, D = m_d, Tier = m_tier, Weights = m_weights, View = m_view,
+    Result = m_result, Solution = m_solution, Site = m_site, K = K(), D = D(), Tier = m_tier, Weights = m_weights, View = m_view,
+    Dense = m_dense, Ticked = m_ticked, AllText = Controls.SitesAllButton:GetText(),
     DistrictCount = List().Count, States = States(), Preset = m_preset, Fold = m_fold, FoldText = Controls.SitesFoldText:GetText(),
     EstimateText = Controls.SitesEstimate:GetText(), PlaceDisabled = Controls.SitesPlaceButton:IsDisabled(),
   }
 end
 
-Controls.SitesCountLess:RegisterCallback(Mouse.eLClick, function() P.SetCount(m_k - 1) end)
-Controls.SitesCountMore:RegisterCallback(Mouse.eLClick, function() P.SetCount(m_k + 1) end)
-Controls.SitesDistanceLess:RegisterCallback(Mouse.eLClick, function() P.SetDistance(m_d - 1) end)
-Controls.SitesDistanceMore:RegisterCallback(Mouse.eLClick, function() P.SetDistance(m_d + 1) end)
+Controls.SitesCountLess:RegisterCallback(Mouse.eLClick, function() P.SetCount(K() - 1) end)
+Controls.SitesCountMore:RegisterCallback(Mouse.eLClick, function() P.SetCount(K() + 1) end)
+Controls.SitesDistanceLess:RegisterCallback(Mouse.eLClick, function() P.SetDistance(D() - 1) end)
+Controls.SitesDistanceMore:RegisterCallback(Mouse.eLClick, function() P.SetDistance(D() + 1) end)
+Controls.SitesDenseCheck:RegisterCheckHandler(function() P.SetDense(Controls.SitesDenseCheck:IsChecked()) end)
+Controls.SitesAllButton:RegisterCallback(Mouse.eLClick, function() P.TickAll() end)
 Controls.SitesPlanLess:RegisterCallback(Mouse.eLClick, function() P.SetDistrictCount(List().Count - 1) end)
 Controls.SitesPlanMore:RegisterCallback(Mouse.eLClick, function() P.SetDistrictCount(List().Count + 1) end)
 Controls.SitesSolveButton:RegisterCallback(Mouse.eLClick, function() P.Solve() end)

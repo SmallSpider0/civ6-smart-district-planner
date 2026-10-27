@@ -274,3 +274,29 @@ test("issue 90: the sites tab's district grid through its cells; solved with the
   end
   SDP_Panel.SelectTab("SINGLE")
 end)
+
+-- Issue 87: dense packing on the real map: more sites than the usual
+-- count when they fit, spaced as the game needs, the same twice.
+test("issue 87: dense packing on the real map", function()
+  if Players[pid]:GetCities():GetCapitalCity() == nil then T.skip("no capital") end
+  local request = { PlayerID = pid, Tier = "FAST", K = SDP_SiteSolver.DENSE_MAX_K, D = 5, Dense = true,
+    Districts = { "DISTRICT_CAMPUS", "DISTRICT_HOLY_SITE" } }
+  local result = SDP_SiteSolver.Solve(request)
+  if not result.Ok and result.Error == "NO_SITE" then T.skip("no room yet") end
+  T.ok(result.Ok, tostring(result.Error))
+  local best = result.Solutions[1]
+  local minRange = SDP_Sites.MinRange()
+  for a = 1, #best.Sites do
+    for b = a + 1, #best.Sites do
+      local s, t = best.Sites[a], best.Sites[b]
+      T.ok(Map.GetPlotDistance(s.X, s.Y, t.X, t.Y) > minRange, "spaced")
+    end
+  end
+  for n = 2, #result.Solutions do
+    T.ok(#result.Solutions[n].Sites <= #best.Sites, "most sites first")
+  end
+  local again = SDP_SiteSolver.Solve(request)
+  T.eq(#again.Solutions[1].Sites, #best.Sites, "same count")
+  T.eq(again.Solutions[1].Sites[1].Index, best.Sites[1].Index, "same first site")
+  print(("dense: %d sites, %d packings"):format(#best.Sites, result.Stats.Packings))
+end)

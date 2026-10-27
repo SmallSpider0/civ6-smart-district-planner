@@ -370,6 +370,21 @@
     <Replace Tag="LOC_SDP_SITES_MODEL_NOTE" Language="en_US">
       <Text>site scores are estimates; step 2 plans the districts exactly</Text>
     </Replace>
+    <Replace Tag="LOC_SDP_SITES_DENSE" Language="en_US">
+      <Text>Dense packing: as many new cities as fit</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_DENSE_TOOLTIP" Language="en_US">
+      <Text>The plan that fits more new cities comes first (City Centers at least 3 tiles apart between them), then the one with the higher score; new cities may link on from each other. When it is on, New cities is 12 by default and can be changed; it and Max distance are kept in the save on their own, and switching it off brings the usual ones back. Tick the sites you want in the results: Place site tacks places only those.[NEWLINE][NEWLINE]Benefit: more cities in the same area: with the same Max distance, at most 6 usually; with it on, 12 fitted in every test.[NEWLINE][NEWLINE]Cost: cities close together share their tiles and resources, so each scores about 7% less on average; you tick the sites to place yourself; it takes about 1.6 times as long as 6 sites usually do.</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_SUMMARY_DENSE" Language="en_US">
+      <Text>{1_Count} new cities fit, score {2_Value}; {3_Ticked} ticked, Place site tacks places only those</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_TICK_ALL" Language="en_US">
+      <Text>Select all</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_TICK_NONE" Language="en_US">
+      <Text>Clear all</Text>
+    </Replace>
     <Replace Tag="LOC_SDP_SITES_W_DISTRICT_SHORT" Language="en_US">
       <Text>Distr.</Text>
     </Replace>

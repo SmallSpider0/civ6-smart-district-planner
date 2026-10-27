@@ -448,6 +448,76 @@ test("the districts weight scales the distance cost; at 0 none is left in the sc
   end
 end)
 
+-- Issue 87: dense packing, as many sites as fit first.
+test("dense packing: most sites first, spaced, linked back, no refined site left that fits; deterministic", function()
+  NewWorld()
+  local request = { PlayerID = 0, K = 12, D = 6, Districts = PLAN, Tier = "FAST", Dense = true }
+  local result = SDP_SiteSolver.Solve(request)
+  T.ok(result.Ok, tostring(result.Error))
+  local minRange = SDP_Sites.MinRange()
+  local best = result.Solutions[1]
+  local normal = SDP_SiteSolver.Solve({ PlayerID = 0, K = 2, D = 6, Districts = PLAN, Tier = "FAST" })
+  T.ok(#best.Sites > #normal.Solutions[1].Sites, "more sites than two: " .. #best.Sites)
+  T.eq(result.Stats.MostSites, #best.Sites, "the count reported")
+  local session = result.Session
+  for n, solution in ipairs(result.Solutions) do
+    T.ok(#solution.Sites <= 12, "at most K")
+    for i, a in ipairs(solution.Sites) do
+      for j = i + 1, #solution.Sites do
+        local b = solution.Sites[j]
+        T.ok(Map.GetPlotDistance(a.X, a.Y, b.X, b.Y) > minRange, "spacing")
+      end
+    end
+    if n > 1 then
+      local prev = result.Solutions[n - 1]
+      T.ok(#solution.Sites < #prev.Sites or (#solution.Sites == #prev.Sites and solution.Value <= prev.Value + 1e-9),
+        "most sites, then best value first")
+    end
+  end
+  -- Linked back: each site within D of our city, our pin or a site linked before.
+  local reached, frontier = {}, {}
+  for _, c in ipairs(SDP_Sites.Centers(0)) do
+    if c.Own then frontier[#frontier + 1] = c end
+  end
+  local grew = true
+  while grew do
+    grew = false
+    for i, site in ipairs(best.Sites) do
+      if not reached[i] then
+        for _, f in ipairs(frontier) do
+          if Map.GetPlotDistance(site.X, site.Y, f.X, f.Y) <= 6 then
+            reached[i], grew = true, true
+            frontier[#frontier + 1] = site
+            break
+          end
+        end
+      end
+    end
+  end
+  for i = 1, #best.Sites do T.ok(reached[i], "site " .. i .. " linked back") end
+  -- No refined site that can hold a city still fits.
+  if #best.Sites < 12 then
+    for _, site in ipairs(session.Pool) do
+      local fits = true
+      for _, other in ipairs(best.Sites) do
+        if Map.GetPlotDistance(site.X, site.Y, other.X, other.Y) <= minRange then fits = false end
+      end
+      local link = false
+      for _, f in ipairs(frontier) do
+        if Map.GetPlotDistance(site.X, site.Y, f.X, f.Y) <= 6 then link = true end
+      end
+      T.ok(not (fits and link), "a site still fits at " .. site.X .. "," .. site.Y)
+    end
+  end
+  local again = SDP_SiteSolver.Solve(request)
+  T.eq(#again.Solutions[1].Sites, #best.Sites, "same count")
+  T.eq(again.Solutions[1].Value, best.Value, "same value")
+  -- K caps the count.
+  local three = SDP_SiteSolver.Solve({ PlayerID = 0, K = 3, D = 6, Districts = PLAN, Tier = "FAST", Dense = true })
+  T.ok(three.Ok and #three.Solutions[1].Sites <= 3, "K = 3: at most three")
+  T.eq(three.Quality.CanContinue, false, "no continue in dense packing")
+end)
+
 test("issue 133: the district count never removes a site; a cramped site is scored with what fits", function()
   -- Our capital at (2, 4); everything else mountains but a two-plot strip at
   -- (9, 4)-(10, 4): a site there has one plot (the other) for a district.
