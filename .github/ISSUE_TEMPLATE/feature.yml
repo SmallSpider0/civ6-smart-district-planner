@@ -1,0 +1,36 @@
+name: 建议 / Suggestion
+description: 想让规划器多做或换个做法 / Something the planner should do, or do differently
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        中文或英文都可以。维护者在这里定做不做、怎么做，定了再写代码。 / Chinese or English are both fine. The maintainers decide here whether and how to do it; code comes after that.
+  - type: textarea
+    id: want
+    attributes:
+      label: 想做什么 / What you want to do
+      description: 在游戏里想达到什么，而不是面板上要加什么控件。 / What you want to achieve in the game, rather than which control to add to the panel.
+    validations:
+      required: true
+  - type: textarea
+    id: example
+    attributes:
+      label: 例子 / An example
+      description: '一座城或一片地，现在规划器给出什么，你希望是什么。截图或存档（zip）可以拖进来。 / One city or one area: what the planner gives now and what you would like instead. Drag in a screenshot or a zipped save.'
+    validations:
+      required: true
+  - type: dropdown
+    id: tab
+    attributes:
+      label: 页签 / Tab
+      options:
+        - 单城 / One city
+        - 选城址 / City sites
+        - 多城 / Several cities
+        - 新的 / Something new
+  - type: textarea
+    id: now
+    attributes:
+      label: 现在怎么做 / How you do it now
+      description: 手动摆、用别的模组，或者做不到。 / By hand, with another mod, or not at all.
