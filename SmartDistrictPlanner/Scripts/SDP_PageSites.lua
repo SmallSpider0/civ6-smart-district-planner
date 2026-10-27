@@ -29,7 +29,8 @@ local COLUMNS_A = {
   { Key = "YIELD_FAITH", Glyph = "[ICON_Faith]" },
   { Key = "YIELD_GOLD", Glyph = "[ICON_Gold]" },
   { Key = "YIELD_PRODUCTION", Glyph = "[ICON_Production]" },
-  { Key = "DISTANCE", Glyph = "LOC_SDP_WEIGHT_DISTANCE_SHORT", ToolTip = "LOC_SDP_WEIGHT_DISTANCE", Step = 0.5, Default = 0 },
+  { Key = "DISTANCE", Glyph = "LOC_SDP_WEIGHT_DISTANCE_SHORT", ToolTip = "LOC_SDP_WEIGHT_DISTANCE", Step = 0.5,
+    Default = SDP_Sites.DEFAULT_DISTANCE },
 }
 local COLUMNS_B = {
   { Key = "YIELD_FOOD", Glyph = "[ICON_Food]" },
@@ -52,7 +53,7 @@ local MIN_D, MAX_D = 4, 15
 local m_states = {}
 local m_count = SDP_Sites.DEFAULT_COUNT
 local m_preset = "BALANCED"
-local m_weights = { DISTANCE = 0 }
+local m_weights = { DISTANCE = SDP_Sites.DEFAULT_DISTANCE }
 for key, value in pairs(SDP_Sites.PRESETS.BALANCED) do m_weights[key] = value end
 local m_views = {}
 local m_tier = SDP_Tiers.DEFAULT

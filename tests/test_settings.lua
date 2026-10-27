@@ -37,3 +37,19 @@ test("a weight changed on the panel is written at once", function()
   T.eq(written and written.Values.YIELD_CULTURE, new, "kept: " .. tostring(text))
   T.eq(back and back.Values.YIELD_CULTURE, old, "back as it was")
 end)
+
+-- Issue 91: the city sites tab's distance weight is 0.5 unless the save
+-- says otherwise; a preset puts it back to 0.5, still recognised.
+test("city sites: a preset sets the distance weight to 0.5, recognised", function()
+  SDP_Panel.Refresh()
+  local sites = SDP_Panel.Sites
+  local before = sites.State()
+  local preset, distance = before.Preset, before.Weights.DISTANCE
+  sites.SetPreset("BALANCED")
+  T.eq(sites.State().Weights.DISTANCE, 0.5, "Balanced: distance 0.5")
+  T.eq(sites.State().Preset, "BALANCED", "and the preset recognised")
+  local text = cfg:GetValue(SDP_Settings.CONFIG_KEY .. "SITES") or ""
+  T.ok(text:find("DISTANCE=", 1, true) == nil, "the default is not written: " .. text)
+  sites.SetPreset(preset)
+  sites.SetWeight("DISTANCE", distance)
+end)

@@ -533,3 +533,28 @@ python3 -I tools/remote.py run i91e-sites -- python3 -I tools/refresh_results.py
 ```
 
 `_DIST<nnn>` 是 `cmp_sdp.lua` 新加的变体后缀（距离权重 nnn/100）；`probe91.lua` 的 `TIER=FINE` 选档位。距离的汇总按两份结果的方案逐个区域比位置、裁判的 `score.gain`、本模组的 `sdpLand`、`sdpCost`（这两项也是新记的）。
+
+### 9.7 选城址页的距离默认 0.5（2026-10-27，分支 mac/sites-distance）
+
+合作者在 #91 下回复“同样修改距离权重为0.5”。选城址页距离列的默认值改成 `SDP_Sites.DEFAULT_DISTANCE`（0.5），`SDP_PageSites` 的列定义和初值都用它。三个预设都不设距离，所以选预设时距离回到 0.5，并且按 #89 的规则仍认作那个预设；存档只记与默认不同的值，没改过的存档读出来是 0.5，改过的（包括特意设成 0 的）保持原值。v1.5.1 更新说明里“选预设时距离成本设回 0”从这一版起是 0.5。
+
+离线测试：`spec_settings.lua` 加了一例（预设设回 0.5 并认得、默认不写进存档、调成 0 后写进存档并能读回、没有这一项的旧存档读成 0.5），旧存档那例另核对读出 0.5；`spec_panel.lua` 的 #89 例改成默认 0.5、调高到 1、选预设回 0.5。游戏内 `test_settings.lua` 加了一例，进夜间队列。
+
+实测（第二台机器）：`cmp_sdp.lua` 的选城址分支现在把 `_DIST<nnn>` 传给 `SDP_SiteSolver`（以前忽略），并把每个城址的区域位置记进 `stats.sdpSiteDistricts`（裁判不读）。12 个 `C` 场景，面板默认的区域格（`_GRID`），标准档：
+
+```
+python3 -I tools/remote.py run i91-sitesdist --slots 6 -- node tools/compare.mjs -s '^C[0-9]' -p sdp \
+  --add sdp:STANDARD_GRID,sdp:STANDARD_GRID_DIST050 --only sdp:STANDARD_GRID,sdp:STANDARD_GRID_DIST050 -j 6 --out logs/i91-sitesdist.jsonl
+```
+
+| | 距离 0 | 距离 0.5 |
+|---|---|---|
+| 选出的城址变了的场景 | — | 2 / 12（C08、C10） |
+| 城址周围区域位置变了的场景 | — | 12 / 12 |
+| 换了位置的区域 | — | 53 / 72（城址没变的 10 个场景里 42 / 60） |
+| 裁判城址分合计 | 842 | 837（−0.6%，C08 80 → 75，其余不变） |
+| 其中区域潜力 | 165 | 161 |
+| 求解耗时中位数（离线秒，6 个并行） | 61 | 70 |
+
+0 失败、全部合法。城址分里的区域潜力是裁判对每种区域单独找的最好相邻加成，不看求解器把区域放在哪，所以区域换位置大多不改它；C08 的变化来自城址换了位置。结果文件只在 `logs/`，不入库。
+

@@ -25,7 +25,9 @@
 --                                    (design 19)
 --   variant ..._DIST<nnn> (last)     the distance cost weight nnn / 100 (single
 --                                    and multi; the panel's default is
---                                    _DIST050 since issue 91), else off
+--                                    _DIST050 since issue 91; sites too,
+--                                    for the districts around each site),
+--                                    else off
 --   variant ORACLE                   the exact reference (cmp_oracle.lua, issue
 --                                    48): the fine tier's plan, then branch and
 --                                    bound over the same search to the proven
@@ -243,12 +245,19 @@ function CmpAdapters.sdp(request, variant, w)
     if grid ~= nil then districts = SDP_Sites.DefaultDistricts(0, tonumber(grid)) end
     local r = SDP_SiteSolver.Solve({ PlayerID = 0, Tier = variant, K = request.sites.count, D = request.sites.distance,
       Districts = districts.Districts, Pool = districts.Pool, Pick = districts.Pick,
-      Weights = growth and SDP_Sites.PRESETS.GROWTH or nil })
+      Weights = growth and SDP_Sites.PRESETS.GROWTH or nil, Distance = distance })
     if grid ~= nil then stats.sdpPool = districts.Pool end
     if not r.Ok then out.notes[#out.notes + 1] = tostring(r.Error) end
+    -- The districts placed around each site ("TYPE@x,y"), for comparing
+    -- variants (issue 91); the judge does not read them.
+    local siteDistricts = {}
     for _, site in ipairs((r.Ok and r.Solutions[1] and r.Solutions[1].Sites) or {}) do
       out.placements[#out.placements + 1] = { kind = "SITE", x = site.X, y = site.Y }
+      for _, d in ipairs(site.Districts or {}) do
+        siteDistricts[#siteDistricts + 1] = d.Type .. "@" .. d.X .. "," .. d.Y
+      end
     end
+    stats.sdpSiteDistricts = siteDistricts
     stats.method = "sites"
   elseif scn.kind == "single" and #(request.wonders or {}) > 0 then
     -- Wonders with the districts: the single-city tab solves this city as

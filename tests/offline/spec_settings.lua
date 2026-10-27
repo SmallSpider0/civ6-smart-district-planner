@@ -103,6 +103,7 @@ test("a loaded save: each tab gets back what it kept", function()
   T.eq(UI_Mock.Controls.SitesPresetPull:GetButton():GetText(), "LOC_SDP_PRESET_CUSTOM", "a change: Custom")
   T.eq(sites.Weights.YIELD_FOOD, SDP_Sites.PRESETS.GROWTH.YIELD_FOOD, "its weights")
   T.eq(sites.Weights.APPEAL, 1, "and the change")
+  T.eq(sites.Weights.DISTANCE, 0.5, "a save without the distance weight: the default 0.5 (issue 91)")
   T.eq(sites.K, 2, "the number of new cities (issue 84)")
   T.eq(sites.D, 9, "and the distance")
   T.eq(UI_Mock.Controls.SitesDistance:GetText(), "9", "the distance shown")
@@ -169,6 +170,41 @@ test("city sites: the district grid and count are kept under the tab's key (issu
   UI_Mock.Controls.SitesPlanLess:Click()
   T.ok(cfg:GetValue("SDP_Settings_SITES"):find("COUNT=", 1, true) == nil, "back to 3: not written")
   T.ok(cfg:GetValue("SDP_Settings_SINGLE"):find("DISTRICT", 1, true) == nil, "nothing on the single-city tab's key")
+  SDP_Panel.SelectTab("SINGLE")
+end)
+
+-- Issue 91 (decided 2026-10-27): the distance weight on the city sites tab
+-- starts at 0.5; a changed value is kept, the default is not written, and a
+-- preset puts it back to 0.5 and is still recognised.
+test("city sites: the distance weight 0.5 by default, a change kept, a preset back to 0.5 (issue 91)", function()
+  SDP_Panel.SelectTab("SITES")
+  local sites = SDP_Panel.Sites
+  local pull = UI_Mock.Controls.SitesPresetPull
+  sites.SetPreset("DISTRICTS")
+  T.eq(sites.State().Weights.DISTANCE, 0.5, "the preset: 0.5")
+  T.eq(pull:GetButton():GetText(), "LOC_SDP_PRESET_DISTRICTS", "and the preset recognised, not Custom")
+  local text = cfg:GetValue("SDP_Settings_SITES")
+  T.ok(text:find("DISTANCE=", 1, true) == nil, "the default is not written: " .. text)
+  local distance = nil
+  for _, c in ipairs(sites.State().View.WeightCells) do
+    if c.Key == "DISTANCE" then distance = c end
+  end
+  T.eq(distance.Value:GetText(), "0.5", "shown")
+  distance.Less:Click()
+  T.eq(sites.State().Weights.DISTANCE, 0, "down to 0 through the arrow")
+  T.eq(pull:GetButton():GetText(), "LOC_SDP_PRESET_CUSTOM", "a change: Custom")
+  text = cfg:GetValue("SDP_Settings_SITES")
+  T.ok(text:find(";DISTANCE=0", 1, true) ~= nil, "0 kept: " .. text)
+  -- What a later load reads from that text: the 0 kept; a text without the
+  -- key (a save from before) gives 0.5.
+  local fields = SDP_UI.SettingFields({ { Key = "DISTANCE", Default = SDP_Sites.DEFAULT_DISTANCE } }, {}, SDP_Tiers.Sites)
+  T.eq(SDP_Settings.Decode(text, fields, SDP_Sites.PRESETS, SDP_Sites.PRESET_ORDER).Values.DISTANCE, 0, "loaded: 0")
+  T.eq(SDP_Settings.Decode("v1;preset=BALANCED", fields, SDP_Sites.PRESETS, SDP_Sites.PRESET_ORDER).Values.DISTANCE, 0.5,
+    "never changed: 0.5")
+  sites.SetPreset("BALANCED")
+  T.eq(sites.State().Weights.DISTANCE, 0.5, "Balanced: 0.5 again")
+  T.eq(pull:GetButton():GetText(), "LOC_SDP_PRESET_BALANCED", "recognised")
+  T.ok(cfg:GetValue("SDP_Settings_SITES"):find("DISTANCE=", 1, true) == nil, "not written")
   SDP_Panel.SelectTab("SINGLE")
 end)
 
