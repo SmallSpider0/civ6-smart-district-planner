@@ -11,10 +11,11 @@ repository's collaborators, read once with gh) are reported; anything else
 goes to logs/watch/others.log and is not acted on. The maintainer and the
 agent share one GitHub account, so the agent records the comments it posts
 (--mine, with the URL gh prints) or they would come back as new.
-Without --once it polls every --every seconds (default 300) and exits with
-the first new items: run it in the background; its end is the signal. It
+Without --once it polls every --every seconds (default 120) and exits with
+the first new items: run it in the background; its end is the signal. A
+failed poll (network) is retried after --retry seconds (default 30). It
 does not handle anything itself (.claude/skills/sdp-watch says how).
-State: logs/watch/state.json.
+State: logs/watch/state.json of the main checkout (shared by all worktrees).
 """
 import argparse
 import datetime
@@ -26,7 +27,18 @@ import sys
 import time
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DIR = os.path.join(ROOT, "logs", "watch")
+
+
+def main_checkout():
+    """The repository's main checkout: the state is shared by every worktree,
+    so a --mine recorded in a worktree reaches the watch running in main."""
+    done = subprocess.run(["git", "rev-parse", "--path-format=absolute", "--git-common-dir"],
+                          cwd=ROOT, capture_output=True, text=True)
+    common = done.stdout.strip()
+    return os.path.dirname(common) if done.returncode == 0 and common else ROOT
+
+
+DIR = os.path.join(main_checkout(), "logs", "watch")
 STATE = os.path.join(DIR, "state.json")
 OTHERS = os.path.join(DIR, "others.log")
 
@@ -95,7 +107,8 @@ def poll(state):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--once", action="store_true")
-    ap.add_argument("--every", type=float, default=300)
+    ap.add_argument("--every", type=float, default=120)
+    ap.add_argument("--retry", type=float, default=30)
     ap.add_argument("--mine", nargs="+", metavar="URL")
     ap.add_argument("--reset", action="store_true")
     args = ap.parse_args()
@@ -117,16 +130,17 @@ def main():
     while True:
         # --mine may have been run while this waited: take its records
         state["mine"] = sorted(set(state["mine"]) | set(load()["mine"]))
+        wait = args.every
         try:
             new = poll(state)
-        except RuntimeError as problem:  # network: try again next round
-            new = []
-            print("%s gh: %s" % (now(), problem), file=sys.stderr)
+        except RuntimeError as problem:  # network: try again soon, not a whole round later
+            new, wait = [], args.retry
+            print("%s gh: %s" % (now(), problem), file=sys.stderr, flush=True)
         save(state)
         if new or args.once:
             print("\n".join(new) if new else "nothing new")
             return 0
-        time.sleep(args.every)
+        time.sleep(wait)
 
 
 if __name__ == "__main__":
