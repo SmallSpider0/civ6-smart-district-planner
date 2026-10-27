@@ -41,7 +41,7 @@ function SDP_SiteSolver.NewSession(request)
   self.D = request.D or 5
   self.Stats = { Tier = self.Params.Tier, Candidates = 0, Refined = 0, Nodes = 0, Combinations = 0, Truncated = false,
     Continues = 0, Calls = 0, Tries = 0 }
-  local ctx = SDP_Sites.Context(playerID, request)
+  local ctx = SDP_Sites.Context(playerID, request, self.K)
   self.Ctx = ctx
   local candidates, centers = SDP_Sites.Candidates(playerID, { K = self.K, D = self.D })
   self.Centers = centers

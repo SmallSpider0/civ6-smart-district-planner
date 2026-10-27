@@ -235,8 +235,8 @@ end
 -- Scores
 -- ===========================================================================
 
--- What is shared by every site of one request.
-function SDP_Sites.Context(playerID, request)
+-- What is shared by every site of one request; k: the sites it plans.
+function SDP_Sites.Context(playerID, request, k)
   local ctx = { PlayerID = playerID, Weights = SDP_Sites.Weights(request.Weights) }
   local plannable, byType = SDP_Rules.PlannableDistricts(playerID), {}
   for _, d in ipairs(plannable) do byType[d.Type] = d end
@@ -289,8 +289,9 @@ function SDP_Sites.Context(playerID, request)
   ctx.Items = SDP_Sites.ItemWeights(ctx, request, #plan + pick)
   local tileWeights, onceWeights = SDP_Sites.PlotWeights(ctx.Weights, ctx.Items)
   ctx.Land = SDP_Land.Context(playerID, tileWeights, true, { OnceWeights = onceWeights, Turns = SDP_Sites.HARVEST_TURNS })
-  -- The distance cost is in adjacency: in points like it.
-  ctx.Distance = request.Distance and request.Distance * ctx.Points.DISTRICT
+  -- The distance cost is in adjacency: in points and weighted like it, so a
+  -- districts weight of 0 leaves none of it in the districts part.
+  ctx.Distance = request.Distance and request.Distance * ctx.Items.DISTRICT
   -- Resources the player has (amounts) and can see.
   local resources = Players[playerID]:GetResources()
   ctx.Owned, ctx.Visible, ctx.Amount = {}, {}, {}
@@ -299,7 +300,7 @@ function SDP_Sites.Context(playerID, request)
     ctx.Owned[row.ResourceType] = ctx.Amount[row.ResourceType] > 0
     ctx.Visible[row.ResourceType] = resources:IsResourceVisible(row.Hash)
   end
-  SDP_Sites.ResourceContext(ctx, playerID, request)
+  SDP_Sites.ResourceContext(ctx, playerID, request, k)
   ctx.Loyalty = SDP_Rules.Ruleset() ~= "RULESET_STANDARD"
   ctx.UnknownStrategic = false
   for row in GameInfo.Resources() do
@@ -321,16 +322,17 @@ function SDP_Sites.Context(playerID, request)
 end
 
 -- What the resource parts need (issue 86):
---   Cities      the player's cities and city-center pins plus the K new ones:
+--   Cities      the player's cities and city-center pins plus the k new ones
+--               (the solver's count; else request.K):
 --               a new luxury gives an amenity to at most this many
 --   Buyers      [luxury type] = met major civilizations (not city-states,
 --               which do not trade) that do not have it: copies beyond the
 --               first are worth DUPLICATE_VALUE up to this many
 --   EraFactor   [strategic type] = ERA_RECENT or 1
 --   Short       [strategic type] = true: had but short (Gathering Storm)
-function SDP_Sites.ResourceContext(ctx, playerID, request)
+function SDP_Sites.ResourceContext(ctx, playerID, request, k)
   local player = Players[playerID]
-  ctx.Cities = player:GetCities():GetCount() + #SDP_Multi.Sites(playerID) + (request.K or 1)
+  ctx.Cities = player:GetCities():GetCount() + #SDP_Multi.Sites(playerID) + (k or request.K or 1)
   ctx.Buyers = SDP_Sites.Buyers(playerID)
   local era = player.GetEra ~= nil and player:GetEra() or 0
   local resources = player:GetResources()
