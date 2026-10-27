@@ -11,7 +11,7 @@ The watch runs only while a session runs it, when the maintainer asks for it; no
 
 ```bash
 python3 -I tools/watch_issues.py --reset    # once, when turning it on: start from now
-python3 -I tools/watch_issues.py            # in the background (polls every 5 min); it exits with the new items
+python3 -I tools/watch_issues.py            # in the background (polls every 2 min, retries a failed poll after 30 s); it exits with the new items
 ```
 
 Run it from the main checkout so its state (logs/watch/state.json) is one place. When it exits, handle what it printed, then start it again. Started again later without `--reset`, it picks up what came while it was off. To check once between tasks: `--once`.

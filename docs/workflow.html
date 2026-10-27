@@ -548,7 +548,7 @@ footer { margin-top: 64px; border-top: 1px solid var(--line); padding-top: 16px;
   ];
   // [step, level, how (may contain a file link), what a person still does]
   var ROWS = [
-    ["发现新 Issue", 2, "维护者要求时开监听脚本，每 5 分钟轮询，只把合作者的 Issue 和评论交给代理；不开时在两件事之间查一次", "—", "tools/watch_issues.py"],
+    ["发现新 Issue", 2, "维护者要求时开监听脚本，每 2 分钟轮询（连不上 GitHub 时 30 秒后重试），只把合作者的 Issue 和评论交给代理；不开时在两件事之间查一次", "—", "tools/watch_issues.py"],
     ["分诊、修 bug", 2, "复现，写一个在旧代码上失败的测试，修好，挂到下一个小版本的里程碑", "—", ".claude/skills/sdp-issue/SKILL.md"],
     ["功能调研", 2, "子 agent 查规则库、游戏与依赖模组的源码、同类模组、玩家社区，写成 Issue 评论", "—", null],
     ["功能方案", 4, "代理列出方案 A、B 和建议，用玩家看得懂的话写在 Issue 里", "维护者在对话里拍板，或合作者在 Issue 下明确回复", null],
