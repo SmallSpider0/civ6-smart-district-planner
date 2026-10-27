@@ -7,6 +7,9 @@
     python3 -I tools/stress.py all                      # load and run every scenario in SCENARIOS
     python3 -I tools/stress.py summary                  # the results as a table
 
+`prepare` also takes the measurement saves in EXTRA_SCENARIOS (not in `all`),
+e.g. mid-gs, a mid-game for tests/bench/sites_count.py (issue 124).
+
 `prepare` needs the game running (game.py launch); inside a game it leaves
 for the main menu first. The local player is handed to the AI for the
 autoplay (AutoplayManager, as the game's own automation tests do), so the save holds an empire the AI built: many cities,
@@ -51,6 +54,15 @@ SCENARIOS = {
                        era="ERA_CLASSICAL", leader="LEADER_PERICLES", seed=59, turns=170),
 }
 
+# Saves for measurements, not part of the release run (`all`). mid-gs
+# (issue 124): a mid-game with room for new cities. Standard speed, so turn
+# 100 is the usual classical-medieval mid-game (at online speed the same turn
+# is past the renaissance); a standard Continents map leaves land to settle.
+EXTRA_SCENARIOS = {
+    "mid-gs": dict(ruleset="RULESET_EXPANSION_2", script="Continents.lua", size="MAPSIZE_STANDARD",
+                   era="ERA_ANCIENT", leader="LEADER_TRAJAN", seed=71, turns=100, speed="GAMESPEED_STANDARD"),
+}
+
 SETUP = """
 SDP_TestSetupOriginal = SDP_TestSetupOriginal or GameSetup_RefreshParameters
 GameSetup_RefreshParameters = function(...)
@@ -59,7 +71,7 @@ GameSetup_RefreshParameters = function(...)
   MapConfiguration.SetScript("%(script)s")
   MapConfiguration.SetMapSize("%(size)s")
   GameConfiguration.SetStartEra("%(era)s")
-  GameConfiguration.SetGameSpeedType("GAMESPEED_ONLINE")
+  GameConfiguration.SetGameSpeedType("%(speed)s")
   PlayerConfigurations[0]:SetLeaderTypeName("%(leader)s")
   GameConfiguration.SetValue("GAME_SYNC_RANDOM_SEED", %(seed)d)
   MapConfiguration.SetValue("RANDOM_SEED", %(seed)d)
@@ -87,8 +99,9 @@ def save_name(name):
 
 
 def cmd_prepare(args):
-    sc = dict(SCENARIOS.get(args.name, {}))
-    for key in ("ruleset", "script", "size", "era", "leader", "seed", "turns"):
+    sc = dict(SCENARIOS.get(args.name) or EXTRA_SCENARIOS.get(args.name) or {})
+    sc.setdefault("speed", "GAMESPEED_ONLINE")
+    for key in ("ruleset", "script", "size", "era", "leader", "seed", "turns", "speed"):
         value = getattr(args, key)
         if value is not None:
             sc[key] = value
@@ -406,7 +419,7 @@ def main(argv=None):
     sub = ap.add_subparsers(dest="cmd", required=True)
     pp = sub.add_parser("prepare")
     pp.add_argument("name")
-    for key in ("ruleset", "script", "size", "era", "leader"):
+    for key in ("ruleset", "script", "size", "era", "leader", "speed"):
         pp.add_argument("--" + key)
     pp.add_argument("--seed", type=int)
     pp.add_argument("--turns", type=int)
