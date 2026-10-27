@@ -93,7 +93,7 @@
   {
    "Count": 0,
    "Round": 1,
-   "Seconds": 0.035,
+   "Seconds": 0.031,
    "Ok": true,
    "Error": null,
    "Found": 1,
@@ -103,67 +103,67 @@
   {
    "Count": 3,
    "Round": 1,
-   "Seconds": 0.03,
-   "Ok": false,
-   "Error": "NO_SITE",
-   "Found": 0,
-   "Calls": 0,
-   "Sites": ""
+   "Seconds": 0.035,
+   "Ok": true,
+   "Error": null,
+   "Found": 1,
+   "Calls": 242,
+   "Sites": "80,32"
   },
   {
    "Count": 6,
    "Round": 1,
-   "Seconds": 0.031,
-   "Ok": false,
-   "Error": "NO_SITE",
-   "Found": 0,
-   "Calls": 0,
-   "Sites": ""
+   "Seconds": 0.038,
+   "Ok": true,
+   "Error": null,
+   "Found": 1,
+   "Calls": 242,
+   "Sites": "80,32"
   },
   {
    "Count": 3,
    "Round": 2,
-   "Seconds": 0.031,
-   "Ok": false,
-   "Error": "NO_SITE",
-   "Found": 0,
-   "Calls": 0,
-   "Sites": ""
+   "Seconds": 0.035,
+   "Ok": true,
+   "Error": null,
+   "Found": 1,
+   "Calls": 242,
+   "Sites": "80,32"
   },
   {
    "Count": 6,
-   "Round": 2,
-   "Seconds": 0.036,
-   "Ok": false,
-   "Error": "NO_SITE",
-   "Found": 0,
-   "Calls": 0,
-   "Sites": ""
-  },
-  {
-   "Count": 0,
    "Round": 2,
    "Seconds": 0.037,
    "Ok": true,
    "Error": null,
    "Found": 1,
+   "Calls": 242,
+   "Sites": "80,32"
+  },
+  {
+   "Count": 0,
+   "Round": 2,
+   "Seconds": 0.039,
+   "Ok": true,
+   "Error": null,
+   "Found": 1,
    "Calls": 6,
    "Sites": "80,32"
   },
   {
    "Count": 6,
    "Round": 3,
-   "Seconds": 0.033,
-   "Ok": false,
-   "Error": "NO_SITE",
-   "Found": 0,
-   "Calls": 0,
-   "Sites": ""
+   "Seconds": 0.039,
+   "Ok": true,
+   "Error": null,
+   "Found": 1,
+   "Calls": 242,
+   "Sites": "80,32"
   },
   {
    "Count": 0,
    "Round": 3,
-   "Seconds": 0.035,
+   "Seconds": 0.031,
    "Ok": true,
    "Error": null,
    "Found": 1,
@@ -173,19 +173,19 @@
   {
    "Count": 3,
    "Round": 3,
-   "Seconds": 0.031,
-   "Ok": false,
-   "Error": "NO_SITE",
-   "Found": 0,
-   "Calls": 0,
-   "Sites": ""
+   "Seconds": 0.038,
+   "Ok": true,
+   "Error": null,
+   "Found": 1,
+   "Calls": 242,
+   "Sites": "80,32"
   }
  ],
  "Summary": {
   "0": {
-   "Median": 0.035,
-   "Min": 0.035,
-   "Max": 0.037,
+   "Median": 0.031,
+   "Min": 0.031,
+   "Max": 0.039,
    "Found": [
     1
    ],
@@ -195,33 +195,29 @@
    "VsZero": 1.0
   },
   "3": {
-   "Median": 0.031,
-   "Min": 0.03,
-   "Max": 0.031,
+   "Median": 0.035,
+   "Min": 0.035,
+   "Max": 0.038,
    "Found": [
-    0
+    1
    ],
-   "Ok": false,
-   "Errors": [
-    "NO_SITE"
-   ],
+   "Ok": true,
+   "Errors": [],
    "SameSites": true,
-   "VsZero": 0.89
+   "VsZero": 1.13
   },
   "6": {
-   "Median": 0.033,
-   "Min": 0.031,
-   "Max": 0.036,
+   "Median": 0.038,
+   "Min": 0.037,
+   "Max": 0.039,
    "Found": [
-    0
+    1
    ],
-   "Ok": false,
-   "Errors": [
-    "NO_SITE"
-   ],
+   "Ok": true,
+   "Errors": [],
    "SameSites": true,
-   "VsZero": 0.94
+   "VsZero": 1.23
   }
  },
- "When": "2026-10-27 12:27"
+ "When": "2026-10-28 00:11"
 }
