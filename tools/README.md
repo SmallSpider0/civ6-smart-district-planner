@@ -533,6 +533,18 @@ python3 -I tools/preflight_night.py   # 每个文件夹一行 ok / PROBLEM / mis
 - 本机配置（见上文 sdplock.py）可加 `preflight_folders`：夜里还要用的其他文件夹的列表，如上传创意工坊用的目录。
 - 一个文件夹超过 10 秒没反应记为 `waiting (prompt on screen?)`；有文件夹出问题时退出码 1。
 
+## codex_review.py — 请 Codex 审 PR、等它审完、回复意见
+
+```bash
+python3 -I tools/codex_review.py request 125              # 在 PR 下评论 @codex review（并记进 watch_issues 的 --mine）
+python3 -I tools/codex_review.py wait 125                 # 后台跑：审完退出；0 没有意见，1 有没处理的意见（列出），3 超时（默认 30 分钟）
+python3 -I tools/codex_review.py findings 125             # 列出 Codex 没解决的审查意见（线程 ID、文件:行、链接、内容）
+python3 -I tools/codex_review.py reply 线程ID "已修，见 abc1234"   # 回复一条并标为已解决
+```
+
+- 什么时候用、意见怎么处理见 CONTRIBUTING.md“Codex 审查”。
+- 判断审完读三处：Codex 汇总评论里的状态、它对最新提交发的审查、它在 PR 上点的 👍（没有意见时）。网络出错会重试。
+
 ## worktree.py — 工作树
 
 ```bash

@@ -404,6 +404,7 @@ footer { margin-top: 64px; border-top: 1px solid var(--line); padding-top: 16px;
     <ul class="overview">
       <li>每个 PR 只跑和它相关的测试文件，整套离线测试 CI 会跑；三种规则集、真实点击、压力测试在发版前跑一次。</li>
       <li>游戏内测试只能晚些跑时（比如要等夜间时段），PR 先开着，测过了再打开自动合并。离线重活放在第二台机器，不和游戏抢 CPU。</li>
+      <li>改了代码的 PR 先请 Codex 审（<code>tools/codex_review.py</code>），审完、意见处理完再开自动合并；只改文档的不审。Codex 的每条意见先核实：属实的写测试再改，不属实的写明原因，都回复后标为已解决。</li>
       <li>汇报时分清“已自动验证”和“需要人确认”，没验证的不说成通过。</li>
     </ul>
   </div>
