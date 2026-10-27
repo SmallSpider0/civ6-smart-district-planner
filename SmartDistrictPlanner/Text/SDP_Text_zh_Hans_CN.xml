@@ -373,8 +373,68 @@
     <Replace Tag="LOC_SDP_SITES_MODEL_NOTE" Language="zh_Hans_CN">
       <Text>城址分是估计值，区域在第 2 步精确规划</Text>
     </Replace>
-    <Replace Tag="LOC_SDP_SITES_PARTS" Language="zh_Hans_CN">
-      <Text>区域 {1_District} 地块 {2_Land} 水源 {3_Water} 奢侈 {4_Luxury} 战略 {5_Strategic}</Text>
+    <Replace Tag="LOC_SDP_SITES_W_DISTRICT_SHORT" Language="zh_Hans_CN">
+      <Text>区域</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_W_FEATURE_SHORT" Language="zh_Hans_CN">
+      <Text>地貌</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_W_AMENITY_SHORT" Language="zh_Hans_CN">
+      <Text>奢侈</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_W_DISTRICT" Language="zh_Hans_CN">
+      <Text>区域：计划的区域在城址周围最好摆法的相邻加成（减去距离成本），按上一行的产出权重折算。计划的区域平均每个 +4 是 10 分。</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_W_LAND" Language="zh_Hans_CN">
+      <Text>地块：城市建齐计划区域时耕作的最好几格，修上最好的改良后每回合的产出（食物、生产力 1，科技、文化 5/6，信仰 1/2，金币 1/4，再乘上一行的产出权重）。耕作的格平均每格约 4.3（开局）到 7.2（科技、市政全满）是 10 分，随科技、市政进度变化。</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_W_FEATURE" Language="zh_Hans_CN">
+      <Text>地貌：3 环内砍伐树林、雨林、沼泽和收获加成资源的一次性产出（随科技、市政进度增长），按 50 回合摊开；城市耕作、留着更好的格不算。约 12 块树林是 10 分，每块树林约 0.8 分，开局和后期都一样。</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_W_HOUSING" Language="zh_Hans_CN">
+      <Text>住房：城址的住房（水源、粮仓；计划里有港口时加上灯塔、海港）比无水城址多出的部分。新城按 1 人口算：到“建齐计划区域所需人口 + 1”和“3”中较大的那个为止，每点住房算 1（城市还能满速增长），之后每多一点减半。多 3 点（河边、湖边）是 10 分。</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_W_AMENITY" Language="zh_Hans_CN">
+      <Text>奢侈：3 环内的奢侈资源。你还没有的种类，第一份按能分到宜居度的城市数算（最多 4 座）；多出来的份数每份算 1，最多算到能卖给的文明数（已相遇、还没有这种资源）。一种新奢侈资源分给 4 座城是 10 分。</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_W_STRATEGIC" Language="zh_Hans_CN">
+      <Text>战略：3 环内的战略资源格。每格算 1，揭示它的科技在你所在时代或前一个时代的乘 2；你还没有的种类第一格再乘 2，已有但不够用的（风云变幻：库存不到上限的四分之一，或每回合收入不为正）乘 1.5。一种新的、你所在时代附近揭示的战略资源是 10 分。</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_W_APPEAL" Language="zh_Hans_CN">
+      <Text>魅力：可建区域格的平均魅力，每 1 点算 1 分（默认不计）。</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_ITEM_SHORT" Language="zh_Hans_CN">
+      <Text>{1_Name} {2_Points}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_ITEM_PENALTY" Language="zh_Hans_CN">
+      <Text>缺格 −{1_Points}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_ITEM_PENALTY_LONG" Language="zh_Hans_CN">
+      <Text>可用的格不够放下计划的区域：−{1_Points} 分（每缺一格 {2_Each} 分）</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_ITEM_DISTRICT" Language="zh_Hans_CN">
+      <Text>区域 {1_Points} 分：相邻加成（减去距离成本）折合 {2_Value}，10 分要 {3_Ten}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_ITEM_LAND" Language="zh_Hans_CN">
+      <Text>地块 {1_Points} 分：耕作的格每回合产出折合 {2_Value}，10 分要 {3_Ten}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_ITEM_FEATURE" Language="zh_Hans_CN">
+      <Text>地貌 {1_Points} 分：砍伐、收获折合每回合 {2_Value}，10 分要 {3_Ten}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_ITEM_HOUSING" Language="zh_Hans_CN">
+      <Text>住房 {1_Points} 分：比无水城址多的住房折合 {2_Value}，10 分要 {3_Ten}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_ITEM_AMENITY" Language="zh_Hans_CN">
+      <Text>奢侈 {1_Points} 分：新种类的宜居度和能卖出的份数折合 {2_Value}，10 分要 {3_Ten}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_ITEM_STRATEGIC" Language="zh_Hans_CN">
+      <Text>战略 {1_Points} 分：资源格按时代、种类折合 {2_Value}，10 分要 {3_Ten}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_ITEM_APPEAL" Language="zh_Hans_CN">
+      <Text>魅力 {1_Points} 分：可建区域格平均魅力 {2_Value}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_WEIGHTED" Language="zh_Hans_CN">
+      <Text>{1_Line}（权重 {2_Weight}）</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SITES_PLACE" Language="zh_Hans_CN">
       <Text>打城址钉</Text>
@@ -388,9 +448,6 @@
     <Replace Tag="LOC_SDP_SITES_WATER_NONE" Language="zh_Hans_CN">
       <Text>无水源</Text>
     </Replace>
-    <Replace Tag="LOC_SDP_SITES_WEIGHT_HOUSING" Language="zh_Hans_CN">
-      <Text>住房：城址的住房（水源、粮仓；计划里有港口时加上灯塔、海港）比无水城址多出的部分折合多少分。新城按 1 人口算：到“建齐计划区域所需人口 + 1”和“3”中较大的那个为止，每点住房算 1（城市还能满速增长），之后每多一点减半。</Text>
-    </Replace>
     <Replace Tag="LOC_SDP_SITES_HOUSING" Language="zh_Hans_CN">
       <Text>住房 {1_Housing}</Text>
     </Replace>
@@ -401,10 +458,10 @@
       <Text>离本方案的其他城址最近 {1_Distance} 格</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SITES_LUXURY" Language="zh_Hans_CN">
-      <Text>奢侈资源（{1_Score} 分）：{2_List}</Text>
+      <Text>奢侈资源：{1_List}</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SITES_STRATEGIC" Language="zh_Hans_CN">
-      <Text>战略资源（{1_Score} 分）：{2_List}</Text>
+      <Text>战略资源：{1_List}</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SITES_NEW_KIND" Language="zh_Hans_CN">
       <Text>{1_Name} {2_Count}（新）</Text>
