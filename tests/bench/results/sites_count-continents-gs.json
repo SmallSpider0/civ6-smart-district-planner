@@ -1,0 +1,227 @@
+{
+ "Name": "continents-gs",
+ "Census": {
+  "Turn": 221,
+  "Districts": 54,
+  "Wonders": 0,
+  "OtherCities": 87
+ },
+ "Cities": 9,
+ "Setups": {
+  "0": {
+   "Count": 0,
+   "D": 5,
+   "Distance": 0.5,
+   "K": 3,
+   "Must": [],
+   "Pick": 0,
+   "Pool": [
+    "DISTRICT_CAMPUS",
+    "DISTRICT_COMMERCIAL_HUB",
+    "DISTRICT_ENTERTAINMENT_COMPLEX",
+    "DISTRICT_HARBOR",
+    "DISTRICT_HOLY_SITE",
+    "DISTRICT_INDUSTRIAL_ZONE",
+    "DISTRICT_THEATER",
+    "DISTRICT_WATER_ENTERTAINMENT_COMPLEX"
+   ],
+   "Step": "Setup",
+   "Tier": "STANDARD"
+  },
+  "3": {
+   "Count": 3,
+   "D": 5,
+   "Distance": 0.5,
+   "K": 3,
+   "Must": [],
+   "Pick": 3,
+   "Pool": [
+    "DISTRICT_CAMPUS",
+    "DISTRICT_COMMERCIAL_HUB",
+    "DISTRICT_ENTERTAINMENT_COMPLEX",
+    "DISTRICT_HARBOR",
+    "DISTRICT_HOLY_SITE",
+    "DISTRICT_INDUSTRIAL_ZONE",
+    "DISTRICT_THEATER",
+    "DISTRICT_WATER_ENTERTAINMENT_COMPLEX"
+   ],
+   "Step": "Setup",
+   "Tier": "STANDARD"
+  },
+  "6": {
+   "Count": 6,
+   "D": 5,
+   "Distance": 0.5,
+   "K": 3,
+   "Must": [],
+   "Pick": 6,
+   "Pool": [
+    "DISTRICT_CAMPUS",
+    "DISTRICT_COMMERCIAL_HUB",
+    "DISTRICT_ENTERTAINMENT_COMPLEX",
+    "DISTRICT_HARBOR",
+    "DISTRICT_HOLY_SITE",
+    "DISTRICT_INDUSTRIAL_ZONE",
+    "DISTRICT_THEATER",
+    "DISTRICT_WATER_ENTERTAINMENT_COMPLEX"
+   ],
+   "Step": "Setup",
+   "Tier": "STANDARD"
+  }
+ },
+ "WarmUp": {
+  "Count": 0,
+  "D": 5,
+  "Distance": 0.5,
+  "K": 3,
+  "Must": [],
+  "Pick": 0,
+  "Pool": [
+   "DISTRICT_CAMPUS",
+   "DISTRICT_COMMERCIAL_HUB",
+   "DISTRICT_ENTERTAINMENT_COMPLEX",
+   "DISTRICT_HARBOR",
+   "DISTRICT_HOLY_SITE",
+   "DISTRICT_INDUSTRIAL_ZONE",
+   "DISTRICT_THEATER",
+   "DISTRICT_WATER_ENTERTAINMENT_COMPLEX"
+  ],
+  "Step": "Setup",
+  "Tier": "STANDARD"
+ },
+ "Runs": [
+  {
+   "Count": 0,
+   "Round": 1,
+   "Seconds": 0.035,
+   "Ok": true,
+   "Error": null,
+   "Found": 1,
+   "Calls": 6,
+   "Sites": "80,32"
+  },
+  {
+   "Count": 3,
+   "Round": 1,
+   "Seconds": 0.03,
+   "Ok": false,
+   "Error": "NO_SITE",
+   "Found": 0,
+   "Calls": 0,
+   "Sites": ""
+  },
+  {
+   "Count": 6,
+   "Round": 1,
+   "Seconds": 0.031,
+   "Ok": false,
+   "Error": "NO_SITE",
+   "Found": 0,
+   "Calls": 0,
+   "Sites": ""
+  },
+  {
+   "Count": 3,
+   "Round": 2,
+   "Seconds": 0.031,
+   "Ok": false,
+   "Error": "NO_SITE",
+   "Found": 0,
+   "Calls": 0,
+   "Sites": ""
+  },
+  {
+   "Count": 6,
+   "Round": 2,
+   "Seconds": 0.036,
+   "Ok": false,
+   "Error": "NO_SITE",
+   "Found": 0,
+   "Calls": 0,
+   "Sites": ""
+  },
+  {
+   "Count": 0,
+   "Round": 2,
+   "Seconds": 0.037,
+   "Ok": true,
+   "Error": null,
+   "Found": 1,
+   "Calls": 6,
+   "Sites": "80,32"
+  },
+  {
+   "Count": 6,
+   "Round": 3,
+   "Seconds": 0.033,
+   "Ok": false,
+   "Error": "NO_SITE",
+   "Found": 0,
+   "Calls": 0,
+   "Sites": ""
+  },
+  {
+   "Count": 0,
+   "Round": 3,
+   "Seconds": 0.035,
+   "Ok": true,
+   "Error": null,
+   "Found": 1,
+   "Calls": 6,
+   "Sites": "80,32"
+  },
+  {
+   "Count": 3,
+   "Round": 3,
+   "Seconds": 0.031,
+   "Ok": false,
+   "Error": "NO_SITE",
+   "Found": 0,
+   "Calls": 0,
+   "Sites": ""
+  }
+ ],
+ "Summary": {
+  "0": {
+   "Median": 0.035,
+   "Min": 0.035,
+   "Max": 0.037,
+   "Found": [
+    1
+   ],
+   "Ok": true,
+   "Errors": [],
+   "SameSites": true,
+   "VsZero": 1.0
+  },
+  "3": {
+   "Median": 0.031,
+   "Min": 0.03,
+   "Max": 0.031,
+   "Found": [
+    0
+   ],
+   "Ok": false,
+   "Errors": [
+    "NO_SITE"
+   ],
+   "SameSites": true,
+   "VsZero": 0.89
+  },
+  "6": {
+   "Median": 0.033,
+   "Min": 0.031,
+   "Max": 0.036,
+   "Found": [
+    0
+   ],
+   "Ok": false,
+   "Errors": [
+    "NO_SITE"
+   ],
+   "SameSites": true,
+   "VsZero": 0.94
+  }
+ },
+ "When": "2026-10-27 12:27"
+}
