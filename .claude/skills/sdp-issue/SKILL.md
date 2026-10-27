@@ -40,7 +40,7 @@ New behaviour, changed defaults, UI changes. Code only after the plan is decided
 
 ## 3. Milestone and version
 
-The version digit follows the size of the change (CONTRIBUTING.md "发版", since 2026-10-26):
+The version digit follows the size of the change (docs/maintaining.md "发版", since 2026-10-26):
 
 | Change | Version |
 |---|---|
@@ -54,8 +54,8 @@ Several changes go into one release; a single change is released alone only when
 
 ## 4. Working on it
 
-- Who does it (CONTRIBUTING.md, "谁来做"): an issue's development runs in a subagent with its own worktree (`tools/worktree.py add`), sent by the main session with the issue, the decided plan, the base branch and the tests to run; it writes the code, runs the offline tests (over a minute on the second machine), queues the in-game tests and pushes the branch without a PR. When the night tests are done, the main session sends a new subagent with a short handoff to fix what failed and open the PR. A side session instead when the maintainer asks for one or the change is large and they want to review it directly; it is archived when its PR has merged. Research and measurements run in subagents; a fix of a few lines (wording, a tooltip, a rule in the docs) stays in the main session.
-- Briefs, handoffs and waiting (CONTRIBUTING.md, "子 agent 怎么派", has the rules and the numbers):
+- Who does it (docs/maintaining.md, "谁来做"): an issue's development runs in a subagent with its own worktree (`tools/worktree.py add`), sent by the main session with the issue, the decided plan, the base branch and the tests to run; it writes the code, runs the offline tests (over a minute on the second machine), queues the in-game tests and pushes the branch without a PR. When the night tests are done, the main session sends a new subagent with a short handoff to fix what failed and open the PR. A side session instead when the maintainer asks for one or the change is large and they want to review it directly; it is archived when its PR has merged. Research and measurements run in subagents; a fix of a few lines (wording, a tooltip, a rule in the docs) stays in the main session.
+- Briefs, handoffs and waiting (docs/maintaining.md, "子 agent 怎么派", has the rules and the numbers):
   - Pick `model` and `effort` on every Agent / side-session call: Sonnet medium for mechanical work with a clear brief, Opus medium by default, Opus high for solver, scoring and legality design, bugs with an unknown cause, trade-off research and a task a medium agent got wrong once.
   - A subagent's task ends at a checkpoint (implemented, offline tests run, PR opened). Follow-ups (rebase, night-test failures, review fixes) go to a new subagent with a handoff: issue, branch, PR, what was decided, log paths. Resume the old one only when the follow-up needs reasoning that is in no file.
   - Briefs point to files instead of pasting them; tool output stays small (`tail`, `grep`, logs in files, Read with offset/limit).
@@ -65,5 +65,5 @@ Several changes go into one release; a single change is released alone only when
 - One branch and one PR per issue (`tools/worktree.py add ~/civ6mod-NAME mac/NAME`); issues that change the same thing and would depend on each other share one. Several commits, English imperative messages with `#N`, ending with the session's `Co-Authored-By` line. Keep commit signing as it is set up; never turn it off.
 - Run the tests related to the change (offline specs, in-game test files, the development set when the solver or legality changed); CI runs the full offline set. The full in-game set, real clicks and the stress test run once before a release (sdp-release).
 - Behaviour that players notice gets a line in CHANGELOG.md under 未发布, in players' words; update the docs that describe it (install guides zh/en, README zh/en, the report when numbers change).
-- The PR as soon as its tests pass: `Closes #N` per issue, the tests that ran and where, and for generated files the command that made them. Auto-merge (squash) and Auto-fix on; when in-game tests still have to run (e.g. the game may not run by day), leave auto-merge off until they pass. Code PRs (`SmartDistrictPlanner/`, `tests/`, `tools/`) also wait for Codex: `tools/codex_review.py request N`, then `wait N` in the background, and auto-merge only when no finding is left unanswered; check each finding before acting on it (CONTRIBUTING.md "Codex 审查"). Docs-only PRs skip it. Unbind after the merge. Merging into `main` reaches no player; only a release does (sdp-release).
-- Writing: plain Chinese, no "新功能/新加" labels, each thing once (CONTRIBUTING.md 写作规则). Tooltips of switches say what it does, the measured gain and the cost.
+- The PR as soon as its tests pass: `Closes #N` per issue, the tests that ran and where, and for generated files the command that made them. Auto-merge (squash) and Auto-fix on; when in-game tests still have to run (e.g. the game may not run by day), leave auto-merge off until they pass. Code PRs (`SmartDistrictPlanner/`, `tests/`, `tools/`) also wait for Codex: `tools/codex_review.py request N`, then `wait N` in the background, and auto-merge only when no finding is left unanswered; check each finding before acting on it (docs/maintaining.md "Codex 审查"). Docs-only PRs skip it. Unbind after the merge. Merging into `main` reaches no player; only a release does (sdp-release).
+- Writing: plain Chinese, no "新功能/新加" labels, each thing once (docs/maintaining.md 写作规则). Tooltips of switches say what it does, the measured gain and the cost.

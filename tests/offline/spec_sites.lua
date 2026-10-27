@@ -517,3 +517,47 @@ test("dense packing: most sites first, spaced, linked back, no refined site left
   T.ok(three.Ok and #three.Solutions[1].Sites <= 3, "K = 3: at most three")
   T.eq(three.Quality.CanContinue, false, "no continue in dense packing")
 end)
+
+test("issue 133: the district count never removes a site; a cramped site is scored with what fits", function()
+  -- Our capital at (2, 4); everything else mountains but a two-plot strip at
+  -- (9, 4)-(10, 4): a site there has one plot (the other) for a district.
+  -- Found on a late save: count 0 found this kind of site, counts 3 and 6
+  -- NO_SITE (the coarse step dropped sites with fewer than half the planned
+  -- districts' plots).
+  World.New({
+    rows = {
+      "MMMMMMMMMMMMMM",
+      "MMMMMMMMMMMMMM",
+      "MMMMMMMMMMMMMM",
+      "MM...MMMMMMMMM",
+      "MM...MMMM..MMM",
+      "MM...MMMMMMMMM",
+      "MMMMMMMMMMMMMM",
+      "MMMMMMMMMMMMMM",
+      "MMMMMMMMMMMMMM",
+    },
+    cities = { { id = 1, x = 3, y = 4, population = 4, capital = true, radius = 1 } },
+  })
+  local pool = { "DISTRICT_CAMPUS", "DISTRICT_HOLY_SITE", "DISTRICT_COMMERCIAL_HUB", "DISTRICT_THEATER" }
+  local found = {}
+  for _, count in ipairs({ 0, 1, 3, 6 }) do
+    local result = SDP_SiteSolver.Solve({ PlayerID = 0, K = 1, D = 8, Districts = {}, Pool = pool, Pick = count,
+      Tier = "FAST" })
+    T.ok(result.Ok, "count " .. count .. ": " .. tostring(result.Error))
+    local keys = {}
+    for _, solution in ipairs(result.Solutions) do
+      local site = solution.Sites[1]
+      keys[#keys + 1] = site.X .. "," .. site.Y
+      if count > 0 then
+        T.ok(#site.Districts >= 1, "count " .. count .. ": the district that fits is placed at " .. keys[#keys])
+      end
+      T.ok(#site.Districts <= 1, "count " .. count .. ": one plot, one district")
+    end
+    table.sort(keys)
+    found[count] = table.concat(keys, " ")
+  end
+  T.ok(found[0] ~= "", "count 0 finds the sites")
+  for _, count in ipairs({ 1, 3, 6 }) do
+    T.eq(found[count], found[0], "count " .. count .. ": the same sites as count 0")
+  end
+end)

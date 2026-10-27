@@ -8,7 +8,8 @@
 --               within K * D of one of the player's cities.
 --   Coarse      every candidate, no DMT: worked plots, fresh water, luxury
 --               and strategic resources, one-time yields, appeal, a penalty
---               when too few plots can take districts.
+--               per planned district without a plot (never a reason to
+--               drop a site: the district count only changes scores).
 -- Each part is first worked out per turn (issue 88, decided 2026-10-26):
 -- yields weigh SDP_Land.PLOT_WEIGHTS (adjacency: 1 a yield) times the tab's
 -- yield weights. Then it is turned into points by a fixed rule (decided
@@ -406,7 +407,9 @@ end
 -- The coarse score of a site (no DMT). Returns a site table:
 --   X, Y, Index, Scan, Land (SDP_Land model of its workable plots)
 --   Parts = { Farm, Water, Luxury, Strategic, Feature, Appeal, Penalty } (weighted)
---   Coarse  sum of the parts; Valid false when too few plots take districts
+--   Coarse  sum of the parts. A site with fewer plots for districts than
+--     planned is kept (issue 133): Penalty lowers it per missing plot and
+--     the fine score places the districts that fit.
 --   Luxury = { [type] = copies }, Strategic = { [type] = amount }
 --   Resources = { { Index, Type, Luxury (bool), Count (copies), Amount } }: the
 --     visible luxury and strategic resources on its workable plots
@@ -471,7 +474,6 @@ function SDP_Sites.Coarse(ctx, candidate, centers)
   site.Parts.Appeal = usable > 0 and w.APPEAL * appeal / usable or 0
   local planned = #ctx.Plan + ctx.Pick
   site.Parts.Penalty = math.max(0, planned - usable) * SDP_Sites.MISSING_PLOT
-  site.Valid = usable * 2 >= planned
   site.Info.Usable = usable
   site.Info.Unrevealed = candidate.Unrevealed
   site.Info.Disaster = disaster
