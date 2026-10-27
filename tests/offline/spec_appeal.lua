@@ -83,22 +83,27 @@ local function RefHousing(world, plan, weight)
 end
 
 -- What housing `total` adds to the test city (issue 55): its housing now
--- (water, 2 here) plus the plan's, valued 1 each up to its target
--- population (6: its population; one specialty district needs 1), half
--- the one before after that.
-local CITY_HOUSING, CITY_TARGET = 2, 6
+-- (water, 2 here) plus the plan's, valued 1 each up to the knee, the
+-- larger of its target population + 1 (6: its population; one specialty
+-- district needs 1) and its population + 2, half the one before after
+-- that; all of it times the size discount, growth threshold at 5 over that
+-- at its population (issue 91, plan B).
+local CITY_HOUSING, CITY_TARGET, CITY_POPULATION = 2, 6, 6
+local function Threshold(p) return 15 + 8 * (p - 1) + (p - 1) ^ 1.5 end
+local SCALE = Threshold(5) / Threshold(CITY_POPULATION)
 local function HousingWorth(total, weight)
   if weight == 0 then return 0 end
   local function Value(n)
-    if n <= CITY_TARGET then return n end
-    local v, step = CITY_TARGET, 1
-    for _ = CITY_TARGET + 1, math.floor(n) do
+    local knee = math.max(CITY_TARGET + 1, CITY_POPULATION + 2)
+    if n <= knee then return n end
+    local v, step = knee, 1
+    for _ = knee + 1, math.floor(n) do
       step = step / 2
       v = v + step
     end
     return v
   end
-  return weight * (Value(CITY_HOUSING + total) - Value(CITY_HOUSING))
+  return weight * SCALE * (Value(CITY_HOUSING + total) - Value(CITY_HOUSING))
 end
 
 -- Best value over every placement of `districts`: DMT adjacency (fake) plus
@@ -166,11 +171,13 @@ test("a neighborhood goes to the most appealing plot; its housing is in the gain
   T.eq(p.X .. "," .. p.Y, "8,2", "on the breathtaking plot")
   T.eq(p.Appeal, 4, "its appeal")
   T.eq(p.Housing, 6, "six housing")
-  -- Housing 2 -> 8 against a target of 6: 4 + 0.5 + 0.25 (issue 55).
-  T.eq(result.AppealDelta, 4.75, "the appeal part")
-  T.eq(result.Gain, result.Adjacency + 4.75, "in the gain")
+  -- Housing 2 -> 8, knee max(6 + 1, 6 + 2) = 8: 6 points, times the size
+  -- discount of a city of 6 (issues 55, 91).
+  T.near(result.AppealDelta, 6 * SCALE, 1e-9, "the appeal part")
+  T.ok(SCALE < 1 and SCALE > 0.8, "a city of 6 is discounted a little: " .. SCALE)
+  T.near(result.Gain, result.Adjacency + 6 * SCALE, 1e-9, "in the gain")
   local double = SDP_Solver.Solve({ PlayerID = 0, CityID = 1, Districts = { HOOD }, Weights = Weights({ HOUSING = 2 }) })
-  T.eq(double.AppealDelta, 9.5, "weighted")
+  T.near(double.AppealDelta, 12 * SCALE, 1e-9, "weighted")
   local campus = SDP_Solver.Solve({ PlayerID = 0, CityID = 1, Districts = { "DISTRICT_CAMPUS" }, Weights = ONES })
   T.eq(campus.AppealDelta, nil, "no appeal part without such a district")
 end)
@@ -313,7 +320,7 @@ test("a pinned neighborhood counts: the plan pays for lowering its appeal", func
 end)
 
 test("a preserve: its own housing and its yields on the unimproved plots around, by their appeal", function()
-  NewWorld({ improvements = { { 8, 3, "IMPROVEMENT_MINE" } } })
+  NewWorld({ improvements = { { 8, 3, "IMPROVEMENT_MINE" } }, civics = { "CIVIC_CONSERVATION" } })
   local scan = SDP_City.Scan(0, 1)
   local workable = {}
   for _, index in ipairs(SDP_Land.Workable(scan)) do workable[index] = true end
@@ -321,8 +328,8 @@ test("a preserve: its own housing and its yields on the unimproved plots around,
   for i, c in ipairs(scan.Candidates) do
     if c.X == 8 and c.Y == 2 then position = i end
   end
-  local model = SDP_Appeal.New({ Types = { PRESERVE }, Kinds = { "DISTRICT" }, Candidates = scan.Candidates, Fixed = {},
-    Weights = {}, Lands = {}, Workable = workable })
+  local model = SDP_Appeal.New({ PlayerID = 0, Types = { PRESERVE }, Kinds = { "DISTRICT" }, Candidates = scan.Candidates,
+    Fixed = {}, Weights = {}, Lands = {}, Workable = workable })
   local detail = {}
   local value = model:Score({ position }, detail)
   local d = detail[1]
@@ -332,48 +339,107 @@ test("a preserve: its own housing and its yields on the unimproved plots around,
   -- (8, 3) gets nothing; the other workable ones 0 + 1 = 1: nothing.
   local want = { YIELD_FOOD = 2, YIELD_FAITH = 2, YIELD_CULTURE = 2, YIELD_GOLD = 2, YIELD_SCIENCE = 2, YIELD_PRODUCTION = 2 }
   T.same(d.Tiles, want, "breathtaking yields on (7, 2) only")
-  -- Plot yields weigh as in the land part (issue 53): food, production 1,
-  -- science, culture 5/6, faith 1/2, gold 1/4.
-  local tiles = 2 * (1 + 1 + 5 / 6 + 5 / 6 + 1 / 2 + 1 / 4)
-  T.near(value, 3 + tiles, 1e-9, "land part off: counted in full, at the plot weights")
-  local lazy = SDP_Appeal.New({ Types = { PRESERVE }, Kinds = { "DISTRICT" }, Candidates = scan.Candidates, Fixed = {},
-    Weights = { YIELD_FOOD = 0, YIELD_FAITH = 0, YIELD_CULTURE = 0, YIELD_GOLD = 0, YIELD_SCIENCE = 0, YIELD_PRODUCTION = 0,
-      HOUSING = 1 }, Lands = {}, Workable = workable })
-  T.near(lazy:Score({ position }), 3 + tiles, 1e-9, "the yield weights do not change the plot yields")
-  local noHousing = SDP_Appeal.New({ Types = { PRESERVE }, Kinds = { "DISTRICT" }, Candidates = scan.Candidates, Fixed = {},
-    Weights = { HOUSING = 0 }, Lands = {}, Workable = workable })
-  T.near(noHousing:Score({ position }), tiles, 1e-9, "housing weight 0: the plot yields only")
+  -- Issue 91: the yields belong to the land part; with it off they are
+  -- reported, not scored.
+  T.eq(value, 3, "land part off: housing only")
+  T.eq(d.TilesCounted, false, "not scored")
+  T.eq(d.TilesReason, "LAND", "because the land part is off")
+  local noHousing = SDP_Appeal.New({ PlayerID = 0, Types = { PRESERVE }, Kinds = { "DISTRICT" }, Candidates = scan.Candidates,
+    Fixed = {}, Weights = { HOUSING = 0 }, Lands = {}, Workable = workable })
+  T.eq(noHousing:Score({ position }), 0, "housing weight 0: nothing")
   -- Picked from the pool (an optional slot): housing counts, the grove and
   -- sanctuary yields are reported but not scored (the user's call, 2026-10-22).
-  local picked = SDP_Appeal.New({ Types = { PRESERVE }, Kinds = { "DISTRICT" }, Candidates = scan.Candidates, Fixed = {},
-    Weights = {}, Lands = {}, Workable = workable, Optional = { true } })
+  local picked = SDP_Appeal.New({ PlayerID = 0, Types = { PRESERVE }, Kinds = { "DISTRICT" }, Candidates = scan.Candidates,
+    Fixed = {}, Weights = {}, Lands = {}, Workable = workable, Optional = { true } })
   local pd = {}
   T.eq(picked:Score({ position }, pd), 3, "pool pick: housing only")
   T.same(pd[1].Tiles, want, "the yields still reported")
   T.eq(pd[1].TilesCounted, false, "marked as not scored")
-  T.eq(d.TilesCounted, true, "a required preserve's are scored")
+  T.eq(pd[1].TilesReason, "POOL", "because it was picked from the pool")
 end)
 
-test("a preserve with the land part on: its yields raise plots in the land model", function()
+test("a preserve's buildings count when the player can build them: the sanctuary needs Conservation (issue 91)", function()
+  local function Tiles(civics)
+    NewWorld({ civics = civics })
+    local scan = SDP_City.Scan(0, 1)
+    local workable = {}
+    for _, index in ipairs(SDP_Land.Workable(scan)) do workable[index] = true end
+    local position = nil
+    for i, c in ipairs(scan.Candidates) do
+      if c.X == 8 and c.Y == 2 then position = i end
+    end
+    local model = SDP_Appeal.New({ PlayerID = 0, Types = { PRESERVE }, Kinds = { "DISTRICT" }, Candidates = scan.Candidates,
+      Fixed = {}, Weights = {}, Lands = {}, Workable = workable })
+    local detail = {}
+    model:Score({ position }, detail)
+    return detail[1].Tiles
+  end
+  -- The grove comes with the preserve (both Mysticism), also before the
+  -- player has it: the plan is for when the preserve is built.
+  T.same(Tiles({}), { YIELD_FOOD = 2, YIELD_FAITH = 2, YIELD_CULTURE = 2 }, "the grove's yields only")
+  T.same(Tiles({ "CIVIC_CONSERVATION" }), { YIELD_FOOD = 2, YIELD_FAITH = 2, YIELD_CULTURE = 2, YIELD_GOLD = 2,
+    YIELD_SCIENCE = 2, YIELD_PRODUCTION = 2 }, "with Conservation the sanctuary's too")
+  local rules = SDP_Appeal.Rules()
+  T.eq(#SDP_Appeal.TileRows(rules, PRESERVE, nil), 10, "no player: every row")
+end)
+
+test("a plot next to a preserve: the better of its improved value and its unimproved value plus the yields (issue 91)", function()
+  -- A mined hill is worth 7, 2 left unimproved: +5 from a preserve does not
+  -- raise it, +6 makes it 8.
+  local model = SDP_Land.Model({ { Index = 1, Tile = 7, Once = 0, Bare = 2 }, { Index = 2, Tile = 3, Once = 0 },
+    { Index = 3, Tile = 1, Once = 0 } }, 2)
+  T.eq(SDP_Land.ScoreTaken(model, {}, 0, {}), 10, "best two: 7 + 3")
+  T.eq(SDP_Land.ScoreTaken(model, {}, 0, {}, { [1] = 5 }), 10, "the mine is worth more than 2 + 5")
+  T.eq(SDP_Land.ScoreTaken(model, {}, 0, {}, { [1] = 6 }), 11, "2 + 6 = 8 beats the mine")
+  T.eq(SDP_Land.ScoreTaken(model, {}, 0, {}, { [3] = 3 }), 11, "no Bare: the plot's value, 1 + 3, beats 3")
+  -- PlotValues gives the unimproved value: grassland, no improvement valid
+  -- in the fake rules but the farm.
   NewWorld()
+  local ctx = SDP_Land.Context(0, SDP_Land.PLOT_WEIGHTS, true)
+  local tile, _, bare = SDP_Land.PlotValues(Map.GetPlot(8, 2), ctx)
+  T.ok(bare ~= nil and bare <= tile, string.format("unimproved %s <= improved %s", tostring(bare), tostring(tile)))
+end)
+
+test("a preserve with the land part on: its yields are in the land part, raising the plots the city works", function()
+  NewWorld({ civics = { "CIVIC_CONSERVATION" } })
   local land = SDP_Solver.Solve({ PlayerID = 0, CityID = 1, Districts = { PRESERVE }, Weights = ONES, Land = true })
   T.ok(land.Ok, tostring(land.Error))
   T.ok(not land.Stats.Mismatch, "board and full evaluation agree")
   local p = Entry(land, PRESERVE)
   T.ok(p.Housing ~= nil and p.Tiles ~= nil, "housing and tiles reported")
+  T.eq(p.TilesCounted, true, "a required preserve's yields are scored")
+  -- Issue 91: the appeal part is the housing alone; the yields raise the
+  -- land part.
+  local housing = SDP_Land.HousingValue(CITY_HOUSING + p.Housing, CITY_TARGET, CITY_POPULATION)
+    - SDP_Land.HousingValue(CITY_HOUSING, CITY_TARGET, CITY_POPULATION)
+  T.near(land.AppealDelta, housing, 1e-9, "the appeal part: the housing only")
+  local search = land.Session.Search
+  local layout = search.BestLayout
+  local _, tiles = search:AppealParts(layout)
+  T.ok(tiles > 0, "the yields add to the worked plots: " .. tiles)
+  local taken = { p.Index }
+  T.near(land.LandDelta, SDP_Land.ScoreTaken(search.Lands[1], taken, 1, {}) - search.Lands[1].Base + tiles, 1e-9,
+    "the land part: the plot taken plus the raised plots")
+  T.near(land.Gain, land.Adjacency + land.LandDelta + land.CostDelta + land.CoverageDelta + land.AppealDelta, 1e-9,
+    "parts add up")
+  -- The land part off: the yields are not scored at all.
   local off = SDP_Solver.Solve({ PlayerID = 0, CityID = 1, Districts = { PRESERVE }, Weights = ONES })
-  T.ok(off.AppealDelta >= land.AppealDelta - 1e-9, "counted in full (land off) is at least what the worked plots get")
-  -- Ranking with boosts: a boosted plot beats unboosted ones of the same base.
-  local model = SDP_Land.Model({ { Index = 1, Tile = 3, Once = 0 }, { Index = 2, Tile = 2, Once = 0 }, { Index = 3, Tile = 1, Once = 0 } }, 2)
-  T.eq(SDP_Land.ScoreTaken(model, {}, 0, {}), 5, "best two: 3 + 2")
-  T.eq(SDP_Land.ScoreTaken(model, {}, 0, {}, { [3] = 3 }), 7, "plot 3 raised to 4: 4 + 3")
-  T.eq(SDP_Land.ScoreTaken(model, { 3 }, 1, {}, { [3] = 3 }), 5, "taken: no boost")
-  T.eq(SDP_Land.ScoreTaken(model, {}, 0, {}, { [1] = 1, [2] = 1 }), 7, "two raised: 4 + 3")
+  T.ok(off.Ok, tostring(off.Error))
+  local q = Entry(off, PRESERVE)
+  T.eq(q.TilesCounted, false, "land part off: reported only")
+  T.eq(q.TilesReason, "LAND", "the reason")
+  T.near(off.Gain, off.Adjacency + off.AppealDelta + off.CostDelta, 1e-9, "the gain has no tile yields")
+  -- Tiles weight 2: the yields count twice, as every plot's value.
+  local double = SDP_Solver.Solve({ PlayerID = 0, CityID = 1, Districts = { PRESERVE }, Weights = Weights({ LAND = 2 }),
+    Land = true })
+  local _, tiles2 = double.Session.Search:AppealParts(double.Session.Search.BestLayout)
+  T.ok(tiles2 > 0, "counted with weight 2")
 end)
 
 test("a preserve in the pool is picked for its value; deterministic", function()
   NewWorld()
-  local request = { PlayerID = 0, CityID = 1, Districts = {}, Pool = { PRESERVE, "DISTRICT_ENCAMPMENT" }, Count = 1, Weights = ONES }
+  local request = { PlayerID = 0, CityID = 1, Districts = {}, Pool = { PRESERVE, "DISTRICT_ENCAMPMENT" }, Count = 1, Weights = ONES,
+    Land = true }
   local result = SDP_Solver.Solve(request)
   T.ok(result.Ok, tostring(result.Error))
   T.same(result.Picked, { PRESERVE }, "the preserve, not the encampment (no adjacency)")
@@ -382,8 +448,8 @@ test("a preserve in the pool is picked for its value; deterministic", function()
   T.eq(Entry(again, PRESERVE).Index, Entry(result, PRESERVE).Index, "same plot")
   -- Its gain counts its housing, not its plots' yields; the plan shows them.
   T.ok(Entry(result, PRESERVE).TilesCounted ~= true, "a pool preserve's yields are not scored")
-  local must = SDP_Solver.Solve({ PlayerID = 0, CityID = 1, Districts = { PRESERVE }, Weights = ONES })
-  T.ok(must.AppealDelta >= result.AppealDelta, "required, the yields come on top")
+  local must = SDP_Solver.Solve({ PlayerID = 0, CityID = 1, Districts = { PRESERVE }, Weights = ONES, Land = true })
+  T.ok(must.Gain >= result.Gain - 1e-9, "required, the yields come on top")
 end)
 
 test("several cities: housing counts per city, the gain parts add up", function()

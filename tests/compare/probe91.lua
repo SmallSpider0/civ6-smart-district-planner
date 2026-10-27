@@ -15,8 +15,11 @@ include("cmp_lib")
 
 local arg = PROBE_ARG or ""
 local head, wanted = arg:match("^([^|]*)|?(.*)$")
-local words = {}
-for word in head:gmatch("%S+") do words[#words + 1] = word end
+local words, tier = {}, "STANDARD"
+for word in head:gmatch("%S+") do
+  -- "TIER=FINE" anywhere: the tier (example 4 of the note uses the fine one).
+  if word:match("^TIER=") then tier = word:sub(6) else words[#words + 1] = word end
+end
 local mode, id, list = words[1], words[2], words[3]
 
 local NAMES = { "SDP_Rules", "SDP_City", "SDP_Overlay", "SDP_Tiers", "SDP_Task", "SDP_Board", "SDP_Land", "SDP_Appeal",
@@ -66,13 +69,13 @@ local function Solve(settings)
   for k, v in pairs(settings) do weights[k] = v end
   if mode == "SINGLE" then
     return SDP_Solver.Solve({ PlayerID = 0, CityID = request.target:GetID(), Districts = districts, Weights = weights,
-      Land = settings.LAND > 0, Distance = settings.DISTANCE, Coverage = settings.COVERAGE, Tier = "STANDARD",
+      Land = settings.LAND > 0, Distance = settings.DISTANCE, Coverage = settings.COVERAGE, Tier = tier,
       Remind = false, Apart = true, AllowFeatureRemoval = true, Auto = { DISTRICT_AQUEDUCT = true, DISTRICT_BATH = true,
         DISTRICT_DAM = true } })
   end
   local existing = {}
   for _, city in ipairs(request.cities) do existing[city:GetID()] = true end
-  return SDP_Multi.Solve({ PlayerID = 0, Tier = "STANDARD", Districts = districts, Existing = existing, Weights = weights,
+  return SDP_Multi.Solve({ PlayerID = 0, Tier = tier, Districts = districts, Existing = existing, Weights = weights,
     Land = settings.LAND > 0, Distance = settings.DISTANCE, Coverage = settings.COVERAGE, Remind = false, Apart = true,
     Auto = { DISTRICT_AQUEDUCT = true, DISTRICT_BATH = true, DISTRICT_DAM = true } })
 end

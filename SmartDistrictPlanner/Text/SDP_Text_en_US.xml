@@ -123,7 +123,7 @@
 
     <!-- Tiers, land part, quality, background computation -->
     <Replace Tag="LOC_SDP_LAND" Language="en_US">
-      <Text>Tiles: what the tiles the districts take would have given, times this weight; 0 leaves it out. A tile counts what it gives with its best improvement; chopping and harvesting are done before building. Its yields are weighed by fixed numbers, not by the weights to the left: Food and Production 1, Science and Culture 5/6, Faith 1/2, Gold 1/4 (1 Production = 4 Gold = 2 Faith), and the same for the one-time yields of chopping and harvesting.</Text>
+      <Text>Tiles: what the tiles the districts take would have given, times this weight; 0 leaves it out. A tile counts what it gives with its best improvement; chopping and harvesting are done before building. Its yields are weighed by fixed numbers, not by the weights to the left: Food and Production 1, Science and Culture 5/6, Faith 1/2, Gold 1/4 (1 Production = 4 Gold = 2 Faith), and the same for the one-time yields of chopping and harvesting. The yields a Preserve's Grove and Sanctuary give to adjacent unimproved tiles count here too, the same way: such a tile is worth the better of its best improvement and staying unimproved with the Preserve's yields, and counts only when the city works it; only the buildings you can build now count (the Grove comes with the Preserve, the Sanctuary needs the Conservation civic).</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SWAP_SHORT" Language="en_US">
       <Text>Swap tiles from my cities</Text>
@@ -311,7 +311,7 @@
       <Text>Pick the cities (for a new city, put a City Center map tack first or use City sites), set districts to Must or raise Per city, then press Solve.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_MULTI_FIRST" Language="en_US">
-      <Text>Planning the cities one after another gives {1_First}</Text>
+      <Text>Compared with planning the cities one after another: {1_First} (adjacency plus the other items)</Text>
     </Replace>
     <Replace Tag="LOC_SDP_PREVIEW_CITY" Language="en_US">
       <Text>{1_N} {2_Text}</Text>
@@ -389,7 +389,7 @@
       <Text>No Water</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SITES_WEIGHT_HOUSING" Language="en_US">
-      <Text>Housing: points for the Housing a site has over a site without water (water, Granary, and the Lighthouse and Seaport when the plan has a Harbor). Each Housing up to the population the planned districts need counts 1, each one after it half the one before.</Text>
+      <Text>Housing: points for the Housing a site has over a site without water (water, Granary, and the Lighthouse and Seaport when the plan has a Harbor). A new city counts as population 1: each Housing up to the larger of 3 and one more than the population the planned districts need counts 1 (the city still grows at full speed), each one after it half the one before.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SITES_HOUSING" Language="en_US">
       <Text>Housing {1_Housing}</Text>
@@ -500,7 +500,7 @@
       <Text>Reach</Text>
     </Replace>
     <Replace Tag="LOC_SDP_WEIGHT_COVERAGE" Language="en_US">
-      <Text>Reach: lets the plan count districts whose buildings help nearby cities, such as Factories, Power Plants, Zoos, Stadiums and Aquariums. Each of your cities or City Center map tacks newly covered adds this many points; a city a district of the same kind already covers does not count. 0 leaves it out.[NEWLINE][NEWLINE]Gain: covered cities get those buildings' regional effects (Production, Amenities). Measured planning one city on 42 real cities: at weight 1, 3 of them covered more cities; at weight 3, 6.[NEWLINE]Cost: those cities lost 0 to 3 adjacency (up to 4 at weight 3); planning takes about 5% longer.</Text>
+      <Text>Reach: lets the plan count districts whose buildings help nearby cities, such as Factories, Power Plants, Zoos, Stadiums and Aquariums. Each of your cities or City Center map tacks newly covered adds this many points; the city being planned does not count (its own Industrial Zone always reaches it), nor does a city a district of the same kind already covers. 0 leaves it out.[NEWLINE][NEWLINE]Gain: covered cities get those buildings' regional effects (Production, Amenities). Measured planning one city on 42 real cities: at weight 1, 3 of them covered more cities; at weight 3, 6.[NEWLINE]Cost: those cities lost 0 to 3 adjacency (up to 4 at weight 3); planning takes about 5% longer.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_RESULT_SUMMARY_COVERAGE" Language="en_US">
       <Text>Weighted gain: {1_Gain} (adjacency {2_Adjacency}, tiles taken {3_Land}, reach {4_Coverage})</Text>
@@ -543,7 +543,7 @@
       <Text>Click: Auto &gt; Must &gt; Off</Text>
     </Replace>
     <Replace Tag="LOC_SDP_STATES_TOOLTIP" Language="en_US">
-      <Text>Must: always placed. Pool: when the count is above the required number, the best of the pool are picked. Off: left out. Districts are compared by weighted adjacency, plus land, reach and distance when on, plus Housing for Neighborhoods and Preserves (and tile yields for a Must Preserve). Encampments and Aerodromes have no adjacency bonus and are never picked from the pool: make them Must. Districts limited to one per empire (Government Plaza, Diplomatic Quarter) are Must or Off only.</Text>
+      <Text>Must: always placed. Pool: when the count is above the required number, the best of the pool are picked. Off: left out. Districts are compared by weighted adjacency, plus tiles, reach and distance when on, plus Housing for Neighborhoods and Preserves (a Must Preserve's yields on adjacent tiles count under tiles). Encampments and Aerodromes have no adjacency bonus and are never picked from the pool: make them Must. Districts limited to one per empire (Government Plaza, Diplomatic Quarter) are Must or Off only. The Preserve starts Off, since few civilizations build it: click it to Pool or Must.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_STATES_OTHER_TOOLTIP" Language="en_US">
       <Text>These districts have no Population requirement and do not count toward the number. Auto: added when the city needs it, placed by the solver. An Aqueduct when the city lacks fresh water (its water Housing is below the 5 a River or Lake gives); a Dam when 3 or more free Floodplains tiles lie in its 3 rings (Gathering Storm only). Left out, with a note, when it fits nowhere.</Text>
@@ -614,14 +614,20 @@
     <Replace Tag="LOC_SDP_SOLUTION_DISTRICTS" Language="en_US">
       <Text>{1_Count} {1_Count: plural 1?district; other?districts;}, different tiles</Text>
     </Replace>
-    <Replace Tag="LOC_SDP_RESULT_SUMMARY_PARTS" Language="en_US">
-      <Text>Weighted gain: {1_Gain} ({2_Parts})</Text>
+    <Replace Tag="LOC_SDP_RESULT_SUMMARY_ADJACENCY" Language="en_US">
+      <Text>Weighted adjacency: {1_Adjacency}</Text>
     </Replace>
-    <Replace Tag="LOC_SDP_PART_ADJACENCY" Language="en_US">
-      <Text>adjacency {1_Value}</Text>
+    <Replace Tag="LOC_SDP_RESULT_SUMMARY_OTHERS" Language="en_US">
+      <Text>Weighted adjacency: {1_Adjacency} ({2_Parts})</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_RANKED" Language="en_US">
+      <Text>Plans are ranked by the adjacency plus the items in brackets. Tiles is what the tiles the districts take would have given (a Preserve's extra yields on the tiles around it count here too). Late in the game the tiles often outweigh the adjacency and the sum is negative; that does not make the plan poor: districts always take tiles.</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_TILES_LAND_OFF" Language="en_US">
+      <Text>adjacent tiles {1_Yields} (Tiles weight 0, not scored)</Text>
     </Replace>
     <Replace Tag="LOC_SDP_PART_LAND" Language="en_US">
-      <Text>land {1_Value}</Text>
+      <Text>tiles {1_Value}</Text>
     </Replace>
     <Replace Tag="LOC_SDP_PART_COVERAGE" Language="en_US">
       <Text>reach {1_Value}</Text>
@@ -645,7 +651,7 @@
       <Text>Replace ({1_N})</Text>
     </Replace>
     <Replace Tag="LOC_SDP_WEIGHT_DISTANCE" Language="en_US">
-      <Text>Distance cost: each district and wonder loses this weight times (tiles to your nearest City Center - 1), in the same unit as adjacency; 0 is off. The game does not charge more for distant districts; distant tiles join the city later or cost more Gold to purchase. This expresses a wish to keep districts close.</Text>
+      <Text>Distance cost: each district and wonder loses this weight times (tiles to your nearest City Center - 1), in the same unit as adjacency, so with the same adjacency the closer tile wins; 0 is off.[NEWLINE][NEWLINE]Gain: a city grows outward, so its third ring comes later than its second; closer districts do not need tiles bought with Gold. On the 84 offline development scenes, 0.5 instead of 0 changed the plan in 52, moving nearly half the districts.[NEWLINE]Cost: 0.6% less adjacency on average and about 4% more lost tile yields; no extra time.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_MULTI_SITE_TOOLTIP" Language="en_US">
       <Text>Click to switch this site on or off. Left out, no districts are planned for it and it is not counted as a new city; the tack stays where it is and still counts as a neighbor.</Text>
@@ -696,7 +702,7 @@
       <Text>the {1_Building} gives no Trade Route capacity</Text>
     </Replace>
     <Replace Tag="LOC_SDP_WEIGHT_HOUSING" Language="en_US">
-      <Text>Housing: points per Housing. In each city, each Housing up to the population its planned districts need counts 1, each one after it half the one before. A Neighborhood's or Preserve's Housing depends on the Appeal of its tile. With the Preserve set to Must, the yields its Grove and Sanctuary give to adjacent unimproved tiles count too, weighed by fixed numbers (Food and Production 1, Science and Culture 5/6, Faith 1/2, Gold 1/4): with the Tiles weight above 0 only on tiles the city works and times that weight, at 0 on all of them; when it is picked from the pool they are shown, not scored. The plan changes Appeal: a Holy Site or Theater Square gives adjacent tiles +1, an Industrial Zone or Encampment -1, and removing Woods -1 to the tiles around it.</Text>
+      <Text>Housing: points per Housing. In each city, each Housing up to the larger of one more than the population its planned districts need and its population now plus 2 counts 1 (up to there the city grows at full speed), each one after it half the one before; bigger cities are discounted, since each citizen needs more Food (none up to population 5, about 0.5 at 10, 0.3 at 16). A City Center tack counts as population 1. A Neighborhood's or Preserve's Housing depends on the Appeal of its tile. The plan changes Appeal: a Holy Site or Theater Square gives adjacent tiles +1, an Industrial Zone or Encampment -1, and removing Woods -1 to the tiles around it. A Preserve's yields on adjacent tiles count under Tiles.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_RESULT_HOUSING" Language="en_US">
       <Text>Housing {1_Housing} (Appeal {2_Appeal})</Text>
@@ -717,7 +723,7 @@
       <Text>adjacent tiles {1_Yields}</Text>
     </Replace>
     <Replace Tag="LOC_SDP_PART_APPEAL" Language="en_US">
-      <Text>Housing and Appeal {1_Value}</Text>
+      <Text>Housing {1_Value}</Text>
     </Replace>
     <Replace Tag="LOC_SDP_YIELD_SHORT_YIELD_FOOD" Language="en_US">
       <Text>Food</Text>

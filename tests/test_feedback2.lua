@@ -208,3 +208,80 @@ test("harbor or commercial hub by the city: the coastal one for a coastal city w
   T.ok(off.Ok, tostring(off.Error))
   print(string.format("  switch off: %s", table.concat(off.Picked, ",")))
 end)
+
+-- Issue 91 (decided 2026-10-26), with the game's rules: the preserve starts
+-- off; its grove counts always and its sanctuary only with the civic that
+-- unlocks it; its yields on the plots around it are in the tiles part.
+test("issue 91: the preserve starts off; its buildings by the player's civics; its yields in the tiles part", function()
+  local city = Capital()
+  if GameInfo.Districts.DISTRICT_PRESERVE == nil then T.skip("no preserve in this ruleset or account") end
+  local preserve = Resolve("DISTRICT_PRESERVE")
+  SDP_Panel.SelectTab("SINGLE")
+  SDP_Panel.SelectCity(city:GetID())
+  for _, d in ipairs(SDP_Rules.PlannableDistricts(pid)) do
+    if d.Type == preserve then T.eq(SDP_UI.DefaultState(d), "OFF", "the preserve starts off") end
+  end
+  -- The buildings: the grove comes with the preserve; the sanctuary needs its civic.
+  local rules = SDP_Appeal.Rules()
+  local rows = SDP_Appeal.TileRows(rules, preserve, Players[pid])
+  local by = {}
+  for _, row in ipairs(rows) do by[row.Building or "-"] = true end
+  T.ok(by.BUILDING_GROVE, "the grove's rows count")
+  local sanctuary = GameInfo.Buildings.BUILDING_SANCTUARY
+  local civic = sanctuary and sanctuary.PrereqCivic and GameInfo.Civics[sanctuary.PrereqCivic]
+  local has = civic ~= nil and Players[pid]:GetCulture():HasCivic(civic.Index)
+  T.eq(by.BUILDING_SANCTUARY == true, has == true, "the sanctuary's rows only with " .. tostring(civic and civic.CivicType))
+  -- Required, the tiles weight on: the appeal part is its housing; the
+  -- yields are in the tiles part; the parts add up.
+  local result = SDP_Solver.Solve({ PlayerID = pid, CityID = city:GetID(), Districts = { preserve }, Weights = ONES,
+    Land = true })
+  if not result.Ok and result.Error == "NO_LEGAL_PLOT" then T.skip("no plot for a preserve") end
+  T.ok(result.Ok, tostring(result.Error))
+  local p = Has(result.Plan, preserve)
+  if p == nil then T.skip("the preserve was not placed") end
+  local housing, tiles = result.Session.Search:AppealParts(result.Session.Search.BestLayout)
+  T.ok(math.abs((result.AppealDelta or 0) - housing) < 1e-6, "the appeal part is the housing")
+  T.ok(tiles >= 0, "the yields add to the tiles part: " .. tiles)
+  T.ok(math.abs(result.Gain - (result.Adjacency + result.LandDelta + result.CostDelta + result.CoverageDelta
+    + (result.AppealDelta or 0))) < 1e-6, "the parts add up")
+  print(string.format("  preserve at (%d, %d): housing %.2f, tiles part %.2f (of it from the preserve's yields %.2f)",
+    p.X, p.Y, housing, result.LandDelta, tiles))
+end)
+
+test("issue 91: the panel's summary leads with the adjacency, distance 0.5 by default", function()
+  local city = Capital()
+  SDP_Panel.SelectTab("SINGLE")
+  SDP_Panel.SelectCity(city:GetID())
+  for _, d in ipairs(SDP_Rules.PlannableDistricts(pid)) do SDP_Panel.SetState(d.Type, SDP_UI.DefaultState(d)) end
+  SDP_Panel.SetPreset("BALANCED")
+  T.eq(SDP_Panel.State().Weights.DISTANCE, 0.5, "distance 0.5 (a new game keeps no settings)")
+  SDP_Panel.SetSelected(Resolve("DISTRICT_CAMPUS"), true)
+  SDP_Panel.SetSelected(Resolve("DISTRICT_HOLY_SITE"), true)
+  SDP_Panel.SetCount(0)
+  SDP_Panel.SetTier("FAST")
+  local result = SDP_Panel.Solve()
+  T.ok(result and result.Ok, tostring(result and result.Error))
+  T.eq(result.Session.Request.Distance, 0.5, "sent")
+  local parts = Locale.Lookup("LOC_SDP_LIST_JOIN", Locale.Lookup("LOC_SDP_PART_LAND", SDP_UI.Signed(result.LandDelta)),
+    Locale.Lookup("LOC_SDP_PART_DISTANCE", SDP_UI.Signed(result.CostDelta)))
+  T.eq(SDP_Panel.State().SummaryText, Locale.Lookup("LOC_SDP_RESULT_SUMMARY_OTHERS", SDP_UI.Signed(result.Adjacency), parts),
+    "adjacency first, then tiles and distance")
+  print("  " .. SDP_Panel.State().SummaryText)
+  SDP_Panel.SetTier("STANDARD")
+  for _, d in ipairs(SDP_Rules.PlannableDistricts(pid)) do SDP_Panel.SetState(d.Type, SDP_UI.DefaultState(d)) end
+end)
+
+test("issue 91: an industrial zone does not count its own city as covered; housing counts 1 up to max(target + 1, population + 2)", function()
+  local city = Capital()
+  local zone = Resolve("DISTRICT_INDUSTRIAL_ZONE")
+  local r = SDP_Solver.Solve({ PlayerID = pid, CityID = city:GetID(), Districts = { zone }, Weights = ONES, Coverage = 1,
+    Tier = "FAST" })
+  T.ok(r.Ok, tostring(r.Error))
+  local p = Has(r.Plan, zone)
+  if p == nil then T.skip("no plot for an industrial zone") end
+  local own = "C" .. city:GetID()
+  for _, key in ipairs(p.Reach or {}) do T.ok(key ~= own, "the capital is not on its own zone's row") end
+  T.eq(r.Covered or 0, #(p.Reach or {}), "only other cities count")
+  T.eq(SDP_Land.HousingValue(8, 7, 5), 8, "housing one past the target counts 1")
+  T.eq(SDP_Land.HousingValue(9, 7, 5), 8.5, "the next one half")
+end)

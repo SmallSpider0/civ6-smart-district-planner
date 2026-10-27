@@ -345,11 +345,13 @@ local function CheckCoverage(result, zone, placed, range)
   T.ok(math.abs(result.Gain - (result.Adjacency + result.LandDelta + result.CoverageDelta + result.CostDelta
     + (result.AppealDelta or 0))) < 1e-6, "the gain adds up")
   T.ok(math.abs(result.CoverageDelta - 3 * result.Covered) < 1e-6, "weight x newly covered cities")
-  -- Counted again here, from the targets: in reach of the zone and not
-  -- covered by a built or pinned district of its group.
+  -- Counted again here, from the targets: in reach of the zone, not
+  -- covered by a built or pinned district of its group, and not the city
+  -- being planned (issue 91: its own zone always reaches it).
   local model = SDP_Coverage.New({ PlayerID = pid, Weight = 3, Sites = SDP_Coverage.SiteTargets(pid) })
+  local own = "C" .. tostring(result.Session.Request.CityID)
   local want = {}
-  for _, id in ipairs(model:InReach(zone, placed.X, placed.Y)) do
+  for _, id in ipairs(model:InReach(zone, placed.X, placed.Y, own)) do
     if not model.Covered[id] then want[#want + 1] = model:Pair(id).Key end
   end
   T.same(placed.Reach, want, "the row lists the cities the zone newly covers")
@@ -474,7 +476,7 @@ test("single-city tab: on a save with several cities, the neighbours the zone ca
     local _, want = CheckCoverage(result, zone, placed, reach.Range)
     -- Newly covered at weight 0's place, counted with the same model.
     local before = 0
-    for _, id in ipairs(model:InReach(zone, plain.X, plain.Y)) do
+    for _, id in ipairs(model:InReach(zone, plain.X, plain.Y, "C" .. chosen:GetID())) do
       if not model.Covered[id] then before = before + 1 end
     end
     T.ok(result.Covered >= before, "covers at least as many as without coverage: " .. result.Covered .. " vs " .. before)

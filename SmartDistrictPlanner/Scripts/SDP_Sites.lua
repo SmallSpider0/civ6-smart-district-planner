@@ -260,7 +260,8 @@ local Water = function(plot) return SDP_City.WaterKind(plot) end
 -- worth over a dry site's, weighed by HOUSING. A site's housing is its water
 -- housing, the first-era city-center buildings' (granary), and the
 -- buildings' of the coast districts (harbor) among `districts`; its worth
--- is SDP_Land.HousingValue with the population the plan needs as target.
+-- is SDP_Land.HousingValue with the population the plan needs as target
+-- and a new city's population, 1 (issue 91).
 function SDP_Sites.WaterPart(ctx, site, districts)
   local plot = Map.GetPlot(site.X, site.Y)
   local kind = site.Info.WaterKind
@@ -271,7 +272,7 @@ function SDP_Sites.WaterPart(ctx, site, districts)
   end
   site.Info.Housing = housing
   local dry = ctx.Housing.None + ctx.Housing.Center
-  return ctx.Weights.HOUSING * (SDP_Land.HousingValue(housing, ctx.Population) - SDP_Land.HousingValue(dry, ctx.Population))
+  return ctx.Weights.HOUSING * (SDP_Land.HousingValue(housing, ctx.Population, 1) - SDP_Land.HousingValue(dry, ctx.Population, 1))
 end
 
 -- The coarse score of a site (no DMT). Returns a site table:

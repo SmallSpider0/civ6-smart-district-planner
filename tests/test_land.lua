@@ -49,5 +49,16 @@ test("housing from the rules: granary for a new city, harbor buildings", functio
   T.ok(inland >= 2, "lighthouse and seaport")
   T.ok(coastal >= inland, "coastal at least as much")
   if SDP_Rules.Ruleset() == "RULESET_EXPANSION_2" then T.eq(coastal - inland, 2, "Gathering Storm: the lighthouse's +2") end
-  T.eq(SDP_Land.HousingValue(9, 7), 7.75, "two past the target")
+  T.eq(SDP_Land.HousingValue(9, 7, 5), 8.5, "a city of 5 planning for 7: 1 each up to 8, then half (issue 91)")
+  -- The growth threshold from GlobalParameters matches the game's for the capital.
+  local capital = Players[Game.GetLocalPlayer()]:GetCities():GetCapitalCity()
+  if capital ~= nil and capital.GetGrowth ~= nil and capital:GetGrowth().GetGrowthThreshold ~= nil then
+    local speed = GameInfo.GameSpeeds[GameConfiguration.GetGameSpeedType()]
+    local percent = speed and speed.CostMultiplier or 100
+    local ours = SDP_Land.GrowthThreshold(capital:GetPopulation())
+    local game = capital:GetGrowth():GetGrowthThreshold()
+    print(string.format("  growth threshold at population %d: ours %.2f, game %.2f (speed %d%%)", capital:GetPopulation(),
+      ours, game, percent))
+    T.ok(math.abs(ours * percent / 100 - game) <= 1, "matches the game's, up to the game speed")
+  end
 end)

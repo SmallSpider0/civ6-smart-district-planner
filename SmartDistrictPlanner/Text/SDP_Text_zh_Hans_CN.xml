@@ -123,7 +123,7 @@
 
     <!-- 档位、地块产出、质量、后台计算 -->
     <Replace Tag="LOC_SDP_LAND" Language="zh_Hans_CN">
-      <Text>地块：区域占掉的地块少了多少产出，乘以这个权重计入，0 表示不计。地块按修上最好的改良后的产出算，砍伐、收获在建区域前完成。各项产出按固定倍数折算，不随左边的权重变：食物、生产力 1，科技、文化 5/6，信仰 1/2，金币 1/4（1 生产力 = 4 金币 = 2 信仰），砍伐、收获的一次性产出也一样。</Text>
+      <Text>地块：区域占掉的地块少了多少产出，乘以这个权重计入，0 表示不计。地块按修上最好的改良后的产出算，砍伐、收获在建区域前完成。各项产出按固定倍数折算，不随左边的权重变：食物、生产力 1，科技、文化 5/6，信仰 1/2，金币 1/4（1 生产力 = 4 金币 = 2 信仰），砍伐、收获的一次性产出也一样。保护区的古树林、避难所给周边未开发地块的产出也算在这里，算法相同：这些地块按“修上最好的改良”和“不修改良、拿保护区的产出”中高的一种算，城市会耕作它们时才计入；只算现在能建的建筑（古树林随保护区一起解锁，避难所要市政“保护地球”）。</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SWAP_SHORT" Language="zh_Hans_CN">
       <Text>从本方其他城换格</Text>
@@ -311,7 +311,7 @@
       <Text>选上参与的城（新城可以先放市中心地图钉，或用“选城址”），把区域点成“必建”或调高“每城数量”，再点击“求解”。</Text>
     </Replace>
     <Replace Tag="LOC_SDP_MULTI_FIRST" Language="zh_Hans_CN">
-      <Text>逐城依次规划时加权提升为 {1_First}</Text>
+      <Text>与逐城依次规划相比：{1_First}（相邻加成与其余各项之和）</Text>
     </Replace>
     <Replace Tag="LOC_SDP_PREVIEW_CITY" Language="zh_Hans_CN">
       <Text>{1_N} {2_Text}</Text>
@@ -389,7 +389,7 @@
       <Text>无水源</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SITES_WEIGHT_HOUSING" Language="zh_Hans_CN">
-      <Text>住房：城址的住房（水源、粮仓；计划里有港口时加上灯塔、海港）比无水城址多出的部分折合多少分。到建齐计划区域所需人口为止，每点住房算 1，之后每多一点减半。</Text>
+      <Text>住房：城址的住房（水源、粮仓；计划里有港口时加上灯塔、海港）比无水城址多出的部分折合多少分。新城按 1 人口算：到“建齐计划区域所需人口 + 1”和“3”中较大的那个为止，每点住房算 1（城市还能满速增长），之后每多一点减半。</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SITES_HOUSING" Language="zh_Hans_CN">
       <Text>住房 {1_Housing}</Text>
@@ -500,7 +500,7 @@
       <Text>覆盖</Text>
     </Replace>
     <Replace Tag="LOC_SDP_WEIGHT_COVERAGE" Language="zh_Hans_CN">
-      <Text>覆盖：让方案照顾工厂、电厂、动物园、体育场、水族馆这类惠及周边城市的区域。每新覆盖一座本方城市或城址钉，加这么多分；已被同类区域覆盖的城不算。0 为不计。[NEWLINE][NEWLINE]好处：被覆盖的城得到这些建筑的范围效果（生产力、宜居度）。单城实测 42 座真实城市，权重 1 时 3 座多覆盖了邻城，权重 3 时 6 座。[NEWLINE]代价：这些城的相邻加成少 0～3 点（权重 3 时最多 4 点）；计算约慢 5%。</Text>
+      <Text>覆盖：让方案照顾工厂、电厂、动物园、体育场、水族馆这类惠及周边城市的区域。每新覆盖一座本方城市或城址钉，加这么多分；正在规划的这座城自己不算（它的工业区总能覆盖到它），已被同类区域覆盖的城也不算。0 为不计。[NEWLINE][NEWLINE]好处：被覆盖的城得到这些建筑的范围效果（生产力、宜居度）。单城实测 42 座真实城市，权重 1 时 3 座多覆盖了邻城，权重 3 时 6 座。[NEWLINE]代价：这些城的相邻加成少 0～3 点（权重 3 时最多 4 点）；计算约慢 5%。</Text>
     </Replace>
     <Replace Tag="LOC_SDP_RESULT_SUMMARY_COVERAGE" Language="zh_Hans_CN">
       <Text>加权提升：{1_Gain}（相邻 {2_Adjacency}，地块 {3_Land}，覆盖 {4_Coverage}）</Text>
@@ -543,7 +543,7 @@
       <Text>点一下：自动 → 必建 → 不建</Text>
     </Replace>
     <Replace Tag="LOC_SDP_STATES_TOOLTIP" Language="zh_Hans_CN">
-      <Text>必建：一定放。候选：区域数量多于必建个数时，挑收益最高的。不建：不放。收益按加权相邻加成算，打开时加上地块、覆盖、距离成本，社区、保护区再加住房（必建的保护区还加周边产出）。军营、航空港没有相邻加成，放在候选里不会被挑中，要建就设为必建。市政广场这类全帝国限一个的区域只能必建或不建。</Text>
+      <Text>必建：一定放。候选：区域数量多于必建个数时，挑收益最高的。不建：不放。收益按加权相邻加成算，打开时加上地块、覆盖、距离成本，社区、保护区再加住房（必建的保护区给周边地块的产出算在地块里）。军营、航空港没有相邻加成，放在候选里不会被挑中，要建就设为必建。市政广场这类全帝国限一个的区域只能必建或不建。保护区默认不建，只有少数文明适合建，要建时点成候选或必建。</Text>
     </Replace>
     <Replace Tag="LOC_SDP_STATES_OTHER_TOOLTIP" Language="zh_Hans_CN">
       <Text>这些区域不占人口名额，不计入区域数量。自动：城市需要时加进方案，位置照常求解。水渠类区域在城市缺淡水（水源住房低于河流、湖泊给的 5）时加入；堤坝在三环内本城可用的泛滥平原不少于 3 格时加入（只在风云变幻）。放不下时不加，并在结果里说明。</Text>
@@ -614,11 +614,17 @@
     <Replace Tag="LOC_SDP_SOLUTION_DISTRICTS" Language="zh_Hans_CN">
       <Text>{1_Count} 个区域，位置不同</Text>
     </Replace>
-    <Replace Tag="LOC_SDP_RESULT_SUMMARY_PARTS" Language="zh_Hans_CN">
-      <Text>加权提升：{1_Gain}（{2_Parts}）</Text>
+    <Replace Tag="LOC_SDP_RESULT_SUMMARY_ADJACENCY" Language="zh_Hans_CN">
+      <Text>加权相邻加成：{1_Adjacency}</Text>
     </Replace>
-    <Replace Tag="LOC_SDP_PART_ADJACENCY" Language="zh_Hans_CN">
-      <Text>相邻 {1_Value}</Text>
+    <Replace Tag="LOC_SDP_RESULT_SUMMARY_OTHERS" Language="zh_Hans_CN">
+      <Text>加权相邻加成：{1_Adjacency}（{2_Parts}）</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_RANKED" Language="zh_Hans_CN">
+      <Text>方案按相邻加成加上括号里各项的和排序。地块是区域占掉的好地块少了多少产出（保护区让周边地块多出的产出也算在这里）。游戏后期地块一项常比相邻加成还大，和是负数，但这不说明方案差：区域总要占地。</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_TILES_LAND_OFF" Language="zh_Hans_CN">
+      <Text>周边地块 {1_Yields}（“地块”权重为 0，不计分）</Text>
     </Replace>
     <Replace Tag="LOC_SDP_PART_LAND" Language="zh_Hans_CN">
       <Text>地块 {1_Value}</Text>
@@ -645,7 +651,7 @@
       <Text>替换旧钉（{1_N}）</Text>
     </Replace>
     <Replace Tag="LOC_SDP_WEIGHT_DISTANCE" Language="zh_Hans_CN">
-      <Text>距离成本：每个区域、奇观按到最近的本方市中心的格数减 1，乘以这个系数扣分（与相邻加成同一单位）；0 为不计。游戏里区域的造价与距离无关，与距离有关的是取得格子的先后和买地价格，这里表达“区域尽量靠近城市”的偏好。</Text>
+      <Text>距离：每个区域、奇观按到最近的本方市中心的格数减 1，乘以这个系数扣分（与相邻加成同一单位），相邻加成一样时选离市中心近的；0 为不计。[NEWLINE][NEWLINE]好处：城市扩地从内往外，三环的地比二环来得晚，区域放得近就不用花金币提前买地。离线开发集 84 个场景里，0.5 比 0 时 52 个场景的方案变了，近一半的区域换了位置。[NEWLINE]代价：相邻加成平均少 0.6%，占掉的地块产出多约 4%；计算时间不变。</Text>
     </Replace>
     <Replace Tag="LOC_SDP_MULTI_SITE_TOOLTIP" Language="zh_Hans_CN">
       <Text>点击切换这个城址是否参与规划。不参与时不为它放区域，也不算作新城；钉本身不动，仍作为固定邻居影响周围的加成。</Text>
@@ -696,7 +702,7 @@
       <Text>{1_Building}不增加贸易路线</Text>
     </Replace>
     <Replace Tag="LOC_SDP_WEIGHT_HOUSING" Language="zh_Hans_CN">
-      <Text>住房：1 住房折合多少分。每座城的住房到建齐计划区域所需人口为止每点算 1，之后每多一点减半。社区、保护区的住房取决于所在格的魅力。保护区设为必建时，它的古树林、避难所给周围未开发地块加的产出也计入，按固定倍数折算（食物、生产力 1，科学、文化 5/6，信仰 1/2，金币 1/4）：“地块”权重大于 0 时只算城市会耕作的地块并乘这个权重，为 0 时全部计入；从候选里挑时只显示不计分。方案会改变魅力：圣地、剧院让相邻格 +1，工业区、军营 -1，砍掉树林让周围格 -1。</Text>
+      <Text>住房：1 住房折合多少分。每座城的住房到“建齐计划区域所需人口 + 1”和“现在人口 + 2”中较大的那个为止每点算 1（到这里城市还能满速增长），之后每多一点减半；人口越多的城整体打折，因为长一个人口要的食物越多（人口 5 及以下不打折，10 人口约 0.5，16 人口约 0.3）。城址钉按 1 人口算。社区、保护区的住房取决于所在格的魅力。方案会改变魅力：圣地、剧院让相邻格 +1，工业区、军营 -1，砍掉树林让周围格 -1。保护区给周边地块的产出算在“地块”里。</Text>
     </Replace>
     <Replace Tag="LOC_SDP_RESULT_HOUSING" Language="zh_Hans_CN">
       <Text>住房{1_Housing}（魅力 {2_Appeal}）</Text>
@@ -717,7 +723,7 @@
       <Text>周边地块 {1_Yields}</Text>
     </Replace>
     <Replace Tag="LOC_SDP_PART_APPEAL" Language="zh_Hans_CN">
-      <Text>住房与魅力 {1_Value}</Text>
+      <Text>住房 {1_Value}</Text>
     </Replace>
     <Replace Tag="LOC_SDP_YIELD_SHORT_YIELD_FOOD" Language="zh_Hans_CN">
       <Text>食</Text>

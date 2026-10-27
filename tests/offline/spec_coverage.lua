@@ -167,13 +167,13 @@ test("the coverage part moves an industrial zone to reach a city without one", f
   -- Counted again here: what the plan made without coverage reaches.
   local model = SDP_Coverage.New({ PlayerID = 0, Weight = 3 })
   local offZone, onZone = Find(off, IZ), Find(on, IZ)
-  local offCovered = #model:List(IZ, offZone.Index, offZone.X, offZone.Y)
+  local offCovered = #model:List(IZ, offZone.Index, offZone.X, offZone.Y, "C1")
   print(("without coverage: zone at %d,%d covers %d; weight 3: %d,%d covers %d, adjacency %+g -> %+g"):format(
     offZone.X, offZone.Y, offCovered, onZone.X, onZone.Y, on.Covered, off.Adjacency, on.Adjacency))
   T.ok(on.Covered >= offCovered, "covers at least as much: " .. on.Covered .. " vs " .. offCovered)
   T.ok(on.Gain >= off.Adjacency + 3 * offCovered - 1e-9, "at least as good under its own objective")
   T.ok(Map.GetPlotDistance(onZone.X, onZone.Y, 11, 5) <= 6, "the zone reaches city 2: " .. onZone.X .. "," .. onZone.Y)
-  T.same(onZone.Reach, Within(model, onZone.X, onZone.Y, 6), "the row lists the cities in reach")
+  T.same(onZone.Reach, Within(model, onZone.X, onZone.Y, 6, { C1 = true }), "the row lists the other cities in reach")
   T.eq(#on.CoveredBy, 1, "one group")
   T.eq(on.CoveredBy[1].Group, IZ, "the industrial zones")
   T.eq(#on.CoveredBy[1].Keys, on.Covered, "the newly covered cities")
@@ -278,13 +278,13 @@ test("single city: the coverage part moves the industrial zone towards the other
   T.eq(on.CoverageDelta, 3 * on.Covered, "weight x newly covered cities")
   local model = SDP_Coverage.New({ PlayerID = 0, Weight = 3 })
   local offZone, onZone = Find(off, IZ), Find(on, IZ)
-  local offCovered = #model:List(IZ, offZone.Index, offZone.X, offZone.Y)
+  local offCovered = #model:List(IZ, offZone.Index, offZone.X, offZone.Y, "C1")
   print(("single, without coverage: zone at %d,%d covers %d; weight 3: %d,%d covers %d, adjacency %+g -> %+g"):format(
     offZone.X, offZone.Y, offCovered, onZone.X, onZone.Y, on.Covered, off.Adjacency, on.Adjacency))
   T.ok(Map.GetPlotDistance(offZone.X, offZone.Y, 11, 5) > 6, "without coverage the zone does not reach city 2")
   T.ok(Map.GetPlotDistance(onZone.X, onZone.Y, 11, 5) <= 6, "with it, it does: " .. onZone.X .. "," .. onZone.Y)
   T.ok(on.Gain >= off.Adjacency + 3 * offCovered - 1e-9, "at least as good under its own objective")
-  T.same(onZone.Reach, Within(model, onZone.X, onZone.Y, 6), "the row lists the newly covered cities")
+  T.same(onZone.Reach, Within(model, onZone.X, onZone.Y, 6, { C1 = true }), "the row lists the newly covered cities")
   T.eq(Find(on, "DISTRICT_CAMPUS").Reach, nil, "a campus has no reach")
   T.eq(on.CoveredBy[1].Group, IZ, "by group")
   T.eq(#on.CoveredBy[1].Keys, on.Covered, "the newly covered cities")
@@ -345,4 +345,51 @@ test("single city: picking from the pool counts coverage too", function()
   T.eq(picked.Picked[1], zone.Gain > campus.Gain and IZ or "DISTRICT_CAMPUS", "the one picked")
   print(("pick: campus %+g, industrial zone %+g (%+g with coverage 3): picked %s, without coverage %s"):format(
     campus.Gain, zoneOff.Gain, zone.Gain, picked.Picked[1], pickedOff.Picked[1]))
+end)
+
+-- Issue 91 (decided 2026-10-26): a district does not count the city it is
+-- planned for; the other cities, participating ones too, count.
+test("issue 91: the city being planned is not counted as covered by its own district", function()
+  NewWorld()
+  local model = SDP_Coverage.New({ PlayerID = 0, Weight = 1 })
+  local at = Map.GetPlotIndex(5, 5)
+  T.same(Keys(model, model:List(IZ, at, 5, 5)), Within(model, 5, 5, 6), "no owner: every city in reach")
+  T.same(Keys(model, model:List(IZ, at, 5, 5, "C1")), Within(model, 5, 5, 6, { C1 = true }), "owner C1 left out")
+  T.same(model:Reach(IZ, 5, 5, "C1"), Within(model, 5, 5, 6, { C1 = true }), "Reach leaves it out too")
+  -- Single city: an industrial zone next to the capital with no other city
+  -- in reach (city 2 is 7 away, city 3 6 away from the capital; the zone on
+  -- the far side reaches neither): nothing covered, where the old count
+  -- gave the capital 1.
+  local r = SDP_Solver.Solve(SingleRequest(1))
+  T.ok(r.Ok, tostring(r.Error))
+  local zone = Find(r, IZ)
+  for _, key in ipairs(zone.Reach) do T.ok(key ~= "C1", "the capital is not on its own zone's row") end
+  for _, g in ipairs(r.CoveredBy or {}) do
+    for _, key in ipairs(g.Keys) do T.ok(key ~= "C1", "nor counted") end
+  end
+  T.eq(r.Covered, #zone.Reach, "only the other cities count")
+  -- Several cities: cities 1 and 2 each plan a zone. Neither counts its own
+  -- city; each may count the other.
+  NewWorld()
+  local m = SDP_Multi.Solve(Request(1, { Existing = { [1] = true, [2] = true }, Plans = { C1 = { IZ }, C2 = { IZ } } }))
+  T.ok(m.Ok, tostring(m.Error))
+  for _, p in ipairs(m.Plan) do
+    if p.Type == IZ then
+      for _, key in ipairs(p.Reach or {}) do T.ok(key ~= p.City, p.City .. "'s zone does not list its own city") end
+    end
+  end
+  local counted = 0
+  for _, g in ipairs(m.CoveredBy or {}) do counted = counted + #g.Keys end
+  T.eq(counted, m.Covered, "the summary counts what the rows list")
+  local covered = {}
+  for _, g in ipairs(m.CoveredBy or {}) do
+    for _, key in ipairs(g.Keys) do covered[key] = true end
+  end
+  local z1, z2 = nil, nil
+  for _, p in ipairs(m.Plan) do
+    if p.Type == IZ and p.City == "C1" then z1 = p end
+    if p.Type == IZ and p.City == "C2" then z2 = p end
+  end
+  T.eq(covered.C2 == true, Map.GetPlotDistance(z1.X, z1.Y, 11, 5) <= 6, "city 2 counts when city 1's zone reaches it")
+  T.eq(covered.C1 == true, Map.GetPlotDistance(z2.X, z2.Y, 4, 5) <= 6, "city 1 counts when city 2's zone reaches it")
 end)

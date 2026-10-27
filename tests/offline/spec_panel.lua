@@ -1008,7 +1008,11 @@ test("issue 71: the solutions are buttons in one row, their districts in the too
   local cells = SDP_Panel.State().SolutionCells
   T.ok(#cells >= 2, "several solutions: " .. #cells)
   for n, cell in ipairs(cells) do
-    T.eq(cell:GetToolTipString(), SDP_UI.SolutionDetail(result.Solutions[n]), "solution " .. n .. "'s districts")
+    -- Its parts (issue 91), then its districts.
+    local tip = cell:GetToolTipString()
+    T.ok(tip:find("^LOC_SDP_RESULT_SUMMARY_") ~= nil, "solution " .. n .. "'s parts first: " .. tip)
+    T.ok(tip:sub(-#SDP_UI.SolutionDetail(result.Solutions[n])) == SDP_UI.SolutionDetail(result.Solutions[n]),
+      "solution " .. n .. "'s districts")
   end
   cells[2]:Click()
   T.eq(SDP_Panel.State().Solution, 2, "a click selects one")
@@ -1216,4 +1220,100 @@ test("issue 89: city sites show Custom too; a preset puts the distance weight ba
   T.eq(sites.State().Preset, "GROWTH", "and current")
   sites.SetPreset("BALANCED")
   SDP_Panel.SelectTab("SINGLE")
+end)
+
+-- Issue 91 (decided 2026-10-26): the preserve starts off, the distance
+-- weight at 0.5, and the summary leads with the adjacency, the other parts
+-- after it, with no total; through the cells' and the arrows' own handlers.
+test("issue 91: the preserve starts off, distance 0.5, the summary leads with the adjacency on both tabs", function()
+  local PRESERVE = "DISTRICT_PRESERVE"
+  local function Row(rows, districtType)
+    for _, r in ipairs(rows()) do
+      if r.Type == districtType then return r end
+    end
+  end
+  SDP_Panel.SelectTab("SINGLE")
+  SDP_Panel.SelectCity(1)
+  for _, d in ipairs(SDP_Rules.PlannableDistricts(0)) do SDP_Panel.SetState(d.Type, SDP_UI.DefaultState(d)) end
+  local single = function() return SDP_Panel.State().DistrictRows end
+  T.eq(Row(single, PRESERVE).State, "OFF", "the preserve starts off")
+  -- A click makes it a candidate, then required, then off again.
+  for _, want in ipairs({ "POOL", "MUST", "OFF" }) do
+    Row(single, PRESERVE).Cell:Click()
+    T.eq(Row(single, PRESERVE).State, want, "the preserve after a click")
+  end
+  T.eq(Row(single, "DISTRICT_ENTERTAINMENT_COMPLEX").State, "POOL", "other districts that take population: candidates")
+  -- The distance weight: 0.5 by default, sent with the request.
+  local cells = SDP_Panel.State().WeightCells
+  local distance = nil
+  for _, c in ipairs(cells) do
+    if c.Key == "DISTANCE" then distance = c end
+  end
+  T.eq(SDP_Panel.State().Weights.DISTANCE, 0.5, "distance 0.5 by default")
+  T.eq(distance.Value:GetText(), "0.5", "shown")
+  -- The presets leave distance at its default (issue 89's matching): 0.5 is Balanced.
+  SDP_Panel.SetPreset("BALANCED")
+  T.eq(UI_Mock.Controls.PresetPull:GetButton():GetText(), "LOC_SDP_PRESET_BALANCED", "0.5 matches Balanced, not Custom")
+  SDP_Panel.SetState("DISTRICT_CAMPUS", "MUST")
+  SDP_Panel.SetState("DISTRICT_HOLY_SITE", "MUST")
+  SDP_Panel.SetState("DISTRICT_AQUEDUCT", "OFF")
+  SDP_Panel.SetCount(0)
+  SDP_Panel.SetTier("FAST")
+  local result = SDP_Panel.Solve()
+  T.ok(result and result.Ok, "solved: " .. tostring(result and result.Error))
+  T.eq(result.Session.Request.Distance, 0.5, "the weight is sent")
+  -- The summary: the adjacency first, then tiles and distance; no total.
+  local s = SDP_Panel.State()
+  local function Signed(v) return SDP_UI.Signed(v) end
+  local want = "LOC_SDP_RESULT_SUMMARY_OTHERS(" .. Signed(result.Adjacency) .. ",LOC_SDP_LIST_JOIN(LOC_SDP_PART_LAND("
+    .. Signed(result.LandDelta) .. "),LOC_SDP_PART_DISTANCE(" .. Signed(result.CostDelta) .. ")))"
+  T.eq(s.SummaryText, want, "adjacency, then the other parts")
+  T.ok(s.SummaryToolTip:find("LOC_SDP_RESULT_RANKED", 1, true) ~= nil, "the tooltip says how plans are ranked")
+  T.eq(SDP_UI.SolutionLabel(2, { Adjacency = 7, Gain = -3 }), "LOC_SDP_SOLUTION_N(2,+7)", "a solution button shows its adjacency")
+  -- Distance 0 and tiles 0: the adjacency alone.
+  distance.Less:Click()
+  T.eq(SDP_Panel.State().Weights.DISTANCE, 0, "down to 0 through the arrow")
+  SDP_Panel.SetWeight("LAND", 0)
+  local plain = SDP_Panel.Solve()
+  T.ok(plain and plain.Ok, "solved")
+  T.eq(SDP_Panel.State().SummaryText, "LOC_SDP_RESULT_SUMMARY_ADJACENCY(" .. Signed(plain.Adjacency) .. ")", "the adjacency alone")
+  SDP_Panel.SetWeight("LAND", 1)
+  distance.More:Click()
+  T.eq(SDP_Panel.State().Weights.DISTANCE, 0.5, "back to 0.5")
+  -- A save that never changed the distance gets 0.5; one that set 0 keeps it.
+  local fields = { { Key = "DISTANCE", Kind = "number", Min = 0, Max = 3, Default = 0.5, Preset = true } }
+  T.eq(SDP_Settings.Decode("v1;preset=BALANCED", fields, SDP_Settings.PRESETS, SDP_Settings.PRESET_ORDER).Values.DISTANCE,
+    0.5, "never changed: the new default")
+  T.eq(SDP_Settings.Decode("v1;preset=BALANCED;DISTANCE=0", fields, SDP_Settings.PRESETS, SDP_Settings.PRESET_ORDER)
+    .Values.DISTANCE, 0, "set to 0: kept")
+  -- Several cities: the same defaults and summary.
+  SDP_Panel.SelectTab("MULTI")
+  local multi = SDP_Panel.Multi
+  multi.Refresh()
+  local rows = function() return multi.State().View.Districts end
+  T.eq(Row(rows, PRESERVE).State, "OFF", "the preserve starts off on the several cities tab")
+  Row(rows, PRESERVE).Cell:Click()
+  T.eq(Row(rows, PRESERVE).State, "POOL", "a click: candidate")
+  Row(rows, PRESERVE).Cell:Click()
+  Row(rows, PRESERVE).Cell:Click()
+  T.eq(Row(rows, PRESERVE).State, "OFF", "and back off")
+  T.eq(multi.State().Weights.DISTANCE, 0.5, "distance 0.5 by default")
+  multi.SetPlanFor("ALL")
+  multi.ApplyPlan({ "DISTRICT_CAMPUS" })
+  multi.SetCount(0)
+  multi.SetTier("FAST")
+  T.eq(multi.Request().Distance, 0.5, "sent")
+  T.ok(multi.Solve(), "started")
+  SDP_Panel.RunTask(500)
+  local m = multi.State().Result
+  T.ok(m and m.Ok, "multi result: " .. tostring(m and m.Error))
+  local sol = m.Solutions[1]
+  local text = multi.State().SummaryText
+  T.ok(text:find("^LOC_SDP_RESULT_SUMMARY_OTHERS%(" .. Signed(sol.Adjacency):gsub("%p", "%%%0")) ~= nil,
+    "the adjacency first: " .. text)
+  T.ok(text:find("LOC_SDP_PART_DISTANCE(" .. Signed(sol.CostDelta) .. ")", 1, true) ~= nil, "the distance part")
+  T.ok(multi.State().SummaryToolTip:find("LOC_SDP_RESULT_RANKED", 1, true) ~= nil, "how plans are ranked")
+  SDP_Panel.SelectTab("SINGLE")
+  for _, d in ipairs(SDP_Rules.PlannableDistricts(0)) do SDP_Panel.SetState(d.Type, SDP_UI.DefaultState(d)) end
+  SDP_Panel.SetTier("STANDARD")
 end)

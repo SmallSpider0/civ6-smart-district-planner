@@ -711,7 +711,9 @@ function SDP_Multi.NewSession(request)
   -- participant that owns its plot, an unowned one's to the nearest.
   local housingCities = {}
   for p, part in ipairs(participants) do
-    housingCities[p] = { Housing = SDP_Land.ScanHousing(part.Scan), Target = part.Population }
+    -- A city-center pin is a city of 1 (issue 91: SDP_Land.HousingValue).
+    housingCities[p] = { Housing = SDP_Land.ScanHousing(part.Scan), Target = part.Population,
+      Population = part.Kind == "CITY" and part.Scan.Population or 1 }
   end
   local function HousingGroup(index)
     local plot = Map.GetPlotByIndex(index)
@@ -727,9 +729,23 @@ function SDP_Multi.NewSession(request)
     end
     return best
   end
+  -- The city a slot's placement is planned for is not counted as covered by
+  -- it (issue 91): its group's, or for a wonder the city whose tile it is
+  -- (as Session:OwnerOf).
+  local function CoverOwner(search, m, i)
+    local spec = slots[search.SlotIndex[m]]
+    local p = spec.Group
+    if spec.Wonder then
+      p = nil
+      for q, part in ipairs(participants) do
+        if p == nil and part.Allowed[i] then p = q end
+      end
+    end
+    return p ~= nil and participants[p] ~= nil and participants[p].Key or nil
+  end
   self.Search = SDP_Search.New({
     PlayerID = playerID, Board = self.Board, Weights = self.Weights, Params = params,
-    Candidates = candidates, Slots = slots, Lands = lands, Coverage = self.Coverage,
+    Candidates = candidates, Slots = slots, Lands = lands, Coverage = self.Coverage, CoverOwner = CoverOwner,
     Pools = pools, Costs = SDP_City.DistanceCosts(playerID, candidates, request.Distance, centers), Apart = apart,
     Exclusive = SDP_Rules.Exclusive(), Reach = reach, Owners = owners,
     Appeal = { Fixed = fixed, Weights = request.Weights, Workable = workable, Cities = housingCities,
@@ -1183,7 +1199,8 @@ function Session:PlanFor(layout)
       Yields = item.Yields, ToolTip = item.ToolTip, Score = item.Score,
       Unowned = c.Unowned, RemoveTech = c.RemoveTech, Swap = swap, ClearFirst = c.ClearFirst,
       Appeal = a.Appeal, Housing = a.Housing, Tiles = a.Tiles, TilesCounted = a.TilesCounted,
-      Reach = self.Coverage and self.Coverage:Reach(search.Types[m], c.X, c.Y) or nil,
+      TilesReason = a.TilesReason,
+      Reach = self.Coverage and self.Coverage:Reach(search.Types[m], c.X, c.Y, self.Participants[p].Key) or nil,
       Picked = search.Optional[m], Auto = (not spec.Wonder) and self.Participants[p].Auto[search.Types[m]] or nil,
       ForWonder = spec.ForWonder,
     }

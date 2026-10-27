@@ -290,9 +290,12 @@ local function BestImprovement(ctx, sea, terrain, feature, resource)
   return best
 end
 
--- A plot's value and its one-time value (what removing its feature and
--- harvesting its resource would give, weighted, per turn). `ctx` from
--- SDP_Land.Context.
+-- A plot's value, its one-time value (what removing its feature and
+-- harvesting its resource would give, weighted, per turn) and its value
+-- left unimproved with its feature kept (issue 91: a preserve's grove and
+-- sanctuary give yields only to unimproved plots, so a plot next to one is
+-- worth the better of its improved value and this plus those yields).
+-- `ctx` from SDP_Land.Context.
 function SDP_Land.PlotValues(plot, ctx)
   local w, rules = ctx.W, ctx.Rules
   local now = 0
@@ -329,33 +332,36 @@ function SDP_Land.PlotValues(plot, ctx)
   if improved or Unimprovable(plot, resourceRow) then
     -- The game's yields include the improvement (removing or harvesting
     -- would undo it), or none can go there.
-    return now, featureOnce + resourceOnce
+    return now, featureOnce + resourceOnce, now
   end
   local sea = plot:IsWater()
   local terrain = GameInfo.Terrains[plot:GetTerrainType()].TerrainType
   local featureYield = feature ~= nil and Weighted(rules.FeatureYields[feature] or {}, w) or 0
   local resourceYield = resource ~= nil and Weighted(rules.ResourceYields[resource] or {}, w) or 0
-  local best = nil
+  local best, bare = nil, nil
   for _, removeFeature in ipairs(removable and { false, true } or { false }) do
     for _, harvest in ipairs(harvestable and { false, true } or { false }) do
       local value = now
       local f, r = feature, resource
       if removeFeature then value, f = value - featureYield, nil else value = value - featureOnce end
       if harvest then value, r = value - resourceYield, nil else value = value - resourceOnce end
+      if not removeFeature and (bare == nil or value > bare) then bare = value end
       value = value + BestImprovement(ctx, sea, terrain, f, r)
       if best == nil or value > best then best = value end
     end
   end
-  return best, featureOnce + resourceOnce
+  return best, featureOnce + resourceOnce, bare
 end
 
--- Land model of one city. plots: { Index, Tile, Once } for every plot it
--- can work. Returns { Plots (best tile first, ties by plot index), P, Base,
--- Loss = { [plot index] = what taking that plot alone costs }, OnceTotal
--- (the plots' one-time values: the city gets them whatever is built) }.
+-- Land model of one city. plots: { Index, Tile, Once, Bare } for every
+-- plot it can work (Bare: its value left unimproved, PlotValues; nil: the
+-- same as Tile). Returns { Plots (best tile first, ties by plot index), P,
+-- Base, Loss = { [plot index] = what taking that plot alone costs },
+-- OnceTotal (the plots' one-time values: the city gets them whatever is
+-- built) }.
 function SDP_Land.Model(plots, population)
   local sorted = {}
-  for i, p in ipairs(plots) do sorted[i] = { Index = p.Index, Tile = p.Tile, Once = p.Once } end
+  for i, p in ipairs(plots) do sorted[i] = { Index = p.Index, Tile = p.Tile, Once = p.Once, Bare = p.Bare or p.Tile } end
   table.sort(sorted, function(a, b)
     if a.Tile ~= b.Tile then return a.Tile > b.Tile end
     return a.Index < b.Index
@@ -378,8 +384,9 @@ end
 -- on. `mark` is a scratch table, left empty. The solvers call this for every
 -- layout they try, so it only walks the best plots until P are found.
 -- `boost` (optional): { [plot index] = extra tile value } (a preserve's
--- yields on the plots around it, SDP_Appeal); a boosted plot is worked when
--- its raised value is among the best P.
+-- yields on the unimproved plots around it, SDP_Appeal): such a plot is
+-- worth the better of its value and its unimproved value plus the extra
+-- (issue 91), and is worked when that is among the best P.
 function SDP_Land.ScoreTaken(model, taken, count, mark, boost)
   for t = 1, count do mark[taken[t]] = true end
   local worked, used = 0, 0
@@ -396,7 +403,7 @@ function SDP_Land.ScoreTaken(model, taken, count, mark, boost)
     local raised = {}
     for index, extra in pairs(boost) do
       local p = model.ByIndex[index]
-      if p ~= nil and not mark[index] then raised[#raised + 1] = { Index = index, Tile = p.Tile + extra } end
+      if p ~= nil and not mark[index] then raised[#raised + 1] = { Index = index, Tile = math.max(p.Tile, p.Bare + extra) } end
     end
     table.sort(raised, function(a, b)
       if a.Tile ~= b.Tile then return a.Tile > b.Tile end
@@ -462,8 +469,8 @@ function SDP_Land.ForScan(scan, fixed, weights, population, keep)
   local plots = {}
   local function Add(index)
     if not taken[index] and (keep == nil or keep(index)) then
-      local tile, once = SDP_Land.PlotValues(Map.GetPlotByIndex(index), ctx)
-      plots[#plots + 1] = { Index = index, Tile = tile, Once = once }
+      local tile, once, bare = SDP_Land.PlotValues(Map.GetPlotByIndex(index), ctx)
+      plots[#plots + 1] = { Index = index, Tile = tile, Once = once, Bare = bare }
     end
   end
   for _, c in ipairs(scan.Candidates) do Add(c.Index) end
@@ -481,16 +488,53 @@ end
 -- ===========================================================================
 -- A city grows at full speed while its housing is 2 or more above its
 -- population, at half and a quarter speed at 1 and 0, and stops a few past
--- it (GlobalParameters CITY_HOUSING_LEFT_*). Housing is worth most until
--- the city can reach the population its districts need, little after: the
--- city's k-th housing counts 1 up to its target population T, each one past
--- it half the one before (0.5, 0.25, ...). Summed, continuous between whole
--- numbers:
---   HousingValue(n, T) = n                     n <= T
---                      = T + 1 - 0.5^(n - T)   n > T
-function SDP_Land.HousingValue(n, target)
-  if n <= target then return n end
-  return target + 1 - 0.5 ^ (n - target)
+-- it (GlobalParameters CITY_HOUSING_LEFT_*). Housing is worth most while
+-- the city still has to grow, and less in a big city, which needs more
+-- food for each citizen (issue 91, plan B of docs/notes/
+-- issue-91-housing-value.md, decided 2026-10-26):
+--   - each Housing counts 1 up to the knee K, each one past it half the one
+--     before (0.5, 0.25, ...);
+--   - K = max(T + HOUSING_TARGET_SPARE, population + HOUSING_GROWTH_SPARE):
+--     to reach the target population T at full speed the last step, T - 1
+--     to T, needs housing T + 1; a city already past T needs its
+--     population + 2 to keep growing at full speed (housing left 2 or more,
+--     CITY_HOUSING_LEFT_50PCT_GROWTH = 1);
+--   - the whole value times min(1, GrowthThreshold(5) /
+--     GrowthThreshold(population)).
+-- Summed, continuous between whole numbers:
+--   HousingValue(n, T, pop) = S(pop) x n                        n <= K
+--                           = S(pop) x (K + 1 - 0.5^(n - K))     n > K
+-- `population` nil: T (a planned city's plan decides it); a city-center
+-- pin or a site is population 1.
+SDP_Land.HOUSING_TARGET_SPARE = 1
+SDP_Land.HOUSING_GROWTH_SPARE = 2
+SDP_Land.HOUSING_SCALE_POPULATION = 5 -- cities up to this size: no discount
+
+-- Food a city of `population` needs for its next citizen, from the game's
+-- GlobalParameters (CITY_GROWTH_THRESHOLD + MULTIPLIER x (p - 1) +
+-- (p - 1)^EXPONENT; the game speed scales every size alike, so the ratio
+-- below does not depend on it).
+function SDP_Land.GrowthThreshold(population)
+  local g = GlobalParameters or {}
+  local base, mult, exp = g.CITY_GROWTH_THRESHOLD or 15, g.CITY_GROWTH_MULTIPLIER or 8, g.CITY_GROWTH_EXPONENT or 1.5
+  local p = math.max(1, population) - 1
+  return base + mult * p + p ^ exp
+end
+
+function SDP_Land.HousingScale(population)
+  if population == nil then return 1 end
+  return math.min(1, SDP_Land.GrowthThreshold(SDP_Land.HOUSING_SCALE_POPULATION) / SDP_Land.GrowthThreshold(population))
+end
+
+function SDP_Land.HousingKnee(target, population)
+  return math.max(target + SDP_Land.HOUSING_TARGET_SPARE, (population or target) + SDP_Land.HOUSING_GROWTH_SPARE)
+end
+
+function SDP_Land.HousingValue(n, target, population)
+  local knee = SDP_Land.HousingKnee(target, population)
+  local value = n
+  if n > knee then value = knee + 1 - 0.5 ^ (n - knee) end
+  return SDP_Land.HousingScale(population) * value
 end
 
 -- The era a technology or civic belongs to (nil when unknown).

@@ -116,17 +116,35 @@ test("site factors: water, luxuries, strategic resources", function()
     "weighted by housing")
   local small = SDP_Sites.Context(0, { Districts = { "DISTRICT_CAMPUS" } })
   T.eq(small.Population, 1, "one district needs population 1")
-  -- Housing 2 -> 5 against a target of 1: 0.25 + 0.125 + 0.0625.
+  -- Housing 2 -> 5, a new city of 1 against a target of 1: knee max(1 + 1,
+  -- 1 + 2) = 3 (issue 91): 1 + 0.5 + 0.25.
   T.eq(SDP_Sites.Coarse(small, { X = 2, Y = 3, Index = Map.GetPlotIndex(2, 3), Unrevealed = 0 }, centers).Parts.Water,
-    0.4375, "housing past the target is worth less")
+    1.75, "housing past the knee is worth less")
 end)
 
-test("housing value: 1 each up to the target, half the one before after it", function()
-  T.eq(SDP_Land.HousingValue(5, 7), 5, "below the target")
-  T.eq(SDP_Land.HousingValue(7, 7), 7, "at the target")
-  T.eq(SDP_Land.HousingValue(8, 7), 7.5, "one past")
-  T.eq(SDP_Land.HousingValue(10, 7), 7.875, "three past")
-  T.ok(math.abs(SDP_Land.HousingValue(7.5, 7) - (8 - 0.5 ^ 0.5)) < 1e-12, "continuous between whole numbers")
+test("housing value (issue 91, plan B): 1 each up to max(target + 1, population + 2), half after; big cities discounted", function()
+  T.eq(SDP_Land.HOUSING_TARGET_SPARE, 1, "target + 1")
+  T.eq(SDP_Land.HOUSING_GROWTH_SPARE, 2, "population + 2")
+  -- A city of 5 planning for 7: knee 8.
+  T.eq(SDP_Land.HousingKnee(7, 5), 8, "the target decides")
+  T.eq(SDP_Land.HousingValue(5, 7, 5), 5, "below the knee")
+  T.eq(SDP_Land.HousingValue(8, 7, 5), 8, "one past the target still counts 1: growing 6 -> 7 needs 8")
+  T.eq(SDP_Land.HousingValue(9, 7, 5), 8.5, "past the knee: half")
+  T.eq(SDP_Land.HousingValue(11, 7, 5), 8.875, "three past")
+  T.ok(math.abs(SDP_Land.HousingValue(8.5, 7, 5) - (9 - 0.5 ^ 0.5)) < 1e-12, "continuous between whole numbers")
+  -- A city of 5 with housing 6 and a target of 3: knee 7 (its own growth).
+  T.eq(SDP_Land.HousingKnee(3, 5), 7, "past its target: population + 2")
+  T.eq(SDP_Land.HousingValue(8, 3, 5) - SDP_Land.HousingValue(6, 3, 5), 1.5, "+2 housing: 1 + 0.5 (the note's example)")
+  -- Growth thresholds from GlobalParameters: 15 + 8 (p - 1) + (p - 1)^1.5.
+  T.eq(SDP_Land.GrowthThreshold(1), 15, "population 1")
+  T.eq(SDP_Land.GrowthThreshold(5), 55, "population 5")
+  T.near(SDP_Land.GrowthThreshold(16), 135 + 15 ^ 1.5, 1e-9, "population 16")
+  T.eq(SDP_Land.HousingScale(1), 1, "small cities: no discount")
+  T.eq(SDP_Land.HousingScale(5), 1, "up to 5")
+  T.near(SDP_Land.HousingScale(16), 55 / (135 + 15 ^ 1.5), 1e-9, "a city of 16: about 0.28")
+  -- A city of 16, housing 15, target 16: knee 18; +2 housing = (17 - 15) x 0.28.
+  T.near(SDP_Land.HousingValue(17, 16, 16) - SDP_Land.HousingValue(15, 16, 16), 2 * SDP_Land.HousingScale(16), 1e-9,
+    "the note's example: about 0.57 (x 3 = 1.7)")
 end)
 
 test("combinations: spacing, relay, distinct solutions; deterministic", function()

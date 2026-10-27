@@ -29,7 +29,7 @@ On every tab:
 - Each result row gives the tile and the bonus; hover it for DMT's breakdown.
 - Land loss (the Tiles weight, 1 by default): districts pay for the good tiles they take, each valued with its best improvement, its yields weighed by fixed numbers (Gold at a quarter of Production, Faith at half); chopping and harvesting come first. An optional switch also uses tiles you can swap from your other cities.
 - Each tab keeps its settings in the save. The settings fold into one line after a solve, the window fits the screen, and **View map** hides the window to look at the preview.
-- Neighborhoods get Housing from Appeal, counted by what each city still needs; Preserves count Appeal and the yields they give nearby tiles. An Aqueduct is added when the city lacks fresh water, a Dam when there are enough Floodplains tiles. When a plan takes adjacency from nearby Woods or Rainforest, placing it also puts a "Don't chop" reminder tack on those tiles.
+- Neighborhoods get Housing from Appeal, counted by what each city still needs; Preserves count Appeal and, under Tiles, the yields their buildings give nearby tiles; the Preserve is off by default. An Aqueduct is added when the city lacks fresh water, a Dam when there are enough Floodplains tiles. When a plan takes adjacency from nearby Woods or Rainforest, placing it also puts a "Don't chop" reminder tack on those tiles.
 - Long computations run over several frames, so the game stays responsive, and they finish even if you close the panel. Placed tacks can be undone, also after loading a save. <kbd>Shift</kbd>+<kbd>L</kbd> opens the panel.
 - Base game, Rise and Fall, and Gathering Storm; the panel is in English and Chinese and follows the game's language.
 
@@ -128,7 +128,7 @@ The development documents are in Chinese; issues and pull requests in English ar
 - 结果行显示坐标和加成，悬停看 DMT 的逐项来源。
 - 计入占地（“地块”权重，默认 1）：区域占掉好地块要付出代价，地块按修上最好的改良后的产出算，各项产出按固定倍数折算（金币按生产力的 1/4、信仰按 1/2），先砍伐、收获再建；可选开关让别的本方城市的格也能换过来用。
 - 每个页签的设置记在存档里；求解后设置收成一行，窗口高度跟着屏幕，“看地图”收起窗口看预览。
-- 社区按魅力计住房，按每座城还缺多少计价值；保护区计魅力和周边产出；缺淡水时自动加水渠，泛滥平原多时自动加堤坝；方案靠旁边的树林、雨林拿加成时，打钉时在这些格上加“勿砍”提醒钉。
+- 社区按魅力计住房，按每座城还缺多少计价值；保护区计魅力，周边产出算在地块里，默认不建；缺淡水时自动加水渠，泛滥平原多时自动加堤坝；方案靠旁边的树林、雨林拿加成时，打钉时在这些格上加“勿砍”提醒钉。
 - 耗时长的计算分帧进行，游戏不卡，关掉面板也会算完。可以撤销，撤销记录随存档保存。<kbd>Shift</kbd>+<kbd>L</kbd> 打开面板。
 - 原版、迭起兴衰、风云变幻都能用；界面中英双语，跟随游戏语言。
 

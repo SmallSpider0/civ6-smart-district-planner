@@ -862,11 +862,18 @@ function P.Render()
     local solution = result.Solutions[m_solution] or result.Solutions[1]
     local byKey = CityByKey(solution)
     local request = result.Session and result.Session.Request or {}
-    -- Planning the cities one after another gave this (it tells what planning
-    -- them together adds); the search's counts are for tests (issue 67).
-    local statsText = Locale.Lookup("LOC_SDP_MULTI_FIRST", SDP_UI.Signed(result.FirstGain or 0))
-    Controls.MultiSummary:SetText(SDP_UI.SummaryText(solution, { Land = request.Land ~= false,
-      Coverage = solution.Covered ~= nil, Distance = (request.Distance or 0) > 0 }))
+    -- How the solutions are ranked, and what planning the cities together
+    -- adds over planning them one after another (the difference of the
+    -- ranked sums; issue 91: no total is shown); the search's counts are for
+    -- tests (issue 67).
+    local statsText = Locale.Lookup("LOC_SDP_RESULT_RANKED")
+    if result.FirstGain ~= nil then
+      statsText = statsText .. "[NEWLINE][NEWLINE]"
+        .. Locale.Lookup("LOC_SDP_MULTI_FIRST", SDP_UI.Signed(math.floor(((solution.Gain or 0) - result.FirstGain) * 10 + 0.5) / 10))
+    end
+    local summaryParts = { Land = request.Land ~= false, Coverage = solution.Covered ~= nil,
+      Distance = (request.Distance or 0) > 0 }
+    Controls.MultiSummary:SetText(SDP_UI.SummaryText(solution, summaryParts))
     local label = TargetLabelFor(byKey)
     if solution.Covered ~= nil then
       statsText = table.concat(SDP_UI.CoverageLines(solution, label), "[NEWLINE]") .. "[NEWLINE][NEWLINE]" .. statsText
@@ -880,8 +887,9 @@ function P.Render()
       for _, p in ipairs(s.Plan) do
         if p.Kind == "WONDER" then wonders = wonders + 1 end
       end
-      SDP_UI.SolutionRow(inst, Locale.Lookup("LOC_SDP_SOLUTION_N", n, SDP_UI.Signed(s.Gain)),
-        Locale.Lookup("LOC_SDP_MULTI_SOLUTION_DETAIL", #s.Cities, #s.Plan - wonders, wonders), n == m_solution)
+      SDP_UI.SolutionRow(inst, SDP_UI.SolutionLabel(n, s),
+        SDP_UI.SummaryText(s, summaryParts) .. "[NEWLINE]"
+          .. Locale.Lookup("LOC_SDP_MULTI_SOLUTION_DETAIL", #s.Cities, #s.Plan - wonders, wonders), n == m_solution)
       inst.Root:RegisterCallback(Mouse.eLClick, function() P.SelectSolution(n) end)
       m_view.Solutions[n] = { Gain = s.Gain, Selected = n == m_solution }
     end

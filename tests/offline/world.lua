@@ -132,6 +132,7 @@ local function BuildGameInfo()
     { CivicType = "CIVIC_RECORDED_HISTORY", Name = "LOC_CIVIC_RECORDED_HISTORY_NAME", EraType = "ERA_CLASSICAL" },
     { CivicType = "CIVIC_GAMES_RECREATION", Name = "LOC_CIVIC_GAMES_RECREATION_NAME", EraType = "ERA_CLASSICAL" },
     { CivicType = "CIVIC_CONSERVATION", Name = "LOC_CIVIC_CONSERVATION_NAME", EraType = "ERA_MODERN" },
+    { CivicType = "CIVIC_MYSTICISM", Name = "LOC_CIVIC_MYSTICISM_NAME", EraType = "ERA_ANCIENT" },
   }, "CivicType")
 
   local function District(t, extra)
@@ -160,7 +161,10 @@ local function BuildGameInfo()
     -- Another civilization's harbor (not the test player's).
     District("DISTRICT_COTHON", { RequiresPopulation = true, Coast = true, AdjacentToLand = true,
       TraitType = "TRAIT_CIVILIZATION_DISTRICT_COTHON" }),
-    District("DISTRICT_PRESERVE", { RequiresPopulation = true, NoAdjacentCity = true, Housing = 1, Appeal = 1 }),
+    -- The preserve and its grove come with Mysticism, the sanctuary with
+    -- Conservation (the game's Districts and Buildings rows).
+    District("DISTRICT_PRESERVE", { RequiresPopulation = true, NoAdjacentCity = true, Housing = 1, Appeal = 1,
+      PrereqCivic = "CIVIC_MYSTICISM" }),
     District("DISTRICT_WATER_ENTERTAINMENT_COMPLEX", { RequiresPopulation = true, Coast = true, AdjacentToLand = true,
       Appeal = 1, Entertainment = 1 }),
   }, "DistrictType")
@@ -272,8 +276,10 @@ local function BuildGameInfo()
       PrereqDistrict = "DISTRICT_ENTERTAINMENT_COMPLEX", RegionalRange = 6 },
     { BuildingType = "BUILDING_TEST_LONG_REACH", Name = "LOC_BUILDING_TEST_LONG_REACH_NAME", Cost = 330,
       PrereqDistrict = "DISTRICT_INDUSTRIAL_ZONE", RegionalRange = 9, TraitType = "TRAIT_CIVILIZATION_DISTRICT_ACROPOLIS" },
-    { BuildingType = "BUILDING_GROVE", Name = "LOC_BUILDING_GROVE_NAME", Cost = 150, PrereqDistrict = "DISTRICT_PRESERVE" },
-    { BuildingType = "BUILDING_SANCTUARY", Name = "LOC_BUILDING_SANCTUARY_NAME", Cost = 300, PrereqDistrict = "DISTRICT_PRESERVE" },
+    { BuildingType = "BUILDING_GROVE", Name = "LOC_BUILDING_GROVE_NAME", Cost = 150, PrereqDistrict = "DISTRICT_PRESERVE",
+      PrereqCivic = "CIVIC_MYSTICISM" },
+    { BuildingType = "BUILDING_SANCTUARY", Name = "LOC_BUILDING_SANCTUARY_NAME", Cost = 300, PrereqDistrict = "DISTRICT_PRESERVE",
+      PrereqCivic = "CIVIC_CONSERVATION" },
   }, "BuildingType")
   -- The game's trade route rows (Buildings.xml, Modifiers): the market adds
   -- a route; the lighthouse adds one when the city has no market.
