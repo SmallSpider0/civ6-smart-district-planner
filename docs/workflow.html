@@ -356,6 +356,11 @@ footer { margin-top: 64px; border-top: 1px solid var(--line); padding-top: 16px;
     <li>夜里另加一个约一小时后的定时兜底。</li>
   </ul>
   <p>最后一句话写明什么会叫醒自己。macOS 上夜里无人值守的运行还会被隐私弹窗卡住，开跑前先碰一遍要用的文件夹（<a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/docs/dev-macos.md">docs/dev-macos.md</a>“隐私弹窗”）。</p>
+  <h3>做完就收尾，子 agent 的也算</h3>
+  <ul>
+    <li>PR 合并后：从 Claude Code 的 PR 栏移除，拉取 main，清理工作树和本地分支。子 agent 开的 PR 也挂在主会话的 PR 栏上，它自己移不掉，所以子 agent 报告合并后、每次发版后，主会话查一遍 PR 栏，把已合并、已关闭的都移除。</li>
+    <li>夜间队列里的一项谁跑谁关：跑完马上标成完成并写上结果，白天经维护者同意提前跑的也一样；没关的一项会一直显示在排队。</li>
+  </ul>
   <p class="refs">参考：<a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/CONTRIBUTING.md#需求分支与提交">CONTRIBUTING.md「需求、分支与提交」里的“子 agent 怎么派”（含统计数字）</a><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/tree/main/docs/notes">docs/notes/</a><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/tools/remote.py">tools/remote.py</a></p>
 </section>
 
