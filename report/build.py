@@ -181,6 +181,7 @@ def build(files=None, version=None, date=None, lang="zh"):
     version = version or git("rev-parse", "--short", "HEAD") or "dev"
     date = date or git("log", "-1", "--format=%cs") or ""
     download = (REPO_URL + "/releases/tag/" + version) if version.startswith("v") else (REPO_URL + "/releases/latest")
+    bug_url = REPO_URL + "/issues/new?template=bug.yml" + ("&amp;version=" + version if version.startswith("v") else "")
     rows = summarize.load([os.path.join(REPO, f) for f in (files or RESULTS)])
     scenarios, det = summarize.summarize(rows)
     raw = {}
@@ -309,7 +310,7 @@ def build(files=None, version=None, date=None, lang="zh"):
                 % (sd["n"] - sd["legal"], sd["pinPlans"], det_sd[1] - det_sd[0])) if sd else ""
 
     texts = {
-        "VERSION": version, "DATE": date, "DOWNLOAD_URL": download, "REPO_URL": REPO_URL, "WORKSHOP_URL": WORKSHOP_URL, "PAGES_URL": PAGES_URL,
+        "VERSION": version, "DATE": date, "DOWNLOAD_URL": download, "BUG_URL": bug_url, "REPO_URL": REPO_URL, "WORKSHOP_URL": WORKSHOP_URL, "PAGES_URL": PAGES_URL,
         "DOWNLOAD_LABEL": (L("下载 ", "Download ") + version) if version.startswith("v") else L("下载最新版", "Download the latest version"),
         "N_SINGLE": str(len(single)), "N_MULTI": str(len(multi)), "N_CIVS": "17",
         "SELF_CHECK": L("%d 次，%d 次不一致", "%d runs, %d differ") % (self_n, self_mis),

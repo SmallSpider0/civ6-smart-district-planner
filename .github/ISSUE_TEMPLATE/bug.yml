@@ -2,105 +2,27 @@ name: 问题反馈 / Bug report
 description: 规划结果不对、面板异常、报错或卡住 / Wrong plans, a broken panel, errors or freezes
 labels: [bug]
 body:
-  - type: markdown
+  - type: textarea
+    id: what
     attributes:
-      value: |
-        中文或英文都可以。 / Chinese or English are both fine.
-
-        一局只开一个规划模组：和 Auto Map Tacks Planner、Empire Planner 等同时启用时，结果会互相干扰。 / Use one planner per game: with Auto Map Tacks Planner, Empire Planner or another planner enabled at the same time, the results interfere.
+      label: 发生了什么 / What happened
+      description: 中文或英文都可以。截图或存档（压缩成 zip）拖进来最快。 / Chinese or English. Dragging in a screenshot or a zipped save is quickest.
+    validations:
+      required: true
   - type: input
     id: version
     attributes:
       label: 模组版本 / Mod version
-      description: 鼠标停在左上角那排按钮最后的六边形按钮上可以看到。 / Hover the hexagon button at the end of the toolbar at the upper left.
-      placeholder: v1.5.3
-    validations:
-      required: true
-  - type: dropdown
-    id: ruleset
-    attributes:
-      label: 规则集 / Ruleset
-      options:
-        - 风云变幻 / Gathering Storm
-        - 迭起兴衰 / Rise and Fall
-        - 原版 / Base game
-    validations:
-      required: true
-  - type: dropdown
-    id: platform
-    attributes:
-      label: 平台 / Platform
-      options:
-        - Windows
-        - macOS
-        - Linux
-    validations:
-      required: true
-  - type: dropdown
-    id: install
-    attributes:
-      label: 安装方式 / How the mod is installed
-      description: 两份都有时游戏只加载其中一份，不一定是新的。 / With both, the game loads only one of them, not necessarily the newer one.
-      options:
-        - 创意工坊 / Steam Workshop
-        - 手动放进 Mods 文件夹 / By hand in the Mods folder
-        - 两种都有 / Both
-    validations:
-      required: true
-  - type: dropdown
-    id: kind
-    attributes:
-      label: 哪类问题 / Kind of problem
-      options:
-        - 报错、卡住或没有结果 / An error, a freeze or no result
-        - 方案里有游戏不让建的位置 / The plan uses a tile the game won't let you build on
-        - 有比给出的方案更好的摆法 / There is a better layout than the one given
-        - 面板显示或操作不对 / The panel shows or behaves wrong
-        - 其他 / Other
-    validations:
-      required: true
-  - type: dropdown
-    id: tab
-    attributes:
-      label: 页签 / Tab
-      options:
-        - 单城 / One city
-        - 选城址 / City sites
-        - 多城 / Several cities
-        - 不在某个页签 / Not on one tab
-  - type: textarea
-    id: mods
-    attributes:
-      label: 同时启用的其他模组 / Other mods enabled
-  - type: textarea
-    id: what
-    attributes:
-      label: 现象 / What happened
-      description: '有比给出的更好的摆法时，写出那个摆法（区域放在哪几格、各得多少相邻加成）。 / For a better layout, describe it: which tiles the districts go on and the adjacency each gets.'
-    validations:
-      required: true
-  - type: textarea
-    id: steps
-    attributes:
-      label: 复现步骤 / Steps to reproduce
-      value: |
-        1.
-        2.
-  - type: textarea
-    id: settings
-    attributes:
-      label: 设置 / Settings
-      description: 勾了哪些区域、预设和权重、开关。截一张面板设置区的图就够。 / The districts you chose, the preset and weights, the toggles. A screenshot of the panel's settings is enough.
-  - type: textarea
-    id: log
-    attributes:
-      label: 日志 / Log
-      description: |
-        Windows：Steam 里给游戏的启动选项加上 `-log` 后再出现一次问题，打开 `%LOCALAPPDATA%\Firaxis Games\Sid Meier's Civilization VI\Logs\Lua.log`，搜 `Runtime Error`，再搜 `SDP_`，贴出附近几十行。macOS 版的游戏不写这个文件，跳过这一项。
-        Windows: add `-log` to the game's launch options in Steam, make the problem happen again, open `%LOCALAPPDATA%\Firaxis Games\Sid Meier's Civilization VI\Logs\Lua.log`, search for `Runtime Error`, then `SDP_`, and paste a few dozen lines around it. The macOS game does not write this file; skip this field.
-      render: text
+      description: 不填按最新版。鼠标停在左上角那排按钮最后的六边形按钮上可以看到。 / Leave empty for the latest. Hover the hexagon button at the end of the toolbar at the upper left.
   - type: markdown
     attributes:
       value: |
-        截图和存档可以拖进上面任一文本框。存档压缩成 zip 再拖：Windows 在 `文档\My Games\Sid Meier's Civilization VI\Saves\Single`，macOS 在 `~/Library/Application Support/Sid Meier's Civilization VI/Sid Meier's Civilization VI/Saves/Single`。能复现的问题有存档最快查清。
-        Drag screenshots and saves into any text field above. Zip a save first: on Windows it is in `Documents\My Games\Sid Meier's Civilization VI\Saves\Single`, on macOS in `~/Library/Application Support/Sid Meier's Civilization VI/Sid Meier's Civilization VI/Saves/Single`. A save is the quickest way to track a problem down.
+        <details><summary>可能有用 / Might help</summary>
+
+        - 不是全部 DLC 都开着时，写一句用的是哪个规则集。 / If you don't play with all DLC, say which ruleset.
+        - 一局只开一个规划模组：和 Auto Map Tacks Planner、Empire Planner 等同时启用时结果会互相干扰。 / Use one planner per game: Auto Map Tacks Planner, Empire Planner and the like interfere with each other.
+        - 本模组的创意工坊版和手动放进 Mods 文件夹的不要同时装。 / Don't have both the Workshop copy and a copy in the Mods folder.
+        - 存档 / Saves: Windows `Documents\My Games\Sid Meier's Civilization VI\Saves\Single`, macOS `~/Library/Application Support/Sid Meier's Civilization VI/Sid Meier's Civilization VI/Saves/Single`
+        - Windows 日志 / log: Steam 启动选项加 `-log` / add `-log` to the launch options, then `%LOCALAPPDATA%\Firaxis Games\Sid Meier's Civilization VI\Logs\Lua.log`, search `Runtime Error` and `SDP_`.
+
+        </details>
