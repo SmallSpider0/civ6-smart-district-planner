@@ -15,7 +15,7 @@ Without --once it polls every --every seconds (default 120) and exits with
 the first new items: run it in the background; its end is the signal. A
 failed poll (network) is retried after --retry seconds (default 30). It
 does not handle anything itself (.claude/skills/sdp-watch says how).
-State: logs/watch/state.json.
+State: logs/watch/state.json of the main checkout (shared by all worktrees).
 """
 import argparse
 import datetime
@@ -27,7 +27,18 @@ import sys
 import time
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DIR = os.path.join(ROOT, "logs", "watch")
+
+
+def main_checkout():
+    """The repository's main checkout: the state is shared by every worktree,
+    so a --mine recorded in a worktree reaches the watch running in main."""
+    done = subprocess.run(["git", "rev-parse", "--path-format=absolute", "--git-common-dir"],
+                          cwd=ROOT, capture_output=True, text=True)
+    common = done.stdout.strip()
+    return os.path.dirname(common) if done.returncode == 0 and common else ROOT
+
+
+DIR = os.path.join(main_checkout(), "logs", "watch")
 STATE = os.path.join(DIR, "state.json")
 OTHERS = os.path.join(DIR, "others.log")
 
