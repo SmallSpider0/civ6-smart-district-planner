@@ -349,6 +349,8 @@ python3 -I tools/run_tests.py -v tests/bench/audit_engine.lua   # 读存档后�
 ```
 
 - 三个场景（`SCENARIOS`）：风云变幻盘古大陆标准图（北条时宗，远古开局 200 回合）、风云变幻大陆大图（威廉明娜，中世纪开局 150 回合）、迭起兴衰群岛（伯里克利，古典开局 170 回合），都用联机速度。存档在游戏自己的存档目录，不进仓库。
+- `prepare` 另认不在发版压力测试里的测量用场景（`EXTRA_SCENARIOS`，`all` 不跑）：`mid-gs` 是风云变幻大陆标准图（图拉真，远古开局，标准速度 100 回合），游戏中期、还有地方建城。`--speed` 改速度（默认联机速度）。
+- 选城址页“区域数量”的耗时（#124）：读档后 `python3 -I tests/bench/sites_count.py NAME [--counts 0,3,6] [--reps 3]`，页签默认设置下逐个数量直接求解（和压力测试“选城址”一步同一个调用），Python 端计墙钟时间，报中位数和相对数量 0 的倍数，结果写 `tests/bench/results/sites_count-NAME.json`。
 - 自动回合用游戏的 `AutoplayManager`，界面以观察者身份观察：以玩家 0 观察时，AI 的外交（初次见面、交易）会发到本地界面等回答，回合停住。
 - 各步：普查（城市、区域、奇观、钉数）；AI 自己建的保护区周边产出与规则对照；人口最多的几座城各做候选池（快速、标准，标准档跑两次核对确定性）与必建求解；社区 + 保护区 + 工业区；港口与商业中心；精细档；选城址与打城址钉；4 城、8 城多城（标准、精细）与打钉；再打 150 个钉后重复单城与多城；面板开关各页签；撤销全部。每步记录耗时、加成、DMT 自报与裁判是否一致、引擎拒绝的格数。
 - `check` 在格上下令建造（`CityOperationTypes.BUILD`）再 `FinishProgress` 建完，事先只给这座城补上这些区域的前置科技、市政和人口；不用 `CreateDistrict`（AGENTS 坑 36）。魅力、住房在核心状态读。
@@ -532,6 +534,18 @@ python3 -I tools/preflight_night.py   # 每个文件夹一行 ok / PROBLEM / mis
 - 碰一遍夜里要用的文件夹，让 macOS 的隐私弹窗在人还在时出现（[docs/dev-macos.md](../docs/dev-macos.md)“隐私弹窗”）：本仓库的全部工作树（`git worktree list`）、`sdplock.py` 的共用目录、`paths.py` 找到的游戏用户目录、Mods、存档和日志目录（写一个测试文件再删掉），Steam 和游戏安装目录（只列目录）。
 - 本机配置（见上文 sdplock.py）可加 `preflight_folders`：夜里还要用的其他文件夹的列表，如上传创意工坊用的目录。
 - 一个文件夹超过 10 秒没反应记为 `waiting (prompt on screen?)`；有文件夹出问题时退出码 1。
+
+## codex_review.py — 请 Codex 审 PR、等它审完、回复意见
+
+```bash
+python3 -I tools/codex_review.py request 125              # 在 PR 下评论 @codex review（并记进 watch_issues 的 --mine）
+python3 -I tools/codex_review.py wait 125                 # 后台跑：审完退出；0 没有意见，1 有没处理的意见（列出），3 超时（默认 30 分钟）
+python3 -I tools/codex_review.py findings 125             # 列出 Codex 没解决的审查意见（线程 ID、文件:行、链接、内容）
+python3 -I tools/codex_review.py reply 线程ID "已修，见 abc1234"   # 回复一条并标为已解决
+```
+
+- 什么时候用、意见怎么处理见 CONTRIBUTING.md“Codex 审查”。
+- 判断审完读三处：Codex 汇总评论里的状态、它对最新提交发的审查、它在 PR 上点的 👍（没有意见时）。网络出错会重试。
 
 ## worktree.py — 工作树
 

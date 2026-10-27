@@ -156,7 +156,7 @@ footer { margin-top: 64px; border-top: 1px solid var(--line); padding-top: 16px;
   </div>
   <figure>
     <div class="frame wide">
-      <svg viewBox="0 0 1030 400" role="img" aria-label="从需求到创意工坊的流程：需求进来，分诊；bug 直接复现并修复，功能先调研，再由维护者或合作者定方案；然后一个 Issue 一个子 agent 开发、跑相关测试、开 PR、CI 和自动合并、判断是否发版、发 Release、更新创意工坊。每一步按自动化程度着色。">
+      <svg viewBox="0 0 1030 400" role="img" aria-label="从需求到创意工坊的流程：需求进来，分诊；bug 直接复现并修复，功能先调研，再由维护者或合作者定方案；然后一个 Issue 一个子 agent 开发、跑相关测试、开 PR、Codex 审查（核实意见后修改或回复）、CI 和自动合并、判断是否发版、发 Release、更新创意工坊。每一步按自动化程度着色。">
         <defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="arrowhead"/></marker></defs>
         <!-- row A -->
         <g>
@@ -191,37 +191,42 @@ footer { margin-top: 64px; border-top: 1px solid var(--line); padding-top: 16px;
         <path class="edge" d="M570 198 H606" marker-end="url(#ar)"/>
         <path class="edge" d="M760 198 C790 198 795 146 816 140" marker-end="url(#ar)"/>
         <!-- connector to row B -->
-        <path class="edge" d="M910 156 V262 H90 V286" marker-end="url(#ar)"/>
+        <path class="edge" d="M910 156 V262 H82 V286" marker-end="url(#ar)"/>
         <!-- row B -->
         <g>
-          <rect class="node k1" x="20" y="290" width="140" height="56" rx="8"/><rect class="tab1" x="20" y="290" width="6" height="56" rx="3"/>
-          <text x="92" y="314" text-anchor="middle" font-size="14" font-weight="600">相关测试</text><text class="sub" x="92" y="333" text-anchor="middle">游戏内的可排到夜里</text>
+          <rect class="node k1" x="18" y="290" width="128" height="56" rx="8"/><rect class="tab1" x="18" y="290" width="6" height="56" rx="3"/>
+          <text x="82" y="314" text-anchor="middle" font-size="14" font-weight="600">相关测试</text><text class="sub" x="82" y="333" text-anchor="middle">游戏内的可排到夜里</text>
         </g>
         <g>
-          <rect class="node k2" x="190" y="290" width="140" height="56" rx="8"/><rect class="tab2" x="190" y="290" width="6" height="56" rx="3"/>
-          <text x="262" y="314" text-anchor="middle" font-size="14" font-weight="600">一个 PR</text><text class="sub" x="262" y="333" text-anchor="middle">Closes #…</text>
+          <rect class="node k2" x="166" y="290" width="112" height="56" rx="8"/><rect class="tab2" x="166" y="290" width="6" height="56" rx="3"/>
+          <text x="222" y="314" text-anchor="middle" font-size="14" font-weight="600">一个 PR</text><text class="sub" x="222" y="333" text-anchor="middle">Closes #…</text>
         </g>
         <g>
-          <rect class="node k1" x="360" y="290" width="140" height="56" rx="8"/><rect class="tab1" x="360" y="290" width="6" height="56" rx="3"/>
-          <text x="432" y="314" text-anchor="middle" font-size="14" font-weight="600">CI · 自动合并</text><text class="sub" x="432" y="333" text-anchor="middle">Ubuntu + Windows</text>
+          <rect class="node k2" x="298" y="290" width="136" height="56" rx="8"/><rect class="tab2" x="298" y="290" width="6" height="56" rx="3"/>
+          <text x="366" y="314" text-anchor="middle" font-size="14" font-weight="600">Codex 审查</text><text class="sub" x="366" y="333" text-anchor="middle">核实意见，改或回复</text>
         </g>
         <g>
-          <rect class="node k3" x="530" y="290" width="160" height="56" rx="8"/><rect class="tab3" x="530" y="290" width="6" height="56" rx="3"/>
-          <text x="612" y="314" text-anchor="middle" font-size="14" font-weight="600">要不要发版</text><text class="sub" x="612" y="333" text-anchor="middle">只修 bug 时自动</text>
+          <rect class="node k1" x="454" y="290" width="120" height="56" rx="8"/><rect class="tab1" x="454" y="290" width="6" height="56" rx="3"/>
+          <text x="514" y="314" text-anchor="middle" font-size="14" font-weight="600">CI · 自动合并</text><text class="sub" x="514" y="333" text-anchor="middle">Ubuntu + Windows</text>
         </g>
         <g>
-          <rect class="node k1" x="720" y="290" width="140" height="56" rx="8"/><rect class="tab1" x="720" y="290" width="6" height="56" rx="3"/>
-          <text x="792" y="314" text-anchor="middle" font-size="14" font-weight="600">Release</text><text class="sub" x="792" y="333" text-anchor="middle">打包 · 介绍页</text>
+          <rect class="node k3" x="594" y="290" width="140" height="56" rx="8"/><rect class="tab3" x="594" y="290" width="6" height="56" rx="3"/>
+          <text x="664" y="314" text-anchor="middle" font-size="14" font-weight="600">要不要发版</text><text class="sub" x="664" y="333" text-anchor="middle">只修 bug 时自动</text>
         </g>
         <g>
-          <rect class="node k2" x="890" y="290" width="120" height="56" rx="8"/><rect class="tab2" x="890" y="290" width="6" height="56" rx="3"/>
-          <text x="952" y="314" text-anchor="middle" font-size="14" font-weight="600">创意工坊</text><text class="sub" x="952" y="333" text-anchor="middle">上传并下载核对</text>
+          <rect class="node k1" x="754" y="290" width="120" height="56" rx="8"/><rect class="tab1" x="754" y="290" width="6" height="56" rx="3"/>
+          <text x="814" y="314" text-anchor="middle" font-size="14" font-weight="600">Release</text><text class="sub" x="814" y="333" text-anchor="middle">打包 · 介绍页</text>
         </g>
-        <path class="edge" d="M160 318 H186" marker-end="url(#ar)"/>
-        <path class="edge" d="M330 318 H356" marker-end="url(#ar)"/>
-        <path class="edge" d="M500 318 H526" marker-end="url(#ar)"/>
-        <path class="edge" d="M690 318 H716" marker-end="url(#ar)"/>
-        <path class="edge" d="M860 318 H886" marker-end="url(#ar)"/>
+        <g>
+          <rect class="node k2" x="894" y="290" width="120" height="56" rx="8"/><rect class="tab2" x="894" y="290" width="6" height="56" rx="3"/>
+          <text x="954" y="314" text-anchor="middle" font-size="14" font-weight="600">创意工坊</text><text class="sub" x="954" y="333" text-anchor="middle">上传并下载核对</text>
+        </g>
+        <path class="edge" d="M146 318 H162" marker-end="url(#ar)"/>
+        <path class="edge" d="M278 318 H294" marker-end="url(#ar)"/>
+        <path class="edge" d="M434 318 H450" marker-end="url(#ar)"/>
+        <path class="edge" d="M574 318 H590" marker-end="url(#ar)"/>
+        <path class="edge" d="M734 318 H750" marker-end="url(#ar)"/>
+        <path class="edge" d="M874 318 H890" marker-end="url(#ar)"/>
         <text class="lbl" x="20" y="384">左侧色条和边框表示这一步的自动化程度，见第 07 节。</text>
       </svg>
     </div>
@@ -404,6 +409,7 @@ footer { margin-top: 64px; border-top: 1px solid var(--line); padding-top: 16px;
     <ul class="overview">
       <li>每个 PR 只跑和它相关的测试文件，整套离线测试 CI 会跑；三种规则集、真实点击、压力测试在发版前跑一次。</li>
       <li>游戏内测试只能晚些跑时（比如要等夜间时段），PR 先开着，测过了再打开自动合并。离线重活放在第二台机器，不和游戏抢 CPU。</li>
+      <li>改了代码的 PR 先请 Codex 审（<code>tools/codex_review.py</code>），审完、意见处理完再开自动合并；只改文档的不审。Codex 的每条意见先核实：属实的写测试再改，不属实的写明原因，都回复后标为已解决。全程由代理做完，只有要维护者拿主意的意见才进状态页“要你决定的事”并在 Issue 下说明。</li>
       <li>汇报时分清“已自动验证”和“需要人确认”，没验证的不说成通过。</li>
     </ul>
   </div>
@@ -560,6 +566,7 @@ footer { margin-top: 64px; border-top: 1px solid var(--line); padding-top: 16px;
     ["真实点击、截图", 1, "系统鼠标事件逐个点控件；截图按面板位置裁剪", "第一次授予辅助功能和录屏权限；无人值守时屏幕不能锁，笔记本要开盖接电", "tools/realclick.py"],
     ["压力测试", 1, "读三张后期存档，逐步计时，在游戏里实际建出来核对", "—", "tools/stress.py"],
     ["夜间队列", 2, "开跑前先碰一遍夜里要用的文件夹，让隐私弹窗趁人还在时出现；主会话在本机配置的夜间时段按顺序跑队列，结果交给新的子 agent 改问题、开 PR", "macOS 上事先给夜里要跑的程序授予文件夹访问权限", "tools/preflight_night.py"],
+    ["代码审查", 2, "改了代码的 PR 由开 PR 的代理点名请 Codex 审，后台等它审完；每条意见先核实，属实的先写会失败的测试再改，不属实的写明原因，回复后标为已解决，都处理完再开自动合并；只改文档的不审。试两周，按记录的属实和误报条数决定留不留", "—（只有要改需求、默认值或权衡做法的意见才进“要你决定的事”）", "tools/codex_review.py"],
     ["PR、CI、合并", 1, "一个 Issue 一个 PR；Ubuntu、Windows 两项检查通过后自动 squash 合并；CI 失败时自动叫醒代理修，通过和合并不叫醒，代理开 PR 后在后台等结果；合并后清理工作树和本地分支", "—", ".github/workflows/checks.yml"],
     ["对外文字审阅", 3, "README、创意工坊简介、介绍页由代理改，PR 里附渲染好的页面和图", "合并前另一人看一下", null],
     ["要不要发版", 3, "只修 bug：满 3 个修复、满 7 天或严重 bug 即自动发；其余（含默认值、界面调整）：做完准备等一句话", "说“发 vX.Y.Z”", ".claude/skills/sdp-release/SKILL.md"],

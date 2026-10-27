@@ -1,0 +1,223 @@
+{
+ "Name": "islands-rf",
+ "Census": {
+  "Turn": 210,
+  "Districts": 15,
+  "Wonders": 2,
+  "OtherCities": 57
+ },
+ "Cities": 4,
+ "Setups": {
+  "0": {
+   "Count": 0,
+   "D": 5,
+   "Distance": 0.5,
+   "K": 3,
+   "Must": [],
+   "Pick": 0,
+   "Pool": [
+    "DISTRICT_ACROPOLIS",
+    "DISTRICT_CAMPUS",
+    "DISTRICT_COMMERCIAL_HUB",
+    "DISTRICT_ENTERTAINMENT_COMPLEX",
+    "DISTRICT_HARBOR",
+    "DISTRICT_HOLY_SITE",
+    "DISTRICT_INDUSTRIAL_ZONE",
+    "DISTRICT_WATER_ENTERTAINMENT_COMPLEX"
+   ],
+   "Step": "Setup",
+   "Tier": "STANDARD"
+  },
+  "3": {
+   "Count": 3,
+   "D": 5,
+   "Distance": 0.5,
+   "K": 3,
+   "Must": [],
+   "Pick": 3,
+   "Pool": [
+    "DISTRICT_ACROPOLIS",
+    "DISTRICT_CAMPUS",
+    "DISTRICT_COMMERCIAL_HUB",
+    "DISTRICT_ENTERTAINMENT_COMPLEX",
+    "DISTRICT_HARBOR",
+    "DISTRICT_HOLY_SITE",
+    "DISTRICT_INDUSTRIAL_ZONE",
+    "DISTRICT_WATER_ENTERTAINMENT_COMPLEX"
+   ],
+   "Step": "Setup",
+   "Tier": "STANDARD"
+  },
+  "6": {
+   "Count": 6,
+   "D": 5,
+   "Distance": 0.5,
+   "K": 3,
+   "Must": [],
+   "Pick": 6,
+   "Pool": [
+    "DISTRICT_ACROPOLIS",
+    "DISTRICT_CAMPUS",
+    "DISTRICT_COMMERCIAL_HUB",
+    "DISTRICT_ENTERTAINMENT_COMPLEX",
+    "DISTRICT_HARBOR",
+    "DISTRICT_HOLY_SITE",
+    "DISTRICT_INDUSTRIAL_ZONE",
+    "DISTRICT_WATER_ENTERTAINMENT_COMPLEX"
+   ],
+   "Step": "Setup",
+   "Tier": "STANDARD"
+  }
+ },
+ "WarmUp": {
+  "Count": 0,
+  "D": 5,
+  "Distance": 0.5,
+  "K": 3,
+  "Must": [],
+  "Pick": 0,
+  "Pool": [
+   "DISTRICT_ACROPOLIS",
+   "DISTRICT_CAMPUS",
+   "DISTRICT_COMMERCIAL_HUB",
+   "DISTRICT_ENTERTAINMENT_COMPLEX",
+   "DISTRICT_HARBOR",
+   "DISTRICT_HOLY_SITE",
+   "DISTRICT_INDUSTRIAL_ZONE",
+   "DISTRICT_WATER_ENTERTAINMENT_COMPLEX"
+  ],
+  "Step": "Setup",
+  "Tier": "STANDARD"
+ },
+ "Runs": [
+  {
+   "Count": 0,
+   "Round": 1,
+   "Seconds": 0.1,
+   "Ok": true,
+   "Error": null,
+   "Found": 3,
+   "Calls": 67,
+   "Sites": "10,24 13,27 18,28"
+  },
+  {
+   "Count": 3,
+   "Round": 1,
+   "Seconds": 0.567,
+   "Ok": true,
+   "Error": null,
+   "Found": 3,
+   "Calls": 6153,
+   "Sites": "18,28 13,29 22,30"
+  },
+  {
+   "Count": 6,
+   "Round": 1,
+   "Seconds": 0.455,
+   "Ok": true,
+   "Error": null,
+   "Found": 3,
+   "Calls": 5663,
+   "Sites": "15,26 12,28 17,29"
+  },
+  {
+   "Count": 3,
+   "Round": 2,
+   "Seconds": 0.417,
+   "Ok": true,
+   "Error": null,
+   "Found": 3,
+   "Calls": 6153,
+   "Sites": "18,28 13,29 22,30"
+  },
+  {
+   "Count": 6,
+   "Round": 2,
+   "Seconds": 0.408,
+   "Ok": true,
+   "Error": null,
+   "Found": 3,
+   "Calls": 5663,
+   "Sites": "15,26 12,28 17,29"
+  },
+  {
+   "Count": 0,
+   "Round": 2,
+   "Seconds": 0.068,
+   "Ok": true,
+   "Error": null,
+   "Found": 3,
+   "Calls": 67,
+   "Sites": "10,24 13,27 18,28"
+  },
+  {
+   "Count": 6,
+   "Round": 3,
+   "Seconds": 0.388,
+   "Ok": true,
+   "Error": null,
+   "Found": 3,
+   "Calls": 5663,
+   "Sites": "15,26 12,28 17,29"
+  },
+  {
+   "Count": 0,
+   "Round": 3,
+   "Seconds": 0.081,
+   "Ok": true,
+   "Error": null,
+   "Found": 3,
+   "Calls": 67,
+   "Sites": "10,24 13,27 18,28"
+  },
+  {
+   "Count": 3,
+   "Round": 3,
+   "Seconds": 0.374,
+   "Ok": true,
+   "Error": null,
+   "Found": 3,
+   "Calls": 6153,
+   "Sites": "18,28 13,29 22,30"
+  }
+ ],
+ "Summary": {
+  "0": {
+   "Median": 0.081,
+   "Min": 0.068,
+   "Max": 0.1,
+   "Found": [
+    3
+   ],
+   "Ok": true,
+   "Errors": [],
+   "SameSites": true,
+   "VsZero": 1.0
+  },
+  "3": {
+   "Median": 0.417,
+   "Min": 0.374,
+   "Max": 0.567,
+   "Found": [
+    3
+   ],
+   "Ok": true,
+   "Errors": [],
+   "SameSites": true,
+   "VsZero": 5.15
+  },
+  "6": {
+   "Median": 0.408,
+   "Min": 0.388,
+   "Max": 0.455,
+   "Found": [
+    3
+   ],
+   "Ok": true,
+   "Errors": [],
+   "SameSites": true,
+   "VsZero": 5.04
+  }
+ },
+ "When": "2026-10-27 12:27"
+}
