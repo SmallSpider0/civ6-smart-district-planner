@@ -52,6 +52,13 @@
 - `newgame` 进对局时把总音量设为 0（只对本次运行，`SoundOpts.txt` 不变）。
 - **Steam 账号在别处运行游戏时**（2026-10-20 遇到）：`steam://rungameid` 会停在 Steam 的"踢掉另一会话"确认框（Steam 日志 `console_log.txt` 中 `waiting for user response to KickingOtherSession`），启动器不会出现。这需要用户决定，不要自行确认。
 
+## 隐私弹窗
+
+“…想要访问…中的文件”这类 macOS 隐私弹窗会一直等人点，挡住发起访问的程序，事后在系统日志里也查不到。夜里无人值守的运行（夜间队列、游戏内测试、发版）碰到它就停到早上。
+
+- 维护者事先在“系统设置 → 隐私与安全性”里给夜里要跑的程序（Claude、用到的终端、文明 6、Steam、工具用的 Python 和 Node）完全磁盘访问权限，或它们要用的文件夹。代理不改这些设置。
+- 夜里开跑前，在会话自己的 shell 里跑 `python3 -I tools/preflight_night.py`：它碰一遍夜里要用的文件夹，有弹窗就趁人还在时出现。用法见 [tools/README.md](../tools/README.md)。
+
 ## computer-use 与真实点击
 
 - 游戏窗口（Metal，标题 `Civilization VI (1920x1080 @ 174%)`）不向辅助功能暴露窗口。computer-use 截图可用（先 `app_release` 释放后台锁），**点击被工具的安全校验拒绝**（"Could not verify which document this window is editing"）。需要操作游戏时优先用 civ6tuner 在对应 Lua 状态里直接调用（如 `Mods` 状态的 `Modding.*`）。

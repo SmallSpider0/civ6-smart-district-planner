@@ -26,6 +26,7 @@
 | `remote.py` | 在第二台机器上跑离线重活：拷代码、按格子数排队运行、等待并取回结果 | 远端任务的退出码 |
 | `sdplock.py` | 并行会话共用资源：游戏锁、本机重活（一次一个、限 worker、开游戏时暂停）、夜间队列、一条命令看本机和第二台机器 | 0 成功；4 被别人占着 |
 | `sdpsched.py` | 第二台机器上所有会话共用的任务队列（`remote.py` 拷过去调用，本机不直接用） | 任务的退出码 |
+| `preflight_night.py` | 仅 macOS 有用：碰一遍夜里要用的文件夹，让隐私弹窗在人还在时出现 | 0 都能访问；1 有文件夹出问题 |
 | `worktree.py` | 新建能直接用的工作树（接好依赖和参考源码的链接）、列出与清理已合并的 | 0 成功 |
 
 ## paths.py、setup_reference.py — 位置与参考源码
@@ -519,8 +520,18 @@ python3 -I tools/sdplock.py queue list                  # 由一个会话在机�
 - **插队**：`take --next` 预订下一个；持有者放锁后 15 分钟内只有预订的工作树能拿。
 - **本机重活**：一次一个；worker 上限按本机配置（没有配置时 4 个），`-j` 超了就改小，`compare.mjs`、`refresh_results.py` 没写 `-j` 就补上；游戏锁被拿走时发 `SIGSTOP` 暂停（整个进程组），放锁时 `SIGCONT` 继续。暂停过的任务结束时会说，它的耗时字段不能用。Windows 上不能暂停。
 - **共用目录**：`$SDP_SHARED`，否则 macOS `~/Library/Application Support/SDP`，Windows `%LOCALAPPDATA%\SDP`。显示的会话名是 `$SDP_OWNER`，没设就是分支名。
-- **本机配置**：和机器有关的数值不进仓库，写在 `~/.config/sdp/local.json`（`SDP_LOCAL_CONFIG` 可改路径），每项都可省：`workers_day`（默认 4）、`workers_night`（默认同白天）、`night`（如 `"00:00-08:00"`，默认没有夜间；夜间队列和夜里的 worker 上限都按它）、`weekend_is_night`（默认 false）、`remote`（第二台机器的 ssh 主机名，`SDP_REMOTE` 优先）、`remote_slots`（默认那台机器的核数减 2）、`remote_path`（那边 node 和 python3 所在目录）。
+- **本机配置**：和机器有关的数值不进仓库，写在 `~/.config/sdp/local.json`（`SDP_LOCAL_CONFIG` 可改路径），每项都可省：`workers_day`（默认 4）、`workers_night`（默认同白天）、`night`（如 `"00:00-08:00"`，默认没有夜间；夜间队列和夜里的 worker 上限都按它）、`weekend_is_night`（默认 false）、`remote`（第二台机器的 ssh 主机名，`SDP_REMOTE` 优先）、`remote_slots`（默认那台机器的核数减 2）、`remote_path`（那边 node 和 python3 所在目录）、`preflight_folders`（`preflight_night.py` 另外要碰的文件夹）。
 - 离线测试：`python3 -I -m unittest discover -s tests/tools`（假时钟、假进程、假游戏；CI 上也跑）。
+
+## preflight_night.py — 夜间运行前检查文件夹权限（macOS）
+
+```bash
+python3 -I tools/preflight_night.py   # 每个文件夹一行 ok / PROBLEM / missing，最后一行是总结
+```
+
+- 碰一遍夜里要用的文件夹，让 macOS 的隐私弹窗在人还在时出现（[docs/dev-macos.md](../docs/dev-macos.md)“隐私弹窗”）：本仓库的全部工作树（`git worktree list`）、`sdplock.py` 的共用目录、`paths.py` 找到的游戏用户目录、Mods、存档和日志目录（写一个测试文件再删掉），Steam 和游戏安装目录（只列目录）。
+- 本机配置（见上文 sdplock.py）可加 `preflight_folders`：夜里还要用的其他文件夹的列表，如上传创意工坊用的目录。
+- 一个文件夹超过 10 秒没反应记为 `waiting (prompt on screen?)`；有文件夹出问题时退出码 1。
 
 ## worktree.py — 工作树
 
