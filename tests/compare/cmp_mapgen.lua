@@ -539,7 +539,7 @@ function CmpMapgen.Generate(scn)
 
   local stage = STAGES[scn.stage or "mid"]
   spec.players = {
-    { id = 0, civ = scn.civ, leader = scn.leader, techs = "all", civics = "all", pantheon = scn.pantheon },
+    { id = 0, civ = scn.civ, leader = scn.leader, techs = "all", civics = "all", pantheon = scn.pantheon, era = scn.era },
   }
   local cities = {}
   local center = Idx(math.floor(W / 2), math.floor(H / 2))
