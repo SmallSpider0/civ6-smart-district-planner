@@ -170,8 +170,9 @@
         <Container Size="480,30">
           <Label Anchor="L,C" Style="BodyTextDark16" String="LOC_SDP_SITES_COUNT"/>
           <Button ID="SitesCountLess" Anchor="L,C" Offset="100,0" Style="ArrowButtonLeft"/>
-          <Label ID="SitesCount" Anchor="L,C" Offset="130,0" Style="BodyTextDark18"/>
-          <Button ID="SitesCountMore" Anchor="L,C" Offset="150,0" Style="ArrowButtonRight"/>
+          <!-- Room for two digits (dense sites reach 12, issue 87). -->
+          <Label ID="SitesCount" Anchor="L,C" Offset="127,0" Style="BodyTextDark18"/>
+          <Button ID="SitesCountMore" Anchor="L,C" Offset="156,0" Style="ArrowButtonRight"/>
           <Label Anchor="L,C" Offset="220,0" Style="BodyTextDark16" String="LOC_SDP_SITES_DISTANCE" ToolTip="LOC_SDP_SITES_DISTANCE_TOOLTIP"/>
           <Button ID="SitesDistanceLess" Anchor="L,C" Offset="350,0" Style="ArrowButtonLeft"/>
           <Label ID="SitesDistance" Anchor="L,C" Offset="380,0" Style="BodyTextDark18"/>
