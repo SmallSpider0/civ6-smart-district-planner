@@ -1338,3 +1338,54 @@ test("issue 91: the preserve starts off, distance 0.5, the summary leads with th
   for _, d in ipairs(SDP_Rules.PlannableDistricts(0)) do SDP_Panel.SetState(d.Type, SDP_UI.DefaultState(d)) end
   SDP_Panel.SetTier("STANDARD")
 end)
+
+-- Issue 87: dense packing on the sites tab: its own count (12 by default)
+-- and distance, kept; a tick box a site; only the ticked sites get a tack.
+test("issue 87: dense packing through its switch, tick boxes and Select all", function()
+  SDP_Panel.Open()
+  SDP_Panel.SelectTab("SITES")
+  local c = UI_Mock.Controls
+  local sites = SDP_Panel.Sites
+  local k, d = sites.State().K, sites.State().D
+  c.SitesDenseCheck:Toggle()
+  T.eq(sites.State().Dense, true, "on through its box")
+  T.eq(sites.State().K, SDP_SiteSolver.DENSE_MAX_K, "12 new cities by default")
+  c.SitesCountLess:Click()
+  T.eq(sites.State().K, SDP_SiteSolver.DENSE_MAX_K - 1, "its own count down")
+  T.ok(c.SitesCountMore:IsDisabled() == false, "up to 12")
+  c.SitesDenseCheck:Toggle()
+  T.eq(sites.State().K, k, "off: the usual count back")
+  T.eq(sites.State().D, d, "and the usual distance")
+  c.SitesDenseCheck:Toggle()
+  T.eq(sites.State().K, SDP_SiteSolver.DENSE_MAX_K - 1, "on again: its count kept")
+  sites.SetCount(4)
+  sites.SetTier("FAST")
+  T.ok(sites.Solve(), "started")
+  SDP_Panel.RunTask(500)
+  local result = sites.State().Result
+  T.ok(result and result.Ok, "dense result: " .. tostring(result and result.Error))
+  local rows = sites.State().View.Results
+  T.ok(#rows >= 2, "sites listed: " .. #rows)
+  for _, row in ipairs(rows) do T.eq(row.Check:IsChecked(), false, "not ticked by default") end
+  T.eq(sites.State().PlaceDisabled, true, "nothing ticked: no tacks")
+  T.eq(c.SitesAllButton:IsHidden(), false, "Select all shown")
+  rows[2].Check:Toggle()
+  T.eq(sites.State().Ticked[2], true, "the second ticked")
+  T.eq(sites.State().PlaceDisabled, false, "tacks for it")
+  local pins = #w:Pins()
+  c.SitesPlaceButton:Click()
+  T.eq(#w:Pins(), pins + 1, "one tack: the ticked site only")
+  local site = sites.State().Result.Solutions[1].Sites[2]
+  local last = w:Pins()[#w:Pins()]
+  T.eq(last:GetHexX() .. "," .. last:GetHexY(), site.X .. "," .. site.Y, "at the ticked site")
+  c.SitesUndoButton:Click()
+  T.eq(#w:Pins(), pins, "undone")
+  c.SitesAllButton:Click()
+  T.eq(sites.State().AllText, "LOC_SDP_SITES_TICK_NONE", "all ticked: Clear all")
+  for _, row in ipairs(sites.State().View.Results) do T.eq(row.Check:IsChecked(), true, "ticked") end
+  c.SitesAllButton:Click()
+  T.eq(next(sites.State().Ticked), nil, "Clear all")
+  c.SitesDenseCheck:Toggle()
+  T.eq(c.SitesAllButton:IsHidden(), true, "dense off: no Select all")
+  SDP_Panel.SelectTab("SINGLE")
+end)

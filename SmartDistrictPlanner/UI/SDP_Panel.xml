@@ -177,6 +177,11 @@
           <Label ID="SitesDistance" Anchor="L,C" Offset="380,0" Style="BodyTextDark18"/>
           <Button ID="SitesDistanceMore" Anchor="L,C" Offset="404,0" Style="ArrowButtonRight"/>
         </Container>
+        <!-- Dense packing (issue 87): as many new cities as fit. -->
+        <Container Size="480,26" ToolTip="LOC_SDP_SITES_DENSE_TOOLTIP">
+          <CheckBox ID="SitesDenseCheck" Anchor="L,C" Style="MainCheckBox"/>
+          <Label Anchor="L,C" Offset="26,0" Style="BodyTextDark16" String="LOC_SDP_SITES_DENSE"/>
+        </Container>
         <GridButton ID="SitesFoldButton" Size="480,26" Style="ButtonControl">
           <Label ID="SitesFoldText" Anchor="L,C" Offset="10,0" Style="FontNormal14" TruncateWidth="390" TruncatedTooltip="1"/>
           <Label ID="SitesFoldAction" Anchor="R,C" Offset="10,0" Style="FontNormal14"/>
@@ -232,9 +237,10 @@
           <ScrollBar Anchor="R,C" AnchorSide="I,I" Style="Slider_Blue"/>
           <Stack ID="SitesResultStack" StackGrowth="Bottom" StackPadding="2"/>
         </ScrollPanel>
-        <Stack Anchor="C,T" StackGrowth="Right" StackPadding="12">
-          <GridButton ID="SitesPlaceButton" Size="200,41" Style="MainButton" String="LOC_SDP_SITES_PLACE"/>
-          <GridButton ID="SitesUndoButton" Size="200,41" Style="MainButton" String="LOC_SDP_UNDO_PINS"/>
+        <Stack Anchor="C,T" StackGrowth="Right" StackPadding="8">
+          <GridButton ID="SitesAllButton" Size="110,41" Style="MainButton" String="LOC_SDP_SITES_TICK_ALL" Hidden="1"/>
+          <GridButton ID="SitesPlaceButton" Size="170,41" Style="MainButton" String="LOC_SDP_SITES_PLACE"/>
+          <GridButton ID="SitesUndoButton" Size="170,41" Style="MainButton" String="LOC_SDP_UNDO_PINS"/>
         </Stack>
       </Stack>
       </Container>
@@ -402,6 +408,22 @@
       <Image ID="Icon" Anchor="L,C" Size="32,32"/>
       <Label ID="Name" Anchor="L,T" Offset="40,2" Style="BodyTextDark16"/>
       <Label ID="Detail" Anchor="L,T" Offset="40,21" Style="BodyTextDark14" WrapWidth="420"/>
+    </Button>
+  </Instance>
+
+  <!-- A site of a dense plan (issue 87): a ResultRow with a tick box for
+       its tack in front; the box takes its own clicks (pitfall 31). -->
+  <Instance Name="SiteRow">
+    <Button ID="Root" Size="460,40">
+      <Container ID="HoverArea" Size="parent,parent">
+        <AlphaAnim Size="parent,parent" ShowOnMouseOver="1" AlphaStart="0" AlphaEnd="1" Speed="4" Function="Root" Cycle="Once">
+          <Grid Size="parent,parent" Texture="Controls_Tab" SliceStart="0,136" SliceCorner="21,16"/>
+        </AlphaAnim>
+      </Container>
+      <CheckBox ID="Check" Anchor="L,C" Style="MainCheckBox"/>
+      <Image ID="Icon" Anchor="L,C" Offset="28,0" Size="32,32"/>
+      <Label ID="Name" Anchor="L,T" Offset="66,2" Style="BodyTextDark16"/>
+      <Label ID="Detail" Anchor="L,T" Offset="66,21" Style="BodyTextDark14" WrapWidth="390"/>
     </Button>
   </Instance>
 

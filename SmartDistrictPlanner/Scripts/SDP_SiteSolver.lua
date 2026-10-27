@@ -16,6 +16,12 @@
 --      (branch and bound, node budget per tier).
 --   4. The N best combinations that differ: each has a site at least two
 --      plots from every site of every better one.
+-- Dense packing (request.Dense, issue 87): as many sites as fit first (up
+-- to DENSE_MAX_K), then the value. Greedy packings place each next site as
+-- close as the spacing allows to the player's cities and the sites placed
+-- so far, from several first sites; the sites of the packings with the most
+-- sites are refined, then each of those packings is improved by moving one
+-- site at a time to a nearby refined site while the value rises.
 -- Same input, same result (constraint 6). The overlay must be installed.
 
 SDP_SiteSolver = {}
@@ -29,18 +35,21 @@ Session.__index = Session
 --   D            relay distance (default 8)
 --   Districts    the plan every site is scored with
 --   Weights      SDP_Sites.WEIGHT_KEYS (default the balanced preset)
+--   Dense        pack as many sites as fit (issue 87), K up to DENSE_MAX_K
 -- }
 SDP_SiteSolver.MAX_K = 6
+SDP_SiteSolver.DENSE_MAX_K = 12
 
 function SDP_SiteSolver.NewSession(request)
   local self = setmetatable({}, Session)
   local playerID = request.PlayerID
   self.PlayerID, self.Request = playerID, request
   self.Params = SDP_Tiers.Params(SDP_Tiers.Sites, request.Tier, request.Params)
-  self.K = math.max(1, math.min(SDP_SiteSolver.MAX_K, request.K or 3))
+  self.Dense = request.Dense == true
+  self.K = math.max(1, math.min(self.Dense and SDP_SiteSolver.DENSE_MAX_K or SDP_SiteSolver.MAX_K, request.K or 3))
   self.D = request.D or 5
   self.Stats = { Tier = self.Params.Tier, Candidates = 0, Refined = 0, Nodes = 0, Combinations = 0, Truncated = false,
-    Continues = 0, Calls = 0, Tries = 0 }
+    Continues = 0, Calls = 0, Tries = 0, Packings = 0, MostSites = 0 }
   local ctx = SDP_Sites.Context(playerID, request, self.K)
   self.Ctx = ctx
   local candidates, centers = SDP_Sites.Candidates(playerID, { K = self.K, D = self.D })
@@ -71,6 +80,7 @@ function SDP_SiteSolver.NewSession(request)
       end
     end
   end
+  self.Anchors = anchors
   self.Order = {} -- refined sites, in the order they were refined
   self.Refined = 0
   return self
@@ -220,6 +230,7 @@ function Session:Connected(chosen)
 end
 
 local function Earlier(a, b)
+  if #a.Chosen ~= #b.Chosen then return #a.Chosen > #b.Chosen end -- dense: more sites first
   if a.Value ~= b.Value then return a.Value > b.Value end
   for i = 1, #a.Chosen do
     if a.Chosen[i] ~= b.Chosen[i] then return a.Chosen[i] < b.Chosen[i] end
@@ -304,13 +315,253 @@ function Session:Combine()
   self.Bound = Rest(1, k)
 end
 
+-- ===========================================================================
+-- Dense packing (issue 87)
+-- ===========================================================================
+
+-- Greedy packings over the sites not in `bad`: from each first site (the
+-- best coarse sites within D of the player's cities, then none forced),
+-- the next site is the one nearest to the cities and the sites placed so
+-- far that keeps the spacing and links back (within D), best coarse score
+-- and smaller plot index on a tie. Returns the packings, most sites first,
+-- then the larger sum of coarse scores; each a list of sites in the order
+-- placed.
+function Session:Packings(bad)
+  local minRange, d, k = SDP_Sites.MinRange(), self.D, self.K
+  local usable, base = {}, {}
+  for _, site in ipairs(self.Sites) do
+    if not bad[site] then
+      usable[#usable + 1] = site
+      local near = math.huge
+      for _, a in ipairs(self.Anchors) do
+        near = math.min(near, Map.GetPlotDistance(site.X, site.Y, a.X, a.Y))
+      end
+      base[#usable] = near
+    end
+  end
+  local anyAnchor = #self.Anchors > 0
+  local function Better(i, j, near)
+    if j == nil then return true end
+    if near[i] ~= near[j] then return near[i] < near[j] end
+    if usable[i].Coarse ~= usable[j].Coarse then return usable[i].Coarse > usable[j].Coarse end
+    return usable[i].Index < usable[j].Index
+  end
+  local function Pack(first)
+    local near, placed, out = {}, {}, {}
+    for i = 1, #usable do near[i] = base[i] end
+    local function Place(i)
+      placed[i] = true
+      out[#out + 1] = usable[i]
+      local site = usable[i]
+      for j = 1, #usable do
+        if not placed[j] then
+          local dist = Map.GetPlotDistance(site.X, site.Y, usable[j].X, usable[j].Y)
+          if dist < near[j] then near[j] = dist end
+        end
+      end
+      if SDP_Task ~= nil then SDP_Task.Tick(0.002 * #usable) end
+    end
+    if first ~= nil then Place(first) end
+    while #out < k do
+      local best = nil
+      for i = 1, #usable do
+        -- No city of the player yet: the first site anywhere, then linked.
+        local reach = near[i] <= d or (not anyAnchor and #out == 0)
+        if not placed[i] and near[i] > minRange and reach and Better(i, best, near) then best = i end
+      end
+      if best == nil then break end
+      Place(best)
+    end
+    return out
+  end
+  -- First sites: the best coarse ones that link back at once.
+  local firsts = {}
+  for i = 1, #usable do
+    if base[i] <= d or not anyAnchor then firsts[#firsts + 1] = i end
+  end
+  table.sort(firsts, function(a, b)
+    if usable[a].Coarse ~= usable[b].Coarse then return usable[a].Coarse > usable[b].Coarse end
+    return usable[a].Index < usable[b].Index
+  end)
+  local packings = { Pack(nil) }
+  for n = 1, math.min(#firsts, self.Params.DenseStarts or 12) do packings[#packings + 1] = Pack(firsts[n]) end
+  local sums = {}
+  for _, packing in ipairs(packings) do
+    local sum = 0
+    for _, site in ipairs(packing) do sum = sum + site.Coarse end
+    sums[packing] = sum
+  end
+  table.sort(packings, function(a, b)
+    if #a ~= #b then return #a > #b end
+    if sums[a] ~= sums[b] then return sums[a] > sums[b] end
+    for i = 1, #a do
+      if a[i].Index ~= b[i].Index then return a[i].Index < b[i].Index end
+    end
+    return false
+  end)
+  self.Stats.Packings = self.Stats.Packings + #packings
+  return packings
+end
+
+-- Refines `site` (once); whether it can hold a city.
+function Session:RefineSite(site)
+  if not site.Refined then
+    local ctx = self.Ctx
+    if ctx.Board == nil then SDP_Sites.Board(ctx, self.Sites) end
+    SDP_Sites.Fine(ctx, site, SDP_Tiers.Params(SDP_Tiers.Single, "FAST", self.Params.Site))
+    site.Refined = true
+    self.Refined = self.Refined + 1
+    self.Order[self.Refined] = site
+    self.Stats.Refined = self.Refined
+  end
+  return site.CenterLegal and site.Fine ~= nil
+end
+
+function Session:DenseRun()
+  local params = self.Params
+  local budget = params.DenseRefined or 80
+  local bad, packings = {}, nil
+  -- Refine the sites of the packings with the most sites; a site that
+  -- cannot hold a city makes the packings again without it.
+  for _ = 1, 4 do
+    packings = self:Packings(bad)
+    local most, again = #(packings[1] or {}), false
+    for _, packing in ipairs(packings) do
+      if #packing < most then break end
+      for _, site in ipairs(packing) do
+        if self.Refined >= budget and not site.Refined then break end
+        if not self:RefineSite(site) then
+          bad[site] = true
+          again = true
+        end
+      end
+    end
+    if not again then break end
+  end
+  -- Sites near the best packing's sites, for moving them.
+  local near = {}
+  for _, site in ipairs(packings[1] or {}) do
+    for _, other in ipairs(self.Sites) do
+      if not other.Refined and not bad[other] and Map.GetPlotDistance(site.X, site.Y, other.X, other.Y) <= 2 then
+        near[#near + 1] = other
+      end
+    end
+  end
+  table.sort(near, function(a, b)
+    if a.Coarse ~= b.Coarse then return a.Coarse > b.Coarse end
+    return a.Index < b.Index
+  end)
+  for _, site in ipairs(near) do
+    if self.Refined >= budget then break end
+    self:RefineSite(site)
+  end
+  -- The pool: refined sites that can hold a city, best first.
+  local pool, at = {}, {}
+  for _, site in ipairs(self.Order) do
+    if site.CenterLegal and site.Fine ~= nil then pool[#pool + 1] = site end
+  end
+  table.sort(pool, function(a, b)
+    if a.Fine ~= b.Fine then return a.Fine > b.Fine end
+    return a.Index < b.Index
+  end)
+  for i, site in ipairs(pool) do at[site] = i end
+  self.Pool = pool
+  local minRange = SDP_Sites.MinRange()
+  local kept, seen = {}, {}
+  local evals, cap = 0, params.DenseMoves or 3000
+  local function Entry(chosen)
+    table.sort(chosen)
+    local key = table.concat(chosen, ",")
+    if seen[key] ~= nil then return seen[key] end
+    evals = evals + 1
+    self.Stats.Combinations = self.Stats.Combinations + 1
+    if SDP_Task ~= nil then SDP_Task.Tick(1) end
+    local value, details, resources, conflict = self:Value(chosen)
+    local entry = { Value = value, Chosen = { unpack(chosen) }, Details = details, Resources = resources, Conflict = conflict }
+    seen[key] = entry
+    return entry
+  end
+  local function Spaced(site, chosen, skip)
+    for n, s in ipairs(chosen) do
+      if n ~= skip and Map.GetPlotDistance(site.X, site.Y, pool[s].X, pool[s].Y) <= minRange then return false end
+    end
+    return true
+  end
+  local starts = 0
+  for _, packing in ipairs(packings) do
+    if starts >= (params.DenseImprove or 3) then break end
+    local chosen = {}
+    for _, site in ipairs(packing) do
+      if at[site] ~= nil then chosen[#chosen + 1] = at[site] end
+    end
+    if #chosen > 0 and self:Connected(chosen) then
+      starts = starts + 1
+      local cur = Entry(chosen)
+      -- A refined site that still fits (spaced, linked back) is added:
+      -- more sites come first.
+      local function Grow()
+        for t, site in ipairs(pool) do
+          if #cur.Chosen >= self.K then return end
+          local inside = false
+          for _, s in ipairs(cur.Chosen) do
+            if s == t then inside = true end
+          end
+          if not inside and Spaced(site, cur.Chosen, 0) then
+            local next = { unpack(cur.Chosen) }
+            next[#next + 1] = t
+            if self:Connected(next) then cur = Entry(next) end
+          end
+        end
+      end
+      Grow()
+      -- Move one site at a time to a refined site within 3 plots; take a
+      -- move when the value rises; stop when no move helps.
+      local moved = true
+      while moved and evals < cap do
+        moved = false
+        for n = 1, #cur.Chosen do
+          local from = pool[cur.Chosen[n]]
+          for t, site in ipairs(pool) do
+            if evals >= cap then break end
+            local inside = false
+            for _, s in ipairs(cur.Chosen) do
+              if s == t then inside = true end
+            end
+            if not inside and Map.GetPlotDistance(from.X, from.Y, site.X, site.Y) <= 3 and Spaced(site, cur.Chosen, n) then
+              local next = { unpack(cur.Chosen) }
+              next[n] = t
+              if self:Connected(next) then
+                local entry = Entry(next)
+                if entry.Value > cur.Value + 1e-9 then
+                  cur, moved = entry, true
+                  Grow()
+                  break
+                end
+              end
+            end
+          end
+        end
+      end
+    end
+  end
+  for _, entry in pairs(seen) do kept[#kept + 1] = entry end
+  table.sort(kept, Earlier)
+  while #kept > (params.Keep or 40) do kept[#kept] = nil end
+  self.Kept = kept
+  self.Stats.MostSites = kept[1] and #kept[1].Chosen or 0
+  self.Stats.Truncated = evals >= cap
+  self.Converged = not self.Stats.Truncated
+end
+
 -- First run: refine the best M sites, combine.
 function Session:Run()
+  if self.Dense then return self:DenseRun() end
   self:Refine(self.Params.Refined)
   self:Combine()
 end
 
 function Session:CanContinue()
+  if self.Dense then return false end
   return self:NextSite() ~= nil
 end
 
@@ -432,8 +683,9 @@ end
 -- Expected work in SDP_Tiers units (time estimate, progress bar); rough.
 -- `continue`: only the sites one "continue" refines.
 -- `planCount`: districts each site picks from the `districts` ticked (nil: all).
-function SDP_SiteSolver.EstimateUnits(districts, k, params, continue, planCount)
+function SDP_SiteSolver.EstimateUnits(districts, k, params, continue, planCount, dense)
   local sites = continue and (params.ContinueSites or 20) or params.Refined
+  if dense then sites = params.DenseRefined or 80 end
   local perSite = (params.Site and params.Site.Work or 100) * math.max(1, districts)
   if planCount ~= nil and districts > planCount then
     -- Each site solves a few combinations of planCount districts.
@@ -445,6 +697,7 @@ function SDP_SiteSolver.EstimateUnits(districts, k, params, continue, planCount)
   local combos = 1
   for i = 1, k do combos = combos * math.max(0, refined - i + 1) / i end
   combos = math.min(params.ComboNodes, combos / 4)
+  if dense then combos = params.DenseMoves or 3000 end
   return 400 + sites * perSite + combos
 end
 

@@ -23,6 +23,12 @@
 --                                    of the scenario's districts; before
 --                                    _GROWTH when both
 --                                    (design 19)
+--   variant <TIER>_DENSE             sites: dense packing (issue 87), up to
+--                                    SDP_SiteSolver.DENSE_MAX_K sites; before
+--                                    _GRID when both
+--   variant <TIER>_K<n>              sites: n sites instead of the scenario's
+--                                    count (issue 87: dense against normal);
+--                                    before _GRID
 --   variant <TIER>_KNEW<n>           sites: the first plot of a new strategic
 --                                    kind counts n times (SDP_Sites.KIND_NEW,
 --                                    issue 86: 2, 3 and 4 measured); before _DIST
@@ -213,6 +219,12 @@ function CmpAdapters.sdp(request, variant, w)
   -- "<TIER>_GROWTH" (sites): the sites tab's Growth first preset.
   local growth = variant:match("_GROWTH$") ~= nil
   variant = variant:gsub("_GROWTH$", "")
+  -- "<TIER>_DENSE[_GRID..]" (sites, issue 87): dense packing.
+  local dense = variant:match("_DENSE") ~= nil
+  variant = variant:gsub("_DENSE", "")
+  -- "<TIER>_K<n>[_GRID..]" (sites, issue 87): n sites instead of the scenario's.
+  local count = tonumber(variant:match("_K(%d+)") or "")
+  variant = variant:gsub("_K%d+", "")
   -- "<TIER>_GRID[n]" (sites): the tab's default grid, n districts per site.
   local grid = variant:match("_GRID(%d*)$")
   variant = variant:gsub("_GRID%d*$", "")
@@ -250,9 +262,11 @@ function CmpAdapters.sdp(request, variant, w)
     -- The sites tab: K sites within D, scored with the scenario's districts.
     local districts = { Districts = request.districts }
     if grid ~= nil then districts = SDP_Sites.DefaultDistricts(0, tonumber(grid)) end
-    local r = SDP_SiteSolver.Solve({ PlayerID = 0, Tier = variant, K = request.sites.count, D = request.sites.distance,
+    local r = SDP_SiteSolver.Solve({ PlayerID = 0, Tier = variant, D = request.sites.distance,
+      K = count or (dense and SDP_SiteSolver.DENSE_MAX_K) or request.sites.count, Dense = dense,
       Districts = districts.Districts, Pool = districts.Pool, Pick = districts.Pick,
       Weights = growth and SDP_Sites.PRESETS.GROWTH or nil, Distance = distance })
+    if dense and r.Ok then stats.sdpPackings, stats.sdpMostSites = r.Stats.Packings, r.Stats.MostSites end
     if grid ~= nil then stats.sdpPool = districts.Pool end
     if not r.Ok then out.notes[#out.notes + 1] = tostring(r.Error) end
     -- The districts placed around each site ("TYPE@x,y"), for comparing

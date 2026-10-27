@@ -373,6 +373,21 @@
     <Replace Tag="LOC_SDP_SITES_MODEL_NOTE" Language="zh_Hans_CN">
       <Text>城址分是估计值，区域在第 2 步精确规划</Text>
     </Replace>
+    <Replace Tag="LOC_SDP_SITES_DENSE" Language="zh_Hans_CN">
+      <Text>密铺：尽量多放新城</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_DENSE_TOOLTIP" Language="zh_Hans_CN">
+      <Text>先比哪种放法放得下更多座新城（两座城中心之间至少隔 3 格），城数一样时再比总分；新城可以接力往外放。打开后“新城数量”默认 12、可调，它和“最远距离”单独记在存档里，关掉后回到平时的设置。结果里勾选要的城址，“打城址钉”只打勾选的。[NEWLINE][NEWLINE]收益：同一片地方放下更多座城。[NEWLINE][NEWLINE]代价：城与城挨得近，地块和资源要分着用，每座城的分会低一些；要自己勾选城址，计算时间比平时长。</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_SUMMARY_DENSE" Language="zh_Hans_CN">
+      <Text>放得下 {1_Count} 座新城，总分 {2_Value}；已勾选 {3_Ticked} 座，“打城址钉”只打勾选的</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_TICK_ALL" Language="zh_Hans_CN">
+      <Text>全选</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_TICK_NONE" Language="zh_Hans_CN">
+      <Text>全部取消</Text>
+    </Replace>
     <Replace Tag="LOC_SDP_SITES_W_DISTRICT_SHORT" Language="zh_Hans_CN">
       <Text>区域</Text>
     </Replace>

@@ -97,23 +97,29 @@ SDP_Tiers.Multi = {
 --   ComboNodes     branch-and-bound nodes over combinations
 --   Keep           best combinations kept to pick the distinct solutions from
 --   ContinueSites  sites refined by each "continue"
+--   Dense*         dense packing (issue 87): DenseStarts first sites tried,
+--                  DenseRefined sites refined at most, DenseImprove packings
+--                  improved, DenseMoves combinations valued at most
 --   Site.Work      time estimate: units per refined site and planned district
 --                  (measured in the game, 2026-10-20)
 --   Site.Combos    when more districts are ticked than each site is scored
 --                  with: combinations solved per site (SDP_Search pools)
 SDP_Tiers.Sites = {
   FAST = {
-    Refined = 20, ComboNodes = 100000, Keep = 30, Solutions = 3, ContinueSites = 20, Sliced = true,
+    Refined = 20, ComboNodes = 100000, Keep = 30,
+    DenseStarts = 6, DenseRefined = 40, DenseImprove = 2, DenseMoves = 800, Solutions = 3, ContinueSites = 20, Sliced = true,
     Site = { Beam = 60, Shortlist = 8, Starts = 1, Kicks = 0, Swap = false, TryLimit = 1500, CallLimit = 100000, Work = 85,
       Combos = 2, ScreenShortlist = 4, Solutions = 1 },
   },
   STANDARD = {
-    Refined = 40, ComboNodes = 500000, Keep = 40, Solutions = 3, ContinueSites = 20, Sliced = true,
+    Refined = 40, ComboNodes = 500000, Keep = 40,
+    DenseStarts = 12, DenseRefined = 80, DenseImprove = 3, DenseMoves = 2500, Solutions = 3, ContinueSites = 20, Sliced = true,
     Site = { Beam = 120, Shortlist = 15, Starts = 1, Kicks = 0, Swap = true, TryLimit = 3000, CallLimit = 100000, Work = 98,
       Combos = 3, ScreenShortlist = 6, Solutions = 1 },
   },
   FINE = {
-    Refined = 80, ComboNodes = 2000000, Keep = 60, Solutions = 3, ContinueSites = 20, Sliced = true,
+    Refined = 80, ComboNodes = 2000000, Keep = 60,
+    DenseStarts = 24, DenseRefined = 160, DenseImprove = 6, DenseMoves = 8000, Solutions = 3, ContinueSites = 20, Sliced = true,
     Site = { Beam = 250, Shortlist = 30, Starts = 2, Kicks = 2, Swap = true, TryLimit = 6000, CallLimit = 100000, Work = 195,
       Combos = 4, ScreenShortlist = 10, Solutions = 1 },
   },
