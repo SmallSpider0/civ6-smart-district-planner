@@ -203,7 +203,7 @@ footer { margin-top: 64px; border-top: 1px solid var(--line); padding-top: 16px;
         </g>
         <g>
           <rect class="node k1" x="360" y="290" width="140" height="56" rx="8"/><rect class="tab1" x="360" y="290" width="6" height="56" rx="3"/>
-          <text x="432" y="314" text-anchor="middle" font-size="14" font-weight="600">CI · 自动合并</text><text class="sub" x="432" y="333" text-anchor="middle">Ubuntu + Windows</text>
+          <text x="432" y="314" text-anchor="middle" font-size="14" font-weight="600">审查 · CI · 合并</text><text class="sub" x="432" y="333" text-anchor="middle">Codex + 两项检查</text>
         </g>
         <g>
           <rect class="node k3" x="530" y="290" width="160" height="56" rx="8"/><rect class="tab3" x="530" y="290" width="6" height="56" rx="3"/>
@@ -561,6 +561,7 @@ footer { margin-top: 64px; border-top: 1px solid var(--line); padding-top: 16px;
     ["真实点击、截图", 1, "系统鼠标事件逐个点控件；截图按面板位置裁剪", "第一次授予辅助功能和录屏权限；无人值守时屏幕不能锁，笔记本要开盖接电", "tools/realclick.py"],
     ["压力测试", 1, "读三张后期存档，逐步计时，在游戏里实际建出来核对", "—", "tools/stress.py"],
     ["夜间队列", 2, "开跑前先碰一遍夜里要用的文件夹，让隐私弹窗趁人还在时出现；主会话在本机配置的夜间时段按顺序跑队列，结果交给新的子 agent 改问题、开 PR", "macOS 上事先给夜里要跑的程序授予文件夹访问权限", "tools/preflight_night.py"],
+    ["代码审查", 2, "改了代码的 PR 由开 PR 的代理点名请 Codex 审，后台等它审完；每条意见先核实，属实的先写会失败的测试再改，不属实的写明原因，回复后标为已解决，都处理完再开自动合并；只改文档的不审。试两周，按记录的属实和误报条数决定留不留", "—（只有要改需求、默认值或权衡做法的意见才进“要你决定的事”）", "tools/codex_review.py"],
     ["PR、CI、合并", 1, "一个 Issue 一个 PR；Ubuntu、Windows 两项检查通过后自动 squash 合并；CI 失败时自动叫醒代理修，通过和合并不叫醒，代理开 PR 后在后台等结果；合并后清理工作树和本地分支", "—", ".github/workflows/checks.yml"],
     ["对外文字审阅", 3, "README、创意工坊简介、介绍页由代理改，PR 里附渲染好的页面和图", "合并前另一人看一下", null],
     ["要不要发版", 3, "只修 bug：满 3 个修复、满 7 天或严重 bug 即自动发；其余（含默认值、界面调整）：做完准备等一句话", "说“发 vX.Y.Z”", ".claude/skills/sdp-release/SKILL.md"],
