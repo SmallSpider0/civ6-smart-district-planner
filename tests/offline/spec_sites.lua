@@ -402,3 +402,48 @@ test("a site's plot yields weigh the fixed numbers times the tab's weights (issu
   T.eq(ctx.Land.W.YIELD_GOLD, 3 * 2 / 4, "the plots: land 3 x gold 2 x 1/4")
   T.eq(ctx.Land.OnceW.YIELD_GOLD, 2 / 4, "one-time yields: without the land weight")
 end)
+
+-- A request without K plans the solver's default count (3): the luxury
+-- part counts that many new cities too (Codex review of PR 125).
+test("without K: the new cities a luxury reaches are the sites the solver plans", function()
+  NewWorld()
+  local result = SDP_SiteSolver.Solve({ PlayerID = 0, D = 6, Districts = PLAN, Tier = "FAST" })
+  T.ok(result.Ok, tostring(result.Error))
+  local session = result.Session
+  T.eq(session.K, 3, "the default count")
+  local own = Players[0]:GetCities():GetCount() + #SDP_Multi.Sites(0)
+  T.eq(session.Ctx.Cities, own + session.K, "our cities and tacks plus the planned sites")
+end)
+
+-- The distance cost is part of the districts part: scaled by its weight
+-- like the adjacency, so a districts weight of 0 leaves nothing of it and
+-- the parts shown (those with a weight) add up to the site's score (Codex
+-- review of PR 125).
+test("the districts weight scales the distance cost; at 0 none is left in the score", function()
+  NewWorld()
+  local function Solve(weights)
+    local result = SDP_SiteSolver.Solve({ PlayerID = 0, K = 2, D = 6, Districts = PLAN, Tier = "FAST",
+      Weights = weights, Distance = 0.5 })
+    T.ok(result.Ok, tostring(result.Error))
+    return result, result.Session.Ctx
+  end
+  local _, one = Solve({})
+  T.ok(one.Distance > 0, "a cost at weight 1")
+  local _, two = Solve({ DISTRICT = 2 })
+  T.near(two.Distance, 2 * one.Distance, 1e-9, "twice at weight 2")
+  local result, zero = Solve({ DISTRICT = 0 })
+  T.eq(zero.Distance or 0, 0, "none at weight 0")
+  local w = SDP_Sites.Weights({ DISTRICT = 0 })
+  local parts = { District = "DISTRICT", Farm = "LAND", Feature = "FEATURE", Water = "HOUSING", Luxury = "AMENITY",
+    Strategic = "STRATEGIC", Appeal = "APPEAL" }
+  for _, solution in ipairs(result.Solutions) do
+    for _, site in ipairs(solution.Sites) do
+      T.eq(site.Parts.District or 0, 0, "no districts part")
+      local sum = 0
+      for part, key in pairs(parts) do
+        if w[key] > 0 then sum = sum + (site.Parts[part] or 0) end
+      end
+      T.near(sum - (site.Parts.Penalty or 0), site.Value, 1e-6, "the parts with a weight add up to the score")
+    end
+  end
+end)
