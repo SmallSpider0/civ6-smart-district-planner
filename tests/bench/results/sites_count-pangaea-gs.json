@@ -1,0 +1,223 @@
+{
+ "Name": "pangaea-gs",
+ "Census": {
+  "Turn": 201,
+  "Districts": 20,
+  "Wonders": 2,
+  "OtherCities": 78
+ },
+ "Cities": 5,
+ "Setups": {
+  "0": {
+   "Count": 0,
+   "D": 5,
+   "Distance": 0.5,
+   "K": 3,
+   "Must": [],
+   "Pick": 0,
+   "Pool": [
+    "DISTRICT_CAMPUS",
+    "DISTRICT_COMMERCIAL_HUB",
+    "DISTRICT_ENTERTAINMENT_COMPLEX",
+    "DISTRICT_HARBOR",
+    "DISTRICT_HOLY_SITE",
+    "DISTRICT_INDUSTRIAL_ZONE",
+    "DISTRICT_THEATER",
+    "DISTRICT_WATER_ENTERTAINMENT_COMPLEX"
+   ],
+   "Step": "Setup",
+   "Tier": "STANDARD"
+  },
+  "3": {
+   "Count": 3,
+   "D": 5,
+   "Distance": 0.5,
+   "K": 3,
+   "Must": [],
+   "Pick": 3,
+   "Pool": [
+    "DISTRICT_CAMPUS",
+    "DISTRICT_COMMERCIAL_HUB",
+    "DISTRICT_ENTERTAINMENT_COMPLEX",
+    "DISTRICT_HARBOR",
+    "DISTRICT_HOLY_SITE",
+    "DISTRICT_INDUSTRIAL_ZONE",
+    "DISTRICT_THEATER",
+    "DISTRICT_WATER_ENTERTAINMENT_COMPLEX"
+   ],
+   "Step": "Setup",
+   "Tier": "STANDARD"
+  },
+  "6": {
+   "Count": 6,
+   "D": 5,
+   "Distance": 0.5,
+   "K": 3,
+   "Must": [],
+   "Pick": 6,
+   "Pool": [
+    "DISTRICT_CAMPUS",
+    "DISTRICT_COMMERCIAL_HUB",
+    "DISTRICT_ENTERTAINMENT_COMPLEX",
+    "DISTRICT_HARBOR",
+    "DISTRICT_HOLY_SITE",
+    "DISTRICT_INDUSTRIAL_ZONE",
+    "DISTRICT_THEATER",
+    "DISTRICT_WATER_ENTERTAINMENT_COMPLEX"
+   ],
+   "Step": "Setup",
+   "Tier": "STANDARD"
+  }
+ },
+ "WarmUp": {
+  "Count": 0,
+  "D": 5,
+  "Distance": 0.5,
+  "K": 3,
+  "Must": [],
+  "Pick": 0,
+  "Pool": [
+   "DISTRICT_CAMPUS",
+   "DISTRICT_COMMERCIAL_HUB",
+   "DISTRICT_ENTERTAINMENT_COMPLEX",
+   "DISTRICT_HARBOR",
+   "DISTRICT_HOLY_SITE",
+   "DISTRICT_INDUSTRIAL_ZONE",
+   "DISTRICT_THEATER",
+   "DISTRICT_WATER_ENTERTAINMENT_COMPLEX"
+  ],
+  "Step": "Setup",
+  "Tier": "STANDARD"
+ },
+ "Runs": [
+  {
+   "Count": 0,
+   "Round": 1,
+   "Seconds": 0.161,
+   "Ok": true,
+   "Error": null,
+   "Found": 3,
+   "Calls": 94,
+   "Sites": "31,4 24,8 29,8"
+  },
+  {
+   "Count": 3,
+   "Round": 1,
+   "Seconds": 1.463,
+   "Ok": true,
+   "Error": null,
+   "Found": 3,
+   "Calls": 20735,
+   "Sites": "24,8 29,8 24,19"
+  },
+  {
+   "Count": 6,
+   "Round": 1,
+   "Seconds": 1.65,
+   "Ok": true,
+   "Error": null,
+   "Found": 3,
+   "Calls": 26353,
+   "Sites": "24,8 29,8 24,18"
+  },
+  {
+   "Count": 3,
+   "Round": 2,
+   "Seconds": 1.17,
+   "Ok": true,
+   "Error": null,
+   "Found": 3,
+   "Calls": 20735,
+   "Sites": "24,8 29,8 24,19"
+  },
+  {
+   "Count": 6,
+   "Round": 2,
+   "Seconds": 1.638,
+   "Ok": true,
+   "Error": null,
+   "Found": 3,
+   "Calls": 26353,
+   "Sites": "24,8 29,8 24,18"
+  },
+  {
+   "Count": 0,
+   "Round": 2,
+   "Seconds": 0.09,
+   "Ok": true,
+   "Error": null,
+   "Found": 3,
+   "Calls": 94,
+   "Sites": "31,4 24,8 29,8"
+  },
+  {
+   "Count": 6,
+   "Round": 3,
+   "Seconds": 1.601,
+   "Ok": true,
+   "Error": null,
+   "Found": 3,
+   "Calls": 26353,
+   "Sites": "24,8 29,8 24,18"
+  },
+  {
+   "Count": 0,
+   "Round": 3,
+   "Seconds": 0.091,
+   "Ok": true,
+   "Error": null,
+   "Found": 3,
+   "Calls": 94,
+   "Sites": "31,4 24,8 29,8"
+  },
+  {
+   "Count": 3,
+   "Round": 3,
+   "Seconds": 1.165,
+   "Ok": true,
+   "Error": null,
+   "Found": 3,
+   "Calls": 20735,
+   "Sites": "24,8 29,8 24,19"
+  }
+ ],
+ "Summary": {
+  "0": {
+   "Median": 0.091,
+   "Min": 0.09,
+   "Max": 0.161,
+   "Found": [
+    3
+   ],
+   "Ok": true,
+   "Errors": [],
+   "SameSites": true,
+   "VsZero": 1.0
+  },
+  "3": {
+   "Median": 1.17,
+   "Min": 1.165,
+   "Max": 1.463,
+   "Found": [
+    3
+   ],
+   "Ok": true,
+   "Errors": [],
+   "SameSites": true,
+   "VsZero": 12.86
+  },
+  "6": {
+   "Median": 1.638,
+   "Min": 1.601,
+   "Max": 1.65,
+   "Found": [
+    3
+   ],
+   "Ok": true,
+   "Errors": [],
+   "SameSites": true,
+   "VsZero": 18.0
+  }
+ },
+ "When": "2026-10-27 12:26"
+}

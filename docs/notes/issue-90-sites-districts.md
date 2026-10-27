@@ -48,3 +48,18 @@ python3 -I tools/remote.py run i90-grid --slots 3 -- node tools/compare.mjs -s '
 - 真实点击（2026-10-26 夜，a96af34）：`realclick.py` 67 项全过，含选城址区域格一圈和数量箭头 3→4→3。
 - 游戏内第一夜（a96af34）：原版、风云变幻各 9 过 1 败，败的是 `test_sites` 里经格子点击那项：游戏的控件没有 `Click`（只有离线替身有）。改成调用格子行带出的 `Click`，它就是格子注册的点击回调（`SDP_UI.BuildCells`，离线测试核对两者是同一个函数）。`test_sites` 文件耗时 1.2 秒。
 - 游戏内（夜间队列）：`test_sites.lua`（默认不建的三个、经格子点击、默认格子求解）、`test_tabs.lua`、`test_settings.lua`；真实点击 `realclick.py` 加了选城址页的区域格一圈和数量箭头。
+
+## 4. #124 游戏内实测
+
+选城址页，标准档，新建 3 个城址，最远距离 5，3 轮取中位数（单位秒）。存档由 `python3 -I tools/stress.py prepare mid-gs` 等准备，测量用 `python3 -I tests/bench/sites_count.py 存档名`，结果在 `tests/bench/results/sites_count-*.json`，日志 `logs/sites_count.log`。
+
+| 存档 | 回合 | 数量 0 | 数量 3 | 数量 6 |
+|---|---|---|---|---|
+| 中期，风云变幻，大陆（mid-gs，3 座城） | 101 | 0.09 | 1.13 | 1.63 |
+| 后期，风云变幻，盘古大陆 | 201 | 0.09 | 1.17 | 1.64 |
+| 后期，海岛（原版加 R&F） | 210 | 0.08 | 0.42 | 0.41 |
+
+数量 3 比数量 0 慢约 12 倍（海岛约 5 倍）。“区域数量”的悬停提示据此改写，不再用上文离线的 7 倍。
+
+未解决的问题（另开 Issue）：后期大陆存档（回合 221）里，数量 0 只找到 1 个城址，数量 3 和 6 一个也没找到（0.03 秒就结束）。这里没有解释，也没有改。
+
