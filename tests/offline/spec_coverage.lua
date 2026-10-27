@@ -291,7 +291,10 @@ test("single city: the coverage part moves the industrial zone towards the other
   for _, s in ipairs(on.Solutions) do
     T.near(s.Gain, s.Adjacency + s.LandDelta + s.CoverageDelta + s.CostDelta + (s.AppealDelta or 0), 1e-9,
       "every solution adds up")
+    World.CheckParts(T, s, "coverage")
   end
+  -- Issue 126: the zone's reach share is the cities it alone covers.
+  T.near(onZone.Parts.Coverage, on.CoverageDelta, 1e-9, "the zone holds the whole reach part")
   NewWorld()
   T.same(SDP_Solver.Solve(SingleRequest(3)).Plan, on.Plan, "deterministic")
 end)

@@ -1240,6 +1240,16 @@ function Session:PlanFor(layout)
   end
   out.CostDelta = search:CostDelta(layout)
   out.Gain = out.Adjacency + out.LandDelta + out.CoverageDelta + out.CostDelta + (out.AppealDelta or 0)
+  search:Breakdown(out, layout, slotsPlaced, final, base)
+  -- Each city's subtotal: the sum of its districts' parts (issue 126).
+  for n, item in ipairs(out.Plan) do
+    local city = out.Cities[self:OwnerOf(slotsPlaced[n], layout[slotsPlaced[n]])]
+    local sum = city.Parts or {}
+    for _, key in ipairs(SDP_Search.PART_KEYS) do
+      if item.Parts[key] ~= nil then sum[key] = (sum[key] or 0) + item.Parts[key] end
+    end
+    city.Parts = sum
+  end
   out.Total = final.Total
   out.Legal = final.Legal
   local taken = {}
@@ -1298,7 +1308,8 @@ function Session:Result()
   local best = result.Solutions[1]
   if best ~= nil then
     for _, key in ipairs({ "Plan", "Unplaced", "Neighbours", "Cities", "Gain", "Adjacency", "LandDelta", "CoverageDelta",
-      "CostDelta", "AppealDelta", "ImprovementHousing", "Covered", "CoveredBy", "Total", "Remind" }) do
+      "CostDelta", "AppealDelta", "ImprovementHousing", "Covered", "CoveredBy", "Total", "Remind", "Rest",
+      "YieldAdjacency", "YieldWeighted" }) do
       result[key] = best[key]
     end
     stats.Mismatch = (not best.Legal) or math.abs(best.Gain - search.BestGain) > 1e-6 or nil

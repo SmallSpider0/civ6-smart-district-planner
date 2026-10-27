@@ -664,14 +664,69 @@ end
 -- ranked by is not shown: late in the game the tiles the districts take can
 -- outweigh their adjacency, and a negative total read as a bad plan.
 function SDP_UI.SummaryText(s, parts)
-  local list = {}
-  if parts.Land then list[#list + 1] = Locale.Lookup("LOC_SDP_PART_LAND", Signed(s.LandDelta or 0)) end
-  if parts.Distance then list[#list + 1] = Locale.Lookup("LOC_SDP_PART_DISTANCE", Signed(s.CostDelta or 0)) end
-  if s.AppealDelta ~= nil then list[#list + 1] = Locale.Lookup("LOC_SDP_PART_APPEAL", Signed(s.AppealDelta)) end
-  if parts.Coverage then list[#list + 1] = Locale.Lookup("LOC_SDP_PART_COVERAGE", Signed(s.CoverageDelta or 0)) end
+  local list = SDP_UI.PartsList({ Land = s.LandDelta, Distance = s.CostDelta, Appeal = s.AppealDelta,
+    Coverage = s.CoverageDelta }, parts)
   local adjacency = Signed(s.Adjacency or 0)
   if #list == 0 then return Locale.Lookup("LOC_SDP_RESULT_SUMMARY_ADJACENCY", adjacency) end
   return Locale.Lookup("LOC_SDP_RESULT_SUMMARY_OTHERS", adjacency, Join(list))
+end
+
+-- The parts other than the adjacency, in the summary's order, as texts:
+-- tiles and distance when on, housing when there is a value, reach when on.
+-- `skipZero`: leave out housing and reach that are 0 (a district's share).
+local function Shown(value) return value ~= nil and math.abs(value) >= 0.05 end
+function SDP_UI.PartsList(values, parts, skipZero)
+  local list = {}
+  if parts.Land then list[#list + 1] = Locale.Lookup("LOC_SDP_PART_LAND", Signed(values.Land or 0)) end
+  if parts.Distance then list[#list + 1] = Locale.Lookup("LOC_SDP_PART_DISTANCE", Signed(values.Distance or 0)) end
+  if values.Appeal ~= nil and (not skipZero or Shown(values.Appeal)) then
+    list[#list + 1] = Locale.Lookup("LOC_SDP_PART_APPEAL", Signed(values.Appeal))
+  end
+  if parts.Coverage and (not skipZero or Shown(values.Coverage)) then
+    list[#list + 1] = Locale.Lookup("LOC_SDP_PART_COVERAGE", Signed(values.Coverage or 0))
+  end
+  return list
+end
+
+-- A district's own parts (issue 126), the first line of its row's tooltip:
+-- its weighted adjacency, then its share of the other parts (SDP_Search
+-- SlotParts). `key` names the line (the district's or a city's).
+function SDP_UI.PartsText(partValues, parts, key)
+  if partValues == nil then return nil end
+  local list = SDP_UI.PartsList(partValues, parts, true)
+  local adjacency = Signed(partValues.Adjacency or 0)
+  if #list == 0 then return Locale.Lookup(key, adjacency) end
+  return Locale.Lookup(key .. "_OTHERS", adjacency, Join(list))
+end
+
+-- A district row's tooltip with its parts first.
+function SDP_UI.PartsTip(p, parts, tip)
+  local line = SDP_UI.PartsText(p.Parts, parts, "LOC_SDP_PARTS_DISTRICT")
+  if line == nil then return tip end
+  return line .. "[NEWLINE][NEWLINE]" .. tip
+end
+
+-- The summary tooltip's lines on the plan's parts (issue 126): the
+-- adjacency by yield before and after the weights, and what the districts'
+-- shares leave of each part (the change of the districts already there; the
+-- tiles, housing and reach several districts share).
+function SDP_UI.BreakdownLines(s, parts)
+  local lines = {}
+  if s.YieldAdjacency ~= nil then
+    lines[#lines + 1] = Locale.Lookup("LOC_SDP_RESULT_BY_YIELD", YieldText(s.YieldAdjacency), YieldText(s.YieldWeighted))
+  end
+  local rest = s.Rest
+  if rest ~= nil then
+    local list = {}
+    if Shown(rest.Adjacency) then list[#list + 1] = Locale.Lookup("LOC_SDP_PART_EXISTING", Signed(rest.Adjacency)) end
+    if parts.Land and Shown(rest.Land) then list[#list + 1] = Locale.Lookup("LOC_SDP_PART_LAND", Signed(rest.Land)) end
+    if Shown(rest.Appeal) then list[#list + 1] = Locale.Lookup("LOC_SDP_PART_APPEAL", Signed(rest.Appeal)) end
+    if parts.Coverage and Shown(rest.Coverage) then
+      list[#list + 1] = Locale.Lookup("LOC_SDP_PART_COVERAGE", Signed(rest.Coverage))
+    end
+    if #list > 0 then lines[#lines + 1] = Locale.Lookup("LOC_SDP_RESULT_REST", Join(list)) end
+  end
+  return lines
 end
 
 -- A solution button's label: its number and weighted adjacency, the
@@ -1073,6 +1128,8 @@ local function ShowResult()
     -- search's counts (result.Stats) are for tests, not the player (issue 67).
     local tip = Locale.Lookup("LOC_SDP_RESULT_RANKED")
     if shown.Covered ~= nil then tip = tip .. "[NEWLINE][NEWLINE]" .. table.concat(SDP_UI.CoverageLines(shown), "[NEWLINE]") end
+    local breakdown = SDP_UI.BreakdownLines(shown, summaryParts)
+    if #breakdown > 0 then tip = table.concat(breakdown, "[NEWLINE]") .. "[NEWLINE][NEWLINE]" .. tip end
     Controls.Summary:SetToolTipString(tip)
     Controls.Quality:SetText(QualityText(result))
     -- The solutions (feedback item 1): a click shows one and previews it.
@@ -1099,6 +1156,7 @@ local function ShowResult()
       local toolTip = (p.ToolTip ~= nil and p.ToolTip ~= "") and p.ToolTip or Locale.Lookup("LOC_SDP_NO_ADJACENCY")
       local detail
       detail, toolTip = SDP_UI.CoverageRow(p, SDP_UI.PlanDetail(p), toolTip)
+      toolTip = SDP_UI.PartsTip(p, summaryParts, toolTip)
       AddResultRow("ICON_" .. p.Type, TypeName(p.Type) .. "  " .. Where(p.X, p.Y), detail, toolTip, p.X, p.Y)
       SDP_UI.SupportRow(p, AddResultRow, "  ")
     end

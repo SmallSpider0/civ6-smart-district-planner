@@ -465,6 +465,7 @@ test("several distinct solutions, best first", function()
   for a = 1, #result.Solutions do
     local sa = result.Solutions[a]
     T.ok(sa.Legal, "solution " .. a .. " legal")
+    World.CheckParts(T, sa, "solution " .. a)
     if a > 1 then T.ok(sa.Gain <= result.Solutions[a - 1].Gain + 1e-9, "sorted by value") end
     for b = 1, a - 1 do
       local at = {}

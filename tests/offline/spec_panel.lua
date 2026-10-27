@@ -1270,6 +1270,22 @@ test("issue 91: the preserve starts off, distance 0.5, the summary leads with th
     .. Signed(result.LandDelta) .. "),LOC_SDP_PART_DISTANCE(" .. Signed(result.CostDelta) .. ")))"
   T.eq(s.SummaryText, want, "adjacency, then the other parts")
   T.ok(s.SummaryToolTip:find("LOC_SDP_RESULT_RANKED", 1, true) ~= nil, "the tooltip says how plans are ranked")
+  -- Issue 126: each district row's tooltip starts with its own parts, the
+  -- solver's numbers; the summary's tooltip has the adjacency by yield.
+  World.CheckParts(T, result, "single")
+  local rows = 0
+  for _, p in ipairs(result.Plan) do
+    for _, row in ipairs(s.ResultRows) do
+      if row.X == p.X and row.Y == p.Y and row.Icon == "ICON_" .. p.Type then
+        rows = rows + 1
+        local want = "LOC_SDP_PARTS_DISTRICT_OTHERS(" .. Signed(p.Parts.Adjacency) .. ",LOC_SDP_LIST_JOIN(LOC_SDP_PART_LAND("
+          .. Signed(p.Parts.Land) .. "),LOC_SDP_PART_DISTANCE(" .. Signed(p.Parts.Distance) .. "))"
+        T.eq(row.ToolTip:sub(1, #want), want, p.Type .. ": its parts first")
+      end
+    end
+  end
+  T.eq(rows, #result.Plan, "a row per district")
+  T.ok(s.SummaryToolTip:find("LOC_SDP_RESULT_BY_YIELD(", 1, true) == 1, "the adjacency by yield first: " .. s.SummaryToolTip)
   T.eq(SDP_UI.SolutionLabel(2, { Adjacency = 7, Gain = -3 }), "LOC_SDP_SOLUTION_N(2,+7)", "a solution button shows its adjacency")
   -- Distance 0 and tiles 0: the adjacency alone.
   distance.Less:Click()
@@ -1314,6 +1330,28 @@ test("issue 91: the preserve starts off, distance 0.5, the summary leads with th
     "the adjacency first: " .. text)
   T.ok(text:find("LOC_SDP_PART_DISTANCE(" .. Signed(sol.CostDelta) .. ")", 1, true) ~= nil, "the distance part")
   T.ok(multi.State().SummaryToolTip:find("LOC_SDP_RESULT_RANKED", 1, true) ~= nil, "how plans are ranked")
+  -- Issue 126: a row per city with its subtotal; its districts' rows start
+  -- with their parts.
+  World.CheckParts(T, sol, "multi")
+  local cityRows, partRows = 0, 0
+  for _, row in ipairs(multi.State().View.Results) do
+    if row.Icon == "ICON_DISTRICT_CITY_CENTER" and row.Detail:find("^LOC_SDP_MULTI_CITY_GAIN") then
+      cityRows = cityRows + 1
+      T.ok(row.Detail:find("LOC_SDP_PART_DISTANCE(", 1, true) ~= nil, "the city's distance subtotal: " .. row.Detail)
+      T.eq(row.ToolTip, "LOC_SDP_MULTI_CITY_TIP", "what the subtotal is")
+    elseif row.ToolTip:find("^LOC_SDP_PARTS_DISTRICT") then
+      partRows = partRows + 1
+    end
+  end
+  T.eq(cityRows, #sol.Cities, "a subtotal per city")
+  T.eq(partRows, #sol.Plan, "parts on every district row")
+  local first = sol.Cities[1]
+  local subtotal = "LOC_SDP_MULTI_CITY_GAIN_OTHERS(" .. Signed(first.Parts.Adjacency)
+  local found = false
+  for _, row in ipairs(multi.State().View.Results) do
+    if row.Detail:sub(1, #subtotal) == subtotal then found = true end
+  end
+  T.ok(found, "the first city's subtotal: " .. subtotal)
   SDP_Panel.SelectTab("SINGLE")
   for _, d in ipairs(SDP_Rules.PlannableDistricts(0)) do SDP_Panel.SetState(d.Type, SDP_UI.DefaultState(d)) end
   SDP_Panel.SetTier("STANDARD")

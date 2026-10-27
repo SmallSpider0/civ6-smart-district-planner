@@ -1124,6 +1124,49 @@ function World.New(spec)
 end
 
 -- ===========================================================================
+-- Issue 126: a reported plan's parts add up. Each district's parts plus what
+-- the shares leave (Rest) give the plan's parts, and those its Gain; the
+-- adjacency by yield, weighted, gives the adjacency. Returns the number of
+-- districts checked.
+-- ===========================================================================
+function World.CheckParts(T, s, label)
+  label = label or "plan"
+  local eps = 1e-6
+  local sum = { Adjacency = 0, Land = 0, Distance = 0, Appeal = 0, Coverage = 0 }
+  for _, p in ipairs(s.Plan) do
+    T.ok(p.Parts ~= nil, label .. ": parts for " .. tostring(p.Type))
+    for key in pairs(sum) do sum[key] = sum[key] + (p.Parts[key] or 0) end
+    T.near(p.Parts.Adjacency, p.Score, eps, label .. ": a district's adjacency is its weighted DMT score")
+  end
+  local rest = s.Rest
+  T.near(sum.Adjacency + rest.Adjacency, s.Adjacency, eps, label .. ": adjacency")
+  T.near(sum.Land + rest.Land, s.LandDelta, eps, label .. ": tiles")
+  T.near(sum.Distance, s.CostDelta, eps, label .. ": distance, a plain sum")
+  T.near(sum.Appeal + (rest.Appeal or 0), s.AppealDelta or 0, eps, label .. ": housing")
+  T.near(sum.Coverage + rest.Coverage, s.CoverageDelta, eps, label .. ": reach")
+  T.near(s.Adjacency + s.LandDelta + s.CostDelta + s.CoverageDelta + (s.AppealDelta or 0), s.Gain, eps,
+    label .. ": the parts give the gain")
+  local weighted = 0
+  for _, yieldType in ipairs(SDP_Rules.YIELDS) do
+    weighted = weighted + s.YieldWeighted[yieldType]
+  end
+  T.near(weighted, s.Adjacency, eps, label .. ": the weighted adjacency by yield")
+  -- Several cities: each city's subtotal is the sum of its districts' parts.
+  for _, city in ipairs(s.Cities or {}) do
+    local own = { Adjacency = 0, Land = 0, Distance = 0 }
+    for _, p in ipairs(s.Plan) do
+      if p.City == city.Key then
+        for key in pairs(own) do own[key] = own[key] + p.Parts[key] end
+      end
+    end
+    local parts = city.Parts or {}
+    for key, value in pairs(own) do T.near(parts[key] or 0, value, eps, label .. ": city subtotal " .. key) end
+    T.near(parts.Adjacency or 0, city.Gain or 0, eps, label .. ": the city's adjacency is its gain")
+  end
+  return #s.Plan
+end
+
+-- ===========================================================================
 -- Deterministic random maps for benchmarks (no math.random: constraint 6)
 -- ===========================================================================
 function World.Rng(seed)

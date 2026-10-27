@@ -621,7 +621,7 @@
       <Text>加权相邻加成：{1_Adjacency}（{2_Parts}）</Text>
     </Replace>
     <Replace Tag="LOC_SDP_RESULT_RANKED" Language="zh_Hans_CN">
-      <Text>方案按相邻加成加上括号里各项的和排序。地块是区域占掉的好地块少了多少产出（保护区让周边地块多出的产出也算在这里）。游戏后期地块一项常比相邻加成还大，和是负数，但这不说明方案差：区域总要占地。</Text>
+      <Text>方案按相邻加成加上括号里各项的和排序。地块是区域占掉的好地块少了多少产出（保护区让周边地块多出的产出也算在这里）。游戏后期地块一项常比相邻加成还大，和是负数，但这不说明方案差：区域总要占地。每个区域自己的分项在它那一行悬停的第一行。</Text>
     </Replace>
     <Replace Tag="LOC_SDP_RESULT_TILES_LAND_OFF" Language="zh_Hans_CN">
       <Text>周边地块 {1_Yields}（“地块”权重为 0，不计分）</Text>
@@ -857,6 +857,27 @@
     </Replace>
     <Replace Tag="LOC_SDP_PRESET_HALF_GOLD_FAITH_TOOLTIP" Language="zh_Hans_CN">
       <Text>金币、信仰权重 0.5，其余同均衡。依据是购买价：1 生产力能买到的东西要 4 金币或 2 信仰。</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_PARTS_DISTRICT" Language="zh_Hans_CN">
+      <Text>本区域：加权相邻加成 {1_Adjacency}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_PARTS_DISTRICT_OTHERS" Language="zh_Hans_CN">
+      <Text>本区域：加权相邻加成 {1_Adjacency}（{2_Parts}）</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_MULTI_CITY_GAIN_OTHERS" Language="zh_Hans_CN">
+      <Text>新区域加权相邻 {1_Gain}（{2_Parts}）</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_MULTI_CITY_TIP" Language="zh_Hans_CN">
+      <Text>这座城各个新区域的分项之和。每个区域自己的分项在它那一行的悬停里。</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_BY_YIELD" Language="zh_Hans_CN">
+      <Text>相邻加成按产出：{1_Yields}；乘权重后：{2_Weighted}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_REST" Language="zh_Hans_CN">
+      <Text>不在各区域分项里的部分：{1_Parts}。“已有区域”是方案让原有区域和锁定的地图钉多出的相邻加成。地块、住房、覆盖按“去掉这个区域、其余不动，这一项变回多少”分给每个区域；几个区域抢同一批地块时，分到的加起来和合计差这么多。</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_PART_EXISTING" Language="zh_Hans_CN">
+      <Text>已有区域 {1_Value}</Text>
     </Replace>
   </LocalizedText>
 </GameData>

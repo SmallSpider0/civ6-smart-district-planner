@@ -296,6 +296,7 @@ function Session:PlanFor(layout)
     out.Covered, out.CoveredBy = self.Coverage:Summary(search:CoveragePairs(layout))
   end
   out.Gain = out.Adjacency + out.LandDelta + out.CostDelta + out.CoverageDelta + (out.AppealDelta or 0)
+  search:Breakdown(out, layout, slotsPlaced, final, base)
   if self.Request.Remind then
     local plan = {}
     for n, p in ipairs(out.Plan) do plan[n] = { Type = p.Type, Kind = "DISTRICT", X = p.X, Y = p.Y } end
@@ -365,7 +366,8 @@ function Session:Result()
     end
     local best = result.Solutions[1]
     for _, key in ipairs({ "Plan", "Neighbours", "Total", "Adjacency", "LandDelta", "CostDelta", "CoverageDelta", "Covered",
-      "CoveredBy", "AppealDelta", "ImprovementHousing", "Gain", "Remind", "Picked", "Together" }) do
+      "CoveredBy", "AppealDelta", "ImprovementHousing", "Gain", "Remind", "Picked", "Together", "Rest",
+      "YieldAdjacency", "YieldWeighted" }) do
       result[key] = best[key]
     end
     -- Required slots the best layout leaves out (Search:PlaceWhatFits; the

@@ -212,6 +212,41 @@ test("locked pins are never built over and count as neighbours", function()
   T.ok(next, "the plan uses the plaza's bonus")
 end)
 
+test("issue 126: each district's parts add up to the plan's; tiles by leaving one district out", function()
+  local w = NewWorld()
+  w:AddPin(4, 4, "ICON_DISTRICT_COMMERCIAL_HUB", "hub")
+  local request = { PlayerID = 0, CityID = 1, Weights = ONES, Land = true, Distance = 1,
+    Districts = { "DISTRICT_CAMPUS", "DISTRICT_HOLY_SITE", "DISTRICT_THEATER", "DISTRICT_INDUSTRIAL_ZONE" } }
+  local result = SDP_Solver.Solve(request)
+  T.ok(result.Ok, tostring(result.Error))
+  for n, s in ipairs(result.Solutions) do World.CheckParts(T, s, "solution " .. n) end
+  -- The pinned hub's gain from its new neighbours is no new district's.
+  local gained = 0
+  for _, n in ipairs(result.Neighbours) do gained = gained + n.After - n.Before end
+  T.near(result.Rest.Adjacency, gained, 1e-9, "the existing districts' change")
+  T.ok(gained > 0, "the hub gains from the plan")
+  -- A district's tiles share: the land part with it left out, others in place.
+  local search = result.Session.Search
+  local layout = search.BestLayout
+  for n, p in ipairs(result.Plan) do
+    local m = nil
+    for slot = 1, search.K do
+      if layout[slot] ~= 0 and search.Candidates[layout[slot]].Index == p.Index then m = slot end
+    end
+    local without = SDP_Search.Copy(layout)
+    without[m] = 0
+    T.near(p.Parts.Land, result.LandDelta - search:LandDelta(without), 1e-9, p.Type .. ": tiles share")
+    T.ok(p.Parts.Land <= 1e-9, p.Type .. ": a district only takes tiles")
+    T.ok(p.Parts.Distance <= 0, p.Type .. ": distance only costs")
+    T.eq(p.Parts.Adjacency, result.Plan[n].Score, "adjacency: DMT's weighted score")
+  end
+  -- One district: its shares are the whole parts.
+  local one = SDP_Solver.Solve({ PlayerID = 0, CityID = 1, Districts = { "DISTRICT_CAMPUS" }, Weights = ONES, Land = true })
+  World.CheckParts(T, one, "one district")
+  T.near(one.Rest.Land, 0, 1e-9, "nothing left over")
+  T.same(SDP_Solver.Solve(request).Rest, result.Rest, "deterministic")
+end)
+
 test("a Government Plaza pinned for another city counts toward the empire limit", function()
   local w = NewWorld()
   -- The plan for another city (outside this city's range) already has it.

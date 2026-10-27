@@ -650,6 +650,78 @@ function Search:LandDelta(layout)
   return delta
 end
 
+-- Each placed slot's share of a layout's parts (issue 126), for reports:
+-- parts[m] = { Distance, Land, Appeal, Coverage }. Distance is the slot's
+-- own cost. Tiles, housing and reach are not sums over the districts (two
+-- districts may want the same tiles), so a slot's share is how much the
+-- part changes when that slot alone is left out, the others in place. The
+-- shares need not add up to the layout's part; the caller shows the rest.
+-- `totals` = { Land, Appeal, Coverage } of the whole layout, as LandDelta,
+-- AppealDelta and CoverageDelta give them.
+function Search:SlotParts(layout, totals)
+  local parts, without = {}, Copy(layout)
+  for m = 1, self.K do
+    local i = layout[m]
+    if i ~= 0 then
+      without[m] = 0
+      local part = { Distance = self.Costs ~= nil and -self.Costs[i] or 0 }
+      part.Land = totals.Land - self:LandDelta(without)
+      part.Coverage = totals.Coverage - self:CoverageDelta(without)
+      if self.AppealModel ~= nil then part.Appeal = totals.Appeal - self:AppealDelta(without) end
+      without[m] = i
+      parts[m] = part
+    end
+  end
+  return parts
+end
+
+-- A reported plan's breakdown (issue 126), after its parts are set:
+--   out.Plan[n].Parts  { Adjacency (DMT's weighted score), Distance, Land,
+--                        Appeal, Coverage } of the district placed by
+--                        slotsPlaced[n] (SlotParts)
+--   out.Rest           what the districts' shares leave of each part:
+--                        Adjacency = the change of the districts already
+--                        there (locked tacks, built districts), Land, Appeal,
+--                        Coverage = the part minus the sum of the shares
+--   out.YieldAdjacency { [yield] = amount } the adjacency gain by yield,
+--                        before weights: Σ out.YieldAdjacency[t] × weight[t]
+--                        = out.Adjacency
+--   out.YieldWeighted  { [yield] = amount × weight }
+-- `final` and `base` are SDP_Overlay.Evaluate's results for the plan and for
+-- the fixed subjects alone.
+SDP_Search.PART_KEYS = { "Adjacency", "Land", "Distance", "Appeal", "Coverage" }
+
+function Search:Breakdown(out, layout, slotsPlaced, final, base)
+  local shares = self:SlotParts(layout, { Land = out.LandDelta, Appeal = out.AppealDelta, Coverage = out.CoverageDelta })
+  local rest = { Adjacency = 0, Land = out.LandDelta, Appeal = out.AppealDelta, Coverage = out.CoverageDelta }
+  local yields = {}
+  for _, yieldType in ipairs(SDP_Rules.YIELDS) do yields[yieldType] = 0 end
+  local function AddYields(from, sign)
+    for _, yieldType in ipairs(SDP_Rules.YIELDS) do
+      yields[yieldType] = yields[yieldType] + sign * ((from or {})[yieldType] or 0)
+    end
+  end
+  for n, m in ipairs(slotsPlaced) do
+    local item, share = final.Placements[n], shares[m]
+    share.Adjacency = item.Score
+    out.Plan[n].Parts = share
+    rest.Land = rest.Land - share.Land
+    rest.Coverage = rest.Coverage - share.Coverage
+    if rest.Appeal ~= nil then rest.Appeal = rest.Appeal - (share.Appeal or 0) end
+    AddYields(item.Yields, 1)
+  end
+  for f, item in ipairs(final.Fixed) do
+    rest.Adjacency = rest.Adjacency + item.Score - base.Fixed[f].Score
+    AddYields(item.Yields, 1)
+    AddYields(base.Fixed[f].Yields, -1)
+  end
+  local weighted = {}
+  for _, yieldType in ipairs(SDP_Rules.YIELDS) do
+    weighted[yieldType] = yields[yieldType] * ((self.Weights or {})[yieldType] or 0)
+  end
+  out.Rest, out.YieldAdjacency, out.YieldWeighted = rest, yields, weighted
+end
+
 function Search:SetBudgets()
   self.CallCap = self.Board.Calls + self.Params.CallLimit
   self.TryCap = self.Stats.Tries + self.Params.TryLimit

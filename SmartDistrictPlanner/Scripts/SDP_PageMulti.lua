@@ -878,6 +878,8 @@ function P.Render()
     if solution.Covered ~= nil then
       statsText = table.concat(SDP_UI.CoverageLines(solution, label), "[NEWLINE]") .. "[NEWLINE][NEWLINE]" .. statsText
     end
+    local breakdown = SDP_UI.BreakdownLines(solution, summaryParts)
+    if #breakdown > 0 then statsText = table.concat(breakdown, "[NEWLINE]") .. "[NEWLINE][NEWLINE]" .. statsText end
     Controls.MultiSummary:SetToolTipString(statsText)
     Controls.MultiQuality:SetText(SDP_UI.QualityText(result))
     -- Solutions.
@@ -906,13 +908,16 @@ function P.Render()
     end
     -- The selected solution, city by city.
     for _, city in ipairs(solution.Cities) do
+      -- The city's subtotal: the sum of its districts' parts (issue 126).
       AddRow("ICON_DISTRICT_CITY_CENTER", P.CityLabel(city) .. "  " .. SDP_UI.Where(city.X, city.Y),
-        Locale.Lookup("LOC_SDP_MULTI_CITY_GAIN", SDP_UI.Signed(city.Gain)), "", city.X, city.Y)
+        SDP_UI.PartsText(city.Parts or { Adjacency = city.Gain }, summaryParts, "LOC_SDP_MULTI_CITY_GAIN"),
+        Locale.Lookup("LOC_SDP_MULTI_CITY_TIP"), city.X, city.Y)
       for _, p in ipairs(solution.Plan) do
         if p.City == city.Key then
           local tip = (p.ToolTip ~= nil and p.ToolTip ~= "") and p.ToolTip or Locale.Lookup("LOC_SDP_NO_ADJACENCY")
           local detail
           detail, tip = SDP_UI.CoverageRow(p, SDP_UI.PlanDetail(p), tip, label)
+          tip = SDP_UI.PartsTip(p, summaryParts, tip)
           AddRow("ICON_" .. p.Type, "  " .. SDP_UI.TypeName(p.Type) .. "  " .. SDP_UI.Where(p.X, p.Y), detail, tip, p.X, p.Y)
           SDP_UI.SupportRow(p, AddRow, "    ")
         end

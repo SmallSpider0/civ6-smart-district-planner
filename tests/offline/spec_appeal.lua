@@ -422,6 +422,10 @@ test("a preserve with the land part on: its yields are in the land part, raising
     "the land part: the plot taken plus the raised plots")
   T.near(land.Gain, land.Adjacency + land.LandDelta + land.CostDelta + land.CoverageDelta + land.AppealDelta, 1e-9,
     "parts add up")
+  -- Issue 126: the preserve alone holds the plan's tiles and housing.
+  World.CheckParts(T, land, "preserve")
+  T.near(p.Parts.Land, land.LandDelta, 1e-9, "the preserve's tiles share: the whole land part")
+  T.near(p.Parts.Appeal, land.AppealDelta, 1e-9, "its housing share: the whole appeal part")
   -- The land part off: the yields are not scored at all.
   local off = SDP_Solver.Solve({ PlayerID = 0, CityID = 1, Districts = { PRESERVE }, Weights = ONES })
   T.ok(off.Ok, tostring(off.Error))
@@ -468,6 +472,7 @@ test("several cities: housing counts per city, the gain parts add up", function(
   T.eq(hoods, 2, "a neighborhood per city")
   T.ok(math.abs(result.Gain - (result.Adjacency + result.LandDelta + result.CoverageDelta + result.CostDelta
     + (result.AppealDelta or 0))) < 1e-9, "parts add up")
+  for n, s in ipairs(result.Solutions) do World.CheckParts(T, s, "multi housing " .. n) end
 end)
 
 test("a pillaged farm gives no housing, so taking it costs none (issue 58)", function()
