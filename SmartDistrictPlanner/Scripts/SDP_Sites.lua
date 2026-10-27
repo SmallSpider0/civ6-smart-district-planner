@@ -36,6 +36,10 @@ SDP_Sites.PRESETS = {
     YIELD_FOOD = 1, HOUSING = 1, AMENITY = 1, STRATEGIC = 0, FEATURE = 1, APPEAL = 0 },
 }
 SDP_Sites.PRESET_ORDER = { "BALANCED", "GROWTH", "DISTRICTS" }
+-- The distance weight's default for placing districts around a site (issue
+-- 91, decided 2026-10-27: 0.5 as on the other tabs). No preset sets it, so a
+-- preset puts it back to this; a save keeps it only when it differs.
+SDP_Sites.DEFAULT_DISTANCE = 0.5
 
 -- The districts a site is scored with (issue 90, decided 2026-10-26): the
 -- states of the single-city tab's grid (MUST, POOL, OFF) and a count. By

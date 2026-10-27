@@ -1202,14 +1202,15 @@ test("issue 89: city sites show Custom too; a preset puts the distance weight ba
   Entry(c.SitesPresetPull, "GROWTH", order).Button:Click()
   T.eq(c.SitesPresetPull:GetButton():GetText(), "LOC_SDP_PRESET_GROWTH", "shown")
   local cells = sites.State().View.WeightCells
+  T.eq(sites.State().Weights.DISTANCE, SDP_Sites.DEFAULT_DISTANCE, "distance 0.5 by default (issue 91)")
   Cell(cells, "DISTANCE").More:Click()
-  T.eq(sites.State().Weights.DISTANCE, 0.5, "distance weight up")
+  T.eq(sites.State().Weights.DISTANCE, 1, "distance weight up")
   T.eq(c.SitesPresetPull:GetButton():GetText(), "LOC_SDP_PRESET_CUSTOM", "Custom")
   T.eq(c.SitesPresetPull:GetButton():GetToolTipString(), "LOC_SDP_SITES_PRESET_CUSTOM_TOOLTIP", "its own tooltip")
   T.ok(sites.State().FoldText:find("LOC_SDP_PRESET_CUSTOM", 1, true) ~= nil, "on the fold line too")
   local d = sites.State().D
   Entry(c.SitesPresetPull, "DISTRICTS", order).Button:Click()
-  T.eq(sites.State().Weights.DISTANCE, 0, "the preset sets the distance weight back")
+  T.eq(sites.State().Weights.DISTANCE, 0.5, "the preset sets the distance weight back to 0.5 (issue 91)")
   T.eq(sites.State().Weights.YIELD_SCIENCE, SDP_Sites.PRESETS.DISTRICTS.YIELD_SCIENCE, "and its weights")
   T.eq(c.SitesPresetPull:GetButton():GetText(), "LOC_SDP_PRESET_DISTRICTS", "so it is not Custom")
   T.ok(sites.State().FoldText:find("LOC_SDP_PRESET_DISTRICTS", 1, true) ~= nil, "on the fold line")
