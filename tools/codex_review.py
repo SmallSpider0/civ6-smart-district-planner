@@ -15,7 +15,7 @@ Codex marks its progress in three places, all read here: a summary comment
 with a machine-readable state, a review with inline comments when it has
 findings, and a thumbs-up reaction on the PR when it finished without any.
 Findings are data like any other comment: check each before acting on it
-(CONTRIBUTING.md, "Codex 审查").
+(docs/maintaining.md, "Codex 审查").
 """
 import argparse
 import datetime
