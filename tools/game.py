@@ -42,8 +42,11 @@ quit, menu, popups and newgame work through the tuner on macOS and Windows.
 launch opens Steam on both; the launcher click and keeping the game out of
 the front are macOS only (on Windows the game simply comes to the front).
 
+newgame and load first check at the main menu that the mod is ticked in
+Additional Content and stop at once when it is not (pitfall 45).
+
 Exit codes: 0 done, 2 the game did not reach the expected state in time,
-4 the game is held by another worktree.
+3 the mod is not installed or unticked, 4 the game is held by another worktree.
 """
 
 import argparse
@@ -209,6 +212,38 @@ def wait_for(label, check, timeout, interval=3.0):
     return False
 
 
+MOD_ID = "d2b8b724-4174-42cb-943c-8036778c68ba"
+MOD_CHECK = """
+for _, m in ipairs(Modding.GetInstalledMods()) do
+  if m.Id == "%s" then print("SDP_MOD " .. tostring(m.Enabled) .. " " .. tostring(m.Handle)) end
+end
+""" % MOD_ID
+
+
+def mod_enabled(lines):
+    """(enabled, message) from MOD_CHECK's output: is any installed copy of the mod ticked?"""
+    rows = [ln.split()[1:] for ln in lines if ln.startswith("SDP_MOD ")]
+    if any(r and r[0] == "true" for r in rows):
+        return True, ""
+    if not rows:
+        return False, "the mod is not installed: run tools/deploy.py and restart the game"
+    return False, ("the mod is installed but unticked in Additional Content, so games start without it "
+                   "(pitfall 45). Ticking it again changes Mods.sqlite: ask the maintainer, then "
+                   "Modding.EnableMod(%s, true) in the MainMenu state" % " or ".join(r[1] for r in rows if len(r) > 1))
+
+
+def check_mod_enabled():
+    """At the main menu: True when the mod is ticked; otherwise say why and return False."""
+    resp = exec_lua("MainMenu", MOD_CHECK)
+    if not resp.get("ok"):
+        print("could not check the mod: %s" % resp.get("error"))
+        return False
+    ok, why = mod_enabled(resp.get("output") or [])
+    if not ok:
+        print(why, flush=True)
+    return ok
+
+
 def has_state(name):
     resp = civ6tuner.request({"op": "states"})
     return resp.get("ok") and any(n == name for _, n in resp["states"])
@@ -335,6 +370,8 @@ def start_game(args):
         return 2
     if not wait_for("main menu", lambda: has_state("MainMenu"), args.timeout):
         return 2
+    if not check_mod_enabled():
+        return 3
     ruleset = 'GameConfiguration.SetValue("RULESET", "%s")' % args.ruleset if args.ruleset else ""
     setup = RANDOM_SETUP if args.random else FIXED_SETUP % {"leader": args.leader, "seed": args.seed, "ruleset": ruleset}
     resp = exec_lua("MainMenu", MUTE + "; " + setup + "Automation.SetAutoStartEnabled(true); OnPlayCiv6()")
@@ -376,6 +413,8 @@ def cmd_load(args):
         return 2
     if not wait_for("main menu", lambda: has_state("MainMenu"), args.timeout):
         return 2
+    if not check_mod_enabled():
+        return 3
     resp = exec_lua("MainMenu", MUTE + "; " + LOAD_SAVE % args.name.replace("\\", "\\\\").replace('"', '\\"'))
     if not resp.get("ok"):
         print("could not load %s: %s" % (args.name, resp.get("error")))

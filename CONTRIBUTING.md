@@ -6,7 +6,7 @@
 
 ## 先读
 
-- [AGENTS.md](AGENTS.md)：需求约束、技术方案、44 条坑的要点（完整说明在 [docs/pitfalls.md](docs/pitfalls.md)）、每轮改动流程。
+- [AGENTS.md](AGENTS.md)：需求约束、技术方案、45 条坑的要点（完整说明在 [docs/pitfalls.md](docs/pitfalls.md)）、每轮改动流程。
 - [.claude/skills/](.claude/skills/)：Issue 处理、游戏内测试、离线重活、发版、监听的固定步骤，Claude Code 按需加载；人照着做也一样。
 - 当前平台的环境说明：[docs/dev-macos.md](docs/dev-macos.md) 或 [docs/dev-windows.md](docs/dev-windows.md)。
 - [tools/README.md](tools/README.md)：每个工具的用法。
