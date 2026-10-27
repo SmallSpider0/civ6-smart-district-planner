@@ -51,9 +51,10 @@ local function Weights(changes)
   return out
 end
 
+-- ALL measures per-turn values (no points: SDP_Sites.ItemWeights).
 local function Request(changes)
   return { PlayerID = 0, Tier = "STANDARD", K = request.sites.count, D = request.sites.distance,
-    Districts = request.districts, Weights = Weights(changes) }
+    Districts = request.districts, Weights = Weights(changes), Raw = mode == "ALL" }
 end
 
 local function Round(x) return math.floor(x * 100 + 0.5) / 100 end
@@ -102,9 +103,11 @@ if not base.Ok then
 end
 
 if mode == "ALL" then
+  local ctx = base.Session.Ctx
   for _, site in ipairs(base.Session.Order or {}) do
     if site.Fine ~= nil and site.CenterLegal then
-      Print({ scene = id, site = site.X .. "," .. site.Y, parts = Parts(site.Parts) })
+      Print({ scene = id, site = site.X .. "," .. site.Y, parts = Parts(site.Parts), P = site.Land.P,
+        districts = #(site.Districts or {}), growth = Round(ctx.Land.Growth), cities = ctx.Cities, water = site.Info.WaterKind })
     end
   end
   return
@@ -129,7 +132,8 @@ for _, v in ipairs(VARIATIONS) do
     for _, d in ipairs(site.Districts or {}) do districts[#districts + 1] = d.Type .. "@" .. d.X .. "," .. d.Y .. "=" .. Round(d.Value) end
     Print({ scene = id, variation = name, site = x .. "," .. y, parts = Parts(site.Parts), water = info.WaterKind,
       housing = info.Housing, features = info.Features, resources = resources, districts = districts,
-      P = site.Land.P, plots = #site.Land.Plots, growth = Round(site.Ctx.Land.Growth), cities = site.Ctx.Cities, chosen = Chosen(result), changed = Chosen(result) ~= defaultChosen,
+      P = site.Land.P, plots = #site.Land.Plots, growth = Round(site.Ctx.Land.Growth), cities = site.Ctx.Cities,
+      points = site.Ctx.Points, chosen = Chosen(result), changed = Chosen(result) ~= defaultChosen,
       solutionSites = result.Ok and #result.Solutions[1].Sites or 0 })
   end
 end

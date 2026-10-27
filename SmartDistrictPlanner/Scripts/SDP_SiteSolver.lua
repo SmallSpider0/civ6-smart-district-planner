@@ -116,7 +116,7 @@ end
 -- self.Pool), with the corrections of the header. Returns the value and
 -- the per-site details.
 function Session:Value(chosen)
-  local ctx, w = self.Ctx, self.Ctx.Weights
+  local ctx = self.Ctx
   local pool = self.Pool
   -- Who works each plot two sites could reach: the one that loses most
   -- without it, then the nearer center, then the smaller plot index.
@@ -180,7 +180,8 @@ function Session:Value(chosen)
     details[#details + 1] = { Site = site, Land = land, Value = value, Resources = owned, Taken = taken, Once = once }
     total = total + value
   end
-  local resources = w.AMENITY * SDP_Sites.LuxuryValue(ctx, luxury, {}) + w.STRATEGIC * SDP_Sites.StrategicValue(ctx, strategic, {})
+  local resources = ctx.Items.AMENITY * SDP_Sites.LuxuryValue(ctx, luxury, {})
+    + ctx.Items.STRATEGIC * SDP_Sites.StrategicValue(ctx, strategic, {})
   total = total + resources - conflict
   return total, details, resources, conflict
 end
@@ -354,7 +355,6 @@ end
 -- solution's (less the conflicts). Also the distance to the nearest other
 -- site of the solution (issue 9).
 local function SolutionSites(ctx, entry)
-  local w = ctx.Weights
   local sites = {}
   for n, d in ipairs(entry.Details) do
     local site = d.Site
@@ -378,8 +378,8 @@ local function SolutionSites(ctx, entry)
       site.NewKinds[kind] = not ctx.Owned[kind] and not (takenLuxury[kind] and takenLuxury[kind].New) or nil
     end
     for kind in pairs(strategic) do site.NewKinds[kind] = not ctx.Owned[kind] and not takenStrategic[kind] or nil end
-    site.Parts.Luxury = w.AMENITY * SDP_Sites.LuxuryValue(ctx, luxury, takenLuxury)
-    site.Parts.Strategic = w.STRATEGIC * SDP_Sites.StrategicValue(ctx, strategic, takenStrategic)
+    site.Parts.Luxury = ctx.Items.AMENITY * SDP_Sites.LuxuryValue(ctx, luxury, takenLuxury)
+    site.Parts.Strategic = ctx.Items.STRATEGIC * SDP_Sites.StrategicValue(ctx, strategic, takenStrategic)
     site.Value = site.Value + site.Parts.Luxury + site.Parts.Strategic
     site.Luxury, site.Strategic = {}, {}
     for kind, count in pairs(copies) do

@@ -206,6 +206,12 @@ local function Progress(playerID)
     Share("Civics", culture and function(i) return culture:HasCivic(i) end))
 end
 
+-- How much one-time yields have grown for the player: 1 at the start,
+-- 1 + ONE_TIME_GROWTH with every technology or civic.
+function SDP_Land.Growth(playerID)
+  return 1 + SDP_Land.ONE_TIME_GROWTH * Progress(playerID)
+end
+
 -- What the land part needs to value plots for one player (issue 52):
 --   W              SDP_Land.Weights(weights)
 --   OnceW          what one-time yields weigh: options.OnceWeights (the
@@ -223,7 +229,7 @@ function SDP_Land.Context(playerID, weights, allowRemoval, options)
   local ctx = { W = SDP_Land.Weights(weights), AllowRemoval = allowRemoval ~= false, OneTime = SDP_Land.OneTimeYields(),
     Rules = ImprovementRules(), PlayerID = playerID, Turns = options.Turns or SDP_Land.HARVEST_TURNS }
   ctx.OnceW = options.OnceWeights ~= nil and SDP_Land.Weights(options.OnceWeights) or ctx.W
-  ctx.Growth = 1 + SDP_Land.ONE_TIME_GROWTH * Progress(playerID)
+  ctx.Growth = SDP_Land.Growth(playerID)
   ctx.Harvest = not HarvestPrevented(playerID)
   local player = playerID ~= nil and Players[playerID] or nil
   local techs = player ~= nil and player.GetTechs ~= nil and player:GetTechs() or nil

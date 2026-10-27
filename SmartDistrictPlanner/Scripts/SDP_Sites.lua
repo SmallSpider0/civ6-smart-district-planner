@@ -9,10 +9,13 @@
 --   Coarse      every candidate, no DMT: worked plots, fresh water, luxury
 --               and strategic resources, one-time yields, appeal, a penalty
 --               when too few plots can take districts.
--- Every part is in points per turn (issue 88, decided 2026-10-26): yields
--- weigh SDP_Land.PLOT_WEIGHTS (adjacency: 1 a yield) times the tab's yield
--- weights, then each part times its own weight (DISTRICT, LAND, FEATURE,
--- HOUSING, AMENITY, STRATEGIC, APPEAL); no normalisation between sites.
+-- Each part is first worked out per turn (issue 88, decided 2026-10-26):
+-- yields weigh SDP_Land.PLOT_WEIGHTS (adjacency: 1 a yield) times the tab's
+-- yield weights. Then it is turned into points by a fixed rule (decided
+-- 2026-10-27, so that every part weighs about the same and a site always
+-- gets the same score): ITEM_POINTS for what a good site has in that part
+-- (REFERENCE, measured on many generated maps), times the part's own weight
+-- (DISTRICT, LAND, FEATURE, HOUSING, AMENITY, STRATEGIC, APPEAL).
 --   Fine        the best M candidates: the planned districts placed by the
 --               single-city search (SDP_Search) around a hypothetical city
 --               center; the district gain and the plots they take enter the
@@ -34,13 +37,50 @@ SDP_Sites.ERA_RECENT = 2
 SDP_Sites.KIND_NEW = 2
 SDP_Sites.KIND_SHORT = 1.5
 SDP_Sites.SHORT_SHARE = 0.25
-SDP_Sites.MISSING_PLOT = 2     -- penalty per planned district without a usable plot
+SDP_Sites.MISSING_PLOT = 5     -- penalty (points) per planned district without a usable plot
 -- One-time yields of clearing and harvesting are spread over this many turns
 -- (issue 88, decided 2026-10-26: 50 at standard speed, other speeds in
 -- proportion). The game scales those yields by the speed in the same
 -- proportion, so the two cancel and 50 holds at every speed.
 SDP_Sites.HARVEST_TURNS = 50
 SDP_Sites.LOYALTY_RANGE = 9    -- cities this close press on a city's loyalty (R&F, GS)
+
+-- Points of a part (issue 88): ITEM_POINTS x (its per-turn value / what a
+-- good site has). What a good site has, about the 90th percentile of the
+-- refined sites of 48 generated maps at three points of the game
+-- (docs/notes/issue-88-sites-score.md):
+--   District   adjacency per planned district
+--   Farm       yield per worked plot, from Farm at the start of the game
+--              to FarmLate with every technology and civic (improvements
+--              yield more), in proportion to the player's progress
+--   Feature    one-time yields per turn per unit of their growth
+--              (SDP_Land.Growth): 0.4 a woods plot (20 production over 50
+--              turns), so a woods plot is worth 0.8 points at any time
+--   Housing    housing over a dry site's (fresh water: 3)
+--   Luxury     one new kind for four cities
+--   Strategic  the first plot of a new kind revealed in the player's era
+SDP_Sites.ITEM_POINTS = 10
+SDP_Sites.REFERENCE = { District = 4, Farm = 4.3, FarmLate = 7.2, Feature = 5, Housing = 3, Luxury = 4, Strategic = 4 }
+
+-- [weight key] = the part's weight times its points per unit (above), for
+-- the request's plan and the player's progress. request.Raw: per-turn
+-- values, no points (measurements).
+function SDP_Sites.ItemWeights(ctx, request, districts)
+  local w, ref = ctx.Weights, SDP_Sites.REFERENCE
+  local out = { DISTRICT = w.DISTRICT, LAND = w.LAND, FEATURE = w.FEATURE, HOUSING = w.HOUSING, AMENITY = w.AMENITY,
+    STRATEGIC = w.STRATEGIC, APPEAL = w.APPEAL }
+  ctx.Points = { DISTRICT = 1, LAND = 1, FEATURE = 1, HOUSING = 1, AMENITY = 1, STRATEGIC = 1, APPEAL = 1 }
+  if not request.Raw then
+    local n, growth = SDP_Sites.ITEM_POINTS, SDP_Land.Growth(ctx.PlayerID)
+    local progress = (growth - 1) / SDP_Land.ONE_TIME_GROWTH
+    local farm = ref.Farm + (ref.FarmLate - ref.Farm) * progress
+    ctx.Points = { DISTRICT = n / (math.max(1, districts) * ref.District), LAND = n / (math.max(1, ctx.Population) * farm),
+      FEATURE = n / (growth * ref.Feature), HOUSING = n / ref.Housing, AMENITY = n / ref.Luxury,
+      STRATEGIC = n / ref.Strategic, APPEAL = 1 }
+  end
+  for key, value in pairs(ctx.Points) do out[key] = out[key] * value end
+  return out
+end
 
 -- The weights a site score uses, with their defaults (design 3.3): the six
 -- yields, then one per part (issue 88): districts, land (the worked plots),
@@ -102,9 +142,10 @@ end
 -- yield, which only leans on it (all 1: the fixed numbers; Growth first:
 -- food twice). Per-turn plot yields also times the land weight, one-time
 -- yields (second table) times FEATURE instead (issue 88).
-function SDP_Sites.PlotWeights(w)
-  local tile, once = { FEATURE = w.FEATURE }, { FEATURE = w.FEATURE }
-  local land = w.LAND or 1
+function SDP_Sites.PlotWeights(w, items)
+  items = items or w
+  local tile, once = { FEATURE = items.FEATURE }, { FEATURE = items.FEATURE }
+  local land = items.LAND or 1
   for _, yieldType in ipairs(SDP_Land.TILE_YIELDS) do
     once[yieldType] = SDP_Land.PLOT_WEIGHTS[yieldType] * (w[yieldType] or 1)
     tile[yieldType] = once[yieldType] * land
@@ -197,8 +238,6 @@ end
 -- What is shared by every site of one request.
 function SDP_Sites.Context(playerID, request)
   local ctx = { PlayerID = playerID, Weights = SDP_Sites.Weights(request.Weights) }
-  local tileWeights, onceWeights = SDP_Sites.PlotWeights(ctx.Weights)
-  ctx.Land = SDP_Land.Context(playerID, tileWeights, true, { OnceWeights = onceWeights, Turns = SDP_Sites.HARVEST_TURNS })
   local plannable, byType = SDP_Rules.PlannableDistricts(playerID), {}
   for _, d in ipairs(plannable) do byType[d.Type] = d end
   -- The plan every site is scored with. A district with an empire limit
@@ -247,7 +286,11 @@ function SDP_Sites.Context(playerID, request)
     plan, pick, specialty = rest, request.PlanCount, request.PlanCount
   end
   ctx.Plan, ctx.Pool, ctx.Pick, ctx.Population = plan, pool, pick, SDP_Land.RequiredPopulation(specialty)
-  ctx.Distance = request.Distance
+  ctx.Items = SDP_Sites.ItemWeights(ctx, request, #plan + pick)
+  local tileWeights, onceWeights = SDP_Sites.PlotWeights(ctx.Weights, ctx.Items)
+  ctx.Land = SDP_Land.Context(playerID, tileWeights, true, { OnceWeights = onceWeights, Turns = SDP_Sites.HARVEST_TURNS })
+  -- The distance cost is in adjacency: in points like it.
+  ctx.Distance = request.Distance and request.Distance * ctx.Points.DISTRICT
   -- Resources the player has (amounts) and can see.
   local resources = Players[playerID]:GetResources()
   ctx.Owned, ctx.Visible, ctx.Amount = {}, {}, {}
@@ -355,7 +398,7 @@ function SDP_Sites.WaterPart(ctx, site, districts)
   end
   site.Info.Housing = housing
   local dry = ctx.Housing.None + ctx.Housing.Center
-  return ctx.Weights.HOUSING * (SDP_Land.HousingValue(housing, ctx.Population, 1) - SDP_Land.HousingValue(dry, ctx.Population, 1))
+  return ctx.Items.HOUSING * (SDP_Land.HousingValue(housing, ctx.Population, 1) - SDP_Land.HousingValue(dry, ctx.Population, 1))
 end
 
 -- The coarse score of a site (no DMT). Returns a site table:
@@ -411,8 +454,8 @@ function SDP_Sites.Coarse(ctx, candidate, centers)
   site.Info.WaterKind = Water(Map.GetPlot(x, y))
   site.Parts.Water = SDP_Sites.WaterPart(ctx, site, ctx.Plan)
 
-  site.Parts.Luxury = w.AMENITY * SDP_Sites.LuxuryValue(ctx, site.Luxury, {})
-  site.Parts.Strategic = w.STRATEGIC * SDP_Sites.StrategicValue(ctx, site.Strategic, {})
+  site.Parts.Luxury = ctx.Items.AMENITY * SDP_Sites.LuxuryValue(ctx, site.Luxury, {})
+  site.Parts.Strategic = ctx.Items.STRATEGIC * SDP_Sites.StrategicValue(ctx, site.Strategic, {})
 
   -- Appeal of the plots districts could take.
   local appeal, usable = 0, 0
@@ -548,7 +591,7 @@ function SDP_Sites.Board(ctx, sites)
   -- Adjacency: 1 a yield, as on the single-city tab (issue 88), times the
   -- tab's yield weights and the district weight.
   ctx.AdjacencyWeights = {}
-  for _, y in ipairs(SDP_Rules.YIELDS) do ctx.AdjacencyWeights[y] = ctx.Weights[y] * ctx.Weights.DISTRICT end
+  for _, y in ipairs(SDP_Rules.YIELDS) do ctx.AdjacencyWeights[y] = ctx.Weights[y] * ctx.Items.DISTRICT end
   ctx.Board = SDP_Board.New(ctx.PlayerID, fixed, ctx.AdjacencyWeights)
   return ctx.Board
 end

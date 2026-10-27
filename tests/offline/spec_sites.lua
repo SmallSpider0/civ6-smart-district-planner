@@ -91,7 +91,8 @@ test("site factors: water, luxuries, strategic resources", function()
       { 3, 4, "RESOURCE_IRON", 1 } },
   })
   local _ = w
-  local ctx = SDP_Sites.Context(0, { Districts = PLAN, K = 3 })
+  -- Per-turn values (Raw: no points, see the points test below).
+  local ctx = SDP_Sites.Context(0, { Districts = PLAN, K = 3, Raw = true })
   local centers = SDP_Sites.Centers(0)
   local river = SDP_Sites.Coarse(ctx, { X = 2, Y = 3, Index = Map.GetPlotIndex(2, 3), Unrevealed = 0 }, centers)
   T.eq(river.Info.WaterKind, "FRESH", "river")
@@ -109,18 +110,31 @@ test("site factors: water, luxuries, strategic resources", function()
   -- Housing (issues 55, 56): its own weight, not food's; worth 1 each up to
   -- the population the plan needs (three specialty districts: 7), half the
   -- one before after that.
-  local food = SDP_Sites.Context(0, { Districts = PLAN, Weights = { YIELD_FOOD = 3 } })
+  local food = SDP_Sites.Context(0, { Districts = PLAN, Weights = { YIELD_FOOD = 3 }, Raw = true })
   T.eq(SDP_Sites.Coarse(food, { X = 2, Y = 3, Index = Map.GetPlotIndex(2, 3), Unrevealed = 0 }, centers).Parts.Water, 3,
     "the food weight leaves the water part alone")
-  local housing = SDP_Sites.Context(0, { Districts = PLAN, Weights = { HOUSING = 2 } })
+  local housing = SDP_Sites.Context(0, { Districts = PLAN, Weights = { HOUSING = 2 }, Raw = true })
   T.eq(SDP_Sites.Coarse(housing, { X = 2, Y = 3, Index = Map.GetPlotIndex(2, 3), Unrevealed = 0 }, centers).Parts.Water, 6,
     "weighted by housing")
-  local small = SDP_Sites.Context(0, { Districts = { "DISTRICT_CAMPUS" } })
+  local small = SDP_Sites.Context(0, { Districts = { "DISTRICT_CAMPUS" }, Raw = true })
   T.eq(small.Population, 1, "one district needs population 1")
   -- Housing 2 -> 5, a new city of 1 against a target of 1: knee max(1 + 1,
   -- 1 + 2) = 3 (issue 91): 1 + 0.5 + 0.25.
   T.eq(SDP_Sites.Coarse(small, { X = 2, Y = 3, Index = Map.GetPlotIndex(2, 3), Unrevealed = 0 }, centers).Parts.Water,
     1.75, "housing past the knee is worth less")
+
+  -- Points (issue 88): ITEM_POINTS for what a good site has in each part.
+  local points = SDP_Sites.Context(0, { Districts = PLAN, K = 3 })
+  local scored = SDP_Sites.Coarse(points, { X = 2, Y = 3, Index = Map.GetPlotIndex(2, 3), Unrevealed = 0 }, centers)
+  local n, ref = SDP_Sites.ITEM_POINTS, SDP_Sites.REFERENCE
+  T.near(scored.Parts.Water, n * 3 / ref.Housing, 1e-9, "fresh water: 3 housing")
+  T.near(scored.Parts.Luxury, n * 4 / ref.Luxury, 1e-9, "a new luxury in 4 cities")
+  T.near(scored.Parts.Strategic, n * 4 / ref.Strategic, 1e-9, "a new strategic of the player's era")
+  T.near(scored.Parts.Feature, river.Parts.Feature * n / (points.Land.Growth * ref.Feature), 1e-9,
+    "one-time yields per unit of their growth")
+  local twice = SDP_Sites.Context(0, { Districts = PLAN, K = 3, Weights = { HOUSING = 2 } })
+  T.near(SDP_Sites.Coarse(twice, { X = 2, Y = 3, Index = Map.GetPlotIndex(2, 3), Unrevealed = 0 }, centers).Parts.Water,
+    2 * scored.Parts.Water, 1e-9, "the part's weight on top")
 end)
 
 test("housing value (issue 91, plan B): 1 each up to max(target + 1, population + 2), half after; big cities discounted", function()
@@ -384,7 +398,7 @@ test("a site's plot yields weigh the fixed numbers times the tab's weights (issu
   T.eq(once.YIELD_GOLD, 1 / 4, "one-time gold: 1/4")
   local growth = SDP_Sites.PlotWeights(SDP_Sites.Weights(SDP_Sites.PRESETS.GROWTH))
   T.eq(growth.YIELD_FOOD, 2, "growth first: food leans twice")
-  local ctx = SDP_Sites.Context(0, { Districts = PLAN, Weights = { YIELD_GOLD = 2, LAND = 3 } })
+  local ctx = SDP_Sites.Context(0, { Districts = PLAN, Weights = { YIELD_GOLD = 2, LAND = 3 }, Raw = true })
   T.eq(ctx.Land.W.YIELD_GOLD, 3 * 2 / 4, "the plots: land 3 x gold 2 x 1/4")
   T.eq(ctx.Land.OnceW.YIELD_GOLD, 2 / 4, "one-time yields: without the land weight")
 end)
