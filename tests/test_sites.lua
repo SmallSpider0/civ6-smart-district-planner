@@ -136,6 +136,42 @@ test("each site's resources and distances, as on the map (issues 8, 9)", functio
   if not ok then error(err, 0) end
 end)
 
+-- Issue 86: the resource parts read what the player can see in the game.
+-- Buyers like the World Resources screen (each met major civilization's
+-- tradable resources through the deal manager); every Strategic resource
+-- gets its era factor; a kind short only when the player has it.
+test("issue 86: buyers, era factors and short kinds from the game", function()
+  local diplomacy = Players[pid]:GetDiplomacy()
+  local met = 0
+  for _, other in ipairs(PlayerManager.GetAliveMajorIDs()) do
+    if other ~= pid and diplomacy:HasMet(other) then met = met + 1 end
+    if other ~= pid then
+      -- The call the World Resources screen makes, met or not.
+      local deal = DealManager.GetWorkingDeal(DealDirection.OUTGOING, pid, other)
+      local items = DealManager.GetPossibleDealItems(other, other, DealItemTypes.RESOURCES, deal)
+      T.ok(items == nil or type(items) == "table", "deal items for " .. other)
+      for _, entry in ipairs(items or {}) do T.ok(GameInfo.Resources[entry.ForType] ~= nil, "a resource") end
+    end
+  end
+  local buyers = SDP_Sites.Buyers(pid)
+  local kinds = 0
+  for kind, n in pairs(buyers) do
+    kinds = kinds + 1
+    T.eq(GameInfo.Resources[kind].ResourceClassType, "RESOURCECLASS_LUXURY", kind)
+    T.ok(n >= 1 and n <= met, kind .. ": " .. n .. " of " .. met .. " met")
+  end
+  if met == 0 then T.eq(kinds, 0, "nobody met: nobody to sell to") end
+  local ctx = SDP_Sites.Context(pid, { PlayerID = pid, K = 2, Districts = {} })
+  for row in GameInfo.Resources() do
+    if row.ResourceClassType == "RESOURCECLASS_STRATEGIC" then
+      local f = ctx.EraFactor[row.ResourceType]
+      T.ok(f == 1 or f == SDP_Sites.ERA_RECENT, row.ResourceType .. " era factor")
+      if ctx.Short[row.ResourceType] ~= nil then T.ok(ctx.Owned[row.ResourceType], row.ResourceType .. " short but owned") end
+    end
+  end
+  print(("met %d, %d luxury kinds with buyers, %d cities after the plan"):format(met, kinds, ctx.Cities))
+end)
+
 test("the sites tab shows each site's resources and both distances", function()
   if Players[pid]:GetCities():GetCapitalCity() == nil then T.skip("no capital") end
   local sites = SDP_Panel.Sites
