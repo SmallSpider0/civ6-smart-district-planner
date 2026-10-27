@@ -1212,6 +1212,20 @@ test("issue 89: the preset the values equal, else Custom; a preset picked after 
   SDP_Panel.SetPreset("BALANCED")
 end)
 
+test("issue 88: city sites weight columns leave room for 0.5 between the arrows", function()
+  SDP_Panel.Open()
+  SDP_Panel.SelectTab("SITES")
+  local cells = SDP_Panel.Sites.State().View.WeightCells
+  T.eq(#cells, 14, "two rows of seven")
+  -- The game's ArrowButtonLeft/Right are 19 wide, 2 in from each side;
+  -- "0.5" in BodyTextDark14 needs about 20. Seven a row in the 480 page.
+  for _, cell in ipairs(cells) do
+    local width = cell.Root:GetSizeX()
+    T.ok(width >= 2 * (19 + 2) + 20, cell.Key .. " wide enough: " .. tostring(width))
+    T.ok(width * 7 <= 480, cell.Key .. " seven fit: " .. tostring(width))
+  end
+end)
+
 test("issue 89: city sites show Custom too; a preset puts the distance weight back", function()
   SDP_Panel.Open()
   SDP_Panel.SelectTab("SITES")

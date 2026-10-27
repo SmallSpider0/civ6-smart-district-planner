@@ -36,7 +36,8 @@ function Control:SetToolTipString(text) self._tooltip = text end
 function Control:GetToolTipString() return self._tooltip end
 function Control:RegisterCallback(event, fn) self._callbacks[event] = fn end
 function Control:RegisterCheckHandler(fn) self._check = fn end
-function Control:GetSizeX() return 100 end
+function Control:GetSizeX() return self._sizeX or 100 end
+function Control:SetSizeX(x) self._sizeX = x end
 function Control:GetSizeY() return self._sizeY or 30 end
 function Control:SetSizeY(y) self._sizeY = y end
 function Control:SetIcon(icon) self._icon = icon return true end

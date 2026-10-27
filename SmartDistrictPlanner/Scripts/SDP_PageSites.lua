@@ -24,8 +24,9 @@ local m_siteRowIM = InstanceManager:new("SiteRow", "Root", Controls.SitesResultS
 -- The site weights (design 3.3, issue 88) and the distance cost, in two
 -- rows: the six yields with the game's font icons and the distance cost,
 -- then one weight per part of a site's score, with a short word (feedback
--- item 3, as on the single-city tab). Seven columns a row, narrower than the
--- default so they fit beside the row's title.
+-- item 3, as on the single-city tab). Seven columns a row over the full
+-- 480 width: 68 leaves room for "0.5" between the 19-wide arrows and keeps
+-- the English words apart (issue 88; 50 hid the value behind the arrows).
 local COLUMNS_A = {
   { Key = "YIELD_SCIENCE", Glyph = "[ICON_Science]" },
   { Key = "YIELD_CULTURE", Glyph = "[ICON_Culture]" },
@@ -52,7 +53,7 @@ local COLUMNS_B = {}
 for _, item in ipairs(ITEMS) do
   COLUMNS_B[#COLUMNS_B + 1] = { Key = item.Key, Glyph = item.Short, ToolTip = "LOC_SDP_SITES_W_" .. item.Key }
 end
-local WEIGHT_WIDTH = 50
+local WEIGHT_WIDTH = 68
 
 -- Default distance 5 (issue 84, the maintainer's choice): sites land at the
 -- full distance (nothing in the score pulls them closer), and players space

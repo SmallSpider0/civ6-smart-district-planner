@@ -331,9 +331,6 @@
     <Replace Tag="LOC_SDP_SITES_DISTANCE_TOOLTIP" Language="zh_Hans_CN">
       <Text>每座新城离本方城市、城址钉或这套方案里另一座新城最多几格，按两个城市中心之间的格数算。游戏规定至少 4 格（中间隔 3 格）。新城通常正好放在这个距离上：5 格时相邻两城共用 4–8 格，6 格时 3 环刚好碰边，7 格起不再共用。[NEWLINE][NEWLINE]设得大，每座新城能用的地块多，但同一片地方放下的城少，计算也更久（8 格比 5 格约多三分之一的时间）。</Text>
     </Replace>
-    <Replace Tag="LOC_SDP_SITES_PRESET" Language="zh_Hans_CN">
-      <Text>权重预设</Text>
-    </Replace>
     <Replace Tag="LOC_SDP_PRESET_BALANCED" Language="zh_Hans_CN">
       <Text>均衡</Text>
     </Replace>
