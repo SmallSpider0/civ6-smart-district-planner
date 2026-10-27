@@ -1,0 +1,7 @@
+Changes since v1.5.2:
+- City sites: the Distance weight defaults to 0.5 instead of 0, as on the One city and Several cities tabs: with equal adjacency, the districts around each site sit closer to its City Center. Choosing a preset sets the distance back to 0.5 (it was 0). Saves that never changed it use 0.5; changed values are kept. The same settings can give different plans: in 12 test scenes the districts moved in all 12, and the chosen sites changed in 2.
+- City sites: the tooltip of Districts gives the times measured in the game: in mid and late game saves a count of 0 takes about 0.1 seconds, 3 about 1 second and 6 about 1.6 seconds (island maps about 0.4 seconds).
+
+自 v1.5.2 以来的变化：
+- 选城址页的“距离”权重默认从 0 改成 0.5，和单城、多城页一样：相邻加成一样时，城址周围的区域离市中心更近。选预设时距离设回 0.5（以前是 0）。存档里没改过这一项的用 0.5，改过的保持原值。同样的设置可能给出不同方案：12 个测试场景里区域位置都变了，2 个选出的城址也变了。
+- 选城址页“区域数量”的悬停提示改为游戏里实测的耗时：中后期存档上数量 0 约 0.1 秒，数量 3 约 1 秒，数量 6 约 1.6 秒（海岛图约 0.4 秒）。
