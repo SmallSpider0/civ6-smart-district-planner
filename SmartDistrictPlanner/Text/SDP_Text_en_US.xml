@@ -331,9 +331,6 @@
     <Replace Tag="LOC_SDP_SITES_DISTANCE_TOOLTIP" Language="en_US">
       <Text>How far each new city may be from one of your cities, a City Center map tack or another new city of the same plan, counted in tiles between the City Centers. The game needs at least 4 (3 tiles between). New cities usually land at exactly this distance: at 5 two neighbors share 4–8 tiles, at 6 their 3 rings just touch, from 7 on they share none.[NEWLINE][NEWLINE]A larger number leaves each new city more tiles but fits fewer cities into the same land, and the search takes longer (about a third longer at 8 than at 5).</Text>
     </Replace>
-    <Replace Tag="LOC_SDP_SITES_PRESET" Language="en_US">
-      <Text>Weights</Text>
-    </Replace>
     <Replace Tag="LOC_SDP_PRESET_BALANCED" Language="en_US">
       <Text>Balanced</Text>
     </Replace>
