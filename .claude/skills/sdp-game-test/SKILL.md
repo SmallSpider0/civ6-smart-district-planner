@@ -33,7 +33,8 @@ Several sessions may run at once, each in its own worktree, and there is one gam
 
 1. Keep the screen from locking for the whole task, from its first step: a locked screen stops the game drawing, takes no clicks and captures only the lock screen, and long offline steps before the game are enough for it to lock. `caffeinate -dimsu` in the background (macOS), stopped at the end, or the host app's keep-awake.
 2. Heavy offline jobs must not run on this machine at the same time: they slow the game to minutes per turn and make timings meaningless. Those started through `sdplock.py heavy` are paused by the lock while the game is held and resumed when it is released; anything else heavy goes to the second machine (sdp-offline-runs).
-3. `python3 -I tools/deploy.py`. A Lua or UI XML change needs a new game; modinfo or text changes need a game restart (deploy says which).
+3. Unattended runs on macOS (the night queue): `python3 -I tools/preflight_night.py` from the session's own shell while someone is still at the machine, so any privacy prompt shows now (docs/dev-macos.md, 隐私弹窗). It must end with `all folders reachable`.
+4. `python3 -I tools/deploy.py`. A Lua or UI XML change needs a new game; modinfo or text changes need a game restart (deploy says which).
 
 ## Start
 

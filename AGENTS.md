@@ -204,3 +204,4 @@ include("dmt_yieldcalculator");       -- 尾部会执行 DMT_Initialize()，见�
 - 不把 DMT/AMT/EP/游戏本体的源码或数据复制进仓库，更不能进 `SmartDistrictPlanner/` 发布目录（版权与依赖关系：DMT 作为依赖 mod 由玩家自行订阅）。仓库是公开的。
 - 回复与文档使用中文；代码标识符与注释用英文或中文均可，但单文件内保持一致。
 - 调研和一个 Issue 的开发交给子 agent（维护者点名或改动很大的开发用子会话），几行的小修和协调留在主会话（CONTRIBUTING.md“需求、分支与提交”的“谁来做”）。
+- 派子 agent 时按任务选模型和思考强度，任务停在检查点，后续的活交给带交接说明的新子 agent；结束一轮前在后台安排好会叫醒自己的等待（CONTRIBUTING.md“子 agent 怎么派”）。

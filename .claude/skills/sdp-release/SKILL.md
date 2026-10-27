@@ -27,7 +27,7 @@ Bug-fix PRs merge into `main` as usual in the meantime: `main` reaches no player
 4. `python3 -I tools/release.py prep X.Y.Z`, then write the change note's English half and shorten the Chinese half (players' words, no issue numbers). Typographic quotes in the note (`workshop.py check` refuses `"`).
 5. When features or limits changed: README (en and zh), `workshop/description.bbcode` and `description_zh.bbcode`, the report pages.
 6. Self-test report: a short block for this round at the top of "自动化测试结果" (tests and counts, what was checked by hand, what was not). Keep only the last two rounds there (git has the rest).
-7. Commit ("Prepare vX.Y.Z"), push, one PR (title in English imperative; `Closes #N`; tests and platform; generated files and commands; ends with the session's PR footer). Auto-merge (squash) and Auto-fix on.
+7. Commit ("Prepare vX.Y.Z"), push, one PR (title in English imperative; `Closes #N`; tests and platform; generated files and commands; ends with the session's PR footer). Auto-merge (squash) and Auto-fix on. Then wait in the background for the merge (`gh pr checks N --watch`, then a loop until `gh pr view N --json state -q .state` is `MERGED`) and go on to §2 when it exits: a green CI run or an auto-merge wakes nobody (CONTRIBUTING.md, "子 agent 怎么派" 3).
 
 ## 2. After the merge
 

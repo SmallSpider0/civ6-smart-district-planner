@@ -237,7 +237,8 @@ footer { margin-top: 64px; border-top: 1px solid var(--line); padding-top: 16px;
     <ul class="overview">
       <li>方案由维护者在 Claude Code 对话里拍板，或由合作者在 Issue 下明确回复（选定方案、逐条回答）来定；两人意见不同以维护者为准。只修 bug 的版本按规则自动发，其余的发版只等维护者的话。</li>
       <li>主会话管全局：提 Issue、分派、转达决定、管里程碑、更新状态页、跑夜间队列、Issue 监听、改对外页面（创意工坊）、汇报；几行的小修也在这里做。</li>
-      <li>调研、测量和每个 Issue 的开发交给子 agent，开发的各用自己的 git 工作树；它们任何时候都能派出去，做完后还能带着原来的上下文被叫醒接着做。维护者点名要看着做的、或改动大来回多的，另开子会话，做完归档。</li>
+      <li>调研、测量和每个 Issue 的开发交给子 agent，开发的各用自己的 git 工作树；它们任何时候都能派出去，任务停在检查点（写完、离线测试跑过、PR 开了），后续的活交给带交接说明的新子 agent。维护者点名要看着做的、或改动大来回多的，另开子会话，做完归档。</li>
+      <li>主会话按任务给子 agent 和子会话选模型和思考强度：机械活用 Sonnet、medium，一般开发用 Opus、medium，求解和计分设计、原因不明的 bug、给维护者权衡方案的调研用 Opus、high；主会话自己保持 high。</li>
       <li>需要人确认的问题写到 Issue 上，工作照常往下走，不停下来等。</li>
     </ul>
   </div>
@@ -410,9 +411,11 @@ footer { margin-top: 64px; border-top: 1px solid var(--line); padding-top: 16px;
     <div class="card"><h4>先调研、再动手</h4><p>功能类 Issue 的调研评论固定分“已查证的规则 / 玩家共识 / 个别意见 / 建议方案 / 待定问题”，写给懂游戏、不看代码的人：每个待定问题是一句能直接回答的问话，附上建议；代码位置和公式折叠在末尾。</p></div>
     <div class="card"><h4>对外只写自己</h4><p>README、创意工坊、介绍页只介绍本模组；同类模组只列客观事实的对照表；和它们的对比数据放在开发者文档里。</p></div>
     <div class="card"><h4>机器有关的不进仓库</h4><p>仓库是公开的：worker 数、夜间时段、第二台机器写在本机配置里，仓库只写有哪些项和默认值；账号也不进仓库。</p></div>
+    <div class="card"><h4>子 agent 的上下文要短</h4><p>子 agent 每次调用都重读整个上下文，这是它花费的大头。所以要求里给文件路径不贴内容，工具输出只取需要的几行，上下文太长时到下一个检查点写交接说明，换一个新的子 agent 接着做。</p></div>
+    <div class="card"><h4>结束前安排好叫醒</h4><p>CI 通过、自动合并都不会叫醒会话。还有活要做时，结束前在后台挂一个等到事情发生就退出的命令（等 CI、等合并、等第二台机器的任务），夜里再加一个定时兜底。</p></div>
     <div class="card"><h4>收尾不留尾巴</h4><p>PR 合并后，解除会话和 PR 的绑定、拉取 main、清掉工作树和本地分支（<code>worktree.py prune</code>）；子会话做完由主会话归档，只留正在进行的工作。</p></div>
   </div>
-  <p class="refs">参考：<a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/CONTRIBUTING.md#写作规则">写作规则</a><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/docs/pitfalls.md">Civ6 Modding 的坑（44 条）</a><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/tree/main/docs/notes">每个 Issue 的实现记录</a></p>
+  <p class="refs">参考：<a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/CONTRIBUTING.md#写作规则">写作规则</a><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/CONTRIBUTING.md#需求分支与提交">子 agent 怎么派（模型、交接、等待）</a><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/docs/pitfalls.md">Civ6 Modding 的坑（44 条）</a><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/tree/main/docs/notes">每个 Issue 的实现记录</a></p>
 </section>
 
 <!-- 09 -->
@@ -471,8 +474,8 @@ footer { margin-top: 64px; border-top: 1px solid var(--line); padding-top: 16px;
     ["游戏内测试", 1, "经调试连接在游戏里执行断言；开局、换规则集、关弹窗都由脚本完成；游戏留在后台", "（macOS 上启动器的“开始”按钮由代理用电脑操控点击）", "tools/run_tests.py"],
     ["真实点击、截图", 1, "系统鼠标事件逐个点控件；截图按面板位置裁剪", "第一次授予辅助功能和录屏权限；无人值守时屏幕不能锁，笔记本要开盖接电", "tools/realclick.py"],
     ["压力测试", 1, "读三张后期存档，逐步计时，在游戏里实际建出来核对", "—", "tools/stress.py"],
-    ["夜间队列", 2, "主会话在本机配置的夜间时段按顺序跑队列，结果转给对应的子 agent 改问题、开 PR", "—", "tools/sdplock.py"],
-    ["PR、CI、合并", 1, "一个 Issue 一个 PR；Ubuntu、Windows 两项检查通过后自动 squash 合并；CI 失败时自动叫醒代理修；合并后清理工作树和本地分支", "—", ".github/workflows/checks.yml"],
+    ["夜间队列", 2, "开跑前先碰一遍夜里要用的文件夹，让隐私弹窗趁人还在时出现；主会话在本机配置的夜间时段按顺序跑队列，结果交给新的子 agent 改问题、开 PR", "macOS 上事先给夜里要跑的程序授予文件夹访问权限", "tools/preflight_night.py"],
+    ["PR、CI、合并", 1, "一个 Issue 一个 PR；Ubuntu、Windows 两项检查通过后自动 squash 合并；CI 失败时自动叫醒代理修，通过和合并不叫醒，代理开 PR 后在后台等结果；合并后清理工作树和本地分支", "—", ".github/workflows/checks.yml"],
     ["对外文字审阅", 3, "README、创意工坊简介、介绍页由代理改，PR 里附渲染好的页面和图", "合并前另一人看一下", null],
     ["要不要发版", 3, "只修 bug：满 3 个修复、满 7 天或严重 bug 即自动发；其余（含默认值、界面调整）：做完准备等一句话", "说“发 vX.Y.Z”", ".claude/skills/sdp-release/SKILL.md"],
     ["发版准备", 2, "版本号、更新说明草稿、截图、自测报告里的表格", "—", "tools/release.py"],
