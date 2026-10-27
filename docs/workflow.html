@@ -131,13 +131,14 @@ footer { margin-top: 64px; border-top: 1px solid var(--line); padding-top: 16px;
   <nav class="toc" aria-label="目录">
     <a href="#flow"><span>01</span>全流程</a>
     <a href="#roles"><span>02</span>角色与会话</a>
-    <a href="#resources"><span>03</span>共用资源</a>
-    <a href="#tests"><span>04</span>测试分层</a>
-    <a href="#release"><span>05</span>发版</a>
-    <a href="#automation"><span>06</span>自动化程度</a>
-    <a href="#board"><span>07</span>状态页</a>
-    <a href="#rules"><span>08</span>几条约定</a>
-    <a href="#where"><span>09</span>流程写在哪</a>
+    <a href="#dispatch"><span>03</span>子 agent 怎么派</a>
+    <a href="#resources"><span>04</span>共用资源</a>
+    <a href="#tests"><span>05</span>测试分层</a>
+    <a href="#release"><span>06</span>发版</a>
+    <a href="#automation"><span>07</span>自动化程度</a>
+    <a href="#board"><span>08</span>状态页</a>
+    <a href="#rules"><span>09</span>几条约定</a>
+    <a href="#where"><span>10</span>流程写在哪</a>
   </nav>
 </header>
 
@@ -221,7 +222,7 @@ footer { margin-top: 64px; border-top: 1px solid var(--line); padding-top: 16px;
         <path class="edge" d="M500 318 H526" marker-end="url(#ar)"/>
         <path class="edge" d="M690 318 H716" marker-end="url(#ar)"/>
         <path class="edge" d="M860 318 H886" marker-end="url(#ar)"/>
-        <text class="lbl" x="20" y="384">左侧色条和边框表示这一步的自动化程度，见第 06 节。</text>
+        <text class="lbl" x="20" y="384">左侧色条和边框表示这一步的自动化程度，见第 07 节。</text>
       </svg>
     </div>
     <div class="legend" aria-hidden="true"><span><i class="c1"></i>脚本或 CI 全自动</span><span><i class="c2"></i>代理自动完成</span><span><i class="c3"></i>代理做，看规则或等人一句话</span><span><i class="c4"></i>人来决定</span></div>
@@ -237,8 +238,7 @@ footer { margin-top: 64px; border-top: 1px solid var(--line); padding-top: 16px;
     <ul class="overview">
       <li>方案由维护者在 Claude Code 对话里拍板，或由合作者在 Issue 下明确回复（选定方案、逐条回答）来定；两人意见不同以维护者为准。只修 bug 的版本按规则自动发，其余的发版只等维护者的话。</li>
       <li>主会话管全局：提 Issue、分派、转达决定、管里程碑、更新状态页、跑夜间队列、Issue 监听、改对外页面（创意工坊）、汇报；几行的小修也在这里做。</li>
-      <li>调研、测量和每个 Issue 的开发交给子 agent，开发的各用自己的 git 工作树；它们任何时候都能派出去，任务停在检查点（写完、离线测试跑过、PR 开了），后续的活交给带交接说明的新子 agent。维护者点名要看着做的、或改动大来回多的，另开子会话，做完归档。</li>
-      <li>主会话按任务给子 agent 和子会话选模型和思考强度：机械活用 Sonnet、medium，一般开发用 Opus、medium，求解和计分设计、原因不明的 bug、给维护者权衡方案的调研用 Opus、high；主会话自己保持 high。</li>
+      <li>调研、测量和每个 Issue 的开发交给子 agent，开发的各用自己的 git 工作树；它们任何时候都能派出去，怎么选模型、什么时候交接见<a href="#dispatch">第 03 节</a>。维护者点名要看着做的、或改动大来回多的，另开子会话，做完归档。</li>
       <li>需要人确认的问题写到 Issue 上，工作照常往下走，不停下来等。</li>
     </ul>
   </div>
@@ -280,8 +280,88 @@ footer { margin-top: 64px; border-top: 1px solid var(--line); padding-top: 16px;
 </section>
 
 <!-- 03 -->
+<section id="dispatch">
+  <h2><span class="n">03</span>子 agent 怎么派</h2>
+  <div class="prose">
+    <ul class="overview">
+      <li>子 agent 每调用一次工具，都要把整个上下文重读一遍。2026-10-27 统计了已有的子 agent，重读占了花费的绝大部分，思考和输出只占小头。所以省钱先靠上下文短，其次才是选模型和思考强度。统计的数字只写在 <a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/CONTRIBUTING.md#需求分支与提交">CONTRIBUTING.md</a> 里。</li>
+      <li>主会话每派一个子 agent、开一个子会话，都按任务选模型和思考强度，并在要求里写上下面的交接规则。</li>
+    </ul>
+  </div>
+
+  <h3>选哪个模型、多大思考强度</h3>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>模型、思考强度</th><th>什么活</th><th>例子</th></tr></thead>
+      <tbody>
+        <tr><td class="step">Sonnet、medium</td><td>要求写清楚的机械活</td><td>变基、合并已知的改动、重跑测试、跑测量脚本、翻译或同步文档、维护状态页和队列</td></tr>
+        <tr><td class="step">Opus、medium</td><td>默认</td><td>开发已定方案的 Issue、原因已知的 bug、写测试、写调研结论</td></tr>
+        <tr><td class="step">Opus、high</td><td>要想得深的</td><td>求解和计分的设计、合法性规则、原因不明的 bug、给维护者权衡方案的调研，以及 medium 做错过一次的任务</td></tr>
+        <tr><td class="step">主会话</td><td>自己始终用 high</td><td>分派、转达决定、汇报</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>一个子 agent 从派出到交回</h3>
+  <figure>
+    <div class="frame wide">
+      <svg viewBox="0 0 960 260" role="img" aria-label="子 agent 的流程：主会话给出要求，子 agent 工作到检查点（测试通过、一次提交、PR 开了、一次测量做完）；上下文还短就接着做，做完把结果交回主会话。上下文过了交接的信号，或有后续的活（变基、夜间测试失败、审阅意见），就写交接说明，派一个新的子 agent，它先读交接说明再接着工作。">
+        <defs><marker id="ar5" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="arrowhead"/></marker></defs>
+        <g><rect class="node k2" x="20" y="50" width="160" height="58" rx="8"/><rect class="tab2" x="20" y="50" width="6" height="58" rx="3"/>
+          <text x="100" y="75" text-anchor="middle" font-size="14" font-weight="600">要求</text><text class="sub" x="100" y="94" text-anchor="middle">给文件路径，不贴内容</text></g>
+        <g><rect class="node k2" x="250" y="50" width="160" height="58" rx="8"/><rect class="tab2" x="250" y="50" width="6" height="58" rx="3"/>
+          <text x="330" y="75" text-anchor="middle" font-size="14" font-weight="600">工作</text><text class="sub" x="330" y="94" text-anchor="middle">输出只取要的几行</text></g>
+        <g><rect class="node k2" x="480" y="50" width="190" height="58" rx="8"/><rect class="tab2" x="480" y="50" width="6" height="58" rx="3"/>
+          <text x="575" y="75" text-anchor="middle" font-size="14" font-weight="600">检查点</text><text class="sub" x="575" y="94" text-anchor="middle">测试过 · 提交 · PR · 测量完</text></g>
+        <g><rect class="node k2" x="740" y="50" width="200" height="58" rx="8"/><rect class="tab2" x="740" y="50" width="6" height="58" rx="3"/>
+          <text x="840" y="75" text-anchor="middle" font-size="14" font-weight="600">交回主会话</text><text class="sub" x="840" y="94" text-anchor="middle">结果 · 挂好叫醒自己的命令</text></g>
+        <g><rect class="box" x="480" y="180" width="190" height="58" rx="8"/>
+          <text x="575" y="205" text-anchor="middle" font-size="14" font-weight="600">交接说明</text><text class="sub" x="575" y="224" text-anchor="middle">docs/notes 或临时目录</text></g>
+        <g><rect class="node k2" x="250" y="180" width="160" height="58" rx="8"/><rect class="tab2" x="250" y="180" width="6" height="58" rx="3"/>
+          <text x="330" y="205" text-anchor="middle" font-size="14" font-weight="600">新的子 agent</text><text class="sub" x="330" y="224" text-anchor="middle">先读交接说明</text></g>
+        <g><rect class="box" x="740" y="180" width="200" height="58" rx="8"/>
+          <text x="840" y="205" text-anchor="middle" font-size="14" font-weight="600">后续的活</text><text class="sub" x="840" y="224" text-anchor="middle">变基 · 夜间测试失败 · 审阅意见</text></g>
+        <path class="edge" d="M180 79 H246" marker-end="url(#ar5)"/>
+        <path class="edge" d="M410 79 H476" marker-end="url(#ar5)"/>
+        <path class="edge" d="M670 79 H736" marker-end="url(#ar5)"/><text class="lbl" x="680" y="70">做完</text>
+        <path class="edge dash" d="M560 50 C560 22 345 22 345 46" marker-end="url(#ar5)"/><text class="lbl" x="452" y="16" text-anchor="middle">上下文还短：接着做</text>
+        <path class="edge" d="M575 108 V176" marker-end="url(#ar5)"/><text class="lbl" x="585" y="140">过了交接的信号</text><text class="lbl" x="585" y="156">（到下一个检查点）</text>
+        <path class="edge" d="M740 209 H674" marker-end="url(#ar5)"/>
+        <path class="edge" d="M480 209 H414" marker-end="url(#ar5)"/>
+        <path class="edge" d="M330 180 V112" marker-end="url(#ar5)"/><text class="lbl" x="340" y="150">接着工作</text>
+      </svg>
+    </div>
+    <figcaption>后续的活不叫醒原来的子 agent：叫醒会重载它的全部上下文，之后每次调用都贵。只有后续要用到没写进任何文件的推理时，才叫醒原来那个。</figcaption>
+  </figure>
+  <ol class="steps">
+    <li><b>要求</b>：Issue、分支、已定的事、测什么、机器怎么用，以及这一节的交接规则。给文件路径（Issue、<code>docs/notes/</code>、日志），不把内容贴进去。</li>
+    <li><b>工作</b>：工具输出只取需要的几行（<code>tail</code>、<code>grep</code>），日志写进文件，大文件按段读，不整个读。</li>
+    <li><b>检查点</b>：任务停在这里。开发是写完、离线测试跑过、PR 开了；调研是结论写完；其间的一次提交、一次测量做完也算检查点。</li>
+    <li><b>交回</b>：结果报回主会话；还有要等的事，先挂好会叫醒自己的命令（见下文）。</li>
+  </ol>
+
+  <h3>什么时候交接</h3>
+  <div class="cards">
+    <div class="card"><h4>约 20 万 token 是信号</h4><p>上下文过了约 20 万 token，不是马上停：做完手上这一步，到下一个检查点再交接。Opus、high 那一档的活信号是约 40 万，那里积累的推理很难写下来。调试的假设、方案比较做到一半时不交接。新的子 agent 重建上下文本身也要花不少，剩下的调用不多时不必交接。</p></div>
+    <div class="card"><h4>后续的活换新的</h4><p>变基、夜间游戏内测试失败、审阅意见，都派一个新的子 agent，附交接说明。白天写代码的子 agent 停在 PR 开了；夜里的测试结果交给新的子 agent 改问题。</p></div>
+    <div class="card"><h4>交接说明写什么</h4><p>做完了什么；定了什么、为什么；试过但不行的和原因；还没验证的假设；文件和日志在哪。写进 <code>docs/notes/issue-&lt;编号&gt;-&lt;主题&gt;.md</code> 或自己的临时目录，接手的先读它再做别的。</p></div>
+  </div>
+  <p class="note">按这样拆能省多少是估算，还没有实测；两个阈值也是估的。接手的子 agent 因为交接而重做或弄坏了之前的工作时，在这个 Issue 的记录里写一笔，用来调整阈值。</p>
+
+  <h3>不等不会叫醒自己的东西</h3>
+  <p>会话只在这几种情况下再运行：维护者发消息、它在后台启动的命令结束、子 agent 或子会话回报、定时任务触发、Auto-fix 看到 CI 失败、冲突或审阅评论。CI 通过、自动合并都不叫醒任何人。还有活要做时，结束前在后台启动一个等到事情发生就退出的命令：</p>
+  <ul>
+    <li>PR：<code>gh pr checks 编号 --watch</code>，或循环到 PR 的状态是已合并；</li>
+    <li>第二台机器上的任务：<code>remote.py wait 名字</code>；</li>
+    <li>夜里另加一个约一小时后的定时兜底。</li>
+  </ul>
+  <p>最后一句话写明什么会叫醒自己。macOS 上夜里无人值守的运行还会被隐私弹窗卡住，开跑前先碰一遍要用的文件夹（<a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/docs/dev-macos.md">docs/dev-macos.md</a>“隐私弹窗”）。</p>
+  <p class="refs">参考：<a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/CONTRIBUTING.md#需求分支与提交">CONTRIBUTING.md「需求、分支与提交」里的“子 agent 怎么派”（含统计数字）</a><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/tree/main/docs/notes">docs/notes/</a><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/tools/remote.py">tools/remote.py</a></p>
+</section>
+
+<!-- 04 -->
 <section id="resources">
-  <h2><span class="n">03</span>共用资源：一个游戏、两台机器</h2>
+  <h2><span class="n">04</span>共用资源：一个游戏、两台机器</h2>
   <div class="prose">
     <p>几个会话同时开发时，游戏和 CPU 都会被抢。每样资源归一个工具管，工具自己拿锁、排队，会话不用互相商量。</p>
   </div>
@@ -312,9 +392,9 @@ footer { margin-top: 64px; border-top: 1px solid var(--line); padding-top: 16px;
   </figure>
 </section>
 
-<!-- 04 -->
+<!-- 05 -->
 <section id="tests">
-  <h2><span class="n">04</span>测试分层</h2>
+  <h2><span class="n">05</span>测试分层</h2>
   <div class="prose">
     <ul class="overview">
       <li>每个 PR 只跑和它相关的测试文件，整套离线测试 CI 会跑；三种规则集、真实点击、压力测试在发版前跑一次。</li>
@@ -338,9 +418,9 @@ footer { margin-top: 64px; border-top: 1px solid var(--line); padding-top: 16px;
   <p class="refs">参考：<a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/.claude/skills/sdp-offline-runs/SKILL.md">sdp-offline-runs</a><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/docs/self-test-report.md">自测报告</a><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/.github/workflows/checks.yml">CI 配置</a></p>
 </section>
 
-<!-- 05 -->
+<!-- 06 -->
 <section id="release">
-  <h2><span class="n">05</span>发版</h2>
+  <h2><span class="n">06</span>发版</h2>
   <div class="split">
     <div class="card">
       <h4>谁来定</h4>
@@ -376,9 +456,9 @@ footer { margin-top: 64px; border-top: 1px solid var(--line); padding-top: 16px;
   <p class="refs">参考：<a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/.claude/skills/sdp-release/SKILL.md">sdp-release</a><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/tools/release.py">tools/release.py</a><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/.github/workflows/release.yml">release.yml</a><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/.github/ISSUE_TEMPLATE/release.md">发版清单</a><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/releases/tag/v1.5.0">示例：v1.5.0</a></p>
 </section>
 
-<!-- 06 -->
+<!-- 07 -->
 <section id="automation">
-  <h2><span class="n">06</span>哪些已经自动化</h2>
+  <h2><span class="n">07</span>哪些已经自动化</h2>
   <div class="prose">
     <p>分四档。前两档不需要人；第三档由代理执行，但要按事先定好的规则判断，或者等人一句话；第四档必须由人来做。</p>
   </div>
@@ -393,34 +473,34 @@ footer { margin-top: 64px; border-top: 1px solid var(--line); padding-top: 16px;
   <p class="note">规律：凡是能由脚本判断对错的（测试、打包、核对上传结果）都交给脚本；需要取舍的（方案、默认值、对外怎么说）留给人；介于两者之间的写成规则（比如“3 个修复 / 7 天 / 严重 bug”），由代理照章执行。</p>
 </section>
 
-<!-- 07 -->
+<!-- 08 -->
 <section id="board">
-  <h2><span class="n">07</span>状态页</h2>
+  <h2><span class="n">08</span>状态页</h2>
   <div class="prose">
     <p>状态页是维护者自己看进度用的一个网页：等人定的事（问题、方案、建议、谁定的）、各里程碑的进度和每个 Issue 的状态、两台机器上正在跑和排队的任务、夜间队列及结果、发版记录。主会话在事情发生的那一步更新它：PR 开了或合并了、任务开始或结束、有事要定或定了。</p>
     <p>它跟维护者的账号和机器绑定，不在仓库里。仓库里对应的公开信息是 <a href="https://github.com/SmallSpider0/civ6-smart-district-planner/milestones?state=all">里程碑</a> 和 <a href="https://github.com/SmallSpider0/civ6-smart-district-planner/issues">Issue</a>。</p>
   </div>
 </section>
 
-<!-- 08 -->
+<!-- 09 -->
 <section id="rules">
-  <h2><span class="n">08</span>几条约定</h2>
+  <h2><span class="n">09</span>几条约定</h2>
   <div class="cards">
     <div class="card"><h4>不卡在提问上</h4><p>需要定的事写进 Issue，然后先做别的。方案以维护者在对话里的话，或合作者在 Issue 下的明确回复为准；含糊的赞同只当意见。</p></div>
     <div class="card"><h4>一个 Issue 一个 PR</h4><p>小 PR 好审、好回退，分支活得短不容易冲突。CI 一次约 6 分钟，只改文档的只跑校验；往 PR 上推新提交会取消没跑完的那一轮，所以提交攒几个一起推。</p></div>
     <div class="card"><h4>先调研、再动手</h4><p>功能类 Issue 的调研评论固定分“已查证的规则 / 玩家共识 / 个别意见 / 建议方案 / 待定问题”，写给懂游戏、不看代码的人：每个待定问题是一句能直接回答的问话，附上建议；代码位置和公式折叠在末尾。</p></div>
     <div class="card"><h4>对外只写自己</h4><p>README、创意工坊、介绍页只介绍本模组；同类模组只列客观事实的对照表；和它们的对比数据放在开发者文档里。</p></div>
     <div class="card"><h4>机器有关的不进仓库</h4><p>仓库是公开的：worker 数、夜间时段、第二台机器写在本机配置里，仓库只写有哪些项和默认值；账号也不进仓库。</p></div>
-    <div class="card"><h4>子 agent 的上下文要短</h4><p>子 agent 每次调用都重读整个上下文，这是它花费的大头。所以要求里给文件路径不贴内容，工具输出只取需要的几行，上下文太长时到下一个检查点写交接说明，换一个新的子 agent 接着做。</p></div>
-    <div class="card"><h4>结束前安排好叫醒</h4><p>CI 通过、自动合并都不会叫醒会话。还有活要做时，结束前在后台挂一个等到事情发生就退出的命令（等 CI、等合并、等第二台机器的任务），夜里再加一个定时兜底。</p></div>
+    <div class="card"><h4>子 agent 的上下文要短</h4><p>重读上下文是子 agent 花费的大头。模型怎么选、什么时候交接、交接说明写什么，见<a href="#dispatch">第 03 节</a>。</p></div>
+    <div class="card"><h4>结束前安排好叫醒</h4><p>CI 通过、自动合并都不会叫醒会话。还有活要做时，结束前在后台挂一个等待的命令，做法见<a href="#dispatch">第 03 节</a>最后一段。</p></div>
     <div class="card"><h4>收尾不留尾巴</h4><p>PR 合并后，解除会话和 PR 的绑定、拉取 main、清掉工作树和本地分支（<code>worktree.py prune</code>）；子会话做完由主会话归档，只留正在进行的工作。</p></div>
   </div>
   <p class="refs">参考：<a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/CONTRIBUTING.md#写作规则">写作规则</a><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/CONTRIBUTING.md#需求分支与提交">子 agent 怎么派（模型、交接、等待）</a><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/docs/pitfalls.md">Civ6 Modding 的坑（44 条）</a><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/tree/main/docs/notes">每个 Issue 的实现记录</a></p>
 </section>
 
-<!-- 09 -->
+<!-- 10 -->
 <section id="where">
-  <h2><span class="n">09</span>流程写在哪</h2>
+  <h2><span class="n">10</span>流程写在哪</h2>
   <div class="split">
     <div class="card">
       <h4>公开仓库里（合作者克隆后即可使用）</h4>
@@ -482,7 +562,7 @@ footer { margin-top: 64px; border-top: 1px solid var(--line); padding-top: 16px;
     ["Release 与介绍页", 1, "打模组包和创意工坊包，生成中英介绍页，连同本页发布到 GitHub Pages", "—", ".github/workflows/release.yml"],
     ["创意工坊上传", 2, "SteamCMD 上传后再下载回来，与提交包逐字节比对", "Steam 要密码或验证码时由人输入", "tools/workshop.py"],
     ["创意工坊网页", 2, "代理在浏览器里改简体中文的标题和简介、换图，先和线上原文比对", "封面只有物品所有者能换", null],
-    ["状态页", 2, "主会话在事件发生时更新（见第 07 节）", "—", null],
+    ["状态页", 2, "主会话在事件发生时更新（见第 08 节）", "—", null],
     ["Windows 实测", 4, "—", "合作者手动测界面缩放与布局", "docs/dev-windows.md"],
     ["改游戏配置", 4, "需要时代理先问，游戏必须关着", "同意后才改", null]
   ];
