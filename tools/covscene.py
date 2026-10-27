@@ -47,6 +47,8 @@ def load(name):
         return False
     if not game.wait_for("main menu", lambda: game.has_state("MainMenu"), 300):
         return False
+    if not game.check_mod_enabled():
+        return False
     resp = game.exec_lua("MainMenu", game.MUTE + "; " + LOAD_SAVE % name)
     if not resp.get("ok"):
         print("could not load %s: %s" % (name, resp.get("error")))

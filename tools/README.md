@@ -11,11 +11,11 @@
 | `validate.py` | 静态校验 mod 与测试文件 | 0 通过；1 有错误；2 缺工具 |
 | `luacheck.mjs` | Lua 语法与陷阱检查（validate 会调用它） | 0 无错误；1 有错误 |
 | `offline_tests.mjs` | 不开游戏跑求解逻辑测试与基准（`tests/offline/`） | 0 全过；1 有失败；2 用法错误 |
-| `deploy.py` | 校验后把 mod 同步到游戏 Mods 目录 | 0 成功；1 校验失败；2 找不到 Mods 目录；4 游戏被别的工作树占着 |
+| `deploy.py` | 校验后把 mod 同步到游戏 Mods 目录 | 0 成功；1 校验失败；2 找不到 Mods 目录；4 游戏被别的工作树占着；5 modinfo 版本号会降低 |
 | `workshop.py` | 创意工坊素材检查、预览图和示意图渲染、提交包（不连接 Steam） | 0 成功；1 超出限制；2 缺 tag、更新说明或有未提交的改动 |
 | `package.py` | 从最近一次提交打出压缩包（mod、安装说明、测试说明、“介绍与评测”页）；发布 Release 时由工作流以 `--release` 调用，不带测试说明 | 0 成功；1 校验失败；2 有未提交的改动 |
 | `run_tests.py` | 经 Tuner 在游戏内跑 `tests/test_*.lua`；Mods 里部署的不是本工作树的代码时停下 | 0 全过；1 有失败；2 连接问题；3 超时；4 游戏被占 |
-| `game.py` | 退出游戏、经 Steam 启动、从主菜单快速开局（可选建首都）；启动时的前台切换仅 macOS | 0 成功；2 超时；4 游戏被占 |
+| `game.py` | 退出游戏、经 Steam 启动、从主菜单快速开局（可选建首都）；启动时的前台切换仅 macOS | 0 成功；2 超时；3 本模组没装或没勾上；4 游戏被占 |
 | `realclick.py` | 仅 macOS：用系统鼠标事件真实点击面板，每步从面板状态读回核对 | 0 全过；1 有失败；2 环境问题 |
 | `stress.py` | 发布前在后期存档上做压力测试：AI 自动打出存档、逐步计时、魅力复核 | 0 全过；1 有问题步骤；2 环境问题 |
 | `refscene.py` | 手写的参照布局（社区公认布局）转成对比场景，画回文字或图片核对 | 0 成功；1 有错误；2 找不到场景 |
@@ -246,6 +246,7 @@ python3 -I tools/deploy.py              # 校验通过后同步
 - 目标：`paths.py` 给出的 Mods 目录下的 `SmartDistrictPlanner/`（Mac 在 `~/Library/Application Support/Sid Meier's Civilization VI/Sid Meier's Civilization VI/Mods/`，Windows 在 `文档\My Games\Sid Meier's Civilization VI\Mods\`）；`--mods-dir` 可改。
 - 增量复制，并删除部署目录里源目录已没有的文件；只动 `Mods/SmartDistrictPlanner/` 内部。
 - 结尾提示重载方式：改了 modinfo 或 `Text/` 要重启游戏，否则回主菜单重新进入对局即可。
+- 要部署的 modinfo `version` 比 Mods 目录里那份低时不部署（退出码 5）：游戏会因此把本模组记成停用（坑 45）。先把 `main` 并进分支；确实要降时加 `--allow-downgrade`。
 
 ## package.py — 压缩包
 
@@ -371,6 +372,8 @@ python3 -I tools/game.py popups --close                # 关掉排队中的游�
 python3 -I tools/game.py newgame --state SDP_Panel --capital --reveal   # 另外揭示首都周围 12 格（城址、多城测试需要）
 python3 -I tools/game.py load SDP_ref_aw-curtin-232        # 读 Saves/Single 里的单人存档（不带扩展名），等对局可用、关掉弹窗；缺内容的存档停在游戏的提示上（超时）
 ```
+
+`newgame`、`load`（以及 `stress.py prepare`、`load` 和 `covscene.py`）到主菜单后先查本模组在“额外内容”里勾没勾上，没勾上立刻停下、退出码 3，并给出要执行的 `Modding.EnableMod(句柄, true)`；重新勾上会写 `Mods.sqlite`，先问维护者（坑 45）。
 
 **不占用户的屏幕**：启动器和游戏窗口出现时会把自己切到前台（`activateIgnoringOtherApps`）。
 

@@ -8,17 +8,23 @@ static checks in validate.py run first and block the deploy on errors.
 The game reads the modinfo and text only at startup, so changes to those need
 a game restart; Lua and UI XML changes load when a game is (re)entered.
 
+A modinfo with a lower version than the deployed one is refused: on
+2026-10-27 deploying a branch at version 12 over 13 left the mod unticked in
+Additional Content, and every game after that started without it (pitfall 45).
+Merge main into the branch first, or pass --allow-downgrade.
+
 The game has one Mods folder, so a deploy takes the game lock for this
 worktree (tools/sdplock.py) and refuses while another worktree holds it.
 
-Usage: deploy.py [--dry-run] [--skip-validate] [--mods-dir DIR] [--source DIR]
+Usage: deploy.py [--dry-run] [--skip-validate] [--allow-downgrade] [--mods-dir DIR] [--source DIR]
 Exit codes: 0 deployed, 1 validation failed, 2 Mods folder not found,
-4 the game is held by another worktree.
+4 the game is held by another worktree, 5 the modinfo version would go down.
 """
 
 import argparse
 import filecmp
 import os
+import re
 import shutil
 import sys
 
@@ -29,6 +35,16 @@ import validate  # noqa: E402
 
 MOD_NAME = "SmartDistrictPlanner"
 SOURCE = os.path.join(validate.ROOT, MOD_NAME)
+
+
+def modinfo_version(mod_dir):
+    """The version attribute of <Mod> in MOD_DIR's modinfo, or None."""
+    try:
+        with open(os.path.join(mod_dir, MOD_NAME + ".modinfo"), encoding="utf-8") as fh:
+            m = re.search(r'<Mod\b[^>]*\bversion="(\d+)"', fh.read())
+    except OSError:
+        return None
+    return int(m.group(1)) if m else None
 
 
 def plan(source, target):
@@ -60,6 +76,8 @@ def main(argv=None):
     ap = argparse.ArgumentParser(description="Deploy the mod into the game's Mods folder")
     ap.add_argument("--dry-run", action="store_true", help="show what would change")
     ap.add_argument("--skip-validate", action="store_true", help="deploy even if validate.py fails")
+    ap.add_argument("--allow-downgrade", action="store_true",
+                    help="deploy a modinfo version lower than the deployed one (unticks the mod, pitfall 45)")
     ap.add_argument("--mods-dir", default=paths.mods_dir(), help="the game's Mods folder")
     ap.add_argument("--source", default=SOURCE, help=argparse.SUPPRESS)  # for testing the tool
     args = ap.parse_args(argv)
@@ -73,10 +91,16 @@ def main(argv=None):
         print("deploy: Mods folder not found: %s" % args.mods_dir)
         return 2
 
-    if not args.dry_run:
-        sdplock.claim_or_exit(validate.ROOT)  # one Mods folder: only the game's holder deploys
     target = os.path.join(os.path.abspath(args.mods_dir), MOD_NAME)
     source = os.path.abspath(args.source)
+    new, old = modinfo_version(source), modinfo_version(target)
+    if new is not None and old is not None and new < old and not args.allow_downgrade:
+        print("deploy: the modinfo version would go down from %d to %d; the game then unticks the mod in "
+              "Additional Content (pitfall 45). Merge main into this branch first, or pass --allow-downgrade; "
+              "nothing deployed" % (old, new))
+        return 5
+    if not args.dry_run:
+        sdplock.claim_or_exit(validate.ROOT)  # one Mods folder: only the game's holder deploys
     added, updated, removed, unchanged = plan(source, target)
     for label, items in (("add", added), ("update", updated), ("remove", removed)):
         for rel in items:
