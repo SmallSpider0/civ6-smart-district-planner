@@ -241,7 +241,7 @@ footer { margin-top: 64px; border-top: 1px solid var(--line); padding-top: 16px;
   <h2><span class="n">02</span>角色与会话</h2>
   <div class="prose">
     <ul class="overview">
-      <li>方案由维护者在 Claude Code 对话里拍板，或由合作者在 Issue 下明确回复（选定方案、逐条回答）来定；两人意见不同以维护者为准。只修 bug 的版本按规则自动发，其余的发版只等维护者的话。</li>
+      <li>方案由维护者在 Claude Code 对话里拍板，或由合作者在带 <code>auto</code> 标签的 Issue 下明确回复（选定方案、逐条回答）来定；两人意见不同以维护者为准。只修 bug 的版本按规则自动发，其余的发版只等维护者的话。</li>
       <li>主会话管全局：提 Issue、分派、转达决定、管里程碑、更新状态页、跑夜间队列、Issue 监听、改对外页面（创意工坊）、汇报；几行的小修也在这里做。</li>
       <li>调研、测量和每个 Issue 的开发交给子 agent，开发的各用自己的 git 工作树；它们任何时候都能派出去，怎么选模型、什么时候交接见<a href="#dispatch">第 03 节</a>。维护者点名要看着做的、或改动大来回多的，另开子会话，做完归档。</li>
       <li>需要人确认的问题写到 Issue 上，工作照常往下走，不停下来等。</li>
@@ -249,7 +249,7 @@ footer { margin-top: 64px; border-top: 1px solid var(--line); padding-top: 16px;
   </div>
   <figure>
     <div class="frame wide">
-      <svg viewBox="0 0 960 330" role="img" aria-label="角色关系：维护者在对话里给主会话拍板，主会话向维护者汇报；合作者在 GitHub 上提 Issue，合作者在 Issue 下的明确回复也能定方案，维护者要求时主会话开监听；主会话把调研和开发分派给子 agent，维护者点名的大改动开子会话，它们做完后把结果报回主会话；状态页由主会话更新。">
+      <svg viewBox="0 0 960 330" role="img" aria-label="角色关系：维护者在对话里给主会话拍板，主会话向维护者汇报；合作者在 GitHub 上提 Issue，合作者在带 auto 标签的 Issue 下的明确回复也能定方案，维护者要求时主会话开监听，只处理带 auto 标签的 Issue；主会话把调研和开发分派给子 agent，维护者点名的大改动开子会话，它们做完后把结果报回主会话；状态页由主会话更新。">
         <defs><marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="arrowhead"/></marker></defs>
         <g><rect class="node k4" x="20" y="110" width="150" height="58" rx="8"/><rect class="tab4" x="20" y="110" width="6" height="58" rx="3"/>
           <text x="95" y="135" text-anchor="middle" font-size="14" font-weight="600">维护者</text><text class="sub" x="95" y="154" text-anchor="middle">方案 · 发版 · 对外文字</text></g>
@@ -270,7 +270,7 @@ footer { margin-top: 64px; border-top: 1px solid var(--line); padding-top: 16px;
         <path class="edge" d="M170 130 H296" marker-end="url(#ar2)"/><text class="lbl" x="196" y="122">拍板</text>
         <path class="edge" d="M296 152 H174" marker-end="url(#ar2)"/><text class="lbl" x="196" y="172">汇报、提问</text>
         <path class="edge" d="M170 269 H296" marker-end="url(#ar2)"/><text class="lbl" x="186" y="261">明确回复可定方案</text>
-        <path class="edge dash" d="M385 240 V172" marker-end="url(#ar2)"/><text class="lbl" x="392" y="212">监听（维护者要求时）</text>
+        <path class="edge dash" d="M385 240 V172" marker-end="url(#ar2)"/><text class="lbl" x="392" y="212">监听（只处理 auto 标签）</text>
         <path class="edge" d="M470 130 C520 130 520 45 566 45" marker-end="url(#ar2)"/>
         <path class="edge" d="M470 136 C520 136 520 110 566 110" marker-end="url(#ar2)"/>
         <path class="edge" d="M470 142 C520 142 520 175 566 175" marker-end="url(#ar2)"/>
@@ -497,7 +497,7 @@ footer { margin-top: 64px; border-top: 1px solid var(--line); padding-top: 16px;
 <section id="rules">
   <h2><span class="n">09</span>几条约定</h2>
   <div class="cards">
-    <div class="card"><h4>不卡在提问上</h4><p>需要定的事写进 Issue，然后先做别的。方案以维护者在对话里的话，或合作者在 Issue 下的明确回复为准；含糊的赞同只当意见。</p></div>
+    <div class="card"><h4>不卡在提问上</h4><p>需要定的事写进 Issue，然后先做别的。方案以维护者在对话里的话，或合作者在带 auto 标签的 Issue 下的明确回复为准；含糊的赞同只当意见。</p></div>
     <div class="card"><h4>一个 Issue 一个 PR</h4><p>小 PR 好审、好回退，分支活得短不容易冲突。CI 一次约 6 分钟，只改文档的只跑校验；往 PR 上推新提交会取消没跑完的那一轮，所以提交攒几个一起推。</p></div>
     <div class="card"><h4>先调研、再动手</h4><p>功能类 Issue 的调研评论固定分“已查证的规则 / 玩家共识 / 个别意见 / 建议方案 / 待定问题”，写给懂游戏、不看代码的人：每个待定问题是一句能直接回答的问话，附上建议；代码位置和公式折叠在末尾。</p></div>
     <div class="card"><h4>对外只写自己</h4><p>README、创意工坊、介绍页只介绍本模组；同类模组只列客观事实的对照表；和它们的对比数据放在开发者文档里。</p></div>
@@ -555,10 +555,10 @@ footer { margin-top: 64px; border-top: 1px solid var(--line); padding-top: 16px;
   ];
   // [step, level, how (may contain a file link), what a person still does]
   var ROWS = [
-    ["发现新 Issue", 2, "维护者要求时开监听脚本，每 2 分钟轮询（连不上 GitHub 时 30 秒后重试），只把合作者的 Issue 和评论交给代理；不开时在两件事之间查一次", "—", "tools/watch_issues.py"],
+    ["发现新 Issue", 2, "维护者要求时开监听脚本，每 2 分钟轮询（连不上 GitHub 时 30 秒后重试），只把维护者或合作者打了 auto 标签的 Issue 上的动静交给代理；合作者的其余 Issue 和评论记进待看列表，等维护者看；不开时在两件事之间查一次", "—", "tools/watch_issues.py"],
     ["分诊、修 bug", 2, "复现，写一个在旧代码上失败的测试，修好，挂到下一个小版本的里程碑", "—", ".claude/skills/sdp-issue/SKILL.md"],
     ["功能调研", 2, "子 agent 查规则库、游戏与依赖模组的源码、同类模组、玩家社区，写成 Issue 评论", "—", null],
-    ["功能方案", 4, "代理列出方案 A、B 和建议，用玩家看得懂的话写在 Issue 里", "维护者在对话里拍板，或合作者在 Issue 下明确回复", null],
+    ["功能方案", 4, "代理列出方案 A、B 和建议，用玩家看得懂的话写在 Issue 里", "维护者在对话里拍板，或合作者在带 auto 标签的 Issue 下明确回复", null],
     ["里程碑", 2, "bug 确认时、功能方案定了时挂上对应版本，没有就新建；版本号按改动大小定；不做的关掉，以后再说的打 later；发版时移走没做完的、关掉里程碑", "—", null],
     ["并行开发", 2, "每个 Issue 一个子 agent，各自的 git 工作树和分支；维护者点名的大改动开子会话", "—", "tools/worktree.py"],
     ["锁与排队", 1, "游戏锁、本机重活暂停与恢复、第二台机器的格子队列与回填", "—", "tools/sdplock.py"],
