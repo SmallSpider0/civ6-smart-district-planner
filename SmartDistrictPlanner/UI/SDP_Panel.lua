@@ -2129,6 +2129,14 @@ SDP_Panel = {
   SetSelected = SetSelected,
   SetState = function(districtType, state) SetState(districtType, state) end,
   SetCount = SetCount,
+  -- Forget the counts set in this game session, so each city shows its default again.
+  ForgetCounts = function()
+    m_counts = {}
+    ClearResult()
+    ShowCount()
+    UpdateSpecialtyNote()
+    UpdateEstimate()
+  end,
   SetRemind = SetRemind,
   SetApart = SetApart,
   SelectSolution = function(n)
