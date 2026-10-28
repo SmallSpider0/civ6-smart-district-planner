@@ -36,7 +36,9 @@ local m_weightIM = InstanceManager:new("WeightColumn", "Root", Controls.MultiWei
 local m_solutionIM = InstanceManager:new("SolutionRow", "Root", Controls.MultiSolutionStack)
 local m_resultIM = InstanceManager:new("ResultRow", "Root", Controls.MultiResultStack)
 
--- A district list: States = { [type] = state }, Count = number or nil.
+-- A district list: States = { [type] = state }, Count = number or nil: how
+-- many districts that take population each city ends with (issue 144; nil:
+-- SDP_UI.DEFAULT_COUNT).
 local m_shared = { States = {}, Count = nil } -- every city without its own
 local m_plans = {}     -- [participant Key] = a city's own list
 local m_planFor = "ALL" -- the list the grid edits: "ALL" or a participant Key
@@ -107,17 +109,45 @@ end
 -- ===========================================================================
 local function Districts() return SDP_Rules.PlannableDistricts(Game.GetLocalPlayer()) end
 
--- The list the grid shows and edits.
+-- The list the grid shows and edits, and its key ("ALL": the shared one).
 local function EditedList()
-  if m_planFor ~= "ALL" and m_plans[m_planFor] ~= nil then return m_plans[m_planFor] end
-  return m_shared
+  if m_planFor ~= "ALL" and m_plans[m_planFor] ~= nil then return m_plans[m_planFor], m_planFor end
+  return m_shared, "ALL"
 end
 
 -- Empire-limited districts the player has built up to the limit (issue 108):
 -- shown as built, never asked for.
 local function Built() return SDP_City.EmpireBuilt(Game.GetLocalPlayer(), Districts()) end
 
-local function ListOf(list) return SDP_UI.ListRequest(Districts(), list.States, list.Count, Built()) end
+-- What the existing city of a participant Key has (SDP_City.SpecialtyHave;
+-- nil for the shared list and a planned city), pins being replaced left out.
+local function HaveOf(key)
+  local cityID = key ~= nil and tonumber(key:match("^C(%d+)$") or "") or nil
+  if cityID == nil then return nil end
+  local ignore = nil
+  if m_replace then
+    for _, pin in ipairs(P.OwnPins()) do
+      ignore = ignore or {}
+      ignore[pin.ID] = true
+    end
+  end
+  return SDP_City.HaveOf(Game.GetLocalPlayer(), cityID, ignore)
+end
+
+-- The count is a target (issue 144). A city's own list starts from what
+-- the city has; the shared list serves cities with different numbers, so
+-- it goes up to the number of district types that take population.
+local function ListOf(list, key)
+  local districts = Districts()
+  if key ~= nil and key ~= "ALL" then
+    return SDP_UI.ListRequest(districts, list.States, list.Count or SDP_UI.DEFAULT_COUNT, Built(), HaveOf(key))
+  end
+  local ceiling = 0
+  for _, d in ipairs(districts) do
+    if d.Specialty then ceiling = ceiling + 1 end
+  end
+  return SDP_UI.ListRequest(districts, list.States, list.Count or SDP_UI.DEFAULT_COUNT, Built(), nil, ceiling)
+end
 
 local function WonderTypes()
   local list = {}
@@ -168,9 +198,9 @@ function P.Request()
   for _, part in ipairs(participants) do
     local own = m_plans[part.Key]
     if own ~= nil then
-      local list = ListOf(own)
+      local list = ListOf(own, part.Key)
       plans, pools, counts, autos, offs = plans or {}, pools or {}, counts or {}, autos or {}, offs or {}
-      plans[part.Key], pools[part.Key], counts[part.Key], autos[part.Key] = list.Must, list.Pool, list.Count, list.Auto
+      plans[part.Key], pools[part.Key], counts[part.Key], autos[part.Key] = list.Must, list.Pool, list.Target, list.Auto
       offs[part.Key] = SDP_UI.OffSet(own.States)
       if #list.Must > 0 or list.Pick > 0 then anything = true end
     end
@@ -178,7 +208,7 @@ function P.Request()
   local wonders = WonderTypes()
   if #participants == 0 or (not anything and #wonders == 0) then return nil end
   return {
-    PlayerID = playerID, Tier = m_tier, Districts = shared.Must, Pool = shared.Pool, Count = shared.Count, Auto = shared.Auto,
+    PlayerID = playerID, Tier = m_tier, Districts = shared.Must, Pool = shared.Pool, Count = shared.Target, Auto = shared.Auto, Target = true,
     Plans = plans, Pools = pools, Counts = counts, Autos = autos, Wonders = wonders, Sites = sites,
     Off = SDP_UI.OffSet(m_shared.States), Offs = offs,
     Existing = existing, Weights = weights, Land = m_weights.LAND > 0, Coverage = m_weights.COVERAGE, Distance = m_weights.DISTANCE,
@@ -205,6 +235,8 @@ function P.SetReplace(on)
     m_replace = on
     ClearResult()
     Remember()
+    -- A city's own count starts from what it has, replaced pins left out.
+    if m_planFor ~= "ALL" then P.RefreshLists() end
   end
 end
 
@@ -296,11 +328,12 @@ function P.SetSelected(districtType, on)
   end
 end
 
--- How many districts that take population each city of the edited list plans.
+-- How many districts that take population each city of the edited list
+-- ends with (issue 144): a city with as many or more plans none from the pool.
 function P.SetCount(count)
-  local list = OwnList()
-  local before = ListOf(list).Count
-  local after = SDP_UI.ListRequest(Districts(), list.States, count, Built()).Count
+  local list, key = OwnList()
+  local before = ListOf(list, key).Target
+  local after = ListOf({ States = list.States, Count = count }, key).Target
   list.Count = after
   if after ~= before then ClearResult() end
   P.RefreshLists()
@@ -644,7 +677,7 @@ function P.RefreshLists()
   if m_planFor ~= "ALL" and byKey[m_planFor] == nil then m_planFor = "ALL" end
   -- Plan: whose list, templates, the districts and how many.
   P.PopulatePlanPulls(participants)
-  local list = EditedList()
+  local list, key = EditedList()
   local districts = Districts()
   local built = Built()
   local rows = SDP_UI.BuildCells(m_cellIM, m_utilityIM, Controls.MultiDistrictStack, Controls.MultiUtilityStack, districts,
@@ -683,11 +716,11 @@ function P.RefreshLists()
     m_view.Districts[#m_view.Districts + 1] = { Type = row.Type, State = row.State, Status = status, Group = row.Group,
       Cell = row.Cell, Built = built[d.Type] ~= nil or nil }
   end
-  local counts = ListOf(list)
-  Controls.MultiCountValue:SetText(tostring(counts.Count))
-  Controls.MultiCountLess:SetDisabled(counts.Count <= counts.MustSpecialty)
-  Controls.MultiCountMore:SetDisabled(counts.Count >= counts.MustSpecialty + #counts.Pool)
-  m_view.Count = counts.Count
+  local counts = ListOf(list, key)
+  Controls.MultiCountValue:SetText(tostring(counts.Target))
+  Controls.MultiCountLess:SetDisabled(counts.Target <= counts.Have + counts.MustSpecialty)
+  Controls.MultiCountMore:SetDisabled(counts.Target >= counts.Top)
+  m_view.Count = counts.Target
 
   -- Wonders: tags and the "add" pulldown.
   local wonders = SDP_Wonders.List(playerID)
@@ -1043,8 +1076,8 @@ Controls.MultiSwapCheck:RegisterCheckHandler(function() P.SetSwap(Controls.Multi
 Controls.MultiReplaceCheck:RegisterCheckHandler(function() P.SetReplace(Controls.MultiReplaceCheck:IsChecked()) end)
 Controls.MultiRemindCheck:RegisterCheckHandler(function() P.SetRemind(Controls.MultiRemindCheck:IsChecked()) end)
 Controls.MultiApartCheck:RegisterCheckHandler(function() P.SetApart(Controls.MultiApartCheck:IsChecked()) end)
-Controls.MultiCountLess:RegisterCallback(Mouse.eLClick, function() P.SetCount(ListOf(EditedList()).Count - 1) end)
-Controls.MultiCountMore:RegisterCallback(Mouse.eLClick, function() P.SetCount(ListOf(EditedList()).Count + 1) end)
+Controls.MultiCountLess:RegisterCallback(Mouse.eLClick, function() P.SetCount(ListOf(EditedList()).Target - 1) end)
+Controls.MultiCountMore:RegisterCallback(Mouse.eLClick, function() P.SetCount(ListOf(EditedList()).Target + 1) end)
 Controls.MultiSolveButton:RegisterCallback(Mouse.eLClick, function() P.Solve() end)
 Controls.MultiContinueButton:RegisterCallback(Mouse.eLClick, function() P.Continue() end)
 Controls.MultiCancelButton:RegisterCallback(Mouse.eLClick, function() SDP_Task.Cancel() end)

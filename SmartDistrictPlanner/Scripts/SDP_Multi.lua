@@ -235,6 +235,9 @@ Session.__index = Session
 --                        population per city (required ones included): each
 --                        city picks the rest from its pool (feedback item 11)
 --   Pools, Counts        { [participant Key] = ... } overrides of Pool, Count
+--   Target               true: Count and Counts are how many districts that
+--                        take population a city ends with, counting what it
+--                        has built or pinned (SDP_City.SpecialtyHave, issue 144)
 --   Auto, Autos          { [district type] = true }: districts a city gets when
 --                        it needs them (SDP_City.NeedsAuto); Autos per Key
 --   Sites                { [site Key] = false }: city-center pins left out
@@ -349,6 +352,15 @@ function SDP_Multi.NewSession(request)
     end
     part.Plan = plan
     asked[p] = { Count = count, Seen = seen, Kept = kept, Status = status, PinnedHere = pinnedHere }
+    -- request.Target: the count is how many the city ends with (issue 144),
+    -- so an existing city plans the rest; a type tacked here and planned
+    -- again (in the city's own list) counts once.
+    if request.Target and part.Kind == "CITY" then
+      local planned = {}
+      for _, districtType in ipairs(plan) do planned[districtType] = true end
+      part.Have = SDP_City.HaveCount(SDP_City.SpecialtyHave(part.Scan), planned)
+      asked[p].Count = count - part.Have
+    end
   end
 
   -- A district with an empire limit (government plaza, diplomatic quarter)
