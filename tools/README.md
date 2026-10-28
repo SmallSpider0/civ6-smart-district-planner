@@ -28,6 +28,7 @@
 | `sdpsched.py` | 第二台机器上所有会话共用的任务队列（`remote.py` 拷过去调用，本机不直接用） | 任务的退出码 |
 | `preflight_night.py` | 仅 macOS 有用：碰一遍夜里要用的文件夹，让隐私弹窗在人还在时出现 | 0 都能访问；1 有文件夹出问题 |
 | `worktree.py` | 新建能直接用的工作树（接好依赖和参考源码的链接）、列出与清理已合并的 | 0 成功 |
+| `status/sync.py`、`status/watch.py` | 维护者的状态页：从调度记录、git、GitHub、夜间队列和几条手写说明生成数据并推送；后台循环 | 见下文 |
 
 ## paths.py、setup_reference.py — 位置与参考源码
 
@@ -563,3 +564,38 @@ python3 -I tools/worktree.py prune --remote            # 删掉其中能删的�
 - 能删的是上面没有 `main` 缺的东西的分支：PR 已合并；或者分支超过一天，并且它的提交已在 `main` 里、它改过的每个文件在 `main` 上都一样（被别的 PR 带进去了，如调研记录）、或者发版的 tag 包含它（发版分支）。开着的 PR 用的分支（来源或目标）和一天内的分支算在做，不列。
 - 只列不删：有 `main` 没有的改动的分支（`unique`，要人看）、有未提交改动的工作树、游离的工作树、还没有自己提交的工作树分支。`gh` 用不了时什么都不删。
 
+## status/ — 状态页
+
+维护者看进度的网页（`status/page.html`）只读一个文件 `status.json`，每分钟刷新一次。`status/sync.py` 生成它，`status/watch.py` 是后台唯一的循环。页面的内容几乎都是自动生成的：
+
+- **自动**：两台机器的格子、在跑和排队的任务（调度工具自己的记录，没走排队工具的 `compare.mjs`、离线测试、游戏内测试也算上）；除 `main` 以外有工作树或开着 PR 的分支（提交里的 Issue、PR 的检查和自动合并、夜间队列里排给它的项）和多出来的分支（`worktree.py stale`）；GitHub 的里程碑和其中每个 Issue 的状态；开着的 Issue 谁开的、谁打的 `auto`、谁该回复（账号名只显示成“我们 / 合作者 / 玩家”）；夜间队列；最近的发版，每版的摘要取自发布说明里“自 … 以来的变化”那一节。顶上的概览和每个里程碑的“下一步”由页面从这些数据算出来。
+- **手写**：只有三类，经 `set|update|delete` 写进共用目录下的 `status/manual.json`：`decisions/*`（要维护者决定的事）、`jobs/*`（调度记录说不清的任务说明，如调研）、`milestones/*`（只补 `goal`、`eta`、`blocker`）。字段只能用页面读的那些（`sync.py` 的 `FIELDS`），`set` 必须带 `REQUIRED` 里的字段，其他字段直接拒绝。**发版记录不手写**：`releases/*` 一律拒绝，摘要不好就改 GitHub 上的发布说明。
+
+```bash
+python3 -I tools/status/sync.py                       # 全量：机器、git、GitHub、夜间队列，写进共用目录的 status/out/
+python3 -I tools/status/sync.py --quick               # 只更新机器（便宜，每分钟一次）
+python3 -I tools/status/sync.py --quick --push        # 再打包成 status.json、查私人信息、推送
+python3 -I tools/status/sync.py set decisions/issue-120 '{"title": "...", "status": "open"}'
+python3 -I tools/status/sync.py update decisions/issue-120 '{"status": "done", "doneAt": "2026-10-27"}'   # 合并字段，值为 null 的删掉
+python3 -I tools/status/sync.py delete jobs/old-job
+python3 -I tools/status/sync.py get [decisions]
+python3 -I tools/status/watch.py                      # 后台循环：每分钟 --quick --push，每 5 分钟全量
+```
+
+- **推送**：`ssh <push_host> status.json` 或 `ssh <push_host> index.html`，文件从标准输入传过去；服务器上那把钥匙只该能写这两个文件。内容（不算时间戳）变了或满 10 分钟才推 `status.json`，`page.html` 变了才推 `index.html`。没配 `push_host` 时只打包、检查，不推送，CI 和合作者也能跑。
+- **私人信息检查**：推送前在 `status.json` 里找本机和服务器路径（`/Users/`、`/home/`、`/private/`、`/var/`、`/etc/`）、`.ssh`、IP、邮箱，以及本机配置里的 `private_words`、`push_host`、`page_host`。找到任何一个就不推，退出码 4。仓库是公开的，账号名、主机名、地址、页面路径都只写在本机配置里。
+- **后台循环**：`watch.py` 只在出问题时退出（每种问题报一次）：连续 3 次推送失败、有私人信息、某台机器用的格子超过上限、游戏锁被占超过 2 小时、页面证书验证不过或不到 2 天到期（配了 `page_host` 时每小时查一次）。启动它的会话收到后转告主会话，再把循环开起来。新的自动内容加进 `sync.py`，不另开后台脚本。
+- **本机配置**：`~/.config/sdp/local.json`（见上文 sdplock.py）里的 `status` 一项，每项都可省：
+
+  ```json
+  "status": {
+    "push_host": "status-push",
+    "page_host": "status.example.org",
+    "private_words": ["alice", "build-box"],
+    "local_name": "这台机器",
+    "remote_name": "第二台机器"
+  }
+  ```
+
+  `push_host` 是接收文件的 ssh 主机名（`~/.ssh/config` 里的别名），`page_host` 是页面所在的主机（查证书用），`private_words` 是这台机器自己的词（账号名、主机名等，不分大小写），`local_name`、`remote_name` 是两张机器卡片的标题。第二台机器沿用 `remote`、`remote_slots`、`remote_path`。
+- 离线测试：`python3 -I -m unittest discover -s tests/tools -p "test_status.py"`（发版摘要、字段检查、打包、私人信息、没配置时不推送）。

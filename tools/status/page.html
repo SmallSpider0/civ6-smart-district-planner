@@ -1,0 +1,631 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<title>区域规划器进度</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<!-- Web fonts load without blocking: where Google Fonts is unreachable the system fonts in the stacks below are used. -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@600;700&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" media="print" onload="this.media='all'">
+<style>
+/* Same look as the mod's "介绍与评测" page: one reading column of status blocks, decisions first; map-room ink on cool paper, brass accent. */
+:root {
+  --bg: #f3f5f6; --surface: #ffffff; --fg: #14202a; --muted: #56646e; --faint: #8794a0; --line: #d4dce1;
+  --accent: #946510; --accent-soft: #f4e8cf; --teal: #1d6470; --teal-soft: #dcecef; --code-bg: #eaeff2;
+  --good: #1a7f37; --warn: #a35f00; --bad: #c0392b;
+  --font-display: "Noto Serif SC", "Songti SC", "STSong", serif;
+  --font-body: "Noto Sans SC", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e161b; --surface: #15212a; --fg: #e3eaee; --muted: #9fb0ba; --faint: #73848f; --line: #2a3a44;
+    --accent: #dcae4c; --accent-soft: #3a2e15; --teal: #6ab9c6; --teal-soft: #173039; --code-bg: #1a2730;
+    --good: #4cb36a; --warn: #e1a33a; --bad: #ef6f62;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e161b; --surface: #15212a; --fg: #e3eaee; --muted: #9fb0ba; --faint: #73848f; --line: #2a3a44;
+  --accent: #dcae4c; --accent-soft: #3a2e15; --teal: #6ab9c6; --teal-soft: #173039; --code-bg: #1a2730;
+  --good: #4cb36a; --warn: #e1a33a; --bad: #ef6f62;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 16px; line-height: 1.7;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 0 64px;
+}
+.col { max-width: 48rem; margin-inline: auto; }
+h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; line-height: 1.3; }
+h1 { font-size: clamp(1.8rem, 4.4vw, 2.4rem); margin: 0 0 10px; }
+h2 { font-size: 1.4rem; margin: 0 0 10px; }
+h3 { font-size: 1.08rem; margin: 0 0 4px; }
+p { margin: 8px 0; }
+a { color: var(--teal); }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+code { font-family: var(--font-mono); font-size: 0.86em; background: var(--code-bg); padding: 1px 5px; border-radius: 4px; }
+.eyebrow { font-size: 0.8rem; letter-spacing: 0.08em; color: var(--accent); font-weight: 700; margin: 0 0 8px; }
+.lead { font-size: 1.04rem; color: var(--muted); margin: 0; }
+.overview { margin: 6px 0 0; padding-left: 1.1em; color: var(--fg); font-size: 1rem; }
+.overview li { margin: 3px 0; }
+.overview .k { color: var(--muted); }
+.stamp { font-family: var(--font-mono); font-size: 0.8rem; color: var(--faint); margin-top: 12px; font-variant-numeric: tabular-nums; }
+header.hero { padding-block: 44px 22px; border-bottom: 1px solid var(--line); }
+section { padding-block: 32px 4px; }
+section > h2 .count, h3.sub .count { font-family: var(--font-mono); font-size: 0.75em; color: var(--faint); margin-left: 6px; font-weight: 400; }
+.empty { color: var(--faint); font-size: 0.92rem; border: 1px dashed var(--line); border-radius: 8px; padding: 12px 16px; }
+.stack { display: grid; gap: 12px; }
+.item { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 14px 18px; min-width: 0; }
+.item.decision { border-left: 3px solid var(--accent); }
+.item.ask { border-left: 3px solid var(--bad); padding-block: 10px; }
+.item .mhead .tag { align-self: center; }
+.item .meta { font-size: 0.84rem; color: var(--muted); display: flex; flex-wrap: wrap; gap: 4px 14px; }
+.item .rec { margin: 8px 0 0; }
+.item .rec b { color: var(--accent); }
+ul.opts { list-style: none; padding: 0; margin: 8px 0 0; display: grid; gap: 4px; font-size: 0.94rem; }
+ul.opts li { display: flex; gap: 8px; align-items: baseline; min-width: 0; }
+ul.opts b { font-family: var(--font-mono); font-size: 0.84rem; color: var(--accent); min-width: 1.4em; }
+.mhead { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 12px; }
+.mhead h3 { margin: 0; }
+.bar { height: 6px; background: var(--code-bg); border-radius: 999px; overflow: hidden; margin: 10px 0 4px; }
+.bar > i { display: block; height: 100%; background: var(--teal); border-radius: 999px; }
+.kv { display: grid; grid-template-columns: 5.5em 1fr; gap: 2px 10px; font-size: 0.92rem; margin-top: 8px; }
+.kv dt { color: var(--muted); }
+.kv dd { margin: 0; min-width: 0; }
+ul.finished { list-style: none; padding: 0; margin: 8px 0 0; display: grid; gap: 6px; font-size: 0.94rem; }
+ul.finished li { display: flex; gap: 12px; align-items: baseline; min-width: 0; }
+ul.finished .when { font-family: var(--font-mono); font-size: 0.82rem; color: var(--faint); min-width: 5.5em; }
+details.more { margin-top: 6px; }
+details.more > summary { cursor: pointer; color: var(--muted); font-size: 0.88rem; width: fit-content; }
+details.more > summary:hover { color: var(--fg); }
+ul.finished li.empty { border: 1px dashed var(--line); border-radius: 8px; padding: 10px 14px; color: var(--faint); }
+ul.issues { list-style: none; padding: 0; margin: 10px 0 0; display: grid; gap: 4px; font-size: 0.92rem; }
+ul.issues li { display: flex; gap: 8px; align-items: baseline; min-width: 0; }
+ul.issues .n { font-family: var(--font-mono); font-size: 0.82rem; color: var(--faint); min-width: 3.2em; }
+.tag { display: inline-block; font-size: 0.72rem; padding: 0 8px; border-radius: 999px; font-weight: 500; white-space: nowrap; line-height: 1.7; }
+.tag.done { color: var(--good); background: color-mix(in srgb, var(--good) 14%, transparent); }
+.tag.doing { color: var(--accent); background: var(--accent-soft); }
+.tag.todo, .tag.planned, .tag.held, .tag.dropped { color: var(--muted); background: var(--code-bg); }
+.tag.blocked, .tag.waiting { color: var(--bad); background: color-mix(in srgb, var(--bad) 12%, transparent); }
+.tag.active { color: var(--teal); background: var(--teal-soft); }
+.tag.where { color: var(--teal); background: var(--teal-soft); }
+.tablewrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { color: var(--muted); font-weight: 500; font-size: 0.84rem; }
+.note { color: var(--muted); font-size: 0.9rem; }
+/* Slot strips: one row per machine, one cell per worker slot, a segment per job coloured by the session that owns it. */
+.devices { display: grid; gap: 14px; margin: 4px 0 18px; }
+.dev { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 12px 16px; min-width: 0; }
+.dev .dhead { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; margin-bottom: 8px; }
+.dev .dhead h3 { margin: 0; font-size: 1rem; }
+.dev .used { font-family: var(--font-mono); font-size: 0.84rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.slots { display: grid; grid-template-columns: repeat(var(--n), minmax(0, 1fr)); gap: 2px; }
+.seg { height: 30px; border-radius: 4px; min-width: 0; display: flex; align-items: center; padding: 0 6px; overflow: hidden;
+  font-size: 0.74rem; color: var(--fg); white-space: nowrap; text-overflow: ellipsis; cursor: default; position: relative; }
+.seg span { overflow: hidden; text-overflow: ellipsis; background: var(--surface); padding: 0 5px; border-radius: 3px; line-height: 1.5; }
+.seg.free { background: transparent; border: 1px dashed var(--line); }
+.seg.ext { background: var(--code-bg); border: 1px solid var(--line); }
+.seg.paused { background-image: repeating-linear-gradient(135deg, transparent 0 5px, color-mix(in srgb, var(--surface) 70%, transparent) 5px 9px); }
+.seg.over { outline: 2px solid var(--bad); outline-offset: -2px; }
+.seg:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.dev .stamp { margin-top: 8px; }
+.dev h4, h4.other { font-size: 0.84rem; color: var(--muted); font-weight: 500; margin: 0 0 4px; }
+.lanes { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 20px; margin-top: 12px; }
+@media (max-width: 640px) { .lanes { grid-template-columns: 1fr; } }
+.lanes > div { min-width: 0; }
+ul.jobs, ol.jobs { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
+.jobs li { display: flex; gap: 8px; align-items: flex-start; min-width: 0; font-size: 0.9rem; line-height: 1.5; }
+.jobs .dot { margin-top: 6px; }
+.jobs .qn { font-family: var(--font-mono); font-size: 0.78rem; color: var(--faint); min-width: 1.2em; margin-top: 1px; }
+.jl { display: grid; min-width: 0; }
+.jl b { font-family: var(--font-mono); font-size: 0.84rem; font-weight: 500; overflow-wrap: anywhere; }
+.jl .facts { color: var(--muted); font-size: 0.8rem; }
+.jl .desc { color: var(--fg); font-size: 0.84rem; margin-top: 2px; }
+.dot.ext { background: var(--code-bg); border: 1px solid var(--faint); }
+.dot.free { border: 1px dashed var(--faint); }
+.recent { margin-top: 10px; font-size: 0.82rem; }
+h3.sub { font-size: 1rem; margin: 18px 0 2px; }
+.work td .small { display: block; color: var(--muted); font-size: 0.8rem; }
+table.issues th { white-space: nowrap; }
+table.issues td:first-child { min-width: 12em; }
+.tag.pass { color: var(--good); background: color-mix(in srgb, var(--good) 14%, transparent); }
+.tag.fail { color: var(--bad); background: color-mix(in srgb, var(--bad) 12%, transparent); }
+.tag.pending, .tag.none { color: var(--accent); background: var(--accent-soft); }
+.work td:first-child { min-width: 11em; }
+h4.other { margin-top: 6px; }
+.queue { display: flex; flex-wrap: wrap; gap: 6px 8px; margin-top: 8px; font-size: 0.82rem; color: var(--muted); align-items: center; }
+.chip { display: inline-flex; align-items: center; gap: 6px; border: 1px dashed var(--line); border-radius: 999px; padding: 0 9px; line-height: 1.8; }
+.dot { width: 9px; height: 9px; border-radius: 2px; flex: none; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 0.82rem; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.tip { position: fixed; z-index: 20; max-width: min(320px, 90vw); background: var(--fg); color: var(--bg); font-size: 0.8rem; line-height: 1.5;
+  padding: 6px 9px; border-radius: 6px; pointer-events: none; }
+:root { --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --s1: #3987e5; --s2: #d95926; --s3: #199e70; } }
+:root[data-theme="dark"] { --s1: #3987e5; --s2: #d95926; --s3: #199e70; }
+@media (max-width: 560px) { .item { padding: 12px 14px; } th, td { padding: 6px 7px; } .kv { grid-template-columns: 4.8em 1fr; } }
+</style>
+<style>body { margin: 0; } [hidden] { display: none !important; }</style>
+</head>
+<body>
+<div class="col">
+  <header class="hero">
+    <p class="eyebrow">智能区域规划器 · 开发进度</p>
+    <h1>区域规划器进度</h1>
+    <ul class="overview" id="overview"><li>读取中。</li></ul>
+    <p class="stamp" id="stamp">正在读取数据…</p>
+  </header>
+
+  <section id="todo">
+    <h2>等你处理<span class="count" id="todo-count"></span></h2>
+    <p class="note">要你拿主意的事都在这里，每条一个标签。<b>要不要做</b>：没有 <code>auto</code> 也没有 <code>later</code> 的 Issue，要做就在 GitHub 上打 <code>auto</code> 或在 Claude Code 里说“处理 #N”，暂缓打 <code>later</code>，不做就关掉。<b>定方案</b>：你在 Claude Code 里拍板，或 DracoYus 在带 <code>auto</code> 的 Issue 下明确回复。<b>发版</b>：只等你的话。<b>规则</b>：流程和机器怎么用。</p>
+    <div class="stack" id="todo-list"><p class="empty">读取中。</p></div>
+  </section>
+
+  <section id="issues">
+    <h2>开着的 Issue<span class="count" id="issues-count"></span></h2>
+    <p class="note">全部开着的 Issue。状态：等你看、等你定方案（这两种的详情在上面）、自动处理中、auto 不算数（标签是别人打的）、暂缓。<code>auto</code> 只认你或合作者打的。</p>
+    <div id="issues-list"><p class="empty">读取中。</p></div>
+  </section>
+
+  <section id="milestones">
+    <h2>里程碑<span class="count" id="milestones-count"></span></h2>
+    <div class="stack" id="milestones-list"><p class="empty">读取中。</p></div>
+    <div id="work-list"></div>
+    <div id="stale-list"></div>
+  </section>
+
+  <section id="machines">
+    <h2>机器<span class="count" id="jobs-count"></span></h2>
+    <div class="devices" id="devices"></div>
+    <div id="jobs-list"></div>
+    <h3 class="sub">夜间队列<span class="count" id="night-count"></span></h3>
+    <p class="note">工作日白天不开游戏：要开游戏的步骤（游戏内测试、真实点击、截图、压力测试、发版前的三种规则集）排在这里，工作日 00:00–08:00 按顺序跑，周末或你说可以时随时跑。跑完的留 7 天。</p>
+    <div id="night-list"><p class="empty">读取中。</p></div>
+  </section>
+
+  <section id="releases">
+    <h2>最近发布</h2>
+    <p class="note">发版会关掉同名的里程碑；没有发版的里程碑完成后也列在这里，满 7 天不再列出。</p>
+    <div id="releases-list"><p class="empty">读取中。</p></div>
+  </section>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+// Short inline markup in the stored text: `code` and [label](https://...) links only.
+function rich(s) {
+  return esc(s)
+    .replace(/`([^`]+)`/g, "<code>$1</code>")
+    .replace(/\[([^\]]+)\]\((https:\/\/[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+}
+const STATE = {
+  done: "已完成", doing: "进行中", todo: "未开始", blocked: "受阻", waiting: "等你决定",
+  active: "进行中", planned: "计划中", dropped: "不做", running: "在跑", queued: "排队", held: "暂缓",
+};
+const REPO = "https://github.com/SmallSpider0/civ6-smart-district-planner";
+const tag = (s) => `<span class="tag ${esc(s)}">${esc(STATE[s] || s)}</span>`;
+const byOrder = (a, b) => (a.order ?? 99) - (b.order ?? 99);
+// Finished items show for 7 days. Dates are "YYYY-MM-DD[ HH:MM]" or "MM-DD HH:MM" (this year).
+function recent(when) {
+  const m = /^(?:(\d{4})-)?(\d{2})-(\d{2})/.exec(String(when || ""));
+  if (!m) return true;
+  const t = new Date(Number(m[1] || new Date().getFullYear()), Number(m[2]) - 1, Number(m[3]));
+  return Date.now() - t.getTime() < 8 * 86400000;
+}
+// "更新于" is the latest of the sync script's runs and the last hand-written change.
+const m_stamps = {};
+function stamp(key, when) {
+  if (when) m_stamps[key] = String(when);
+  const all = Object.values(m_stamps).sort();
+  $("stamp").textContent = all.length ? "更新于 " + all[all.length - 1] : "还没有数据：第一次更新后显示。";
+}
+// Lists of finished things show the newest 3; the rest fold into "更早的 N 条".
+function fold(items, render, n = 3) {
+  const rest = items.slice(n);
+  return render(items.slice(0, n)) + (rest.length
+    ? `<details class="more"><summary>更早的 ${rest.length} 条</summary>${render(rest)}</details>` : "");
+}
+const count = (id, n) => { $(id).textContent = n ? "· " + n : ""; };
+
+// 等你处理: open decisions (hand-written) and the open issues nobody has said to handle, one list.
+// A decision's kind is its `kind` field, else read from its title and link.
+const issueOf = (d) => { const m = /\/issues\/(\d+)/.exec(d.link || ""); return m ? Number(m[1]) : null; };
+function decisionKind(d) {
+  if (d.kind) return d.kind;
+  if (/可以发了|^发 ?v\d/.test(d.title || "") || /\/milestone\/|\/releases\//.test(d.link || "")) return "发版";
+  return issueOf(d) ? "定方案" : "规则";
+}
+const KIND_TAG = { "要不要做": "blocked", "auto 不算数": "blocked", "定方案": "doing", "发版": "active", "规则": "todo" };
+const kindTag = (k) => `<span class="tag ${KIND_TAG[k] || "todo"}">${esc(k)}</span>`;
+function renderTodo(decisions, issues) {
+  const open = decisions.filter((d) => d.status !== "done");
+  const ask = ((issues && issues.items) || []).filter((i) => i.group === "review" || i.group === "badauto");
+  count("todo-count", open.length + ask.length);
+  const cards = open.map((d) => `
+    <article class="item decision">
+      <div class="mhead">${kindTag(decisionKind(d))}<h3>${rich(d.title)}</h3></div>
+      ${d.detail ? `<p>${rich(d.detail)}</p>` : ""}
+      ${(d.options || []).length ? `<ul class="opts">${d.options.map((o) => `<li><b>${esc(o.key)}</b><span>${rich(o.text)}</span></li>`).join("")}</ul>` : ""}
+      ${d.recommendation ? `<p class="rec"><b>建议：</b>${rich(d.recommendation)}</p>` : ""}
+      ${d.collaborator ? `<p class="note">合作者意见：${rich(d.collaborator)}</p>` : ""}
+      <p class="meta">${d.milestone ? `<span>${esc(d.milestone)}</span>` : ""}${d.link ? `<a href="${esc(d.link)}" target="_blank" rel="noopener">讨论</a>` : ""}</p>
+    </article>`).concat(ask.map((i) => `
+    <article class="item ask">
+      <div class="mhead">${kindTag(i.group === "badauto" ? "auto 不算数" : "要不要做")}<h3>${issueLink(i)}</h3></div>
+      <p class="meta"><span>${esc(i.by)}开的 · ${esc(i.opened)}</span>${(i.type || []).length ? `<span>${i.type.map(esc).join("、")}</span>` : ""}${
+        i.auto ? `<span>auto 是${esc(i.auto.by)} ${esc(i.auto.at)} 打的，不算数</span>` : ""}${
+        i.kind === "replied" && i.talkAt !== i.opened ? `<span>${esc(i.who.join("、"))}回复了（${esc(i.talkAt)}）</span>` : ""}</p>
+    </article>`));
+  $("todo-list").innerHTML = cards.length ? cards.join("") : `<p class="empty">暂时没有要你处理的事。</p>`;
+}
+
+// work/milestones is synced from GitHub (milestones, their issues, states, progress);
+// milestones/<id> docs only add goal / eta / next / blocker, matched by the milestone
+// number in `ms` or in a /milestone/N link, else by name. Unmatched docs (work with no
+// GitHub milestone) show as written.
+let m_auto = null, m_notes = [], m_ctx = { w: {}, decisions: [] };
+// "下一步" of a GitHub milestone is generated from the same data as the overview (issues and
+// their branches, the release branch and its PR, the night queue, releases, open decisions),
+// so it changes with every sync; hand-written `next` is used only for work with no milestone.
+function autoNext(a) {
+  const w = m_ctx.w || {}, steps = [];
+  const pr = (b) => b.pr ? `<a href="${esc(b.pr.url)}" target="_blank" rel="noopener">PR #${esc(b.pr.n)}</a> ` : "";
+  const branches = (w.branches && w.branches.items) || [];
+  const night = ((w.night && w.night.items) || []).filter((n) => n.state !== "done" && n.state !== "failed");
+  const talk = ((w.issues && w.issues.items) || []).filter((i) => i.kind);
+  const released = ((w.releases && w.releases.items) || []).find((r) => r.version === a.title);
+  if (released) return `已发布（${esc(String(released.date).slice(5))}），等关闭里程碑`;
+  (m_ctx.decisions || []).filter((d) => d.status !== "done" && (d.milestone === a.title || String(d.title || "").includes(a.title)))
+    .forEach((d) => steps.push(`等你决定：${rich(d.title)}`));
+  const prep = branches.find((b) => b.branch.includes("release") && b.branch.includes(a.title));
+  if (prep) {
+    const q = night.filter((n) => n.branch === prep.branch);
+    const running = (m_ctx.jobs || []).filter((j) => j.branch === prep.branch && j.state === "running").map((j) => rich(j.what));
+    const what = prep.pr ? `${pr(prep)}${esc(prep.stage)}` : (running.length ? "" : "测试、截图和文字在做");
+    steps.push(`发版准备（${esc(prep.branch)}）：${[what].concat(running).filter(Boolean).join("；")}${q.length ? `；夜间队列 ${q.map((n) => "#" + esc(n.id)).join("、")}` : ""}`);
+  } else if (a.total && a.done === a.total) {
+    steps.push("Issue 都已完成，下一步准备发版（测试、版本号、更新说明）");
+  }
+  a.issues.filter((i) => i.state === "doing").forEach((i) => steps.push(`#${esc(i.n)} ${esc(i.stage || "进行中")}${i.pr ? `（<a href="${REPO}/pull/${esc(i.pr)}" target="_blank" rel="noopener">PR #${esc(i.pr)}</a>）` : ""}`));
+  a.issues.filter((i) => i.state === "todo").forEach((i) => {
+    const t = talk.find((x) => x.n === i.n);
+    steps.push(`#${esc(i.n)} ${t ? (t.kind === "waiting" ? `等 ${esc(t.who.join("、"))} 回复` : `${esc(t.who.join("、"))} 回复了，要处理`) : "未开始"}`);
+  });
+  return steps.join("；");
+}
+function msNumber(d) {
+  if (d.ms) return Number(d.ms);
+  const m = /\/milestone\/(\d+)/.exec(d.link || "");
+  return m ? Number(m[1]) : null;
+}
+function mergeMilestones() {
+  if (!m_auto) { renderMilestones(m_notes); return; }
+  const used = new Set();
+  const merged = m_auto.items.map((a, i) => {
+    const note = m_notes.find((d) => msNumber(d) === a.number || d.name === a.title) || {};
+    used.add(note.id);
+    const started = a.issues.some((x) => x.state === "doing" || x.state === "done");
+    return {
+      id: "gh" + a.number, order: i, name: a.title, link: a.url, auto: true,
+      state: a.open ? (started ? "active" : "planned") : "done", doneAt: a.closedAt,
+      goal: note.goal || a.description, eta: note.eta, next: autoNext(a), nextHtml: true, blocker: note.blocker,
+      progress: a.progress, counts: `${a.done} / ${a.total}`,
+      issues: a.issues.map((x) => ({ n: x.n, state: x.state, title: x.title, stage: x.stage, pr: x.pr })),
+    };
+  });
+  renderMilestones(merged.concat(m_notes.filter((d) => !used.has(d.id))), m_auto.synced);
+}
+let m_finished = [];
+function renderMilestones(all, synced) {
+  // Finished ones are listed with the releases. The issue list folds: the issue table has the details.
+  const list = all.filter((m) => m.state !== "done");
+  const finished = all.filter((m) => m.state === "done" && recent(m.doneAt))
+    .sort((a, b) => String(b.doneAt || "").localeCompare(String(a.doneAt || "")));
+  m_finished = finished;
+  count("milestones-count", list.length);
+  $("milestones-list").innerHTML = list.length ? list.map((m) => {
+    const pct = Math.max(0, Math.min(100, Number(m.progress) || 0));
+    const issues = (m.issues || []).map((i) => `<li>${tag(i.state)}<span class="n"><a href="${REPO}/issues/${esc(i.n)}" target="_blank" rel="noopener">#${esc(i.n)}</a></span><span>${rich(i.title)}${
+      i.stage ? ` <span class="facts">· ${esc(i.stage)}${i.pr ? ` · <a href="${REPO}/pull/${esc(i.pr)}" target="_blank" rel="noopener">PR #${esc(i.pr)}</a>` : ""}</span>` : ""}</span></li>`).join("");
+    return `
+    <article class="item">
+      <div class="mhead"><h3>${rich(m.name)}</h3>${tag(m.state)}${m.link ? `<a href="${esc(m.link)}" target="_blank" rel="noopener">GitHub</a>` : ""}</div>
+      ${m.goal ? `<p class="note">${rich(m.goal)}</p>` : ""}
+      <div class="bar" role="img" aria-label="完成约 ${pct}%"><i style="width:${pct}%"></i></div>
+      <dl class="kv">
+        <dt>完成</dt><dd>${m.counts ? `${esc(m.counts)} 个 Issue（${pct}%）` : `约 ${pct}%`}</dd>
+        ${m.eta ? `<dt>预计</dt><dd>${rich(m.eta)}</dd>` : ""}
+        ${m.next ? `<dt>下一步</dt><dd>${m.nextHtml ? m.next : rich(m.next)}</dd>` : ""}
+        ${m.blocker ? `<dt>卡在</dt><dd>${rich(m.blocker)}</dd>` : ""}
+      </dl>
+      ${issues ? `<details class="more"><summary>${(m.issues || []).length} 个 Issue</summary><ul class="issues">${issues}</ul></details>` : ""}
+    </article>`;
+  }).join("") : `<p class="empty">${synced ? "现在没有进行中的里程碑。" : "还没有里程碑数据。"}</p>`;
+}
+
+function table(list, cols, empty) {
+  if (!list.length) return `<p class="empty">${empty}</p>`;
+  return `<div class="tablewrap"><table><thead><tr>${cols.map((c) => `<th>${c[0]}</th>`).join("")}</tr></thead><tbody>${
+    list.map((r) => `<tr>${cols.map((c) => `<td>${c[1](r)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
+}
+
+// --- machines: slot strip + own queue per machine ------------------------
+// machines/<id> is a snapshot of the schedulers' own records (tools/status/sync.py):
+//   {order, name, cap, capNote, synced, game: {holder, purpose}|null,
+//    running: [{name, session, slots, started, progress, paused, unregistered}],
+//    queued: [{name, session, slots, queuedAt}], recent: [{name, session, ended, exit}]}
+// jobs/<id> adds the human description; `run` names the scheduler job(s) it describes.
+const SESSIONS = [["评测基线", "--s1"], ["v1.5.0", "--s2"], ["主会话等", "--s3"]];
+const sessionVar = (s) => s ? (SESSIONS.find(([k]) => String(s).includes(k)) || SESSIONS[2])[1] : null;
+let m_jobs = [], m_machines = [];
+function describe(name) {
+  return m_jobs.find((j) => [].concat(j.run || []).includes(name) || j.id === name);
+}
+function jobLine(r, kind, i) {
+  const v = sessionVar(r.session);
+  const d = describe(r.name);
+  const facts = [r.session || "未登记", `${r.slots} 格`];
+  if (kind === "run") { if (r.started) facts.push(r.started + " 开始"); if (r.progress) facts.push("进度 " + r.progress); if (r.paused) facts.push("暂停中"); }
+  if (kind === "queue") { if (r.queuedAt) facts.push(r.queuedAt + " 排队"); }
+  return `<li>${kind === "queue" ? `<span class="qn">${i + 1}</span>` : ""}<i class="dot${v ? "" : " ext"}" style="${v ? `background: var(${v})` : ""}"></i>
+    <div class="jl"><b>${esc(r.name)}</b><span class="facts">${facts.map(esc).join(" · ")}</span>
+    ${d && d.what ? `<span class="desc">${rich(d.what)}${d.eta ? `<br>预计：${rich(d.eta)}` : ""}</span>` : ""}</div></li>`;
+}
+function renderMachines() {
+  if (!m_machines.length) { $("devices").innerHTML = ""; return; }
+  const used = new Set();
+  const cards = m_machines.map((m) => {
+    const n = Number(m.cap) || 0;
+    const run = m.running || [], queued = m.queued || [];
+    let taken = 0;
+    const segs = run.map((r) => {
+      const k = Math.max(1, Number(r.slots) || 1);
+      const v = sessionVar(r.session); if (v) used.add(v);
+      const over = taken + k > n; taken += k;
+      const d = describe(r.name);
+      const tip = `${r.name}\n${r.session || "未登记（没走排队工具）"} · ${k} 格${r.progress ? " · 进度 " + r.progress : ""}${r.paused ? " · 暂停中" : ""}${d && d.what ? "\n" + d.what : ""}`;
+      return `<div class="seg${v ? "" : " ext"}${r.paused ? " paused" : ""}${over ? " over" : ""}" tabindex="0"
+        style="grid-column: span ${k};${v ? ` background-color: var(${v})` : ""}" data-tip="${esc(tip)}"
+        aria-label="${esc(r.name + "，" + k + " 格" + (r.paused ? "，暂停中" : ""))}"><span>${esc(r.name)}</span></div>`;
+    });
+    for (let i = taken; i < n; i++) segs.push(`<div class="seg free" aria-hidden="true"></div>`);
+    queued.forEach((q) => { const v = sessionVar(q.session); if (v) used.add(v); });
+    const recent = (m.recent || []).map((r) => `${esc(r.name)}（${esc(r.ended)}${r.exit ? "，退出码 " + esc(r.exit) : ""}）`).join("、");
+    return `<article class="dev">
+      <div class="dhead"><h3>${esc(m.name)}</h3><span class="used">在用 ${taken} / ${n} 格${taken > n ? "（超出）" : ""}</span>
+        ${m.game ? `<span class="tag doing">游戏占用：${esc(m.game.purpose || m.game.holder)}</span>` : ""}</div>
+      ${m.capNote ? `<p class="note">${rich(m.capNote)}</p>` : ""}
+      <div class="slots" role="img" aria-label="${esc(m.name + "：在用 " + taken + " / " + n + " 格")}" style="--n:${Math.max(n, taken)}">${segs.join("")}</div>
+      <div class="lanes">
+        <div><h4>在跑 · ${run.length}</h4>${run.length ? `<ul class="jobs">${run.map((r) => jobLine(r, "run")).join("")}</ul>` : `<p class="note">空闲</p>`}</div>
+        <div><h4>排队 · ${queued.length}</h4>${queued.length ? `<ol class="jobs">${queued.map((q, i) => jobLine(q, "queue", i)).join("")}</ol>` : `<p class="note">没有排队的任务</p>`}</div>
+      </div>
+      ${recent ? `<p class="note recent">12 小时内跑完：${recent}</p>` : ""}
+      <p class="stamp">取自调度记录 · ${esc(m.synced || "")}</p>
+    </article>`;
+  }).join("");
+  const legend = SESSIONS.filter(([, v]) => used.has(v)).map(([k, v]) => `<span><i class="dot" style="background: var(${v})"></i>${esc(k)}</span>`).join("")
+    + `<span><i class="dot ext"></i>未登记</span><span><i class="dot free"></i>空格</span><span>斜纹 = 暂停中</span>`;
+  $("devices").innerHTML = `<div class="legend">${legend}</div>` + cards;
+}
+(function tips() {
+  const t = document.createElement("div"); t.className = "tip"; t.hidden = true; document.body.appendChild(t);
+  const show = (el, x, y) => { t.textContent = el.dataset.tip; t.style.whiteSpace = "pre-line"; t.hidden = false;
+    const r = t.getBoundingClientRect(); t.style.left = Math.min(x + 12, innerWidth - r.width - 8) + "px"; t.style.top = Math.max(8, y - r.height - 10) + "px"; };
+  document.addEventListener("pointerover", (e) => { const el = e.target.closest("[data-tip]"); if (el) show(el, e.clientX, e.clientY); });
+  document.addEventListener("pointermove", (e) => { const el = e.target.closest("[data-tip]"); if (el) show(el, e.clientX, e.clientY); else t.hidden = true; });
+  document.addEventListener("pointerout", (e) => { if (!e.relatedTarget || !e.relatedTarget.closest || !e.relatedTarget.closest("[data-tip]")) t.hidden = true; });
+  document.addEventListener("focusin", (e) => { const el = e.target.closest && e.target.closest("[data-tip]"); if (el) { const r = el.getBoundingClientRect(); show(el, r.left, r.top); } });
+  document.addEventListener("focusout", () => { t.hidden = true; });
+})();
+
+function renderJobs(list) {
+  m_jobs = list; renderMachines();
+  // Machines show what the schedulers know; the table keeps only notes with no scheduler record behind them.
+  const onMachine = new Set(m_machines.flatMap((m) => [...(m.running || []), ...(m.queued || [])].map((r) => r.name)));
+  const linked = (j) => [].concat(j.run || []).some((n) => onMachine.has(n)) || onMachine.has(j.id);
+  // Hand-written notes only for work the branch list and the machine cards do not show (e.g. research).
+  const other = list.filter((j) => j.state !== "done" && j.what && !(j.branch && m_branches.has(j.branch))
+    && !(m_machines.length && (linked(j) || j.run)));
+  const live = m_machines.reduce((a, m) => a + (m.running || []).length + (m.queued || []).length, 0) + other.length;
+  count("jobs-count", live);
+  $("jobs-list").innerHTML = other.length ? `<h3 class="sub">其他说明</h3>` + table(other, [
+    ["任务", (j) => rich(j.what)], ["在哪", (j) => `<span class="tag where">${esc(j.where)}</span>`],
+    ["开始", (j) => esc(j.started)], ["预计结束", (j) => rich(j.eta)], ["状态", (j) => tag(j.state)],
+  ], "") : "";
+}
+
+// work/branches: {synced, items: [{branch, stage, commits, issues: [{n, title}], last: {at, subject},
+//   pr: {n, url, title, draft, automerge, checks}|null, night: [{id, what}], on: [branch]}]}
+const STAGE = { "CI 没过": "fail", "PR 在跑 CI": "doing", "PR 等合并": "doing", "PR 已开": "doing",
+  "PR 等夜间测试": "todo", "等夜间测试": "todo", "开发中": "active", "刚开始": "planned" };
+const CHECKS = { pass: "CI 通过", fail: "CI 没过", pending: "CI 在跑", none: "还没跑 CI" };
+let m_branches = new Set();
+// Branches of open issues show in the issue table's 进度 column; this table keeps the rest
+// (release preparation, tools, branches whose issue is closed).
+function renderWork(doc, issues) {
+  const all = (doc && doc.items) || [];
+  m_branches = new Set(all.map((i) => i.branch));
+  const openNs = new Set(((issues && issues.items) || []).map((i) => i.n));
+  const items = all.filter((b) => !(b.issues || []).some((x) => openNs.has(x.n)));
+  $("work-list").innerHTML = items.length ? `<h3 class="sub">其他进行中的分支<span class="count">· ${items.length}</span></h3><div class="tablewrap"><table class="work"><thead><tr><th>分支 · Issue</th><th>进度</th><th>PR</th><th>夜间测试</th></tr></thead><tbody>${
+    items.map((i) => `<tr>
+      <td><code>${esc(i.branch)}</code>${(i.issues || []).map((x) => `<span class="small">#${esc(x.n)} ${esc(x.title)}</span>`).join("")}
+        ${(i.on || []).length ? `<span class="small">基于 ${i.on.map((b) => `<code>${esc(b)}</code>`).join("、")}</span>` : ""}</td>
+      <td><span class="tag ${STAGE[i.stage] || "todo"}">${esc(i.stage)}</span>
+        ${i.last ? `<span class="small">${esc(i.commits)} 个提交，最后 ${esc(i.last.at)}：${esc(i.last.subject)}</span>` : `<span class="small">还没有提交</span>`}</td>
+      <td>${i.pr ? `<a href="${esc(i.pr.url)}" target="_blank" rel="noopener">#${esc(i.pr.n)}</a> <span class="tag ${esc(i.pr.checks)}">${esc(CHECKS[i.pr.checks] || i.pr.checks)}</span>
+        <span class="small">${i.pr.automerge ? "过了自动合并" : "没开自动合并"}${i.pr.draft ? " · 草稿" : ""}</span>` : `<span class="small">还没开</span>`}</td>
+      <td>${(i.night || []).length ? i.night.map((q) => `<span class="small">第 ${esc(q.id)} 项：${esc(q.what)}</span>`).join("") : `<span class="small">—</span>`}</td>
+    </tr>`).join("")}</tbody></table></div><p class="stamp">取自 git、GitHub 和夜间队列 · ${esc(doc.synced || "")}</p>`
+    : "";
+}
+
+// work/branches.stale: [{branch|null, where: worktree|local|remote, reason, removable, last, subject}]
+// from tools/worktree.py stale; null when the sync could not run it. `prune --remote` removes the removable ones.
+const WHERE = { worktree: "工作树", local: "本地", remote: "GitHub" };
+const STALE = { merged: "PR 已合并", "in-main": "提交都在 main 里", squashed: "改的文件 main 上都一样",
+  tagged: "发版 tag 包含它", unique: "有 main 没有的改动", uncommitted: "有未提交的改动", detached: "游离的工作树",
+  "no-commits": "工作树还没有提交", "no-gh": "连不上 GitHub，判断不了" };
+function renderStale(doc) {
+  const rows = (doc && doc.stale) || [];
+  $("stale-list").innerHTML = rows.length ? `<h3 class="sub">多出来的分支<span class="count">· ${rows.length}</span></h3>
+    <p class="note">没有开着的 PR 用、超过一天的分支。能删的合并后由 <code>worktree.py prune --remote</code> 删掉；其余的要你看留不留。</p>
+    <div class="tablewrap"><table class="work"><thead><tr><th>分支</th><th>在哪</th><th>情况</th><th>最后提交</th></tr></thead><tbody>${
+    rows.map((r) => `<tr><td><code>${esc(r.branch || "（游离）")}</code></td><td>${esc(WHERE[r.where] || r.where)}</td>
+      <td><span class="tag ${r.removable ? "done" : r.reason === "unique" ? "blocked" : "held"}">${r.removable ? "能删" : "留着"}</span>
+        <span class="small">${esc(STALE[r.reason] || r.reason)}</span></td>
+      <td><span class="small">${esc(r.last)}：${esc(r.subject)}</span></td></tr>`).join("")}</tbody></table></div>` : "";
+}
+
+// work/issues: {synced, items: [{n, title, url, milestone, at, opened, by, type: [], labels: [],
+//   work: [{branch, stage, pr: {n, url}|null}], group: review|auto|badauto|later, auto: {by, at},
+//   kind: replied|waiting, who: [role], talkAt}]}. Names are roles (我们 / 合作者 / 玩家).
+// One table; the state column tells the groups apart, those that need the maintainer first.
+// An auto issue with an open decision linked to it shows as 等你定方案 (the decision card has the details).
+const GROUPS = { review: ["等你看", "blocked"], badauto: ["auto 不算数", "blocked"], plan: ["等你定方案", "doing"],
+  auto: ["自动处理中", "active"], later: ["暂缓", "held"] };
+const G_ORDER = ["review", "badauto", "plan", "auto", "later"];
+function renderIssues(d, decisions) {
+  const planning = new Set(decisions.filter((x) => x.status !== "done").map(issueOf).filter(Boolean));
+  const items = ((d && d.items) || []).map((i) => i.group === "auto" && planning.has(i.n) ? Object.assign({}, i, { group: "plan" }) : i)
+    .sort((a, b) => G_ORDER.indexOf(a.group) - G_ORDER.indexOf(b.group) || a.n - b.n);
+  count("issues-count", items.length);
+  if (!d) { $("issues-list").innerHTML = `<p class="empty">还没有数据。</p>`; return; }
+  const state = (i) => { const [t, c] = GROUPS[i.group] || [i.group, "todo"];
+    return `<span class="tag ${c}">${esc(t)}</span>${i.auto ? `<span class="small">auto：${esc(i.auto.by)} ${esc(i.auto.at)} 打的</span>` : ""}`; };
+  $("issues-list").innerHTML = table(items, [
+    ["Issue", (i) => `<a href="${esc(i.url)}" target="_blank" rel="noopener">#${esc(i.n)}</a> ${esc(i.title)}${
+      (i.labels || []).length ? `<span class="small">${i.labels.map(esc).join("、")}</span>` : ""}`],
+    ["状态", state],
+    ["类型", (i) => (i.type || []).length ? i.type.map(esc).join("、") : "—"],
+    ["谁开的", (i) => `${esc(i.by)}<span class="small">${esc(i.opened)}</span>`],
+    ["里程碑", (i) => esc(i.milestone) || "—"],
+    ["进度", (i) => (i.work || []).length ? i.work.map((b) => `<span class="tag ${STAGE[b.stage] || "todo"}">${esc(b.stage)}</span>${
+      b.pr ? ` <a href="${esc(b.pr.url)}" target="_blank" rel="noopener">PR #${esc(b.pr.n)}</a>` : ""}`).join("<br>") : "—"],
+    ["谁该回复", (i) => i.kind === "replied" ? `<span class="tag waiting">${esc(i.who.join("、"))}回复了，要处理</span><span class="small">${esc(i.talkAt)}</span>`
+      : i.kind === "waiting" ? `等${esc(i.who.join("、"))}回复<span class="small">${esc(i.talkAt)} 问的</span>` : "—"],
+    ["最后动静", (i) => esc(i.at)],
+  ], "没有开着的 Issue。").replace("<table>", '<table class="work issues">') + `<p class="stamp">取自 GitHub · ${esc(d.synced || "")}</p>`;
+}
+
+// work/night is the shared queue file as the sync script reads it: {window, items: [{id, branch, what,
+// why, state, result, added, finished}]}, finished items only for 7 days.
+function renderNight(d) {
+  const items = (d && d.items) || [];
+  const queued = items.filter((n) => n.state !== "done" && n.state !== "failed");
+  const done = items.filter((n) => (n.state === "done" || n.state === "failed") && recent(n.finished))
+    .sort((a, b) => String(b.finished).localeCompare(String(a.finished)));
+  count("night-count", queued.length);
+  $("night-list").innerHTML = table(queued, [
+    ["#", (n) => esc(n.id)], ["步骤", (n) => rich(n.what)], ["为了", (n) => rich(n.why)],
+    ["分支", (n) => n.branch ? `<code>${esc(n.branch)}</code>` : ""],
+  ], "夜间队列是空的。") + (done.length ? `<h3 class="sub">最近跑完</h3>` + fold(done, (part) => `<ul class="finished">${part.map((n) =>
+    `<li><span class="when">${esc(n.finished)}</span><span>#${esc(n.id)} ${n.state === "failed" ? tag("blocked") + " " : ""}${rich(n.what)}${
+      n.result ? `<br><span class="facts">${rich(n.result)}</span>` : ""}</span></li>`).join("")}</ul>`) : "");
+}
+
+// Releases come only from GitHub (work/releases): their summaries are generated from the notes.
+let m_rel = null;
+function renderReleases() {
+  const list = m_rel ? m_rel.items : [];
+  const versions = new Set(list.map((r) => r.version));
+  const extra = m_finished.filter((m) => !versions.has(m.name))
+    .map((m) => ({ version: m.name, link: m.link, date: m.doneAt, summary: "里程碑完成（没有发版）" }));
+  const sorted = list.concat(extra).sort((a, b) => String(b.date).localeCompare(String(a.date)));
+  const cols = [
+    ["版本", (r) => r.link ? `<a href="${esc(r.link)}" target="_blank" rel="noopener">${esc(r.version)}</a>` : esc(r.version)],
+    ["日期", (r) => esc(r.date)], ["内容", (r) => rich(r.summary)],
+  ];
+  // The 5 newest releases, all shown; older ones are on GitHub.
+  $("releases-list").innerHTML = table(sorted.slice(0, 5), cols, "还没有发布记录。");
+}
+
+// The overview at the top: built only from the data below, never written by hand, so it is as
+// current as the last sync (work/* every 5 minutes, machines every minute).
+const issueLink = (i) => `<a href="${esc(i.url || REPO + "/issues/" + i.n)}" target="_blank" rel="noopener">#${esc(i.n)}</a> ${esc(i.title)}`;
+function renderOverview(s) {
+  const w = s.work || {}, lines = [];
+  const line = (k, v) => lines.push(`<li><span class="k">${esc(k)}：</span>${v}</li>`);
+  const rel = ((w.releases && w.releases.items) || []).filter((r) => !r.pre)
+    .sort((a, b) => String(b.date).localeCompare(String(a.date)))[0];
+  if (rel) line("最新发布", `<a href="${esc(rel.link)}" target="_blank" rel="noopener">${esc(rel.version)}</a>（${esc(String(rel.date).slice(5))}）`);
+  const branches = (w.branches && w.branches.items) || [];
+  ((w.milestones && w.milestones.items) || []).filter((m) => m.open && m.total).forEach((m) => {
+    const by = (st) => m.issues.filter((i) => i.state === st);
+    const parts = [`${m.done}/${m.total} 个 Issue 完成`];
+    const doing = by("doing"), todo = by("todo");
+    if (doing.length) parts.push("进行中 " + doing.map((i) => `#${esc(i.n)}（${esc(i.stage)}）`).join("、"));
+    if (todo.length) parts.push("未开始 " + todo.map((i) => `#${esc(i.n)}`).join("、"));
+    const prep = branches.find((b) => b.branch.includes("release") && b.branch.includes(m.title));
+    if (prep) parts.push(`发版准备${esc(prep.stage)}`);
+    else if (m.done === m.total) parts.push("等发版");
+    lines.push(`<li><a href="${esc(m.url)}" target="_blank" rel="noopener">${esc(m.title)}</a><span class="k">：</span>${parts.join("；")}</li>`);
+  });
+  const kinds = (s.decisions || []).filter((d) => d.status !== "done").map(decisionKind);
+  const all = (w.issues && w.issues.items) || [];
+  all.filter((i) => i.group === "review" || i.group === "badauto").forEach(() => kinds.push("要不要做"));
+  const per = ["要不要做", "定方案", "发版", "规则"].map((k) => [k, kinds.filter((x) => x === k).length]).filter((x) => x[1]);
+  line("等你处理", kinds.length ? `<a href="#todo">${kinds.length} 件</a>（${per.map(([k, n]) => `${esc(k)} ${n}`).join("、")}）` : "没有");
+  const replied = all.filter((i) => i.kind === "replied").length;
+  if (replied) line("Issue 上对方回复了还没处理", `<a href="#issues">${replied} 个</a>`);
+  const stale = (w.branches && w.branches.stale) || [];
+  if (stale.length) {
+    const keep = stale.filter((r) => !r.removable).length;
+    line("多出来的分支", `<a href="#stale-list">${stale.length} 个</a>${keep ? `（${keep} 个要你看留不留）` : "（都能删，合并后会清）"}`);
+  }
+  const prs = branches.filter((b) => b.pr);
+  const failed = prs.filter((b) => b.pr.checks === "fail");
+  if (failed.length) line("CI 没过", failed.map((b) => `<a href="${esc(b.pr.url)}" target="_blank" rel="noopener">#${esc(b.pr.n)}</a>`).join("、"));
+  const jobs = (s.machines || []).map((m) => [m.name, (m.running || []).length, (m.queued || []).length]).filter((m) => m[1] || m[2]);
+  const night = ((w.night && w.night.items) || []).filter((n) => n.state !== "done" && n.state !== "failed");
+  line("机器", (jobs.length ? jobs.map(([n, r, q]) => `${esc(n)}在跑 ${r} 个${q ? `、排队 ${q} 个` : ""}`).join("，") : "没有在跑的任务")
+    + `；开着的 PR ${prs.length} 个；夜间队列${night.length ? `待跑 ${night.length} 项` : "是空的"}`);
+  $("overview").innerHTML = lines.join("");
+}
+
+// The page is static; status.json is pushed to it by
+// tools/status/sync.py (machines every minute, git and GitHub every 5 minutes, hand-written notes at once).
+const sorted = (l) => (l || []).slice().sort(byOrder);
+let m_text = "";
+function render(s) {
+  const w = s.work || {};
+  stamp("meta", s.meta && s.meta.updated);
+  renderOverview(s);
+  renderTodo(sorted(s.decisions), w.issues || null);
+  renderIssues(w.issues || null, s.decisions || []); stamp("issues", w.issues && w.issues.synced);
+  m_notes = sorted(s.milestones); m_auto = w.milestones || null; m_ctx = { w, decisions: s.decisions || [], jobs: s.jobs || [] }; mergeMilestones(); stamp("ms", m_auto && m_auto.synced);
+  m_machines = sorted(s.machines); m_machines.forEach((m) => stamp("m-" + m.id, m.synced));
+  renderWork(w.branches || null, w.issues || null); renderStale(w.branches || null); stamp("work", w.branches && w.branches.synced);
+  renderJobs(sorted(s.jobs));
+  renderNight(w.night || null); stamp("night", w.night && w.night.synced);
+  m_rel = w.releases || null; renderReleases();
+}
+async function load() {
+  try {
+    const r = await fetch("status.json", { cache: "no-store" });
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    const text = await r.text();
+    if (text === m_text) return;
+    m_text = text;
+    render(JSON.parse(text));
+  } catch (e) {
+    if (!m_text) {
+      for (const id of ["todo-list", "issues-list", "milestones-list", "night-list", "releases-list"]) $(id).innerHTML = `<p class="empty">读不到数据。</p>`;
+    }
+    $("stamp").textContent = "读取失败（" + (e && e.message) + "），每分钟重试。";
+  }
+}
+load();
+setInterval(load, 60000);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) load(); });
+</script>
+</body>
+</html>
