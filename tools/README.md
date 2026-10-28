@@ -555,8 +555,11 @@ python3 -I tools/codex_review.py reply 线程ID "已修，见 abc1234"   # 回�
 ```bash
 python3 -I tools/worktree.py add ~/civ6mod-x mac/x     # 从 main 新建分支和工作树，接好 node_modules、规则缓存和 reference/ 的链接
 python3 -I tools/worktree.py list                      # 各工作树的分支，PR 是否已合并，有没有未提交的改动
-python3 -I tools/worktree.py prune                     # 删掉 PR 已合并且没有未提交改动的工作树和本地分支（逐个确认，--yes 不问）
+python3 -I tools/worktree.py stale                     # 列出多出来的分支：工作树、本地分支、GitHub 上没有开着的 PR 用的分支，各写原因（--json 给状态页）
+python3 -I tools/worktree.py prune --remote            # 删掉其中能删的（逐个确认，--yes 不问）；不加 --remote 只删本地的
 ```
 
 - 仓库只做 squash 合并，所以“已合并”按 PR 判断：分支当前的提交就是那个已合并 PR 的最后一个提交。分支名重复用过也不会误判。
+- 能删的是上面没有 `main` 缺的东西的分支：PR 已合并；或者分支超过一天，并且它的提交已在 `main` 里、它改过的每个文件在 `main` 上都一样（被别的 PR 带进去了，如调研记录）、或者发版的 tag 包含它（发版分支）。开着的 PR 用的分支（来源或目标）和一天内的分支算在做，不列。
+- 只列不删：有 `main` 没有的改动的分支（`unique`，要人看）、有未提交改动的工作树、游离的工作树、还没有自己提交的工作树分支。`gh` 用不了时什么都不删。
 
