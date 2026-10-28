@@ -19,14 +19,14 @@ A district planner for Civilization VI: pick a city and the districts you want, 
 The panel has three tabs:
 
 - **One city**: pick a city, mark each district Must, Pool or Off, and set how many districts to plan and how much each yield counts, or pick a preset (Balanced, Science, Culture, Religion, Half Gold and Faith). The planner finds the layout with the highest weighted adjacency within the city's 3 rings; when it picks from the pool you get three plans with different districts. Click one to preview it on the map, then place the tacks. Wonders can be planned along with the districts; a wonder that needs a district next to it (the Colosseum and the Entertainment Complex) gets one when the city has none, and the Temple of Artemis comes with the Camp it needs.
-- **City sites**: choose sites for new cities on the explored map, weighing fresh water, workable tiles, Luxury and Strategic resources, district potential, and how much the new cities overlap. Three plans; hover a site for the resources it gets and how far it is from the other sites; preview on the map, then place site tacks.
+- **City sites**: choose sites for new cities on the explored map. A site is scored part by part (Districts, Tiles, Features, Housing, Luxuries, Strategics, Appeal), each part with its own weight; a typical good site gets 10 points in a part. Three plans; each site lists its points per part, and its tooltip gives the yields per turn behind them, the resources the site gets and how far it is from the other sites; preview on the map, then place site tacks. With **Dense packing: as many new cities as fit** on, the plan that fits more new cities wins (New cities 12 by default); tick the sites you want, or **Select all**, and only those get tacks.
 - **Several cities**: plan districts and wonders for the city selected on the map and the nearest cities and site tacks around it (4 by default, up to 8), counting adjacency across cities and empire limits. Each city can have its own district list, or a template built from your civilization's adjacency rules (Science city, Production city…).
 
 On every tab:
 
 - Three effort levels: Fast, Standard and Thorough. Small cases are solved exhaustively; otherwise the result says whether it is the best or how far it may be from an upper bound, and you can keep improving it. The same game state and settings give the same plan every time.
 - Built districts and the tacks you placed yourself are never moved or covered and count as neighbors; districts limited to one per empire (such as the Government Plaza) are never planned twice.
-- Each result row gives the tile and the bonus; hover it for DMT's breakdown.
+- On One city and Several cities, each result row gives the district's tile and bonus; hover it for the district's own score (its weighted adjacency, with the tiles it takes and its distance from the City Center), then DMT's breakdown. Several cities shows a subtotal for each city.
 - Land loss (the Tiles weight, 1 by default): districts pay for the good tiles they take, each valued with its best improvement, its yields weighed by fixed numbers (Gold at a quarter of Production, Faith at half); chopping and harvesting come first. An optional switch also uses tiles you can swap from your other cities.
 - Each tab keeps its settings in the save. The settings fold into one line after a solve, the window fits the screen, and **View map** hides the window to look at the preview.
 - Neighborhoods get Housing from Appeal, counted by what each city still needs; Preserves count Appeal and, under Tiles, the yields their buildings give nearby tiles; the Preserve is off by default. An Aqueduct is added when the city lacks fresh water, a Dam when there are enough Floodplains tiles. When a plan takes adjacency from nearby Woods or Rainforest, placing it also puts a "Don't chop" reminder tack on those tiles.
@@ -44,7 +44,7 @@ How close its plans come to the true optimum, its speed and known limitations: s
 | Districts | ✓ | ✓ | ✓ up to 3 kinds at a time (plus Aqueduct and Government Plaza) | ✓ |
 | Wonders | ✓ | ✓ | ✓ up to 5 | ✓ |
 | Improvements | ✓ unique improvements included | ✓ | ◐ only the one a wonder needs | ◐ only the one a wonder needs (the Camp for the Temple of Artemis) |
-| New city sites | — future cities from your City Center tacks | ✓ 0–6 | — future cities from your City Center tacks | ✓ |
+| New city sites | — future cities from your City Center tacks | ✓ 0–6 | — future cities from your City Center tacks | ✓ 1–6, up to 12 with dense packing |
 | Cities planned together | ✓ up to 4 | ✓ every existing city and the new sites, in one go | ✓ all cities, with a tick | ✓ up to 8 (site tacks included) |
 | Places map tacks | ✓ | ✓ | ✓ | ✓ |
 | Needs DMT | ✓ | — the author advises turning DMT off | ✓ | ✓ |
@@ -118,14 +118,14 @@ The development documents are in Chinese; issues and pull requests in English ar
 面板有三个页签：
 
 - **单城**：选一座城，把区域设为必建、候选或不建，给出区域数量和各产出的权重，或选一个预设（均衡、科技、文化、宗教、金币信仰减半）。规划器在城市三环内找加权相邻加成最高的摆法；从候选里挑时给出组合不同的三套方案，点一套就在地图上预览，再一键打钉。单城也能一起放奇观：需要相邻某区域的奇观（如罗马斗兽场要挨着娱乐中心），城里没有这个区域时会补上；阿耳忒弥斯神庙会带上它要的营地。
-- **选城址**：在已探索的地图上给几座新城选位置，考虑水源、耕作地块、奢侈与战略资源、区域潜力，以及新城之间不抢地。给出三套方案，悬停看每个城址拿到的奢侈、战略资源和离其他城址多远，预览后打城址钉。
+- **选城址**：在已探索的地图上给几座新城选位置。城址分按区域、地块、地貌、住房、奢侈、战略、魅力各项分开打分，每项有自己的权重，达到好城址的典型水平记 10 分。给出三套方案，每个城址列出各项几分，悬停看每项背后的每回合产出、拿到的奢侈和战略资源、离其他城址多远，预览后打城址钉。勾选“密铺：尽量多放新城”时先比放得下几座新城（新城数量默认 12），在结果里勾选要的城址或点“全选”，只给勾上的打钉。
 - **多城**：以地图上选中的城为中心，和离它最近的城市、城址钉（默认 4 座，最多 8 座）一起规划区域和奇观，跨城的相邻加成和帝国上限都计入。可以给每座城单独的区域清单，或套用按产出生成的模板（科技城、生产力城……）。
 
 各页签共用：
 
 - 快速、标准、精细三档；规模小时穷举，结果注明是否最优或离上界多远，可以继续优化。同一局面、同样输入，结果每次相同。
 - 已建区域和你自己打的钉不挪、不压，并作为邻居计分；全帝国限量的区域（如市政广场）不会重复规划。
-- 结果行显示坐标和加成，悬停看 DMT 的逐项来源。
+- 单城、多城页的结果行显示区域的坐标和加成，悬停先看这个区域自己的分（加权相邻加成，以及占掉的地块、离市中心的距离），再看 DMT 的逐项来源；多城页每座城有一行小计。
 - 计入占地（“地块”权重，默认 1）：区域占掉好地块要付出代价，地块按修上最好的改良后的产出算，各项产出按固定倍数折算（金币按生产力的 1/4、信仰按 1/2），先砍伐、收获再建；可选开关让别的本方城市的格也能换过来用。
 - 每个页签的设置记在存档里；求解后设置收成一行，窗口高度跟着屏幕，“看地图”收起窗口看预览。
 - 社区按魅力计住房，按每座城还缺多少计价值；保护区计魅力，周边产出算在地块里，默认不建；缺淡水时自动加水渠，泛滥平原多时自动加堤坝；方案靠旁边的树林、雨林拿加成时，打钉时在这些格上加“勿砍”提醒钉。
@@ -143,7 +143,7 @@ The development documents are in Chinese; issues and pull requests in English ar
 | 区域 | ✓ | ✓ | ✓ 一次最多 3 种（另加水渠、市政广场） | ✓ |
 | 奇观 | ✓ | ✓ | ✓ 最多 5 座 | ✓ |
 | 改良设施 | ✓ 含特色改良设施 | ✓ | ◐ 只规划奇观需要的那一种 | ◐ 只规划奇观需要的那一种（阿耳忒弥斯神庙旁的营地） |
-| 选新城址 | — 未来的城用你打的城市中心钉 | ✓ 0–6 处 | — 未来的城用你打的城市中心钉 | ✓ |
+| 选新城址 | — 未来的城用你打的城市中心钉 | ✓ 0–6 处 | — 未来的城用你打的城市中心钉 | ✓ 1–6 处，密铺最多 12 处 |
 | 几座城一起规划 | ✓ 最多 4 座 | ✓ 全部现有城市和新城址一次规划 | ✓ 可勾选全部城市 | ✓ 最多 8 座（含城址钉） |
 | 打地图钉 | ✓ | ✓ | ✓ | ✓ |
 | 需要 DMT | ✓ | — 作者建议关掉 DMT | ✓ | ✓ |

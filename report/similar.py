@@ -29,7 +29,7 @@ MARKED = [
     ("选新城址", "New city sites", [("n", "未来的城用你打的城市中心钉", "future cities from your City Center tacks"),
                                   ("y", "0–6 处", "0–6"),
                                   ("n", "未来的城用你打的城市中心钉", "future cities from your City Center tacks"),
-                                  ("y", "", "")]),
+                                  ("y", "1–6 处，密铺最多 12 处", "1–6, up to 12 with dense packing")]),
     ("几座城一起规划", "Cities planned together", [("y", "最多 4 座", "up to 4"),
                                                 ("y", "全部现有城市和新城址一次规划", "every existing city and the new sites, in one go"),
                                                 ("y", "可勾选全部城市", "all cities, with a tick"),
