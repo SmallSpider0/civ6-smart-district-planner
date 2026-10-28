@@ -594,10 +594,10 @@
       <Text>Per city</Text>
     </Replace>
     <Replace Tag="LOC_SDP_COUNT_TOOLTIP" Language="en_US">
-      <Text>How many specialty districts this city should plan, required ones included. Above the required number the rest are picked from the pool (best gain first), and three plans with different districts are offered. At the required number nothing is picked.</Text>
+      <Text>How many specialty districts this city should end up with. Districts built, under construction and map tacks for this city count, and only the rest are planned: with 2 already there and 3 chosen, 1 more is planned. The lowest number is what the city has plus the Must districts not built yet; above that the rest are picked from the pool (best gain first), and three plans with different districts are offered. 3 by default, or one more than the city has once it has 3 or more. A number you set stays with its city when you switch to another city and back.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_COUNT_TOOLTIP_MULTI" Language="en_US">
-      <Text>How many specialty districts each city of this list should plan, required ones included. Above the required number the solver picks the rest from the pool for each city.</Text>
+      <Text>How many specialty districts each city of this list should end up with. Districts built, under construction and map tacks for the city count, and each city plans only the rest; a city that has enough picks nothing from the pool (Must districts are still placed). A planned city has none yet and plans this many.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_GROUP_SPECIALTY" Language="en_US">
       <Text>Specialty districts</Text>

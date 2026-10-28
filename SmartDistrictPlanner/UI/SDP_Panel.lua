@@ -81,7 +81,8 @@ local m_resultIM = InstanceManager:new("ResultRow", "Root", Controls.ResultStack
 -- Panel state, kept while the game runs.
 local m_cityID = nil
 local m_states = {}           -- [DistrictType] = "MUST" | "POOL" | "OFF" | "AUTO" (chosen; else SDP_UI.DefaultState)
-local m_count = nil           -- districts that take population to plan (nil: SDP_UI.DEFAULT_COUNT)
+local m_counts = {}           -- [cityID] = the target the player set (SDP_UI.ListRequest; none: SDP_UI.DefaultTarget, issue 144)
+local m_have = nil            -- SDP_City.SpecialtyHave of the selected city, pins being replaced left out
 local m_weights = {}          -- [YieldType, DISTANCE, HOUSING or COVERAGE] = 0..MAX_WEIGHT
 for _, column in ipairs(SINGLE_COLUMNS) do m_weights[column.Key] = column.Default or 1 end
 local m_allowFeatureRemoval = true
@@ -467,18 +468,34 @@ end
 
 -- What a district list asks for, in type order: Must (types), Pool (types,
 -- candidates that take population), Auto (set), MustSpecialty (count), and
--- Count, the districts that take population to plan (at least MustSpecialty,
--- at most MustSpecialty + #Pool; `count` nil: DEFAULT_COUNT, issue 71).
+-- the count of districts that take population (issues 71, 144). `count` is
+-- a target: how many the city ends with, counting what it has. `have`
+-- (SDP_City.SpecialtyHave, nil: nothing) is what it has; a tacked type it
+-- must build is planned again and counted once. Out: Have (that number),
+-- Target (`count` within Have + MustSpecialty .. Top; nil: DefaultTarget),
+-- Top (Have + MustSpecialty + #Pool, or `ceiling` when higher: a list for
+-- several cities, each with its own Have), Count (the districts to plan:
+-- Target - Have, at least MustSpecialty, at most MustSpecialty + #Pool) and
+-- Pick (Count - MustSpecialty).
 -- `status` (optional): [type] = reason the district cannot be planned (left out).
 SDP_UI.DEFAULT_COUNT = 3
-function SDP_UI.ListRequest(districts, states, count, status)
-  if count == nil then count = SDP_UI.DEFAULT_COUNT end
+
+-- The default target of a city that has `have` districts that take
+-- population: three, or one more than it has (issue 144).
+function SDP_UI.DefaultTarget(have)
+  if have < SDP_UI.DEFAULT_COUNT then return SDP_UI.DEFAULT_COUNT end
+  return have + 1
+end
+
+function SDP_UI.ListRequest(districts, states, count, status, have, ceiling)
   local out = { Must = {}, Pool = {}, Auto = {}, MustSpecialty = 0 }
+  local must = {}
   for _, d in ipairs(districts) do
     if status == nil or status[d.Type] == nil then
       local state = SDP_UI.StateOf(states, d)
       if state == "MUST" then
         out.Must[#out.Must + 1] = d.Type
+        must[d.Type] = true
         if d.Specialty then out.MustSpecialty = out.MustSpecialty + 1 end
       elseif state == "POOL" and d.Specialty and not Limited(d) then
         out.Pool[#out.Pool + 1] = d.Type
@@ -487,7 +504,12 @@ function SDP_UI.ListRequest(districts, states, count, status)
       end
     end
   end
-  out.Count = math.max(out.MustSpecialty, math.min(count, out.MustSpecialty + #out.Pool))
+  out.Have = SDP_City.HaveCount(have, must)
+  if count == nil then count = SDP_UI.DefaultTarget(out.Have) end
+  local most = out.MustSpecialty + #out.Pool
+  out.Top = math.max(out.Have + most, ceiling or 0)
+  out.Target = math.max(out.Have + out.MustSpecialty, math.min(count, out.Top))
+  out.Count = math.min(out.Target - out.Have, most)
   out.Pick = out.Count - out.MustSpecialty
   return out
 end
@@ -1210,7 +1232,7 @@ end
 local function StatusOf(d) return m_status[d.Type] end
 
 local function List()
-  return SDP_UI.ListRequest(m_districts, m_states, m_count, m_status)
+  return SDP_UI.ListRequest(m_districts, m_states, m_cityID and m_counts[m_cityID], m_status, m_have)
 end
 
 local function UpdateSpecialtyNote()
@@ -1228,9 +1250,9 @@ end
 
 local function ShowCount()
   local list = List()
-  Controls.CountValue:SetText(tostring(list.Count))
-  Controls.CountLess:SetDisabled(list.Count <= list.MustSpecialty)
-  Controls.CountMore:SetDisabled(list.Count >= list.MustSpecialty + #list.Pool)
+  Controls.CountValue:SetText(tostring(list.Target))
+  Controls.CountLess:SetDisabled(list.Target <= list.Have + list.MustSpecialty)
+  Controls.CountMore:SetDisabled(list.Target >= list.Top)
 end
 
 local SetState -- defined below
@@ -1277,16 +1299,15 @@ local function SetSelected(districtType, selected)
   if state ~= nil then SetState(districtType, state) end
 end
 
--- How many districts that take population to plan (clamped to what the
--- states allow; at the required number nothing is picked).
+-- How many districts that take population the city should end with
+-- (issue 144), kept for this city; clamped to what it has and what the
+-- states allow (at the required number nothing is picked).
 local function SetCount(count)
-  local list = SDP_UI.ListRequest(m_districts, m_states, count, m_status)
-  if list.Count ~= List().Count then
-    m_count = list.Count
-    ClearResult()
-  else
-    m_count = list.Count
-  end
+  if m_cityID == nil then return end
+  local list = SDP_UI.ListRequest(m_districts, m_states, count, m_status, m_have)
+  local changed = list.Count ~= List().Count
+  m_counts[m_cityID] = list.Target
+  if changed then ClearResult() end
   ShowCount()
   UpdateSpecialtyNote()
   UpdateEstimate()
@@ -1479,8 +1500,24 @@ local function OwnPins()
   return SDP_Pins.Own(playerID, { SDP_City.CityNumbers(playerID)[m_cityID] })
 end
 
+-- What the selected city has (issue 144): read again whenever its pins or
+-- the replace switch change. Pins being replaced do not count.
+local function UpdateHave()
+  local ignore = nil
+  if m_replace then
+    for _, pin in ipairs(OwnPins()) do
+      ignore = ignore or {}
+      ignore[pin.ID] = true
+    end
+  end
+  m_have = m_cityID and SDP_City.HaveOf(Game.GetLocalPlayer(), m_cityID, ignore) or nil
+  ShowCount()
+  UpdateSpecialtyNote()
+end
+
 UpdateReplaceLabel = function()
   Controls.ReplaceLabel:SetText(Locale.Lookup("LOC_SDP_REPLACE_OWN_SHORT", #OwnPins()))
+  UpdateHave()
 end
 
 local function SetReplace(on)
@@ -1489,6 +1526,8 @@ local function SetReplace(on)
     m_replace = on
     ClearResult()
     Remember()
+    UpdateHave()
+    UpdateEstimate()
   end
 end
 
@@ -1568,6 +1607,7 @@ SetPreset = function(name)
   Controls.RemindCheck:SetCheck(m_remind)
   Controls.ApartCheck:SetCheck(m_apart)
   Remember()
+  UpdateHave() -- a preset may turn replace off: the city's tacks count again (issue 144)
   UpdateEstimate()
 end
 
@@ -2131,7 +2171,7 @@ SDP_Panel = {
     return {
       CityID = m_cityID, Result = m_result, DistrictRows = m_districtRows, ResultRows = m_resultRows,
       SolutionCells = m_solutionCells, WeightCells = m_weightCells,
-      Count = List().Count, Solution = m_solution, Remind = m_remind, Apart = m_apart,
+      Count = List().Count, Target = List().Target, Have = List().Have, Solution = m_solution, Remind = m_remind, Apart = m_apart,
       Weights = m_weights, AllowFeatureRemoval = m_allowFeatureRemoval, Land = m_weights.LAND > 0, Tier = m_tier, Replace = m_replace,
       Swap = m_swap,
       Wonders = SelectedWonders(), HeatDistrict = m_heat,
@@ -2170,8 +2210,8 @@ end)
 Controls.ApartCheck:RegisterCheckHandler(function()
   SetApart(Controls.ApartCheck:IsChecked())
 end)
-Controls.CountLess:RegisterCallback(Mouse.eLClick, function() SetCount(List().Count - 1) end)
-Controls.CountMore:RegisterCallback(Mouse.eLClick, function() SetCount(List().Count + 1) end)
+Controls.CountLess:RegisterCallback(Mouse.eLClick, function() SetCount(List().Target - 1) end)
+Controls.CountMore:RegisterCallback(Mouse.eLClick, function() SetCount(List().Target + 1) end)
 Controls.SolveButton:RegisterCallback(Mouse.eLClick, function() Solve() end)
 Controls.ContinueButton:RegisterCallback(Mouse.eLClick, function() Continue() end)
 Controls.CancelButton:RegisterCallback(Mouse.eLClick, function() Cancel() end)

@@ -633,6 +633,56 @@ function SDP_City.TackedDistricts(scan)
   return tacked
 end
 
+-- The districts that take population a city has already (issue 144): Built,
+-- how many are built (complete or not), and Tacked, the types it has a pin
+-- of (SDP_City.OwnPins) and has not built: { Built = n, Tacked = { [type] = true } }.
+-- `scan` needs PlayerID, CityID, X, Y, Pins and Built (SDP_City.Scan, or
+-- SDP_City.HaveOf for a city without the full scan).
+function SDP_City.SpecialtyHave(scan)
+  local have = { Built = 0, Tacked = {} }
+  local built = {}
+  for _, district in ipairs(scan.Built) do
+    local row = GameInfo.Districts[district.Type]
+    if row ~= nil and row.RequiresPopulation then
+      have.Built = have.Built + 1
+      built[district.Type] = true
+    end
+  end
+  for districtType in pairs(SDP_City.TackedDistricts(scan)) do
+    if GameInfo.Districts[districtType].RequiresPopulation and not built[districtType] then
+      have.Tacked[districtType] = true
+    end
+  end
+  return have
+end
+
+-- SDP_City.SpecialtyHave of a city without scanning its plots. `ignore`:
+-- { [pin ID] = true } pins treated as absent (being replaced). Nil when
+-- the city does not exist.
+function SDP_City.HaveOf(playerID, cityID, ignore)
+  local city = CityManager.GetCity(playerID, cityID)
+  if city == nil then return nil end
+  local x, y = city:GetX(), city:GetY()
+  local scan = { PlayerID = playerID, CityID = cityID, X = x, Y = y, Built = {}, Ignored = ignore,
+    Pins = SDP_City.PinsInRange(playerID, x, y, SDP_City.RADIUS + 1, ignore) }
+  for _, district in city:GetDistricts():Members() do
+    scan.Built[#scan.Built + 1] = { Type = GameInfo.Districts[district:GetType()].DistrictType }
+  end
+  return SDP_City.SpecialtyHave(scan)
+end
+
+-- How many districts that take population a city has (SDP_City.SpecialtyHave)
+-- besides the ones planned anew: a tacked type in `planned` (a set) is
+-- planned again, so it is not counted twice. `have` nil: 0.
+function SDP_City.HaveCount(have, planned)
+  if have == nil then return 0 end
+  local n = have.Built
+  for districtType in pairs(have.Tacked) do
+    if not (planned and planned[districtType]) then n = n + 1 end
+  end
+  return n
+end
+
 -- District types a city has already: built (complete or not), or pinned for
 -- it (SDP_City.OwnPins). A set; for SDP_Rules.Apart.
 function SDP_City.PresentDistricts(scan)
@@ -682,6 +732,29 @@ function SDP_City.DistrictStatus(scan, districts)
     elseif district.MaxPerPlayer and district.MaxPerPlayer > 0
         and (builtByPlayer[district.Type] or 0) >= district.MaxPerPlayer then
       status[district.Type] = "MAX_PER_PLAYER"
+    end
+  end
+  return status
+end
+
+-- What one existing city has built that keeps a district type from being
+-- planned there again: { [DistrictType] = "BUILT" | "EXCLUSIVE" }, as
+-- SDP_City.DistrictStatus without the empire limit and without scanning the
+-- city's plots. The Several cities tab adds it to a city's own list (issue
+-- 144: a built district set to required is neither planned nor counted twice).
+function SDP_City.BuiltHereStatus(playerID, cityID, districts)
+  local status = {}
+  local city = CityManager.GetCity(playerID, cityID)
+  if city == nil then return status end
+  local builtHere = {}
+  for _, district in city:GetDistricts():Members() do
+    builtHere[GameInfo.Districts[district:GetType()].DistrictType] = true
+  end
+  for _, district in ipairs(districts) do
+    if builtHere[district.Type] and district.OnePerCity then
+      status[district.Type] = "BUILT"
+    elseif SDP_Rules.ExcludedBy(district.Type, builtHere) ~= nil then
+      status[district.Type] = "EXCLUSIVE"
     end
   end
   return status
