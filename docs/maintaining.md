@@ -35,7 +35,7 @@
 | 一个 Issue 的开发（自己的分支和 PR，要测试、可能等夜里的游戏内测试、要返工） | 子 agent，各用自己的工作树：白天写代码、跑离线测试；游戏内测试跑完后，主会话派一个新的子 agent 按交接说明改问题、开 PR（见下文“子 agent 怎么派”第 2 条） |
 | 维护者点名要单独看着做的开发，或改动大、来回多、想直接审的（如计分重做） | 子会话，各用自己的工作树；做完归档 |
 | 几行就能改完的小修（文字、提示、只改文档的规则） | 主会话 |
-| 分派、转达 Issue 上的决定、里程碑、状态页、夜间队列、Issue 监听（只处理带 `auto` 标签的 Issue，其余记进待看列表）、对外页面（创意工坊） | 主会话 |
+| 分派、转达 Issue 上的决定、里程碑、状态页的手写部分（要决定的事、任务说明、里程碑目标；其余由 `tools/status/` 自动生成）、夜间队列、Issue 监听（只处理带 `auto` 标签的 Issue，其余记进待看列表）、对外页面（创意工坊） | 主会话 |
 
 开发默认交给子 agent，是因为它在任何时候都能派出去（Issue 上来了决定，马上就能开工），后续的活可以按交接说明交给新的子 agent；代价是维护者看不到过程，要改方向得经主会话转达。子 agent 和子会话开工时都拿到完整的要求（Issue、已定的方案、分支基于哪里、测什么），之后的决定由主会话转过去。要求里也写明机器怎么用（见“共用资源”）。
 
@@ -150,6 +150,8 @@
    - 打出 `SmartDistrictPlanner-vX.Y.Z.zip`（mod、中英安装与使用说明、`REPORT.html`、`REPORT_EN.html`；不带给测试者的说明），连同中英两个单文件页面一起附到 Release；
    - 打出 `SmartDistrictPlanner-vX.Y.Z-workshop.zip`（创意工坊提交包，`tools/workshop.py pack`）附到 Release；
    - 生成介绍与评测页，发布到 GitHub Pages（中文 <https://smallspider0.github.io/civ6-smart-district-planner/>，英文在 `en/`）。
+
+   状态页的“最近发布”只取自 GitHub 的 Release，摘要是发布说明里“自 … 以来的变化”一节每条的开头，不手写（[tools/README.md](../tools/README.md)“status/”）：摘要不好就改发布说明。
 5. 用提交包更新创意工坊，见 [docs/workshop-upload.md](workshop-upload.md)：维护者在 Mac 上用 SteamCMD（贡献者账号能更新内容、英文标题与简介、更新说明，不能换预览图），或合作者在 Windows 上传。物品页的图片和简体中文版本在网页上改，提交包里的 UPLOAD.md 写明这次要动哪些。本仓库的工具不连接 Steam。
 
 其他情况：
