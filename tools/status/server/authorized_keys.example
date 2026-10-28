@@ -1,0 +1,3 @@
+# ~<push-user>/.ssh/authorized_keys on the server: one line. The key can only run status-receive
+# (no shell, no forwarding, no pty), whatever command the client asks for.
+restrict,command="/usr/local/bin/status-receive" ssh-ed25519 <push-key> <key-comment>

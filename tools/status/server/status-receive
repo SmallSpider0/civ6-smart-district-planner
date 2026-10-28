@@ -1,0 +1,19 @@
+#!/bin/sh
+# Forced command of the status page's push key (tools/README.md "status/", server setup).
+# Reads stdin into one of the two allowed files, atomically, at most 1 MB.
+# Install as /usr/local/bin/status-receive (root-owned, mode 755); set root to the web root.
+set -eu
+umask 022
+root=/var/www/status
+case "${SSH_ORIGINAL_COMMAND:-}" in
+  status.json|index.html) name=$SSH_ORIGINAL_COMMAND ;;
+  *) echo "usage: ssh <push-host> status.json|index.html < file" >&2; exit 2 ;;
+esac
+tmp=$(mktemp "$root/.in.XXXXXX")
+trap 'rm -f "$tmp"' EXIT
+head -c 1048577 > "$tmp"
+if [ "$(wc -c < "$tmp")" -gt 1048576 ]; then echo "too large" >&2; exit 3; fi
+chmod 644 "$tmp"
+mv -f "$tmp" "$root/$name"
+trap - EXIT
+echo "ok $name"
