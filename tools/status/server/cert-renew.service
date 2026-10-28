@@ -1,0 +1,16 @@
+# Optional example: renew the page's certificate with lego (https://go-acme.github.io/lego/) over HTTP-01
+# (acme-http.conf), then reload nginx. For a bare IP address Let's Encrypt only gives short-lived
+# certificates (--profile shortlived, about 6 days), so the timer must run at least daily;
+# for a domain name drop --profile. Point the HTTPS server's ssl_certificate and ssl_certificate_key
+# at <lego-data>/certificates/<page-host>.crt and .key.
+# Install as /etc/systemd/system/cert-renew.service with cert-renew.timer next to it, then
+# `systemctl daemon-reload && systemctl enable --now cert-renew.timer`.
+[Unit]
+Description=Renew the status page certificate
+After=network-online.target nginx.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+# lego renews only when about half of the lifetime is left (or the CA asks for it); then nginx reloads.
+ExecStart=/usr/local/bin/lego run --accept-tos --path <lego-data> --domains <page-host> --profile shortlived --http --http.webroot <acme-webroot> --deploy-hook "systemctl reload nginx"

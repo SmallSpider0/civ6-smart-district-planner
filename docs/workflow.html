@@ -243,8 +243,9 @@ footer { margin-top: 64px; border-top: 1px solid var(--line); padding-top: 16px;
     <ul class="overview">
       <li>方案由维护者在 Claude Code 对话里拍板，或由合作者在带 <code>auto</code> 标签的 Issue 下明确回复（选定方案、逐条回答）来定；两人意见不同以维护者为准。只修 bug 的版本按规则自动发，其余的发版只等维护者的话。</li>
       <li>主会话管全局：提 Issue、分派、转达决定、管里程碑、更新状态页、跑夜间队列、Issue 监听、改对外页面（创意工坊）、汇报；几行的小修也在这里做。</li>
-      <li>调研、测量和每个 Issue 的开发交给子 agent，开发的各用自己的 git 工作树；它们任何时候都能派出去，怎么选模型、什么时候交接见<a href="#dispatch">第 03 节</a>。维护者点名要看着做的、或改动大来回多的，另开子会话，做完归档。</li>
-      <li>需要人确认的问题写到 Issue 上，工作照常往下走，不停下来等。</li>
+      <li>调研、测量和每个 Issue 的开发交给子 agent，开发的各用自己的 git 工作树；它们任何时候都能派出去，怎么选模型、什么时候交接见<a href="#dispatch">第 03 节</a>。维护者点名要看着做的、或改动大来回多的，主会话直接另开子会话（不先问），做完归档。要求一次写完整：会话正在做事时发给它的消息，要等它这一轮结束才看得到。</li>
+      <li>维护者事先同意不用问的事（各种评论、自己分支的提交和 PR、自动合并、测试、里程碑、到期的修 bug 版本）对每个会话和子 agent 都有效，它们不再请示，也不等转来的同意；要等维护者的事只由主会话处理。</li>
+      <li>需要人确认的问题写到 Issue 上和状态页“要你决定的事”里，工作照常往下走，不停下来等。</li>
     </ul>
   </div>
   <figure>
@@ -379,7 +380,7 @@ footer { margin-top: 64px; border-top: 1px solid var(--line); padding-top: 16px;
     <div class="card"><h4>游戏锁</h4><p>游戏、调试连接、Mods 文件夹只有一套。碰游戏的工具（部署、测试、点击、截图）自己拿锁；别的工作树正拿着，就以退出码 4 停下，可以在后台等锁。退出游戏时放锁。</p><p class="refs"><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/tools/sdplock.py">tools/sdplock.py</a></p></div>
     <div class="card"><h4>本机重活</h4><p>有第二台机器时，超过约一分钟的计算都排到它上面；本机只跑不到一分钟的小任务，或第二台机器格子全满又不能等的。本机上一次只跑一个，worker 上限按本机配置（白天、夜里可以不同），游戏锁被拿走时自动暂停。不经这两个工具直接启动的计算不进排队，别的会话看不到它；子 agent 也照此办理。</p><p class="refs"><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/tools/README.md">tools/README.md「sdplock.py」</a></p></div>
     <div class="card"><h4>第二台机器</h4><p>可选，用 ssh 连接，不用装游戏。所有会话共用一个队列，按排队先后分格子；排在前面的任务放不下时，后面放得下的先跑，每个排队任务最多被越过 3 次，独占任务不被越过。任务在工作树的快照里跑，结果取回本机。</p><p class="refs"><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/tools/remote.py">tools/remote.py</a><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/tools/sdpsched.py">tools/sdpsched.py</a></p></div>
-    <div class="card"><h4>夜间队列</h4><p>机器有人用时，占屏幕的步骤（真实点击、截图、压力测试、发版前的三种规则集）由各会话排进共用队列，由主会话在本机配置的夜间时段（工作日白天不开游戏）统一跑；游戏内测试也可以排进去。周末可按本机配置算作夜间。</p><p class="refs"><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/.claude/skills/sdp-game-test/SKILL.md">sdp-game-test</a></p></div>
+    <div class="card"><h4>夜间队列</h4><p>机器有人用时，占屏幕的步骤（真实点击、截图、压力测试、发版前的三种规则集）由各会话排进共用队列，由主会话在本机配置的夜间时段（工作日白天不开游戏）统一跑：队列不空时，主会话安排一个在时段开始后几分钟叫醒自己的一次性定时任务；游戏内测试也可以排进去。周末可按本机配置算作夜间。</p><p class="refs"><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/.claude/skills/sdp-game-test/SKILL.md">sdp-game-test</a></p></div>
   </div>
   <figure>
     <div class="frame wide">
@@ -488,8 +489,9 @@ footer { margin-top: 64px; border-top: 1px solid var(--line); padding-top: 16px;
 <section id="board">
   <h2><span class="n">08</span>状态页</h2>
   <div class="prose">
-    <p>状态页是维护者自己看进度用的一个网页：等人定的事（问题、方案、建议、谁定的）、各里程碑的进度和每个 Issue 的状态、两台机器上正在跑和排队的任务、夜间队列及结果、发版记录。主会话在事情发生的那一步更新它：PR 开了或合并了、任务开始或结束、有事要定或定了。</p>
-    <p>它跟维护者的账号和机器绑定，不在仓库里。仓库里对应的公开信息是 <a href="https://github.com/SmallSpider0/civ6-smart-district-planner/milestones?state=all">里程碑</a> 和 <a href="https://github.com/SmallSpider0/civ6-smart-district-planner/issues">Issue</a>。</p>
+    <p>状态页是维护者自己看进度用的一个网页：要维护者处理的事、开着的 Issue 和谁该回复、各里程碑的进度和下一步、两台机器上正在跑和排队的任务、夜间队列及结果、最近的发版。</p>
+    <p>代码在仓库的 <a href="https://github.com/SmallSpider0/civ6-smart-district-planner/tree/main/tools/status"><code>tools/status/</code></a>（用法见 <a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/tools/README.md">tools/README.md</a>“status/”；服务器端的模板在 <code>tools/status/server/</code>，搭服务器的步骤在同一节）。页面上的内容几乎都是自动生成的：后台一个循环每分钟读一遍两台机器的调度记录，每 5 分钟读一遍 git 和 GitHub（分支和 PR、里程碑、Issue、发版）和夜间队列，概览和每个里程碑的“下一步”由页面从这些数据算出来。发版记录只从 GitHub 来，摘要取自发布说明，不手写。</p>
+    <p>手写的只有三类，主会话在事情发生的那一步写：要维护者决定的事、调度记录说不清的任务说明（如调研）、里程碑的目标和预计时间。页面的地址、推送用的服务器、账号和机器名只在维护者的本机配置里，不进仓库；推送前脚本会查一遍有没有路径、IP、邮箱和这些词。</p>
   </div>
 </section>
 
@@ -501,7 +503,7 @@ footer { margin-top: 64px; border-top: 1px solid var(--line); padding-top: 16px;
     <div class="card"><h4>一个 Issue 一个 PR</h4><p>小 PR 好审、好回退，分支活得短不容易冲突。CI 一次约 6 分钟，只改文档的只跑校验；往 PR 上推新提交会取消没跑完的那一轮，所以提交攒几个一起推。</p></div>
     <div class="card"><h4>先调研、再动手</h4><p>功能类 Issue 的调研评论固定分“已查证的规则 / 玩家共识 / 个别意见 / 建议方案 / 待定问题”，写给懂游戏、不看代码的人：每个待定问题是一句能直接回答的问话，附上建议；代码位置和公式折叠在末尾。</p></div>
     <div class="card"><h4>对外只写自己</h4><p>README、创意工坊、介绍页只介绍本模组；同类模组只列客观事实的对照表；和它们的对比数据放在开发者文档里。</p></div>
-    <div class="card"><h4>机器有关的不进仓库</h4><p>仓库是公开的：worker 数、夜间时段、第二台机器写在本机配置里，仓库只写有哪些项和默认值；账号也不进仓库。</p></div>
+    <div class="card"><h4>机器有关的不进仓库</h4><p>仓库是公开的：worker 数、夜间时段、第二台机器写在本机配置里，仓库只写有哪些项和默认值；账号也不进仓库。反过来，怎么做事的规则都写进仓库，维护者本机的个人规则只留机器、账号和个人的东西，两边不一致以仓库为准。</p></div>
     <div class="card"><h4>子 agent 的上下文要短</h4><p>重读上下文是子 agent 花费的大头。模型怎么选、什么时候交接、交接说明写什么，见<a href="#dispatch">第 03 节</a>。</p></div>
     <div class="card"><h4>结束前安排好叫醒</h4><p>CI 通过、自动合并都不会叫醒会话。还有活要做时，结束前在后台挂一个等待的命令，做法见<a href="#dispatch">第 03 节</a>最后一段。</p></div>
     <div class="card"><h4>收尾不留尾巴</h4><p>PR 合并后，解除会话和 PR 的绑定、拉取 main、清掉工作树、本地分支和 GitHub 上多出来的分支（<code>worktree.py prune --remote</code>）；子会话做完由主会话归档，只留正在进行的工作。</p></div>
@@ -521,16 +523,16 @@ footer { margin-top: 64px; border-top: 1px solid var(--line); padding-top: 16px;
         <li><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/AGENTS.md">AGENTS.md</a>：需求约束、技术方案、坑的速查表、开发环境与每轮改动流程</li>
         <li><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/tree/main/.claude/skills">.claude/skills/</a>：5 份固定步骤，Claude Code 会按需读入</li>
         <li><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/tree/main/.github">.github/</a>：CI、发版流水线、Issue 与 PR 模板</li>
-        <li><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/tools/README.md">tools/</a>：部署、测试、游戏控制、截图、压力测试、发版、调度</li>
+        <li><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/tools/README.md">tools/</a>：部署、测试、游戏控制、截图、压力测试、发版、调度、状态页</li>
         <li><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/docs/workflow.html">docs/workflow.html</a>：本页</li>
       </ul>
     </div>
     <div class="card">
       <h4>只在各自的机器上</h4>
       <ul>
-        <li>本机规则：哪台机器做什么、什么时候能开游戏、谁跑夜间队列、账号</li>
+        <li>本机规则：哪台机器做什么、什么时候能开游戏、账号</li>
         <li>本机配置：worker 数、夜间时段、第二台机器</li>
-        <li>维护者的状态页</li>
+        <li>状态页的地址、推送用的服务器、账号和机器名（状态页的代码和服务器端的模板在仓库的 <code>tools/status/</code>）</li>
         <li>代理的记忆：维护者和代理之间的约定、各里程碑的决定过程（最终决定已写进 Issue 和 CHANGELOG）</li>
       </ul>
     </div>
@@ -575,7 +577,7 @@ footer { margin-top: 64px; border-top: 1px solid var(--line); padding-top: 16px;
     ["Release 与介绍页", 1, "打模组包和创意工坊包，生成中英介绍页，连同本页发布到 GitHub Pages", "—", ".github/workflows/release.yml"],
     ["创意工坊上传", 2, "SteamCMD 上传后再下载回来，与提交包逐字节比对", "Steam 要密码或验证码时由人输入", "tools/workshop.py"],
     ["创意工坊网页", 2, "代理在浏览器里改简体中文的标题和简介、换图，先和线上原文比对", "封面只有物品所有者能换", null],
-    ["状态页", 2, "主会话在事件发生时更新（见第 08 节）", "—", null],
+    ["状态页", 2, "后台循环每分钟从调度记录、git、GitHub、夜间队列生成并推送，发版记录只取自 GitHub；主会话只在事情发生时手写要决定的事、任务说明和里程碑目标（见第 08 节）", "—", "tools/status/sync.py"],
     ["Windows 实测", 4, "—", "合作者手动测界面缩放与布局", "docs/dev-windows.md"],
     ["改游戏配置", 4, "需要时代理先问，游戏必须关着", "同意后才改", null]
   ];
