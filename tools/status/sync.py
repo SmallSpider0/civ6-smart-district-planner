@@ -30,7 +30,7 @@ local config: nothing is pushed if one shows up) and sent with `ssh HOST NAME`
 or PUSH_EVERY passed. Without a push host in the local config the bundle is
 written and checked, and nothing is sent.
 
-    python3 -I tools/status/sync.py [OUT_DIR] [--quick] [--push]
+    python3 -I tools/status/sync.py [--quick] [--push] [--out DIR]
     python3 -I tools/status/sync.py set decisions/issue-120 '{"title": "...", "status": "open"}'
     python3 -I tools/status/sync.py update decisions/issue-120 '{"status": "done", "doneAt": "2026-10-27"}'
     python3 -I tools/status/sync.py delete jobs/old-job
@@ -771,22 +771,64 @@ def push(out):
             json.dump(sig, fh)
 
 
-def main():
-    args = [a for a in sys.argv[1:] if not a.startswith("--")]
-    if args and args[0] in ("set", "update", "delete", "get"):
-        op = args[0]
-        if op == "get":
-            m = load_manual()
-            print(json.dumps(m[args[1]] if len(args) > 1 else m, ensure_ascii=False, indent=1))
-            return
-        if len(args) < 2 or (op != "delete" and len(args) < 3):
-            sys.exit(__doc__)
-        edit_manual(op, args[1], json.loads(args[2]) if op != "delete" else None)
+USAGE = """usage:
+    python3 -I tools/status/sync.py [--quick] [--push] [--out DIR]
+    python3 -I tools/status/sync.py set|update <collection>/<id> '<json>'
+    python3 -I tools/status/sync.py delete <collection>/<id>
+    python3 -I tools/status/sync.py get [<collection>]"""
+
+OPS = {"set": (2, 2), "update": (2, 2), "delete": (1, 1), "get": (0, 1)}  # op: (min, max) words after it
+
+
+def parse_args(argv):
+    """Return (op, words, opts) or exit 2 with the usage: an unknown word or flag never becomes a folder
+    (on 2026-10-27 `sync.py list` took "list" for the output directory and wrote snapshots there)."""
+    def fail(msg):
+        print("sync.py: %s\n%s" % (msg, USAGE), file=sys.stderr)
+        sys.exit(2)
+    if argv and argv[0] in OPS:
+        op, words = argv[0], argv[1:]
+        lo, hi = OPS[op]
+        if any(w.startswith("--") for w in words):
+            fail("%s takes no options" % op)
+        if not lo <= len(words) <= hi:
+            fail("%s takes %s" % (op, "%d argument(s)" % lo if lo == hi else "%d to %d arguments" % (lo, hi)))
+        return op, words, {}
+    opts = {"quick": False, "push": False, "out": OUT}
+    i = 0
+    while i < len(argv):
+        a = argv[i]
+        if a in ("--quick", "--push"):
+            opts[a[2:]] = True
+        elif a == "--out" or a.startswith("--out="):
+            val = a[len("--out="):] if a.startswith("--out=") else (argv[i + 1] if i + 1 < len(argv) else "")
+            if a == "--out":
+                i += 1
+            if not val or val.startswith("--"):
+                fail("--out needs a directory")
+            opts["out"] = val
+        elif a in ("-h", "--help"):
+            print(USAGE)
+            sys.exit(0)
+        else:
+            fail("unknown %s %r" % ("option" if a.startswith("-") else "argument", a))
+        i += 1
+    return None, [], opts
+
+
+def main(argv=None):
+    op, words, opts = parse_args(sys.argv[1:] if argv is None else argv)
+    if op == "get":
+        m = load_manual()
+        print(json.dumps(m[words[0]] if words else m, ensure_ascii=False, indent=1))
+        return
+    if op:
+        edit_manual(op, words[0], json.loads(words[1]) if op != "delete" else None)
         os.makedirs(OUT, exist_ok=True)
         push(OUT)
         return
-    out = args[0] if args else OUT
-    quick = "--quick" in sys.argv[1:]  # machines only: cheap enough to run every minute
+    out = opts["out"]
+    quick = opts["quick"]  # machines only: cheap enough to run every minute
     now = time.time()
     os.makedirs(os.path.join(out, "machines"), exist_ok=True)
     os.makedirs(os.path.join(out, "work"), exist_ok=True)
@@ -806,7 +848,7 @@ def main():
                                                          sum(r["slots"] for r in doc["running"]), doc["cap"]))
     if not quick:
         full(out, now, stamp)
-    if "--push" in sys.argv[1:]:
+    if opts["push"]:
         push(out)
 
 

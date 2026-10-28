@@ -1,13 +1,16 @@
 """Offline tests of tools/status/sync.py: release summaries, the hand-written notes' field check,
-bundling, the private-string check and pushing only with a push host configured.
+bundling, the private-string check, pushing only with a push host configured, and the command line
+(unknown words and flags are refused and create nothing).
 
     python3 -I -m unittest discover -s tests/tools -v
 """
+import io
 import json
 import os
 import sys
 import tempfile
 import unittest
+from contextlib import redirect_stderr
 from unittest import mock
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
@@ -208,6 +211,67 @@ class Push(TempShared):
             sync.push(self.out)
         self.assertEqual(e.exception.code, 4)
         self.assertEqual(self.sent, [])
+
+
+class Arguments(unittest.TestCase):
+    """An unknown word or flag exits with the usage and creates nothing (2026-10-27: `sync.py list`
+    took "list" for the output directory and left a list/ folder of snapshots in the repository)."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.cwd = os.path.join(self.tmp.name, "cwd")
+        os.makedirs(self.cwd)
+        old = os.getcwd()
+        os.chdir(self.cwd)
+        self.addCleanup(os.chdir, old)
+        for target, value in (("OUT", os.path.join(self.tmp.name, "out")),
+                              ("MANUAL", os.path.join(self.tmp.name, "manual.json"))):
+            p = mock.patch.object(sync, target, value)
+            p.start()
+            self.addCleanup(p.stop)
+        for target in ("macbook", "macmini", "full", "push", "edit_manual"):
+            p = mock.patch.object(sync, target, side_effect=AssertionError(target + " must not run"))
+            p.start()
+            self.addCleanup(p.stop)
+
+    def refused(self, argv):
+        err = io.StringIO()
+        with redirect_stderr(err), self.assertRaises(SystemExit) as e:
+            sync.main(argv)
+        self.assertEqual(e.exception.code, 2, argv)
+        self.assertIn("usage:", err.getvalue())
+        self.assertEqual(os.listdir(self.tmp.name), ["cwd"], argv)  # neither OUT nor manual.json
+        self.assertEqual(os.listdir(self.cwd), [], argv)
+
+    def test_unknown_word(self):
+        for argv in (["list"], ["--quick", "list"], ["status", "--push"]):
+            self.refused(argv)
+
+    def test_unknown_flag(self):
+        for argv in (["--bogus"], ["--quick", "-x"], ["--out"], ["--out", "--push"], ["--out="]):
+            self.refused(argv)
+
+    def test_edits_check_their_arguments(self):
+        for argv in (["set", "jobs/a"], ["delete"], ["delete", "jobs/a", "x"], ["get", "a", "b"],
+                     ["update", "jobs/a", "{}", "--push"]):
+            self.refused(argv)
+
+    def test_known_arguments(self):
+        d = os.path.join(self.tmp.name, "elsewhere")
+        self.assertEqual(sync.parse_args(["--out", d, "--push", "--quick"]),
+                         (None, [], {"out": d, "push": True, "quick": True}))
+        self.assertEqual(sync.parse_args(["--out=" + d])[2]["out"], d)
+        self.assertEqual(sync.parse_args([]), (None, [], {"out": sync.OUT, "push": False, "quick": False}))
+        self.assertEqual(sync.parse_args(["get"]), ("get", [], {}))
+        self.assertEqual(sync.parse_args(["delete", "jobs/a"]), ("delete", ["jobs/a"], {}))
+
+    def test_watch_passes_the_folder_as_an_option(self):
+        import watch
+        with mock.patch.object(watch.subprocess, "run") as run:
+            watch.sync("/some/dir", quick=True)
+        cmd = run.call_args[0][0]
+        self.assertEqual(sync.parse_args(cmd[3:])[2], {"out": "/some/dir", "push": True, "quick": True})
 
 
 if __name__ == "__main__":

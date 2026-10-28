@@ -13,7 +13,7 @@ background) only on trouble, each trouble once:
     than 2 days left: its renewal on the server is broken (checked hourly; skipped without page_host).
 The session reports the trouble to the main session and starts the loop again.
 
-    python3 -I tools/status/watch.py [OUT_DIR] [--interval 300] [--tick 60]
+    python3 -I tools/status/watch.py [--out DIR] [--interval 300] [--tick 60]
 """
 import argparse
 import json
@@ -61,7 +61,7 @@ def cert_trouble():
 
 
 def sync(out, quick):
-    return subprocess.run([sys.executable, "-I", os.path.join(HERE, "sync.py"), out, "--push"]
+    return subprocess.run([sys.executable, "-I", os.path.join(HERE, "sync.py"), "--out", out, "--push"]
                           + (["--quick"] if quick else []), capture_output=True, text=True, timeout=180)
 
 
@@ -90,7 +90,7 @@ def troubles(out):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("out", nargs="?", default=OUT)
+    ap.add_argument("--out", default=OUT)  # never positional: a stray word must not become a folder
     ap.add_argument("--interval", type=int, default=300)  # full sync: git, GitHub, queue, machines
     ap.add_argument("--tick", type=int, default=60)  # machines and the hand-written part
     a = ap.parse_args()

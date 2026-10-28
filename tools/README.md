@@ -572,7 +572,7 @@ python3 -I tools/worktree.py prune --remote            # 删掉其中能删的�
 - **手写**：只有三类，经 `set|update|delete` 写进共用目录下的 `status/manual.json`：`decisions/*`（要维护者决定的事）、`jobs/*`（调度记录说不清的任务说明，如调研）、`milestones/*`（只补 `goal`、`eta`、`blocker`）。字段只能用页面读的那些（`sync.py` 的 `FIELDS`），`set` 必须带 `REQUIRED` 里的字段，其他字段直接拒绝。**发版记录不手写**：`releases/*` 一律拒绝，摘要不好就改 GitHub 上的发布说明。
 
 ```bash
-python3 -I tools/status/sync.py                       # 全量：机器、git、GitHub、夜间队列，写进共用目录的 status/out/
+python3 -I tools/status/sync.py                       # 全量：机器、git、GitHub、夜间队列，写进共用目录的 status/out/（--out DIR 写到别处）
 python3 -I tools/status/sync.py --quick               # 只更新机器（便宜，每分钟一次）
 python3 -I tools/status/sync.py --quick --push        # 再打包成 status.json、查私人信息、推送
 python3 -I tools/status/sync.py set decisions/issue-120 '{"title": "...", "status": "open"}'
@@ -581,6 +581,9 @@ python3 -I tools/status/sync.py delete jobs/old-job
 python3 -I tools/status/sync.py get [decisions]
 python3 -I tools/status/watch.py                      # 后台循环：每分钟 --quick --push，每 5 分钟全量
 ```
+
+- 不认识的词和选项一律打印用法、以退出码 2 退出，什么都不建（以前第一个词被当成输出目录，`sync.py list` 在仓库里建出了 `list/`）。输出目录只能用 `--out DIR` 指定。
+- 手写的部分在事情发生的同一步写：要决定的事提出或定了、调研这类任务开始或结束、里程碑的目标变了。回答进度问题前先看一遍页面。
 
 - **推送**：`ssh <push_host> status.json` 或 `ssh <push_host> index.html`，文件从标准输入传过去；服务器上那把钥匙只该能写这两个文件。内容（不算时间戳）变了或满 10 分钟才推 `status.json`，`page.html` 变了才推 `index.html`。没配 `push_host` 时只打包、检查，不推送，CI 和合作者也能跑。
 - **私人信息检查**：推送前在 `status.json` 里找本机和服务器路径（`/Users/`、`/home/`、`/private/`、`/var/`、`/etc/`）、`.ssh`、IP、邮箱，以及本机配置里的 `private_words`、`push_host`、`page_host`。找到任何一个就不推，退出码 4。仓库是公开的，账号名、主机名、地址、页面路径都只写在本机配置里。
@@ -599,3 +602,42 @@ python3 -I tools/status/watch.py                      # 后台循环：每分钟
 
   `push_host` 是接收文件的 ssh 主机名（`~/.ssh/config` 里的别名），`page_host` 是页面所在的主机（查证书用），`private_words` 是这台机器自己的词（账号名、主机名等，不分大小写），`local_name`、`remote_name` 是两张机器卡片的标题。第二台机器沿用 `remote`、`remote_slots`、`remote_path`。
 - 离线测试：`python3 -I -m unittest discover -s tests/tools -p "test_status.py"`（发版摘要、字段检查、打包、私人信息、没配置时不推送）。
+
+### 搭状态页的服务器
+
+页面是静态文件，服务器只需要 nginx 和一个只能写两个文件的推送账号。模板在 `tools/status/server/`，尖括号里的是占位符：`<push-user>` 推送账号、`<web-root>` 网页目录、`<page-path>` 页面路径、`<page-host>` 服务器的域名或 IP、`<push-key>` 推送用的公钥、`<push-host>` 本机 `~/.ssh/config` 里连推送账号的别名。下面以 Debian/Ubuntu 为例，在服务器上用 root 做。
+
+1. **推送账号**：不能登录、没有密码。
+
+   ```bash
+   useradd --system --create-home --shell /bin/sh <push-user>
+   passwd -l <push-user>
+   ```
+
+2. **网页目录**，属于推送账号，nginx 能读：
+
+   ```bash
+   install -d -o <push-user> -g <push-user> -m 755 <web-root>
+   ```
+
+3. **接收脚本**：`status-receive` 复制到 `/usr/local/bin/status-receive`（root 所有，755），把里面的 `root=` 改成 `<web-root>`。它只认 `status.json`、`index.html` 两个名字，从标准输入读、先写临时文件再改名，超过 1 MB 拒收。
+
+4. **推送钥匙**：在本机生成一把只做这件事的钥匙（`ssh-keygen -t ed25519 -f ~/.ssh/<key-file> -N ""`），公钥按 `authorized_keys.example` 写进服务器上 `~<push-user>/.ssh/authorized_keys`（目录 700、文件 600，属于推送账号）。`restrict` 关掉 shell、转发和终端，`command=` 让这把钥匙不管客户端要什么都只跑接收脚本。本机 `~/.ssh/config` 加一个别名：
+
+   ```
+   Host <push-host>
+       HostName <page-host>
+       User <push-user>
+       IdentityFile ~/.ssh/<key-file>
+       IdentitiesOnly yes
+       BatchMode yes
+   ```
+
+   试一下：`ssh <push-host> status.json < some.json` 应该回 `ok status.json`；`ssh <push-host> ls` 应该只回用法。
+
+5. **nginx**：`nginx-location.conf` 填好占位符，放进 HTTPS 那个 `server` 块（或存成 snippet 再 `include`），`nginx -t && systemctl reload nginx`。`<page-path>` 用一串长的随机字符（如 `openssl rand -hex 12`）：页面没有登录，拿到链接的人都能看，所以路径不写进仓库、Issue 或公开页面。
+
+6. **HTTPS**：有域名时用常见的 Let's Encrypt 客户端（certbot、lego 等）即可。只有 IP 时 Let's Encrypt 只给短期证书（约 6 天），要每天续：`acme-http.conf`（80 端口只放验证文件，其余转到 HTTPS）和 `cert-renew.service`、`cert-renew.timer`（lego 的 HTTP-01，一天查两次，续了就 reload nginx）是一个可选的示例，云服务器的安全组要放开 80 端口。
+
+7. **本机配置**：在 `~/.config/sdp/local.json` 的 `status` 里填 `push_host`（第 4 步的别名）、`page_host`（`<page-host>`，`watch.py` 每小时查一次证书）和 `private_words`（本机和服务器的账号名、主机名等）。然后 `python3 -I tools/status/sync.py --push` 推一次，打开 `https://<page-host>/<page-path>/` 看。页面地址只私下给要看的人。
+
