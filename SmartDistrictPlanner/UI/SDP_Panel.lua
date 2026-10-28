@@ -1607,6 +1607,7 @@ SetPreset = function(name)
   Controls.RemindCheck:SetCheck(m_remind)
   Controls.ApartCheck:SetCheck(m_apart)
   Remember()
+  UpdateHave() -- a preset may turn replace off: the city's tacks count again (issue 144)
   UpdateEstimate()
 end
 

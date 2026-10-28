@@ -737,6 +737,29 @@ function SDP_City.DistrictStatus(scan, districts)
   return status
 end
 
+-- What one existing city has built that keeps a district type from being
+-- planned there again: { [DistrictType] = "BUILT" | "EXCLUSIVE" }, as
+-- SDP_City.DistrictStatus without the empire limit and without scanning the
+-- city's plots. The Several cities tab adds it to a city's own list (issue
+-- 144: a built district set to required is neither planned nor counted twice).
+function SDP_City.BuiltHereStatus(playerID, cityID, districts)
+  local status = {}
+  local city = CityManager.GetCity(playerID, cityID)
+  if city == nil then return status end
+  local builtHere = {}
+  for _, district in city:GetDistricts():Members() do
+    builtHere[GameInfo.Districts[district:GetType()].DistrictType] = true
+  end
+  for _, district in ipairs(districts) do
+    if builtHere[district.Type] and district.OnePerCity then
+      status[district.Type] = "BUILT"
+    elseif SDP_Rules.ExcludedBy(district.Type, builtHere) ~= nil then
+      status[district.Type] = "EXCLUSIVE"
+    end
+  end
+  return status
+end
+
 -- The districts with an empire limit (Districts.MaxPerPlayer, e.g. the
 -- Government Plaza) the player has built up to that limit, complete or not,
 -- in any of their cities: { [DistrictType] = "BUILT" } (issue 108). The

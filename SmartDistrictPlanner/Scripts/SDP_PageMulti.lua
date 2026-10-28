@@ -121,8 +121,12 @@ local function Built() return SDP_City.EmpireBuilt(Game.GetLocalPlayer(), Distri
 
 -- What the existing city of a participant Key has (SDP_City.SpecialtyHave;
 -- nil for the shared list and a planned city), pins being replaced left out.
+local function CityOf(key)
+  return key ~= nil and tonumber(key:match("^C(%d+)$") or "") or nil
+end
+
 local function HaveOf(key)
-  local cityID = key ~= nil and tonumber(key:match("^C(%d+)$") or "") or nil
+  local cityID = CityOf(key)
   if cityID == nil then return nil end
   local ignore = nil
   if m_replace then
@@ -140,13 +144,32 @@ end
 local function ListOf(list, key)
   local districts = Districts()
   if key ~= nil and key ~= "ALL" then
-    return SDP_UI.ListRequest(districts, list.States, list.Count or SDP_UI.DEFAULT_COUNT, Built(), HaveOf(key))
+    -- What the city has built is in its count already: a built district
+    -- set to required is not counted again (the solver skips it).
+    local status = Built()
+    local cityID = CityOf(key)
+    if cityID ~= nil then
+      for districtType, why in pairs(SDP_City.BuiltHereStatus(Game.GetLocalPlayer(), cityID, districts)) do
+        status[districtType] = status[districtType] or why
+      end
+    end
+    return SDP_UI.ListRequest(districts, list.States, list.Count or SDP_UI.DEFAULT_COUNT, status, HaveOf(key))
   end
   local ceiling = 0
   for _, d in ipairs(districts) do
     if d.Specialty then ceiling = ceiling + 1 end
   end
   return SDP_UI.ListRequest(districts, list.States, list.Count or SDP_UI.DEFAULT_COUNT, Built(), nil, ceiling)
+end
+
+-- The edited list's count. A city's own count starts from what the city
+-- has, so show it again whenever its tacks or the replace switch change.
+local function ShowCount()
+  local counts = ListOf(EditedList())
+  Controls.MultiCountValue:SetText(tostring(counts.Target))
+  Controls.MultiCountLess:SetDisabled(counts.Target <= counts.Have + counts.MustSpecialty)
+  Controls.MultiCountMore:SetDisabled(counts.Target >= counts.Top)
+  m_view.Count = counts.Target
 end
 
 local function WonderTypes()
@@ -566,6 +589,7 @@ function P.SetPreset(name)
   Controls.MultiRemindCheck:SetCheck(m_remind)
   Controls.MultiApartCheck:SetCheck(m_apart)
   Remember()
+  ShowCount()
   UpdateEstimate()
 end
 
@@ -716,11 +740,7 @@ function P.RefreshLists()
     m_view.Districts[#m_view.Districts + 1] = { Type = row.Type, State = row.State, Status = status, Group = row.Group,
       Cell = row.Cell, Built = built[d.Type] ~= nil or nil }
   end
-  local counts = ListOf(list, key)
-  Controls.MultiCountValue:SetText(tostring(counts.Target))
-  Controls.MultiCountLess:SetDisabled(counts.Target <= counts.Have + counts.MustSpecialty)
-  Controls.MultiCountMore:SetDisabled(counts.Target >= counts.Top)
-  m_view.Count = counts.Target
+  ShowCount()
 
   -- Wonders: tags and the "add" pulldown.
   local wonders = SDP_Wonders.List(playerID)
@@ -1040,6 +1060,7 @@ function P.Place()
   m_result.Placed = true
   SDP_Preview.Clear()
   UpdateReplaceLabel()
+  ShowCount()
   SDP_UI.UpdateAllButtons()
   return placed
 end
@@ -1053,6 +1074,7 @@ function P.Undo()
     m_result.Placed = false
   end
   UpdateReplaceLabel()
+  ShowCount()
   SDP_UI.UpdateAllButtons()
   return removed
 end

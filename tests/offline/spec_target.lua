@@ -191,3 +191,81 @@ test("several cities tab: each city fills up to the count", function()
   multi.ApplyPlan(nil)
   multi.SetPlanFor("ALL")
 end)
+
+-- A preset puts the switches back, replace among them: the city's tacks count
+-- again (Codex on PR 147).
+test("single-city tab: a preset that turns replace off counts the tacks again", function()
+  SDP_Panel.SelectTab("SINGLE")
+  SDP_Panel.SelectCity(3)
+  c.SolveButton:Click()
+  local result = SDP_Panel.RunTask(1000) or SDP_Panel.State().Result
+  T.ok(result and result.Ok, "result: " .. tostring(result and result.Error))
+  T.ok(SDP_Panel.PlacePins() >= 3, "placed")
+  c.ReplaceCheck:Toggle()
+  T.eq(SDP_Panel.State().Have, 0, "tacks being replaced do not count")
+  c.PresetPull._entries[1].Button:Click()
+  T.eq(c.ReplaceCheck:IsChecked(), false, "the preset turns replace off")
+  T.eq(SDP_Panel.State().Have, 3, "the three tacks count again")
+  T.eq(Shown(), 4, "default one more than it has")
+  T.eq(SDP_Panel.State().Count, 1, "one more to plan")
+  SDP_Panel.UndoPins()
+  T.eq(SDP_Panel.State().Have, 0, "undone")
+end)
+
+local function MultiRow(districtType)
+  for _, r in ipairs(SDP_Panel.Multi.State().View.Districts) do
+    if r.Type == districtType then return r end
+  end
+end
+
+local function MultiMust(districtType)
+  for _ = 1, 3 do
+    if MultiRow(districtType).State ~= "MUST" then MultiRow(districtType).Cell:Click() end
+  end
+  T.eq(MultiRow(districtType).State, "MUST", districtType)
+end
+
+-- A district the city has built, required in its own list, is in what the
+-- city has already: it does not raise the minimum (Codex on PR 147).
+test("several cities tab: a built district required in a city's own list counts once", function()
+  SDP_Panel.SelectTab("MULTI")
+  local multi = SDP_Panel.Multi
+  multi.Refresh()
+  multi.SetPlanFor("C1")
+  MultiMust("DISTRICT_CAMPUS") -- city 1 has built it
+  for _ = 1, 5 do c.MultiCountLess:Click() end
+  T.eq(tonumber(c.MultiCountValue:GetText()), 2, "down to the two city 1 has")
+  T.ok(c.MultiCountLess:IsDisabled(), "less is off at the minimum")
+  T.eq(multi.Request().Counts.C1, 2, "city 1's target: nothing new")
+  c.MultiCountMore:Click()
+  T.eq(multi.Request().Counts.C1, 3, "three: one new district")
+  multi.ApplyPlan(nil)
+  multi.SetPlanFor("ALL")
+end)
+
+-- A city's own count follows its tacks: after placing, undoing, and a
+-- preset that turns replace off (Codex on PR 147).
+test("several cities tab: a city's own count follows its tacks and the replace switch", function()
+  SDP_Panel.SelectTab("MULTI")
+  local multi = SDP_Panel.Multi
+  multi.Refresh()
+  multi.SetPlanFor("C3")
+  MultiMust("DISTRICT_CAMPUS")
+  T.eq(tonumber(c.MultiCountValue:GetText()), 3, "city 3's own list: three")
+  T.ok(not c.MultiCountLess:IsDisabled(), "city 3 has none: less is on")
+  c.MultiSolveButton:Click()
+  local result = SDP_Panel.RunTask(5000) or multi.State().Result
+  T.ok(result and result.Ok, "result: " .. tostring(result and result.Error))
+  T.eq(Specialty(result.Plan, "C3"), 3, "city 3 gets three")
+  c.MultiPlaceButton:Click()
+  T.ok(c.MultiCountLess:IsDisabled(), "placed: city 3 has three, less is off")
+  c.MultiReplaceCheck:Toggle()
+  T.ok(not c.MultiCountLess:IsDisabled(), "replacing them: less is on")
+  c.MultiPresetPull._entries[1].Button:Click()
+  T.eq(c.MultiReplaceCheck:IsChecked(), false, "the preset turns replace off")
+  T.ok(c.MultiCountLess:IsDisabled(), "the tacks count again: less is off")
+  c.MultiUndoButton:Click()
+  T.ok(not c.MultiCountLess:IsDisabled(), "undone: less is on")
+  multi.ApplyPlan(nil)
+  multi.SetPlanFor("ALL")
+end)
