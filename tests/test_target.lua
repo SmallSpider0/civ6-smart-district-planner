@@ -41,6 +41,9 @@ test("single-city tab: what the city has counts, the default follows it", functi
   SDP_Panel.SelectTab("SINGLE")
   SDP_Panel.SelectCity(city:GetID())
   PoolOnly()
+  -- Earlier test files set the capital's count; a set count stays with its
+  -- city for the game session, so start from the default.
+  SDP_Panel.ForgetCounts()
   local have = SDP_City.HaveCount(SDP_City.HaveOf(pid, city:GetID()))
   T.ok(have >= 1, "the built campus counts: " .. have)
   T.eq(SDP_Panel.State().Have, have, "the panel reads the same")

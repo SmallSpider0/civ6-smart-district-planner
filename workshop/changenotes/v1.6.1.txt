@@ -1,0 +1,5 @@
+Changes since v1.6.0:
+- One city and Several cities: Districts and Per city now mean how many specialty districts the city should end up with. Districts built, under construction and map tacks for the city count, and only the rest are planned: with 2 already there and 3 chosen, 1 more is planned. On Several cities a city that already has enough picks nothing more from the pool. On One city the number follows the city: 3 when it has fewer than 3, otherwise one more than it has; a number you set stays with its city when you switch to another city and back. For a city that already has districts, the same number plans fewer new ones than before.
+
+自 v1.6.0 以来的变化：
+- 单城、多城页的“区域数量”“每城数量”改成这座城最后一共要有几个区域：已建好的、正在建的、已为这座城打了钉的都算在内，只规划差的那几个（已有 2 个、选 3，就只再规划 1 个）。多城页已经够数的城不再从候选里挑。单城页的默认值跟着城走：不到 3 个时默认 3，否则比已有的多 1 个；在一座城改过的数，换城再换回来还在。已有区域的城，同样的数量会比以前少规划几个。

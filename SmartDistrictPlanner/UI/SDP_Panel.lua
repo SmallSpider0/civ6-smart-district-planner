@@ -30,7 +30,7 @@ local MAX_WEIGHT = 3
 -- The release, in the launch bar button's tooltip, so that a report says
 -- which copy the game loaded (issue 27). tools/validate.py checks it against
 -- the newest version in CHANGELOG.md.
-local VERSION = "v1.6.0"
+local VERSION = "v1.6.1"
 
 -- The weight row (feedback item 3): the six yields with the game's font
 -- icons, one family (the texture icons cover only some yields: requirements
@@ -2129,6 +2129,14 @@ SDP_Panel = {
   SetSelected = SetSelected,
   SetState = function(districtType, state) SetState(districtType, state) end,
   SetCount = SetCount,
+  -- Forget the counts set in this game session, so each city shows its default again.
+  ForgetCounts = function()
+    m_counts = {}
+    ClearResult()
+    ShowCount()
+    UpdateSpecialtyNote()
+    UpdateEstimate()
+  end,
   SetRemind = SetRemind,
   SetApart = SetApart,
   SelectSolution = function(n)
