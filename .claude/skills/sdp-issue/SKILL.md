@@ -19,7 +19,7 @@ Nothing here waits on a blocking question: what the maintainer must decide goes 
 
 The mod does something wrong, or a test or document is wrong. Fix it without asking.
 
-1. Reproduce it (offline test, or in-game; real clicks go to the night queue, sdp-game-test). If it cannot be reproduced, ask on the issue for the save or the log and change nothing.
+1. Reproduce it yourself before asking the reporter for anything (maintainer, 2026-10-29). Read the report, screenshot and log for clues: civilization, city, tab, districts, wonders, switches that were probably on (replace, reminders, presets), map tacks already on the map. Set up the same situation: an offline spec on the fake world, or a game with the same civilization (`game.py newgame --leader ...`) and game state set through `GameCore_Tuner` (a founded religion, built districts, tacks placed by an earlier plan), then drive the panel through its hooks (`civ6tuner.py exec -s SDP_Panel`) or real clicks, and vary the options one at a time. In-game work follows sdp-game-test (by day only when the maintainer says so; otherwise queue it and go on offline). Only when that fails, ask on the issue for the version, the save or the log, and change nothing until it is reproduced.
 2. Still a bug if the fix only corrects plans that were wrong (an illegal tile, a miscounted bonus). If the fix needs a default changed, the requirement document changed, something removed, or changes plans in ordinary cases, treat it as a feature.
 3. Write a test that fails on the old code, fix, run the related tests, commit with `#N`.
 4. Put it in the next patch milestone (§3; create it when none is open). If the fix changes plans in many scenes, say so in the milestone's description and in CHANGELOG.
