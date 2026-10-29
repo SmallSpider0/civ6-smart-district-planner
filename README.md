@@ -27,7 +27,7 @@ On every tab:
 - Three effort levels: Fast, Standard and Thorough. Small cases are solved exhaustively; otherwise the result says whether it is the best or how far it may be from an upper bound, and you can keep improving it. The same game state and settings give the same plan every time.
 - Built districts and the tacks you placed yourself are never moved or covered and count as neighbors; districts limited to one per empire (such as the Government Plaza) are never planned twice.
 - On One city and Several cities, each result row gives the district's tile and bonus; hover it for the district's own score (its weighted adjacency, with the tiles it takes and its distance from the City Center), then DMT's breakdown. Several cities shows a subtotal for each city.
-- Land loss (the Tiles weight, 1 by default): districts pay for the good tiles they take, each valued with its best improvement, its yields weighed by fixed numbers (Gold at a quarter of Production, Faith at half); chopping and harvesting come first. An optional switch also uses tiles you can swap from your other cities.
+- Land loss (the Tiles weight, 1 by default): districts pay for the good tiles they take, each valued with its best improvement, its yields weighed by fixed numbers (Gold at a quarter of Production, Faith at half); chopping and harvesting come first. Tiles you can swap from your other cities are used too (a switch, on by default); at equal value the plan keeps to the city's own tiles.
 - Each tab keeps its settings in the save. The settings fold into one line after a solve, the window fits the screen, and **View map** hides the window to look at the preview.
 - Neighborhoods get Housing from Appeal, counted by what each city still needs; Preserves count Appeal and, under Tiles, the yields their buildings give nearby tiles; the Preserve is off by default. An Aqueduct is added when the city lacks fresh water, a Dam when there are enough Floodplains tiles. When a plan takes adjacency from nearby Woods or Rainforest, placing it also puts a "Don't chop" reminder tack on those tiles.
 - Long computations run over several frames, so the game stays responsive, and they finish even if you close the panel. Placed tacks can be undone, also after loading a save. <kbd>Shift</kbd>+<kbd>L</kbd> opens the panel.
@@ -126,7 +126,7 @@ The development documents are in Chinese; issues and pull requests in English ar
 - 快速、标准、精细三档；规模小时穷举，结果注明是否最优或离上界多远，可以继续优化。同一局面、同样输入，结果每次相同。
 - 已建区域和你自己打的钉不挪、不压，并作为邻居计分；全帝国限量的区域（如市政广场）不会重复规划。
 - 单城、多城页的结果行显示区域的坐标和加成，悬停先看这个区域自己的分（加权相邻加成，以及占掉的地块、离市中心的距离），再看 DMT 的逐项来源；多城页每座城有一行小计。
-- 计入占地（“地块”权重，默认 1）：区域占掉好地块要付出代价，地块按修上最好的改良后的产出算，各项产出按固定倍数折算（金币按生产力的 1/4、信仰按 1/2），先砍伐、收获再建；可选开关让别的本方城市的格也能换过来用。
+- 计入占地（“地块”权重，默认 1）：区域占掉好地块要付出代价，地块按修上最好的改良后的产出算，各项产出按固定倍数折算（金币按生产力的 1/4、信仰按 1/2），先砍伐、收获再建；别的本方城市能换过来的格也会用（开关，默认打开），同样好时只用本城的格。
 - 每个页签的设置记在存档里；求解后设置收成一行，窗口高度跟着屏幕，“看地图”收起窗口看预览。
 - 社区按魅力计住房，按每座城还缺多少计价值；保护区计魅力，周边产出算在地块里，默认不建；缺淡水时自动加水渠，泛滥平原多时自动加堤坝；方案靠旁边的树林、雨林拿加成时，打钉时在这些格上加“勿砍”提醒钉。
 - 耗时长的计算分帧进行，游戏不卡，关掉面板也会算完。可以撤销，撤销记录随存档保存。<kbd>Shift</kbd>+<kbd>L</kbd> 打开面板。

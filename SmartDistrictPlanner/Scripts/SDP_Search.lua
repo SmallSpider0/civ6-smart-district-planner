@@ -2222,7 +2222,9 @@ end
 
 -- Ties take no swap (issue 162). From `layout` (value `gain`), each slot on
 -- a swapped plot, in slot order, tries every free plot it needs no swap
--- for, and trading plots with each other placed slot; the move kept is the
+-- for, trading plots with each other placed slot, and moving with a placed
+-- slot next to it to another pair of touching plots (its own one needing no
+-- swap); the move kept is the
 -- one with the highest value, then the fewest swapped plots, then the
 -- smaller positions (Better), among the moves that keep the value at least
 -- `gain` and swap fewer plots. Repeats until a pass keeps nothing. Never
@@ -2234,6 +2236,7 @@ function Search:Untangle(layout, gain)
   if swapped == nil or layout == nil then return layout, gain end
   local cur, swaps = Copy(layout), self:SwapCount(layout)
   local k, n, legal = self.K, self.N, self.Legal
+  local adjacent, touching = self:Touching()
   local changed = swaps > 0
   while changed do
     changed = false
@@ -2270,6 +2273,26 @@ function Search:Untangle(layout, gain)
           if q ~= m and other ~= 0 and legal[m][other] and legal[q][keep] then
             cur[m], cur[q] = other, keep
             Try()
+            cur[m], cur[q] = keep, other
+          end
+        end
+        -- With a placed slot next to it, to another pair of touching plots
+        -- (two districts that give each other adjacency move together).
+        for q = 1, k do
+          local other = cur[q]
+          if q ~= m and other ~= 0 and touching[keep][other] then
+            for i = 1, n do
+              local freeI = not inUse[i] or inUse[i] == q
+              if i ~= keep and legal[m][i] and freeI and not swapped(self, m, i) then
+                for _, j in ipairs(adjacent[i]) do
+                  local freeJ = not inUse[j] or inUse[j] == m or inUse[j] == q
+                  if legal[q][j] and freeJ and not (j == other) then
+                    cur[m], cur[q] = i, j
+                    Try()
+                  end
+                end
+              end
+            end
             cur[m], cur[q] = keep, other
           end
         end

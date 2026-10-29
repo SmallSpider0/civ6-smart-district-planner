@@ -53,3 +53,22 @@ test("city sites: a preset sets the distance weight to 0.5, recognised", functio
   sites.SetPreset(preset)
   sites.SetWeight("DISTANCE", distance)
 end)
+
+-- Issue 162: the swap switch is on in a game that kept nothing for it; off,
+-- the fold line names it with the game's loaded text.
+test("the swap switch: on by default, off named on the fold line", function()
+  SDP_Panel.Refresh()
+  SDP_Panel.SelectTab("SINGLE")
+  local kept = cfg:GetValue(SDP_Settings.CONFIG_KEY .. "SINGLE") or ""
+  if kept:find("SWAP=", 1, true) == nil then T.eq(SDP_Panel.State().Swap, true, "on: " .. kept) end
+  local word = Locale.Lookup("LOC_SDP_FOLD_NO_SWAP")
+  T.ok(word ~= "" and word ~= "LOC_SDP_FOLD_NO_SWAP", "the text loads: " .. word)
+  local was = SDP_Panel.State().Swap
+  SDP_Panel.SetSwap(false)
+  local off = SDP_Panel.State().FoldText
+  SDP_Panel.SetSwap(true)
+  local on = SDP_Panel.State().FoldText
+  SDP_Panel.SetSwap(was)
+  T.ok(off:find(word, 1, true) ~= nil, "off: named: " .. off)
+  T.ok(on:find(word, 1, true) == nil, "on: not named: " .. on)
+end)
