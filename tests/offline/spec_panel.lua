@@ -538,32 +538,31 @@ test("district cells: a click goes round the states on both tabs", function()
   Round(rows, "DISTRICT_AQUEDUCT", { "AUTO", "MUST", "OFF", "AUTO" })
 end)
 
--- The harbor / commercial hub switch (SDP_Rules.Apart): named from the
--- rules, on by default, sent with the request, toggled through its box.
-test("the harbor and commercial hub switch on both tabs", function()
+-- Partner districts (the harbor and the commercial hub, SDP_Rules.Apart) are
+-- always kept apart (issue 152): no switch on either tab, and every request
+-- asks for it (the rule of issue 106 then picks which one a city takes).
+test("partner districts always kept apart, with no switch on either tab (issue 152)", function()
   SDP_Panel.SelectTab("SINGLE")
   SDP_Panel.SelectCity(1)
+  SDP_Panel.Refresh()
   local c = UI_Mock.Controls
-  T.eq(c.ApartBox:IsHidden(), false, "shown: the rules have the pair")
-  T.ok(c.ApartLabel:GetText():find("LOC_DISTRICT_HARBOR_NAME", 1, true) ~= nil, "named: " .. c.ApartLabel:GetText())
-  T.ok(c.ApartBox:GetToolTipString():find("LOC_BUILDING_LIGHTHOUSE_NAME", 1, true) ~= nil, "the rule in the tooltip")
-  T.eq(SDP_Panel.State().Apart, true, "on by default")
-  T.eq(c.ApartCheck:IsChecked(), true, "ticked")
-  c.ApartCheck:Toggle()
-  T.eq(SDP_Panel.State().Apart, false, "off through the box")
-  c.ApartCheck:Toggle()
-  T.eq(SDP_Panel.State().Apart, true, "on again")
+  for _, id in ipairs({ "ApartBox", "ApartCheck", "ApartLabel" }) do
+    T.eq(rawget(c, id), nil, "the single-city tab has no " .. id)
+  end
+  T.eq(SDP_Panel.SetApart, nil, "nor a hook to turn it off")
+  local request = SDP_Panel.Request()
+  T.ok(request ~= nil, "a request")
+  T.eq(request.Apart, true, "kept apart")
   SDP_Panel.SelectTab("MULTI")
   local multi = SDP_Panel.Multi
   multi.Refresh()
-  T.eq(c.MultiApartBox:IsHidden(), false, "shown on the multi-city tab")
-  T.eq(multi.State().Apart, true, "on by default")
+  for _, id in ipairs({ "MultiApartBox", "MultiApartCheck", "MultiApartLabel" }) do
+    T.eq(rawget(c, id), nil, "the several-cities tab has no " .. id)
+  end
+  T.eq(multi.SetApart, nil, "nor a hook to turn it off")
   multi.SetPlanFor("ALL")
   multi.ApplyPlan({ "DISTRICT_CAMPUS" })
-  T.eq(multi.Request().Apart, true, "sent")
-  c.MultiApartCheck:Toggle()
-  T.eq(multi.Request().Apart, false, "off through the box")
-  c.MultiApartCheck:Toggle()
+  T.eq(multi.Request().Apart, true, "kept apart")
 end)
 
 -- The swap switch (issue 54): off by default, sent with the request on both

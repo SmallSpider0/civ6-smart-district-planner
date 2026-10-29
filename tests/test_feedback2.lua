@@ -1,7 +1,7 @@
 -- @state SDP_Panel
 -- @timeout 400
 -- The second round of feedback (2026-10-21): the harbor and the commercial
--- hub kept apart (SDP_Rules.Apart), a neighborhood's housing and a
+-- hub kept apart (SDP_Rules.Apart; always since issue 152), a neighborhood's housing and a
 -- preserve's yields by appeal (SDP_Appeal), switching a city-center pin off
 -- on the multi-city tab, "replace" leaving city-center pins alone. The rules
 -- are the game's here. Needs a city: run tests/fixtures/found_capital.lua
@@ -155,21 +155,17 @@ test("the multi-city tab: a city-center pin unticked stays out; replace leaves c
   if not ok then error(err, 0) end
 end)
 
-test("the panel: the switch names the pair and starts on", function()
+-- Issue 152: no switch; every request keeps partner districts apart.
+test("the panel: no keep-apart switch, partner districts always kept apart (issue 152)", function()
   Capital()
   SDP_Panel.SelectTab("SINGLE")
   SDP_Panel.Refresh()
-  if #SDP_Rules.ApartFor(pid) == 0 then
-    T.eq(Controls.ApartBox:IsHidden(), true, "hidden where the player's districts have no such pair")
-    T.skip("no harbor / commercial hub rule in this ruleset")
+  for _, id in ipairs({ "ApartBox", "ApartCheck", "ApartLabel", "MultiApartBox", "MultiApartCheck", "MultiApartLabel" }) do
+    T.eq(Controls[id], nil, "no " .. id)
   end
-  T.eq(Controls.ApartBox:IsHidden(), false, "shown")
-  -- The tooltip names the pair; the short label too in Chinese ("Keep apart" in English).
-  local harbor = Locale.Lookup(GameInfo.Districts.DISTRICT_HARBOR.Name)
-  T.ok(Controls.ApartLabel:GetText() ~= "", "labelled")
-  T.ok(Controls.ApartBox:GetToolTipString():find(harbor, 1, true) ~= nil, "named: " .. Controls.ApartBox:GetToolTipString())
-  T.eq(SDP_Panel.State().Apart, true, "on")
-  T.eq(Controls.ApartCheck:IsChecked(), true, "ticked")
+  local request = SDP_Panel.Request()
+  if request == nil then T.skip("nothing to plan in the capital") end
+  T.eq(request.Apart, true, "kept apart")
 end)
 
 -- Issue 106: with both the harbor and the commercial hub as candidates and

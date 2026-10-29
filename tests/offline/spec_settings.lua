@@ -20,9 +20,11 @@ World.New({ rows = MAP, cities = { { id = 1, x = 5, y = 3, population = 6, capit
 local broadcasts = 0
 Network.BroadcastPlayerInfo = function() broadcasts = broadcasts + 1 end
 local cfg = PlayerConfigurations[0]
-cfg:SetValue("SDP_Settings_SINGLE", "v1;preset=BALANCED;LAND=0;YIELD_GOLD=3;TIER=FINE;HOUSING=9;BOGUS=1;SWAP=yes")
+-- APART=0: the partner-district switch turned off, kept by v1.6.1 and earlier
+-- (the switch is gone since issue 152; the value is ignored).
+cfg:SetValue("SDP_Settings_SINGLE", "v1;preset=BALANCED;LAND=0;YIELD_GOLD=3;TIER=FINE;HOUSING=9;BOGUS=1;SWAP=yes;APART=0")
 -- Several cities: a save written by v1.5.0 with a change from Science (issue 89).
-cfg:SetValue("SDP_Settings_MULTI", "v1;preset=SCIENCE;YIELD_GOLD=2")
+cfg:SetValue("SDP_Settings_MULTI", "v1;preset=SCIENCE;YIELD_GOLD=2;APART=0")
 cfg:SetValue("SDP_Settings_SITES",
   "v1;preset=GROWTH;APPEAL=1;K=2;D=9;COUNT=4;DISTRICTS=DISTRICT_PRESERVE:P,DISTRICT_CAMPUS:M,bad entry,DISTRICT_NOPE:M")
 UI_Mock.Install()
@@ -87,6 +89,7 @@ test("a loaded save: each tab gets back what it kept", function()
   T.eq(s.Weights.HOUSING, 1, "a weight out of range: the default")
   T.eq(s.Swap, false, "a switch that is not 0 or 1: the default")
   T.eq(s.Remind, true, "what was not kept: the default")
+  T.eq(SDP_Panel.Request().Apart, true, "a kept APART=0 is ignored: partner districts kept apart (issue 152)")
   SDP_Panel.SelectTab("MULTI")
   local m = SDP_Panel.Multi.State()
   T.eq(m.Weights.YIELD_GOLD, 2, "several cities: its own gold weight")
@@ -97,6 +100,9 @@ test("a loaded save: each tab gets back what it kept", function()
   T.eq(UI_Mock.Controls.MultiPresetPull:GetButton():GetText(), "LOC_SDP_PRESET_CUSTOM",
     "a v1.5.0 save with a change: Custom (issue 89)")
   T.ok(m.FoldText:find("LOC_SDP_PRESET_CUSTOM", 1, true) ~= nil, "on the fold line too")
+  SDP_Panel.Multi.SetPlanFor("ALL")
+  SDP_Panel.Multi.ApplyPlan({ "DISTRICT_CAMPUS" })
+  T.eq(SDP_Panel.Multi.Request().Apart, true, "several cities: a kept APART=0 is ignored too")
   SDP_Panel.SelectTab("SITES")
   local sites = SDP_Panel.Sites.State()
   T.eq(sites.Preset, "GROWTH", "city sites: the preset")
