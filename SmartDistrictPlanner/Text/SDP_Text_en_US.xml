@@ -536,10 +536,7 @@
       <Text>Replace this mod's earlier tacks ({1_N})</Text>
     </Replace>
     <Replace Tag="LOC_SDP_REPLACE_OWN_TOOLTIP" Language="en_US">
-      <Text>When on, this mod's earlier tacks for this city (those you have not edited) give way to the new plan, and undo puts them back; tacks you placed yourself are never touched.</Text>
-    </Replace>
-    <Replace Tag="LOC_SDP_REPLACE_OWN_MULTI_TOOLTIP" Language="en_US">
-      <Text>When on, this mod's earlier tacks for these cities (those you have not edited) give way to the new plan, and undo puts them back; tacks you placed yourself are never touched.</Text>
+      <Text>This mod's earlier tacks for the cities being planned (those you have not edited) give way to the new plan, and undo puts them back; tacks you placed yourself are never touched.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SINGLE_WONDERS" Language="en_US">
       <Text>Wonders</Text>
@@ -594,10 +591,7 @@
       <Text>Per city</Text>
     </Replace>
     <Replace Tag="LOC_SDP_COUNT_TOOLTIP" Language="en_US">
-      <Text>How many specialty districts this city should end up with (built, under construction and tacked ones count); raise it to plan more, picked from the Pool.</Text>
-    </Replace>
-    <Replace Tag="LOC_SDP_COUNT_TOOLTIP_MULTI" Language="en_US">
-      <Text>How many specialty districts each city should end up with; a city that has enough gets no more, and a new city is planned with this many.</Text>
+      <Text>How many specialty districts each city should end up with (built, under construction and tacked ones count); raise it to plan more from the Pool, which takes longer to compute.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_GROUP_SPECIALTY" Language="en_US">
       <Text>Specialty districts</Text>
@@ -612,10 +606,10 @@
       <Text>Click: Auto &gt; Must &gt; Off</Text>
     </Replace>
     <Replace Tag="LOC_SDP_STATES_TOOLTIP" Language="en_US">
-      <Text>Must is always placed, Pool districts are picked best first up to the number, Off is left out. Encampments and Aerodromes have no adjacency bonus: to build one, make it Must.</Text>
+      <Text>Must is always placed, Pool districts are picked best first up to the number, Off is left out. The Preserve, Encampment and Aerodrome have no adjacency bonus: to build one, make it Must.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_STATES_OTHER_TOOLTIP" Language="en_US">
-      <Text>These districts have no Population requirement. Auto: an Aqueduct when the city lacks fresh water, a Dam when it has many Floodplains tiles; left out when it fits nowhere.</Text>
+      <Text>These districts have no Population requirement; Must is always placed. Auto (not on the city sites tab): an Aqueduct when the city lacks fresh water, a Dam when it has many Floodplains tiles; left out when it fits nowhere.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_STATE_MUST" Language="en_US">
       <Text>Must</Text>
@@ -728,17 +722,8 @@
     <Replace Tag="LOC_SDP_STATUS_NOT_PER_SITE" Language="en_US">
       <Text>Off</Text>
     </Replace>
-    <Replace Tag="LOC_SDP_SITES_STATES_TOOLTIP" Language="en_US">
-      <Text>Every site is scored with the Must districts and picks the best of the Pool; Off is left out. The Preserve, Encampment and Aerodrome start Off: set them to Pool or Must to count them.</Text>
-    </Replace>
     <Replace Tag="LOC_SDP_SITES_STATES_LEGEND_OTHER" Language="en_US">
       <Text>Click: Off &gt; Must</Text>
-    </Replace>
-    <Replace Tag="LOC_SDP_SITES_STATES_OTHER_TOOLTIP" Language="en_US">
-      <Text>These districts have no Population requirement; set to Must, every site is scored with one placed.</Text>
-    </Replace>
-    <Replace Tag="LOC_SDP_SITES_PLAN_COUNT_TOOLTIP" Language="en_US">
-      <Text>How many districts each site is scored with; higher favors sites with room for several good districts and takes longer; 0 ignores districts.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_WEIGHT_DISTANCE_SHORT" Language="en_US">
       <Text>Dist.</Text>

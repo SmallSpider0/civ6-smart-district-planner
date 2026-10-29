@@ -1279,6 +1279,48 @@ test("issue 153: city sites presets have their own tooltips", function()
   SDP_Panel.SelectTab("SINGLE")
 end)
 
+-- Issue 153 (decided 2026-10-29): a tooltip that means the same on every
+-- tab is one key. These tooltips sit on the panel XML's containers and
+-- labels, which no script sets, so the check reads the XML: the controls
+-- the other tests click (the count arrows, the replace boxes) and the group
+-- labels, each with the tooltip of the nearest element around it.
+test("issue 153: the tabs share the count, states and replace tooltips", function()
+  local xml = sdp_read_file(sdp_root .. "/SmartDistrictPlanner/UI/SDP_Panel.xml")
+  T.ok(xml ~= nil, "the panel XML is read")
+  xml = xml:gsub("<!%-%-.-%-%->", "")
+  local stack, byID, byString = {}, {}, {}
+  for close, tag, attrs, empty in xml:gmatch("<(/?)([%w_]+)([^>]-)(/?)>") do
+    if close == "/" then
+      table.remove(stack)
+    else
+      local tip = attrs:match('ToolTip="([^"]*)"')
+      local around = tip
+      for i = #stack, 1, -1 do around = around or stack[i] end
+      local id, str = attrs:match('ID="([^"]*)"'), attrs:match('String="([^"]*)"')
+      if id then byID[id] = around or false end
+      if str then
+        byString[str] = byString[str] or {}
+        table.insert(byString[str], tip or false)
+      end
+      if empty ~= "/" then table.insert(stack, tip or false) end
+    end
+  end
+  for _, id in ipairs({ "CountLess", "MultiCountLess", "SitesPlanLess" }) do
+    T.eq(byID[id], "LOC_SDP_COUNT_TOOLTIP", id .. ": the shared count tooltip")
+  end
+  for _, id in ipairs({ "ReplaceCheck", "MultiReplaceCheck" }) do
+    T.eq(byID[id], "LOC_SDP_REPLACE_OWN_TOOLTIP", id .. ": the shared replace tooltip")
+  end
+  local function All(str, want, n)
+    local tips = byString[str] or {}
+    T.eq(#tips, n, str .. ": on " .. n .. " tabs")
+    for i, tip in ipairs(tips) do T.eq(tip, want, str .. " " .. i) end
+  end
+  All("LOC_SDP_GROUP_SPECIALTY", "LOC_SDP_STATES_TOOLTIP", 3)
+  All("LOC_SDP_GROUP_OTHER", "LOC_SDP_STATES_OTHER_TOOLTIP", 3)
+  All("LOC_SDP_SITES_PLAN", "LOC_SDP_STATES_TOOLTIP", 1)
+end)
+
 -- Issue 91 (decided 2026-10-26): the preserve starts off, the distance
 -- weight at 0.5, and the summary leads with the adjacency, the other parts
 -- after it, with no total; through the cells' and the arrows' own handlers.

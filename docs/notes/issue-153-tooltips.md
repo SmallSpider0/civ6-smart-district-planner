@@ -20,10 +20,18 @@
 - 只为提示提供数字的记录（`docs/notes/27-fifth-feedback-land.md`、`29-issue-63-several-cities.md`、`issue-67-ui.md`）留着，各加一句“#153 起不再重跑”。`issue-87-dense.md`、`issue-90-sites-districts.md`、`19-coverage.md` 只是记录当时提示用了哪些数，没有承诺重跑，不改。
 - 玩家文档：`docs/install-and-test.md`、`docs/install-en.md` 里“悬停看实测耗时、完整算法、收益和代价”的说法改成现在提示里有的内容。
 
+- 合作者问能不能共用（[评论](https://github.com/SmallSpider0/civ6-smart-district-planner/issues/153#issuecomment-6485094886)），[定的方案](https://github.com/SmallSpider0/civ6-smart-district-planner/issues/153#issuecomment-6485137427)：意思相同的四条三个页签共用一个键。
+  - 区域数量 `LOC_SDP_COUNT_TOOLTIP`（单城、多城、选城址），说“每座城”，选城址的新城没有已建的，同一句也对。
+  - 区域状态 `LOC_SDP_STATES_TOOLTIP`（三页的“占人口名额的区域”和选城址的“规划”）。写之前核对了默认值：单城、多城的保护区默认不建（`SDP_UI.DefaultState`，魅力规则），军营、航空港默认在候选；选城址三个都默认不建（`SDP_Sites.DefaultState` + `SDP_Rules.Functional`）。三页不一样，所以句子不说“默认不建”，只说它们没有相邻加成、要建就点成必建，三页都成立。
+  - 不占名额的区域 `LOC_SDP_STATES_OTHER_TOOLTIP`，半句注明选城址页没有“自动”。
+  - 替换旧钉 `LOC_SDP_REPLACE_OWN_TOOLTIP`（单城、多城），不说“这座城”“这些城”。
+  - 删掉的键（中英）：`LOC_SDP_COUNT_TOOLTIP_MULTI`、`LOC_SDP_SITES_PLAN_COUNT_TOOLTIP`、`LOC_SDP_SITES_STATES_TOOLTIP`、`LOC_SDP_SITES_STATES_OTHER_TOOLTIP`、`LOC_SDP_REPLACE_OWN_MULTI_TOOLTIP`。没有 Lua 或游戏内测试引用它们。
+
 ## 测试
 
 - `validate.py`：0 错误。
 - 离线 `spec_panel.lua` 新加 “issue 153: city sites presets have their own tooltips”：经下拉框每一项的按钮 `Click()`，查每项和选中后按钮上的提示是 `LOC_SDP_SITES_PRESET_<名>_TOOLTIP`。去掉 `SDP_PageSites.lua` 的改动时这一项失败（29 过 1 败），改后 30 项全过。
+- 离线 `spec_panel.lua` 加 “issue 153: the tabs share the count, states and replace tooltips”：这几条提示写在面板 XML 的容器和标签上，脚本不设，所以直接读 `SDP_Panel.xml`（`offline_tests.mjs` 新给 spec 一个全局 `sdp_root`），查三个页签数量箭头、两个替换勾选框外层的提示键和各分组标签的提示键相同。旧 XML 上失败（`MultiCountLess` 拿到 `LOC_SDP_COUNT_TOOLTIP_MULTI`），改后 `spec_panel.lua` 31 项全过。
 - 整套离线测试在第二台机器上跑（`remote.py run offline153b`）：211 过、0 败。
 - 游戏内：工作日白天不开游戏，加了夜间队列 #34（中英文各跑 `test_ui`、`test_sites`、`test_settings`、`test_tiers`，并截悬停图看英文有没有截断）。
 

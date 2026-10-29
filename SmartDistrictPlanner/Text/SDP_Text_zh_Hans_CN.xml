@@ -536,10 +536,7 @@
       <Text>替换本模组之前打的钉（{1_N} 个）</Text>
     </Replace>
     <Replace Tag="LOC_SDP_REPLACE_OWN_TOOLTIP" Language="zh_Hans_CN">
-      <Text>打开后，本模组以前给这座城打的钉（你没改过的）换成新方案，撤销时放回；你自己打的钉不动。</Text>
-    </Replace>
-    <Replace Tag="LOC_SDP_REPLACE_OWN_MULTI_TOOLTIP" Language="zh_Hans_CN">
-      <Text>打开后，本模组以前给这些城打的钉（你没改过的）换成新方案，撤销时放回；你自己打的钉不动。</Text>
+      <Text>本模组以前给要规划的城打的钉（你没改过的）换成新方案，撤销时放回；你自己打的钉不动。</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SINGLE_WONDERS" Language="zh_Hans_CN">
       <Text>奇观</Text>
@@ -594,10 +591,7 @@
       <Text>每城数量</Text>
     </Replace>
     <Replace Tag="LOC_SDP_COUNT_TOOLTIP" Language="zh_Hans_CN">
-      <Text>这座城最后要有几个占人口名额的区域（已建、在建、已打钉的都算）；调高就多规划几个，从“候选”里挑。</Text>
-    </Replace>
-    <Replace Tag="LOC_SDP_COUNT_TOOLTIP_MULTI" Language="zh_Hans_CN">
-      <Text>每座城最后要有几个占人口名额的区域；已够数的城不再加，新城就规划这么多个。</Text>
+      <Text>每座城最后要有几个占人口名额的区域（已建、在建、已打钉的都算）；调高就从“候选”里多规划几个，算得也更久。</Text>
     </Replace>
     <Replace Tag="LOC_SDP_GROUP_SPECIALTY" Language="zh_Hans_CN">
       <Text>占人口名额的区域</Text>
@@ -612,10 +606,10 @@
       <Text>点一下：自动 → 必建 → 不建</Text>
     </Replace>
     <Replace Tag="LOC_SDP_STATES_TOOLTIP" Language="zh_Hans_CN">
-      <Text>必建一定放，候选按区域数量挑收益最高的，不建不放。军营、航空港没有相邻加成，要建就设为必建。</Text>
+      <Text>必建一定放，候选按区域数量挑收益最高的，不建不放。保护区、军营、航空港没有相邻加成，要建就点成必建。</Text>
     </Replace>
     <Replace Tag="LOC_SDP_STATES_OTHER_TOOLTIP" Language="zh_Hans_CN">
-      <Text>这些区域不占人口名额。自动：城市缺淡水时加水渠，泛滥平原多时加堤坝，放不下就不加。</Text>
+      <Text>这些区域不占人口名额，必建一定放。自动（选城址页没有这一档）：城市缺淡水时加水渠，泛滥平原多时加堤坝，放不下就不加。</Text>
     </Replace>
     <Replace Tag="LOC_SDP_STATE_MUST" Language="zh_Hans_CN">
       <Text>必建</Text>
@@ -728,17 +722,8 @@
     <Replace Tag="LOC_SDP_STATUS_NOT_PER_SITE" Language="zh_Hans_CN">
       <Text>不计入</Text>
     </Replace>
-    <Replace Tag="LOC_SDP_SITES_STATES_TOOLTIP" Language="zh_Hans_CN">
-      <Text>必建的每个城址都按它评分，候选的由每个城址挑最合适的几个，不建的不算。保护区、军营、航空港默认不建，要算就点成候选或必建。</Text>
-    </Replace>
     <Replace Tag="LOC_SDP_SITES_STATES_LEGEND_OTHER" Language="zh_Hans_CN">
       <Text>点一下：不建 → 必建</Text>
-    </Replace>
-    <Replace Tag="LOC_SDP_SITES_STATES_OTHER_TOOLTIP" Language="zh_Hans_CN">
-      <Text>这些区域不占人口名额；设为必建时，每个城址都按放下它来评分。</Text>
-    </Replace>
-    <Replace Tag="LOC_SDP_SITES_PLAN_COUNT_TOOLTIP" Language="zh_Hans_CN">
-      <Text>每个城址按建几个区域来评分；调高，更偏向能摆下多个好区域的城址，算得也更久；0 表示不看区域。</Text>
     </Replace>
     <Replace Tag="LOC_SDP_WEIGHT_DISTANCE_SHORT" Language="zh_Hans_CN">
       <Text>距离</Text>
