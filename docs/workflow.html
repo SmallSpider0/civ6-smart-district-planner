@@ -558,7 +558,7 @@ footer { margin-top: 64px; border-top: 1px solid var(--line); padding-top: 16px;
   // [step, level, how (may contain a file link), what a person still does]
   var ROWS = [
     ["发现新 Issue", 2, "维护者要求时开监听脚本，每 2 分钟轮询（连不上 GitHub 时 30 秒后重试），只把维护者或合作者打了 auto 标签的 Issue 上的动静交给代理；合作者的其余 Issue 和评论记进待看列表，等维护者看；不开时在两件事之间查一次", "—", "tools/watch_issues.py"],
-    ["分诊、修 bug", 2, "复现，写一个在旧代码上失败的测试，修好，挂到下一个小版本的里程碑", "—", ".claude/skills/sdp-issue/SKILL.md"],
+    ["分诊、修 bug", 2, "先照报告和截图自己复现（同样的文明、页签、开关和地图上的钉），复现不了才请报告人给存档；写一个在旧代码上失败的测试，修好，挂到下一个小版本的里程碑", "—", ".claude/skills/sdp-issue/SKILL.md"],
     ["功能调研", 2, "子 agent 查规则库、游戏与依赖模组的源码、同类模组、玩家社区，写成 Issue 评论", "—", null],
     ["功能方案", 4, "代理列出方案 A、B 和建议，用玩家看得懂的话写在 Issue 里", "维护者在对话里拍板，或合作者在带 auto 标签的 Issue 下明确回复", null],
     ["里程碑", 2, "bug 确认时、功能方案定了时挂上对应版本，没有就新建；版本号按改动大小定；不做的关掉，以后再说的打 later；发版时移走没做完的、关掉里程碑", "—", null],
