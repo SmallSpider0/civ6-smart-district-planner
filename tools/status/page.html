@@ -301,7 +301,7 @@ function autoNext(a) {
   return steps.join("；");
 }
 function msNumber(d) {
-  if (d.ms) return Number(d.ms);
+  if (Number.isInteger(d.ms)) return d.ms;
   const m = /\/milestone\/(\d+)/.exec(d.link || "");
   return m ? Number(m[1]) : null;
 }
@@ -309,7 +309,8 @@ function mergeMilestones() {
   if (!m_auto) { renderMilestones(m_notes); return; }
   const used = new Set();
   const merged = m_auto.items.map((a, i) => {
-    const note = m_notes.find((d) => msNumber(d) === a.number || d.name === a.title) || {};
+    // An older note may carry the title in ms ("v1.6.1"): match it by name too, so it closes with its milestone.
+    const note = m_notes.find((d) => msNumber(d) === a.number || d.name === a.title || d.ms === a.title) || {};
     used.add(note.id);
     const started = a.issues.some((x) => x.state === "doing" || x.state === "done");
     return {

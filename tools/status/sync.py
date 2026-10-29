@@ -664,6 +664,12 @@ def edit_manual(op, path, data=None):
         unknown = sorted(set(data) - FIELDS[coll])
         if unknown:
             sys.exit("%s: the page does not read %s; fields are %s" % (coll, unknown, sorted(FIELDS[coll])))
+        # 2026-10-29: a note written with "ms": "v1.6.1" matched no milestone and stayed on the page
+        # after the milestone closed; ms is GitHub's milestone number.
+        if coll == "milestones" and "ms" in data and data["ms"] is not None and \
+                (isinstance(data["ms"], bool) or not isinstance(data["ms"], int)):
+            sys.exit("milestones: ms is the GitHub milestone's number (as in /milestone/15), not %r;"
+                     " the title goes in name" % (data["ms"],))
         missing = sorted(REQUIRED.get(coll, set()) - set(data)) if op == "set" else \
             sorted(k for k in REQUIRED.get(coll, set()) if k in data and not data[k])
         if missing:
