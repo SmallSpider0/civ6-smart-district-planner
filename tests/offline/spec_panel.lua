@@ -1257,6 +1257,24 @@ test("issue 89: city sites show Custom too; a preset puts the distance weight ba
   SDP_Panel.SelectTab("SINGLE")
 end)
 
+-- Issue 153: each city sites preset says what it favors, on its entry and on
+-- the button once chosen (they had no tooltip before).
+test("issue 153: city sites presets have their own tooltips", function()
+  SDP_Panel.Open()
+  SDP_Panel.SelectTab("SITES")
+  local c = UI_Mock.Controls
+  local order = SDP_Sites.PRESET_ORDER
+  for _, name in ipairs(order) do
+    local key = "LOC_SDP_SITES_PRESET_" .. name .. "_TOOLTIP"
+    local entry = Entry(c.SitesPresetPull, name, order)
+    T.ok((entry.Button:GetToolTipString() or ""):find(key, 1, true) == 1, name .. ": its entry's tooltip")
+    entry.Button:Click()
+    T.ok((c.SitesPresetPull:GetButton():GetToolTipString() or ""):find(key, 1, true) == 1, name .. ": on the button")
+  end
+  SDP_Panel.Sites.SetPreset("BALANCED")
+  SDP_Panel.SelectTab("SINGLE")
+end)
+
 -- Issue 91 (decided 2026-10-26): the preserve starts off, the distance
 -- weight at 0.5, and the summary leads with the adjacency, the other parts
 -- after it, with no total; through the cells' and the arrows' own handlers.

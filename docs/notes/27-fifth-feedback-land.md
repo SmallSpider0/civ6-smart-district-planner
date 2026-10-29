@@ -18,7 +18,7 @@
 - 这类格成为候选格（`SDP_City` 的 `Reach.Swap`，候选的 `Swap` 为原来的城），结果写“需从某城换格”。由单城、多城页的开关“从本方其他城换格”控制（请求的 `Swap`，默认关闭）：下面实测的代价（手动换格、求解约慢一倍）由玩家权衡，维护者 2026-10-24 定为默认关闭。耕作损失记在原来那座城：单城页签为这些城各建一个地块模型（只含它已有的格），多城页签里城市已有的格留在它的地块模型里。
 - 单城页签里无主、离另一座本方城市更近的格，耕作分归那座城（与多城页签一致）。
 - 离线对比的裁判按同样的条件认可换格（`cmp_lib.lua` 的 `Swappable`，记 `swapped` 格数），不再判 `other_city_tile`、`unreachable`。
-- **开关的实测数字**（面板提示引用，改了求解器、规则或测试集后重跑并更新提示）：`node tools/compare.mjs -s '^R[MS]' --add sdp:STANDARD_SWAP,sdp:STANDARD_SWAP_LAND --only sdp:STANDARD,sdp:STANDARD_LAND,sdp:STANDARD_SWAP,sdp:STANDARD_SWAP_LAND`，结果在 `tests/compare/results/swap.jsonl`。v1.3.0（2026-10-24）：
+- **开关的实测数字**（当时面板提示引用；#153 起提示不再写实测数字，这里只留作记录，不再重跑）：`node tools/compare.mjs -s '^R[MS]' --add sdp:STANDARD_SWAP,sdp:STANDARD_SWAP_LAND --only sdp:STANDARD,sdp:STANDARD_LAND,sdp:STANDARD_SWAP,sdp:STANDARD_SWAP_LAND`，结果在 `tests/compare/results/swap.jsonl`。v1.3.0（2026-10-24）：
 
   | 场景（标准档） | 只算相邻：相邻加成 | 计入占地：相邻加成 | 求解时间 | 要换格的区域 |
   |---|---|---|---|---|
