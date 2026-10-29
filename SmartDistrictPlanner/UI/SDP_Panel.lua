@@ -300,14 +300,23 @@ end
 
 -- The preset pulldown (issue 49): an entry a preset, the button shows the
 -- preset the values equal (`shown`, nil for "Custom", issue 89).
--- spec = { Order (default the planner's presets), Tips (each preset's
--- LOC_SDP_PRESET_<name>_TOOLTIP, with SDP_Settings.FOCUS), CustomTip }.
+-- spec = { Order (default the planner's presets), Tips (true: each preset's
+-- LOC_SDP_PRESET_<name>_TOOLTIP, with SDP_Settings.FOCUS; a string: that
+-- prefix instead of LOC_SDP_PRESET_, issue 153), TipArgs (a function of the
+-- preset's name giving the numbers its tooltip shows, instead of the focus
+-- weight), CustomTip }.
 -- onSelect(name).
 function SDP_UI.ShowPreset(pull, shown, onSelect, spec)
   spec = spec or {}
+  local prefix = (type(spec.Tips) == "string") and spec.Tips or "LOC_SDP_PRESET_"
   local function Tip(name)
     if not spec.Tips then return "" end
-    return Locale.Lookup("LOC_SDP_PRESET_" .. name .. "_TOOLTIP", Number(SDP_Settings.FOCUS[name] or 1))
+    if spec.TipArgs then
+      local args = {}
+      for i, value in ipairs(spec.TipArgs(name)) do args[i] = Number(value) end
+      return Locale.Lookup(prefix .. name .. "_TOOLTIP", unpack(args))
+    end
+    return Locale.Lookup(prefix .. name .. "_TOOLTIP", Number(SDP_Settings.FOCUS[name] or 1))
   end
   pull:ClearEntries()
   for _, name in ipairs(spec.Order or SDP_Settings.PRESET_ORDER) do

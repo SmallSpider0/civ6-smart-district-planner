@@ -11,7 +11,7 @@ description: Run the Smart District Planner's (civ6mod) offline checks and heavy
 |---|---|---|
 | Did the logic break? | `node tools/offline_tests.mjs` (or one `spec_*.lua`) | ~5 min, local |
 | Did the solver change plans for the worse? (solver or legality changed; before a release) | `python3 -I tools/refresh_results.py --check` | ~270 runs |
-| A tooltip's measured numbers after an algorithm change | the commands recorded in docs/notes/ for that tooltip | as recorded |
+| A measured number in the report after an algorithm change | the commands recorded in docs/notes/ for it | as recorded |
 | Refresh a stored result file for the report | `python3 -I tools/refresh_results.py tests/compare/results/F.jsonl` | the file's sdp rows |
 | True optimum, weight profiles, reference scenes | `compare.mjs ... sdp:ORACLE...` | hours |
 
@@ -45,5 +45,5 @@ python3 -I tools/remote.py wait NAME --fetch logs/remote/NAME.jsonl     # in the
 
 - Read the result, don't just count rows: for `--check`, "lower" gains and new violations must be explained before a release (violations "no_plot", a district with no legal tile in range, are not faults).
 - Results that go into the repository: in `tests/compare/results/` or `tests/bench/results/`, and the PR description names each file and the exact command.
-- Numbers in tooltips and the report come from those files; record the source in the issue's record in docs/notes/.
+- Numbers in the report come from those files; record the source in the issue's record in docs/notes/. Tooltips carry no measured numbers (docs/maintaining.md §10).
 - Background helpers you started: stop them when done; never leave wait loops behind.

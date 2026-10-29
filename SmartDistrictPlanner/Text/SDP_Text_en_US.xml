@@ -52,7 +52,7 @@
       <Text>Yield weights (0-3)</Text>
     </Replace>
     <Replace Tag="LOC_SDP_ALLOW_FEATURE_REMOVAL" Language="en_US">
-      <Text>Allow removing Woods, Rainforest and Marsh</Text>
+      <Text>When off, the plan never removes Woods, Rainforest or Marsh to place a district.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SOLVE" Language="en_US">
       <Text>Solve</Text>
@@ -123,13 +123,13 @@
 
     <!-- Tiers, land part, quality, background computation -->
     <Replace Tag="LOC_SDP_LAND" Language="en_US">
-      <Text>Tiles: what the tiles the districts take would have given, times this weight; 0 leaves it out. A tile counts what it gives with its best improvement; chopping and harvesting are done before building. Its yields are weighed by fixed numbers, not by the weights to the left: Food and Production 1, Science and Culture 5/6, Faith 1/2, Gold 1/4 (1 Production = 4 Gold = 2 Faith), and the same for the one-time yields of chopping and harvesting. The yields a Preserve's Grove and Sanctuary give to adjacent unimproved tiles count here too, the same way: such a tile is worth the better of its best improvement and staying unimproved with the Preserve's yields, and counts only when the city works it; only the buildings you can build now count (the Grove comes with the Preserve, the Sanctuary needs the Conservation civic).</Text>
+      <Text>Higher keeps districts off good tiles (those that yield much once improved); 0 ignores which tiles they take.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SWAP_SHORT" Language="en_US">
       <Text>Swap tiles from my cities</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SWAP_TOOLTIP" Language="en_US">
-      <Text>Let districts go on tiles of your other cities: in Manage Citizens, Swap gives such a tile to this city (no district or wonder on it, not next to that city's center).[NEWLINE][NEWLINE]Gain: more adjacency, measured at +13% on average for one city and +20% for several.[NEWLINE]Cost: about three in ten districts need a swap by hand; the other city loses that tile; several cities take about twice as long to plan.</Text>
+      <Text>When on, districts may also go on tiles of your other cities, for more adjacency; you then use Swap in Manage Citizens to give the tile to this city, and the other city loses it.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_WEIGHT_FEATURE_SHORT" Language="en_US">
       <Text>Harv.</Text>
@@ -150,13 +150,13 @@
       <Text>Thorough</Text>
     </Replace>
     <Replace Tag="LOC_SDP_TIER_FAST_TOOLTIP" Language="en_US">
-      <Text>Least work. On the offline benchmark, picking districts for one city takes about 0.1–0.2 s and reaches 98% of the best plan on average (93% at worst); four cities take about 0.5 s.</Text>
+      <Text>Quickest; now and then a little behind Standard.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_TIER_STANDARD_TOOLTIP" Language="en_US">
-      <Text>The default. On the offline benchmark, picking districts for one city takes about 0.4–1 s and always reaches the best plan; four cities take about 2–6 s.</Text>
+      <Text>The default; it usually finds the best plan.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_TIER_FINE_TOOLTIP" Language="en_US">
-      <Text>Most work, computed over several frames; you can keep playing or close the panel meanwhile. One city takes about 2–5 s, four cities about 2–7 s, eight cities 25–60 s. On the offline benchmark it reaches the best plan as Standard does; use it when Standard says the plan may still improve.</Text>
+      <Text>Takes the longest, and you can keep playing meanwhile; use it when Standard says the plan may still improve.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_ESTIMATE" Language="en_US">
       <Text>About {1_Seconds} s</Text>
@@ -266,7 +266,7 @@
       <Text>Wonders</Text>
     </Replace>
     <Replace Tag="LOC_SDP_MULTI_CITIES_TOOLTIP" Language="en_US">
-      <Text>Click a chip to switch that city or site on or off. When the panel opens, the city selected on the map is the center (the capital when none is selected): it is on by default, then, nearest first, your cities and City Center map tacks within 7 tiles of one already on, 4 at most. Up to 8 by hand. Cities left out count as fixed neighbors.[NEWLINE][NEWLINE]Gain: cities planned together can give each other adjacency, which happens between cities 4–5 tiles apart. Measured: 4 together get 1.5–7% more adjacency than in pairs; 8 together 0–11% more than 4 + 4.[NEWLINE][NEWLINE]Cost: the wait grows with the number of cities. Three late-game saves, 3 districts per city, 2, 4, 6 and 8 cities: Fast about 0.2, 0.5, 1 and 2 seconds; Standard 0.5–2, 2–6, 4–9 and 10–16 seconds; Thorough 1–3, 2–7, 7–21 and 25–60 seconds.</Text>
+      <Text>Click a city or site to plan it with the others or not; cities planned together can give each other adjacency, and more cities take longer.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_MULTI_CLEAR" Language="en_US">
       <Text>Clear all</Text>
@@ -278,7 +278,7 @@
       <Text>Default</Text>
     </Replace>
     <Replace Tag="LOC_SDP_MULTI_DEFAULT_TOOLTIP" Language="en_US">
-      <Text>Back to the default choice: the center city and the joined cities and sites near it, 4 at most.</Text>
+      <Text>Back to the default: the selected city and the cities and sites near it, 4 at most.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_MULTI_CENTER" Language="en_US">
       <Text>Center (the city selected when the panel opened, else the capital)</Text>
@@ -293,7 +293,7 @@
       <Text>{1_Max} are on, the most planned at once. Switch one off first.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_MULTI_CITY_TOOLTIP" Language="en_US">
-      <Text>Click to switch this city on or off. Left out, its districts and map tacks still count as fixed neighbors.</Text>
+      <Text>Click to switch it on or off; a city left out is not planned, but its districts and tacks still count for the bonuses next to them.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_MULTI_SITE_PIN" Language="en_US">
       <Text>map tack {1_Where}</Text>
@@ -329,7 +329,7 @@
       <Text>Max distance</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SITES_DISTANCE_TOOLTIP" Language="en_US">
-      <Text>How far each new city may be from one of your cities, a City Center map tack or another new city of the same plan, counted in tiles between the City Centers. The game needs at least 4 (3 tiles between). New cities usually land at exactly this distance: at 5 two neighbors share 4–8 tiles, at 6 their 3 rings just touch, from 7 on they share none.[NEWLINE][NEWLINE]A larger number leaves each new city more tiles but fits fewer cities into the same land, and the search takes longer (about a third longer at 8 than at 5).</Text>
+      <Text>How many tiles at most a new city may be from a city or site. Larger gives each city more land but fits fewer cities; smaller packs them closer, and neighbors share more tiles.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_PRESET_BALANCED" Language="en_US">
       <Text>Balanced</Text>
@@ -374,7 +374,7 @@
       <Text>Dense packing: as many new cities as fit</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SITES_DENSE_TOOLTIP" Language="en_US">
-      <Text>The plan that fits more new cities comes first (City Centers at least 3 tiles apart between them), then the one with the higher score; new cities may link on from each other. When it is on, New cities is 12 by default and can be changed; it and Max distance are kept in the save on their own, and switching it off brings the usual ones back. Tick the sites you want in the results: Place site tacks places only those.[NEWLINE][NEWLINE]Benefit: more cities in the same area: with the same Max distance, at most 6 usually; with it on, 12 fitted in every test.[NEWLINE][NEWLINE]Cost: cities close together share their tiles and resources, so each scores about 7% less on average; you tick the sites to place yourself; it takes about 1.6 times as long as 6 sites usually do.</Text>
+      <Text>When on, as many new cities as possible go into the same area, closer together and with less land each; tick the sites you want in the results, then place their tacks.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SITES_SUMMARY_DENSE" Language="en_US">
       <Text>{1_Count} new cities fit, score {2_Value}; {3_Ticked} ticked, Place site tacks places only those</Text>
@@ -395,25 +395,25 @@
       <Text>Lux.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SITES_W_DISTRICT" Language="en_US">
-      <Text>Districts: the adjacency bonuses of the planned districts placed at their best around the site, less the distance cost, weighed by the yield weights in the row above. An average of +4 a planned district is 10 points.</Text>
+      <Text>Higher favors sites where the districts around them can get high adjacency.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SITES_W_LAND" Language="en_US">
-      <Text>Tiles: what the best tiles the city works once it has the planned districts yield each turn with their best improvements (Food and Production 1, Science and Culture 5/6, Faith 1/2, Gold 1/4, times the yield weights in the row above). An average of about 4.3 a worked tile at the start of the game, up to 7.2 with every technology and civic, is 10 points; it follows your progress in technologies and civics.</Text>
+      <Text>Higher favors sites with many good tiles around (high yields once improved).</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SITES_W_FEATURE" Language="en_US">
-      <Text>Features: the one-time yields of removing Woods, Rainforest and Marsh and harvesting Bonus resources within 3 tiles (they grow with your technologies and civics), spread over 50 turns; tiles the city works that are better kept do not count. About 12 Woods tiles are 10 points, about 0.8 a Woods tile, at any point of the game.</Text>
+      <Text>Higher favors sites with much Woods, Rainforest, Marsh and Bonus resources around, for the one-time yields of removing and harvesting them.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SITES_W_HOUSING" Language="en_US">
-      <Text>Housing: the Housing a site has over a site without water (water, Granary, and the Lighthouse and Seaport when the plan has a Harbor). A new city counts as population 1: each Housing up to the larger of 3 and one more than the population the planned districts need counts 1 (the city still grows at full speed), each one after it half the one before. 3 more (a river or lake) is 10 points.</Text>
+      <Text>Higher favors sites with more Housing, such as by a river or lake.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SITES_W_AMENITY" Language="en_US">
-      <Text>Luxuries: the Luxury resources within 3 tiles. The first copy of a kind you lack counts the cities that get its Amenities (up to 4); each further copy counts 1, up to the number of civilizations you could sell it to (met, without that resource). A new kind for 4 cities is 10 points.</Text>
+      <Text>Higher favors sites with Luxury resources around that you do not have yet.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SITES_W_STRATEGIC" Language="en_US">
-      <Text>Strategics: the Strategic resource tiles within 3 tiles. Each counts 1, times 2 when the technology that reveals it is in your era or the one before; the first tile of a kind you lack counts twice that, a tile of a kind you are short of (Gathering Storm: a stockpile under a quarter of the cap, or no income) 1.5 times. A new kind revealed near your era is 10 points.</Text>
+      <Text>Higher favors sites with Strategic resources around, first those you lack or are short of.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SITES_W_APPEAL" Language="en_US">
-      <Text>Appeal: the average Appeal of the tiles districts can take, 1 point each (off by default).</Text>
+      <Text>Higher favors sites whose tiles have high Appeal; 0, the default, leaves it out.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SITES_ITEM_SHORT" Language="en_US">
       <Text>{1_Name} {2_Points}</Text>
@@ -536,10 +536,7 @@
       <Text>Replace this mod's earlier tacks ({1_N})</Text>
     </Replace>
     <Replace Tag="LOC_SDP_REPLACE_OWN_TOOLTIP" Language="en_US">
-      <Text>Plan as if this mod's earlier tacks for this city were gone (only the ones you have not edited), and remove them when placing the new plan; undo puts them back. Tacks you placed yourself are never touched.</Text>
-    </Replace>
-    <Replace Tag="LOC_SDP_REPLACE_OWN_MULTI_TOOLTIP" Language="en_US">
-      <Text>Plan as if this mod's earlier tacks for the cities taking part were gone (only the ones you have not edited), and remove them when placing the new plan; undo puts them back. Tacks you placed yourself are never touched.</Text>
+      <Text>This mod's earlier tacks for the cities being planned (those you have not edited) give way to the new plan, and undo puts them back; tacks you placed yourself are never touched.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SINGLE_WONDERS" Language="en_US">
       <Text>Wonders</Text>
@@ -554,7 +551,7 @@
       <Text>Good places</Text>
     </Replace>
     <Replace Tag="LOC_SDP_HEATMAP_TOOLTIP" Language="en_US">
-      <Text>Shows on the map where one district is good: every tile where it can go, shaded from the best down, with the bonus of placing it there alone.</Text>
+      <Text>Pick a district to see on the map, in colors and numbers, which tiles give it a high bonus.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_HEAT_OFF" Language="en_US">
       <Text>Off</Text>
@@ -569,7 +566,7 @@
       <Text>Reach</Text>
     </Replace>
     <Replace Tag="LOC_SDP_WEIGHT_COVERAGE" Language="en_US">
-      <Text>Reach: lets the plan count districts whose buildings help nearby cities, such as Factories, Power Plants, Zoos, Stadiums and Aquariums. Each of your cities or City Center map tacks newly covered adds this many points; the city being planned does not count (its own Industrial Zone always reaches it), nor does a city a district of the same kind already covers. 0 leaves it out.[NEWLINE][NEWLINE]Gain: covered cities get those buildings' regional effects (Production, Amenities). Measured planning one city on 42 real cities: at weight 1, 3 of them covered more cities; at weight 3, 6.[NEWLINE]Cost: those cities lost 0 to 3 adjacency (up to 4 at weight 3); planning takes about 5% longer.</Text>
+      <Text>Higher lets the regional effects of buildings such as the Factory and the Zoo reach more of your cities, perhaps for a little less adjacency; 0, the default, ignores it.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_RESULT_SUMMARY_COVERAGE" Language="en_US">
       <Text>Weighted gain: {1_Gain} (adjacency {2_Adjacency}, tiles taken {3_Land}, reach {4_Coverage})</Text>
@@ -594,10 +591,7 @@
       <Text>Per city</Text>
     </Replace>
     <Replace Tag="LOC_SDP_COUNT_TOOLTIP" Language="en_US">
-      <Text>How many specialty districts this city should end up with. Districts built, under construction and map tacks for this city count, and only the rest are planned: with 2 already there and 3 chosen, 1 more is planned. The lowest number is what the city has plus the Must districts not built yet; above that the rest are picked from the pool (best gain first), and three plans with different districts are offered. 3 by default, or one more than the city has once it has 3 or more. A number you set stays with its city when you switch to another city and back.</Text>
-    </Replace>
-    <Replace Tag="LOC_SDP_COUNT_TOOLTIP_MULTI" Language="en_US">
-      <Text>How many specialty districts each city of this list should end up with. Districts built, under construction and map tacks for the city count, and each city plans only the rest; a city that has enough picks nothing from the pool (Must districts are still placed). A planned city has none yet and plans this many.</Text>
+      <Text>How many specialty districts each city should end up with (built, under construction and tacked ones count); raise it to plan more from the Pool, which takes longer to compute.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_GROUP_SPECIALTY" Language="en_US">
       <Text>Specialty districts</Text>
@@ -612,10 +606,10 @@
       <Text>Click: Auto &gt; Must &gt; Off</Text>
     </Replace>
     <Replace Tag="LOC_SDP_STATES_TOOLTIP" Language="en_US">
-      <Text>Must: always placed. Pool: when the count is above the required number, the best of the pool are picked. Off: left out. Districts are compared by weighted adjacency, plus tiles, reach and distance when on, plus Housing for Neighborhoods and Preserves (a Must Preserve's yields on adjacent tiles count under tiles). Encampments and Aerodromes have no adjacency bonus and are never picked from the pool: make them Must. Districts limited to one per empire (Government Plaza, Diplomatic Quarter) are Must or Off only. The Preserve starts Off, since few civilizations build it: click it to Pool or Must.</Text>
+      <Text>Must is always placed, Pool districts are picked best first up to the number, Off is left out. The Preserve, Encampment and Aerodrome have no adjacency bonus: to build one, make it Must.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_STATES_OTHER_TOOLTIP" Language="en_US">
-      <Text>These districts have no Population requirement and do not count toward the number. Auto: added when the city needs it, placed by the solver. An Aqueduct when the city lacks fresh water (its water Housing is below the 5 a River or Lake gives); a Dam when 3 or more free Floodplains tiles lie in its 3 rings (Gathering Storm only). Left out, with a note, when it fits nowhere.</Text>
+      <Text>These districts have no Population requirement; Must is always placed. Auto (not on the city sites tab): an Aqueduct when the city lacks fresh water, a Dam when it has many Floodplains tiles; left out when it fits nowhere.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_STATE_MUST" Language="en_US">
       <Text>Must</Text>
@@ -636,7 +630,7 @@
       <Text>Reminders</Text>
     </Replace>
     <Replace Tag="LOC_SDP_REMIND_TOOLTIP" Language="en_US">
-      <Text>The plan's districts get adjacency bonuses from adjacent Woods and Rainforest; removing them later loses those bonuses. Placing the plan also puts a reminder tack (with the Remove Feature icon) on those tiles, named with what removing them would cost; undo removes these tacks too.</Text>
+      <Text>When on, a reminder tack goes on each Woods or Rainforest tile the plan's adjacency depends on, so you remember not to remove it.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_REMIND_PIN" Language="en_US">
       <Text>Don't chop: {1_Losses}</Text>
@@ -690,7 +684,7 @@
       <Text>Weighted adjacency: {1_Adjacency} ({2_Parts})</Text>
     </Replace>
     <Replace Tag="LOC_SDP_RESULT_RANKED" Language="en_US">
-      <Text>Plans are ranked by the adjacency plus the items in brackets. Tiles is what the tiles the districts take would have given (a Preserve's extra yields on the tiles around it count here too). Late in the game the tiles often outweigh the adjacency and the sum is negative; that does not make the plan poor: districts always take tiles. Each district's own parts are on the first line of its row's tooltip.</Text>
+      <Text>Plans are ranked by the adjacency plus the items in brackets; a negative Tiles item is normal, since districts always take tiles.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_RESULT_TILES_LAND_OFF" Language="en_US">
       <Text>adjacent tiles {1_Yields} (Tiles weight 0, not scored)</Text>
@@ -720,25 +714,16 @@
       <Text>Replace ({1_N})</Text>
     </Replace>
     <Replace Tag="LOC_SDP_WEIGHT_DISTANCE" Language="en_US">
-      <Text>Distance cost: each district and wonder loses this weight times (tiles to your nearest City Center - 1), in the same unit as adjacency, so with the same adjacency the closer tile wins; 0 is off.[NEWLINE][NEWLINE]Gain: a city grows outward, so its third ring comes later than its second; closer districts do not need tiles bought with Gold. On the 84 offline development scenes, 0.5 instead of 0 changed the plan in 52, moving nearly half the districts.[NEWLINE]Cost: 0.6% less adjacency on average and about 4% more lost tile yields; no extra time.</Text>
+      <Text>Higher brings districts and wonders closer to the City Center, so fewer far tiles need buying with Gold; 0 ignores distance.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_MULTI_SITE_TOOLTIP" Language="en_US">
-      <Text>Click to switch this site on or off. Left out, no districts are planned for it and it is not counted as a new city; the tack stays where it is and still counts as a neighbor.</Text>
+      <Text>Click to switch it on or off; left out, no districts are planned for it, but its tack still counts for the bonuses next to it.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_STATUS_NOT_PER_SITE" Language="en_US">
       <Text>Off</Text>
     </Replace>
-    <Replace Tag="LOC_SDP_SITES_STATES_TOOLTIP" Language="en_US">
-      <Text>Must: every site is scored with it. Pool: when the count is above the required number, each site picks the best of the pool. Off: left out. The district score is the weighted adjacency less the yields of the tiles the districts take.[NEWLINE][NEWLINE]By default every specialty district is in the pool, except those with no adjacency bonus and no Amenities (Preserve, Encampment, Aerodrome): they are built for what they do, so they start Off; set them to Must or Pool to count them. Districts limited to one per empire (Government Plaza) are not counted per site.</Text>
-    </Replace>
     <Replace Tag="LOC_SDP_SITES_STATES_LEGEND_OTHER" Language="en_US">
       <Text>Click: Off &gt; Must</Text>
-    </Replace>
-    <Replace Tag="LOC_SDP_SITES_STATES_OTHER_TOOLTIP" Language="en_US">
-      <Text>These districts have no Population requirement and do not count toward the number. Set to Must, every site places one, with its adjacency and that of the districts next to it.</Text>
-    </Replace>
-    <Replace Tag="LOC_SDP_SITES_PLAN_COUNT_TOOLTIP" Language="en_US">
-      <Text>How many specialty districts each site is scored with, required ones included. Above the required number each site picks the rest from the pool, best district score first; at the required number nothing is picked. At most 6.[NEWLINE][NEWLINE]Gain: sites scored with districts suit districts better. In 12 test scenes a count of 3, against 0 (no districts), chose other sites in 5 scenes, with 13% more adjacency in total for the districts around the sites and no scene worse.[NEWLINE][NEWLINE]Cost: a higher count and a larger pool take longer. In mid and late game saves a count of 0 takes about 0.1 seconds, 3 about 1 second and 6 about 1.6 seconds (Standard tier, 3 new sites); island maps are faster, about 0.4 seconds.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_WEIGHT_DISTANCE_SHORT" Language="en_US">
       <Text>Dist.</Text>
@@ -765,7 +750,7 @@
       <Text>the {1_Building} gives no Trade Route capacity</Text>
     </Replace>
     <Replace Tag="LOC_SDP_WEIGHT_HOUSING" Language="en_US">
-      <Text>Housing: points per Housing. In each city, each Housing up to the larger of one more than the population its planned districts need and its population now plus 2 counts 1 (up to there the city grows at full speed), each one after it half the one before; bigger cities are discounted, since each citizen needs more Food (none up to population 5, about 0.5 at 10, 0.3 at 16). A City Center tack counts as population 1. A Neighborhood's or Preserve's Housing depends on the Appeal of its tile. The plan changes Appeal: a Holy Site or Theater Square gives adjacent tiles +1, an Industrial Zone or Encampment -1, and removing Woods -1 to the tiles around it. A Preserve's yields on adjacent tiles count under Tiles.</Text>
+      <Text>Higher makes the plan value the Housing of Neighborhoods and Preserves more (it depends on their tile's Appeal); 0 ignores Housing.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_RESULT_HOUSING" Language="en_US">
       <Text>Housing {1_Housing} (Appeal {2_Appeal})</Text>
@@ -800,7 +785,7 @@
       <Text>Weights (0–3)</Text>
     </Replace>
     <Replace Tag="LOC_SDP_WEIGHTS_TOOLTIP" Language="en_US">
-      <Text>Each yield of the adjacency bonuses is multiplied by its weight and the results added up; 0 leaves it out. The Tiles column weighs what the tiles the districts take would have given, its yields by fixed numbers (see its tooltip).</Text>
+      <Text>Raise a weight and the plan cares more about it; at 0 the plan ignores it.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_PEEK" Language="en_US">
       <Text>View map</Text>
@@ -833,7 +818,7 @@
       <Text>Hide</Text>
     </Replace>
     <Replace Tag="LOC_SDP_FOLD_TOOLTIP" Language="en_US">
-      <Text>Wonders, good places, weights and switches. Hidden after each solve; click this line to show them.</Text>
+      <Text>Click to show or hide the settings; they hide by themselves after each plan.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_FOLD_SUMMARY" Language="en_US">
       <Text>Settings: {1_Parts}</Text>
@@ -889,37 +874,46 @@
       <Text>Custom</Text>
     </Replace>
     <Replace Tag="LOC_SDP_PRESET_CUSTOM_TOOLTIP" Language="en_US">
-      <Text>The weights or switches differ from every preset. Pick a preset in the list to set the weights and switches to its values (Effort stays).</Text>
+      <Text>The weights or switches match no preset; pick a preset to switch to its values.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SITES_PRESET_CUSTOM_TOOLTIP" Language="en_US">
-      <Text>The weights differ from every preset. Pick a preset in the list to set all weights (Dist. included) to its values; New cities, Max distance and Effort stay.</Text>
+      <Text>The weights match no preset; pick a preset to switch to its weights. New cities and Max distance stay.</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_PRESET_BALANCED_TOOLTIP" Language="en_US">
+      <Text>Every item weighs {1_Food}; Appeal weighs {5_Appeal}, so it is left out.</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_PRESET_GROWTH_TOOLTIP" Language="en_US">
+      <Text>Food and Housing weigh more ({1_Food}, {2_Housing}), for cities that grow fast.</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_PRESET_DISTRICTS_TOOLTIP" Language="en_US">
+      <Text>Districts weigh more ({3_District}), so district adjacency counts more; Strategic resources weigh {4_Strategic}, so they are left out.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_PRESET_BALANCED_TOOLTIP" Language="en_US">
-      <Text>Every yield weighs 1; every switch as it comes.</Text>
+      <Text>Every yield counts the same; every switch as it comes.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_PRESET_SCIENCE" Language="en_US">
       <Text>Science</Text>
     </Replace>
     <Replace Tag="LOC_SDP_PRESET_SCIENCE_TOOLTIP" Language="en_US">
-      <Text>Science victory, Campus first: Science weighs {1_K}, the rest as in Balanced.</Text>
+      <Text>For a Science victory: Science weighs more ({1_K}), so Campuses get better places.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_PRESET_CULTURE" Language="en_US">
       <Text>Culture</Text>
     </Replace>
     <Replace Tag="LOC_SDP_PRESET_CULTURE_TOOLTIP" Language="en_US">
-      <Text>Culture victory, Theater Square first: Culture weighs {1_K}, the rest as in Balanced.</Text>
+      <Text>For a Culture victory: Culture weighs more ({1_K}), so Theater Squares get better places.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_PRESET_RELIGION" Language="en_US">
       <Text>Religion</Text>
     </Replace>
     <Replace Tag="LOC_SDP_PRESET_RELIGION_TOOLTIP" Language="en_US">
-      <Text>Religious victory, or Holy Sites whose Faith buys what you need: Faith weighs {1_K}, the rest as in Balanced.</Text>
+      <Text>For a Religious victory, or Faith to buy things with: Faith weighs more ({1_K}), so Holy Sites get better places.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_PRESET_HALF_GOLD_FAITH" Language="en_US">
       <Text>Half Gold and Faith</Text>
     </Replace>
     <Replace Tag="LOC_SDP_PRESET_HALF_GOLD_FAITH_TOOLTIP" Language="en_US">
-      <Text>Gold and Faith weigh 0.5, the rest as in Balanced. Purchase prices: what 1 Production buys costs 4 Gold or 2 Faith.</Text>
+      <Text>Gold and Faith count half: buying something takes more Gold or Faith than building it takes Production.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_PARTS_DISTRICT" Language="en_US">
       <Text>This district: weighted adjacency {1_Adjacency}</Text>

@@ -97,6 +97,12 @@ SDP_Sites.PRESETS = {
     YIELD_FOOD = 1, DISTRICT = 2, LAND = 1, FEATURE = 1, HOUSING = 1, AMENITY = 1, STRATEGIC = 0, APPEAL = 0 },
 }
 SDP_Sites.PRESET_ORDER = { "BALANCED", "GROWTH", "DISTRICTS" }
+-- The weights a preset's tooltip shows (issue 153), in the order its text
+-- numbers them: food, housing, districts, strategics, appeal.
+function SDP_Sites.PresetTipArgs(name)
+  local p = SDP_Sites.PRESETS[name]
+  return { p.YIELD_FOOD, p.HOUSING, p.DISTRICT, p.STRATEGIC, p.APPEAL }
+end
 -- The distance weight's default for placing districts around a site (issue
 -- 91, decided 2026-10-27: 0.5 as on the other tabs). No preset sets it, so a
 -- preset puts it back to this; a save keeps it only when it differs.

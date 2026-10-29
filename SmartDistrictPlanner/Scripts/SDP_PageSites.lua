@@ -134,7 +134,8 @@ local function UpdateFold()
   SDP_UI.ShowFold(Controls.SitesFoldButton, Controls.SitesFoldText, Controls.SitesFoldAction, Controls.SitesSettingsStack,
     m_fold, SDP_UI.FoldSummary(shown, {}))
   SDP_UI.ShowPreset(Controls.SitesPresetPull, shown, function(name) P.SetPreset(name) end,
-    { Order = SDP_Sites.PRESET_ORDER, CustomTip = "LOC_SDP_SITES_PRESET_CUSTOM_TOOLTIP" })
+    { Order = SDP_Sites.PRESET_ORDER, Tips = "LOC_SDP_SITES_PRESET_", CustomTip = "LOC_SDP_SITES_PRESET_CUSTOM_TOOLTIP",
+      TipArgs = SDP_Sites.PresetTipArgs })
 end
 
 function P.FitPage() SDP_UI.FitResults(Controls.SitesBody, Controls.SitesPage, Controls.SitesResultScroll) end
