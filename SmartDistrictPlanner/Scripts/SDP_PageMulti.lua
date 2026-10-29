@@ -71,7 +71,8 @@ local SWITCHES = {
 }
 local m_fold = false -- the settings folded into one line (issue 71)
 local m_keeper = SDP_UI.Keeper({ Tab = "MULTI", Columns = COLUMNS, Weights = m_weights, Switches = SWITCHES,
-  Extra = { { Key = "FOLD", Default = false, Get = function() return m_fold end, Put = function(v) m_fold = v end } },
+  Extra = { { Key = "FOLD", Default = false, Get = function() return m_fold end, Put = function(v) m_fold = v end },
+    SDP_UI.WonderSetting(m_wonders) },
   Tiers = SDP_Tiers.Multi, GetTier = function() return m_tier end, PutTier = function(tier) m_tier = tier end })
 local UpdateFold, FitPage -- defined below
 -- Values equal to another preset make it the current one (issue 89).
@@ -421,6 +422,7 @@ function P.SetWonder(wonderType, on)
   if (m_wonders[wonderType] == true) ~= (on == true) then
     m_wonders[wonderType] = on or nil
     ClearResult()
+    Remember() -- kept in the save with the other settings (issue 166)
   end
   P.RefreshLists()
   UpdateFold()

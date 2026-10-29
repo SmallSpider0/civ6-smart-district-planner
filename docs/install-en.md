@@ -30,7 +30,7 @@ The panel has three tabs: **One city**, **City sites** and **Several cities**. T
 
 - The window is as tall as the screen allows: shorter on a low screen, taller on a tall one, and the result list takes the difference.
 - **View map**, at the upper left of the window, hides the window and keeps the plan previewed on the map; click **Back to planner** or press Esc to return.
-- Each tab keeps its switches, weights, Effort and whether its settings are hidden in the save, so a loaded game opens as you left it. Nothing is sent to other players. The Must, Pool and Off states of districts are not kept.
+- Each tab keeps its switches, weights, Effort, whether its settings are hidden and, on the One city and Several cities tabs, the chosen wonders in the save, so a loaded game opens as you left it. Nothing is sent to other players. The Must, Pool and Off states of districts are not kept.
 
 ## One city
 

@@ -72,3 +72,30 @@ test("the swap switch: on by default, off named on the fold line", function()
   T.ok(off:find(word, 1, true) ~= nil, "off: named: " .. off)
   T.ok(on:find(word, 1, true) == nil, "on: not named: " .. on)
 end)
+
+-- Issue 166: the wonders chosen on the several-cities tab are kept with its
+-- other settings, and read back only as wonders of this ruleset.
+test("several cities: a chosen wonder is written at once and read back", function()
+  SDP_Panel.Refresh()
+  SDP_Panel.SelectTab("MULTI")
+  local multi = SDP_Panel.Multi
+  local wonderType = nil
+  for _, w in ipairs(SDP_Wonders.List(pid)) do
+    if wonderType == nil and w.Status == nil then wonderType = w.Type end
+  end
+  T.ok(wonderType ~= nil, "a wonder to choose")
+  local was = false
+  for _, v in ipairs(multi.State().View.Wonders) do
+    if v.Type == wonderType then was = v.Chosen end
+  end
+  multi.SetWonder(wonderType, true)
+  local text = cfg:GetValue(SDP_Settings.CONFIG_KEY .. "MULTI") or ""
+  local list = text:match(";WONDERS=([^;]*)") or ""
+  local chosen = {}
+  SDP_UI.WonderSetting(chosen).Put(list .. ",BUILDING_MONUMENT,BUILDING_NOPE")
+  multi.SetWonder(wonderType, was)
+  SDP_Panel.SelectTab("SINGLE")
+  T.ok(chosen[wonderType] == true, "kept and read back: " .. text)
+  T.ok(chosen.BUILDING_MONUMENT == nil, "a building that is not a wonder is dropped")
+  T.ok(chosen.BUILDING_NOPE == nil, "a type this ruleset lacks is dropped")
+end)

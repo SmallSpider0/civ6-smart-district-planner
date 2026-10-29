@@ -252,6 +252,28 @@ function SDP_UI.SettingFields(columns, switches, tiers, extra)
   return fields
 end
 
+-- A tab's chosen wonders (`chosen`, { [BuildingType] = true }) as a kept
+-- setting (issue 166): the types, sorted, comma-separated; read back, only
+-- the wonders this ruleset has. A wonder stays chosen while it is pinned
+-- (it is only left out then), so a load keeps that too: with "replace" on
+-- it is planned again (issue 154).
+function SDP_UI.WonderSetting(chosen)
+  return { Key = "WONDERS", Kind = "list", Pattern = "^[%w_]+$", Default = "",
+    Get = function()
+      local list = {}
+      for wonderType in pairs(chosen) do list[#list + 1] = wonderType end
+      table.sort(list)
+      return table.concat(list, ",")
+    end,
+    Put = function(text)
+      for wonderType in pairs(chosen) do chosen[wonderType] = nil end
+      for wonderType in tostring(text or ""):gmatch("[^,]+") do
+        local row = GameInfo.Buildings[wonderType]
+        if row ~= nil and row.IsWonder then chosen[wonderType] = true end
+      end
+    end }
+end
+
 -- A keeper (SDP_Settings.Keeper) for a tab: spec = { Tab, Columns, Weights
 -- (the tab's table), Switches and Extra ({ Key, Default, Get, Put; Kind "number"
 -- with Min, Max, "list" with Pattern, else a flag }), Tiers,
@@ -370,7 +392,8 @@ function SDP_UI.FitResults(body, page, scroll)
 end
 
 local m_keeper = SDP_UI.Keeper({ Tab = "SINGLE", Columns = SINGLE_COLUMNS, Weights = m_weights, Switches = SINGLE_SWITCHES,
-  Extra = { { Key = "FOLD", Default = false, Get = function() return m_fold end, Put = function(v) m_fold = v end } },
+  Extra = { { Key = "FOLD", Default = false, Get = function() return m_fold end, Put = function(v) m_fold = v end },
+    SDP_UI.WonderSetting(m_wonders) },
   Tiers = SDP_Tiers.Single, GetTier = function() return m_tier end, PutTier = function(tier) m_tier = tier end })
 local UpdateFold, SetPreset -- defined below (inputs)
 -- Keep the tab's settings in the save after a change (issue 57), and show
@@ -1572,6 +1595,7 @@ SetWonder = function(wonderType, on)
   if (m_wonders[wonderType] == true) ~= (on == true) then
     m_wonders[wonderType] = on or nil
     ClearResult()
+    Remember() -- kept in the save with the other settings (issue 166)
   end
   PopulateWonders()
   ShowCells()
