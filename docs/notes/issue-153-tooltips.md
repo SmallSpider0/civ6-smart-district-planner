@@ -35,6 +35,8 @@
 - 整套离线测试在第二台机器上跑（`remote.py run offline153b`）：211 过、0 败。
 - 游戏内：工作日白天不开游戏，加了夜间队列 #34（中英文各跑 `test_ui`、`test_sites`、`test_settings`、`test_tiers`，并截悬停图看英文有没有截断）。
 
+最终文字贴在 [#153 的评论](https://github.com/SmallSpider0/civ6-smart-district-planner/issues/153#issuecomment-6485194512)。共用这轮的提交已推到 PR #159，并请 Codex 审（`codex_review.py request 159`）；自动合并没开，等审完。
+
 ## 没定或没验证的
 
 - 英文提示在游戏里的显示（长度、换行）只在夜间队列里看，还没验证。
