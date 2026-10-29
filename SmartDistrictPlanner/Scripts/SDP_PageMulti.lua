@@ -125,9 +125,11 @@ local function CityOf(key)
   return key ~= nil and tonumber(key:match("^C(%d+)$") or "") or nil
 end
 
-local function HaveOf(key)
-  local cityID = CityOf(key)
-  if cityID == nil then return nil end
+local ShowWonders -- defined below
+
+-- The pins being replaced, { [pin ID] = true }, or nil with replace off.
+-- They do not count as what a city has, nor a wonder as pinned (issue 154).
+local function ReplacedPins()
   local ignore = nil
   if m_replace then
     for _, pin in ipairs(P.OwnPins()) do
@@ -135,7 +137,13 @@ local function HaveOf(key)
       ignore[pin.ID] = true
     end
   end
-  return SDP_City.HaveOf(Game.GetLocalPlayer(), cityID, ignore)
+  return ignore
+end
+
+local function HaveOf(key)
+  local cityID = CityOf(key)
+  if cityID == nil then return nil end
+  return SDP_City.HaveOf(Game.GetLocalPlayer(), cityID, ReplacedPins())
 end
 
 -- The count is a target (issue 144). A city's own list starts from what
@@ -174,7 +182,7 @@ end
 
 local function WonderTypes()
   local list = {}
-  for _, w in ipairs(SDP_Wonders.List(Game.GetLocalPlayer())) do
+  for _, w in ipairs(SDP_Wonders.List(Game.GetLocalPlayer(), ReplacedPins())) do
     if m_wonders[w.Type] and w.Status == nil then list[#list + 1] = w.Type end
   end
   table.sort(list) -- the solver's slot order, as before the list was sorted by era
@@ -258,8 +266,9 @@ function P.SetReplace(on)
     m_replace = on
     ClearResult()
     Remember()
-    -- A city's own count starts from what it has, replaced pins left out.
-    if m_planFor ~= "ALL" then P.RefreshLists() end
+    -- A city's own count starts from what it has, replaced pins left out;
+    -- a wonder whose pin is replaced can be chosen again (issue 154).
+    if m_planFor ~= "ALL" then P.RefreshLists() else ShowWonders() end
   end
 end
 
@@ -534,7 +543,7 @@ function P.ShowSupply()
     if #wonders > 0 then
       local has = {}
       local rows = {}
-      for _, w in ipairs(SDP_Wonders.List(Game.GetLocalPlayer())) do rows[w.Type] = w end
+      for _, w in ipairs(SDP_Wonders.List(Game.GetLocalPlayer(), ReplacedPins())) do rows[w.Type] = w end
       local shared = ListOf(m_shared)
       for _, t in ipairs(shared.Must) do has[SDP_Rules.BaseDistrict(t)] = true end
       for _, own in pairs(m_plans) do
@@ -693,6 +702,19 @@ function P.RefreshCities()
   return participants
 end
 
+-- Wonders: tags and the "add" pulldown, and the districts they bring. Read
+-- again when pins come or go or the replace switch changes: a wonder with a
+-- pin is left out unless that pin is being replaced (issue 154).
+ShowWonders = function()
+  local wonders = SDP_Wonders.List(Game.GetLocalPlayer(), ReplacedPins())
+  SDP_UI.BuildWonders(Controls.MultiWonderPull, m_chipIM, Controls.MultiWonderChipStack, wonders, m_wonders, P.SetWonder)
+  m_view.Wonders = {}
+  for _, w in ipairs(wonders) do
+    m_view.Wonders[#m_view.Wonders + 1] = { Type = w.Type, Status = w.Status, Chosen = m_wonders[w.Type] == true }
+  end
+  P.ShowSupply()
+end
+
 function P.RefreshLists()
   local playerID = Game.GetLocalPlayer()
   local participants = P.RefreshCities()
@@ -742,14 +764,7 @@ function P.RefreshLists()
   end
   ShowCount()
 
-  -- Wonders: tags and the "add" pulldown.
-  local wonders = SDP_Wonders.List(playerID)
-  SDP_UI.BuildWonders(Controls.MultiWonderPull, m_chipIM, Controls.MultiWonderChipStack, wonders, m_wonders, P.SetWonder)
-  m_view.Wonders = {}
-  for _, w in ipairs(wonders) do
-    m_view.Wonders[#m_view.Wonders + 1] = { Type = w.Type, Status = w.Status, Chosen = m_wonders[w.Type] == true }
-  end
-  P.ShowSupply()
+  ShowWonders()
   UpdateReplaceLabel()
   m_view.PlanFor = m_planFor
   m_view.Plans = {}
@@ -1060,6 +1075,7 @@ function P.Place()
   m_result.Placed = true
   SDP_Preview.Clear()
   UpdateReplaceLabel()
+  ShowWonders()
   ShowCount()
   SDP_UI.UpdateAllButtons()
   return placed
@@ -1074,6 +1090,7 @@ function P.Undo()
     m_result.Placed = false
   end
   UpdateReplaceLabel()
+  ShowWonders()
   ShowCount()
   SDP_UI.UpdateAllButtons()
   return removed

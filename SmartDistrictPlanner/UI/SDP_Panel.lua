@@ -529,7 +529,8 @@ end
 -- 66): [district type] = the wonder. `scan` the city (SDP_City.Scan),
 -- `states` its list. The player's own "not wanted" and a district the
 -- required ones exclude are left out, as the solver does (SDP_Multi).
-function SDP_UI.WonderNeeds(playerID, wonders, districts, states, scan, status)
+-- `ignore` the pins being replaced (as for SDP_Wonders.Pinned).
+function SDP_UI.WonderNeeds(playerID, wonders, districts, states, scan, status, ignore)
   local needs = {}
   if scan == nil or #wonders == 0 then return needs end
   local must, has = {}, {}
@@ -542,7 +543,7 @@ function SDP_UI.WonderNeeds(playerID, wonders, districts, states, scan, status)
   end
   for districtType in pairs(SDP_City.PresentDistricts(scan)) do has[SDP_Rules.BaseDistrict(districtType)] = true end
   local rows = {}
-  for _, w in ipairs(SDP_Wonders.List(playerID)) do rows[w.Type] = w end
+  for _, w in ipairs(SDP_Wonders.List(playerID, ignore)) do rows[w.Type] = w end
   for _, wonderType in ipairs(wonders) do
     local w = rows[wonderType]
     local base = w ~= nil and w.Status == nil and w.AdjacentDistrict or nil
@@ -1258,11 +1259,14 @@ end
 local SetState -- defined below
 
 local SelectedWonders -- defined below
+local ReplacedPins -- defined below
+local PopulateWonders -- defined below
 
 local function ShowCells()
   -- A district a chosen wonder needs shows "for wonder" (issue 66); a click
   -- goes on from its own state.
-  local needs = SDP_UI.WonderNeeds(Game.GetLocalPlayer(), SelectedWonders(), m_districts, m_states, m_scan, m_status)
+  local needs = SDP_UI.WonderNeeds(Game.GetLocalPlayer(), SelectedWonders(), m_districts, m_states, m_scan, m_status,
+    ReplacedPins())
   m_districtRows = SDP_UI.BuildCells(m_cellIM, m_utilityIM, Controls.DistrictStack, Controls.UtilityStack, m_districts,
     function(d)
       local state = SDP_UI.StateOf(m_states, d)
@@ -1500,9 +1504,9 @@ local function OwnPins()
   return SDP_Pins.Own(playerID, { SDP_City.CityNumbers(playerID)[m_cityID] })
 end
 
--- What the selected city has (issue 144): read again whenever its pins or
--- the replace switch change. Pins being replaced do not count.
-local function UpdateHave()
+-- The pins being replaced, { [pin ID] = true }, or nil with replace off.
+-- They do not count as what the city has, nor a wonder as pinned (issue 154).
+ReplacedPins = function()
   local ignore = nil
   if m_replace then
     for _, pin in ipairs(OwnPins()) do
@@ -1510,7 +1514,13 @@ local function UpdateHave()
       ignore[pin.ID] = true
     end
   end
-  m_have = m_cityID and SDP_City.HaveOf(Game.GetLocalPlayer(), m_cityID, ignore) or nil
+  return ignore
+end
+
+-- What the selected city has (issue 144): read again whenever its pins or
+-- the replace switch change. Pins being replaced do not count.
+local function UpdateHave()
+  m_have = m_cityID and SDP_City.HaveOf(Game.GetLocalPlayer(), m_cityID, ReplacedPins()) or nil
   ShowCount()
   UpdateSpecialtyNote()
 end
@@ -1518,6 +1528,7 @@ end
 UpdateReplaceLabel = function()
   Controls.ReplaceLabel:SetText(Locale.Lookup("LOC_SDP_REPLACE_OWN_SHORT", #OwnPins()))
   UpdateHave()
+  PopulateWonders() -- a wonder's pin may have come, gone or be replaced (issue 154)
 end
 
 local function SetReplace(on)
@@ -1527,6 +1538,8 @@ local function SetReplace(on)
     ClearResult()
     Remember()
     UpdateHave()
+    PopulateWonders()
+    ShowCells()
     UpdateEstimate()
   end
 end
@@ -1554,15 +1567,16 @@ end
 -- in type order (the solver's slot order, independent of the list's order).
 SelectedWonders = function()
   local list = {}
-  for _, w in ipairs(SDP_Wonders.List(Game.GetLocalPlayer())) do
+  for _, w in ipairs(SDP_Wonders.List(Game.GetLocalPlayer(), ReplacedPins())) do
     if m_wonders[w.Type] and w.Status == nil then list[#list + 1] = w.Type end
   end
   table.sort(list)
   return list
 end
 
-local function PopulateWonders()
-  SDP_UI.BuildWonders(Controls.WonderPull, m_chipIM, Controls.WonderChipStack, SDP_Wonders.List(Game.GetLocalPlayer()),
+PopulateWonders = function()
+  SDP_UI.BuildWonders(Controls.WonderPull, m_chipIM, Controls.WonderChipStack,
+    SDP_Wonders.List(Game.GetLocalPlayer(), ReplacedPins()),
     m_wonders, function(wonderType, on) SetWonder(wonderType, on) end)
 end
 
