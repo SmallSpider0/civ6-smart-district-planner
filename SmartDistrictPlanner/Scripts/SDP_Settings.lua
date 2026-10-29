@@ -38,10 +38,11 @@ SDP_Settings.PRESETS = {
   SCIENCE = { YIELD_SCIENCE = SDP_Settings.FOCUS.SCIENCE },
   CULTURE = { YIELD_CULTURE = SDP_Settings.FOCUS.CULTURE },
   RELIGION = { YIELD_FAITH = SDP_Settings.FOCUS.RELIGION },
-  -- Gold and faith at half (purchase prices: 1 production = 4 gold = 2 faith).
-  HALF_GOLD_FAITH = { YIELD_GOLD = 0.5, YIELD_FAITH = 0.5 },
 }
-SDP_Settings.PRESET_ORDER = { "BALANCED", "SCIENCE", "CULTURE", "RELIGION", "HALF_GOLD_FAITH" }
+-- "Half Gold and Faith" (gold and faith 0.5) was removed in issue 161: a save
+-- that kept it reads back as the default preset (Decode: an unknown preset),
+-- gold and faith at 1 again; the player's own changes stay.
+SDP_Settings.PRESET_ORDER = { "BALANCED", "SCIENCE", "CULTURE", "RELIGION" }
 
 local function Text(value)
   if type(value) == "boolean" then return value and "1" or "0" end
