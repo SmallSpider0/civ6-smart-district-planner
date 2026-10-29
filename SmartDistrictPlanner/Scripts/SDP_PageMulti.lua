@@ -57,7 +57,6 @@ local m_tier = SDP_Tiers.DEFAULT
 local m_swap = false -- plots swapped from another of our cities are candidates (issue 54)
 local m_replace = false -- plan over this mod's earlier pins for the cities and replace them
 local m_remind = true
-local m_apart = true -- partner districts (harbor, commercial hub) not picked into one city (SDP_Rules.Apart)
 local m_result = nil
 local m_solution = 1
 local m_view = { Cities = {}, Districts = {}, Wonders = {}, Solutions = {}, Results = {}, Plans = {}, Templates = {} } -- for tests
@@ -69,7 +68,6 @@ local SWITCHES = {
   { Key = "SWAP", Default = false, Get = function() return m_swap end, Put = function(v) m_swap = v end },
   { Key = "REPLACE", Default = false, Get = function() return m_replace end, Put = function(v) m_replace = v end },
   { Key = "REMIND", Default = true, Get = function() return m_remind end, Put = function(v) m_remind = v end },
-  { Key = "APART", Default = true, Get = function() return m_apart end, Put = function(v) m_apart = v end },
 }
 local m_fold = false -- the settings folded into one line (issue 71)
 local m_keeper = SDP_UI.Keeper({ Tab = "MULTI", Columns = COLUMNS, Weights = m_weights, Switches = SWITCHES,
@@ -244,7 +242,7 @@ function P.Request()
     Plans = plans, Pools = pools, Counts = counts, Autos = autos, Wonders = wonders, Sites = sites,
     Off = SDP_UI.OffSet(m_shared.States), Offs = offs,
     Existing = existing, Weights = weights, Land = m_weights.LAND > 0, Coverage = m_weights.COVERAGE, Distance = m_weights.DISTANCE,
-    Remind = m_remind, Apart = m_apart, IgnorePins = m_replace and P.OwnPins() or nil, Swap = m_swap,
+    Remind = m_remind, Apart = true, IgnorePins = m_replace and P.OwnPins() or nil, Swap = m_swap,
   }
 end
 
@@ -283,15 +281,6 @@ function P.SetRemind(on)
   Controls.MultiRemindCheck:SetCheck(on)
   if m_remind ~= on then
     m_remind = on
-    ClearResult()
-    Remember()
-  end
-end
-
-function P.SetApart(on)
-  Controls.MultiApartCheck:SetCheck(on)
-  if m_apart ~= on then
-    m_apart = on
     ClearResult()
     Remember()
   end
@@ -603,7 +592,6 @@ function P.SetPreset(name)
   Controls.MultiSwapCheck:SetCheck(m_swap)
   Controls.MultiReplaceCheck:SetCheck(m_replace)
   Controls.MultiRemindCheck:SetCheck(m_remind)
-  Controls.MultiApartCheck:SetCheck(m_apart)
   Remember()
   ShowCount()
   UpdateEstimate()
@@ -834,7 +822,6 @@ function P.Refresh()
   Controls.MultiSwapCheck:SetCheck(m_swap)
   Controls.MultiReplaceCheck:SetCheck(m_replace)
   Controls.MultiRemindCheck:SetCheck(m_remind)
-  SDP_UI.ShowApart(Controls.MultiApartBox, Controls.MultiApartCheck, Controls.MultiApartLabel, m_apart)
   UpdateFold()
   P.Render()
 end
@@ -1107,7 +1094,7 @@ end
 function P.State()
   return {
     Result = m_result, Solution = m_solution, Tier = m_tier, Land = m_weights.LAND > 0, Replace = m_replace, Remind = m_remind,
-    Apart = m_apart, Swap = m_swap, Weights = m_weights, Preset = m_preset, Fold = m_fold,
+    Swap = m_swap, Weights = m_weights, Preset = m_preset, Fold = m_fold,
     FoldText = Controls.MultiFoldText:GetText(), ResultHeight = Controls.MultiResultScroll:GetSizeY(),
     View = m_view, EstimateText = Controls.MultiEstimate:GetText(), QualityText = Controls.MultiQuality:GetText(),
     PlaceDisabled = Controls.MultiPlaceButton:IsDisabled(), ContinueDisabled = Controls.MultiContinueButton:IsDisabled(),
@@ -1121,7 +1108,6 @@ Controls.MultiCityDefault:RegisterCallback(Mouse.eLClick, function() P.DefaultCi
 Controls.MultiSwapCheck:RegisterCheckHandler(function() P.SetSwap(Controls.MultiSwapCheck:IsChecked()) end)
 Controls.MultiReplaceCheck:RegisterCheckHandler(function() P.SetReplace(Controls.MultiReplaceCheck:IsChecked()) end)
 Controls.MultiRemindCheck:RegisterCheckHandler(function() P.SetRemind(Controls.MultiRemindCheck:IsChecked()) end)
-Controls.MultiApartCheck:RegisterCheckHandler(function() P.SetApart(Controls.MultiApartCheck:IsChecked()) end)
 Controls.MultiCountLess:RegisterCallback(Mouse.eLClick, function() P.SetCount(ListOf(EditedList()).Target - 1) end)
 Controls.MultiCountMore:RegisterCallback(Mouse.eLClick, function() P.SetCount(ListOf(EditedList()).Target + 1) end)
 Controls.MultiSolveButton:RegisterCallback(Mouse.eLClick, function() P.Solve() end)

@@ -1,6 +1,6 @@
 -- Offline: the harbor or the commercial hub by the city (issue 106). When
--- both sides of a keep-apart pair (SDP_Rules.Apart) are candidates and the
--- switch lets a city take only one, a city whose center is on the coast and
+-- both sides of a keep-apart pair (SDP_Rules.Apart) are candidates, a city
+-- takes only one (always, issue 152): a city whose center is on the coast and
 -- has no fresh water takes the coastal side (the harbor, Districts.Coast),
 -- every other city the other side. Driven through the panel's own controls.
 local test, T = ...
@@ -91,7 +91,7 @@ test("single-city tab: the coastal city without fresh water takes the harbor, th
   for id = 1, 3 do
     SDP_Panel.SelectCity(id)
     OnlyThePair(rows, function() return SDP_Panel.State().Count end, c.CountLess, c.CountMore)
-    T.eq(SDP_Panel.State().Apart, true, "the switch is on")
+    T.eq(SDP_Panel.Request().Apart, true, "kept apart")
     c.SolveButton:Click()
     local result = SDP_Panel.RunTask(500) or SDP_Panel.State().Result
     T.ok(result and result.Ok, "city " .. id .. ": " .. tostring(result and result.Error))
@@ -99,16 +99,14 @@ test("single-city tab: the coastal city without fresh water takes the harbor, th
       T.eq(Types(sol.Plan), want[id], "city " .. id .. ", solution " .. n)
     end
   end
-  -- Switched off, the score decides: the harbor next to city 2's center.
+  -- Not kept apart (a request no panel sends since issue 152), the score
+  -- decides: the harbor next to city 2's center. So the rule above chose the hub.
   SDP_Panel.SelectCity(2)
-  c.ApartCheck:Toggle()
-  T.eq(SDP_Panel.State().Apart, false, "off")
-  c.SolveButton:Click()
-  local off = SDP_Panel.RunTask(500) or SDP_Panel.State().Result
+  local request = SDP_Panel.Request()
+  request.Apart = false
+  local off = SDP_Solver.Solve(request)
   T.ok(off and off.Ok, tostring(off and off.Error))
-  T.eq(Types(off.Plan), HARBOR, "off: by score")
-  c.ApartCheck:Toggle()
-  T.eq(SDP_Panel.State().Apart, true, "on again")
+  T.eq(Types(off.Plan), HARBOR, "not kept apart: by score")
 end)
 
 test("single-city tab: a required one is placed as asked; a lone candidate is taken", function()
@@ -144,7 +142,7 @@ test("several-cities tab: each city by its center", function()
   T.ok(keys[1] and keys[2] and keys[3], "the three cities take part")
   local rows = function() return multi.State().View.Districts end
   OnlyThePair(rows, function() return multi.Request() and multi.Request().Count or 0 end, c.MultiCountLess, c.MultiCountMore)
-  T.eq(multi.State().Apart, true, "the switch is on")
+  T.eq(multi.Request().Apart, true, "kept apart")
   c.MultiSolveButton:Click()
   local result = SDP_Panel.RunTask(500) or multi.State().Result
   T.ok(result and result.Ok, tostring(result and result.Error))

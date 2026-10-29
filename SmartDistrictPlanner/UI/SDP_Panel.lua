@@ -89,7 +89,6 @@ local m_allowFeatureRemoval = true
 local m_swap = false          -- plots swapped from another of our cities are candidates (issue 54)
 local m_replace = false       -- plan over this mod's earlier pins for the city and replace them
 local m_remind = true         -- reminder pins on the woods and rainforest the plan relies on (feedback item 5)
-local m_apart = true          -- keep partner districts (harbor, commercial hub) out of one city's picks (SDP_Rules.Apart)
 local m_wonders = {}          -- [BuildingType] = true: wonders to place too (then solved by SDP_Multi, one city)
 local m_heat = nil            -- the district whose good places the map shows
 local m_heatSpots = nil       -- SDP_Solver.Heat of m_heat (tests)
@@ -118,7 +117,6 @@ local SINGLE_SWITCHES = {
   { Key = "SWAP", Default = false, Get = function() return m_swap end, Put = function(v) m_swap = v end },
   { Key = "REPLACE", Default = false, Get = function() return m_replace end, Put = function(v) m_replace = v end },
   { Key = "REMIND", Default = true, Get = function() return m_remind end, Put = function(v) m_remind = v end },
-  { Key = "APART", Default = true, Get = function() return m_apart end, Put = function(v) m_apart = v end },
 }
 
 -- ===========================================================================
@@ -1023,30 +1021,9 @@ function SDP_UI.SupportEntry(p, name)
   return { Type = s.Type, X = s.X, Y = s.Y, Name = name }
 end
 
--- The switch for partner districts (SDP_Rules.Apart, 2026-10-21 feedback):
--- the label names the pair (several pairs: a general label), the tooltip
--- gives the rule as the game's data states it; hidden when the rules have
--- no such pair for the player's districts (SDP_Rules.ApartFor).
-function SDP_UI.ShowApart(box, check, label, on)
-  local pairs = SDP_Rules.ApartFor(Game.GetLocalPlayer())
-  box:SetHide(#pairs == 0)
-  check:SetCheck(on)
-  if #pairs == 0 then return end
-  if #pairs == 1 then
-    label:SetText(Locale.Lookup("LOC_SDP_APART_SHORT", TypeName(pairs[1].A), TypeName(pairs[1].B)))
-  else
-    label:SetText(Locale.Lookup("LOC_SDP_APART_SHORT_ANY"))
-  end
-  local rules = {}
-  for _, pair in ipairs(pairs) do
-    rules[#rules + 1] = Locale.Lookup("LOC_SDP_APART_RULE", TypeName(pair.Building), TypeName(pair.Other), TypeName(pair.A),
-      TypeName(pair.B))
-  end
-  box:SetToolTipString(Locale.Lookup("LOC_SDP_APART_TOOLTIP", table.concat(rules, "[NEWLINE]")))
-end
-
 -- Result rows for partner districts a plan leaves in one city
--- (Together); `city` names the city (several cities) or is nil.
+-- (Together; partner districts are always kept apart otherwise, issue 152):
+-- `city` names the city (several cities) or is nil.
 -- Housing the plan takes from improvements (SDP_Appeal), as one row.
 function SDP_UI.ImprovementHousingRow(lost, add)
   if lost ~= nil and lost < 0 then
@@ -1060,7 +1037,8 @@ function SDP_UI.TogetherRows(together, city, add)
     local name = city and Locale.Lookup("LOC_SDP_RESULT_TOGETHER_CITY", city, TypeName(t.A), TypeName(t.B))
       or Locale.Lookup("LOC_SDP_RESULT_TOGETHER", TypeName(t.A), TypeName(t.B))
     add("ICON_" .. t.A, name, Locale.Lookup("LOC_SDP_RESULT_TOGETHER_DETAIL", TypeName(t.Building)),
-      Locale.Lookup("LOC_SDP_APART_RULE", TypeName(t.Building), TypeName(t.Other), TypeName(t.A), TypeName(t.B)))
+      Locale.Lookup("LOC_SDP_RESULT_TOGETHER_TOOLTIP",
+        Locale.Lookup("LOC_SDP_APART_RULE", TypeName(t.Building), TypeName(t.Other), TypeName(t.A), TypeName(t.B))))
   end
 end
 
@@ -1544,15 +1522,6 @@ local function SetReplace(on)
   end
 end
 
-local function SetApart(on)
-  Controls.ApartCheck:SetCheck(on)
-  if m_apart ~= on then
-    m_apart = on
-    ClearResult()
-    Remember()
-  end
-end
-
 -- Reminder pins only change what "place" puts on the map.
 local function SetRemind(on)
   Controls.RemindCheck:SetCheck(on)
@@ -1619,7 +1588,6 @@ SetPreset = function(name)
   Controls.SwapCheck:SetCheck(m_swap)
   Controls.ReplaceCheck:SetCheck(m_replace)
   Controls.RemindCheck:SetCheck(m_remind)
-  Controls.ApartCheck:SetCheck(m_apart)
   Remember()
   UpdateHave() -- a preset may turn replace off: the city's tacks count again (issue 144)
   UpdateEstimate()
@@ -1759,7 +1727,6 @@ Refresh = function()
   Controls.SwapCheck:SetCheck(m_swap)
   Controls.ReplaceCheck:SetCheck(m_replace)
   Controls.RemindCheck:SetCheck(m_remind)
-  SDP_UI.ShowApart(Controls.ApartBox, Controls.ApartCheck, Controls.ApartLabel, m_apart)
   UpdateReplaceLabel()
   PopulateWonders()
   m_heat = nil
@@ -1864,7 +1831,7 @@ Request = function()
   return {
     PlayerID = Game.GetLocalPlayer(), CityID = m_cityID, Districts = list.Must, Weights = weights,
     Pool = list.Pool, Count = list.Count, MustSpecialty = list.MustSpecialty, Auto = list.Auto,
-    Distance = m_weights.DISTANCE, Coverage = m_weights.COVERAGE, Remind = m_remind, Apart = m_apart,
+    Distance = m_weights.DISTANCE, Coverage = m_weights.COVERAGE, Remind = m_remind, Apart = true,
     AllowFeatureRemoval = m_allowFeatureRemoval, Land = m_weights.LAND > 0, Tier = m_tier, Swap = m_swap,
     IgnorePins = m_replace and OwnPins() or nil, Wonders = wonders, Off = SDP_UI.OffSet(m_states),
   }
@@ -2143,6 +2110,7 @@ SDP_Panel = {
   SetSelected = SetSelected,
   SetState = function(districtType, state) SetState(districtType, state) end,
   SetCount = SetCount,
+  Request = function() return Request() end,
   -- Forget the counts set in this game session, so each city shows its default again.
   ForgetCounts = function()
     m_counts = {}
@@ -2152,7 +2120,6 @@ SDP_Panel = {
     UpdateEstimate()
   end,
   SetRemind = SetRemind,
-  SetApart = SetApart,
   SelectSolution = function(n)
     if m_result ~= nil and m_result.Ok and m_result.Solutions and m_result.Solutions[n] then
       m_solution = n
@@ -2193,7 +2160,7 @@ SDP_Panel = {
     return {
       CityID = m_cityID, Result = m_result, DistrictRows = m_districtRows, ResultRows = m_resultRows,
       SolutionCells = m_solutionCells, WeightCells = m_weightCells,
-      Count = List().Count, Target = List().Target, Have = List().Have, Solution = m_solution, Remind = m_remind, Apart = m_apart,
+      Count = List().Count, Target = List().Target, Have = List().Have, Solution = m_solution, Remind = m_remind,
       Weights = m_weights, AllowFeatureRemoval = m_allowFeatureRemoval, Land = m_weights.LAND > 0, Tier = m_tier, Replace = m_replace,
       Swap = m_swap,
       Wonders = SelectedWonders(), HeatDistrict = m_heat,
@@ -2228,9 +2195,6 @@ Controls.SwapCheck:RegisterCheckHandler(function()
 end)
 Controls.RemindCheck:RegisterCheckHandler(function()
   SetRemind(Controls.RemindCheck:IsChecked())
-end)
-Controls.ApartCheck:RegisterCheckHandler(function()
-  SetApart(Controls.ApartCheck:IsChecked())
 end)
 Controls.CountLess:RegisterCallback(Mouse.eLClick, function() SetCount(List().Target - 1) end)
 Controls.CountMore:RegisterCallback(Mouse.eLClick, function() SetCount(List().Target + 1) end)
