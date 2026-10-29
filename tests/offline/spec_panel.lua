@@ -133,9 +133,15 @@ test("single-city tab: the record survives a reload; replace plans over this mod
   T.eq(#SDP_Pins.Own(0, { 1 }), 1, "the campus pin is ours")
   T.eq(#SDP_Pins.Own(0, { 2 }), 0, "nothing for another city")
 
-  -- Without replace the pin is a fixed plot: the campus goes elsewhere.
-  local locked = SDP_Panel.Solve()
-  T.ok(locked.Plan[1].Index ~= campus.Index, "the pinned plot is taken")
+  -- Without replace the pin stays: the tacked campus is greyed out and not
+  -- planned again (issue 165).
+  local function CampusStatus()
+    for _, r in ipairs(SDP_Panel.State().DistrictRows) do
+      if r.Type == "DISTRICT_CAMPUS" then return r.Status end
+    end
+  end
+  T.eq(CampusStatus(), "TACKED", "the tacked campus is greyed out")
+  T.eq(SDP_Panel.Request(), nil, "nothing left to plan")
   -- With replace, the plan is made as if the pin were gone: the same plot again.
   SDP_Panel.SetReplace(true)
   local replanned = SDP_Panel.Solve()
@@ -152,9 +158,12 @@ test("single-city tab: the record survives a reload; replace plans over this mod
   local own = SDP_Pins.Own(0, { 1 })[1]
   PlayerConfigurations[0]:GetMapPinID(own.ID):SetName("mine")
   T.eq(#SDP_Pins.Own(0, { 1 }), 0, "an edited pin is not ours")
-  local after = SDP_Panel.Solve()
-  T.ok(after.Plan[1].Index ~= campus.Index, "the player's pin stays a fixed plot")
   SDP_Panel.SetReplace(false)
+  SDP_Panel.SetReplace(true)
+  T.eq(CampusStatus(), "TACKED", "the player's pin stays, replace or not")
+  PlayerConfigurations[0]:DeleteMapPin(own.ID)
+  SDP_Panel.SetReplace(false)
+  T.eq(CampusStatus(), nil, "the player's pin deleted: the campus can be planned")
   SDP_Panel.SetRemind(true)
   SDP_Panel.SetState("DISTRICT_AQUEDUCT", "AUTO")
   while SDP_Pins.CanUndo() do SDP_Pins.UndoLast() end

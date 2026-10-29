@@ -232,7 +232,9 @@ test("several cities tab: a built district required in a city's own list counts 
   local multi = SDP_Panel.Multi
   multi.Refresh()
   multi.SetPlanFor("C1")
-  MultiMust("DISTRICT_CAMPUS") -- city 1 has built it
+  -- City 1 has built it: greyed out (issue 165), required only by a template.
+  multi.ApplyPlan({ "DISTRICT_CAMPUS" })
+  T.eq(MultiRow("DISTRICT_CAMPUS").Why, "BUILT", "the built campus is greyed out")
   for _ = 1, 5 do c.MultiCountLess:Click() end
   T.eq(tonumber(c.MultiCountValue:GetText()), 2, "down to the two city 1 has")
   T.ok(c.MultiCountLess:IsDisabled(), "less is off at the minimum")
