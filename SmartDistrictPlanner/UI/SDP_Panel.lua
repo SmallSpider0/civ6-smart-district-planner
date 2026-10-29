@@ -96,7 +96,8 @@ local m_tier = SDP_Tiers.DEFAULT
 local m_launchDone = false    -- a background solve finished while the panel was closed
 local m_scan = nil            -- the selected city (district status, specialty slots)
 local m_districts = {}        -- SDP_Rules.PlannableDistricts, sorted by type
-local m_status = {}           -- SDP_City.DistrictStatus for the selected city
+local m_scanStatus = {}       -- SDP_City.DistrictStatus for the selected city
+local m_status = {}           -- m_scanStatus and the types tacked for the city (SDP_City.TackedStatus)
 local m_result = nil          -- last solve; cleared whenever an input changes
 local m_solution = 1          -- the solution shown (and previewed)
 local m_districtRows = {}     -- what the district grid shows, for tests
@@ -1308,7 +1309,8 @@ local function RefreshDistricts()
   local playerID = Game.GetLocalPlayer()
   m_districts = SDP_Rules.PlannableDistricts(playerID)
   m_scan = m_cityID and SDP_City.Scan(playerID, m_cityID) or nil
-  m_status = m_scan and SDP_City.DistrictStatus(m_scan, m_districts) or {}
+  m_scanStatus = m_scan and SDP_City.DistrictStatus(m_scan, m_districts) or {}
+  m_status = m_scanStatus
   UpdateReplaceLabel()
   PopulateHeat()
   ShowCells()
@@ -1507,9 +1509,17 @@ end
 -- What the selected city has (issue 144): read again whenever its pins or
 -- the replace switch change. Pins being replaced do not count.
 local function UpdateHave()
-  m_have = m_cityID and SDP_City.HaveOf(Game.GetLocalPlayer(), m_cityID, ReplacedPins()) or nil
-  ShowCount()
-  UpdateSpecialtyNote()
+  local playerID, ignore = Game.GetLocalPlayer(), ReplacedPins()
+  m_have = m_cityID and SDP_City.HaveOf(playerID, m_cityID, ignore) or nil
+  -- A type tacked for the city is greyed out like a built one (issue 165).
+  m_status = {}
+  for districtType, why in pairs(m_scanStatus) do m_status[districtType] = why end
+  if m_cityID ~= nil then
+    for districtType, why in pairs(SDP_City.TackedStatus(playerID, m_cityID, m_districts, ignore)) do
+      m_status[districtType] = m_status[districtType] or why
+    end
+  end
+  ShowCells()
 end
 
 UpdateReplaceLabel = function()
@@ -1654,7 +1664,7 @@ PopulateHeat = function()
   entry.Button:SetText(Locale.Lookup("LOC_SDP_HEAT_OFF"))
   entry.Button:RegisterCallback(Mouse.eLClick, function() ShowHeat(nil) end)
   for _, d in ipairs(m_districts) do
-    if m_status[d.Type] == nil then
+    if m_scanStatus[d.Type] == nil then
       local districtType = d.Type
       local e = {}
       pull:BuildEntry("InstanceOne", e)

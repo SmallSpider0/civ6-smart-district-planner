@@ -36,6 +36,9 @@
     <Replace Tag="LOC_SDP_STATUS_EXCLUSIVE" Language="zh_Hans_CN">
       <Text>不能同城</Text>
     </Replace>
+    <Replace Tag="LOC_SDP_STATUS_TACKED" Language="zh_Hans_CN">
+      <Text>已打钉</Text>
+    </Replace>
     <Replace Tag="LOC_SDP_REASON_EXCLUSIVE" Language="zh_Hans_CN">
       <Text>不能和{1_Other}建在同一座城</Text>
     </Replace>
