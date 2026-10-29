@@ -102,10 +102,20 @@ end)
 test("placed tacks are locked for the next solve", function()
   local ok, err = pcall(function()
     local campus = Resolve("DISTRICT_CAMPUS")
+    local holy = Resolve("DISTRICT_HOLY_SITE")
     local first = SolveFromPanel({ campus })
     SDP_Panel.PlacePins()
-    local second = SolveFromPanel({ campus })
-    T.ok(second.Plan[1].Index ~= first.Plan[1].Index, "planned on top of the placed tack")
+    -- The tacked campus is greyed out and not planned again (issue 165).
+    local status = nil
+    for _, r in ipairs(SDP_Panel.State().DistrictRows) do
+      if r.Type == campus then status = r.Status end
+    end
+    T.eq(status, "TACKED", "the tacked campus is greyed out")
+    local second = SolveFromPanel({ campus, holy })
+    for _, p in ipairs(second.Plan) do
+      T.ok(p.Type ~= campus, "a second campus beside the tack")
+      T.ok(p.Index ~= first.Plan[1].Index, "planned on top of the placed tack")
+    end
     local seen = false
     for _, n in ipairs(second.Neighbours) do
       if n.Subject.X == first.Plan[1].X and n.Subject.Y == first.Plan[1].Y then seen = true end

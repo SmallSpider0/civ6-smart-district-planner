@@ -184,8 +184,8 @@ test("the pin record survives a reload; replace plans over this mod's pins; undo
     T.ok(SDP_Pins.CanUndo(), "undo after re-reading the record")
     T.eq(#SDP_Pins.Own(pid, { number }), 1, "the pin is ours")
 
-    local locked = SDP_Panel.Solve()
-    T.ok(locked.Plan[1].Index ~= plot, "without replace the pinned plot is taken")
+    -- Without replace the tacked campus is not planned again (issue 165).
+    T.eq(SDP_Panel.Request(), nil, "without replace nothing is left to plan")
     SDP_Panel.SetReplace(true)
     local again = SDP_Panel.Solve()
     T.eq(again.Plan[1].Index, plot, "with replace the old pin's plot is free")

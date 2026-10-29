@@ -656,10 +656,11 @@ function SDP_City.SpecialtyHave(scan)
   return have
 end
 
--- SDP_City.SpecialtyHave of a city without scanning its plots. `ignore`:
--- { [pin ID] = true } pins treated as absent (being replaced). Nil when
--- the city does not exist.
-function SDP_City.HaveOf(playerID, cityID, ignore)
+-- What SDP_City.SpecialtyHave and SDP_City.TackedStatus need of a city,
+-- without scanning its plots: its districts (complete or not) and the pins
+-- near it, `ignore` ({ [pin ID] = true }, being replaced) left out. Nil
+-- when the city does not exist.
+local function PinScan(playerID, cityID, ignore)
   local city = CityManager.GetCity(playerID, cityID)
   if city == nil then return nil end
   local x, y = city:GetX(), city:GetY()
@@ -668,7 +669,38 @@ function SDP_City.HaveOf(playerID, cityID, ignore)
   for _, district in city:GetDistricts():Members() do
     scan.Built[#scan.Built + 1] = { Type = GameInfo.Districts[district:GetType()].DistrictType }
   end
+  return scan
+end
+
+-- SDP_City.SpecialtyHave of a city without scanning its plots. `ignore`:
+-- { [pin ID] = true } pins treated as absent (being replaced). Nil when
+-- the city does not exist.
+function SDP_City.HaveOf(playerID, cityID, ignore)
+  local scan = PinScan(playerID, cityID, ignore)
+  if scan == nil then return nil end
   return SDP_City.SpecialtyHave(scan)
+end
+
+-- District types a city has a tack of (SDP_City.OwnPins) and has not built,
+-- of the ones a city has at most one of (issue 165): { [DistrictType] =
+-- "TACKED" }. The tack stays where it is and is scored as a neighbour
+-- (requirement 7), so the type is neither a candidate nor planned again;
+-- the district lists show it greyed out, as a built one. Pins being
+-- replaced (`ignore`) do not count: those types are planned anew. Empty
+-- when the city does not exist.
+function SDP_City.TackedStatus(playerID, cityID, districts, ignore)
+  local status = {}
+  local scan = PinScan(playerID, cityID, ignore)
+  if scan == nil then return status end
+  local built = {}
+  for _, district in ipairs(scan.Built) do built[district.Type] = true end
+  local tacked = SDP_City.TackedDistricts(scan)
+  for _, district in ipairs(districts) do
+    if tacked[district.Type] and not built[district.Type] and district.OnePerCity then
+      status[district.Type] = "TACKED"
+    end
+  end
+  return status
 end
 
 -- How many districts that take population a city has (SDP_City.SpecialtyHave)

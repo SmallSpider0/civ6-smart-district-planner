@@ -36,6 +36,9 @@
     <Replace Tag="LOC_SDP_STATUS_EXCLUSIVE" Language="en_US">
       <Text>Excluded</Text>
     </Replace>
+    <Replace Tag="LOC_SDP_STATUS_TACKED" Language="en_US">
+      <Text>Tacked</Text>
+    </Replace>
     <Replace Tag="LOC_SDP_REASON_EXCLUSIVE" Language="en_US">
       <Text>cannot share a city with the {1_Other}</Text>
     </Replace>

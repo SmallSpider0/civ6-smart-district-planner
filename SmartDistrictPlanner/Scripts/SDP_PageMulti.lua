@@ -146,22 +146,36 @@ local function HaveOf(key)
   return SDP_City.HaveOf(Game.GetLocalPlayer(), cityID, ReplacedPins())
 end
 
+-- Why each district cannot be planned for participant `key` (a city's own
+-- list): the empire limit, what the city has built (complete or not) and
+-- the types tacked for it (issue 165), pins being replaced left out. As the
+-- single-city tab's list: these are greyed out, neither required nor
+-- candidates. The shared list: the empire limit only.
+local function StatusOf(key, districts)
+  local status = Built()
+  local cityID = CityOf(key)
+  if cityID ~= nil then
+    local playerID = Game.GetLocalPlayer()
+    for districtType, why in pairs(SDP_City.BuiltHereStatus(playerID, cityID, districts)) do
+      status[districtType] = status[districtType] or why
+    end
+    for districtType, why in pairs(SDP_City.TackedStatus(playerID, cityID, districts, ReplacedPins())) do
+      status[districtType] = status[districtType] or why
+    end
+  end
+  return status
+end
+
 -- The count is a target (issue 144). A city's own list starts from what
 -- the city has; the shared list serves cities with different numbers, so
 -- it goes up to the number of district types that take population.
 local function ListOf(list, key)
   local districts = Districts()
   if key ~= nil and key ~= "ALL" then
-    -- What the city has built is in its count already: a built district
-    -- set to required is not counted again (the solver skips it).
-    local status = Built()
-    local cityID = CityOf(key)
-    if cityID ~= nil then
-      for districtType, why in pairs(SDP_City.BuiltHereStatus(Game.GetLocalPlayer(), cityID, districts)) do
-        status[districtType] = status[districtType] or why
-      end
-    end
-    return SDP_UI.ListRequest(districts, list.States, list.Count or SDP_UI.DEFAULT_COUNT, status, HaveOf(key))
+    -- What the city has built or tacked is in its count already: such a
+    -- district set to required is not counted again (the solver skips it).
+    return SDP_UI.ListRequest(districts, list.States, list.Count or SDP_UI.DEFAULT_COUNT, StatusOf(key, districts),
+      HaveOf(key))
   end
   local ceiling = 0
   for _, d in ipairs(districts) do
@@ -178,6 +192,18 @@ local function ShowCount()
   Controls.MultiCountLess:SetDisabled(counts.Target <= counts.Have + counts.MustSpecialty)
   Controls.MultiCountMore:SetDisabled(counts.Target >= counts.Top)
   m_view.Count = counts.Target
+end
+
+-- After the tacks or the replace switch change: a city's list greys out
+-- what the city has tacked again (issue 165); the shared list shows its
+-- count.
+local function ShowHave()
+  if m_planFor ~= "ALL" then
+    P.RefreshLists()
+  else
+    ShowWonders()
+    ShowCount()
+  end
 end
 
 local function WonderTypes()
@@ -595,7 +621,7 @@ function P.SetPreset(name)
   Controls.MultiReplaceCheck:SetCheck(m_replace)
   Controls.MultiRemindCheck:SetCheck(m_remind)
   Remember()
-  ShowCount()
+  ShowHave()
   UpdateEstimate()
 end
 
@@ -723,8 +749,11 @@ function P.RefreshLists()
   local list, key = EditedList()
   local districts = Districts()
   local built = Built()
+  -- A city's list (its own, or the shared one until it is edited) greys
+  -- out what that city has built or tacked (issue 165).
+  local why = StatusOf(m_planFor, districts)
   local rows = SDP_UI.BuildCells(m_cellIM, m_utilityIM, Controls.MultiDistrictStack, Controls.MultiUtilityStack, districts,
-    function(d) return SDP_UI.StateOf(list.States, d) end, function(d) return built[d.Type] end,
+    function(d) return SDP_UI.StateOf(list.States, d) end, function(d) return why[d.Type] end,
     function(d) P.SetState(d.Type, SDP_UI.NextState(d, SDP_UI.StateOf(list.States, d))) end)
   m_view.Districts = {}
   for _, row in ipairs(rows) do
@@ -757,7 +786,7 @@ function P.RefreshLists()
       row.Cell:SetToolTipString(status)
     end
     m_view.Districts[#m_view.Districts + 1] = { Type = row.Type, State = row.State, Status = status, Group = row.Group,
-      Cell = row.Cell, Built = built[d.Type] ~= nil or nil }
+      Cell = row.Cell, Built = built[d.Type] ~= nil or nil, Why = why[d.Type] }
   end
   ShowCount()
 
@@ -1071,8 +1100,7 @@ function P.Place()
   m_result.Placed = true
   SDP_Preview.Clear()
   UpdateReplaceLabel()
-  ShowWonders()
-  ShowCount()
+  ShowHave()
   SDP_UI.UpdateAllButtons()
   return placed
 end
@@ -1086,8 +1114,7 @@ function P.Undo()
     m_result.Placed = false
   end
   UpdateReplaceLabel()
-  ShowWonders()
-  ShowCount()
+  ShowHave()
   SDP_UI.UpdateAllButtons()
   return removed
 end
