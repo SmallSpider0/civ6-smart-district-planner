@@ -77,6 +77,31 @@ test("match: the preset the values equal, the current one first, else none (issu
     "an unknown current one: the first in order")
 end)
 
+-- Issue 161: the "Half Gold and Faith" preset is gone. A save that kept it
+-- (v1.6.1 and earlier wrote "preset=HALF_GOLD_FAITH" and only what differed
+-- from it) reads back as Balanced with gold and faith at 1; the player's own
+-- changes stay.
+test("a save with the removed Half Gold and Faith preset: Balanced, gold and faith 1 (issue 161)", function()
+  local P, O = SDP_Settings.PRESETS, SDP_Settings.PRESET_ORDER
+  T.eq(P.HALF_GOLD_FAITH, nil, "no such preset")
+  for _, name in ipairs(O) do T.ok(name ~= "HALF_GOLD_FAITH", "not in the pulldown") end
+  local fields = SDP_UI.SettingFields({ { Key = "YIELD_SCIENCE" }, { Key = "YIELD_GOLD" }, { Key = "YIELD_FAITH" } }, {},
+    SDP_Tiers.Single)
+  local kept = SDP_Settings.Decode("v1;preset=HALF_GOLD_FAITH", fields, P, O)
+  T.eq(kept.Preset, "BALANCED", "read as Balanced")
+  T.eq(kept.Values.YIELD_GOLD, 1, "gold back to 1")
+  T.eq(kept.Values.YIELD_FAITH, 1, "faith back to 1")
+  T.same(kept.Edited, {}, "nothing counted as changed")
+  T.eq(SDP_Settings.Match(kept.Preset, kept.Values, fields, P, O), "BALANCED", "shown as Balanced")
+  local changed = SDP_Settings.Decode("v1;preset=HALF_GOLD_FAITH;YIELD_SCIENCE=2;TIER=FINE", fields, P, O)
+  T.eq(changed.Preset, "BALANCED", "with a change: Balanced too")
+  T.eq(changed.Values.YIELD_SCIENCE, 2, "the change kept")
+  T.eq(changed.Values.TIER, "FINE", "and the tier")
+  T.eq(changed.Values.YIELD_GOLD, 1, "gold 1")
+  T.eq(changed.Values.YIELD_FAITH, 1, "faith 1")
+  T.eq(SDP_Settings.Match(changed.Preset, changed.Values, fields, P, O), nil, "shown as Custom")
+end)
+
 test("a loaded save: each tab gets back what it kept", function()
   SDP_Panel.Open()
   SDP_Panel.SelectCity(1)

@@ -909,12 +909,6 @@
     <Replace Tag="LOC_SDP_PRESET_RELIGION_TOOLTIP" Language="en_US">
       <Text>For a Religious victory, or Faith to buy things with: Faith weighs more ({1_K}), so Holy Sites get better places.</Text>
     </Replace>
-    <Replace Tag="LOC_SDP_PRESET_HALF_GOLD_FAITH" Language="en_US">
-      <Text>Half Gold and Faith</Text>
-    </Replace>
-    <Replace Tag="LOC_SDP_PRESET_HALF_GOLD_FAITH_TOOLTIP" Language="en_US">
-      <Text>Gold and Faith count half: buying something takes more Gold or Faith than building it takes Production.</Text>
-    </Replace>
     <Replace Tag="LOC_SDP_PARTS_DISTRICT" Language="en_US">
       <Text>This district: weighted adjacency {1_Adjacency}</Text>
     </Replace>

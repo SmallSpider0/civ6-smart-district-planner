@@ -18,7 +18,7 @@ A district planner for Civilization VI: pick a city and the districts you want, 
 
 The panel has three tabs:
 
-- **One city**: pick a city, mark each district Must, Pool or Off, and set how many districts the city should end up with and how much each yield counts, or pick a preset (Balanced, Science, Culture, Religion, Half Gold and Faith). The planner finds the layout with the highest weighted adjacency within the city's 3 rings; when it picks from the pool you get three plans with different districts. Click one to preview it on the map, then place the tacks. Wonders can be planned along with the districts; a wonder that needs a district next to it (the Colosseum and the Entertainment Complex) gets one when the city has none, and the Temple of Artemis comes with the Camp it needs.
+- **One city**: pick a city, mark each district Must, Pool or Off, and set how many districts the city should end up with and how much each yield counts, or pick a preset (Balanced, Science, Culture, Religion). The planner finds the layout with the highest weighted adjacency within the city's 3 rings; when it picks from the pool you get three plans with different districts. Click one to preview it on the map, then place the tacks. Wonders can be planned along with the districts; a wonder that needs a district next to it (the Colosseum and the Entertainment Complex) gets one when the city has none, and the Temple of Artemis comes with the Camp it needs.
 - **City sites**: choose sites for new cities on the explored map. A site is scored part by part (Districts, Tiles, Features, Housing, Luxuries, Strategics, Appeal), each part with its own weight; a typical good site gets 10 points in a part. Three plans; each site lists its points per part, and its tooltip gives the yields per turn behind them, the resources the site gets and how far it is from the other sites; preview on the map, then place site tacks. With **Dense packing: as many new cities as fit** on, the plan that fits more new cities wins (New cities 12 by default); tick the sites you want, or **Select all**, and only those get tacks.
 - **Several cities**: plan districts and wonders for the city selected on the map and the nearest cities and site tacks around it (4 by default, up to 8), counting adjacency across cities and empire limits. Each city can have its own district list, or a template built from your civilization's adjacency rules (Science city, Production city…).
 
@@ -117,7 +117,7 @@ The development documents are in Chinese; issues and pull requests in English ar
 
 面板有三个页签：
 
-- **单城**：选一座城，把区域设为必建、候选或不建，给出这座城一共要有几个区域和各产出的权重，或选一个预设（均衡、科技、文化、宗教、金币信仰减半）。规划器在城市三环内找加权相邻加成最高的摆法；从候选里挑时给出组合不同的三套方案，点一套就在地图上预览，再一键打钉。单城也能一起放奇观：需要相邻某区域的奇观（如罗马斗兽场要挨着娱乐中心），城里没有这个区域时会补上；阿耳忒弥斯神庙会带上它要的营地。
+- **单城**：选一座城，把区域设为必建、候选或不建，给出这座城一共要有几个区域和各产出的权重，或选一个预设（均衡、科技、文化、宗教）。规划器在城市三环内找加权相邻加成最高的摆法；从候选里挑时给出组合不同的三套方案，点一套就在地图上预览，再一键打钉。单城也能一起放奇观：需要相邻某区域的奇观（如罗马斗兽场要挨着娱乐中心），城里没有这个区域时会补上；阿耳忒弥斯神庙会带上它要的营地。
 - **选城址**：在已探索的地图上给几座新城选位置。城址分按区域、地块、地貌、住房、奢侈、战略、魅力各项分开打分，每项有自己的权重，达到好城址的典型水平记 10 分。给出三套方案，每个城址列出各项几分，悬停看每项背后的每回合产出、拿到的奢侈和战略资源、离其他城址多远，预览后打城址钉。勾选“密铺：尽量多放新城”时先比放得下几座新城（新城数量默认 12），在结果里勾选要的城址或点“全选”，只给勾上的打钉。
 - **多城**：以地图上选中的城为中心，和离它最近的城市、城址钉（默认 4 座，最多 8 座）一起规划区域和奇观，跨城的相邻加成和帝国上限都计入。可以给每座城单独的区域清单，或套用按产出生成的模板（科技城、生产力城……）。
 

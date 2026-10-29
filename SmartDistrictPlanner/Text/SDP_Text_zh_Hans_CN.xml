@@ -909,12 +909,6 @@
     <Replace Tag="LOC_SDP_PRESET_RELIGION_TOOLTIP" Language="zh_Hans_CN">
       <Text>适合宗教胜利，或想用信仰值买东西：调高信仰值权重（{1_K}），圣地摆得更好。</Text>
     </Replace>
-    <Replace Tag="LOC_SDP_PRESET_HALF_GOLD_FAITH" Language="zh_Hans_CN">
-      <Text>金币信仰减半</Text>
-    </Replace>
-    <Replace Tag="LOC_SDP_PRESET_HALF_GOLD_FAITH_TOOLTIP" Language="zh_Hans_CN">
-      <Text>金币、信仰值只算一半：买同样的东西，要花的金币、信仰值比生产力多。</Text>
-    </Replace>
     <Replace Tag="LOC_SDP_PARTS_DISTRICT" Language="zh_Hans_CN">
       <Text>本区域：加权相邻加成 {1_Adjacency}</Text>
     </Replace>
