@@ -231,21 +231,23 @@ SDP_Panel.Multi.Refresh()
     lua("SDP_Panel.Multi.SetFold(true)")
     click_control("Controls.MultiFoldButton")
     s.check("multi settings unfolded by click", value("SDP_Panel.Multi.State().Fold"), "false")
-    # The swap switch (issue 54), off by default.
+    # The swap switch (issue 54), on by default (issue 162).
+    s.check("multi swap switch on by default", value("SDP_Panel.Multi.State().Swap"), "true")
     click_control("Controls.MultiSwapCheck")
-    s.check("multi swap switch on by click", value("SDP_Panel.Multi.State().Swap"), "true")
+    s.check("multi swap switch off by click", value("SDP_Panel.Multi.State().Swap"), "false")
     click_control("Controls.MultiSwapCheck")
-    s.check("multi swap switch off again", value("SDP_Panel.Multi.State().Swap"), "false")
+    s.check("multi swap switch on again", value("SDP_Panel.Multi.State().Swap"), "true")
     # Back to the single-city tab: solve, a solution row, place, undo.
     click_control("Controls.SingleTab")
     s.check("single tab by click", value("SDP_Panel.Tab()"), "SINGLE")
     lua("SDP_Panel.SetFold(true)")
     click_control("Controls.FoldButton")
     s.check("single settings unfolded by click", value("SDP_Panel.State().Fold"), "false")
+    s.check("single swap switch on by default", value("SDP_Panel.State().Swap"), "true")
     click_control("Controls.SwapCheck")
-    s.check("single swap switch on by click", value("SDP_Panel.State().Swap"), "true")
+    s.check("single swap switch off by click", value("SDP_Panel.State().Swap"), "false")
     click_control("Controls.SwapCheck")
-    s.check("single swap switch off again", value("SDP_Panel.State().Swap"), "false")
+    s.check("single swap switch on again", value("SDP_Panel.State().Swap"), "true")
     # The coverage column, the last of the weight row (issue 61): its arrows,
     # 0.5 a click (issue 53).
     s.check("single coverage column last", value("SDP_Panel.State().WeightCells[9].Key"), "COVERAGE")

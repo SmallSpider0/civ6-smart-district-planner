@@ -1,0 +1,13 @@
+Changes since v1.6.1:
+- ‘Swap tiles from my cities’ is now on by default on the One city and Several cities tabs. Plans may use tiles from your other cities: on real saves adjacency is about 13% higher for one city and 19% for several, but about a fifth of districts (one city) to a third (several) need a Swap in Manage Citizens, and several cities take about twice as long. When a swap gains nothing, the plan keeps the tile without the swap. Older saves that never touched the switch get it on; the settings line says ‘no tile swaps’ when it is off.
+- The ‘Keep apart’ switch is gone: a Harbor and a Commercial Hub are always planned in different cities. A coastal city without fresh water takes the Harbor, others the Commercial Hub; they share a city only when the district count cannot be met otherwise or both are Must.
+- With ‘Replace this mod’s earlier tacks’ on, a wonder tacked together with the old plan is planned again instead of being left out, and its tack is replaced.
+- The Half Gold and Faith preset is gone; the presets are Balanced, Science, Culture and Religion. Set Gold and Faith to 0.5 by hand for the same effect. Saves that used it load as Balanced, so plans may change.
+- Shorter tooltips: one or two sentences on what changes on the map. The three city-site presets have tooltips too.
+
+自 v1.6.1 以来的变化：
+- 单城、多城页的“从本方其他城换格”默认打开。真实存档上相邻加成单城平均高约 13%、多城约 19%；代价是单城约两成、多城约三成区域要在“市民管理”里手动切换，多城计算慢约一倍。换不换格一样好时不换。没动过这个开关的旧存档也会变成打开；关掉时设置摘要写“不换格”。
+- 去掉“港口、商业中心分城”开关，一直分城规划：靠海又没有淡水的城挑港口，其他城挑商业中心；凑不够区域数量或两个都是必建时才同城。
+- 勾了“替换本模组之前的钉”时，之前一起打过钉的奇观会重新规划，打钉时换成新的奇观钉，不再被漏掉。
+- 预设去掉“金币信仰减半”，剩均衡、科技、文化、宗教；想少算金币、信仰的，在权重行手动调到 0.5。选过它的存档读档后回到均衡，方案可能变。
+- 悬停提示改短，每条一两句话说方案会怎么变；选城址页的三个预设也有了提示。
