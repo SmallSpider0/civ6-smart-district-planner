@@ -81,6 +81,14 @@ class FieldCheck(TempShared):
             sync.edit_manual("set", "decisions/x", {"title": "t", "state": "open"})
         self.assertFalse(os.path.exists(sync.MANUAL))
 
+    def test_milestone_number_only(self):
+        # 2026-10-29: "ms": "v1.6.1" matched no milestone, so the note outlived it on the page.
+        for bad in ("v1.6.1", "15", 1.5, True):
+            with self.assertRaises(SystemExit):
+                sync.edit_manual("set", "milestones/x", {"ms": bad, "goal": "g"})
+        sync.edit_manual("set", "milestones/x", {"ms": 15, "goal": "g"})
+        self.assertEqual(self.manual()["milestones"]["x"]["ms"], 15)
+
     def test_releases_refused(self):
         for op, data in (("set", {"summary": "s"}), ("update", {"summary": "s"}), ("delete", None)):
             with self.assertRaises(SystemExit):
