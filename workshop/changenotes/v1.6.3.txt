@@ -1,0 +1,7 @@
+Changes since v1.6.2:
+- The wonders you choose on the One city and Several cities tabs are kept in the save, like the switches and weights, and are still chosen after loading. A wonder you have tacked is still left out of the list only for now: with ‘Replace this mod’s earlier tacks’ on after loading, it is planned again, so its tack is not lost when you tack the new plan.
+- Districts a city already has are no longer candidates. Districts placed (built or being built) and districts tacked for the city but not built yet are greyed out as ‘Built’ or ‘Tacked’ in the One city list and in that city’s own list on the Several cities tab, neither candidates nor Must. Before, that city’s list on the Several cities tab still showed them as candidates, and the One city tab could plan a second copy of a tacked district, leaving two Holy Site tacks in one city. To plan this mod’s tacks again, turn on ‘Replace this mod’s earlier tacks’; delete tacks you placed yourself first.
+
+自 v1.6.2 以来的变化：
+- 单城、多城页选的奇观和开关、权重一样记在存档里，读档后还在。打过钉的奇观照旧只是暂时不列出：读档后打开“替换本模组之前打的钉”，它仍会重新规划，打钉时不会把它的钉丢掉。
+- 一座城已经有的区域不再当候选：已建、在建和已为这座城打了钉的区域，在单城页和多城页这座城自己的清单里显示灰色（“已建”“已打钉”），不当候选也不当必建。以前单城页会在已打钉的区域之外再规划一个同样的区域。要重新规划本模组打过的钉，勾上“替换本模组之前打的钉”；自己手动打的钉先删掉。
