@@ -660,3 +660,59 @@ test("several cities: a tie between a swapped plot and the city's own takes no s
   T.eq(heat[1].Index, swapIndex, "best first, ties by plot: the swapped plot first")
   T.eq(heat[1].Gain, on.Gain, "a tie")
 end)
+
+-- Issue 162 (Codex review of PR 164): untangling can raise a later layout
+-- above the first. The search is made to miss the best plan: its best has
+-- no swap and is worth 2, and a lower start (1) takes the swapped plot
+-- (3,1); untangling that one moves its campus to (2,3), next to the holy
+-- site, worth 3. The plan shown first must be that one.
+test("several cities: a layout that untangles to a higher value comes first (issue 162)", function()
+  local w = World.New({ rows = {
+    "~~~~~~~~~~~~",
+    "~~~.M~~~~~~~",
+    "~~..........",
+    "~...........",
+    "~..M........",
+    "~~~~~~~~~~~~",
+  }, cities = { { id = 1, x = 3, y = 2, population = 7, capital = true, radius = 1 },
+    { id = 2, x = 9, y = 3, population = 4, radius = 1 } } })
+  w:Own(3, 1, 0, w:City(2))
+  local swapIndex = Map.GetPlotIndex(3, 1)
+  local request = Request({ Plans = { C1 = { "DISTRICT_CAMPUS", "DISTRICT_HOLY_SITE" }, C2 = {} }, Only = { [1] = true, [2] = true },
+    Land = false, Swap = true })
+  local result, missed, start = SDP_Overlay.With(0, function()
+    local session = SDP_Multi.NewSession(request)
+    session:Run()
+    local search = session.Search
+    local function Layout(spots)
+      local layout = {}
+      for m = 1, search.K do
+        local x, y = spots[search.Types[m]][1], spots[search.Types[m]][2]
+        for i, c in ipairs(search.Candidates) do
+          if c.X == x and c.Y == y then layout[m] = i end
+        end
+      end
+      return layout
+    end
+    local best = Layout({ DISTRICT_CAMPUS = { 2, 4 }, DISTRICT_HOLY_SITE = { 5, 2 } })
+    local alt = Layout({ DISTRICT_CAMPUS = { 3, 1 }, DISTRICT_HOLY_SITE = { 2, 2 } })
+    local bestGain, bestLegal = search:Evaluate(best)
+    local altGain, altLegal = search:Evaluate(alt)
+    T.ok(bestLegal and altLegal, "both layouts are legal")
+    search.BestLayout, search.BestGain, search.BestPlaced = best, bestGain, 2
+    session.Starts = { { Layout = alt, Gain = altGain } }
+    return session:Result(), bestGain, altGain
+  end)
+  T.eq(missed, 2, "the missed search's best")
+  T.eq(start, 1, "the start, before untangling")
+  T.ok(result.Ok, tostring(result.Error))
+  T.ok(not result.Stats.Mismatch, "board and full evaluation agree")
+  T.eq(result.Gain, 3, "the untangled start's value")
+  for n, solution in ipairs(result.Solutions) do
+    T.ok(solution.Gain <= result.Gain, "solution " .. n .. " is not better than the first")
+  end
+  for _, p in ipairs(result.Plan) do
+    T.ok(p.Index ~= swapIndex, p.Type .. " not on the swapped plot")
+    T.eq(p.Swap, nil, p.Type .. ": no swap")
+  end
+end)

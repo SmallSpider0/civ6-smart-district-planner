@@ -2306,21 +2306,40 @@ function Search:Untangle(layout, gain)
   return cur, gain
 end
 
--- Up to `count` solutions: the best layout of each solved combination, best
--- first; then the alternatives kept along the way (other plots for the same
--- districts), as long as they are distinct from the ones taken. Each is
--- untangled first (Untangle: ties take no swap).
-function Search:Solutions(count)
-  local pool = {}
-  for _, entry in ipairs(self.PoolEntries or {}) do
-    pool[#pool + 1] = { Layout = entry.BestLayout, Gain = entry.BestGain }
+-- Up to `count` layouts of `pool` ({ Layout, Gain }, best first) that are
+-- distinct from each other (IsDistinct), each untangled first (Untangle:
+-- ties take no swap, issue 162). Untangling can raise a later layout above
+-- the first, so with spec.Swapped every layout of the pool is untangled and
+-- the best of them goes first (more placed slots, then the higher value,
+-- then fewer swapped plots, then earlier in the pool); the others keep
+-- their order. With spec.Swapped nil the pool is taken as it is.
+function Search:Pick(pool, count)
+  if self.Swapped ~= nil and #pool > 0 then
+    local done, first = {}, 1
+    for r, entry in ipairs(pool) do
+      local key = table.concat(entry.Layout, ",")
+      local tidy = done[key]
+      if tidy == nil then
+        local layout, gain = self:Untangle(entry.Layout, entry.Gain)
+        tidy = { Layout = layout, Gain = gain, Placed = Placed(layout), Swaps = self:SwapCount(layout) }
+        done[key] = tidy
+      end
+      entry.Layout, entry.Gain, entry.Placed, entry.Swaps = tidy.Layout, tidy.Gain, tidy.Placed, tidy.Swaps
+      local best = pool[first]
+      if entry.Placed > best.Placed or (entry.Placed == best.Placed and (entry.Gain > best.Gain
+          or (entry.Gain == best.Gain and entry.Swaps < best.Swaps))) then
+        first = r
+      end
+    end
+    local ordered = { pool[first] }
+    for r, entry in ipairs(pool) do
+      if r ~= first then ordered[#ordered + 1] = entry end
+    end
+    pool = ordered
   end
-  if self.BestLayout ~= nil then table.insert(pool, 1, { Layout = self.BestLayout, Gain = self.BestGain }) end
-  for _, e in ipairs(self.Alt) do pool[#pool + 1] = { Layout = e.Layout, Gain = e.Gain } end
   local kept = {}
   for _, entry in ipairs(pool) do
     if #kept >= count then break end
-    entry.Layout, entry.Gain = self:Untangle(entry.Layout, entry.Gain)
     local distinct = true
     for _, other in ipairs(kept) do
       if not self:IsDistinct(entry.Layout, other.Layout) then distinct = false end
@@ -2328,6 +2347,19 @@ function Search:Solutions(count)
     if distinct then kept[#kept + 1] = entry end
   end
   return kept
+end
+
+-- Up to `count` solutions: the best layout of each solved combination, best
+-- first; then the alternatives kept along the way (other plots for the same
+-- districts), as long as they are distinct from the ones taken (Pick).
+function Search:Solutions(count)
+  local pool = {}
+  for _, entry in ipairs(self.PoolEntries or {}) do
+    pool[#pool + 1] = { Layout = entry.BestLayout, Gain = entry.BestGain }
+  end
+  if self.BestLayout ~= nil then table.insert(pool, 1, { Layout = self.BestLayout, Gain = self.BestGain }) end
+  for _, e in ipairs(self.Alt) do pool[#pool + 1] = { Layout = e.Layout, Gain = e.Gain } end
+  return self:Pick(pool, count)
 end
 
 -- Quality indicators (design 7.4) for `gain`, the value reported.

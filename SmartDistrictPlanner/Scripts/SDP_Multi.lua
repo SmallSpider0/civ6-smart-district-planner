@@ -1156,17 +1156,8 @@ function Session:Distinct(count)
     if a.Placed ~= b.Placed then return a.Placed > b.Placed end
     return SDP_Search.Better(a.Gain, a.Layout, b.Gain, b.Layout)
   end)
-  local kept = {}
-  for _, entry in ipairs(pool) do
-    if #kept >= count then break end
-    entry.Layout, entry.Gain = search:Untangle(entry.Layout, entry.Gain)
-    local distinct = true
-    for _, other in ipairs(kept) do
-      if not search:IsDistinct(entry.Layout, other.Layout) then distinct = false end
-    end
-    if distinct then kept[#kept + 1] = entry end
-  end
-  return kept
+  -- Untangled first (ties take no swap, issue 162), the best of them first.
+  return search:Pick(pool, count)
 end
 
 -- Plan, values and neighbours of one layout, with DMT's yields and tooltips.

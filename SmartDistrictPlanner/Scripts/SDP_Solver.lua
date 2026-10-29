@@ -378,11 +378,12 @@ function Session:Result()
       result[key] = best[key]
     end
     -- Required slots the best layout leaves out (Search:PlaceWhatFits; the
-    -- search's slots all have a legal plot of their own).
-    local unplaced = {}
+    -- search's slots all have a legal plot of their own). The plan shown
+    -- first: untangling may put another layout ahead of the search's best.
+    local unplaced, shown = {}, entries[1].Layout
     for _, u in ipairs(self.Unplaced) do unplaced[#unplaced + 1] = u end
     for m = 1, search.K do
-      if search.BestLayout[m] == 0 and not search.Optional[m] then
+      if shown[m] == 0 and not search.Optional[m] then
         unplaced[#unplaced + 1] = { Type = search.Types[m], Reason = "NO_FREE_PLOT", Auto = self.Auto[search.Types[m]] }
       end
     end
