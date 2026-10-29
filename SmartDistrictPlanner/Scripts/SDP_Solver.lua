@@ -208,6 +208,9 @@ function SDP_Solver.NewSession(request, scan)
     -- The city being planned is not counted as covered (issue 91).
     CoverOwner = function() return "C" .. tostring(scan.CityID) end,
     Alternatives = params.Solutions or 3, Apart = apart, Exclusive = SDP_Rules.Exclusive(),
+    -- A candidate swapped from another of the player's cities (issue 54);
+    -- ties take the plots that need no swap (issue 162).
+    Swapped = function(search, m, i) return search.Candidates[i].Swap ~= nil end,
     Appeal = { Fixed = self.Fixed, Weights = request.Weights, Workable = workable,
       Cities = { [1] = { Housing = SDP_Land.ScanHousing(scan), Target = population, Population = scan.Population } },
       -- A neighbouring city's district does not count in this city's housing.
@@ -361,7 +364,11 @@ function Session:Result()
     result.Ok, result.Error = false, "NO_LEGAL_LAYOUT"
   end
   if search.BestLayout ~= nil then
-    for _, entry in ipairs(search:Solutions(self.Params.Solutions or 3)) do
+    -- Solutions untangles each layout (ties take no swap, issue 162), which
+    -- moves the board: clear it again before the plans.
+    local entries = search:Solutions(self.Params.Solutions or 3)
+    board:Clear()
+    for _, entry in ipairs(entries) do
       result.Solutions[#result.Solutions + 1] = self:PlanFor(entry.Layout)
     end
     local best = result.Solutions[1]
@@ -381,7 +388,7 @@ function Session:Result()
     end
     result.Unplaced = unplaced
     -- The board's incremental value must match the full evaluation.
-    stats.Mismatch = (not best.Legal) or math.abs(best.Gain - search.BestGain) > 1e-6 or nil
+    stats.Mismatch = (not best.Legal) or math.abs(best.Gain - entries[1].Gain) > 1e-6 or nil
   end
   stats.Calls = board.Calls + self.ExtraCalls
   stats.Hits = board.Hits

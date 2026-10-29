@@ -86,7 +86,7 @@ local m_have = nil            -- SDP_City.SpecialtyHave of the selected city, pi
 local m_weights = {}          -- [YieldType, DISTANCE, HOUSING or COVERAGE] = 0..MAX_WEIGHT
 for _, column in ipairs(SINGLE_COLUMNS) do m_weights[column.Key] = column.Default or 1 end
 local m_allowFeatureRemoval = true
-local m_swap = false          -- plots swapped from another of our cities are candidates (issue 54)
+local m_swap = true           -- plots swapped from another of our cities are candidates (issue 54; on by default, issue 162)
 local m_replace = false       -- plan over this mod's earlier pins for the city and replace them
 local m_remind = true         -- reminder pins on the woods and rainforest the plan relies on (feedback item 5)
 local m_apart = true          -- keep partner districts (harbor, commercial hub) out of one city's picks (SDP_Rules.Apart)
@@ -115,7 +115,7 @@ local m_peek = false          -- the window hidden to look at the map (issue 71)
 local SINGLE_SWITCHES = {
   { Key = "ALLOW_REMOVAL", Default = true, Get = function() return m_allowFeatureRemoval end,
     Put = function(v) m_allowFeatureRemoval = v end },
-  { Key = "SWAP", Default = false, Get = function() return m_swap end, Put = function(v) m_swap = v end },
+  { Key = "SWAP", Default = true, Get = function() return m_swap end, Put = function(v) m_swap = v end },
   { Key = "REPLACE", Default = false, Get = function() return m_replace end, Put = function(v) m_replace = v end },
   { Key = "REMIND", Default = true, Get = function() return m_remind end, Put = function(v) m_remind = v end },
   { Key = "APART", Default = true, Get = function() return m_apart end, Put = function(v) m_apart = v end },
@@ -1578,12 +1578,12 @@ SetWonder = function(wonderType, on)
 end
 
 -- The fold line: the preset, then what is not as usual (land part off,
--- clearing off, swaps, replacing, wonders, the good places shown).
+-- clearing off, swaps off, replacing, wonders, the good places shown).
 UpdateFold = function()
   local parts = {}
   if m_weights.LAND == 0 then parts[#parts + 1] = Locale.Lookup("LOC_SDP_FOLD_LAND_OFF") end
   if not m_allowFeatureRemoval then parts[#parts + 1] = Locale.Lookup("LOC_SDP_FOLD_NO_REMOVAL") end
-  if m_swap then parts[#parts + 1] = Locale.Lookup("LOC_SDP_FOLD_SWAP") end
+  if not m_swap then parts[#parts + 1] = Locale.Lookup("LOC_SDP_FOLD_NO_SWAP") end
   if m_replace then parts[#parts + 1] = Locale.Lookup("LOC_SDP_FOLD_REPLACE") end
   local wonders = #SelectedWonders()
   if wonders > 0 then parts[#parts + 1] = Locale.Lookup("LOC_SDP_FOLD_WONDERS", wonders) end

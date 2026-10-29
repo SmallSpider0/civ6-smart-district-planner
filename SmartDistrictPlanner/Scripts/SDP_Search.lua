@@ -107,6 +107,10 @@ SDP_Search.Better = Better
 --               Requires counts only a district of a city that could own the
 --               wonder's plot, placed (a slot of such a group) or fixed
 --               (issue 45: the game takes only the wonder's own city's)
+--   Swapped     function(search, m, i) -> true when slot m on candidate i
+--               takes a plot from another of the player's cities (issue 54)
+--               or nil (off): the plan shown prefers, at the same value,
+--               the plots that need no swap (Untangle, issue 162)
 -- }
 function SDP_Search.New(spec)
   local self = setmetatable({}, Search)
@@ -123,6 +127,7 @@ function SDP_Search.New(spec)
   self.Alt = {}
   self.ReachSpec = spec.Reach
   self.Owners = spec.Owners
+  self.Swapped = spec.Swapped
   self.CoverLists = {} -- scratch for CoverageCount
   self.SlotSpecs = spec.Slots
   self.Moving, self.Taken, self.Mark = {}, {}, {} -- scratch tables for Evaluate
@@ -2202,9 +2207,86 @@ function Search:PoolsBound()
   return bound
 end
 
+-- How many placed slots of `layout` take a plot from another of the
+-- player's cities (spec.Swapped; 0 when off).
+function Search:SwapCount(layout)
+  local swapped = self.Swapped
+  if swapped == nil then return 0 end
+  local count = 0
+  for m = 1, self.K do
+    local i = layout[m]
+    if i ~= 0 and swapped(self, m, i) then count = count + 1 end
+  end
+  return count
+end
+
+-- Ties take no swap (issue 162). From `layout` (value `gain`), each slot on
+-- a swapped plot, in slot order, tries every free plot it needs no swap
+-- for, and trading plots with each other placed slot; the move kept is the
+-- one with the highest value, then the fewest swapped plots, then the
+-- smaller positions (Better), among the moves that keep the value at least
+-- `gain` and swap fewer plots. Repeats until a pass keeps nothing. Never
+-- lowers the value; runs after the search, so the search itself is the same
+-- with or without it, and with spec.Swapped nil it returns the layout as is.
+-- Moves the board: clear it before reading plans.
+function Search:Untangle(layout, gain)
+  local swapped = self.Swapped
+  if swapped == nil or layout == nil then return layout, gain end
+  local cur, swaps = Copy(layout), self:SwapCount(layout)
+  local k, n, legal = self.K, self.N, self.Legal
+  local changed = swaps > 0
+  while changed do
+    changed = false
+    for m = 1, k do
+      if cur[m] ~= 0 and swapped(self, m, cur[m]) then
+        local bestTrial, bestGain, bestSwaps = nil, nil, nil
+        local function Try()
+          local trialGain, isLegal = self:Evaluate(cur)
+          if not isLegal or trialGain < gain then return end
+          local trialSwaps = self:SwapCount(cur)
+          if trialSwaps >= swaps then return end
+          if bestTrial == nil or trialGain > bestGain
+              or (trialGain == bestGain and (trialSwaps < bestSwaps
+                or (trialSwaps == bestSwaps and Better(trialGain, cur, bestGain, bestTrial)))) then
+            bestTrial, bestGain, bestSwaps = Copy(cur), trialGain, trialSwaps
+          end
+        end
+        local inUse = {}
+        for q = 1, k do
+          if cur[q] ~= 0 then inUse[cur[q]] = q end
+        end
+        local keep = cur[m]
+        -- To a free plot it needs no swap for.
+        for i = 1, n do
+          if legal[m][i] and not inUse[i] and not swapped(self, m, i) then
+            cur[m] = i
+            Try()
+          end
+        end
+        cur[m] = keep
+        -- Trade plots with another placed slot.
+        for q = 1, k do
+          local other = cur[q]
+          if q ~= m and other ~= 0 and legal[m][other] and legal[q][keep] then
+            cur[m], cur[q] = other, keep
+            Try()
+            cur[m], cur[q] = keep, other
+          end
+        end
+        if bestTrial ~= nil then
+          cur, gain, swaps = bestTrial, bestGain, bestSwaps
+          changed = true
+        end
+      end
+    end
+  end
+  return cur, gain
+end
+
 -- Up to `count` solutions: the best layout of each solved combination, best
 -- first; then the alternatives kept along the way (other plots for the same
--- districts), as long as they are distinct from the ones taken.
+-- districts), as long as they are distinct from the ones taken. Each is
+-- untangled first (Untangle: ties take no swap).
 function Search:Solutions(count)
   local pool = {}
   for _, entry in ipairs(self.PoolEntries or {}) do
@@ -2215,6 +2297,7 @@ function Search:Solutions(count)
   local kept = {}
   for _, entry in ipairs(pool) do
     if #kept >= count then break end
+    entry.Layout, entry.Gain = self:Untangle(entry.Layout, entry.Gain)
     local distinct = true
     for _, other in ipairs(kept) do
       if not self:IsDistinct(entry.Layout, other.Layout) then distinct = false end

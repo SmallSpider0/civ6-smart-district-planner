@@ -54,7 +54,7 @@ local m_weights = {}
 for _, column in ipairs(COLUMNS) do m_weights[column.Key] = column.Default or 1 end
 local m_weightViews = {}
 local m_tier = SDP_Tiers.DEFAULT
-local m_swap = false -- plots swapped from another of our cities are candidates (issue 54)
+local m_swap = true -- plots swapped from another of our cities are candidates (issue 54; on by default, issue 162)
 local m_replace = false -- plan over this mod's earlier pins for the cities and replace them
 local m_remind = true
 local m_apart = true -- partner districts (harbor, commercial hub) not picked into one city (SDP_Rules.Apart)
@@ -66,7 +66,7 @@ local m_preset = SDP_Settings.PRESET_ORDER[1] -- the weights and switches starte
 
 -- The weights, these switches and the tier, kept in the save (issue 57).
 local SWITCHES = {
-  { Key = "SWAP", Default = false, Get = function() return m_swap end, Put = function(v) m_swap = v end },
+  { Key = "SWAP", Default = true, Get = function() return m_swap end, Put = function(v) m_swap = v end },
   { Key = "REPLACE", Default = false, Get = function() return m_replace end, Put = function(v) m_replace = v end },
   { Key = "REMIND", Default = true, Get = function() return m_remind end, Put = function(v) m_remind = v end },
   { Key = "APART", Default = true, Get = function() return m_apart end, Put = function(v) m_apart = v end },
@@ -568,7 +568,7 @@ end
 UpdateFold = function()
   local parts = {}
   if m_weights.LAND == 0 then parts[#parts + 1] = Locale.Lookup("LOC_SDP_FOLD_LAND_OFF") end
-  if m_swap then parts[#parts + 1] = Locale.Lookup("LOC_SDP_FOLD_SWAP") end
+  if not m_swap then parts[#parts + 1] = Locale.Lookup("LOC_SDP_FOLD_NO_SWAP") end
   if m_replace then parts[#parts + 1] = Locale.Lookup("LOC_SDP_FOLD_REPLACE") end
   local wonders = #WonderTypes()
   if wonders > 0 then parts[#parts + 1] = Locale.Lookup("LOC_SDP_FOLD_WONDERS", wonders) end

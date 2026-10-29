@@ -416,6 +416,65 @@ test("a plot another of our cities owns is a candidate when it can be swapped (i
   end
 end)
 
+-- Issue 162: a plot swapped from another city and a plot of the city's own
+-- worth the same: the plan takes the one that needs no swap. The swapped
+-- plot (3,1) has the smallest plot index, which the plain tie rule (smaller
+-- positions) would pick.
+local TIE_ROWS = {
+  "~~~~~~~~~~~~",
+  "~~~.~~~~~~~~",
+  "~~..........",
+  "~...........",
+  "~...........",
+  "~~~~~~~~~~~~",
+}
+local function TieWorld(rows)
+  local w = World.New({ rows = rows or TIE_ROWS, cities = { { id = 1, x = 3, y = 2, population = 7, capital = true, radius = 1 },
+    { id = 2, x = 9, y = 3, population = 4, radius = 1 } } })
+  w:Own(3, 1, 0, w:City(2))
+  return Map.GetPlotIndex(3, 1)
+end
+
+test("a tie between a swapped plot and the city's own: no swap (issue 162)", function()
+  local swapIndex = TieWorld()
+  local request = { PlayerID = 0, CityID = 1, Weights = ONES, Districts = { "DISTRICT_CAMPUS" }, Land = false, Swap = true }
+  -- The swapped plot is a candidate, worth as much as the best own plot.
+  local heat, swapGain, ownBest = SDP_Solver.Heat({ PlayerID = 0, CityID = 1, District = "DISTRICT_CAMPUS", Weights = ONES,
+    Swap = true }), nil, nil
+  for _, h in ipairs(heat) do
+    if h.Index == swapIndex then swapGain = h.Gain elseif ownBest == nil or h.Gain > ownBest then ownBest = h.Gain end
+  end
+  T.ok(swapGain ~= nil and ownBest ~= nil, "both kinds of plot are candidates")
+  T.eq(swapGain, ownBest, "a tie")
+  T.eq(heat[1].Index, swapIndex, "best first, ties by plot: the swapped plot first")
+  local result = SDP_Solver.Solve(request)
+  T.ok(result.Ok, tostring(result.Error))
+  T.ok(not result.Stats.Mismatch, "board and full evaluation agree")
+  T.eq(#result.Plan, 1, "one campus")
+  T.ok(result.Plan[1].Index ~= swapIndex, "not on the swapped plot")
+  T.eq(result.Plan[1].Swap, nil, "no swap")
+  T.eq(result.Gain, ownBest, "the same value")
+  for n, solution in ipairs(result.Solutions) do
+    for _, p in ipairs(solution.Plan) do T.eq(p.Swap, nil, "solution " .. n .. ": no swap") end
+  end
+  -- Same input, same plan.
+  T.eq(SDP_Solver.Solve(request).Plan[1].Index, result.Plan[1].Index, "deterministic")
+end)
+
+test("a swapped plot worth more is still taken (issue 162)", function()
+  -- A mountain at (4,1) touches no land candidate but the swapped plot.
+  local rows = {}
+  for y, row in ipairs(TIE_ROWS) do rows[y] = row end
+  rows[2], rows[3] = "~~~.M~~~~~~~", "~~..~~......"
+  local swapIndex = TieWorld(rows)
+  local result = SDP_Solver.Solve({ PlayerID = 0, CityID = 1, Weights = ONES, Districts = { "DISTRICT_CAMPUS" }, Land = false,
+    Swap = true })
+  T.ok(result.Ok, tostring(result.Error))
+  T.eq(result.Plan[1].Index, swapIndex, "the better plot, swapped")
+  T.eq(result.Plan[1].Swap, 2, "from city 2")
+  T.ok(result.Gain > 0, "worth more than the city's own plots")
+end)
+
 test("unowned plots another city is nearer to are that city's to work (issue 54)", function()
   local flat = {}
   for y = 1, 9 do flat[y] = "~..........~" end

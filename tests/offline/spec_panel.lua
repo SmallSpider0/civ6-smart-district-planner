@@ -566,28 +566,49 @@ test("the harbor and commercial hub switch on both tabs", function()
   c.MultiApartCheck:Toggle()
 end)
 
--- The swap switch (issue 54): off by default, sent with the request on both
--- tabs, toggled through its box.
+-- The swap switch (issue 54): on by default (issue 162), sent with the
+-- request on both tabs, toggled through its box; the fold line names it
+-- only when it is off, the save keeps only "off", and the preset puts it
+-- back on.
 test("the swap switch on both tabs", function()
   SDP_Panel.SelectTab("SINGLE")
   SDP_Panel.SelectCity(1)
   local c = UI_Mock.Controls
-  T.eq(SDP_Panel.State().Swap, false, "off by default")
-  T.eq(c.SwapCheck:IsChecked(), false, "unticked")
+  local function Kept(tab) return PlayerConfigurations[0]:GetValue("SDP_Settings_" .. tab) or "" end
+  T.eq(SDP_Panel.State().Swap, true, "on by default")
+  T.eq(c.SwapCheck:IsChecked(), true, "ticked")
+  T.ok(c.FoldText:GetText():find("LOC_SDP_FOLD_NO_SWAP", 1, true) == nil, "on: not on the fold line")
   c.SwapCheck:Toggle()
-  T.eq(SDP_Panel.State().Swap, true, "on through the box")
+  T.eq(SDP_Panel.State().Swap, false, "off through the box")
+  T.ok(c.FoldText:GetText():find("LOC_SDP_FOLD_NO_SWAP", 1, true) ~= nil, "off: on the fold line: " .. c.FoldText:GetText())
+  T.ok(c.FoldText:GetText():find("LOC_SDP_PRESET_CUSTOM", 1, true) ~= nil, "off is a change: Custom")
+  T.ok(Kept("SINGLE"):find(";SWAP=0", 1, true) ~= nil, "off kept in the save: " .. Kept("SINGLE"))
   c.SwapCheck:Toggle()
-  T.eq(SDP_Panel.State().Swap, false, "off again")
+  T.eq(SDP_Panel.State().Swap, true, "on again")
+  T.ok(c.FoldText:GetText():find("LOC_SDP_FOLD_NO_SWAP", 1, true) == nil, "on again: off the fold line")
+  T.ok(Kept("SINGLE"):find("SWAP", 1, true) == nil, "on is the default: not kept")
+  c.SwapCheck:Toggle()
+  local preset = SDP_Panel.State().Preset
+  for i, name in ipairs(SDP_Settings.PRESET_ORDER) do
+    if name == preset then c.PresetPull._entries[i].Button:Click() end
+  end
+  T.eq(SDP_Panel.State().Swap, true, "the preset's entry again turns it back on")
+  T.eq(c.SwapCheck:IsChecked(), true, "and ticks the box")
   SDP_Panel.SelectTab("MULTI")
   local multi = SDP_Panel.Multi
   multi.Refresh()
   multi.SetPlanFor("ALL")
   multi.ApplyPlan({ "DISTRICT_CAMPUS" })
-  T.eq(multi.Request().Swap, false, "off by default")
+  T.eq(multi.Request().Swap, true, "on by default")
+  T.eq(c.MultiSwapCheck:IsChecked(), true, "ticked")
+  T.ok(multi.State().FoldText:find("LOC_SDP_FOLD_NO_SWAP", 1, true) == nil, "on: not on the fold line")
   c.MultiSwapCheck:Toggle()
-  T.eq(multi.Request().Swap, true, "on through the box")
+  T.eq(multi.Request().Swap, false, "off through the box")
+  T.ok(multi.State().FoldText:find("LOC_SDP_FOLD_NO_SWAP", 1, true) ~= nil, "off: on the fold line")
+  T.ok(Kept("MULTI"):find(";SWAP=0", 1, true) ~= nil, "off kept in the save")
   c.MultiSwapCheck:Toggle()
-  T.eq(multi.State().Swap, false, "off again")
+  T.eq(multi.State().Swap, true, "on again")
+  T.ok(multi.State().FoldText:find("LOC_SDP_FOLD_NO_SWAP", 1, true) == nil, "on again: off the fold line")
 end)
 
 -- Issue 61: the coverage column on the single-city tab, through its arrows'

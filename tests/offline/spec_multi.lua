@@ -621,3 +621,42 @@ test("oracle with a wonder: the optimum equals brute force (issue 48)", function
   local lib, campus = at.BUILDING_GREAT_LIBRARY, at.DISTRICT_CAMPUS
   T.eq(Map.GetPlotDistance(lib.X, lib.Y, campus.X, campus.Y), 1, "great library next to the campus")
 end)
+
+-- Issue 162: with the swap switch on, a plot another city owns and a plot
+-- of the planned city's own worth the same: the plan takes the own one. The
+-- swapped plot (3,1) has the smallest plot index (the plain tie rule's pick).
+-- Off, the plans are as before (no swapped plot is a candidate).
+test("several cities: a tie between a swapped plot and the city's own takes no swap (issue 162)", function()
+  local w = World.New({ rows = {
+    "~~~~~~~~~~~~",
+    "~~~.~~~~~~~~",
+    "~~..........",
+    "~...........",
+    "~...........",
+    "~~~~~~~~~~~~",
+  }, cities = { { id = 1, x = 3, y = 2, population = 7, capital = true, radius = 1 },
+    { id = 2, x = 9, y = 3, population = 4, radius = 1 } } })
+  w:Own(3, 1, 0, w:City(2))
+  local swapIndex = Map.GetPlotIndex(3, 1)
+  local function Solve(swap)
+    return SDP_Multi.Solve(Request({ Plans = { C1 = { "DISTRICT_CAMPUS" }, C2 = {} }, Only = { [1] = true, [2] = true }, Land = false,
+      Swap = swap }))
+  end
+  local on = Solve(true)
+  T.ok(on.Ok, tostring(on.Error))
+  T.ok(not on.Stats.Mismatch, "board and full evaluation agree")
+  local campus = nil
+  for _, p in ipairs(on.Plan) do
+    if p.Type == "DISTRICT_CAMPUS" then campus = p end
+  end
+  T.ok(campus ~= nil, "a campus")
+  T.ok(campus.Index ~= swapIndex, "not on the swapped plot")
+  T.eq(campus.Swap, nil, "no swap")
+  local off = Solve(false)
+  T.eq(on.Gain, off.Gain, "the same value as without swaps")
+  -- The swapped plot is worth as much: it is the plain tie rule's pick
+  -- among the city's candidates.
+  local heat = SDP_Solver.Heat({ PlayerID = 0, CityID = 1, District = "DISTRICT_CAMPUS", Weights = ONES, Swap = true })
+  T.eq(heat[1].Index, swapIndex, "best first, ties by plot: the swapped plot first")
+  T.eq(heat[1].Gain, on.Gain, "a tie")
+end)

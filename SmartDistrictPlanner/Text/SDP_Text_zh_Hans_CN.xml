@@ -853,8 +853,8 @@
     <Replace Tag="LOC_SDP_FOLD_NO_REMOVAL" Language="zh_Hans_CN">
       <Text>不砍伐</Text>
     </Replace>
-    <Replace Tag="LOC_SDP_FOLD_SWAP" Language="zh_Hans_CN">
-      <Text>换格</Text>
+    <Replace Tag="LOC_SDP_FOLD_NO_SWAP" Language="zh_Hans_CN">
+      <Text>不换格</Text>
     </Replace>
     <Replace Tag="LOC_SDP_FOLD_REPLACE" Language="zh_Hans_CN">
       <Text>替换旧钉</Text>
