@@ -379,7 +379,7 @@ footer { margin-top: 64px; border-top: 1px solid var(--line); padding-top: 16px;
   <div class="cards">
     <div class="card"><h4>游戏锁</h4><p>游戏、调试连接、Mods 文件夹只有一套。碰游戏的工具（部署、测试、点击、截图）自己拿锁；别的工作树正拿着，就以退出码 4 停下，可以在后台等锁。退出游戏时放锁。</p><p class="refs"><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/tools/sdplock.py">tools/sdplock.py</a></p></div>
     <div class="card"><h4>本机重活</h4><p>有第二台机器时，超过约一分钟的计算都排到它上面；本机只跑不到一分钟的小任务，或第二台机器格子全满又不能等的。本机上一次只跑一个，worker 上限按本机配置（白天、夜里可以不同），游戏锁被拿走时自动暂停。不经这两个工具直接启动的计算不进排队，别的会话看不到它；子 agent 也照此办理。</p><p class="refs"><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/tools/README.md">tools/README.md「sdplock.py」</a></p></div>
-    <div class="card"><h4>第二台机器</h4><p>可选，用 ssh 连接，不用装游戏。所有会话共用一个队列，按排队先后分格子；排在前面的任务放不下时，后面放得下的先跑，每个排队任务最多被越过 3 次，独占任务不被越过。任务在工作树的快照里跑，结果取回本机。</p><p class="refs"><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/tools/remote.py">tools/remote.py</a><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/tools/sdpsched.py">tools/sdpsched.py</a></p></div>
+    <div class="card"><h4>第二台机器</h4><p>可选，用 ssh 连接，不用装游戏。所有会话共用一个队列，按排队先后分格子；排在前面的任务放不下时，后面放得下的先跑，每个排队任务最多被越过 3 次，独占任务不被越过。任务在工作树的快照里跑，结果取回本机；用完的快照和没人再用的工作树副本一周后自动清掉。</p><p class="refs"><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/tools/remote.py">tools/remote.py</a><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/tools/sdpsched.py">tools/sdpsched.py</a></p></div>
     <div class="card"><h4>夜间队列</h4><p>机器有人用时，占屏幕的步骤（真实点击、截图、压力测试、发版前的三种规则集）由各会话排进共用队列，由主会话在本机配置的夜间时段（工作日白天不开游戏）统一跑：队列不空时，主会话安排一个在时段开始后几分钟叫醒自己的一次性定时任务；游戏内测试也可以排进去。周末可按本机配置算作夜间。</p><p class="refs"><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/.claude/skills/sdp-game-test/SKILL.md">sdp-game-test</a></p></div>
   </div>
   <figure>
@@ -558,7 +558,7 @@ footer { margin-top: 64px; border-top: 1px solid var(--line); padding-top: 16px;
   // [step, level, how (may contain a file link), what a person still does]
   var ROWS = [
     ["发现新 Issue", 2, "维护者要求时开监听脚本，每 2 分钟轮询（连不上 GitHub 时 30 秒后重试），只把维护者或合作者打了 auto 标签的 Issue 上的动静交给代理；合作者的其余 Issue 和评论记进待看列表，等维护者看；不开时在两件事之间查一次", "—", "tools/watch_issues.py"],
-    ["分诊、修 bug", 2, "复现，写一个在旧代码上失败的测试，修好，挂到下一个小版本的里程碑", "—", ".claude/skills/sdp-issue/SKILL.md"],
+    ["分诊、修 bug", 2, "先照报告和截图自己复现（同样的文明、页签、开关和地图上的钉），复现不了才请报告人给存档；写一个在旧代码上失败的测试，修好，挂到下一个小版本的里程碑", "—", ".claude/skills/sdp-issue/SKILL.md"],
     ["功能调研", 2, "子 agent 查规则库、游戏与依赖模组的源码、同类模组、玩家社区，写成 Issue 评论", "—", null],
     ["功能方案", 4, "代理列出方案 A、B 和建议，用玩家看得懂的话写在 Issue 里", "维护者在对话里拍板，或合作者在带 auto 标签的 Issue 下明确回复", null],
     ["里程碑", 2, "bug 确认时、功能方案定了时挂上对应版本，没有就新建；版本号按改动大小定；不做的关掉，以后再说的打 later；发版时移走没做完的、关掉里程碑", "—", null],
