@@ -107,6 +107,10 @@ SDP_Search.Better = Better
 --               Requires counts only a district of a city that could own the
 --               wonder's plot, placed (a slot of such a group) or fixed
 --               (issue 45: the game takes only the wonder's own city's)
+--   Swapped     function(search, m, i) -> true when slot m on candidate i
+--               takes a plot from another of the player's cities (issue 54)
+--               or nil (off): the plan shown prefers, at the same value,
+--               the plots that need no swap (Untangle, issue 162)
 -- }
 function SDP_Search.New(spec)
   local self = setmetatable({}, Search)
@@ -123,6 +127,7 @@ function SDP_Search.New(spec)
   self.Alt = {}
   self.ReachSpec = spec.Reach
   self.Owners = spec.Owners
+  self.Swapped = spec.Swapped
   self.CoverLists = {} -- scratch for CoverageCount
   self.SlotSpecs = spec.Slots
   self.Moving, self.Taken, self.Mark = {}, {}, {} -- scratch tables for Evaluate
@@ -2202,16 +2207,136 @@ function Search:PoolsBound()
   return bound
 end
 
--- Up to `count` solutions: the best layout of each solved combination, best
--- first; then the alternatives kept along the way (other plots for the same
--- districts), as long as they are distinct from the ones taken.
-function Search:Solutions(count)
-  local pool = {}
-  for _, entry in ipairs(self.PoolEntries or {}) do
-    pool[#pool + 1] = { Layout = entry.BestLayout, Gain = entry.BestGain }
+-- How many placed slots of `layout` take a plot from another of the
+-- player's cities (spec.Swapped; 0 when off).
+function Search:SwapCount(layout)
+  local swapped = self.Swapped
+  if swapped == nil then return 0 end
+  local count = 0
+  for m = 1, self.K do
+    local i = layout[m]
+    if i ~= 0 and swapped(self, m, i) then count = count + 1 end
   end
-  if self.BestLayout ~= nil then table.insert(pool, 1, { Layout = self.BestLayout, Gain = self.BestGain }) end
-  for _, e in ipairs(self.Alt) do pool[#pool + 1] = { Layout = e.Layout, Gain = e.Gain } end
+  return count
+end
+
+-- Ties take no swap (issue 162). From `layout` (value `gain`), each slot on
+-- a swapped plot, in slot order, tries every free plot it needs no swap
+-- for, trading plots with each other placed slot, and moving with a placed
+-- slot next to it to another pair of touching plots (its own one needing no
+-- swap); the move kept is the
+-- one with the highest value, then the fewest swapped plots, then the
+-- smaller positions (Better), among the moves that keep the value at least
+-- `gain` and swap fewer plots. Repeats until a pass keeps nothing. Never
+-- lowers the value; runs after the search, so the search itself is the same
+-- with or without it, and with spec.Swapped nil it returns the layout as is.
+-- Moves the board: clear it before reading plans.
+function Search:Untangle(layout, gain)
+  local swapped = self.Swapped
+  if swapped == nil or layout == nil then return layout, gain end
+  local cur, swaps = Copy(layout), self:SwapCount(layout)
+  local k, n, legal = self.K, self.N, self.Legal
+  local adjacent, touching = self:Touching()
+  local changed = swaps > 0
+  while changed do
+    changed = false
+    for m = 1, k do
+      if cur[m] ~= 0 and swapped(self, m, cur[m]) then
+        local bestTrial, bestGain, bestSwaps = nil, nil, nil
+        local function Try()
+          local trialGain, isLegal = self:Evaluate(cur)
+          if not isLegal or trialGain < gain then return end
+          local trialSwaps = self:SwapCount(cur)
+          if trialSwaps >= swaps then return end
+          if bestTrial == nil or trialGain > bestGain
+              or (trialGain == bestGain and (trialSwaps < bestSwaps
+                or (trialSwaps == bestSwaps and Better(trialGain, cur, bestGain, bestTrial)))) then
+            bestTrial, bestGain, bestSwaps = Copy(cur), trialGain, trialSwaps
+          end
+        end
+        local inUse = {}
+        for q = 1, k do
+          if cur[q] ~= 0 then inUse[cur[q]] = q end
+        end
+        local keep = cur[m]
+        -- To a free plot it needs no swap for.
+        for i = 1, n do
+          if legal[m][i] and not inUse[i] and not swapped(self, m, i) then
+            cur[m] = i
+            Try()
+          end
+        end
+        cur[m] = keep
+        -- Trade plots with another placed slot.
+        for q = 1, k do
+          local other = cur[q]
+          if q ~= m and other ~= 0 and legal[m][other] and legal[q][keep] then
+            cur[m], cur[q] = other, keep
+            Try()
+            cur[m], cur[q] = keep, other
+          end
+        end
+        -- With a placed slot next to it, to another pair of touching plots
+        -- (two districts that give each other adjacency move together).
+        for q = 1, k do
+          local other = cur[q]
+          if q ~= m and other ~= 0 and touching[keep][other] then
+            for i = 1, n do
+              local freeI = not inUse[i] or inUse[i] == q
+              if i ~= keep and legal[m][i] and freeI and not swapped(self, m, i) then
+                for _, j in ipairs(adjacent[i]) do
+                  local freeJ = not inUse[j] or inUse[j] == m or inUse[j] == q
+                  if legal[q][j] and freeJ and not (j == other) then
+                    cur[m], cur[q] = i, j
+                    Try()
+                  end
+                end
+              end
+            end
+            cur[m], cur[q] = keep, other
+          end
+        end
+        if bestTrial ~= nil then
+          cur, gain, swaps = bestTrial, bestGain, bestSwaps
+          changed = true
+        end
+      end
+    end
+  end
+  return cur, gain
+end
+
+-- Up to `count` layouts of `pool` ({ Layout, Gain }, best first) that are
+-- distinct from each other (IsDistinct), each untangled first (Untangle:
+-- ties take no swap, issue 162). Untangling can raise a later layout above
+-- the first, so with spec.Swapped every layout of the pool is untangled and
+-- the best of them goes first (more placed slots, then the higher value,
+-- then fewer swapped plots, then earlier in the pool); the others keep
+-- their order. With spec.Swapped nil the pool is taken as it is.
+function Search:Pick(pool, count)
+  if self.Swapped ~= nil and #pool > 0 then
+    local done, first = {}, 1
+    for r, entry in ipairs(pool) do
+      local key = table.concat(entry.Layout, ",")
+      local tidy = done[key]
+      if tidy == nil then
+        local layout, gain = self:Untangle(entry.Layout, entry.Gain)
+        tidy = { Layout = layout, Gain = gain, Placed = Placed(layout), Swaps = self:SwapCount(layout) }
+        done[key] = tidy
+      end
+      entry.Layout, entry.Gain, entry.Placed, entry.Swaps = tidy.Layout, tidy.Gain, tidy.Placed, tidy.Swaps
+      local best = pool[first]
+      if entry.Placed > best.Placed or (entry.Placed == best.Placed and (entry.Gain > best.Gain
+          or (entry.Gain == best.Gain and entry.Swaps < best.Swaps))) then
+        first = r
+      end
+    end
+    local ordered = { pool[first] }
+    for r, entry in ipairs(pool) do
+      if r ~= first then ordered[#ordered + 1] = entry end
+    end
+    pool = ordered
+  end
   local kept = {}
   for _, entry in ipairs(pool) do
     if #kept >= count then break end
@@ -2222,6 +2347,19 @@ function Search:Solutions(count)
     if distinct then kept[#kept + 1] = entry end
   end
   return kept
+end
+
+-- Up to `count` solutions: the best layout of each solved combination, best
+-- first; then the alternatives kept along the way (other plots for the same
+-- districts), as long as they are distinct from the ones taken (Pick).
+function Search:Solutions(count)
+  local pool = {}
+  for _, entry in ipairs(self.PoolEntries or {}) do
+    pool[#pool + 1] = { Layout = entry.BestLayout, Gain = entry.BestGain }
+  end
+  if self.BestLayout ~= nil then table.insert(pool, 1, { Layout = self.BestLayout, Gain = self.BestGain }) end
+  for _, e in ipairs(self.Alt) do pool[#pool + 1] = { Layout = e.Layout, Gain = e.Gain } end
+  return self:Pick(pool, count)
 end
 
 -- Quality indicators (design 7.4) for `gain`, the value reported.

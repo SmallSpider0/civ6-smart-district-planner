@@ -416,6 +416,123 @@ test("a plot another of our cities owns is a candidate when it can be swapped (i
   end
 end)
 
+-- Issue 162: a plot swapped from another city and a plot of the city's own
+-- worth the same: the plan takes the one that needs no swap. The swapped
+-- plot (3,1) has the smallest plot index, which the plain tie rule (smaller
+-- positions) would pick.
+local TIE_ROWS = {
+  "~~~~~~~~~~~~",
+  "~~~.~~~~~~~~",
+  "~~..........",
+  "~...........",
+  "~...........",
+  "~~~~~~~~~~~~",
+}
+local function TieWorld(rows)
+  local w = World.New({ rows = rows or TIE_ROWS, cities = { { id = 1, x = 3, y = 2, population = 7, capital = true, radius = 1 },
+    { id = 2, x = 9, y = 3, population = 4, radius = 1 } } })
+  w:Own(3, 1, 0, w:City(2))
+  return Map.GetPlotIndex(3, 1)
+end
+
+test("a tie between a swapped plot and the city's own: no swap (issue 162)", function()
+  local swapIndex = TieWorld()
+  local request = { PlayerID = 0, CityID = 1, Weights = ONES, Districts = { "DISTRICT_CAMPUS" }, Land = false, Swap = true }
+  -- The swapped plot is a candidate, worth as much as the best own plot.
+  local heat, swapGain, ownBest = SDP_Solver.Heat({ PlayerID = 0, CityID = 1, District = "DISTRICT_CAMPUS", Weights = ONES,
+    Swap = true }), nil, nil
+  for _, h in ipairs(heat) do
+    if h.Index == swapIndex then swapGain = h.Gain elseif ownBest == nil or h.Gain > ownBest then ownBest = h.Gain end
+  end
+  T.ok(swapGain ~= nil and ownBest ~= nil, "both kinds of plot are candidates")
+  T.eq(swapGain, ownBest, "a tie")
+  T.eq(heat[1].Index, swapIndex, "best first, ties by plot: the swapped plot first")
+  local result = SDP_Solver.Solve(request)
+  T.ok(result.Ok, tostring(result.Error))
+  T.ok(not result.Stats.Mismatch, "board and full evaluation agree")
+  T.eq(#result.Plan, 1, "one campus")
+  T.ok(result.Plan[1].Index ~= swapIndex, "not on the swapped plot")
+  T.eq(result.Plan[1].Swap, nil, "no swap")
+  T.eq(result.Gain, ownBest, "the same value")
+  for n, solution in ipairs(result.Solutions) do
+    for _, p in ipairs(solution.Plan) do T.eq(p.Swap, nil, "solution " .. n .. ": no swap") end
+  end
+  -- Same input, same plan.
+  T.eq(SDP_Solver.Solve(request).Plan[1].Index, result.Plan[1].Index, "deterministic")
+end)
+
+test("a swapped plot worth more is still taken (issue 162)", function()
+  -- A mountain at (4,1) touches no land candidate but the swapped plot.
+  local rows = {}
+  for y, row in ipairs(TIE_ROWS) do rows[y] = row end
+  rows[2], rows[3] = "~~~.M~~~~~~~", "~~..~~......"
+  local swapIndex = TieWorld(rows)
+  local result = SDP_Solver.Solve({ PlayerID = 0, CityID = 1, Weights = ONES, Districts = { "DISTRICT_CAMPUS" }, Land = false,
+    Swap = true })
+  T.ok(result.Ok, tostring(result.Error))
+  T.eq(result.Plan[1].Index, swapIndex, "the better plot, swapped")
+  T.eq(result.Plan[1].Swap, 2, "from city 2")
+  T.ok(result.Gain > 0, "worth more than the city's own plots")
+end)
+
+-- Issue 162 (Codex review of PR 164): untangling can raise a later layout
+-- above the first. Here the search is made to miss the best plan (as a
+-- search that is not exhaustive can): its best has no swap and is worth 2,
+-- and a lower alternative (1) takes the swapped plot (3,1); untangling that
+-- one moves its campus to (2,3), next to the holy site, worth 3. The plan
+-- shown first must be that one.
+test("a layout that untangles to a higher value comes first (issue 162)", function()
+  local rows = {}
+  for y, row in ipairs(TIE_ROWS) do rows[y] = row end
+  rows[2], rows[5] = "~~~.M~~~~~~~", "~..M........"
+  local swapIndex = TieWorld(rows)
+  local request = { PlayerID = 0, CityID = 1, Weights = ONES, Districts = { "DISTRICT_CAMPUS", "DISTRICT_HOLY_SITE" },
+    Land = false, Swap = true }
+  local scan = SDP_City.Scan(0, 1, SDP_City.ScanOptions(request))
+  local result, missed, alternative = SDP_Overlay.With(0, function()
+    local session = SDP_Solver.NewSession(request, scan)
+    session:Run()
+    local search = session.Search
+    local function Layout(spots)
+      local layout = {}
+      for m = 1, search.K do
+        local x, y = spots[search.Types[m]][1], spots[search.Types[m]][2]
+        for i, c in ipairs(search.Candidates) do
+          if c.X == x and c.Y == y then layout[m] = i end
+        end
+      end
+      return layout
+    end
+    local best = Layout({ DISTRICT_CAMPUS = { 2, 4 }, DISTRICT_HOLY_SITE = { 5, 2 } })
+    local alt = Layout({ DISTRICT_CAMPUS = { 3, 1 }, DISTRICT_HOLY_SITE = { 2, 2 } })
+    local bestGain, bestLegal = search:Evaluate(best)
+    local altGain, altLegal = search:Evaluate(alt)
+    T.ok(bestLegal and altLegal, "both layouts are legal")
+    search.BestLayout, search.BestGain, search.BestPlaced = best, bestGain, 2
+    search.Alt = { { Layout = alt, Gain = altGain, Placed = 2 } }
+    search.PoolEntries = nil
+    local result = session:Result()
+    -- One plan asked: the better one is not cut off.
+    session.Params.Solutions = 1
+    local single = session:Result()
+    T.eq(#single.Solutions, 1, "one plan")
+    T.eq(single.Gain, 3, "one plan: the untangled alternative's value")
+    return result, bestGain, altGain
+  end)
+  T.eq(missed, 2, "the missed search's best")
+  T.eq(alternative, 1, "the alternative, before untangling")
+  T.ok(result.Ok, tostring(result.Error))
+  T.ok(not result.Stats.Mismatch, "board and full evaluation agree")
+  T.eq(result.Gain, 3, "the untangled alternative's value")
+  for n, solution in ipairs(result.Solutions) do
+    T.ok(solution.Gain <= result.Gain, "solution " .. n .. " is not better than the first")
+  end
+  for _, p in ipairs(result.Plan) do
+    T.ok(p.Index ~= swapIndex, p.Type .. " not on the swapped plot")
+    T.eq(p.Swap, nil, p.Type .. ": no swap")
+  end
+end)
+
 test("unowned plots another city is nearer to are that city's to work (issue 54)", function()
   local flat = {}
   for y = 1, 9 do flat[y] = "~..........~" end
