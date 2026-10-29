@@ -745,7 +745,7 @@ function SDP_Multi.NewSession(request)
   -- The city a slot's placement is planned for is not counted as covered by
   -- it (issue 91): its group's, or for a wonder the city whose tile it is
   -- (as Session:OwnerOf).
-  local function CoverOwner(search, m, i)
+  local function SlotOwner(search, m, i)
     local spec = slots[search.SlotIndex[m]]
     local p = spec.Group
     if spec.Wonder then
@@ -754,11 +754,32 @@ function SDP_Multi.NewSession(request)
         if p == nil and part.Allowed[i] then p = q end
       end
     end
-    return p ~= nil and participants[p] ~= nil and participants[p].Key or nil
+    return p ~= nil and participants[p] or nil
+  end
+  local function CoverOwner(search, m, i)
+    local part = SlotOwner(search, m, i)
+    return part ~= nil and part.Key or nil
+  end
+  -- Slot m on candidate i takes the plot from another of the player's
+  -- cities (as Session:PlanFor's Swap); ties take the plots that need no
+  -- swap (issue 162). Only with the swap switch on.
+  local plotCity = {} -- [candidate] = the ID of the player's city owning it, or false
+  local function Swapped(search, m, i)
+    local owner = plotCity[i]
+    if owner == nil then
+      local plot = Map.GetPlotByIndex(candidates[i].Index)
+      local city = plot:GetOwner() == playerID and Cities.GetPlotPurchaseCity(plot) or nil
+      owner = city ~= nil and city:GetID() or false
+      plotCity[i] = owner
+    end
+    if owner == false then return false end
+    local part = SlotOwner(search, m, i)
+    return part ~= nil and part.CityID ~= nil and part.CityID ~= owner
   end
   self.Search = SDP_Search.New({
     PlayerID = playerID, Board = self.Board, Weights = self.Weights, Params = params,
     Candidates = candidates, Slots = slots, Lands = lands, Coverage = self.Coverage, CoverOwner = CoverOwner,
+    Swapped = request.Swap == true and Swapped or nil,
     Pools = pools, Costs = SDP_City.DistanceCosts(playerID, candidates, request.Distance, centers), Apart = apart,
     Exclusive = SDP_Rules.Exclusive(), Reach = reach, Owners = owners,
     Appeal = { Fixed = fixed, Weights = request.Weights, Workable = workable, Cities = housingCities,
@@ -1136,16 +1157,8 @@ function Session:Distinct(count)
     if a.Placed ~= b.Placed then return a.Placed > b.Placed end
     return SDP_Search.Better(a.Gain, a.Layout, b.Gain, b.Layout)
   end)
-  local kept = {}
-  for _, entry in ipairs(pool) do
-    if #kept >= count then break end
-    local distinct = true
-    for _, other in ipairs(kept) do
-      if not search:IsDistinct(entry.Layout, other.Layout) then distinct = false end
-    end
-    if distinct then kept[#kept + 1] = entry end
-  end
-  return kept
+  -- Untangled first (ties take no swap, issue 162), the best of them first.
+  return search:Pick(pool, count)
 end
 
 -- Plan, values and neighbours of one layout, with DMT's yields and tooltips.
@@ -1313,7 +1326,11 @@ function Session:Result()
     CostDelta = 0, Total = self.Base.Total, Sites = self.SiteList, Supplied = self.Supplied,
   }
   if search.K > 0 and search.BestLayout == nil then result.Ok, result.Error = false, "NO_LEGAL_LAYOUT" end
-  for _, entry in ipairs(self:Distinct(self.Params.Solutions or 3)) do
+  -- Distinct untangles each layout (ties take no swap, issue 162), which
+  -- moves the board: clear it again before the plans.
+  local entries = self:Distinct(self.Params.Solutions or 3)
+  board:Clear()
+  for _, entry in ipairs(entries) do
     local solution = self:PlanFor(entry.Layout)
     for _, u in ipairs(self.Unplaced) do table.insert(solution.Unplaced, 1, u) end
     result.Solutions[#result.Solutions + 1] = solution
@@ -1325,7 +1342,7 @@ function Session:Result()
       "YieldAdjacency", "YieldWeighted" }) do
       result[key] = best[key]
     end
-    stats.Mismatch = (not best.Legal) or math.abs(best.Gain - search.BestGain) > 1e-6 or nil
+    stats.Mismatch = (not best.Legal) or math.abs(best.Gain - entries[1].Gain) > 1e-6 or nil
   else
     for _, u in ipairs(self.Unplaced) do result.Unplaced[#result.Unplaced + 1] = u end
   end
