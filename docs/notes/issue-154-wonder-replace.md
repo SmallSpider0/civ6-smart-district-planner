@@ -21,3 +21,9 @@
 - 离线 `tests/offline/spec_wonder_replace.lua`（新）：单城页和多城页各一项，经面板自己的钩子（`SetWonder`、`SetReplace`、`Solve`/`RunTask`、`PlacePins`/`Place`）：打过钉后不开替换，奇观算已打钉；开替换后奇观又被选上，方案里有它，和第一次的方案完全相同（剧院广场的分也相同），再打钉后地图上正好一个奇观钉。旧代码上两项都失败（单城页“with replace the wonder is chosen again”；多城页去掉列表状态的断言后在“the wonder is in the plan”失败）。
 - 游戏内 `tests/test_features.lua` 加“replace plans a wonder again when its only pin is one being replaced (issue 154)”：剧院广场、圣地加一个不需相邻区域的空闲奇观，打钉、开替换再求解，方案与第一次相同、每项的分相同，打钉后 DMT 认得新的奇观钉。排进 2026-10-29 夜间队列。
 - 本机跑过：`validate.py`，`spec_wonder_replace.lua`、`spec_panel.lua`、`spec_support.lua`；整套离线测试在第二台机器上跑。
+
+## Codex 审查（PR #158，第一轮两条，都属实）
+
+- **测试没经控件回调**（PRRT_kwDOVS5Ar86xXwF2）：`spec_wonder_replace.lua` 改成经控件自己的回调：奇观从“添加奇观”下拉的条目点选（`WonderPull` / `MultiWonderPull` 的 `_entries`），替换和提醒钉开关用勾选框 `Toggle()`，求解、打钉、撤销点按钮（`SolveButton`、`PlaceButton`、`UndoButton` 及 `Multi*` 版）。区域列表、档位和收尾的取消奇观仍用面板钩子准备（不是这次修的入口）。在修复前的源码上三项都失败。
+- **多城页求解按钮不跟替换开关变**（PRRT_kwDOVS5Ar86xXwF5）：共享列表（`m_planFor == "ALL"`）只选了一个已打钉的奇观、没有结果时，`P.SetReplace` 只调 `ShowWonders()`，`ClearResult()` 在没有结果时不重画，按钮停在旧状态（开替换后仍灰着，或关替换后仍可点）。修法：这一支再调 `UpdateEstimate()`（它更新按钮和提示），`UpdateEstimate` 改成前置声明的局部函数。新测试“the solve button follows the replace switch for a pinned wonder”：只选奇观、打钉、开关替换三次，每次查按钮和提示；旧代码在“replace off: ... nothing to plan”失败。单城页没有这个缺口：`SetReplace` 总是调 `UpdateEstimate()`，打钉、撤销后调 `UpdateButtons()`。
+- 本机跑过：`validate.py`；`spec_wonder_replace.lua`、`spec_panel.lua`、`spec_support.lua`、`spec_citychips.lua`、`spec_target.lua`、`spec_harborchoice.lua` 全过。游戏内测试没改。

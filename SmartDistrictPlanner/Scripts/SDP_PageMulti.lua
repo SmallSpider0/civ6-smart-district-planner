@@ -126,6 +126,7 @@ local function CityOf(key)
 end
 
 local ShowWonders -- defined below
+local UpdateEstimate -- defined below
 
 -- The pins being replaced, { [pin ID] = true }, or nil with replace off.
 -- They do not count as what a city has, nor a wonder as pinned (issue 154).
@@ -267,8 +268,14 @@ function P.SetReplace(on)
     ClearResult()
     Remember()
     -- A city's own count starts from what it has, replaced pins left out;
-    -- a wonder whose pin is replaced can be chosen again (issue 154).
-    if m_planFor ~= "ALL" then P.RefreshLists() else ShowWonders() end
+    -- a wonder whose pin is replaced can be chosen again (issue 154), and
+    -- whether there is something to plan follows it, result or not.
+    if m_planFor ~= "ALL" then
+      P.RefreshLists()
+    else
+      ShowWonders()
+      UpdateEstimate()
+    end
   end
 end
 
@@ -317,7 +324,7 @@ local function Estimate(request, params)
   return SDP_Multi.EstimateUnits(#participants, size, #request.Wonders, params, pick, pool)
 end
 
-local function UpdateEstimate()
+UpdateEstimate = function()
   local request = P.Request()
   -- Whether there is something to plan may have changed (issue 67).
   P.UpdateButtons()
