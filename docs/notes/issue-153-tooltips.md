@@ -24,7 +24,7 @@
 
 - `validate.py`：0 错误。
 - 离线 `spec_panel.lua` 新加 “issue 153: city sites presets have their own tooltips”：经下拉框每一项的按钮 `Click()`，查每项和选中后按钮上的提示是 `LOC_SDP_SITES_PRESET_<名>_TOOLTIP`。去掉 `SDP_PageSites.lua` 的改动时这一项失败（29 过 1 败），改后 30 项全过。
-- 整套离线测试在第二台机器上跑（`remote.py run offline153b`）。
+- 整套离线测试在第二台机器上跑（`remote.py run offline153b`）：211 过、0 败。
 - 游戏内：工作日白天不开游戏，加了夜间队列 #34（中英文各跑 `test_ui`、`test_sites`、`test_settings`、`test_tiers`，并截悬停图看英文有没有截断）。
 
 ## 没定或没验证的
