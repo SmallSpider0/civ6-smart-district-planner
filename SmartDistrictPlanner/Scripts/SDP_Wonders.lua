@@ -26,13 +26,18 @@ function SDP_Wonders.Built(playerID)
   return built
 end
 
--- Wonders with a map pin of the player: { [BuildingType] = true }.
-function SDP_Wonders.Pinned(playerID)
+-- Wonders with a map pin of the player: { [BuildingType] = true }. `ignore`
+-- ({ [pin ID] = true }, optional): this mod's earlier pins being replaced,
+-- which do not count (issue 154: a wonder whose only pin is replaced is
+-- planned again).
+function SDP_Wonders.Pinned(playerID, ignore)
   local pinned = {}
   for _, pin in pairs(PlayerConfigurations[playerID]:GetMapPins()) do
-    local key = (pin:GetIconName() or ""):gsub("^ICON_", "")
-    local row = GameInfo.Buildings[key]
-    if row ~= nil and row.IsWonder then pinned[key] = true end
+    if not (ignore and ignore[pin:GetID()]) then
+      local key = (pin:GetIconName() or ""):gsub("^ICON_", "")
+      local row = GameInfo.Buildings[key]
+      if row ~= nil and row.IsWonder then pinned[key] = true end
+    end
   end
   return pinned
 end
@@ -54,9 +59,10 @@ end
 -- (MapTacks.PlayerWonders) without the generic wonder icon: { Type, Name,
 -- Icon, Status = nil | "BUILT" | "PINNED", AdjacentDistrict,
 -- AdjacentImprovement, Era, EraType, Cost }. Sorted by era, then production cost, then type (issue 7).
--- Tech and era are not checked: this is planning ahead.
-function SDP_Wonders.List(playerID)
-  local built, pinned = SDP_Wonders.Built(playerID), SDP_Wonders.Pinned(playerID)
+-- Tech and era are not checked: this is planning ahead. `ignore` as for
+-- SDP_Wonders.Pinned.
+function SDP_Wonders.List(playerID, ignore)
+  local built, pinned = SDP_Wonders.Built(playerID), SDP_Wonders.Pinned(playerID, ignore)
   local list = {}
   for _, row in ipairs(MapTacks.PlayerWonders(MapTacks.PlayerTraits(playerID))) do
     if row.BuildingType ~= nil and row.IsWonder then

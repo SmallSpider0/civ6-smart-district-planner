@@ -734,23 +734,17 @@
     <Replace Tag="LOC_SDP_TIER_SHORT" Language="en_US">
       <Text>Effort</Text>
     </Replace>
-    <Replace Tag="LOC_SDP_APART_SHORT" Language="en_US">
-      <Text>Keep apart</Text>
-    </Replace>
-    <Replace Tag="LOC_SDP_APART_SHORT_ANY" Language="en_US">
-      <Text>Keep apart</Text>
-    </Replace>
     <Replace Tag="LOC_SDP_APART_RULE" Language="en_US">
       <Text>The {1_Building} gives +1 Trade Route capacity only in a city without a {2_Other}: a {3_A} and a {4_B} in the same city give one extra route, in two different cities two.</Text>
-    </Replace>
-    <Replace Tag="LOC_SDP_APART_TOOLTIP" Language="en_US">
-      <Text>{1_Rules}[NEWLINE]When ticked, the pool never gives one city both; a city that already has one (built, with a map tack, or Must) does not get the other. Only when the count cannot be filled otherwise are both picked, and the result says so. Must districts are placed as asked.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_RESULT_TOGETHER" Language="en_US">
       <Text>{1_A} with {2_B}</Text>
     </Replace>
     <Replace Tag="LOC_SDP_RESULT_TOGETHER_CITY" Language="en_US">
       <Text>{1_City}: {2_A} with {3_B}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_TOGETHER_TOOLTIP" Language="en_US">
+      <Text>{1_Rule}[NEWLINE]The planner never gives one city both from the pool, nor the other when the city already has one (built, with a map tack, or Must). They share a city only when the count cannot be filled otherwise, or when both are Must.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_RESULT_TOGETHER_DETAIL" Language="en_US">
       <Text>the {1_Building} gives no Trade Route capacity</Text>

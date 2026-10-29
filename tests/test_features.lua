@@ -201,6 +201,53 @@ test("the pin record survives a reload; replace plans over this mod's pins; undo
   end)
 end)
 
+test("replace plans a wonder again when its only pin is one being replaced (issue 154)", function()
+  Finally(function()
+    local theater = Resolve("DISTRICT_THEATER")
+    Reset({ theater, Resolve("DISTRICT_HOLY_SITE") })
+    local wonder
+    for _, w in ipairs(SDP_Wonders.List(pid)) do
+      if wonder == nil and w.Status == nil and w.AdjacentDistrict == nil then wonder = w.Type end
+    end
+    if wonder == nil then T.skip("no free wonder") end
+    SDP_Panel.SetWonder(wonder, true)
+    T.eq(SDP_Panel.Solve(), nil, "solved as a task")
+    local first = SDP_Panel.RunTask(5000)
+    T.ok(first and first.Ok, "result: " .. tostring(first and first.Error))
+    local function Items(plan)
+      local items, keys = {}, {}
+      for _, p in ipairs(plan) do
+        items[p.Type] = p
+        keys[#keys + 1] = p.Type .. "@" .. p.Index
+      end
+      table.sort(keys)
+      return items, table.concat(keys, " ")
+    end
+    local before, layout = Items(first.Plan)
+    if before[wonder] == nil then T.skip(wonder .. " has no legal plot near this capital") end
+    T.eq(SDP_Panel.PlacePins(), #first.Plan, "placed")
+    T.same(SDP_Panel.State().Wonders, {}, "its pin is there: not planned again without replace")
+
+    SDP_Panel.SetReplace(true)
+    T.same(SDP_Panel.State().Wonders, { wonder }, "with replace the wonder is chosen again")
+    T.eq(SDP_Panel.Solve(), nil, "solved as a task again")
+    local again = SDP_Panel.RunTask(5000)
+    T.ok(again and again.Ok, "result: " .. tostring(again and again.Error))
+    local after, layout2 = Items(again.Plan)
+    T.ok(after[wonder] ~= nil, "the wonder is in the plan")
+    T.eq(layout2, layout, "the same plan as before the pins were placed")
+    -- The districts keep what the wonder gives them (the theater lost it before).
+    for _, p in ipairs(first.Plan) do
+      T.near(after[p.Type] and after[p.Type].Score or -1, p.Score, 1e-9, p.Type .. " keeps its bonus")
+    end
+    local t, wd = before[theater], before[wonder]
+    if t ~= nil and Map.GetPlotDistance(t.X, t.Y, wd.X, wd.Y) == 1 then print("the theater stands next to " .. wonder) end
+    T.eq(SDP_Panel.PlacePins(), #again.Plan, "placed over the earlier pins")
+    local subject = GetMapPinSubject(pid, after[wonder].X, after[wonder].Y)
+    T.ok(subject ~= nil and subject.Key == wonder, "the wonder pin is there after replacing")
+  end)
+end)
+
 test("multi tab: the government plaza stays in the one city whose own list has it", function()
   local plannable = {}
   for _, d in ipairs(SDP_Rules.PlannableDistricts(pid)) do plannable[d.Type] = d end

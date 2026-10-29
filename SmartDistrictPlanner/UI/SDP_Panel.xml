@@ -59,15 +59,9 @@
         </Container>
         <Label ID="SpecialtyNote" Style="BodyTextDark14" WrapWidth="480"/>
 
-        <!-- Districts in two groups (feedback 6, 7): a click cycles the state.
-             The switch keeps partner districts (the harbor and the commercial
-             hub, SDP_Rules.Apart) out of one city's picks. -->
+        <!-- Districts in two groups (feedback 6, 7): a click cycles the state. -->
         <Container Size="480,24">
           <Label Anchor="L,C" Style="BodyTextDark16" String="LOC_SDP_GROUP_SPECIALTY" ToolTip="LOC_SDP_STATES_TOOLTIP"/>
-          <Container ID="ApartBox" Anchor="L,C" Offset="138,0" Size="160,24">
-            <CheckBox ID="ApartCheck" Anchor="L,C" Style="MainCheckBox"/>
-            <Label ID="ApartLabel" Anchor="L,C" Offset="26,0" Style="BodyTextDark14" TruncateWidth="130" TruncatedTooltip="1"/>
-          </Container>
           <Label Anchor="R,C" Style="BodyTextDark14" String="LOC_SDP_STATES_LEGEND"/>
         </Container>
         <Stack ID="DistrictStack" StackGrowth="Right" WrapWidth="480" WrapGrowth="Bottom" StackPadding="4"/>
@@ -279,10 +273,6 @@
         </Container>
         <Container Size="480,24">
           <Label Anchor="L,C" Style="BodyTextDark16" String="LOC_SDP_GROUP_SPECIALTY" ToolTip="LOC_SDP_STATES_TOOLTIP"/>
-          <Container ID="MultiApartBox" Anchor="L,C" Offset="138,0" Size="210,24">
-            <CheckBox ID="MultiApartCheck" Anchor="L,C" Style="MainCheckBox"/>
-            <Label ID="MultiApartLabel" Anchor="L,C" Offset="26,0" Style="BodyTextDark14" TruncateWidth="184" TruncatedTooltip="1"/>
-          </Container>
           <Container Anchor="R,C" Size="136,22" ToolTip="LOC_SDP_COUNT_TOOLTIP">
             <Label Anchor="L,C" Style="BodyTextDark14" String="LOC_SDP_COUNT_PER_CITY"/>
             <Button ID="MultiCountLess" Anchor="R,C" Offset="52,0" Style="ArrowButtonLeft"/>

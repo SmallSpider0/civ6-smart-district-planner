@@ -734,23 +734,17 @@
     <Replace Tag="LOC_SDP_TIER_SHORT" Language="zh_Hans_CN">
       <Text>档位</Text>
     </Replace>
-    <Replace Tag="LOC_SDP_APART_SHORT" Language="zh_Hans_CN">
-      <Text>{1_A}、{2_B}分城</Text>
-    </Replace>
-    <Replace Tag="LOC_SDP_APART_SHORT_ANY" Language="zh_Hans_CN">
-      <Text>部分区域分城</Text>
-    </Replace>
     <Replace Tag="LOC_SDP_APART_RULE" Language="zh_Hans_CN">
       <Text>{1_Building}只在本城没有{2_Other}时加贸易路线：{3_A}和{4_B}同城共多 1 条，分在两城共多 2 条。</Text>
-    </Replace>
-    <Replace Tag="LOC_SDP_APART_TOOLTIP" Language="zh_Hans_CN">
-      <Text>{1_Rules}[NEWLINE]勾选后，从候选里挑时一座城不同时挑这两个；城里已有其中一个（已建、已打钉或必建）就不挑另一个。凑不够区域数量时才放行，结果里会提示。必建的照建。</Text>
     </Replace>
     <Replace Tag="LOC_SDP_RESULT_TOGETHER" Language="zh_Hans_CN">
       <Text>{1_A}与{2_B}同城</Text>
     </Replace>
     <Replace Tag="LOC_SDP_RESULT_TOGETHER_CITY" Language="zh_Hans_CN">
       <Text>{1_City}：{2_A}与{3_B}同城</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_TOGETHER_TOOLTIP" Language="zh_Hans_CN">
+      <Text>{1_Rule}[NEWLINE]规划时一座城不同时挑这两个；城里已有其中一个（已建、已打钉或必建）就不挑另一个。只有凑不够区域数量，或两个都是必建时，才会同城。</Text>
     </Replace>
     <Replace Tag="LOC_SDP_RESULT_TOGETHER_DETAIL" Language="zh_Hans_CN">
       <Text>{1_Building}不增加贸易路线</Text>
