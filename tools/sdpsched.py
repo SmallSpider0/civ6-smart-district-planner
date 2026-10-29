@@ -7,7 +7,8 @@ through it; it is not run on this machine.
     python3 sdpsched.py run NAME --slots N [--exclusive] [--owner WHO] [--tree T] -- CMD ...
     python3 sdpsched.py status            # every job: who, slots, queued (in line order) / running / exit, last log line
     python3 sdpsched.py check NAME        # exit 1 when a job of that name is queued or running
-    python3 sdpsched.py prune             # drop snapshots of jobs that ended over a week ago
+    python3 sdpsched.py prune             # drop snapshots of jobs that ended over a week ago, and worktree
+                                          # copies no job has used and nobody synced for a week
 
 The machine has SDP_SLOTS slots (default: its cores minus two, left for the
 system). A job asks for N slots (its compare.mjs workers; 0 = all) and starts
@@ -43,6 +44,7 @@ SLOTS = int(os.environ.get("SDP_SLOTS") or max(1, (os.cpu_count() or 4) - 2))
 POLL = 15
 LEGACY_FRESH = 2 * 3600  # a log without a job record or exit file, written this recently, is a running job
 KEEP = 7 * 86400
+SYNCED = ".sdp-synced"  # tools/remote.py sync touches it in the worktree copy
 MAX_PASSED = 3  # later jobs that may start ahead of a waiting job; after that it keeps its place
 
 
@@ -294,14 +296,37 @@ def cmd_status(_args):
     return 0
 
 
+def mtime(path):
+    try:
+        return os.path.getmtime(path)
+    except OSError:
+        return 0
+
+
 def cmd_prune(_args):
+    """Snapshots of jobs that ended over KEEP ago (or have no record and are that old), and
+    worktree copies (tools/remote.py sync) that no live job uses and nothing touched for KEEP."""
     t = time.time()
+    jobs = load_jobs()
     snaps = os.path.join(BASE, "snap")
     for name in sorted(os.listdir(snaps)) if os.path.isdir(snaps) else []:
         job = read_json(job_path(name))
-        if job and job["state"] == "done" and t - job.get("ended_at", t) > KEEP:
+        if job and job["state"] == "done" and t - job.get("ended_at", t) > KEEP \
+                or job is None and t - mtime(os.path.join(snaps, name)) > KEEP:
             subprocess.run(["rm", "-rf", os.path.join(snaps, name)])
             print("removed snapshot", name)
+    for name in sorted(os.listdir(BASE)) if os.path.isdir(BASE) else []:
+        tree = os.path.join(BASE, name)
+        if name in ("bin", "snap", "ref", "jobs") or not os.path.isfile(os.path.join(tree, "tools", "sdpsched.py")):
+            continue
+        mine = [j for j in jobs if j.get("tree") == name]
+        if any(live(j) for j in mine):
+            continue
+        last = max([mtime(os.path.join(tree, SYNCED)), mtime(tree)]
+                   + [j.get("ended_at") or j.get("queued_at") or 0 for j in mine])
+        if t - last > KEEP:
+            subprocess.run(["rm", "-rf", tree])
+            print("removed tree", name)
     return 0
 
 
