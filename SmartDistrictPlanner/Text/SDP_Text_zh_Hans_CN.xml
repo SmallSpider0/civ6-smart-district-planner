@@ -129,7 +129,7 @@
       <Text>从本方其他城换格</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SWAP_TOOLTIP" Language="zh_Hans_CN">
-      <Text>让区域也能放在你其他城市的格上：游戏里在“市民管理”点“切换”，就能把这种格划给这座城（格上没有区域或奇观，也不紧挨那座城的市中心）。[NEWLINE][NEWLINE]好处：相邻加成更高，实测单城平均 +13%，多城 +20%。[NEWLINE]代价：约三成区域要你手动切换；原来那座城少了这一格；多城计算慢约一倍。</Text>
+      <Text>让区域也能放在你其他城市的格上：游戏里在“市民管理”点“切换”，就能把这种格划给这座城（格上没有区域或奇观，也不紧挨那座城的市中心）。[NEWLINE][NEWLINE]好处：相邻加成更高，实测单城平均 +13%，多城 +19%；换不换一样好时不换。[NEWLINE]代价：单城约两成、多城约三成区域要你手动切换；原来那座城少了这一格；多城计算慢约一倍。</Text>
     </Replace>
     <Replace Tag="LOC_SDP_WEIGHT_FEATURE_SHORT" Language="zh_Hans_CN">
       <Text>收获</Text>

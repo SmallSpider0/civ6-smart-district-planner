@@ -129,7 +129,7 @@
       <Text>Swap tiles from my cities</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SWAP_TOOLTIP" Language="en_US">
-      <Text>Let districts go on tiles of your other cities: in Manage Citizens, Swap gives such a tile to this city (no district or wonder on it, not next to that city's center).[NEWLINE][NEWLINE]Gain: more adjacency, measured at +13% on average for one city and +20% for several.[NEWLINE]Cost: about three in ten districts need a swap by hand; the other city loses that tile; several cities take about twice as long to plan.</Text>
+      <Text>Let districts go on tiles of your other cities: in Manage Citizens, Swap gives such a tile to this city (no district or wonder on it, not next to that city's center).[NEWLINE][NEWLINE]Gain: more adjacency, measured at +13% on average for one city and +19% for several; no swap when it gains nothing.[NEWLINE]Cost: about two in ten districts for one city and three in ten for several need a swap by hand; the other city loses that tile; several cities take about twice as long to plan.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_WEIGHT_FEATURE_SHORT" Language="en_US">
       <Text>Harv.</Text>
