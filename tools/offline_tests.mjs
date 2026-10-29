@@ -155,6 +155,9 @@ function newState(output) {
     return 0;
   });
   lua.lua_setglobal(L, to_luastring("sdp_write_file"));
+  // The repository root, for specs that read the mod's own files (the panel XML).
+  lua.lua_pushstring(L, to_luastring(ROOT));
+  lua.lua_setglobal(L, to_luastring("sdp_root"));
 
   // include(name): like the game's, by file name without extension.
   lua.lua_pushjsfunction(L, (L) => {

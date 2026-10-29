@@ -538,32 +538,31 @@ test("district cells: a click goes round the states on both tabs", function()
   Round(rows, "DISTRICT_AQUEDUCT", { "AUTO", "MUST", "OFF", "AUTO" })
 end)
 
--- The harbor / commercial hub switch (SDP_Rules.Apart): named from the
--- rules, on by default, sent with the request, toggled through its box.
-test("the harbor and commercial hub switch on both tabs", function()
+-- Partner districts (the harbor and the commercial hub, SDP_Rules.Apart) are
+-- always kept apart (issue 152): no switch on either tab, and every request
+-- asks for it (the rule of issue 106 then picks which one a city takes).
+test("partner districts always kept apart, with no switch on either tab (issue 152)", function()
   SDP_Panel.SelectTab("SINGLE")
   SDP_Panel.SelectCity(1)
+  SDP_Panel.Refresh()
   local c = UI_Mock.Controls
-  T.eq(c.ApartBox:IsHidden(), false, "shown: the rules have the pair")
-  T.ok(c.ApartLabel:GetText():find("LOC_DISTRICT_HARBOR_NAME", 1, true) ~= nil, "named: " .. c.ApartLabel:GetText())
-  T.ok(c.ApartBox:GetToolTipString():find("LOC_BUILDING_LIGHTHOUSE_NAME", 1, true) ~= nil, "the rule in the tooltip")
-  T.eq(SDP_Panel.State().Apart, true, "on by default")
-  T.eq(c.ApartCheck:IsChecked(), true, "ticked")
-  c.ApartCheck:Toggle()
-  T.eq(SDP_Panel.State().Apart, false, "off through the box")
-  c.ApartCheck:Toggle()
-  T.eq(SDP_Panel.State().Apart, true, "on again")
+  for _, id in ipairs({ "ApartBox", "ApartCheck", "ApartLabel" }) do
+    T.eq(rawget(c, id), nil, "the single-city tab has no " .. id)
+  end
+  T.eq(SDP_Panel.SetApart, nil, "nor a hook to turn it off")
+  local request = SDP_Panel.Request()
+  T.ok(request ~= nil, "a request")
+  T.eq(request.Apart, true, "kept apart")
   SDP_Panel.SelectTab("MULTI")
   local multi = SDP_Panel.Multi
   multi.Refresh()
-  T.eq(c.MultiApartBox:IsHidden(), false, "shown on the multi-city tab")
-  T.eq(multi.State().Apart, true, "on by default")
+  for _, id in ipairs({ "MultiApartBox", "MultiApartCheck", "MultiApartLabel" }) do
+    T.eq(rawget(c, id), nil, "the several-cities tab has no " .. id)
+  end
+  T.eq(multi.SetApart, nil, "nor a hook to turn it off")
   multi.SetPlanFor("ALL")
   multi.ApplyPlan({ "DISTRICT_CAMPUS" })
-  T.eq(multi.Request().Apart, true, "sent")
-  c.MultiApartCheck:Toggle()
-  T.eq(multi.Request().Apart, false, "off through the box")
-  c.MultiApartCheck:Toggle()
+  T.eq(multi.Request().Apart, true, "kept apart")
 end)
 
 -- The swap switch (issue 54): on by default (issue 162), sent with the
@@ -1276,6 +1275,70 @@ test("issue 89: city sites show Custom too; a preset puts the distance weight ba
   T.eq(sites.State().Preset, "GROWTH", "and current")
   sites.SetPreset("BALANCED")
   SDP_Panel.SelectTab("SINGLE")
+end)
+
+-- Issue 153: each city sites preset says what it favors, on its entry and on
+-- the button once chosen (they had no tooltip before).
+test("issue 153: city sites presets have their own tooltips", function()
+  SDP_Panel.Open()
+  SDP_Panel.SelectTab("SITES")
+  local c = UI_Mock.Controls
+  local order = SDP_Sites.PRESET_ORDER
+  for _, name in ipairs(order) do
+    local key = "LOC_SDP_SITES_PRESET_" .. name .. "_TOOLTIP"
+    local entry = Entry(c.SitesPresetPull, name, order)
+    T.ok((entry.Button:GetToolTipString() or ""):find(key, 1, true) == 1, name .. ": its entry's tooltip")
+    entry.Button:Click()
+    T.ok((c.SitesPresetPull:GetButton():GetToolTipString() or ""):find(key, 1, true) == 1, name .. ": on the button")
+    -- It shows the preset's own weights, read from the preset.
+    local p = SDP_Sites.PRESETS[name]
+    T.eq(entry.Button:GetToolTipString(), key .. "(" .. table.concat({ tostring(p.YIELD_FOOD), tostring(p.HOUSING),
+      tostring(p.DISTRICT), tostring(p.STRATEGIC), tostring(p.APPEAL) }, ",") .. ")", name .. ": with its weights")
+  end
+  SDP_Panel.Sites.SetPreset("BALANCED")
+  SDP_Panel.SelectTab("SINGLE")
+end)
+
+-- Issue 153 (decided 2026-10-29): a tooltip that means the same on every
+-- tab is one key. These tooltips sit on the panel XML's containers and
+-- labels, which no script sets, so the check reads the XML: the controls
+-- the other tests click (the count arrows, the replace boxes) and the group
+-- labels, each with the tooltip of the nearest element around it.
+test("issue 153: the tabs share the count, states and replace tooltips", function()
+  local xml = sdp_read_file(sdp_root .. "/SmartDistrictPlanner/UI/SDP_Panel.xml")
+  T.ok(xml ~= nil, "the panel XML is read")
+  xml = xml:gsub("<!%-%-.-%-%->", "")
+  local stack, byID, byString = {}, {}, {}
+  for close, tag, attrs, empty in xml:gmatch("<(/?)([%w_]+)([^>]-)(/?)>") do
+    if close == "/" then
+      table.remove(stack)
+    else
+      local tip = attrs:match('ToolTip="([^"]*)"')
+      local around = tip
+      for i = #stack, 1, -1 do around = around or stack[i] end
+      local id, str = attrs:match('ID="([^"]*)"'), attrs:match('String="([^"]*)"')
+      if id then byID[id] = around or false end
+      if str then
+        byString[str] = byString[str] or {}
+        table.insert(byString[str], tip or false)
+      end
+      if empty ~= "/" then table.insert(stack, tip or false) end
+    end
+  end
+  for _, id in ipairs({ "CountLess", "MultiCountLess", "SitesPlanLess" }) do
+    T.eq(byID[id], "LOC_SDP_COUNT_TOOLTIP", id .. ": the shared count tooltip")
+  end
+  for _, id in ipairs({ "ReplaceCheck", "MultiReplaceCheck" }) do
+    T.eq(byID[id], "LOC_SDP_REPLACE_OWN_TOOLTIP", id .. ": the shared replace tooltip")
+  end
+  local function All(str, want, n)
+    local tips = byString[str] or {}
+    T.eq(#tips, n, str .. ": on " .. n .. " tabs")
+    for i, tip in ipairs(tips) do T.eq(tip, want, str .. " " .. i) end
+  end
+  All("LOC_SDP_GROUP_SPECIALTY", "LOC_SDP_STATES_TOOLTIP", 3)
+  All("LOC_SDP_GROUP_OTHER", "LOC_SDP_STATES_OTHER_TOOLTIP", 3)
+  All("LOC_SDP_SITES_PLAN", "LOC_SDP_STATES_TOOLTIP", 1)
 end)
 
 -- Issue 91 (decided 2026-10-26): the preserve starts off, the distance

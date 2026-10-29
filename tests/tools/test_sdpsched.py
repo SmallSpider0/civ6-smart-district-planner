@@ -5,6 +5,7 @@
 import os
 import sys
 import tempfile
+import time
 import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "tools"))
@@ -133,6 +134,35 @@ class Run(unittest.TestCase):
         record = sdpsched.read_json(sdpsched.job_path("small"))
         self.assertEqual((record["state"], record["exit"]), ("done", 0))
         self.assertEqual(sdpsched.passed(sdpsched.read_json(sdpsched.job_path("big")), sdpsched.load_jobs()), 1)
+
+    def test_prune_drops_old_snapshots_and_unused_trees(self):
+        base, old = self.dir.name, time.time() - sdpsched.KEEP - 3600
+        os.makedirs(sdpsched.jobs_dir())
+
+        def make(path, synced=None, age=old):
+            os.makedirs(os.path.join(base, path, "tools"))
+            open(os.path.join(base, path, "tools", "sdpsched.py"), "w").close()
+            if synced is not None:
+                open(os.path.join(base, path, sdpsched.SYNCED), "w").close()
+                os.utime(os.path.join(base, path, sdpsched.SYNCED), (synced, synced))
+            os.utime(os.path.join(base, path), (age, age))
+
+        for name, ended, tree in (("done-old", old, "t-old"), ("done-new", time.time(), "t-recent")):
+            sdpsched.write_json(sdpsched.job_path(name), dict(job(name, "done", 1, old), ended_at=ended, tree=tree))
+            make(os.path.join("snap", name))
+        make(os.path.join("snap", "no-record"))
+        sdpsched.write_json(sdpsched.job_path("busy"), dict(job("busy", "running", 1, old, pid=os.getpid()), tree="t-live"))
+        make("t-old", synced=old)               # synced long ago, its job ended long ago
+        make("t-unmarked")                      # copied before the marker existed, no job
+        make("t-live", synced=old)              # a live job uses it
+        make("t-recent", synced=old)            # its job ended just now
+        make("t-synced", synced=time.time())    # synced just now
+        os.makedirs(os.path.join(base, "logs"))  # not a worktree copy
+        os.utime(os.path.join(base, "logs"), (old, old))
+        self.assertEqual(sdpsched.main(["prune"]), 0)
+        self.assertEqual(sorted(os.listdir(os.path.join(base, "snap"))), ["done-new"])
+        left = sorted(n for n in os.listdir(base) if n.startswith("t-") or n == "logs")
+        self.assertEqual(left, ["logs", "t-live", "t-recent", "t-synced"])
 
     def test_check_refuses_a_live_name(self):
         os.makedirs(sdpsched.jobs_dir())

@@ -57,7 +57,6 @@ local m_tier = SDP_Tiers.DEFAULT
 local m_swap = true -- plots swapped from another of our cities are candidates (issue 54; on by default, issue 162)
 local m_replace = false -- plan over this mod's earlier pins for the cities and replace them
 local m_remind = true
-local m_apart = true -- partner districts (harbor, commercial hub) not picked into one city (SDP_Rules.Apart)
 local m_result = nil
 local m_solution = 1
 local m_view = { Cities = {}, Districts = {}, Wonders = {}, Solutions = {}, Results = {}, Plans = {}, Templates = {} } -- for tests
@@ -69,7 +68,6 @@ local SWITCHES = {
   { Key = "SWAP", Default = true, Get = function() return m_swap end, Put = function(v) m_swap = v end },
   { Key = "REPLACE", Default = false, Get = function() return m_replace end, Put = function(v) m_replace = v end },
   { Key = "REMIND", Default = true, Get = function() return m_remind end, Put = function(v) m_remind = v end },
-  { Key = "APART", Default = true, Get = function() return m_apart end, Put = function(v) m_apart = v end },
 }
 local m_fold = false -- the settings folded into one line (issue 71)
 local m_keeper = SDP_UI.Keeper({ Tab = "MULTI", Columns = COLUMNS, Weights = m_weights, Switches = SWITCHES,
@@ -125,9 +123,12 @@ local function CityOf(key)
   return key ~= nil and tonumber(key:match("^C(%d+)$") or "") or nil
 end
 
-local function HaveOf(key)
-  local cityID = CityOf(key)
-  if cityID == nil then return nil end
+local ShowWonders -- defined below
+local UpdateEstimate -- defined below
+
+-- The pins being replaced, { [pin ID] = true }, or nil with replace off.
+-- They do not count as what a city has, nor a wonder as pinned (issue 154).
+local function ReplacedPins()
   local ignore = nil
   if m_replace then
     for _, pin in ipairs(P.OwnPins()) do
@@ -135,7 +136,13 @@ local function HaveOf(key)
       ignore[pin.ID] = true
     end
   end
-  return SDP_City.HaveOf(Game.GetLocalPlayer(), cityID, ignore)
+  return ignore
+end
+
+local function HaveOf(key)
+  local cityID = CityOf(key)
+  if cityID == nil then return nil end
+  return SDP_City.HaveOf(Game.GetLocalPlayer(), cityID, ReplacedPins())
 end
 
 -- The count is a target (issue 144). A city's own list starts from what
@@ -174,7 +181,7 @@ end
 
 local function WonderTypes()
   local list = {}
-  for _, w in ipairs(SDP_Wonders.List(Game.GetLocalPlayer())) do
+  for _, w in ipairs(SDP_Wonders.List(Game.GetLocalPlayer(), ReplacedPins())) do
     if m_wonders[w.Type] and w.Status == nil then list[#list + 1] = w.Type end
   end
   table.sort(list) -- the solver's slot order, as before the list was sorted by era
@@ -235,7 +242,7 @@ function P.Request()
     Plans = plans, Pools = pools, Counts = counts, Autos = autos, Wonders = wonders, Sites = sites,
     Off = SDP_UI.OffSet(m_shared.States), Offs = offs,
     Existing = existing, Weights = weights, Land = m_weights.LAND > 0, Coverage = m_weights.COVERAGE, Distance = m_weights.DISTANCE,
-    Remind = m_remind, Apart = m_apart, IgnorePins = m_replace and P.OwnPins() or nil, Swap = m_swap,
+    Remind = m_remind, Apart = true, IgnorePins = m_replace and P.OwnPins() or nil, Swap = m_swap,
   }
 end
 
@@ -258,8 +265,15 @@ function P.SetReplace(on)
     m_replace = on
     ClearResult()
     Remember()
-    -- A city's own count starts from what it has, replaced pins left out.
-    if m_planFor ~= "ALL" then P.RefreshLists() end
+    -- A city's own count starts from what it has, replaced pins left out;
+    -- a wonder whose pin is replaced can be chosen again (issue 154), and
+    -- whether there is something to plan follows it, result or not.
+    if m_planFor ~= "ALL" then
+      P.RefreshLists()
+    else
+      ShowWonders()
+      UpdateEstimate()
+    end
   end
 end
 
@@ -267,15 +281,6 @@ function P.SetRemind(on)
   Controls.MultiRemindCheck:SetCheck(on)
   if m_remind ~= on then
     m_remind = on
-    ClearResult()
-    Remember()
-  end
-end
-
-function P.SetApart(on)
-  Controls.MultiApartCheck:SetCheck(on)
-  if m_apart ~= on then
-    m_apart = on
     ClearResult()
     Remember()
   end
@@ -308,7 +313,7 @@ local function Estimate(request, params)
   return SDP_Multi.EstimateUnits(#participants, size, #request.Wonders, params, pick, pool)
 end
 
-local function UpdateEstimate()
+UpdateEstimate = function()
   local request = P.Request()
   -- Whether there is something to plan may have changed (issue 67).
   P.UpdateButtons()
@@ -534,7 +539,7 @@ function P.ShowSupply()
     if #wonders > 0 then
       local has = {}
       local rows = {}
-      for _, w in ipairs(SDP_Wonders.List(Game.GetLocalPlayer())) do rows[w.Type] = w end
+      for _, w in ipairs(SDP_Wonders.List(Game.GetLocalPlayer(), ReplacedPins())) do rows[w.Type] = w end
       local shared = ListOf(m_shared)
       for _, t in ipairs(shared.Must) do has[SDP_Rules.BaseDistrict(t)] = true end
       for _, own in pairs(m_plans) do
@@ -587,7 +592,6 @@ function P.SetPreset(name)
   Controls.MultiSwapCheck:SetCheck(m_swap)
   Controls.MultiReplaceCheck:SetCheck(m_replace)
   Controls.MultiRemindCheck:SetCheck(m_remind)
-  Controls.MultiApartCheck:SetCheck(m_apart)
   Remember()
   ShowCount()
   UpdateEstimate()
@@ -693,6 +697,19 @@ function P.RefreshCities()
   return participants
 end
 
+-- Wonders: tags and the "add" pulldown, and the districts they bring. Read
+-- again when pins come or go or the replace switch changes: a wonder with a
+-- pin is left out unless that pin is being replaced (issue 154).
+ShowWonders = function()
+  local wonders = SDP_Wonders.List(Game.GetLocalPlayer(), ReplacedPins())
+  SDP_UI.BuildWonders(Controls.MultiWonderPull, m_chipIM, Controls.MultiWonderChipStack, wonders, m_wonders, P.SetWonder)
+  m_view.Wonders = {}
+  for _, w in ipairs(wonders) do
+    m_view.Wonders[#m_view.Wonders + 1] = { Type = w.Type, Status = w.Status, Chosen = m_wonders[w.Type] == true }
+  end
+  P.ShowSupply()
+end
+
 function P.RefreshLists()
   local playerID = Game.GetLocalPlayer()
   local participants = P.RefreshCities()
@@ -742,14 +759,7 @@ function P.RefreshLists()
   end
   ShowCount()
 
-  -- Wonders: tags and the "add" pulldown.
-  local wonders = SDP_Wonders.List(playerID)
-  SDP_UI.BuildWonders(Controls.MultiWonderPull, m_chipIM, Controls.MultiWonderChipStack, wonders, m_wonders, P.SetWonder)
-  m_view.Wonders = {}
-  for _, w in ipairs(wonders) do
-    m_view.Wonders[#m_view.Wonders + 1] = { Type = w.Type, Status = w.Status, Chosen = m_wonders[w.Type] == true }
-  end
-  P.ShowSupply()
+  ShowWonders()
   UpdateReplaceLabel()
   m_view.PlanFor = m_planFor
   m_view.Plans = {}
@@ -812,7 +822,6 @@ function P.Refresh()
   Controls.MultiSwapCheck:SetCheck(m_swap)
   Controls.MultiReplaceCheck:SetCheck(m_replace)
   Controls.MultiRemindCheck:SetCheck(m_remind)
-  SDP_UI.ShowApart(Controls.MultiApartBox, Controls.MultiApartCheck, Controls.MultiApartLabel, m_apart)
   UpdateFold()
   P.Render()
 end
@@ -1060,6 +1069,7 @@ function P.Place()
   m_result.Placed = true
   SDP_Preview.Clear()
   UpdateReplaceLabel()
+  ShowWonders()
   ShowCount()
   SDP_UI.UpdateAllButtons()
   return placed
@@ -1074,6 +1084,7 @@ function P.Undo()
     m_result.Placed = false
   end
   UpdateReplaceLabel()
+  ShowWonders()
   ShowCount()
   SDP_UI.UpdateAllButtons()
   return removed
@@ -1083,7 +1094,7 @@ end
 function P.State()
   return {
     Result = m_result, Solution = m_solution, Tier = m_tier, Land = m_weights.LAND > 0, Replace = m_replace, Remind = m_remind,
-    Apart = m_apart, Swap = m_swap, Weights = m_weights, Preset = m_preset, Fold = m_fold,
+    Swap = m_swap, Weights = m_weights, Preset = m_preset, Fold = m_fold,
     FoldText = Controls.MultiFoldText:GetText(), ResultHeight = Controls.MultiResultScroll:GetSizeY(),
     View = m_view, EstimateText = Controls.MultiEstimate:GetText(), QualityText = Controls.MultiQuality:GetText(),
     PlaceDisabled = Controls.MultiPlaceButton:IsDisabled(), ContinueDisabled = Controls.MultiContinueButton:IsDisabled(),
@@ -1097,7 +1108,6 @@ Controls.MultiCityDefault:RegisterCallback(Mouse.eLClick, function() P.DefaultCi
 Controls.MultiSwapCheck:RegisterCheckHandler(function() P.SetSwap(Controls.MultiSwapCheck:IsChecked()) end)
 Controls.MultiReplaceCheck:RegisterCheckHandler(function() P.SetReplace(Controls.MultiReplaceCheck:IsChecked()) end)
 Controls.MultiRemindCheck:RegisterCheckHandler(function() P.SetRemind(Controls.MultiRemindCheck:IsChecked()) end)
-Controls.MultiApartCheck:RegisterCheckHandler(function() P.SetApart(Controls.MultiApartCheck:IsChecked()) end)
 Controls.MultiCountLess:RegisterCallback(Mouse.eLClick, function() P.SetCount(ListOf(EditedList()).Target - 1) end)
 Controls.MultiCountMore:RegisterCallback(Mouse.eLClick, function() P.SetCount(ListOf(EditedList()).Target + 1) end)
 Controls.MultiSolveButton:RegisterCallback(Mouse.eLClick, function() P.Solve() end)

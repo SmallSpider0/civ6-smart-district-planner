@@ -403,7 +403,7 @@ function SDP_Multi.NewSession(request)
   self.Supplied, self.Elsewhere = {}, {}
   if request.Wonders and #request.Wonders > 0 then
     local wonderRows = {}
-    for _, w in ipairs(SDP_Wonders.List(playerID)) do wonderRows[w.Type] = w end
+    for _, w in ipairs(SDP_Wonders.List(playerID, options.ignorePins)) do wonderRows[w.Type] = w end
     local have = {} -- base types some participant has or plans
     for _, part in ipairs(participants) do
       for districtType in pairs(part.Present) do have[SDP_Rules.BaseDistrict(districtType)] = true end
@@ -607,11 +607,12 @@ function SDP_Multi.NewSession(request)
   end
 
   -- Wonders: one slot each, anywhere in the participating cities, placed
-  -- after the districts (design 4.4). Built or pinned ones are left out.
+  -- after the districts (design 4.4). Built or pinned ones are left out
+  -- (a pin being replaced does not count, issue 154).
   local wonderGroup = #participants + 1
   self.WonderGroup = wonderGroup
   if request.Wonders and #request.Wonders > 0 then
-    local list, byWonder = SDP_Wonders.List(playerID), {}
+    local list, byWonder = SDP_Wonders.List(playerID, options.ignorePins), {}
     for _, w in ipairs(list) do byWonder[w.Type] = w end
     local everywhere = {}
     for _, part in ipairs(participants) do

@@ -111,6 +111,7 @@ def sync(_args):
         only_lua = ["--include=*/", "--include=*.lua", "--exclude=*", "--prune-empty-dirs"] if name == "base-ui" else []
         rsync(["-L"] + only_lua + [src + "/", "%s:%s/ref/%s/" % (h, BASE, name)])
         ssh("ln -sfn ~/%s/ref/%s %s/reference/%s" % (BASE, name, TREE, name))
+    ssh("touch %s/%s" % (TREE, sdpsched.SYNCED))  # tells sdpsched.py prune the copy is in use
     install_sched()
     print("synced %s to %s:~/%s" % (ROOT, h, TREE))
     return 0
@@ -132,9 +133,10 @@ def run(args):
     queue = "python3 ~/%s/bin/sdpsched.py run %s --slots %d %s--owner %s --tree %s -- sh -c %s" % (
         BASE, shlex.quote(args.name), slots, "--exclusive " if args.exclusive else "", shlex.quote(me["owner"]),
         shlex.quote(NAME), shlex.quote(cmd))
-    ssh("python3 ~/%s/bin/sdpsched.py prune >/dev/null 2>&1; rm -rf %s %s && (cp -c -R ~/%s %s || cp -R ~/%s %s) && cd %s && %s && "
-        "(nohup %s > %s 2>&1 < /dev/null &) && echo queued" % (
-            BASE, snap, code, TREE, snap, TREE, snap, snap, remote_env(), queue, log), capture=False)
+    # remote_env first: without its PATH, python3 there may be a stub that fails (macOS asks for the Xcode license).
+    ssh("%s && (python3 ~/%s/bin/sdpsched.py prune >/dev/null 2>&1; true) && rm -rf %s %s && (cp -c -R ~/%s %s || cp -R ~/%s %s) "
+        "&& cd %s && (nohup %s > %s 2>&1 < /dev/null &) && echo queued" % (
+            remote_env(), BASE, snap, code, TREE, snap, TREE, snap, snap, queue, log), capture=False)
     print("queued %s on %s (%s%s; snapshot %s): %s (log %s)"
           % (args.name, host(), "%d slot(s)" % slots if slots else "all slots", ", exclusive" if args.exclusive else "",
              snap, cmd, log))
