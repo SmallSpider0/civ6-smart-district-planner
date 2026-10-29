@@ -1270,6 +1270,10 @@ test("issue 153: city sites presets have their own tooltips", function()
     T.ok((entry.Button:GetToolTipString() or ""):find(key, 1, true) == 1, name .. ": its entry's tooltip")
     entry.Button:Click()
     T.ok((c.SitesPresetPull:GetButton():GetToolTipString() or ""):find(key, 1, true) == 1, name .. ": on the button")
+    -- It shows the preset's own weights, read from the preset.
+    local p = SDP_Sites.PRESETS[name]
+    T.eq(entry.Button:GetToolTipString(), key .. "(" .. table.concat({ tostring(p.YIELD_FOOD), tostring(p.HOUSING),
+      tostring(p.DISTRICT), tostring(p.STRATEGIC), tostring(p.APPEAL) }, ",") .. ")", name .. ": with its weights")
   end
   SDP_Panel.Sites.SetPreset("BALANCED")
   SDP_Panel.SelectTab("SINGLE")

@@ -901,13 +901,13 @@
       <Text>现在的权重和哪个预设都不一样；选一个预设就换成它的值，新城数量和最远距离不变。</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SITES_PRESET_BALANCED_TOOLTIP" Language="zh_Hans_CN">
-      <Text>各项同样看待，魅力不计。</Text>
+      <Text>各项权重都是 {1_Food}，魅力是 {5_Appeal}，不计。</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SITES_PRESET_GROWTH_TOOLTIP" Language="zh_Hans_CN">
-      <Text>更看重食物和住房，选出的城长得快。</Text>
+      <Text>调高食物、住房的权重（{1_Food}、{2_Housing}），选出的城长得快。</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SITES_PRESET_DISTRICTS_TOOLTIP" Language="zh_Hans_CN">
-      <Text>更看重区域的相邻加成，不看战略资源。</Text>
+      <Text>调高区域的权重（{3_District}），更看重区域的相邻加成；战略资源的权重是 {4_Strategic}，不看它。</Text>
     </Replace>
     <Replace Tag="LOC_SDP_PRESET_BALANCED_TOOLTIP" Language="zh_Hans_CN">
       <Text>各种产出同样看待，开关都用默认。</Text>

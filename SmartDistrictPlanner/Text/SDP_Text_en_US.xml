@@ -901,13 +901,13 @@
       <Text>The weights match no preset; pick a preset to switch to its weights. New cities and Max distance stay.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SITES_PRESET_BALANCED_TOOLTIP" Language="en_US">
-      <Text>Every item counts the same; Appeal is left out.</Text>
+      <Text>Every item weighs {1_Food}; Appeal weighs {5_Appeal}, so it is left out.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SITES_PRESET_GROWTH_TOOLTIP" Language="en_US">
-      <Text>Food and Housing count more, for cities that grow fast.</Text>
+      <Text>Food and Housing weigh more ({1_Food}, {2_Housing}), for cities that grow fast.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SITES_PRESET_DISTRICTS_TOOLTIP" Language="en_US">
-      <Text>District adjacency counts more, and Strategic resources not at all.</Text>
+      <Text>Districts weigh more ({3_District}), so district adjacency counts more; Strategic resources weigh {4_Strategic}, so they are left out.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_PRESET_BALANCED_TOOLTIP" Language="en_US">
       <Text>Every yield counts the same; every switch as it comes.</Text>
