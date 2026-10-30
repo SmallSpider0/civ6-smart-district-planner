@@ -5,7 +5,8 @@ Nothing here talks to Steam: the package is uploaded by hand on Windows
 (docs/workshop-upload.md).
 
     python3 -I tools/workshop.py check            # limits: title, description, change notes, image sizes
-    python3 -I tools/workshop.py render           # workshop/src/*.html -> preview.jpg, images/*.jpg (needs Chrome)
+    python3 -I tools/workshop.py render           # workshop/src/*.html -> preview.jpg, images/*.jpg, inline/*.jpg (needs Chrome)
+    python3 -I tools/workshop.py render --inline  # only the description's pictures, inline/*.jpg
     python3 -I tools/workshop.py pack v1.0.0      # dist/SmartDistrictPlanner-v1.0.0-workshop.zip
     python3 -I tools/workshop.py vdf DIR          # DIR/item.vdf with this machine's absolute paths
 
@@ -19,6 +20,10 @@ workshop/ holds what goes to the item page:
   images.txt                      the pictures to add on the item page, in order
   preview.jpg                     the preview image (rendered from src/preview.html)
   images/                         the gallery pictures rendered from src/g*.html (slide.css)
+  inline.txt                      the pictures inside the description and their placeholders
+  inline/                         those pictures, rendered from src/i<n>-<name>[-en].html (SVG from
+                                  tests/compare/refmaps.py --workshop). They go up as Steam screenshots,
+                                  not item images, and pack leaves them out
 
 pack takes the mod from the release tag (git archive) and everything else from
 the last commit, so a package always matches a release.
@@ -42,6 +47,8 @@ MOD = "SmartDistrictPlanner"
 TITLE_MAX = 128
 TEXT_MAX = 8000          # description and change note; checked in characters and in UTF-8 bytes
 IMAGE_MAX = 1000000      # the preview must be under 1 MB; the other pictures are held to the same size
+INLINE_W = 1260          # description pictures: twice Steam's description column of about 630 px
+IMG_TAG = re.compile(r"\[img\](.*?)\[/img\]", re.I | re.S)
 CHROME = ["/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
           r"C:\Program Files\Google\Chrome\Application\chrome.exe",
           r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
@@ -85,6 +92,41 @@ def images(ref=None):
     return out
 
 
+def inline():
+    """[(path, placeholder)] from inline.txt: the pictures in the descriptions.
+    Each one is uploaded as a Steam screenshot and its address replaces the
+    placeholder, e.g. [img]STEAM_IMG_REF12_EN[/img]."""
+    path = os.path.join(WS, "inline.txt")
+    out = []
+    if os.path.exists(path):
+        for line in read(path).splitlines():
+            line = line.split("#", 1)[0].split()
+            if len(line) >= 2:
+                out.append((line[0], line[1]))
+    return out
+
+
+def img_problems(label, text, placeholders):
+    """(errors, placeholders still in the text) for the [img] tags of a
+    description: each is an http(s) address or a placeholder of inline.txt."""
+    errors, left = [], []
+    for target in IMG_TAG.findall(text):
+        target = target.strip()
+        if target in placeholders:
+            left.append(target)
+        elif not re.match(r"https?://\S+$", target):
+            errors.append("%s: [img]%s[/img] is neither an http(s) address nor a placeholder of inline.txt"
+                          % (label, target))
+    return errors, left
+
+
+def inline_size(svg_path, width=INLINE_W):
+    """The JPEG size for a description picture: INLINE_W wide, the SVG's aspect."""
+    head = open(svg_path, encoding="utf-8").read(2000)
+    w, h = (float(v) for v in re.search(r'viewBox="0 0 ([\d.]+) ([\d.]+)"', head).groups())
+    return width, int(round(width * h / w))
+
+
 def images_note(version, first):
     """What to change on the item page's images, against the previous release."""
     names = [name for _, name in images()]
@@ -122,15 +164,21 @@ def problems():
     would refuse. validate.py reports the errors too, so a PR catches them
     before the release workflow does."""
     errors, notes = [], []
+    placeholders = {name: src for src, name in inline()}
     for name, limit, english in (("title.txt", TITLE_MAX, True), ("description.bbcode", TEXT_MAX, True),
                                  ("title_zh.txt", TITLE_MAX, False), ("description_zh.bbcode", TEXT_MAX, False)):
         text = read(os.path.join(WS, name))
         check_text(errors, name, text, limit, english)
         if name.startswith("description"):
             notes.append("%s: %d characters, %d UTF-8 bytes" % (name, len(text), len(text.encode("utf-8"))))
+            bad, left = img_problems(name, text, placeholders)
+            errors += bad
+            for ph in left:
+                notes.append("%s: placeholder %s - upload %s as a Steam screenshot and put its address here "
+                             "before the description goes to Steam" % (name, ph, placeholders[ph]))
     for name in sorted(os.listdir(os.path.join(WS, "changenotes"))):
         check_text(errors, "changenotes/" + name, read(os.path.join(WS, "changenotes", name)), TEXT_MAX)
-    for src in ["workshop/preview.jpg"] + [s for s, _ in images()]:
+    for src in ["workshop/preview.jpg"] + [s for s, _ in images()] + [s for s, _ in inline()]:
         path = os.path.join(ROOT, src)
         if not os.path.exists(path):
             errors.append("%s: missing" % src)
@@ -271,10 +319,25 @@ def multi_page(probe):
     return out
 
 
-def render(_args):
+def render_inline():
+    """src/i<n>-<name>[-en].html -> inline/i<n>-<name>[-en].jpg, INLINE_W wide.
+    Not images/: pack uploads that folder to the item's gallery."""
+    os.makedirs(os.path.join(WS, "inline"), exist_ok=True)
+    for name in sorted(os.listdir(os.path.join(WS, "src"))):
+        m = re.match(r"(i\d-[a-z0-9]+(?:-en)?)\.html$", name)
+        if m:
+            width, height = inline_size(os.path.join(WS, "src", m.group(1) + ".svg"))
+            shoot(os.path.join(WS, "src", name), os.path.join(WS, "inline", m.group(1) + ".jpg"), width, height)
+
+
+def render(args):
     """The preview (src/preview.html, 1024 x 1024), then the gallery
     pictures: src/g<n>-<name>.html and src/g1-multi.html (with the probe's
-    plans drawn in) -> images/<n>-<name>.jpg, 1920 x 1080."""
+    plans drawn in) -> images/<n>-<name>.jpg, 1920 x 1080; then the
+    description's pictures (render_inline). --inline: only those."""
+    if getattr(args, "inline", False):
+        render_inline()
+        return 0
     shoot(os.path.join(WS, "src", "preview.html"), os.path.join(WS, "preview.jpg"), 1024, 1024)
     probe = multi_probe()
     os.makedirs(os.path.join(WS, "images"), exist_ok=True)
@@ -287,6 +350,7 @@ def render(_args):
         shoot(page, os.path.join(WS, "images", "01-multi.jpg"), 1920, 1080)
     finally:
         os.remove(page)
+    render_inline()
     return 0
 
 
@@ -387,7 +451,13 @@ def pack(args):
         guide = guide.replace("{{UPLOAD}}", "第一次上传（新建物品，可见性：私密）" if first else
                               "更新已有物品 %s" % item["publishedfileid"])
         guide = guide.replace("{{ZH}}", zh_note(version, first))
-        guide = guide.replace("{{IMAGES}}", images_note(version, first))
+        note = images_note(version, first)
+        left = sorted({ph for _, ph in inline()
+                       if ph in read(os.path.join(WS, "description.bbcode")) + read(os.path.join(WS, "description_zh.bbcode"))})
+        if left:
+            note += "。简介里还有占位符 %s：先把 `workshop/inline/` 里对应的图作为 Steam 截图上传（不放进物品页图片），" \
+                    "再把图片地址填进简介" % "、".join(left)
+        guide = guide.replace("{{IMAGES}}", note)
         add(zf, "UPLOAD.md", (guide + "\n").encode("utf-8"))
     print("workshop: %s (%d mod files from tag %s, modinfo version %s, %s, %d KB)" % (
         os.path.relpath(path, ROOT), files, version, mod_version,
@@ -415,7 +485,8 @@ def main(argv=None):
     ap = argparse.ArgumentParser(description="Steam Workshop material and upload package")
     sub = ap.add_subparsers(dest="cmd", required=True)
     sub.add_parser("check", help="check the limits")
-    sub.add_parser("render", help="render the preview and the diagrams (needs Chrome and Pillow)")
+    r = sub.add_parser("render", help="render the preview and the diagrams (needs Chrome and Pillow)")
+    r.add_argument("--inline", action="store_true", help="only the description's pictures (workshop/inline/)")
     p = sub.add_parser("pack", help="build the upload package for a release tag")
     p.add_argument("version")
     v = sub.add_parser("vdf", help="write item.vdf with absolute paths into an unzipped package")

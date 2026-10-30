@@ -1,0 +1,8 @@
+# 简介里的图（不是物品页图片）：作为 Steam 艺术作品上传（docs/workshop-upload.md；不要用“添加/编辑图片与视频”，那里的图进轮播），
+# 设成公开，再把图片地址换进简介里的 [img]占位符[/img]。pack 不打包这些图。
+# 每行：路径  占位符  说明。重画：python3 -I tests/compare/refmaps.py --workshop，再 python3 -I tools/workshop.py render --inline
+# 2026-10-30 上传的艺术作品地址：STEAM_IMG_REF12_ZH = https://images.steamusercontent.com/ugc/17504690978110355723/4A3515720AA4C7F607D8141C499DFBB13EF5FF52/；STEAM_IMG_REF12_EN = https://images.steamusercontent.com/ugc/11999830916440841608/48A761AE4348AD3360EA326E18E9E9A6B279A8EA/；STEAM_IMG_REF09_ZH = https://images.steamusercontent.com/ugc/15572868354983670023/C7EA8B4B47F3D06259DF591DC007E7551F581E4E/；STEAM_IMG_REF09_EN = https://images.steamusercontent.com/ugc/12566266383868626793/78082900019C8026A0E3538FE1F8E1185556A85C/
+workshop/inline/i1-ref12b.jpg     STEAM_IMG_REF12_ZH   西安（REF12）：高手的布局与本模组标准档，中文简介
+workshop/inline/i1-ref12b-en.jpg  STEAM_IMG_REF12_EN   Xi'an (REF12), English description
+workshop/inline/i2-ref09.jpg      STEAM_IMG_REF09_ZH   阿姆斯特丹和哈勒姆（REF09）：两城一起规划，高手的布局与本模组标准档，中文简介
+workshop/inline/i2-ref09-en.jpg   STEAM_IMG_REF09_EN   Amsterdam and Haarlem (REF09), English description
