@@ -23,7 +23,7 @@ numbers come from the result files.
   python3 -I tests/compare/refmaps.py --tables           # also print the Markdown tables of
                                                          # docs/reference-scenes.md
   python3 -I tests/compare/refmaps.py --out DIR
-  python3 -I tests/compare/refmaps.py --workshop         # workshop/src/i1-ref12[-en].svg, i2-ref06[-en].svg:
+  python3 -I tests/compare/refmaps.py --workshop         # workshop/src/i1-ref12b[-en].svg, i2-ref09[-en].svg:
                                                          # the Workshop description's pictures (player's layout
                                                          # and the Standard plan, zh and en; see render_workshop)
 
@@ -543,23 +543,24 @@ def legend():
 # drawn, no author names. workshop/src/i<n>-<name>.html shows each at 1260 px
 # and tools/workshop.py render turns it into workshop/inline/*.jpg.
 WS_DIR = os.path.join(ROOT, "workshop", "src")
-WS_SCENES = (("i1-ref12", "REF12"), ("i2-ref06", "REF06"))
+WS_SCENES = (("i1-ref12b", "REF12"), ("i2-ref09", "REF09"))
 WS_S = 30
 WS_GAP = 34
 WS_TITLE_H = 56
 WS_INSET = 4
+WS_NEAR = 1  # several cities: tiles kept next to City Centers and districts
 # Game names (Base and DLC text, zh_Hans_CN and en_US), checked 2026-10-30.
 WS_WORDS = {
     "zh": {
         "player": "高手的布局 · 相邻 +%s", "player_note": "存档里已建的区域",
-        "sdp": "本模组 · 相邻 +%s", "sdp_note": "标准档，与证明过的最优逐格相同",
+        "sdp": "本模组（= 证明过的最优）· 相邻 +%s", "sdp_note": "标准档",
         "moved": "红框：与高手的布局不同", "mountain": "山脉", "river": "河流", "border": "领土边界",
         "floodplains": "泛滥平原", "other": "其他城市的领土", "city": "城", "foreign": "外", "tack": "钉",
         "sep": "：",
     },
     "en": {
         "player": "Player's layout · +%s", "player_note": "Adjacency of the districts built in the save",
-        "sdp": "Smart District Planner · +%s", "sdp_note": "Adjacency; the same tiles as the proven best",
+        "sdp": "Smart District Planner (= proven best) · +%s", "sdp_note": "Standard effort",
         "moved": "Red outline: moved", "mountain": "Mountains", "river": "River", "border": "Border",
         "floodplains": "Floodplains", "other": "Another city's tiles", "city": "City", "foreign": "Foreign",
         "tack": "Tack", "sep": " ",
@@ -585,8 +586,14 @@ WS_IMPROVEMENT = {"IMPROVEMENT_FARM": ("农场", "Farm"), "IMPROVEMENT_MINE": ("
                   "IMPROVEMENT_QUARRY": ("采石场", "Quarry")}
 WS_RESOURCE_EN = {"WHEAT": "Wheat", "SHEEP": "Sheep", "FURS": "Furs", "TEA": "Tea", "DYES": "Dyes",
                   "MERCURY": "Mercury", "CRABS": "Crabs", "FISH": "Fish", "RICE": "Rice", "CATTLE": "Cattle"}
-WS_CITY_EN = {"REF12": "Xi’an", "REF06": "Kyoto"}
+WS_CITY_EN = {"西安": "Xi’an", "阿姆斯特丹": "Amsterdam", "哈勒姆": "Haarlem"}  # the zh names of city_name
 FLOOD = "#7a5a1e"
+
+
+def ws_fixed_name(dtype):
+    """Another city's district of the planned kinds, drawn grey: (zh, en abbreviation, en name)."""
+    names = WS_DISTRICT.get(dtype)
+    return (names[0][1], names[1][0], names[1][1]) if names else None
 
 
 def load_sdp():
@@ -616,12 +623,16 @@ def render_workshop(spec, panels, lang):
     w = WS_WORDS[lang]
     s = WS_S
     sc = spec["scenario"]
-    sid = sc["id"][:5]
     W = spec["width"]
     plots = spec["plots"]
     chosen = [c for c in spec["cities"] if c["owner"] == 0 and c["id"] in sc["only"]]
     centres = [(c["x"], c["y"]) for c in chosen]
     area = [(i % W, i // W) for i in range(len(plots)) if any(dist((i % W, i // W), c) <= 3 for c in centres)]
+    if len(chosen) > 1:
+        # Several cities: only the tiles near a City Center or a district of
+        # either panel, so the hexes stay readable at half width.
+        near = centres + [(i["x"], i["y"]) for p in panels for i in p["items"]]
+        area = [xy for xy in area if any(dist(xy, c) <= WS_NEAR for c in near)]
     area_set = set(area)
     owner = {}
     for c in spec["cities"]:
@@ -644,7 +655,8 @@ def render_workshop(spec, panels, lang):
     for c in spec["cities"]:
         xy = (c["x"], c["y"])
         if c["owner"] == 0 and c["id"] in sc["only"]:
-            fixed[xy] = ("city", city_name(sc["id"], c) if zh else WS_CITY_EN.get(sid, c["name"]))
+            name = city_name(sc["id"], c)
+            fixed[xy] = ("city", name if zh else WS_CITY_EN.get(name, name))
         else:
             fixed[xy] = ("othercity", w["city"] if c["owner"] == 0 else w["foreign"])
         for d in c["districts"]:
@@ -664,11 +676,15 @@ def render_workshop(spec, panels, lang):
         return ('<text x="%.1f" y="%.1f" font-size="%s" font-weight="%s" fill="%s" text-anchor="%s">%s</text>'
                 % (x, y, size, weight, fill, anchor, body))
 
+    # One title size for both panels, smaller when a title would run past its
+    # panel (rough advance: a CJK character 1 em, anything else 0.5 em).
+    tsize = min([19.0] + [math.floor(10 * (pw - 4) / sum(1.0 if ord(ch) > 0x2000 else 0.5 for ch in p["title"])) / 10
+                          for p in panels])
     out = []
     for n, panel in enumerate(panels):
         ox = n * (pw + WS_GAP) - minx
         oy = WS_TITLE_H - miny
-        out.append(text(n * (pw + WS_GAP) + 2, 22, esc(panel["title"]), 19, "#14202a", "700", "start"))
+        out.append(text(n * (pw + WS_GAP) + 2, 22, esc(panel["title"]), "%g" % tsize, "#14202a", "700", "start"))
         out.append(text(n * (pw + WS_GAP) + 2, 44, esc(panel["notes"][0]), 13, "#555555", "400", "start"))
         placed = {(i["x"], i["y"]): i for i in panel["items"]}
         late = []  # words drawn over the neighbouring hexes
@@ -738,7 +754,14 @@ def render_workshop(spec, panels, lang):
             if kind == "city":
                 out.append('<polygon points="%s" fill="#ffffff" stroke="#111111" stroke-width="2.2"/>'
                            % pts(corners(cx, cy, s - WS_INSET)))
-                out.append(text(cx, cy + 5, esc(label), 13, "#111111", "700"))
+                # Long names smaller or on two lines: Haarlem, Amster-/dam, 阿姆斯/特丹.
+                size = 13 if zh or len(label) <= 5 else 11
+                cut = 0 if len(label) <= (4 if zh else 7) else (len(label) + 1) // 2 if zh else len(label) - 3
+                if cut:
+                    out.append(text(cx, cy - 2, esc(label[:cut] + ("" if zh else "-")), size, "#111111", "700"))
+                    out.append(text(cx, cy + 12, esc(label[cut:]), size, "#111111", "700"))
+                else:
+                    out.append(text(cx, cy + 5, esc(label), size, "#111111", "700"))
             elif kind == "othercity":
                 out.append('<polygon points="%s" fill="#e6e6e6" stroke="#555555" stroke-width="1.2"/>'
                            % pts(corners(cx, cy, s - WS_INSET)))
@@ -748,7 +771,7 @@ def render_workshop(spec, panels, lang):
                            'stroke-dasharray="3,2"/>' % pts(corners(cx, cy, s - WS_INSET)))
                 out.append(text(cx, cy + 4.5, esc(label), 11.5, "#333333"))
             else:
-                names = WS_FIXED.get(label)
+                names = WS_FIXED.get(label) or ws_fixed_name(label)
                 used["fixed"].add(label)
                 wonder = label == "DISTRICT_WONDER"
                 out.append('<polygon points="%s" fill="%s" stroke="#555555" stroke-width="1"/>'
@@ -783,9 +806,10 @@ def render_workshop(spec, panels, lang):
     entries.append((badge("#ffffff", "", "", CHANGED, 3), w["moved"]))
     if not zh:
         for ftype in sorted(used["fixed"], key=lambda d: list(WS_FIXED).index(d) if d in WS_FIXED else 99):
-            if ftype in WS_FIXED:
+            names = WS_FIXED.get(ftype) or ws_fixed_name(ftype)
+            if names:
                 entries.append((badge("#e8d9b5" if ftype == "DISTRICT_WONDER" else "#cfcfcf", "#333333",
-                                      WS_FIXED[ftype][1], "#555555", 1), WS_FIXED[ftype][2]))
+                                      names[1], "#555555", 1), names[2]))
     entries.append((lambda x, y: ('<polygon points="%s" fill="%s" stroke="#6b6b6b" stroke-width="0.8"/>'
                                   % (pts(corners(x, y, 12)), MOUNTAIN) + text(x, y + 5, "▲", 12, "#3d362f")),
                     w["mountain"]))
