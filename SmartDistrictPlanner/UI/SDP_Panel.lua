@@ -879,7 +879,11 @@ end
 -- the Several cities tab's default group, and the panel opens on the
 -- single-city tab (issue 76; true then). Not while a computation runs (its
 -- result would go); that selection is then passed over, not kept for later.
+-- Selecting a city on the map again is a new selection even when it is the
+-- same city as before (issue 178): the game tells of each one
+-- (Events.CitySelectionChanged), not only of a change of city.
 local m_followed = nil -- the selected city (ID) when the panel last opened
+local m_reselected = false -- one of our cities selected on the map since then
 local FollowSelection -- defined below (after SelectCity)
 
 -- Peek (M3): the window hidden, the panel still open, so the map preview
@@ -1396,7 +1400,9 @@ FollowSelection = function()
   local selected = UI.GetHeadSelectedCity()
   local cityID = nil
   if selected ~= nil and selected:GetOwner() == playerID then cityID = selected:GetID() end
-  if cityID == m_followed then return false end
+  local reselected = m_reselected
+  m_reselected = false
+  if cityID == m_followed and not reselected then return false end
   m_followed = cityID
   if cityID == nil or SDP_Task.IsRunning() then return false end
   if cityID ~= m_cityID then
@@ -1406,6 +1412,10 @@ FollowSelection = function()
   end
   SDP_PageMulti.SetCenter(cityID)
   return true
+end
+
+local function OnCitySelectionChanged(owner, cityID, _, _, _, isSelected)
+  if isSelected and owner == Game.GetLocalPlayer() then m_reselected = true end
 end
 
 local function SetWeight(key, value)
@@ -2135,6 +2145,7 @@ local function OnShutdown()
   SDP_Preview.Shutdown()
   Events.LoadScreenClose.Remove(OnLoadScreenClose)
   Events.InterfaceModeChanged.Remove(OnInterfaceModeChanged)
+  Events.CitySelectionChanged.Remove(OnCitySelectionChanged)
   Events.SystemUpdateUI.Remove(OnUpdateUI)
   LuaEvents.SDP_OpenPanel.Remove(Open)
   LuaEvents.SDP_ClosePanel.Remove(Close)
@@ -2252,6 +2263,7 @@ ContextPtr:SetShutdown(OnShutdown)
 Events.LoadScreenClose.Add(OnLoadScreenClose)
 Events.InputActionTriggered.Add(OnInputActionTriggered)
 Events.InterfaceModeChanged.Add(OnInterfaceModeChanged)
+Events.CitySelectionChanged.Add(OnCitySelectionChanged)
 Events.SystemUpdateUI.Add(OnUpdateUI)
 LuaEvents.SDP_OpenPanel.Add(Open)
 LuaEvents.SDP_ClosePanel.Add(Close)
