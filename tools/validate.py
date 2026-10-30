@@ -16,6 +16,8 @@ restart (AGENTS.md section 5):
   lua        tools/luacheck.mjs: Lua 5.1 syntax, banned globals, determinism
   refscene   tests/compare/refscenes/*.txt read back the same and their scene
              files and index.json entries are current (tools/refscene.py)
+  markdown   every **bold** in the repository's .md files opens and closes on
+             GitHub: "**标题。**正文" shows the stars, "**标题**。正文" is bold
 
 Usage: validate.py [--strict] [--mod DIR] [--tests DIR]
 Exit codes: 0 clean, 1 errors (or warnings with --strict), 2 tool missing.
@@ -28,6 +30,7 @@ import re
 import shutil
 import subprocess
 import sys
+import unicodedata
 from xml.parsers import expat
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -454,6 +457,63 @@ def check_refscenes(report):
         report.error(os.path.join(ROOT, path), 0, "refscene", message)
 
 
+def _punct(ch):
+    return ch in "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~" or unicodedata.category(ch).startswith("P")
+
+
+def bold_problems(text):
+    """(line, snippet) for each ** that GitHub will not render as bold.
+
+    CommonMark lets ** open only when it is left-flanking and close only when
+    it is right-flanking. A ** after a full stop or colon and before text, as
+    in "**标题。**正文", is neither, so the stars show. Fenced code and code
+    spans are skipped; a bold may not span lines."""
+    problems, fenced = [], False
+    for lineno, line in enumerate(text.split("\n"), 1):
+        if line.lstrip().startswith(("```", "~~~")):
+            fenced = not fenced
+            continue
+        if fenced or "**" not in line:
+            continue
+        line = re.sub(r"`[^`]*`", "``", line.replace("\\*", ""))
+        stack = []
+        for m in re.finditer(r"(?<!\*)\*\*(?!\*)", line):
+            i = m.start()
+            before = line[i - 1] if i else " "
+            after = line[i + 2] if i + 2 < len(line) else " "
+            opens = not after.isspace() and (not _punct(after) or before.isspace() or _punct(before))
+            closes = not before.isspace() and (not _punct(before) or after.isspace() or _punct(after))
+            if stack and closes:
+                stack.pop()
+            elif opens:
+                stack.append(i)
+            else:
+                stack.append(i)
+                break
+        if stack:
+            i = stack[-1]
+            problems.append((lineno, line[max(0, i - 12):i + 14]))
+    return problems
+
+
+def check_markdown(report):
+    """Bold text in the repository's Markdown renders on GitHub (PR 174)."""
+    try:
+        names = subprocess.run(["git", "ls-files", "*.md"], cwd=ROOT, capture_output=True,
+                               text=True, check=True).stdout.split()
+    except (OSError, subprocess.CalledProcessError):
+        return
+    for name in names:
+        path = os.path.join(ROOT, name)
+        if not os.path.isfile(path):
+            continue
+        with open(path, encoding="utf-8") as f:
+            for lineno, snippet in bold_problems(f.read()):
+                report.error(path, lineno, "markdown",
+                             "** does not open or close here, GitHub shows the stars; "
+                             "put punctuation outside the bold: ...%s..." % snippet)
+
+
 def check_lua(report, paths):
     if not paths:
         return True
@@ -498,6 +558,7 @@ def run(mod_dir=MOD_DIR, tests_dir=TESTS_DIR, strict=False, quiet=False):
     if os.path.isdir(os.path.join(ROOT, "workshop")):
         check_workshop(report)
     check_refscenes(report)
+    check_markdown(report)
     tool_ok = check_lua(report, [p for p in mod_files + test_files if p.endswith(".lua")])
 
     if not quiet:
