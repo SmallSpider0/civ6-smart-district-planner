@@ -7,6 +7,7 @@
 -- district and another one required, the rest candidates, four a city, a
 -- wonder that needs an entertainment complex. Before v1.6.1 the count was
 -- the number of new districts and the second city got four new ones.
+-- Issue 180: the district supplied for the wonder is the one next to it.
 -- Driven through the panel's own controls.
 local test, T = ...
 
@@ -116,6 +117,69 @@ test("shared list: an empire-limited district elsewhere and a wonder's district 
   T.eq(limitedIn, "C1", "the empire-limited district goes to the first city")
   local _, c2 = Specialty(plan, "C2")
   T.ok(c2:find("DISTRICT_CAMPUS", 1, true) ~= nil, "city 2 gets the required campus: " .. c2)
+end)
+
+-- Issue 180: a district supplied for a wonder (issue 66) stands next to
+-- that wonder, in a city the wonder's tile can belong to; and no other
+-- district of its kind serves the wonder already (then it is not needed).
+local function Base(districtType)
+  return SDP_Rules.BaseDistrict(districtType)
+end
+
+local function CheckSupplied(result, what)
+  for n, sol in ipairs(result.Solutions) do
+    local wonders = {}
+    for _, p in ipairs(sol.Plan) do
+      if p.Kind == "WONDER" then wonders[p.Type] = p end
+    end
+    for _, p in ipairs(sol.Plan) do
+      if p.ForWonder ~= nil then
+        local wonder = wonders[p.ForWonder]
+        local label = what .. ", solution " .. n .. ", " .. p.Type .. " in " .. p.City
+        T.ok(wonder ~= nil, label .. ": its wonder is placed")
+        if wonder ~= nil then
+          T.eq(Map.GetPlotDistance(p.X, p.Y, wonder.X, wonder.Y), 1, label .. ": next to " .. p.ForWonder)
+          for _, q in ipairs(sol.Plan) do
+            if q ~= p and q.Kind ~= "WONDER" and Base(q.Type) == Base(p.Type)
+                and Map.GetPlotDistance(q.X, q.Y, wonder.X, wonder.Y) == 1 then
+              T.ok(false, label .. ": the wonder has another one next to it in " .. q.City)
+            end
+          end
+        end
+      end
+    end
+  end
+end
+
+test("issue 180: the district supplied for a wonder is the one next to it", function()
+  local multi = SDP_Panel.Multi
+  multi.Undo()
+  c.MultiSolveButton:Click()
+  local result = SDP_Panel.RunTask(5000) or multi.State().Result
+  T.ok(result and result.Ok, tostring(result and result.Error))
+  T.ok(#result.Supplied > 0, "a district is supplied for the wonder")
+  CheckSupplied(result, "shared list")
+  CheckSolutions(result, "shared list")
+end)
+
+test("issue 180: the single-city tab still supplies the district next to the wonder", function()
+  SDP_Panel.Multi.Undo()
+  SDP_Panel.SelectTab("SINGLE")
+  SDP_Panel.SelectCity(1)
+  SDP_Panel.SetCount(0)
+  SDP_Panel.SetTier("FAST")
+  SDP_Panel.SetWonder("BUILDING_COLOSSEUM", true)
+  SDP_Panel.Solve()
+  local result = SDP_Panel.RunTask(5000)
+  T.ok(result and result.Ok, "solved: " .. tostring(result and result.Error))
+  local supplied = 0
+  for _, p in ipairs(result.Plan) do
+    if p.ForWonder == "BUILDING_COLOSSEUM" then supplied = supplied + 1 end
+  end
+  T.eq(supplied, 1, "one district supplied for the colosseum")
+  CheckSupplied({ Solutions = { result } }, "single city")
+  SDP_Panel.SetWonder("BUILDING_COLOSSEUM", false)
+  SDP_Panel.SelectTab("MULTI")
 end)
 
 -- The plan's own pins, replaced, do not count: the same counts again.

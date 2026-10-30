@@ -670,8 +670,14 @@ function SDP_Multi.NewSession(request)
             unplaced[#unplaced + 1] = { City = "WONDERS", Type = wonderType, Reason = "NEEDS_IMPROVEMENT",
               Other = w.AdjacentImprovement }
           else
+            -- The district supplied for this wonder, if any: the wonder goes
+            -- next to it, not next to another city's (issue 180).
+            local requiresSlot = nil
+            for s, spec in ipairs(slots) do
+              if requiresSlot == nil and spec.ForWonder == wonderType then requiresSlot = s end
+            end
             slots[#slots + 1] = { Key = wonderType, Type = "WONDER", Group = wonderGroup, Allowed = everywhere,
-              Requires = w.AdjacentDistrict, Support = support, Wonder = true }
+              Requires = w.AdjacentDistrict, RequiresSlot = requiresSlot, Support = support, Wonder = true }
             slotCity[#slots] = nil
           end
         end
