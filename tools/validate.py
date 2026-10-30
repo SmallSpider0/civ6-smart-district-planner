@@ -468,25 +468,35 @@ def bold_problems(text):
     it is right-flanking. A ** after a full stop or colon and before text, as
     in "**标题。**正文", is neither, so the stars show. Fenced code and code
     spans are skipped; a bold may not span lines."""
-    problems, fenced = [], False
+    problems, fence = [], None
     for lineno, line in enumerate(text.split("\n"), 1):
-        if line.lstrip().startswith(("```", "~~~")):
-            fenced = not fenced
+        # A fence closes only with the same character, at least as long, and
+        # nothing else on the line: ```` may hold an example with ```.
+        m = re.match(r" {0,3}(`{3,}|~{3,})(.*)$", line)
+        if m and fence is None:
+            fence = m.group(1)
             continue
-        if fenced or "**" not in line:
+        if m and m.group(1)[0] == fence[0] and len(m.group(1)) >= len(fence) and not m.group(2).strip():
+            fence = None
+            continue
+        if fence is not None or "**" not in line:
             continue
         line = re.sub(r"`[^`]*`", "``", line.replace("\\*", ""))
         stack = []
-        for m in re.finditer(r"(?<!\*)\*\*(?!\*)", line):
-            i = m.start()
+        # Each run of two or more stars counts as one bold delimiter: in
+        # "**bold *italic***" the final *** closes both.
+        for m in re.finditer(r"\*{2,}", line):
+            i, j = m.start(), m.end()
             before = line[i - 1] if i else " "
-            after = line[i + 2] if i + 2 < len(line) else " "
+            after = line[j] if j < len(line) else " "
             opens = not after.isspace() and (not _punct(after) or before.isspace() or _punct(before))
             closes = not before.isspace() and (not _punct(before) or after.isspace() or _punct(after))
             if stack and closes:
                 stack.pop()
             elif opens:
                 stack.append(i)
+            elif j - i > 2:
+                continue  # a rule (***) or literal stars, not a bold
             else:
                 stack.append(i)
                 break

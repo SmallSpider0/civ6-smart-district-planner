@@ -28,6 +28,9 @@ RENDERS = [
     "默认都不勾，**全选** 一次",
     "**Requires X.** It decides",
     "`**x。**y` 代码",
+    "**bold *italic***",
+    "***粗斜***体",
+    "***",
 ]
 
 
@@ -45,6 +48,12 @@ class BoldTest(unittest.TestCase):
     def test_skips_fenced_code_and_reports_line_numbers(self):
         text = "ok **a**\n```\n**b。**c\n```\n\n- **d。**e\n"
         self.assertEqual([p[0] for p in validate.bold_problems(text)], [6])
+
+    def test_longer_fence_holds_a_shorter_one(self):
+        text = "````markdown\n```\n**标题。**正文\n```\n````\n- **d。**e\n"
+        self.assertEqual([p[0] for p in validate.bold_problems(text)], [6])
+        text = "~~~\n```\n**标题。**正文\n~~~\n"
+        self.assertEqual(validate.bold_problems(text), [])
 
 
 if __name__ == "__main__":
