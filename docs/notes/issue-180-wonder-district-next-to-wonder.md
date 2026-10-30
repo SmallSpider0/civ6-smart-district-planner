@@ -25,4 +25,8 @@ Issue 里还写了“奇观旁边已经有同种区域（包括从候选挑的�
 - `tests/offline/spec_target_limit.lua` 加了两项：
   - 多城共用清单：每个方案里带“供…相邻”的区域都挨着它的奇观，且奇观旁没有别的同类区域；每城数量照旧是 4。旧代码上失败（补的娱乐中心离斗兽场 10 格）。
   - 单城页只选斗兽场：照旧补一个娱乐中心，挨着斗兽场。
-- 其余结果见 PR 描述。
+- `node tools/offline_tests.mjs tests/offline/spec_target_limit.lua`：4 项通过；`spec_wonder_memory.lua`、`spec_wonder_replace.lua`、`spec_target.lua`：17 项通过（macOS 本机）。
+- 整套离线测试：第二台机器 234 项通过（`remote.py run i180-off2 -- node tools/offline_tests.mjs`）。
+- 离线对比奇观开发集（`W01`–`W24`，`STANDARD`、`STANDARD_LAND`，共 48 次）：`node tools/compare.mjs -s '^W[0-9][0-9]-' -p sdp -j 2`，改前（#179 的分支）、改后各跑一遍（第二台机器，`logs/remote/i180-w-{base,new}.jsonl`，不入库）。48 次方案完全相同，加成没有升降；本模组自报的加成与裁判一致，零违规，没有漏放。`W` 都是单城场景：单城只有一座城的区域能给奇观，补的区域本来就是奇观旁唯一的同类区域，所以不变在意料之中。
+- 多城加奇观的场景对比集里没有（`cmp_sdp.lua` 只在单城请求里带奇观），多城的效果只由上面的离线测试和 `spec_multi.lua` 的奇观项（随整套通过）覆盖。
+- 游戏内没有跑，留给今晚的发版测试。
