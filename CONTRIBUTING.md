@@ -91,6 +91,7 @@ python3 -I tools/run_tests.py tests/test_xxx.lua                 # run one test 
 - Names from the game (districts, buildings, wonders, civilizations, leaders, terrain, resources, interface) use the game's own words in both languages. Do not translate them yourself.
 - Settled English words: tile (not plot), valid (not legal), map tack or tack (not pin), specialty districts, City Center, Woods, Rainforest, Marsh, Floodplains, Volcanic Soil, Housing, Appeal, Amenities, Additional Content, Key Bindings, the toolbar at the upper left (not launch bar).
 - Write plainly. Say each thing once. Describe a feature directly, without labels such as "new".
+- In Markdown, put punctuation after the closing `**`: GitHub shows the stars in `**标题。**正文`, but renders `**标题**。正文` (`validate.py` checks this).
 
 ### License and third-party content
 
@@ -187,6 +188,7 @@ python3 -I tools/run_tests.py tests/test_xxx.lua                 # 在游戏里�
 - 游戏里的名称（区域、建筑、奇观、文明、领袖、地貌、资源、界面）中英文都用游戏自己的，不自己翻译。
 - 已定的英文：tile（不是 plot）、valid（不是 legal）、map tack / tack（不是 pin）、specialty districts、City Center、Woods / Rainforest / Marsh / Floodplains / Volcanic Soil、Housing、Appeal、Amenities、Additional Content、Key Bindings、the toolbar at the upper left（不是 launch bar）。
 - 写得平实，同一个意思只写一次。直接描述功能，不加“新功能”“新加”之类的标签。
+- Markdown 里加粗后的标点放在收尾的 `**` 外面：`**标题。**正文` 在 GitHub 上会直接显示星号，`**标题**。正文` 才是加粗（`validate.py` 会查）。
 
 ### 许可证与第三方内容
 

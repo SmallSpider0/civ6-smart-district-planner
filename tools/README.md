@@ -58,6 +58,7 @@ python3 -I tools/validate.py --strict   # 警告也算失败
 | `lua` | 调用 `luacheck.mjs`，见下 |
 | `ui`（点击遮挡） | 模板实例的根是可点击的按钮时，里面不能有 `Size="parent,parent"` 的 Button / GridButton / CheckBox：显示时会接住鼠标，下面的按钮点不到（坑 31） |
 | `controls` | 脚本里的 `Controls.<ID>` 都是 UI XML 里的 ID（坑 30） |
+| `markdown` | 仓库里 `.md` 文件的每个 `**加粗**` 在 GitHub 上都能开、能收：`**标题。**正文` 会直接显示星号，要写成 `**标题**。正文`（PR #174） |
 
 ## luacheck.mjs — Lua 检查
 
