@@ -1,5 +1,5 @@
 Changes since v1.6.3:
-- On the Several cities tab, when you choose a wonder that must be next to a district (such as the Colosseum) and no city has that district yet, the district added for it is now always placed next to the wonder. Before, the Entertainment Complex could go to one city while the Colosseum went next to another city’s Entertainment Complex: the added one had no wonder beside it, the result still said ‘for Colosseum’, and it used up one of that city’s districts for nothing.
+- On the Several cities tab, when you choose a wonder that must be next to a district (such as the Colosseum) and no city has that district yet, the district added for it is now always placed next to the wonder. Before, the Entertainment Complex could go to one city while the Colosseum went next to another city’s Entertainment Complex: the added one had no wonder beside it, the result still said ‘next to Colosseum’, and it used up one of that city’s districts for nothing.
 - Selecting a city on the map again and opening the panel switches the panel to that city’s One city tab again. Before, if you had last opened the panel on the same city and then changed the city or tab inside the panel, it reopened on that city and tab instead, as if it had not followed your selection.
 
 自 v1.6.3 以来的变化：
