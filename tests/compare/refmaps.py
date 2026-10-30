@@ -23,6 +23,9 @@ numbers come from the result files.
   python3 -I tests/compare/refmaps.py --tables           # also print the Markdown tables of
                                                          # docs/reference-scenes.md
   python3 -I tests/compare/refmaps.py --out DIR
+  python3 -I tests/compare/refmaps.py --workshop         # workshop/src/i1-ref12[-en].svg, i2-ref06[-en].svg:
+                                                         # the Workshop description's pictures (player's layout
+                                                         # and the Standard plan, zh and en; see render_workshop)
 
 Python 3.8, standard library only.
 """
@@ -422,13 +425,13 @@ def neighbours(xy):
     return [(x, y + 1), (x + 1, y), (x, y - 1), (x - 1, y - 1), (x - 1, y), (x - 1, y + 1)]
 
 
-def edge_line(pos, a, b, ox, oy, colour, width, extra=""):
+def edge_line(pos, a, b, ox, oy, colour, width, extra="", s=S):
     ax, ay = pos(*a)
     bx, by = pos(*b)
     mx, my = (ax + bx) / 2 + ox, (ay + by) / 2 + oy
     dx, dy = bx - ax, by - ay
     d = math.hypot(dx, dy) or 1
-    px, py = -dy / d * S / 2, dx / d * S / 2
+    px, py = -dy / d * s / 2, dx / d * s / 2
     return ('<line x1="%.1f" y1="%.1f" x2="%.1f" y2="%.1f" stroke="%s" stroke-width="%.1f"%s/>'
             % (mx - px, my - py, mx + px, my + py, colour, width, extra))
 
@@ -531,6 +534,315 @@ def legend():
 
 
 # ---------------------------------------------------------------------------
+# Workshop pictures (--workshop)
+# ---------------------------------------------------------------------------
+# Two panels for the Steam Workshop description: the player's layout and the
+# mod's Standard plan (results/refscore_sdp.jsonl), which must be the proven
+# optimum of results/refscore.jsonl tile for tile. Bigger hexes and text than
+# the review pictures, words in the game's own names, a legend of only what is
+# drawn, no author names. workshop/src/i<n>-<name>.html shows each at 1260 px
+# and tools/workshop.py render turns it into workshop/inline/*.jpg.
+WS_DIR = os.path.join(ROOT, "workshop", "src")
+WS_SCENES = (("i1-ref12", "REF12"), ("i2-ref06", "REF06"))
+WS_S = 30
+WS_GAP = 34
+WS_TITLE_H = 56
+WS_INSET = 4
+# Game names (Base and DLC text, zh_Hans_CN and en_US), checked 2026-10-30.
+WS_WORDS = {
+    "zh": {
+        "player": "高手的布局 · 相邻 +%s", "player_note": "存档里已建的区域",
+        "sdp": "本模组 · 相邻 +%s", "sdp_note": "标准档，与证明过的最优逐格相同",
+        "moved": "红框：与高手的布局不同", "mountain": "山脉", "river": "河流", "border": "领土边界",
+        "floodplains": "泛滥平原", "other": "其他城市的领土", "city": "城", "foreign": "外", "tack": "钉",
+        "sep": "：",
+    },
+    "en": {
+        "player": "Player's layout · +%s", "player_note": "Adjacency of the districts built in the save",
+        "sdp": "Smart District Planner · +%s", "sdp_note": "Adjacency; the same tiles as the proven best",
+        "moved": "Red outline: moved", "mountain": "Mountains", "river": "River", "border": "Border",
+        "floodplains": "Floodplains", "other": "Another city's tiles", "city": "City", "foreign": "Foreign",
+        "tack": "Tack", "sep": " ",
+    },
+}
+WS_DISTRICT = {  # label, name: zh, en
+    "DISTRICT_CAMPUS": (("学", "学院"), ("C", "Campus")),
+    "DISTRICT_HOLY_SITE": (("圣", "圣地"), ("HS", "Holy Site")),
+    "DISTRICT_THEATER": (("剧", "剧院广场"), ("TS", "Theater Square")),
+    "DISTRICT_COMMERCIAL_HUB": (("商", "商业中心"), ("CH", "Commercial Hub")),
+    "DISTRICT_HARBOR": (("港", "港口"), ("H", "Harbor")),
+    "DISTRICT_INDUSTRIAL_ZONE": (("工", "工业区"), ("IZ", "Industrial Zone")),
+}
+WS_FIXED = {  # other districts: zh name in the hex; en abbreviation in the hex, name in the legend
+    "DISTRICT_WONDER": ("奇观", "W", "Wonder"), "DISTRICT_GOVERNMENT": ("市政广场", "GP", "Government Plaza"),
+    "DISTRICT_ENCAMPMENT": ("军营", "E", "Encampment"), "DISTRICT_AERODROME": ("航空港", "A", "Aerodrome"),
+    "DISTRICT_DAM": ("堤坝", "D", "Dam"), "DISTRICT_ENTERTAINMENT_COMPLEX": ("娱乐中心", "EC", "Entertainment Complex"),
+    "DISTRICT_AQUEDUCT": ("水渠", "Aq", "Aqueduct"), "DISTRICT_NEIGHBORHOOD": ("社区", "N", "Neighborhood"),
+}
+WS_IMPROVEMENT = {"IMPROVEMENT_FARM": ("农场", "Farm"), "IMPROVEMENT_MINE": ("矿山", "Mine"),
+                  "IMPROVEMENT_MONASTERY": ("修道院", "Monastery"), "IMPROVEMENT_PASTURE": ("牧场", "Pasture"),
+                  "IMPROVEMENT_PLANTATION": ("种植园", "Plantation"), "IMPROVEMENT_CAMP": ("营地", "Camp"),
+                  "IMPROVEMENT_QUARRY": ("采石场", "Quarry")}
+WS_RESOURCE_EN = {"WHEAT": "Wheat", "SHEEP": "Sheep", "FURS": "Furs", "TEA": "Tea", "DYES": "Dyes",
+                  "MERCURY": "Mercury", "CRABS": "Crabs", "FISH": "Fish", "RICE": "Rice", "CATTLE": "Cattle"}
+WS_CITY_EN = {"REF12": "Xi’an", "REF06": "Kyoto"}
+FLOOD = "#7a5a1e"
+
+
+def load_sdp():
+    return load_rows(os.path.join(HERE, "results", "refscore_sdp.jsonl"),
+                     lambda r: r.get("planner") == "sdp" and r.get("variant") == "STANDARD")
+
+
+def workshop_panels(spec, refscore, sdp, lang):
+    """The player's layout and the Standard plan; refuses when the plan is not
+    the proven optimum tile for tile."""
+    sid = spec["scenario"]["id"]
+    ref_row, sdp_row = refscore.get((sid, "all1")), sdp.get((sid, "all1"))
+    if not ref_row or not sdp_row:
+        raise SystemExit("%s: no all1 row in refscore.jsonl or refscore_sdp.jsonl" % sid)
+    opt, plan = ref_row["optimum"], sdp_row["score"]
+    if not ref_row["summary"].get("proven") or not same_plan(opt["items"], plan["items"]) or opt["gain"] != plan["gain"]:
+        raise SystemExit("%s: the Standard plan (+%s) is not the proven optimum (+%s) tile for tile"
+                         % (sid, num(plan["gain"]), num(opt["gain"])))
+    w = WS_WORDS[lang]
+    return [{"title": w["player"] % num(ref_row["reference"]["gain"]), "notes": [w["player_note"]],
+             "items": ref_row["reference"]["items"], "ref": True},
+            {"title": w["sdp"] % num(plan["gain"]), "notes": [w["sdp_note"]], "items": plan["items"]}]
+
+
+def render_workshop(spec, panels, lang):
+    zh = lang == "zh"
+    w = WS_WORDS[lang]
+    s = WS_S
+    sc = spec["scenario"]
+    sid = sc["id"][:5]
+    W = spec["width"]
+    plots = spec["plots"]
+    chosen = [c for c in spec["cities"] if c["owner"] == 0 and c["id"] in sc["only"]]
+    centres = [(c["x"], c["y"]) for c in chosen]
+    area = [(i % W, i // W) for i in range(len(plots)) if any(dist((i % W, i // W), c) <= 3 for c in centres)]
+    area_set = set(area)
+    owner = {}
+    for c in spec["cities"]:
+        for i in c.get("plots", []):
+            owner[i] = (c["owner"], c["id"])
+    chosen_keys = {(0, c["id"]) for c in chosen}
+    ymax = max(y for _, y in area)
+
+    def pos(x, y):  # north up
+        return SQ3 * s * (x + 0.5 * (y & 1)), 1.5 * s * (ymax - y)
+
+    xs = [pos(*xy)[0] for xy in area]
+    ys = [pos(*xy)[1] for xy in area]
+    minx, maxx = min(xs) - SQ3 * s / 2 - 2, max(xs) + SQ3 * s / 2 + 2
+    miny, maxy = min(ys) - s - 2, max(ys) + s + 2
+    pw, ph = maxx - minx, maxy - miny
+    width = 2 * pw + WS_GAP
+
+    fixed, used = {}, {"fixed": set(), "district": set()}
+    for c in spec["cities"]:
+        xy = (c["x"], c["y"])
+        if c["owner"] == 0 and c["id"] in sc["only"]:
+            fixed[xy] = ("city", city_name(sc["id"], c) if zh else WS_CITY_EN.get(sid, c["name"]))
+        else:
+            fixed[xy] = ("othercity", w["city"] if c["owner"] == 0 else w["foreign"])
+        for d in c["districts"]:
+            fixed[(d["x"], d["y"])] = ("fixed", d["type"])
+    for wd in spec.get("wonders", []):
+        fixed.setdefault((wd["x"], wd["y"]), ("fixed", "DISTRICT_WONDER"))
+    for p in spec.get("pins", []):
+        fixed.setdefault((p["x"], p["y"]), ("tack", w["tack"]))
+    rivers = [((a % W, a // W), (b % W, b // W)) for r in spec.get("rivers", []) for a, b in r["edges"]]
+    rivers = [e for e in rivers if e[0] in area_set or e[1] in area_set]
+    # Tiles a district covers in one panel and not the other: what it covers
+    # (improvement, resource) is written on them where they are bare.
+    covered = {(i["x"], i["y"]) for p in panels for i in p["items"]}
+    flood = other = False
+
+    def text(x, y, body, size, fill, weight="400", anchor="middle"):
+        return ('<text x="%.1f" y="%.1f" font-size="%s" font-weight="%s" fill="%s" text-anchor="%s">%s</text>'
+                % (x, y, size, weight, fill, anchor, body))
+
+    out = []
+    for n, panel in enumerate(panels):
+        ox = n * (pw + WS_GAP) - minx
+        oy = WS_TITLE_H - miny
+        out.append(text(n * (pw + WS_GAP) + 2, 22, esc(panel["title"]), 19, "#14202a", "700", "start"))
+        out.append(text(n * (pw + WS_GAP) + 2, 44, esc(panel["notes"][0]), 13, "#555555", "400", "start"))
+        placed = {(i["x"], i["y"]): i for i in panel["items"]}
+        late = []  # words drawn over the neighbouring hexes
+        ref_set = {(i["city"], i["type"], i["x"], i["y"]) for i in panels[0]["items"]}
+        for xy in sorted(area, key=lambda a: (-a[1], a[0])):
+            p = plots[xy[1] * W + xy[0]]
+            cx, cy = pos(*xy)
+            cx, cy = cx + ox, cy + oy
+            t = p["t"]
+            if p.get("hidden"):
+                fill = HIDDEN
+            elif t == "TERRAIN_OCEAN":
+                fill = OCEAN
+            elif t == "TERRAIN_COAST":
+                fill = LAKE if p.get("lake") else COAST
+            elif t.endswith("_MOUNTAIN"):
+                fill = MOUNTAIN
+            else:
+                base = t.replace("TERRAIN_", "").replace("_HILLS", "")
+                fill = TERRAIN.get(base, TERRAIN["GRASS"])[1 if t.endswith("_HILLS") else 0]
+            out.append('<polygon points="%s" fill="%s" stroke="#6b6b6b" stroke-width="0.8"/>'
+                       % (pts(corners(cx, cy, s)), fill))
+            own = owner.get(xy[1] * W + xy[0])
+            if own and own not in chosen_keys and not p.get("hidden"):
+                other = True
+                out.append('<polygon points="%s" fill="#ffffff" fill-opacity="0.5"/>' % pts(corners(cx, cy, s - 0.4)))
+                if own[0] != 0:
+                    out.append('<polygon points="%s" fill="url(#foreign)"/>' % pts(corners(cx, cy, s - 0.4)))
+            if p.get("hidden"):
+                out.append(text(cx, cy + 6, "?", 16, "#dddddd"))
+                continue
+            if (p.get("f") or "").startswith("FEATURE_FLOODPLAINS"):
+                flood = True
+                out.append('<polygon points="%s" fill="url(#flood)"/>' % pts(corners(cx, cy, s - 0.4)))
+            if t.endswith("_HILLS"):
+                out.append('<path d="M%.1f,%.1f q10,-6 20,0" fill="none" stroke="#4d3f22" stroke-width="1.6"/>'
+                           % (cx - 10, cy + 25))
+            item, fx = placed.get(xy), fixed.get(xy)
+            if item is None and fx is None:
+                if t.endswith("_MOUNTAIN"):
+                    out.append(text(cx, cy + 6, "▲", 16, "#3d362f"))
+                elif xy in covered:
+                    words = []
+                    imp = WS_IMPROVEMENT.get(p.get("imp") or "")
+                    if imp:
+                        words.append(imp[0 if zh else 1])
+                    res = (p.get("r") or "")[len("RESOURCE_"):]
+                    if res:
+                        words.append(RESOURCE.get(res, res.title()) if zh else WS_RESOURCE_EN.get(res, res.title()))
+                    for k, word in enumerate(words):
+                        late.append(text(cx, cy - 2 + 14 * k - 7 * (len(words) - 1), esc(word),
+                                         11.5 if len(word) < 8 else 10, "#14202a", "700"))
+                continue
+            if item is not None and (fx is None or fx[0] == "tack"):
+                names = WS_DISTRICT.get(item["type"])
+                label = names[0 if zh else 1][0] if names else "?"
+                used["district"].add(item["type"])
+                _, bg, fg = DISTRICT.get(item["type"], ("", "#cccccc", "#222222"))
+                changed = not panel.get("ref") and (item["city"], item["type"], item["x"], item["y"]) not in ref_set
+                stroke, sw = (CHANGED, 3.4) if changed else ("#1a1a1a", 1.4)
+                out.append('<polygon points="%s" fill="%s" stroke="%s" stroke-width="%.1f"/>'
+                           % (pts(corners(cx, cy, s - WS_INSET)), bg, stroke, sw))
+                out.append(text(cx, cy + 3, esc(label), 17, fg, "700"))
+                out.append(text(cx, cy + 19, "+%s" % num(item["adj"]), 15, fg, "700"))
+                continue
+            kind, label = fx
+            if kind == "city":
+                out.append('<polygon points="%s" fill="#ffffff" stroke="#111111" stroke-width="2.2"/>'
+                           % pts(corners(cx, cy, s - WS_INSET)))
+                out.append(text(cx, cy + 5, esc(label), 13, "#111111", "700"))
+            elif kind == "othercity":
+                out.append('<polygon points="%s" fill="#e6e6e6" stroke="#555555" stroke-width="1.2"/>'
+                           % pts(corners(cx, cy, s - WS_INSET)))
+                out.append(text(cx, cy + 5, esc(label), 12, "#333333"))
+            elif kind == "tack":
+                out.append('<polygon points="%s" fill="none" stroke="#333333" stroke-width="1.2" '
+                           'stroke-dasharray="3,2"/>' % pts(corners(cx, cy, s - WS_INSET)))
+                out.append(text(cx, cy + 4.5, esc(label), 11.5, "#333333"))
+            else:
+                names = WS_FIXED.get(label)
+                used["fixed"].add(label)
+                wonder = label == "DISTRICT_WONDER"
+                out.append('<polygon points="%s" fill="%s" stroke="#555555" stroke-width="1"/>'
+                           % (pts(corners(cx, cy, s - WS_INSET)), "#e8d9b5" if wonder else "#cfcfcf"))
+                word = (names[0] if zh else names[1]) if names else "?"
+                out.append(text(cx, cy + 4.5, esc(word), 11.5 if zh else 13, "#333333", "700"))
+        for xy in area:
+            i = xy[1] * W + xy[0]
+            for nb in neighbours(xy):
+                if nb not in area_set or nb < xy:
+                    continue
+                a, b = owner.get(i), owner.get(nb[1] * W + nb[0])
+                if a != b and (a in chosen_keys or b in chosen_keys):
+                    out.append(edge_line(pos, xy, nb, ox, oy, BORDER, 2.6, ' stroke-dasharray="6,4"', s))
+        for a, b in rivers:
+            out.append(edge_line(pos, a, b, ox, oy, RIVER, 5, ' stroke-linecap="round"', s))
+        out += late
+
+    # Legend: only what the picture shows, wrapped to the picture's width.
+    entries = []
+
+    def badge(bg, fg, glyph, stroke="#1a1a1a", sw=1.4):
+        return lambda x, y: ('<polygon points="%s" fill="%s" stroke="%s" stroke-width="%.1f"/>'
+                             % (pts(corners(x, y, 12)), bg, stroke, sw)
+                             + (text(x, y + 4.5, esc(glyph), 11 if len(glyph) < 3 else 9, fg, "700") if glyph else ""))
+
+    for dtype in sorted(used["district"], key=lambda d: list(WS_DISTRICT).index(d) if d in WS_DISTRICT else 99):
+        names = WS_DISTRICT.get(dtype)
+        if names:
+            label, name = names[0 if zh else 1]
+            entries.append((badge(DISTRICT[dtype][1], DISTRICT[dtype][2], label), name))
+    entries.append((badge("#ffffff", "", "", CHANGED, 3), w["moved"]))
+    if not zh:
+        for ftype in sorted(used["fixed"], key=lambda d: list(WS_FIXED).index(d) if d in WS_FIXED else 99):
+            if ftype in WS_FIXED:
+                entries.append((badge("#e8d9b5" if ftype == "DISTRICT_WONDER" else "#cfcfcf", "#333333",
+                                      WS_FIXED[ftype][1], "#555555", 1), WS_FIXED[ftype][2]))
+    entries.append((lambda x, y: ('<polygon points="%s" fill="%s" stroke="#6b6b6b" stroke-width="0.8"/>'
+                                  % (pts(corners(x, y, 12)), MOUNTAIN) + text(x, y + 5, "▲", 12, "#3d362f")),
+                    w["mountain"]))
+    if flood:
+        entries.append((lambda x, y: ('<polygon points="%s" fill="%s" stroke="#6b6b6b" stroke-width="0.8"/>'
+                                      '<polygon points="%s" fill="url(#flood)"/>'
+                                      % (pts(corners(x, y, 12)), TERRAIN["GRASS"][0], pts(corners(x, y, 11.6)))),
+                        w["floodplains"]))
+    if rivers:
+        entries.append((lambda x, y: '<line x1="%.1f" y1="%.1f" x2="%.1f" y2="%.1f" stroke="%s" stroke-width="5" '
+                        'stroke-linecap="round"/>' % (x - 12, y, x + 12, y, RIVER), w["river"]))
+    entries.append((lambda x, y: '<line x1="%.1f" y1="%.1f" x2="%.1f" y2="%.1f" stroke="%s" stroke-width="2.6" '
+                    'stroke-dasharray="6,4"/>' % (x - 12, y, x + 12, y, BORDER), w["border"]))
+    if other:
+        entries.append((lambda x, y: ('<polygon points="%s" fill="%s" stroke="#6b6b6b" stroke-width="0.8"/>'
+                                      '<polygon points="%s" fill="#ffffff" fill-opacity="0.5"/>'
+                                      % (pts(corners(x, y, 12)), TERRAIN["GRASS"][0], pts(corners(x, y, 11.6)))),
+                        w["other"]))
+    top = WS_TITLE_H + ph + 26
+    x, y = 14.0, top
+    for draw, label in entries:
+        cw = 13.5 if zh else 7.4  # rough advance per character at 14 px
+        span = 34 + cw * len(label) + 20
+        if x + span > width and x > 14:
+            x, y = 14.0, y + 30
+        out.append(draw(x, y))
+        out.append(text(x + 20, y + 5, esc(label), 14, "#14202a", "400", "start"))
+        x += span
+    height = y + 20
+    head = ['<svg xmlns="http://www.w3.org/2000/svg" width="%d" height="%d" viewBox="0 0 %.1f %.1f" font-family="%s">'
+            % (math.ceil(width), math.ceil(height), width, height, FONT),
+            '<rect width="100%" height="100%" fill="#ffffff"/>',
+            '<defs><pattern id="foreign" width="6" height="6" patternUnits="userSpaceOnUse" '
+            'patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="6" stroke="#ffffff" '
+            'stroke-width="2.2" stroke-opacity="0.75"/></pattern>'
+            '<pattern id="flood" width="8" height="7" patternUnits="userSpaceOnUse">'
+            '<path d="M0,4 q2,-2.5 4,0 t4,0" fill="none" stroke="%s" stroke-width="1.1" stroke-opacity="0.7"/>'
+            '</pattern></defs>' % FLOOD]
+    return "\n".join(head + out + ["</svg>"]) + "\n"
+
+
+def write_workshop(out_dir):
+    scenes, refscore, _ = load_all([sid for _, sid in WS_SCENES])
+    by_id = {s["scenario"]["id"][:5]: s for s in scenes}
+    sdp = load_sdp()
+    os.makedirs(out_dir, exist_ok=True)
+    for name, sid in WS_SCENES:
+        spec = by_id[sid]
+        for lang, suffix in (("zh", ""), ("en", "-en")):
+            path = os.path.join(out_dir, name + suffix + ".svg")
+            with open(path, "w", encoding="utf-8", newline="\n") as f:
+                f.write(render_workshop(spec, workshop_panels(spec, refscore, sdp, lang), lang))
+            print("wrote %s" % os.path.relpath(path, ROOT))
+    return 0
+
+
+# ---------------------------------------------------------------------------
 # Tables
 # ---------------------------------------------------------------------------
 ZH = {
@@ -630,6 +942,11 @@ def main(argv):
         i = argv.index("--out")
         out_dir = argv[i + 1]
         argv = argv[:i] + argv[i + 2:]
+    if "--workshop" in argv:
+        if argv != ["--workshop"]:
+            print(__doc__)
+            return 2
+        return write_workshop(WS_DIR if out_dir == OUT else out_dir)
     if any(a.startswith("-") for a in argv):
         print(__doc__)
         return 2

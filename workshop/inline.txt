@@ -1,0 +1,7 @@
+# 简介里的图（不是物品页图片）：作为 Steam 截图上传（不要用“添加/编辑图片与视频”，那里的图进轮播），
+# 截图设成公开，再把图片地址替换简介里的占位符 [img]占位符[/img]。pack 不打包这些图。
+# 每行：路径  占位符  说明。重画：python3 -I tests/compare/refmaps.py --workshop，再 python3 -I tools/workshop.py render --inline
+workshop/inline/i1-ref12.jpg      STEAM_IMG_REF12_ZH   西安（REF12）：高手的布局与本模组标准档，中文简介
+workshop/inline/i1-ref12-en.jpg   STEAM_IMG_REF12_EN   Xi'an (REF12), English description
+workshop/inline/i2-ref06.jpg      STEAM_IMG_REF06_ZH   京都（REF06）：高手的布局与本模组标准档，中文简介
+workshop/inline/i2-ref06-en.jpg   STEAM_IMG_REF06_EN   Kyoto (REF06), English description

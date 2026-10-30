@@ -1,14 +1,21 @@
 [h1]Smart District Planner[/h1]
 [b]Pick a city and the districts you want. In a few seconds it finds the layout with the highest adjacency bonus and places it as map tacks with district icons.[/b]
 
-[img]https://raw.githubusercontent.com/SmallSpider0/civ6-smart-district-planner/main/workshop/images/01-multi.jpg[/img]
-
 [b]Requires Detailed Map Tacks.[/b] It decides where a district fits and what it gets, so the numbers in a plan are the numbers on the tacks.
 
 [h2]Why use it[/h2]
 [list]
 [*][b]Your civilization's rules, with no setup.[/b] Adjacency and placement rules from your civilization, your leader, your pantheon and your religion's beliefs are counted, and your unique districts are used: Japan's districts get +1 from each other, Korea's Seowon loses yield next to districts, Gaul's specialty districts stay off the City Center, Vietnam's go on Woods, Rainforest or Marsh.
 [*][b]Close to the best possible, and it tells you how close.[/b] With few districts it tries every layout, so the plan is the best one; otherwise it says at most how far from the best it may be, and you can press Improve. Checked against real games: from games that 8 strong players shared with their saves on CivFanatics, 17 city layouts (turns 58–276; [url=https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/docs/reference-scenes.md]each scene with maps[/url], in Chinese) were planned again on the saved maps, counting adjacency only. The players’ layouts reach on average 90.4% of the proven optimum; the Standard effort reaches 99.8% and hits it exactly in 16 of 17. The players built their cities step by step, though, without knowing what would come later.
+[/list]
+
+[img]STEAM_IMG_REF12_EN[/img]
+Xi’an, turn 145 of a one-city challenge (Gathering Storm). Counting adjacency only, the player’s Holy Site, Theater Square and Campus give +12; the planner puts the Theater Square among the wonders (+6) and the Holy Site by the mountains to the west (+4), +15 in all, the proven best.
+
+[img]STEAM_IMG_REF06_EN[/img]
+Kyoto, Japan, turn 276 (Gathering Storm). Counting adjacency only, the player’s Industrial Zone, Holy Site and Theater Square give +14; with Meiji Restoration the planner puts the three in a row so they boost each other, +16. The row covers two farmed Floodplains, and counting the tiles too, the player’s layout is just as good.
+
+[list]
 [*][b]Several cities at once.[/b] Up to 8 cities, including site tacks for cities not founded yet. Districts share adjacency across cities, and districts limited to one per empire, like the Government Plaza, go to the city where they do the most. In the test scenarios, planning the cities one at a time reaches only about 95% of the best known plan.
 [*][b]Borrows tiles from your other cities.[/b] Tiles you can swap from your own cities are used (on by default, can be turned off). On real saves this gives about 13% more adjacency for one city and 19% for several; some districts then need a Swap in Manage Citizens, and the result marks them.
 [*][b]Never a tile you cannot build on, never moves what you have.[/b] Luxury and strategic resources stay uncovered, empire limits and city borders are checked, and on tiles a city owns the game's own list of valid tiles is checked too. Built districts and your own tacks stay where they are and count as neighbors.
