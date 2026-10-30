@@ -68,6 +68,8 @@ SDP_Search.Better = Better
 --   Candidates  { Index, X, Y } sorted by plot index
 --   Slots       { Key, Type ("DISTRICT" | "WONDER"), Group, Allowed = { [position] = true } or nil (all),
 --                 Requires = district type a wonder must be next to (GameInfo.Buildings.AdjacentDistrict),
+--                 RequiresSlot = the index in Slots of the district supplied for this wonder: with
+--                   Owners, the wonder must be next to that one when it is placed (issue 180),
 --                 Support = SDP_Wonders.Support: the improvement a wonder must be next to
 --                   (Buildings.AdjacentImprovement, issue 51) }
 --   Lands       SDP_Land models whose part counts (each only sees its own plots)
@@ -189,10 +191,22 @@ end
 
 -- Whether every placed wonder that must be next to a district has one of
 -- its own city's (OwnDistrictNext).
+-- A wonder with a district supplied for it (RequiresSlot, issue 180) must
+-- stand next to that one, placed, of a city that could own its plot: the
+-- district was added only for it. Unplaced, any of its own city's serves.
 function Search:WondersServed(layout)
   for m = 1, self.K do
     local i, required = layout[m], self.SlotSpecs[self.SlotIndex[m]].Requires
-    if i ~= 0 and required ~= nil and not self:OwnDistrictNext(required, i, layout) then return false end
+    if i ~= 0 and required ~= nil then
+      local r = self.RequiresM[m]
+      if r ~= nil and layout[r] ~= 0 then
+        local _, is = self:Touching()
+        local cities = self.Owners.Wonder[i]
+        if not (is[i][layout[r]] and cities ~= nil and cities[self.Groups[r]]) then return false end
+      elseif not self:OwnDistrictNext(required, i, layout) then
+        return false
+      end
+    end
   end
   return true
 end
@@ -325,6 +339,14 @@ function Search:Singles()
   self.Types, self.Kinds, self.Groups, self.Single, self.Legal, self.Subjects, self.SlotIndex =
     types, kinds, groups, single, legal, subjects, index
   self.K = #types
+  -- The slot of the district supplied for a wonder (issue 180), by slot number.
+  self.RequiresM = {}
+  local slotOf = {}
+  for m = 1, self.K do slotOf[index[m]] = m end
+  for m = 1, self.K do
+    local s = self.SlotSpecs[index[m]].RequiresSlot
+    if s ~= nil then self.RequiresM[m] = slotOf[s] end
+  end
   -- Wonders with an improvement to place next to them (issue 51).
   self.SupportList, self.SupportOf = nil, {}
   for m = 1, self.K do
