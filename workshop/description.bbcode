@@ -1,37 +1,56 @@
 [h1]Smart District Planner[/h1]
-Pick a city and the districts you want. The planner searches the city's three rings for the layout with the highest adjacency bonus and turns it into map tacks with district icons in one click. It can also choose sites for new cities and plan several cities together.
+[b]Pick a city and the districts you want. In a few seconds it finds the layout with the highest adjacency bonus and places it as map tacks with district icons.[/b]
 
-Placement rules and adjacency come from [url=https://steamcommunity.com/sharedfiles/filedetails/?id=2428969051]Detailed Map Tacks[/url] (DMT), so a plan shows the same numbers you later see on the tacks.
+[img]https://raw.githubusercontent.com/SmallSpider0/civ6-smart-district-planner/main/workshop/images/01-multi.jpg[/img]
 
-[b]Requires Detailed Map Tacks.[/b] Subscribe to it as well.
+[b]Requires Detailed Map Tacks.[/b] It decides where a district fits and what it gets, so the numbers in a plan are the numbers on the tacks.
 
-[h2]Tabs[/h2]
+[h2]Why use it[/h2]
 [list]
-[*][b]One city[/b]: mark each district Must, Pool or Off, set how many districts the city should end up with and how much each yield counts (or pick a preset: Balanced, Science, Culture, Religion). You get three plans with different district mixes; click one to preview it on the map, then place the tacks. Hover a district's row for its own score (weighted adjacency, with the tiles it takes and its distance from the City Center), then DMT's breakdown. Wonders can be planned together with the districts: a wonder that needs a district next to it gets one when the city has none, and the Temple of Artemis comes with the Camp it needs.
-[*][b]City sites[/b]: choose spots for new cities on the explored map. A site is scored part by part (Districts, Tiles, Features, Housing, Luxuries, Strategics, Appeal), each part with its own weight; a typical good site gets 10 points in a part. Three plans; each site lists its points per part, and its tooltip gives the yields per turn behind them, the resources it gets and how far it is from the other sites; click the plan again to go through its sites on the map, then mark them with City Center tacks. With Dense packing: as many new cities as fit on, the plan that fits more new cities wins (New cities 12 by default); tick the sites you want, or Select all, and only those get tacks.
-[*][b]Several cities[/b]: plan districts and wonders for the city selected on the map and the nearest cities and site tacks around it (4 by default, up to 8), counting adjacency across cities and empire-wide limits, with a subtotal for each city. Each city can have its own district list, or a template built from your civilization's adjacency rules.
+[*][b]Your civilization's rules, with no setup.[/b] Adjacency and placement rules from your civilization, your leader, your pantheon and your religion's beliefs are counted, and your unique districts are used: Japan's districts get +1 from each other, Korea's Seowon loses yield next to districts, Gaul's specialty districts stay off the City Center, Vietnam's go on Woods, Rainforest or Marsh.
+[*][b]Close to the best possible, and it tells you how close.[/b] With few districts it tries every layout, so the plan is the best one; otherwise it says at most how far from the best it may be, and you can press Improve. On 72 one-city scenarios with a proven optimum, the default Standard effort reaches 99.9% of it on average and hits it exactly in 71. For comparison, 17 city layouts shared by strong players on forums reach on average 90.4% of the optimum in adjacency, though those cities were built up step by step, without knowing what would come later.
+[*][b]Several cities at once.[/b] Up to 8 cities, including site tacks for cities not founded yet. Districts share adjacency across cities, and districts limited to one per empire, like the Government Plaza, go to the city where they do the most. In the test scenarios, planning the cities one at a time reaches only about 95% of the best known plan.
+[*][b]Borrows tiles from your other cities.[/b] Tiles you can swap from your own cities are used (on by default, can be turned off). On real saves this gives about 13% more adjacency for one city and 19% for several; some districts then need a Swap in Manage Citizens, and the result marks them.
+[*][b]Never a tile you cannot build on, never moves what you have.[/b] Luxury and strategic resources stay uncovered, empire limits and city borders are checked, and on tiles a city owns the game's own list of valid tiles is checked too. Built districts and your own tacks stay where they are and count as neighbors.
+[*][b]Wonders with their rules.[/b] Add wonders and they are planned with the districts: the Colosseum gets an Entertainment Complex next to it when the city has none, and the Temple of Artemis comes with its Camp.
 [/list]
 
-[h2]In every tab[/h2]
+[h2]How to use it[/h2]
 [list]
-[*]Three effort levels: Fast, Standard and Thorough. Small cases are solved exhaustively; otherwise the result says how far it may be from the best, and you can keep optimizing.
-[*]Same position, same settings, same result every time.
-[*]Built districts and your own tacks are never moved or covered; they count as neighbors.
-[*]Land loss (the Tiles weight, 1 by default): districts pay for the good tiles they take, each valued with its best improvement, its yields weighed by fixed numbers (Gold at a quarter of Production, Faith at half); chopping and harvesting come first. An optional switch also uses tiles you can swap from your other cities.
-[*]Each tab keeps its settings in the save. The settings fold into one line after a solve, the window fits the screen, and View map hides the window to look at the preview.
-[*]Neighborhoods get Housing from Appeal, counted by what each city still needs. Preserves count Appeal and, under Tiles, the yields their buildings give nearby tiles; the Preserve is off by default. An Aqueduct is added when the city lacks fresh water, a Dam when there are enough Floodplains tiles.
-[*]When a plan relies on nearby Woods or Rainforest, a reminder tack on those tiles says what chopping them would cost.
-[*]Long searches run over several frames, so the game stays responsive, and they finish even if you close the panel. Placed tacks can be undone, also after loading a save.
-[*]Open the panel with the hexagon button at the top left of the screen or with Shift+L.
+[*]In a game, click the hexagon button in the toolbar at the upper left, or press Shift+L.
+[*]One city: pick a city, set the districts you must have to Must, leave the rest in the Pool, and say how many districts the city should end up with.
+[*]Click Solve for three plans with different districts. Click one to preview it on the map, then Place tacks. Undo tacks works too, also after loading a save.
+[*]City sites chooses spots for new cities; Several cities plans a group of cities together.
+[/list]
+
+[h2]Also[/h2]
+[list]
+[*]Lean toward a yield with the Science, Culture or Religion preset, or set each weight yourself.
+[*]Districts stay off tiles that would make good farms or mines unless the bonus is worth it.
+[*]Neighborhoods go where Appeal gives the most Housing. An Aqueduct is added when a city lacks fresh water, a Dam when it has enough Floodplains.
+[*]When a plan relies on nearby Woods or Rainforest, a “Don't chop” tack on those tiles says what chopping would cost.
+[*]Good places: pick a district and the map colors every tile it can go on by its bonus.
+[*]To plan again, turn on “Replace this mod's earlier tacks”: the old tacks are replaced, and Undo tacks puts them back.
+[*]City sites scores each site on district potential, tiles, resources and Housing; hover a score for the yields behind it. Dense packing fits in as many cities as possible.
+[*]Long searches run over several frames, so you can keep playing or close the panel. One city with 6–8 districts usually takes under half a second.
+[*]Settings are kept in the save.
+[/list]
+
+[h2]Questions[/h2]
+[list]
+[*][b]Should I change the weights for my leader?[/b] Not for the rules: your civilization's, leader's, pantheon's and beliefs' bonuses are counted automatically. The weights say which yields you want and do not change by themselves; pick the Science preset if you want more Science. On Several cities, “Apply a template” fills a district list for Science, Production or another yield from your civilization's rules.
+[*][b]Subscribed, but no button in the game?[/b] Enable both Detailed Map Tacks and Smart District Planner in Additional Content, then restart the game.
+[*][b]Why was a district left out?[/b] The result says why: no valid tile in range, already built, empire limit reached, not available to your civilization, or not enough districts in the Pool.
+[*][b]Is my save safe if I disable it?[/b] Yes. The tacks are ordinary map tacks.
+[*][b]Can I use it with another planner?[/b] No. Auto Map Tacks Planner, Empire Planner and other district planners simulate, create and delete map tacks and interfere with each other. Use one per game.
+[*][b]Multiplayer?[/b] Not tested.
+[/list]
+
+[h2]Requirements[/h2]
+[list]
+[*][url=https://steamcommunity.com/sharedfiles/filedetails/?id=2428969051]Detailed Map Tacks[/url]
 [*]Base game, Rise and Fall, and Gathering Storm. English and Simplified Chinese, following the game language.
+[*]What similar planner mods plan: a table on [url=https://github.com/SmallSpider0/civ6-smart-district-planner#similar-mods]GitHub[/url].
 [/list]
 
-[h2]Notes[/h2]
-[list]
-[*][b]One planner per game.[/b] Do not enable Auto Map Tacks Planner, Empire Planner or other district planners at the same time: they each simulate, create and delete map tacks and interfere with each other.
-[*]Safe for saves: the tacks are ordinary map tacks, and saves still load after the mod is disabled.
-[*]Multiplayer has not been tested.
-[*]A table of what similar planner mods plan is on [url=https://github.com/SmallSpider0/civ6-smart-district-planner#similar-mods]GitHub[/url].
-[/list]
-
-Source code, bug reports and change log: [url=https://github.com/SmallSpider0/civ6-smart-district-planner]GitHub[/url].
+How close it gets to the best plan, its speed and its known limitations: [url=https://smallspider0.github.io/civ6-smart-district-planner/en/]overview[/url]. Source code, bug reports and change log: [url=https://github.com/SmallSpider0/civ6-smart-district-planner]GitHub[/url].

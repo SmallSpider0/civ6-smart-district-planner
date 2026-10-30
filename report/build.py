@@ -397,6 +397,14 @@ def build(files=None, version=None, date=None, lang="zh"):
                 (L(" %s 的场景", "%s of the scenarios") % pct(mb.get("sdp:STANDARD") or 0)),
                 pct(M["sdp:STANDARD"]["quality"], 1),
                 pct(M["sdp:CITY_BY_CITY"]["quality"]) if M.get("sdp:CITY_BY_CITY") else "-")
+    # One sentence for section 1: city by city against planning together.
+    texts["MULTI_LEAD"] = ""
+    if M.get("sdp:STANDARD") and M.get("sdp:CITY_BY_CITY"):
+        texts["MULTI_LEAD"] = L(
+            "测试场景里，用单城页签一座一座规划平均只拿到已知最好方案的 %s，几座城一起规划是 %s（附录 B.3）。",
+            "In the test scenarios, planning the cities one at a time on the One city tab reaches on average only %s of the "
+            "best known plan, and planning them together %s (appendix B.3).") % (
+                pct(M["sdp:CITY_BY_CITY"]["quality"]), pct(M["sdp:STANDARD"]["quality"], 1))
     hom = robust_best.get("heldout/multi", {})
     texts["MULTI_ROBUST_TEXT"] = (L(
         "留出集的 %d 个新地图上，标准档 %s 的场景达到参照，平均是参照的 %s。",
