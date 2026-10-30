@@ -242,6 +242,68 @@ test("a running computation is not cut short by a new selection", function()
   m_selected = nil
 end)
 
+-- Issue 178: the game tells of each selection (Events.CitySelectionChanged).
+-- Selecting the same city again after the panel moved away from it is a new
+-- selection, followed when the panel opens, even if the panel was not
+-- opened while nothing was selected in between.
+local function SelectOnMap(id)
+  local before = m_selected
+  m_selected = id
+  if before ~= nil then Events.CitySelectionChanged(w:City(before):GetOwner(), before, 0, 0, 0, false, false) end
+  if id ~= nil then Events.CitySelectionChanged(w:City(id):GetOwner(), id, 0, 0, 0, true, true) end
+end
+
+local function PickCity(id) -- the city pulldown's entry (cities by ID)
+  for i, city in ipairs(CITIES) do
+    if city.id == id then UI_Mock.Controls.CityPull._entries[i].Button:Click() end
+  end
+end
+
+test("selecting the same city again is followed (issue 178)", function()
+  SelectOnMap(3)
+  LuaEvents.SDP_OpenPanel()
+  T.eq(SDP_Panel.State().CityID, 3, "followed")
+  T.eq(SDP_Panel.Tab(), "SINGLE", "single-city tab")
+  -- The player looks at another city and the Several cities tab, closes.
+  PickCity(1)
+  T.eq(SDP_Panel.State().CityID, 1, "picked on the pulldown")
+  UI_Mock.Controls.MultiTab:Click()
+  LuaEvents.SDP_ClosePanel()
+  -- On the map: away from the city, then the city again; then the panel.
+  SelectOnMap(nil)
+  SelectOnMap(3)
+  LuaEvents.SDP_OpenPanel()
+  T.eq(SDP_Panel.State().CityID, 3, "the city selected again: followed")
+  T.eq(SDP_Panel.Tab(), "SINGLE", "on the single-city tab")
+  T.eq(multi.State().View.Center, "C3", "the Several cities tab around it")
+  LuaEvents.SDP_ClosePanel()
+  -- Still the same selection (no new event): the player's choice stays.
+  LuaEvents.SDP_OpenPanel()
+  PickCity(1)
+  LuaEvents.SDP_ClosePanel()
+  LuaEvents.SDP_OpenPanel()
+  T.eq(SDP_Panel.State().CityID, 1, "the same selection: not taken back")
+  LuaEvents.SDP_ClosePanel()
+  -- Selected while the panel was open: followed at the next opening.
+  LuaEvents.SDP_OpenPanel()
+  SelectOnMap(2)
+  PickCity(1)
+  LuaEvents.SDP_ClosePanel()
+  LuaEvents.SDP_OpenPanel()
+  T.eq(SDP_Panel.State().CityID, 2, "selected while open: followed when opened again")
+  LuaEvents.SDP_ClosePanel()
+  -- Another player's city selected: not followed.
+  w:City(4).owner = 1
+  SelectOnMap(4)
+  LuaEvents.SDP_OpenPanel()
+  T.eq(SDP_Panel.State().CityID, 2, "not ours: not followed")
+  LuaEvents.SDP_ClosePanel()
+  w:City(4).owner = 0
+  SelectOnMap(nil)
+  PickCity(1)
+  multi.SetCenter(nil)
+end)
+
 test("chips: a click switches a city or a pin; clear all; default", function()
   SDP_Panel.Open()
   SDP_Panel.SelectTab("MULTI")
