@@ -54,4 +54,10 @@ DracoYus 在 v1.6.4 上复现（[评论](https://github.com/SmallSpider0/civ6-sm
 - 共用清单同样的必建，每城数量 4 → 补到后一座城（前一座城已满）；
 - 共用清单每城数量 3 → 前一座城的必建照留（共 4，必建超出数量不删），后一座城 3 个已满，不补，奇观放不下、原因 `NO_ROOM_FOR_DISTRICT`；
 - 单城页：已建 2 + 必建 2，数量 4 时不补、奇观放不下；数量 5 时补一个，共计 5。
-在当前 `main` 上这 4 项都失败（前一座城 5 个；单城页数量 4 时仍补）。原有的 #180 单城测试原来把数量设成最小（`SetCount(0)`）仍期望补区域，按新规则改成比已有多 1。
+在当前 `main` 上这 4 项都失败（前一座城 5 个；单城页数量 4 时仍补）。原有的两项测试把单城页数量设成最小（`SetCount(0)`）仍期望补区域，按新规则给出名额：#180 的单城测试改成比已有多 1，`spec_panel.lua` 的 #66 测试改成比已有加必建多 1（测试末尾把数量放回）。
+
+- `node tools/offline_tests.mjs tests/offline/spec_target_limit.lua`：8 项通过（macOS）；`spec_panel.lua` 31 项通过。
+- 整套离线测试：第二台机器 239 项通过（`remote.py run i177b-off2 -- node tools/offline_tests.mjs`；第一轮 `i177b-off` 有 2 项失败，是上面那项 #66 测试和它留下奇观带出的后一项，改测试后通过）。
+- 离线对比奇观开发集（`W01`–`W24`，`STANDARD`、`STANDARD_LAND`，48 次）：`node tools/compare.mjs -s '^W[0-9][0-9]-' -p sdp -j 2`，`main` 和本分支各跑一遍（第二台机器，`logs/remote/i177b-w-{base,new}.jsonl`，不入库）。48 次方案完全相同；合法，零违规，没有漏放，奇观放下 84/96（两边一样）。对比的调用不给数量（`Count`），按设计不受名额限制，所以这组对比只说明没给数量时行为不变；名额规则由上面的离线测试覆盖。
+- `python3 -I tools/validate.py`：0 错误。
+- 游戏内没有跑（发版前由主会话跑）。
