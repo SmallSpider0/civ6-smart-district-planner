@@ -231,7 +231,7 @@ footer { margin-top: 64px; border-top: 1px solid var(--line); padding-top: 16px;
       </svg>
     </div>
     <div class="legend" aria-hidden="true"><span><i class="c1"></i>脚本或 CI 全自动</span><span><i class="c2"></i>代理自动完成</span><span><i class="c3"></i>代理做，看规则或等人一句话</span><span><i class="c4"></i>人来决定</span></div>
-    <figcaption>bug 和功能走两条路，在开发处会合。每个 Issue 的 PR 单独合并；一个里程碑的 Issue 都合并后做发版准备，只修 bug 的版本按规则自动发，其余的等维护者说“发”。</figcaption>
+    <figcaption>bug 和功能走两条路，在开发处会合。每个 Issue 的 PR 单独合并；一个里程碑的 Issue 都合并后做发版准备，什么时候发由维护者说“发”。</figcaption>
   </figure>
   <p class="refs">参考：<a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/docs/maintaining.md#2-一轮工作的流程">docs/maintaining.md「一轮工作的流程」</a><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/.claude/skills/sdp-issue/SKILL.md">sdp-issue</a><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/issues/82">Issue 示例：#82 的调研与决定</a></p>
 </section>
@@ -241,10 +241,10 @@ footer { margin-top: 64px; border-top: 1px solid var(--line); padding-top: 16px;
   <h2><span class="n">02</span>角色与会话</h2>
   <div class="prose">
     <ul class="overview">
-      <li>方案由维护者在 Claude Code 对话里拍板，或由合作者在带 <code>auto</code> 标签的 Issue 下明确回复（选定方案、逐条回答）来定；两人意见不同以维护者为准。只修 bug 的版本按规则自动发，其余的发版只等维护者的话。</li>
+      <li>方案由维护者在 Claude Code 对话里拍板，或由合作者在带 <code>auto</code> 标签的 Issue 下明确回复（选定方案、逐条回答）来定；两人意见不同以维护者为准。发版只等维护者的话。</li>
       <li>主会话管全局：提 Issue、分派、转达决定、管里程碑、更新状态页、跑夜间队列、Issue 监听、改对外页面（创意工坊）、汇报；几行的小修也在这里做。</li>
       <li>调研、测量和每个 Issue 的开发交给子 agent，开发的各用自己的 git 工作树；它们任何时候都能派出去，怎么选模型、什么时候交接见<a href="#dispatch">第 03 节</a>。维护者点名要看着做的、或改动大来回多的，主会话直接另开子会话（不先问），做完归档。要求一次写完整：会话正在做事时发给它的消息，要等它这一轮结束才看得到。</li>
-      <li>维护者事先同意不用问的事（各种评论、自己分支的提交和 PR、自动合并、测试、里程碑、到期的修 bug 版本）对每个会话和子 agent 都有效，它们不再请示，也不等转来的同意；要等维护者的事只由主会话处理。</li>
+      <li>维护者事先同意不用问的事（各种评论、自己分支的提交和 PR、自动合并、测试、里程碑）对每个会话和子 agent 都有效，它们不再请示，也不等转来的同意；要等维护者的事只由主会话处理。</li>
       <li>需要人确认的问题写到 Issue 上和状态页“要你决定的事”里，工作照常往下走，不停下来等。</li>
     </ul>
   </div>
@@ -436,13 +436,8 @@ footer { margin-top: 64px; border-top: 1px solid var(--line); padding-top: 16px;
   <div class="split">
     <div class="card">
       <h4>谁来定</h4>
-      <p><b>只修 bug 的版本自动发</b>，满足任一条即可：</p>
-      <ul>
-        <li>攒够 3 个修复；</li>
-        <li>离第一个修复合并满 7 天；</li>
-        <li>修好一个严重 bug：线上版本崩溃、面板不能用，或者方案在普通设置下违反游戏规则。</li>
-      </ul>
-      <p><b>其余的版本</b>（含功能、优化，或默认值、界面调整，哪怕只升第三位）：测试和准备都做完，报告“可以发了”（里面有什么、测出什么、还剩什么），等维护者说一句“发 vX.Y.Z”。</p>
+      <p><b>每一版都由维护者决定什么时候发</b>，只修 bug 的也一样：测试和准备都做完，报告“可以发了”（里面有什么、测出什么、还剩什么），等维护者说一句“发 vX.Y.Z”。</p>
+      <p>修好一个严重 bug（线上版本崩溃、面板不能用，或者方案在普通设置下违反游戏规则）时马上告诉维护者。</p>
     </div>
     <div class="card">
       <h4>版本号</h4>
@@ -482,7 +477,7 @@ footer { margin-top: 64px; border-top: 1px solid var(--line); padding-top: 16px;
       <tbody id="autorows"></tbody>
     </table>
   </div>
-  <p class="note">规律：凡是能由脚本判断对错的（测试、打包、核对上传结果）都交给脚本；需要取舍的（方案、默认值、对外怎么说）留给人；介于两者之间的写成规则（比如“3 个修复 / 7 天 / 严重 bug”），由代理照章执行。</p>
+  <p class="note">规律：凡是能由脚本判断对错的（测试、打包、核对上传结果）都交给脚本；需要取舍的（方案、默认值、对外怎么说）留给人；介于两者之间的写成规则（比如什么时候挂哪个里程碑），由代理照章执行。</p>
 </section>
 
 <!-- 08 -->
@@ -572,7 +567,7 @@ footer { margin-top: 64px; border-top: 1px solid var(--line); padding-top: 16px;
     ["代码审查", 2, "改了代码的 PR 由开 PR 的代理点名请 Codex 审，后台等它审完；每条意见先核实，属实的先写会失败的测试再改，不属实的写明原因，回复后标为已解决，都处理完再开自动合并；只改文档的不审。试两周，按记录的属实和误报条数决定留不留", "—（只有要改需求、默认值或权衡做法的意见才进“要你决定的事”）", "tools/codex_review.py"],
     ["PR、CI、合并", 1, "一个 Issue 一个 PR；Ubuntu、Windows 两项检查通过后自动 squash 合并；CI 失败时自动叫醒代理修，通过和合并不叫醒，代理开 PR 后在后台等结果；合并后清理工作树、本地分支和 GitHub 上多出来的分支", "—", ".github/workflows/checks.yml"],
     ["对外文字审阅", 3, "README、创意工坊简介、介绍页由代理改，PR 里附渲染好的页面和图", "合并前另一人看一下", null],
-    ["要不要发版", 3, "只修 bug：满 3 个修复、满 7 天或严重 bug 即自动发；其余（含默认值、界面调整）：做完准备等一句话", "说“发 vX.Y.Z”", ".claude/skills/sdp-release/SKILL.md"],
+    ["要不要发版", 4, "每一版（含只修 bug 的）做完准备、报告可以发了，等维护者一句话；严重 bug 修好时马上告诉维护者", "说“发 vX.Y.Z”", ".claude/skills/sdp-release/SKILL.md"],
     ["发版准备", 2, "版本号、更新说明草稿、截图、自测报告里的表格", "—", "tools/release.py"],
     ["Release 与介绍页", 1, "打模组包和创意工坊包，生成中英介绍页，连同本页发布到 GitHub Pages", "—", ".github/workflows/release.yml"],
     ["创意工坊上传", 2, "SteamCMD 上传后再下载回来，与提交包逐字节比对", "Steam 要密码或验证码时由人输入", "tools/workshop.py"],

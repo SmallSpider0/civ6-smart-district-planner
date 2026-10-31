@@ -1,14 +1,14 @@
 ---
 name: sdp-release
-description: Release a version of the Smart District Planner (civ6mod) — tests, screenshots, version numbers, change notes, the self-test report, the PR, the GitHub release and the Steam Workshop update, in order. Use when the maintainer says to release, when a bug-fix milestone is due, or when a milestone's issues are done (to prepare it and report it ready).
+description: Release a version of the Smart District Planner (civ6mod) — tests, screenshots, version numbers, change notes, the self-test report, the PR, the GitHub release and the Steam Workshop update, in order. Use when the maintainer says to release, or when a milestone's issues are done (to prepare it and report it ready).
 ---
 
 # Releasing vX.Y.Z
 
 Who decides (docs/maintaining.md "一轮工作的流程" 5 and "发版"):
 
-- **Bug fixes only**: a patch milestone that holds only bug fixes (text and document fixes count with them) is released when one of these holds: three ordinary bug fixes are merged and not released; seven days have passed since the first unreleased bug fix was merged; a critical bug is fixed (the live version crashes the game, the panel cannot be used, or plans break the game's rules for ordinary setups), released as soon as it is fixed and tested. If fixing a bug raises a question the maintainer must settle (a default, a requirement, a trade-off), that fix waits for the answer like a feature.
-- **Anything else** (a feature, an optimisation, a default, parameter or layout change — whatever the version digit) is released when the maintainer decides. Until then: when its issues are done, do §1 steps 0–6 (tests, screenshots, version, notes, report), report it ready (what is in it, what the tests showed, what is left) and go on with other work. After the decision: §1 step 7 and §2.
+- **Every release** waits for the maintainer's word ("发 vX.Y.Z"), a bug-fix-only one too (2026-10-31; before, bug-fix milestones went out by themselves after three fixes or seven days). When a critical bug is fixed (the live version crashes the game, the panel cannot be used, or plans break the game's rules for ordinary setups), tell the maintainer at once.
+- When a milestone's issues are done, do §1 steps 0–6 (tests, screenshots, version, notes, report), report it ready (what is in it, what the tests showed, what is left) and go on with other work. After the word: §1 step 7 and §2.
 
 Bug-fix PRs merge into `main` as usual in the meantime: `main` reaches no player. Windows is not tested before a release. This file is the release checklist; the issue template that repeated it was removed on 2026-10-27.
 
