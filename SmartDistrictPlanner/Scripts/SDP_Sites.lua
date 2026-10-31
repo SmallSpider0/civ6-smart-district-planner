@@ -318,6 +318,7 @@ function SDP_Sites.Context(playerID, request, k)
     Coast = (GlobalParameters and GlobalParameters.CITY_POPULATION_COAST) or 3,
     None = (GlobalParameters and GlobalParameters.CITY_POPULATION_NO_WATER) or 2,
     Center = SDP_Land.CenterHousing(),
+    CenterParts = SDP_Land.CenterHousingParts(),
   }
   -- Districts on the coast (the harbor): their buildings' housing counts
   -- for the site (issue 55).
@@ -396,16 +397,24 @@ local Water = function(plot) return SDP_City.WaterKind(plot) end
 -- housing, the first-era city-center buildings' (granary), and the
 -- buildings' of the coast districts (harbor) among `districts`; its worth
 -- is SDP_Land.HousingValue with the population the plan needs as target
--- and a new city's population, 1 (issue 91).
+-- and a new city's population, 1 (issue 91). The tooltip shows the water
+-- housing and each building's apart (Info.HousingWater, HousingParts: issue
+-- 188), so the total does not read as what the new city has at once.
 function SDP_Sites.WaterPart(ctx, site, districts)
   local plot = Map.GetPlot(site.X, site.Y)
   local kind = site.Info.WaterKind
-  local housing = ((kind == "FRESH" and ctx.Housing.Fresh) or (kind == "COAST" and ctx.Housing.Coast) or ctx.Housing.None)
-    + ctx.Housing.Center
+  local water = (kind == "FRESH" and ctx.Housing.Fresh) or (kind == "COAST" and ctx.Housing.Coast) or ctx.Housing.None
+  local housing, parts = water + ctx.Housing.Center, {}
+  for _, part in ipairs(ctx.Housing.CenterParts) do parts[#parts + 1] = part end
   for _, districtType in ipairs(districts) do
-    if ctx.CoastDistricts[districtType] then housing = housing + SDP_Land.BuildingHousing(districtType, plot:IsCoastalLand()) end
+    if ctx.CoastDistricts[districtType] then
+      for _, part in ipairs(SDP_Land.BuildingHousingParts(districtType, plot:IsCoastalLand())) do
+        housing = housing + part.Housing
+        parts[#parts + 1] = part
+      end
+    end
   end
-  site.Info.Housing = housing
+  site.Info.Housing, site.Info.HousingWater, site.Info.HousingParts = housing, water, parts
   local dry = ctx.Housing.None + ctx.Housing.Center
   return ctx.Items.HOUSING * (SDP_Land.HousingValue(housing, ctx.Population, 1) - SDP_Land.HousingValue(dry, ctx.Population, 1))
 end

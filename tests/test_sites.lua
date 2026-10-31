@@ -205,6 +205,17 @@ test("the sites tab shows each site's resources and both distances", function()
     local district = Locale.Lookup("LOC_SDP_SITES_ITEM_SHORT", Locale.Lookup("LOC_SDP_SITES_W_DISTRICT_SHORT"),
       SDP_UI.Number(math.floor(site.Parts.District * 10 + 0.5) / 10))
     T.ok(row.Detail:find(district, 1, true), "the districts part: " .. district)
+    -- Housing (issue 188): the water's and each building's, in the game's
+    -- names, adding up to the total.
+    local info, parts, total = site.Info, {}, site.Info.HousingWater
+    for _, part in ipairs(info.HousingParts) do
+      parts[#parts + 1] = Locale.Lookup("LOC_SDP_SITES_HOUSING_PART", Locale.Lookup(GameInfo.Buildings[part.Building].Name),
+        SDP_UI.Number(part.Housing))
+      total = total + part.Housing
+    end
+    T.eq(total, info.Housing, "water and buildings add up")
+    T.ok(tip:find(Locale.Lookup("LOC_SDP_SITES_HOUSING_BUILT", SDP_UI.Number(info.Housing), SDP_UI.Number(info.HousingWater),
+      table.concat(parts, ", ")), 1, true), "the housing line")
     print(sites.State().View.Results[s].Name .. " | " .. sites.State().View.Results[s].Detail .. " | "
       .. tip:gsub("%[NEWLINE%]", " / "))
   end

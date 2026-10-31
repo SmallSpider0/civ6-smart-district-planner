@@ -471,6 +471,42 @@ function World.New(spec)
       Cost = 180, PrereqTech = "TECH_IRRIGATION", AdjacentImprovement = "IMPROVEMENT_CAMP" }
     gi.Buildings = Table(rows, "BuildingType")
   end
+  -- Housing from buildings as in Gathering Storm (issue 188), on request:
+  -- the granary (+2, a city-center building of the first era), the
+  -- lighthouse (+1, and +2 more when the city center is next to the coast,
+  -- a building modifier) and the seaport (+1, a later era). Added last, so
+  -- the other rows keep their indices.
+  if spec.housingBuildings then
+    local function Append(tbl, key, extra)
+      local rows = {}
+      for row in tbl() do rows[#rows + 1] = row end
+      for _, row in ipairs(extra) do rows[#rows + 1] = row end
+      return Table(rows, key)
+    end
+    gi.Buildings.BUILDING_LIGHTHOUSE.Housing = 1
+    gi.Buildings = Append(gi.Buildings, "BuildingType", {
+      { BuildingType = "BUILDING_GRANARY", Name = "LOC_BUILDING_GRANARY_NAME", Cost = 65, Housing = 2,
+        PrereqDistrict = "DISTRICT_CITY_CENTER", PrereqTech = "TECH_IRRIGATION" },
+      { BuildingType = "BUILDING_SEAPORT", Name = "LOC_BUILDING_SEAPORT_NAME", Cost = 580, Housing = 1,
+        PrereqDistrict = "DISTRICT_HARBOR" },
+    })
+    gi.Modifiers = Append(gi.Modifiers, "ModifierId", {
+      { ModifierId = "LIGHTHOUSE_COASTAL_CITY_HOUSING", ModifierType = "MODIFIER_CITY_OWNER_ADJUST_BUILDING_HOUSING",
+        SubjectRequirementSetId = "PLOT_IS_ADJACENT_TO_COAST" },
+    })
+    gi.BuildingModifiers = Append(gi.BuildingModifiers, nil, {
+      { BuildingType = "BUILDING_LIGHTHOUSE", ModifierId = "LIGHTHOUSE_COASTAL_CITY_HOUSING" },
+    })
+    gi.RequirementSetRequirements = Append(gi.RequirementSetRequirements, nil, {
+      { RequirementSetId = "PLOT_IS_ADJACENT_TO_COAST", RequirementId = "REQUIRES_PLOT_IS_ADJACENT_TO_COAST" },
+    })
+    gi.Requirements = Append(gi.Requirements, "RequirementId", {
+      { RequirementId = "REQUIRES_PLOT_IS_ADJACENT_TO_COAST", RequirementType = "REQUIREMENT_PLOT_ADJACENT_TO_COAST" },
+    })
+    gi.ModifierArguments = Table({
+      { ModifierId = "LIGHTHOUSE_COASTAL_CITY_HOUSING", Name = "Amount", Value = "2" },
+    })
+  end
   -- A trait that replaces a table row with a bonus only DMT knows, as
   -- Japan's: spec.traitNeighbour = { [DistrictType] = { YieldType, Change, YieldChangeId } }
   -- gives Change per neighbouring district instead of the row YieldChangeId.
