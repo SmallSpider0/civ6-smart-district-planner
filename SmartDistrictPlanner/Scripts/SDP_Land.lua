@@ -589,17 +589,29 @@ end
 -- Housing every new city soon has from city-center buildings: those of the
 -- first era that are not wonders, the palace (Capital) or a civilization's
 -- own (the granary in the game's rules). Sites add it to their water housing.
-function SDP_Land.CenterHousing()
-  local first, total = FirstEra(), 0
-  if first == nil or GameInfo.Buildings == nil then return 0 end
+-- CenterHousingParts lists them, { { Building, Housing } } in the rules'
+-- order (issue 188: the site tooltip names them).
+function SDP_Land.CenterHousingParts()
+  local first, parts = FirstEra(), {}
+  if first == nil or GameInfo.Buildings == nil then return parts end
   for row in GameInfo.Buildings() do
     if row.PrereqDistrict == "DISTRICT_CITY_CENTER" and (row.Housing or 0) > 0 and not row.IsWonder
         and not row.Capital and row.TraitType == nil and (row.PrereqTech or row.PrereqCivic)
         and EraOf(row.PrereqTech, row.PrereqCivic) == first then
-      total = total + row.Housing
+      parts[#parts + 1] = { Building = row.BuildingType, Housing = row.Housing }
     end
   end
+  return parts
+end
+
+local function Sum(parts)
+  local total = 0
+  for _, part in ipairs(parts) do total = total + part.Housing end
   return total
+end
+
+function SDP_Land.CenterHousing()
+  return Sum(SDP_Land.CenterHousingParts())
 end
 
 -- Whether every requirement of requirement set `id` is of type `kind`.
@@ -622,8 +634,11 @@ end
 -- next to the coast" (counted when `coastal`, the city center is; Gathering
 -- Storm's lighthouse). Not wonders, not a civilization's own buildings.
 -- The base type's buildings count for a replacement (Cothon for Harbor).
+-- BuildingHousingParts lists the buildings that give some, { { Building,
+-- Housing } } in the rules' order, a modifier's amount with its building
+-- (issue 188).
 local m_buildingHousing, m_buildingHousingFor = {}, nil
-function SDP_Land.BuildingHousing(districtType, coastal)
+function SDP_Land.BuildingHousingParts(districtType, coastal)
   if m_buildingHousingFor ~= GameInfo then m_buildingHousing, m_buildingHousingFor = {}, GameInfo end
   local key = districtType .. (coastal and "+" or "-")
   if m_buildingHousing[key] ~= nil then return m_buildingHousing[key] end
@@ -633,32 +648,42 @@ function SDP_Land.BuildingHousing(districtType, coastal)
       if row.CivUniqueDistrictType == districtType then base = row.ReplacesDistrictType end
     end
   end
-  local total, buildings = 0, {}
-  if GameInfo.Buildings == nil then return 0 end
+  local parts, byBuilding = {}, {}
+  if GameInfo.Buildings == nil then return parts end
   for row in GameInfo.Buildings() do
     if (row.PrereqDistrict == districtType or row.PrereqDistrict == base) and not row.IsWonder and row.TraitType == nil then
-      total = total + (row.Housing or 0)
-      buildings[row.BuildingType] = true
+      local part = { Building = row.BuildingType, Housing = row.Housing or 0 }
+      parts[#parts + 1] = part
+      byBuilding[row.BuildingType] = part
     end
   end
   if GameInfo.BuildingModifiers ~= nil and GameInfo.Modifiers ~= nil and GameInfo.ModifierArguments ~= nil then
     for link in GameInfo.BuildingModifiers() do
-      local modifier = buildings[link.BuildingType] and GameInfo.Modifiers[link.ModifierId] or nil
+      local part = byBuilding[link.BuildingType]
+      local modifier = part ~= nil and GameInfo.Modifiers[link.ModifierId] or nil
       if modifier ~= nil and modifier.ModifierType == "MODIFIER_CITY_OWNER_ADJUST_BUILDING_HOUSING" then
         local set = modifier.SubjectRequirementSetId
         local applies = set == nil or (coastal and SetIsOnly(set, "REQUIREMENT_PLOT_ADJACENT_TO_COAST"))
         if applies then
           for argument in GameInfo.ModifierArguments() do
             if argument.ModifierId == link.ModifierId and argument.Name == "Amount" then
-              total = total + (tonumber(argument.Value) or 0)
+              part.Housing = part.Housing + (tonumber(argument.Value) or 0)
             end
           end
         end
       end
     end
   end
-  m_buildingHousing[key] = total
-  return total
+  local giving = {}
+  for _, part in ipairs(parts) do
+    if part.Housing ~= 0 then giving[#giving + 1] = part end
+  end
+  m_buildingHousing[key] = giving
+  return giving
+end
+
+function SDP_Land.BuildingHousing(districtType, coastal)
+  return Sum(SDP_Land.BuildingHousingParts(districtType, coastal))
 end
 
 -- A city's housing now (issue 55): the game's figure for a city, water

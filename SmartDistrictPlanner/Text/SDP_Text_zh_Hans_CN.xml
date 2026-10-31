@@ -469,6 +469,12 @@
     <Replace Tag="LOC_SDP_SITES_HOUSING" Language="zh_Hans_CN">
       <Text>住房 {1_Housing}</Text>
     </Replace>
+    <Replace Tag="LOC_SDP_SITES_HOUSING_BUILT" Language="zh_Hans_CN">
+      <Text>住房 {1_Housing}（水源 {2_Water}，建好后另加：{3_Buildings}）</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_HOUSING_PART" Language="zh_Hans_CN">
+      <Text>{1_Building} +{2_Housing}</Text>
+    </Replace>
     <Replace Tag="LOC_SDP_SITES_OWN_DISTANCE" Language="zh_Hans_CN">
       <Text>离我方最近的城市或已打的城址钉 {1_Distance} 格</Text>
     </Replace>

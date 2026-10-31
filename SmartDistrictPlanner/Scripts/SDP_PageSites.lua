@@ -437,7 +437,18 @@ local function SiteToolTip(site, result)
   local lines = ItemLines(site, result)
   local info = site.Info
   lines[#lines + 1] = Locale.Lookup("LOC_SDP_SITES_WATER_" .. info.WaterKind)
-  if info.Housing ~= nil then lines[#lines + 1] = Locale.Lookup("LOC_SDP_SITES_HOUSING", SDP_UI.Number(info.Housing)) end
+  -- Housing: the water's and each building's apart (issue 188), so the
+  -- total does not read as what the new city has at once.
+  if info.Housing ~= nil and info.HousingParts ~= nil and #info.HousingParts > 0 then
+    local parts = {}
+    for _, part in ipairs(info.HousingParts) do
+      parts[#parts + 1] = Locale.Lookup("LOC_SDP_SITES_HOUSING_PART", SDP_UI.TypeName(part.Building), SDP_UI.Number(part.Housing))
+    end
+    lines[#lines + 1] = Locale.Lookup("LOC_SDP_SITES_HOUSING_BUILT", SDP_UI.Number(info.Housing),
+      SDP_UI.Number(info.HousingWater), table.concat(parts, ", "))
+  elseif info.Housing ~= nil then
+    lines[#lines + 1] = Locale.Lookup("LOC_SDP_SITES_HOUSING", SDP_UI.Number(info.Housing))
+  end
   local own = site.OwnDistance or info.OwnDistance
   if own ~= nil and own < math.huge then lines[#lines + 1] = Locale.Lookup("LOC_SDP_SITES_OWN_DISTANCE", own) end
   if site.SiteDistance ~= nil then lines[#lines + 1] = Locale.Lookup("LOC_SDP_SITES_SITE_DISTANCE", site.SiteDistance) end

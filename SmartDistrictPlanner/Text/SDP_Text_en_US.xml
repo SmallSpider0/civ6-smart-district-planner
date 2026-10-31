@@ -469,6 +469,12 @@
     <Replace Tag="LOC_SDP_SITES_HOUSING" Language="en_US">
       <Text>Housing {1_Housing}</Text>
     </Replace>
+    <Replace Tag="LOC_SDP_SITES_HOUSING_BUILT" Language="en_US">
+      <Text>Housing {1_Housing} (water {2_Water}; once built: {3_Buildings})</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_HOUSING_PART" Language="en_US">
+      <Text>{1_Building} +{2_Housing}</Text>
+    </Replace>
     <Replace Tag="LOC_SDP_SITES_OWN_DISTANCE" Language="en_US">
       <Text>{1_Distance} tiles from your nearest city or placed site tack</Text>
     </Replace>

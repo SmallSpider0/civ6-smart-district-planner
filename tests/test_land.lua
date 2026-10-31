@@ -49,6 +49,22 @@ test("housing from the rules: granary for a new city, harbor buildings", functio
   T.ok(inland >= 2, "lighthouse and seaport")
   T.ok(coastal >= inland, "coastal at least as much")
   if SDP_Rules.Ruleset() == "RULESET_EXPANSION_2" then T.eq(coastal - inland, 2, "Gathering Storm: the lighthouse's +2") end
+  -- The parts the site tooltip names (issue 188) add up to the totals; each
+  -- is a building's Housing, plus its modifiers on the coast.
+  local function Sum(parts)
+    local total = 0
+    for _, part in ipairs(parts) do
+      T.ok(GameInfo.Buildings[part.Building] ~= nil and part.Housing > 0, part.Building)
+      total = total + part.Housing
+    end
+    return total
+  end
+  T.eq(Sum(SDP_Land.CenterHousingParts()), SDP_Land.CenterHousing(), "center parts")
+  T.eq(Sum(SDP_Land.BuildingHousingParts("DISTRICT_HARBOR", true)), coastal, "harbor parts on the coast")
+  T.eq(Sum(SDP_Land.BuildingHousingParts("DISTRICT_HARBOR", false)), inland, "harbor parts inland")
+  for _, part in ipairs(SDP_Land.BuildingHousingParts("DISTRICT_HARBOR", false)) do
+    T.eq(part.Housing, GameInfo.Buildings[part.Building].Housing, part.Building .. ": its Housing inland")
+  end
   T.eq(SDP_Land.HousingValue(9, 7, 5), 8.5, "a city of 5 planning for 7: 1 each up to 8, then half (issue 91)")
   -- The growth threshold from GlobalParameters matches the game's for the capital.
   local capital = Players[Game.GetLocalPlayer()]:GetCities():GetCapitalCity()
