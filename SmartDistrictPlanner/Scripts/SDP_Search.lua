@@ -2328,19 +2328,27 @@ function Search:Untangle(layout, gain)
   return cur, gain
 end
 
--- Up to `count` layouts of `pool` ({ Layout, Gain }) that are distinct
--- from each other (IsDistinct), best first. With spec.Swapped each layout is
--- untangled first (Untangle: ties take no swap, issue 162), which can raise
--- a later layout above an earlier one. The plans are shown in this order,
--- so the whole pool is ranked (issue 189): more placed slots, then the
--- higher value, then fewer swapped plots, then earlier in the pool.
+-- Up to `count` layouts of `pool` ({ Layout, Gain }, best first) that are
+-- distinct from each other (IsDistinct), each untangled first (Untangle:
+-- ties take no swap, issue 162). Untangling can raise a later layout above
+-- the first, so with spec.Swapped every layout of the pool is untangled and
+-- the best of them goes first; the others keep their order while the
+-- distinct ones are taken (the single-city tab lists other combinations
+-- before other plots for the same districts). The plans are shown in the
+-- order returned, so the ones taken are ranked (issue 189): more placed
+-- slots, then the higher value, then fewer swapped plots, then earlier in
+-- the pool.
+local function Ranked(a, b)
+  if a.Placed ~= b.Placed then return a.Placed > b.Placed end
+  if a.Gain ~= b.Gain then return a.Gain > b.Gain end
+  if a.Swaps ~= b.Swaps then return a.Swaps < b.Swaps end
+  return a.Rank < b.Rank
+end
+
 function Search:Pick(pool, count)
-  local done = {}
-  local ranked = {}
-  for r, entry in ipairs(pool) do
-    if entry.Layout == nil then
-      -- nothing to rank
-    elseif self.Swapped ~= nil then
+  if self.Swapped ~= nil and #pool > 0 then
+    local done, first = {}, 1
+    for r, entry in ipairs(pool) do
       local key = table.concat(entry.Layout, ",")
       local tidy = done[key]
       if tidy == nil then
@@ -2349,30 +2357,31 @@ function Search:Pick(pool, count)
         done[key] = tidy
       end
       entry.Layout, entry.Gain, entry.Placed, entry.Swaps = tidy.Layout, tidy.Gain, tidy.Placed, tidy.Swaps
-    else
-      entry.Placed, entry.Swaps = Placed(entry.Layout), 0
+      local best = pool[first]
+      if entry.Placed > best.Placed or (entry.Placed == best.Placed and (entry.Gain > best.Gain
+          or (entry.Gain == best.Gain and entry.Swaps < best.Swaps))) then
+        first = r
+      end
     end
-    if entry.Layout ~= nil then
-      entry.Rank = r
-      ranked[#ranked + 1] = entry
+    local ordered = { pool[first] }
+    for r, entry in ipairs(pool) do
+      if r ~= first then ordered[#ordered + 1] = entry end
     end
+    pool = ordered
   end
-  table.sort(ranked, function(a, b)
-    if a.Placed ~= b.Placed then return a.Placed > b.Placed end
-    if a.Gain ~= b.Gain then return a.Gain > b.Gain end
-    if a.Swaps ~= b.Swaps then return a.Swaps < b.Swaps end
-    return a.Rank < b.Rank
-  end)
-  pool = ranked
   local kept = {}
-  for _, entry in ipairs(pool) do
+  for r, entry in ipairs(pool) do
     if #kept >= count then break end
     local distinct = true
     for _, other in ipairs(kept) do
       if not self:IsDistinct(entry.Layout, other.Layout) then distinct = false end
     end
-    if distinct then kept[#kept + 1] = entry end
+    if distinct then
+      entry.Placed, entry.Swaps, entry.Rank = entry.Placed or Placed(entry.Layout), entry.Swaps or 0, r
+      kept[#kept + 1] = entry
+    end
   end
+  table.sort(kept, Ranked)
   return kept
 end
 

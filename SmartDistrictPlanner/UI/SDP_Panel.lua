@@ -1208,8 +1208,8 @@ local function ShowResult()
         local inst = m_solutionIM:GetInstance()
         m_solutionCells[n] = inst.Root
         SDP_UI.SolutionRow(inst, SDP_UI.SolutionLabel(n, sol),
-          SDP_UI.WithRank(SDP_UI.SummaryText(sol, summaryParts) .. "[NEWLINE]" .. SDP_UI.SolutionDetail(sol),
-            SDP_UI.RankText(solutions, n, summaryParts)), n == m_solution)
+          SDP_UI.WithRank(SDP_UI.SummaryText(sol, summaryParts), SDP_UI.RankText(solutions, n, summaryParts))
+            .. "[NEWLINE]" .. SDP_UI.SolutionDetail(sol), n == m_solution)
         inst.Root:RegisterCallback(Mouse.eLClick, function()
           m_solution = n
           m_lookNext = true

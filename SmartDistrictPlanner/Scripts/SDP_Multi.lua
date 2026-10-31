@@ -1189,7 +1189,8 @@ function Session:Distinct(count)
     if a.Placed ~= b.Placed then return a.Placed > b.Placed end
     return SDP_Search.Better(a.Gain, a.Layout, b.Gain, b.Layout)
   end)
-  -- Untangled first (ties take no swap, issue 162), then ranked again (issue 189).
+  -- Untangled first (ties take no swap, issue 162), the best of them first;
+  -- the plans taken are ranked again (issue 189).
   return search:Pick(pool, count)
 end
 

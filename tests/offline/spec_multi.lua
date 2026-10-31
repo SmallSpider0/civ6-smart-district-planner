@@ -720,10 +720,11 @@ end)
 -- Issue 189: the plans are shown in the order Pick returns them. Untangling
 -- (issue 162) can raise a later layout above an earlier one other than the
 -- first; and a pool given without swaps may come unsorted (the single-city
--- tab adds the alternatives after the solved combinations). The whole pool
--- is ranked: more placed, then the higher value, then fewer swaps, then the
--- pool's order. Search:Pick on stand-ins for the search's own steps.
-test("plans: the whole pool is ranked after untangling (issue 189)", function()
+-- tab adds the alternatives after the solved combinations). The plans taken
+-- are the same as before (the best first, then the pool's order), ranked:
+-- more placed, then the higher value, then fewer swaps, then the pool's
+-- order. Search:Pick on stand-ins for the search's own steps.
+test("plans: the plans taken are ranked after untangling (issue 189)", function()
   NewWorld()
   local result = SDP_Multi.Solve(Request({ Districts = { "DISTRICT_CAMPUS" }, Only = { [1] = true } }))
   T.ok(result.Ok, tostring(result.Error))
@@ -750,7 +751,7 @@ test("plans: the whole pool is ranked after untangling (issue 189)", function()
     }
   end
   T.eq(Order(Pick(stub, Pool(), 5)), "A C B E D", "untangled: C rises above B; ties by pool order; fewer placed last")
-  T.eq(Order(Pick(stub, Pool(), 2)), "A C", "the best two")
+  T.eq(Order(Pick(stub, Pool(), 2)), "A B", "the same two plans as before: the best, then the pool's order")
   stub.Swapped = nil
   local unsorted = { { Name = "B", Layout = { 1, 2, 4 }, Gain = 4 }, { Name = "A", Layout = { 1, 2, 3 }, Gain = 5 } }
   T.eq(Order(Pick(stub, unsorted, 3)), "A B", "without swaps: ranked too")
