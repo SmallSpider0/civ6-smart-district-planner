@@ -31,6 +31,11 @@ class Verdict(unittest.TestCase):
         self.assertEqual(cr.verdict(HEAD, SINCE, [summary(HEAD, "completed", False)], [], []), "clean")
         self.assertEqual(cr.verdict(HEAD, SINCE, [summary(HEAD, "completed", True)], [], []), "findings")
 
+    def test_failed_summary_is_not_a_review(self):
+        # Codex ran out of usage on PR 192 and 193: status "failed" with
+        # has_unresolved_findings true but no threads, read as "all resolved".
+        self.assertEqual(cr.verdict(HEAD, SINCE, [summary(HEAD, "failed", True)], [], []), "failed")
+
     def test_summary_of_an_older_commit_is_ignored(self):
         self.assertIsNone(cr.verdict(HEAD, SINCE, [summary(OLD, "completed", False)], [], []))
 
