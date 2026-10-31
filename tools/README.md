@@ -544,7 +544,7 @@ python3 -I tools/preflight_night.py   # 每个文件夹一行 ok / PROBLEM / mis
 
 ```bash
 python3 -I tools/codex_review.py request 125              # 在 PR 下评论 @codex review（并记进 watch_issues 的 --mine）
-python3 -I tools/codex_review.py wait 125                 # 后台跑：审完退出；0 没有意见，1 有没处理的意见（列出），3 超时（默认 30 分钟）
+python3 -I tools/codex_review.py wait 125                 # 后台跑：审完退出；0 没有意见，1 有没处理的意见（列出），3 没审成：超时（默认 30 分钟）或 Codex 报审查失败（如用量到了上限）
 python3 -I tools/codex_review.py findings 125             # 列出 Codex 没解决的审查意见（线程 ID、文件:行、链接、内容）
 python3 -I tools/codex_review.py reply 线程ID "已修，见 abc1234"   # 回复一条并标为已解决
 ```

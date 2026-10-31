@@ -8,7 +8,9 @@
 
 wait polls every --every seconds (default 30) and exits 0 when the review
 ended without findings, 1 when there are unresolved findings (they are
-printed), 3 after --timeout seconds (default 1800) without a finished review.
+printed), 3 after --timeout seconds (default 1800) without a finished review
+or when Codex could not finish it (its summary says "failed", e.g. out of
+usage): either way the PR was not reviewed.
 Network errors are retried. Run it in the background: its end is the signal.
 
 Codex marks its progress in three places, all read here: a summary comment
@@ -67,7 +69,7 @@ def review_state(body):
 
 
 def verdict(head, since, comments, reviews, reactions):
-    """'clean', 'findings' or None (still running) for the head commit.
+    """'clean', 'findings', 'failed' or None (still running) for the head commit.
 
     comments: issue comments of the PR; reviews: its reviews; reactions: the
     PR's reactions; since: ISO time of the head commit (older reactions are
@@ -76,6 +78,8 @@ def verdict(head, since, comments, reviews, reactions):
         if c["user"]["login"] != BOT:
             continue
         code = (review_state(c["body"]) or {}).get("code_review") or {}
+        if code.get("commit_sha") == head and code.get("status") == "failed":
+            return "failed"
         if code.get("commit_sha") == head and code.get("status") not in RUNNING:
             return "findings" if code.get("has_unresolved_findings") else "clean"
     if any(r["user"]["login"] == BOT and r.get("commit_id") == head for r in reviews):
@@ -126,6 +130,9 @@ def wait(number, every, timeout):
         if v == "clean":
             print("PR #%d %s: Codex found nothing" % (number, head[:7]))
             return 0
+        if v == "failed":
+            print("PR #%d %s: Codex could not finish the review (failed); not reviewed" % (number, head[:7]))
+            return 3
         if v == "findings":
             items = findings(number)
             if not items:  # all answered already
