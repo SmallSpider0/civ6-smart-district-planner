@@ -29,4 +29,6 @@
 
 - `tests/offline/spec_plan_order.lua`：多城两种情况（少放、同数量但总和低）和单城，经方案按钮自己的回调（`View.Solutions[n].Cell`、`SolutionCells[n]`）看悬停和选中后的说明，并检查顺序；旧代码上 3 条都失败。
 - `tests/offline/spec_multi.lua`“plans: the plans taken are ranked after untangling (issue 189)”：`Search:Pick` 用替身整理步骤：挑出的方案和以前一样，整理后升高的排到前面、同分按原顺序、少放的在最后，不换格时也排；旧代码上失败。
-- 结果见下（第二台机器）。
+- 整套离线测试（第二台机器，第二个提交）：243 条全过。第一个提交（把整个候选按分数排）有 2 条失败：`spec_pools`“three solutions: other combinations first”（同一组合的变体挤掉了别的组合）和 `spec_panel`“issue 71”（说明写在区域清单之后），第二个提交改成只排挑出的方案、说明放在区域清单之前。
+- 开发集复核 `python3 -I tools/refresh_results.py --check -j 4`（第二台机器，第一个提交）：268 行重跑，方案全部相同，加成没有变高或变低，没有新的违规。复核只看方案 1；两个提交里方案 1 的选法相同（整理后最好的一套），所以结论适用于最终版本。
+- 游戏内：`test_ui`、`test_feedback`、`test_feedback2`、`test_target` 排进了夜间队列（#37）。
