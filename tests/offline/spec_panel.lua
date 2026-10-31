@@ -1078,7 +1078,8 @@ test("issue 66: a wonder's district is supplied, shown, marked; not wanted stand
   for _, d in ipairs(SDP_Rules.PlannableDistricts(0)) do SDP_Panel.SetState(d.Type, SDP_UI.DefaultState(d)) end
   SDP_Panel.SetState("DISTRICT_AQUEDUCT", "OFF")
   SDP_Panel.SetState("DISTRICT_CAMPUS", "MUST")
-  SDP_Panel.SetCount(0)
+  -- Room for one more than the campus: the supplied district counts (issue 177).
+  SDP_Panel.SetCount(SDP_Panel.State().Have + 2)
   SDP_Panel.SetTier("FAST")
   local function Row(districtType)
     for _, r in ipairs(SDP_Panel.State().DistrictRows) do
@@ -1135,6 +1136,7 @@ test("issue 66: a wonder's district is supplied, shown, marked; not wanted stand
   multi.SetWonder("BUILDING_COLOSSEUM", false)
   T.eq(#multi.State().View.Supply, 0, "no line without the wonder")
   SDP_Panel.SelectTab("SINGLE")
+  SDP_Panel.SetCount(0)
 end)
 
 -- Issue 49: a preset from its pulldown entry sets the weights; the save

@@ -351,7 +351,9 @@ function SDP_Multi.NewSession(request)
       end
     end
     part.Plan = plan
-    asked[p] = { Count = count, Seen = seen, Kept = kept, Status = status, PinnedHere = pinnedHere }
+    -- Limited: a count was asked for this city (the panel always asks one).
+    local limited = (request.Counts and request.Counts[part.Key] ~= nil) or request.Count ~= nil
+    asked[p] = { Count = count, Limited = limited, Seen = seen, Kept = kept, Status = status, PinnedHere = pinnedHere }
     -- request.Target: the count is how many the city ends with (issue 144),
     -- so an existing city plans the rest; a type tacked here and planned
     -- again (in the city's own list) counts once.
@@ -398,9 +400,13 @@ function SDP_Multi.NewSession(request)
   -- player set it to "not wanted" (Off, Offs), where the city has or plans
   -- a district it cannot share a city with (a water park), where it has no
   -- valid tile, or past an empire limit; two wonders needing one district
-  -- get one. self.Supplied lists them { City, Type, Wonder }; Elsewhere[wonder]
-  -- the city where an empire-limited district stands already.
-  self.Supplied, self.Elsewhere = {}, {}
+  -- get one. A district that takes population needs room: the city's
+  -- required ones (and, with Target, what it has) below its count (issue
+  -- 177); required districts are never dropped for it. self.Supplied lists
+  -- them { City, Type, Wonder }; Elsewhere[wonder] the city where an
+  -- empire-limited district stands already; NoRoom[wonder] true when only
+  -- the count kept it out.
+  self.Supplied, self.Elsewhere, self.NoRoom = {}, {}, {}
   if request.Wonders and #request.Wonders > 0 then
     local wonderRows = {}
     for _, w in ipairs(SDP_Wonders.List(playerID, options.ignorePins)) do wonderRows[w.Type] = w end
@@ -412,6 +418,16 @@ function SDP_Multi.NewSession(request)
     local wonders = {}
     for _, wonderType in ipairs(request.Wonders) do wonders[#wonders + 1] = wonderType end
     table.sort(wonders)
+    -- Districts that take population the city may still plan: its count
+    -- less what it requires (asked[p].Count is already less what it has).
+    local function Room(p, part)
+      if not asked[p].Limited then return math.huge end
+      local n = 0
+      for _, districtType in ipairs(part.Plan) do
+        if byType[districtType].Specialty then n = n + 1 end
+      end
+      return asked[p].Count - n
+    end
     local function Placeable(part, districtType)
       for _, c in ipairs(part.Scan.Candidates) do
         if SDP_Overlay.CanPlace(SDP_Overlay.Subject(districtType, c.X, c.Y)) then return true end
@@ -433,13 +449,17 @@ function SDP_Multi.NewSession(request)
           if limited and left[own] == nil then
             left[own] = row.MaxPerPlayer - (builtByPlayer[own] or 0) - (pinnedAnywhere[own] or 0)
           end
+          local full = false
           for p, part in ipairs(participants) do
             local off = (request.Offs and request.Offs[part.Key]) or request.Off or {}
             local a = asked[p]
-            if not have[base] and not off[own] and not (limited and left[own] <= 0)
+            local fits = not have[base] and not off[own] and not (limited and left[own] <= 0)
                 and a.Status[own] == nil and not a.PinnedHere[own]
                 and SDP_Rules.ExcludedBy(own, a.Kept) == nil and SDP_Rules.ExcludedBy(own, part.Present) == nil
-                and Placeable(part, own) then
+                and Placeable(part, own)
+            if fits and row.Specialty and Room(p, part) <= 0 then
+              full = true
+            elseif fits then
               part.Plan[#part.Plan + 1] = own
               a.Seen[own], a.Kept[own] = true, true
               part.ForWonder[own] = wonderType
@@ -450,6 +470,8 @@ function SDP_Multi.NewSession(request)
           end
           if not have[base] and limited and left[own] <= 0 then
             self.Elsewhere[wonderType] = SDP_Multi.WhereBuilt(playerID, own)
+          elseif not have[base] and full then
+            self.NoRoom[wonderType] = true
           end
         end
       end
@@ -659,6 +681,10 @@ function SDP_Multi.NewSession(request)
             -- An empire-limited district in a city that does not take part.
             unplaced[#unplaced + 1] = { City = "WONDERS", Type = wonderType, Reason = "DISTRICT_ELSEWHERE",
               District = w.AdjacentDistrict, Other = own, Where = self.Elsewhere[wonderType] }
+          elseif self.NoRoom[wonderType] then
+            -- Every city that could take the district has its count (issue 177).
+            unplaced[#unplaced + 1] = { City = "WONDERS", Type = wonderType, Reason = "NO_ROOM_FOR_DISTRICT",
+              District = w.AdjacentDistrict, Other = own }
           else
             unplaced[#unplaced + 1] = { City = "WONDERS", Type = wonderType, Reason = "NEEDS_DISTRICT",
               District = w.AdjacentDistrict, Other = own }
@@ -1308,7 +1334,8 @@ end
 --                          Reach (keys of the targets it newly covers; coverage on, types with a reach) }
 --                 Unplaced { City, Type, Reason } (NOT_AVAILABLE, BUILT, PINNED, TACKED (an existing
 --                          city with the shared list has a pin of it, SDP_City.OwnPins), MAX_PER_PLAYER,
---                          NEEDS_DISTRICT, DISTRICT_ELSEWHERE (Where: the city's name), NEEDS_IMPROVEMENT
+--                          NEEDS_DISTRICT, NO_ROOM_FOR_DISTRICT (every city that could take it has its
+--                          count, issue 177), DISTRICT_ELSEWHERE (Where: the city's name), NEEDS_IMPROVEMENT
 --                          (Other: the improvement), NO_LEGAL_PLOT, NO_FREE_PLOT; City "WONDERS" for
 --                          wonders; ForWonder: a district supplied for that wonder, issue 66)
 --                 Plan entries of supplied districts carry ForWonder too

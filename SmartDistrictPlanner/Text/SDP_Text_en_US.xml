@@ -238,6 +238,9 @@
     <Replace Tag="LOC_SDP_REASON_NEEDS_DISTRICT" Language="en_US">
       <Text>needs a {1_Other} next to it that no city plans: set it to Must</Text>
     </Replace>
+    <Replace Tag="LOC_SDP_REASON_NO_ROOM_FOR_DISTRICT" Language="en_US">
+      <Text>needs a {1_Other} next to it, and every city that could take one already has its number of districts: raise the number or set it to Must</Text>
+    </Replace>
     <Replace Tag="LOC_SDP_REASON_NEEDS_IMPROVEMENT" Language="en_US">
       <Text>needs a {1_Improvement} next to it, and no tile nearby can take one</Text>
     </Replace>
@@ -864,7 +867,7 @@
       <Text>needs a {1_Other} next to it, which is in {2_Where} already: plan the wonder in that city</Text>
     </Replace>
     <Replace Tag="LOC_SDP_MULTI_SUPPLY" Language="en_US">
-      <Text>{2_Wonder} needs a {1_District} next to it: the first city of the list that can take one gets it (to choose the city, give it a list of its own with the {1_District} set to Must)</Text>
+      <Text>{2_Wonder} needs a {1_District} next to it: the first city of the list that has room for one more district and can take it gets it; with no such city the wonder is left out (to choose the city, give it a list of its own with the {1_District} set to Must)</Text>
     </Replace>
     <Replace Tag="LOC_SDP_MULTI_SUPPLIED" Language="en_US">
       <Text>{1_District} added to {3_City} for {2_Wonder}</Text>
