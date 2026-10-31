@@ -792,6 +792,29 @@ function SDP_UI.BreakdownLines(s, parts)
   return lines
 end
 
+-- Why plan n comes after plan n - 1 (issue 189): the button shows the
+-- weighted adjacency, but plans are ranked by how many districts and
+-- wonders they place, then by the adjacency plus the items in brackets
+-- (Gain). `parts`: the summary's items (SummaryText); with none the two
+-- values are the same. "" for the first plan.
+function SDP_UI.RankText(solutions, n, parts)
+  local s, before = solutions[n], solutions[n - 1]
+  if s == nil or before == nil then return "" end
+  local fewer = #(before.Plan or {}) - #(s.Plan or {})
+  if fewer > 0 then return Locale.Lookup("LOC_SDP_RANK_FEWER", n - 1, fewer) end
+  local lower = math.floor(((before.Gain or 0) - (s.Gain or 0)) * 10 + 0.5) / 10
+  local others = #SDP_UI.PartsList({ Appeal = s.AppealDelta }, parts or {}) > 0
+  if lower <= 0 then return Locale.Lookup(others and "LOC_SDP_RANK_SAME" or "LOC_SDP_RANK_SAME_ADJACENCY", n - 1) end
+  return Locale.Lookup(others and "LOC_SDP_RANK_LOWER" or "LOC_SDP_RANK_LOWER_ADJACENCY", n - 1, Number(lower))
+end
+
+-- `text`, then `rank` (RankText) on a line of its own when there is one.
+function SDP_UI.WithRank(text, rank)
+  if rank == nil or rank == "" then return text end
+  if text == nil or text == "" then return rank end
+  return text .. "[NEWLINE]" .. rank
+end
+
 -- A solution button's label: its number and weighted adjacency, the
 -- summary's first figure (issue 91); its tooltip: the summary, then `detail`.
 function SDP_UI.SolutionLabel(n, s)
@@ -1178,14 +1201,15 @@ local function ShowResult()
     local breakdown = SDP_UI.BreakdownLines(shown, summaryParts)
     if #breakdown > 0 then tip = table.concat(breakdown, "[NEWLINE]") .. "[NEWLINE][NEWLINE]" .. tip end
     Controls.Summary:SetToolTipString(tip)
-    Controls.Quality:SetText(QualityText(result))
+    Controls.Quality:SetText(SDP_UI.WithRank(QualityText(result), SDP_UI.RankText(solutions, m_solution, summaryParts)))
     -- The solutions (feedback item 1): a click shows one and previews it.
     if #solutions > 1 then
       for n, sol in ipairs(solutions) do
         local inst = m_solutionIM:GetInstance()
         m_solutionCells[n] = inst.Root
         SDP_UI.SolutionRow(inst, SDP_UI.SolutionLabel(n, sol),
-          SDP_UI.SummaryText(sol, summaryParts) .. "[NEWLINE]" .. SDP_UI.SolutionDetail(sol), n == m_solution)
+          SDP_UI.WithRank(SDP_UI.SummaryText(sol, summaryParts), SDP_UI.RankText(solutions, n, summaryParts))
+            .. "[NEWLINE]" .. SDP_UI.SolutionDetail(sol), n == m_solution)
         inst.Root:RegisterCallback(Mouse.eLClick, function()
           m_solution = n
           m_lookNext = true

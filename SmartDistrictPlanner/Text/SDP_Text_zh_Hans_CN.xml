@@ -696,7 +696,22 @@
       <Text>加权相邻加成：{1_Adjacency}（{2_Parts}）</Text>
     </Replace>
     <Replace Tag="LOC_SDP_RESULT_RANKED" Language="zh_Hans_CN">
-      <Text>方案按相邻加成和括号里各项之和排序；地块一项是负数很正常，区域总要占地。</Text>
+      <Text>方案先比放下的区域和奇观多少，再比相邻加成和括号里各项之和；地块一项是负数很正常，区域总要占地。</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RANK_FEWER" Language="zh_Hans_CN">
+      <Text>排在方案 {1_N} 后面：比它少放 {2_Count} 个区域或奇观</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RANK_LOWER" Language="zh_Hans_CN">
+      <Text>排在方案 {1_N} 后面：相邻加成和括号里各项之和比它低 {2_Value}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RANK_SAME" Language="zh_Hans_CN">
+      <Text>排在方案 {1_N} 后面：相邻加成和括号里各项之和与它相同</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RANK_LOWER_ADJACENCY" Language="zh_Hans_CN">
+      <Text>排在方案 {1_N} 后面：加权相邻加成比它低 {2_Value}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RANK_SAME_ADJACENCY" Language="zh_Hans_CN">
+      <Text>排在方案 {1_N} 后面：加权相邻加成与它相同</Text>
     </Replace>
     <Replace Tag="LOC_SDP_RESULT_TILES_LAND_OFF" Language="zh_Hans_CN">
       <Text>周边地块 {1_Yields}（“地块”权重为 0，不计分）</Text>

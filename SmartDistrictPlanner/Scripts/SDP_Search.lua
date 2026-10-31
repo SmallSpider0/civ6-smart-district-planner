@@ -2332,9 +2332,19 @@ end
 -- distinct from each other (IsDistinct), each untangled first (Untangle:
 -- ties take no swap, issue 162). Untangling can raise a later layout above
 -- the first, so with spec.Swapped every layout of the pool is untangled and
--- the best of them goes first (more placed slots, then the higher value,
--- then fewer swapped plots, then earlier in the pool); the others keep
--- their order. With spec.Swapped nil the pool is taken as it is.
+-- the best of them goes first; the others keep their order while the
+-- distinct ones are taken (the single-city tab lists other combinations
+-- before other plots for the same districts). The plans are shown in the
+-- order returned, so the ones taken are ranked (issue 189): more placed
+-- slots, then the higher value, then fewer swapped plots, then earlier in
+-- the pool.
+local function Ranked(a, b)
+  if a.Placed ~= b.Placed then return a.Placed > b.Placed end
+  if a.Gain ~= b.Gain then return a.Gain > b.Gain end
+  if a.Swaps ~= b.Swaps then return a.Swaps < b.Swaps end
+  return a.Rank < b.Rank
+end
+
 function Search:Pick(pool, count)
   if self.Swapped ~= nil and #pool > 0 then
     local done, first = {}, 1
@@ -2360,14 +2370,18 @@ function Search:Pick(pool, count)
     pool = ordered
   end
   local kept = {}
-  for _, entry in ipairs(pool) do
+  for r, entry in ipairs(pool) do
     if #kept >= count then break end
     local distinct = true
     for _, other in ipairs(kept) do
       if not self:IsDistinct(entry.Layout, other.Layout) then distinct = false end
     end
-    if distinct then kept[#kept + 1] = entry end
+    if distinct then
+      entry.Placed, entry.Swaps, entry.Rank = entry.Placed or Placed(entry.Layout), entry.Swaps or 0, r
+      kept[#kept + 1] = entry
+    end
   end
+  table.sort(kept, Ranked)
   return kept
 end
 

@@ -696,7 +696,22 @@
       <Text>Weighted adjacency: {1_Adjacency} ({2_Parts})</Text>
     </Replace>
     <Replace Tag="LOC_SDP_RESULT_RANKED" Language="en_US">
-      <Text>Plans are ranked by the adjacency plus the items in brackets; a negative Tiles item is normal, since districts always take tiles.</Text>
+      <Text>Plans are ranked by how many districts and wonders they place, then by the adjacency plus the items in brackets; a negative Tiles item is normal, since districts always take tiles.</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RANK_FEWER" Language="en_US">
+      <Text>Ranked after Plan {1_N}: places {2_Count} fewer {2_Count: plural 1?district or wonder; other?districts or wonders;}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RANK_LOWER" Language="en_US">
+      <Text>Ranked after Plan {1_N}: the adjacency plus the items in brackets is {2_Value} lower</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RANK_SAME" Language="en_US">
+      <Text>Ranked after Plan {1_N}: the adjacency plus the items in brackets is the same</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RANK_LOWER_ADJACENCY" Language="en_US">
+      <Text>Ranked after Plan {1_N}: the weighted adjacency is {2_Value} lower</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RANK_SAME_ADJACENCY" Language="en_US">
+      <Text>Ranked after Plan {1_N}: the same weighted adjacency</Text>
     </Replace>
     <Replace Tag="LOC_SDP_RESULT_TILES_LAND_OFF" Language="en_US">
       <Text>adjacent tiles {1_Yields} (Tiles weight 0, not scored)</Text>
