@@ -238,6 +238,9 @@
     <Replace Tag="LOC_SDP_REASON_NEEDS_DISTRICT" Language="zh_Hans_CN">
       <Text>需要相邻{1_Other}，但没有城市规划它：把它设为必建</Text>
     </Replace>
+    <Replace Tag="LOC_SDP_REASON_NO_ROOM_FOR_DISTRICT" Language="zh_Hans_CN">
+      <Text>需要相邻{1_Other}，但能放它的城都已到区域数量：调高数量，或把它设为必建</Text>
+    </Replace>
     <Replace Tag="LOC_SDP_REASON_NEEDS_IMPROVEMENT" Language="zh_Hans_CN">
       <Text>需要相邻{1_Improvement}，但附近没有能建它的格</Text>
     </Replace>
@@ -864,7 +867,7 @@
       <Text>需要相邻{1_Other}，它已在{2_Where}：在那座城规划这个奇观</Text>
     </Replace>
     <Replace Tag="LOC_SDP_MULTI_SUPPLY" Language="zh_Hans_CN">
-      <Text>{2_Wonder}要挨着{1_District}：求解时补给列表里第一座能放下的城（想指定哪座城，就给它开自己的列表并把{1_District}设为必建）</Text>
+      <Text>{2_Wonder}要挨着{1_District}：求解时补给列表里第一座还有名额、能放下的城，都没有名额时不放这个奇观（想指定哪座城，就给它开自己的列表并把{1_District}设为必建）</Text>
     </Replace>
     <Replace Tag="LOC_SDP_MULTI_SUPPLIED" Language="zh_Hans_CN">
       <Text>{1_District}随{2_Wonder}补给了{3_City}</Text>

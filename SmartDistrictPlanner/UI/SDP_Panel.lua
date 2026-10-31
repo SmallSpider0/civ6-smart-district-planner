@@ -560,8 +560,11 @@ end
 -- 66): [district type] = the wonder. `scan` the city (SDP_City.Scan),
 -- `states` its list. The player's own "not wanted" and a district the
 -- required ones exclude are left out, as the solver does (SDP_Multi).
--- `ignore` the pins being replaced (as for SDP_Wonders.Pinned).
-function SDP_UI.WonderNeeds(playerID, wonders, districts, states, scan, status, ignore)
+-- `ignore` the pins being replaced (as for SDP_Wonders.Pinned). `room`
+-- (optional): how many more districts that take population the city's
+-- count leaves beside the required ones; a district that takes population
+-- needs one (issue 177; wonders in SDP_Multi's order).
+function SDP_UI.WonderNeeds(playerID, wonders, districts, states, scan, status, ignore, room)
   local needs = {}
   if scan == nil or #wonders == 0 then return needs end
   local must, has = {}, {}
@@ -575,16 +578,22 @@ function SDP_UI.WonderNeeds(playerID, wonders, districts, states, scan, status, 
   for districtType in pairs(SDP_City.PresentDistricts(scan)) do has[SDP_Rules.BaseDistrict(districtType)] = true end
   local rows = {}
   for _, w in ipairs(SDP_Wonders.List(playerID, ignore)) do rows[w.Type] = w end
-  for _, wonderType in ipairs(wonders) do
+  local sorted = {}
+  for _, wonderType in ipairs(wonders) do sorted[#sorted + 1] = wonderType end
+  table.sort(sorted)
+  for _, wonderType in ipairs(sorted) do
     local w = rows[wonderType]
     local base = w ~= nil and w.Status == nil and w.AdjacentDistrict or nil
     if base ~= nil and not has[base] then
+      local found = nil
       for _, d in ipairs(districts) do
         if SDP_Rules.BaseDistrict(d.Type) == base and (status == nil or status[d.Type] == nil) and states[d.Type] ~= "OFF"
             and SDP_Rules.ExcludedBy(d.Type, must) == nil then
-          needs[d.Type] = wonderType
+          found = found or d
+          if not d.Specialty or room == nil or room > 0 then needs[d.Type] = wonderType end
         end
       end
+      if found ~= nil and found.Specialty and room ~= nil and room > 0 then room = room - 1 end
       has[base] = true
     end
   end
@@ -1281,7 +1290,7 @@ local function ShowCells()
   -- A district a chosen wonder needs shows "for wonder" (issue 66); a click
   -- goes on from its own state.
   local needs = SDP_UI.WonderNeeds(Game.GetLocalPlayer(), SelectedWonders(), m_districts, m_states, m_scan, m_status,
-    ReplacedPins())
+    ReplacedPins(), List().Pick)
   m_districtRows = SDP_UI.BuildCells(m_cellIM, m_utilityIM, Controls.DistrictStack, Controls.UtilityStack, m_districts,
     function(d)
       local state = SDP_UI.StateOf(m_states, d)
@@ -1327,8 +1336,13 @@ local function SetCount(count)
   local changed = list.Count ~= List().Count
   m_counts[m_cityID] = list.Target
   if changed then ClearResult() end
-  ShowCount()
-  UpdateSpecialtyNote()
+  if #SelectedWonders() > 0 then
+    -- The district for a wonder needs room in the count (issue 177).
+    ShowCells()
+  else
+    ShowCount()
+    UpdateSpecialtyNote()
+  end
   UpdateEstimate()
 end
 
