@@ -716,3 +716,42 @@ test("several cities: a layout that untangles to a higher value comes first (iss
     T.eq(p.Swap, nil, p.Type .. ": no swap")
   end
 end)
+
+-- Issue 189: the plans are shown in the order Pick returns them. Untangling
+-- (issue 162) can raise a later layout above an earlier one other than the
+-- first; and a pool given without swaps may come unsorted (the single-city
+-- tab adds the alternatives after the solved combinations). The whole pool
+-- is ranked: more placed, then the higher value, then fewer swaps, then the
+-- pool's order. Search:Pick on stand-ins for the search's own steps.
+test("plans: the whole pool is ranked after untangling (issue 189)", function()
+  NewWorld()
+  local result = SDP_Multi.Solve(Request({ Districts = { "DISTRICT_CAMPUS" }, Only = { [1] = true } }))
+  T.ok(result.Ok, tostring(result.Error))
+  local Pick = getmetatable(result.Session.Search).Pick
+  local raised = { ["1,2,5"] = 4.5 }
+  local stub = {
+    Swapped = function() return false end,
+    Untangle = function(_, layout, gain) return layout, raised[table.concat(layout, ",")] or gain end,
+    SwapCount = function() return 0 end,
+    IsDistinct = function() return true end,
+  }
+  local function Order(kept)
+    local list = {}
+    for _, e in ipairs(kept) do list[#list + 1] = e.Name end
+    return table.concat(list, " ")
+  end
+  local function Pool()
+    return {
+      { Name = "A", Layout = { 1, 2, 3 }, Gain = 5 },
+      { Name = "B", Layout = { 1, 2, 4 }, Gain = 4 },
+      { Name = "C", Layout = { 1, 2, 5 }, Gain = 3 },
+      { Name = "D", Layout = { 1, 2, 0 }, Gain = 10 },
+      { Name = "E", Layout = { 1, 2, 6 }, Gain = 4 },
+    }
+  end
+  T.eq(Order(Pick(stub, Pool(), 5)), "A C B E D", "untangled: C rises above B; ties by pool order; fewer placed last")
+  T.eq(Order(Pick(stub, Pool(), 2)), "A C", "the best two")
+  stub.Swapped = nil
+  local unsorted = { { Name = "B", Layout = { 1, 2, 4 }, Gain = 4 }, { Name = "A", Layout = { 1, 2, 3 }, Gain = 5 } }
+  T.eq(Order(Pick(stub, unsorted, 3)), "A B", "without swaps: ranked too")
+end)

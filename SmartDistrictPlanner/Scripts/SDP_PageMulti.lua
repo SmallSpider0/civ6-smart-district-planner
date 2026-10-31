@@ -974,7 +974,8 @@ function P.Render()
     local breakdown = SDP_UI.BreakdownLines(solution, summaryParts)
     if #breakdown > 0 then statsText = table.concat(breakdown, "[NEWLINE]") .. "[NEWLINE][NEWLINE]" .. statsText end
     Controls.MultiSummary:SetToolTipString(statsText)
-    Controls.MultiQuality:SetText(SDP_UI.QualityText(result))
+    Controls.MultiQuality:SetText(SDP_UI.WithRank(SDP_UI.QualityText(result),
+      SDP_UI.RankText(result.Solutions, m_solution, summaryParts)))
     -- Solutions.
     for n, s in ipairs(result.Solutions) do
       local inst = m_solutionIM:GetInstance()
@@ -983,10 +984,11 @@ function P.Render()
         if p.Kind == "WONDER" then wonders = wonders + 1 end
       end
       SDP_UI.SolutionRow(inst, SDP_UI.SolutionLabel(n, s),
-        SDP_UI.SummaryText(s, summaryParts) .. "[NEWLINE]"
-          .. Locale.Lookup("LOC_SDP_MULTI_SOLUTION_DETAIL", #s.Cities, #s.Plan - wonders, wonders), n == m_solution)
+        SDP_UI.WithRank(SDP_UI.SummaryText(s, summaryParts) .. "[NEWLINE]"
+          .. Locale.Lookup("LOC_SDP_MULTI_SOLUTION_DETAIL", #s.Cities, #s.Plan - wonders, wonders),
+          SDP_UI.RankText(result.Solutions, n, summaryParts)), n == m_solution)
       inst.Root:RegisterCallback(Mouse.eLClick, function() P.SelectSolution(n) end)
-      m_view.Solutions[n] = { Gain = s.Gain, Selected = n == m_solution }
+      m_view.Solutions[n] = { Gain = s.Gain, Selected = n == m_solution, Cell = inst.Root }
     end
     -- What the plan leaves out comes first (issue 60).
     for _, u in ipairs(solution.Unplaced) do

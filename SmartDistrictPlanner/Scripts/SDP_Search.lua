@@ -2328,17 +2328,19 @@ function Search:Untangle(layout, gain)
   return cur, gain
 end
 
--- Up to `count` layouts of `pool` ({ Layout, Gain }, best first) that are
--- distinct from each other (IsDistinct), each untangled first (Untangle:
--- ties take no swap, issue 162). Untangling can raise a later layout above
--- the first, so with spec.Swapped every layout of the pool is untangled and
--- the best of them goes first (more placed slots, then the higher value,
--- then fewer swapped plots, then earlier in the pool); the others keep
--- their order. With spec.Swapped nil the pool is taken as it is.
+-- Up to `count` layouts of `pool` ({ Layout, Gain }) that are distinct
+-- from each other (IsDistinct), best first. With spec.Swapped each layout is
+-- untangled first (Untangle: ties take no swap, issue 162), which can raise
+-- a later layout above an earlier one. The plans are shown in this order,
+-- so the whole pool is ranked (issue 189): more placed slots, then the
+-- higher value, then fewer swapped plots, then earlier in the pool.
 function Search:Pick(pool, count)
-  if self.Swapped ~= nil and #pool > 0 then
-    local done, first = {}, 1
-    for r, entry in ipairs(pool) do
+  local done = {}
+  local ranked = {}
+  for r, entry in ipairs(pool) do
+    if entry.Layout == nil then
+      -- nothing to rank
+    elseif self.Swapped ~= nil then
       local key = table.concat(entry.Layout, ",")
       local tidy = done[key]
       if tidy == nil then
@@ -2347,18 +2349,21 @@ function Search:Pick(pool, count)
         done[key] = tidy
       end
       entry.Layout, entry.Gain, entry.Placed, entry.Swaps = tidy.Layout, tidy.Gain, tidy.Placed, tidy.Swaps
-      local best = pool[first]
-      if entry.Placed > best.Placed or (entry.Placed == best.Placed and (entry.Gain > best.Gain
-          or (entry.Gain == best.Gain and entry.Swaps < best.Swaps))) then
-        first = r
-      end
+    else
+      entry.Placed, entry.Swaps = Placed(entry.Layout), 0
     end
-    local ordered = { pool[first] }
-    for r, entry in ipairs(pool) do
-      if r ~= first then ordered[#ordered + 1] = entry end
+    if entry.Layout ~= nil then
+      entry.Rank = r
+      ranked[#ranked + 1] = entry
     end
-    pool = ordered
   end
+  table.sort(ranked, function(a, b)
+    if a.Placed ~= b.Placed then return a.Placed > b.Placed end
+    if a.Gain ~= b.Gain then return a.Gain > b.Gain end
+    if a.Swaps ~= b.Swaps then return a.Swaps < b.Swaps end
+    return a.Rank < b.Rank
+  end)
+  pool = ranked
   local kept = {}
   for _, entry in ipairs(pool) do
     if #kept >= count then break end
