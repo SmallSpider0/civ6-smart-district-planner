@@ -171,6 +171,9 @@ class Run(unittest.TestCase):
         for ext in (".log", ".exit"):
             with open(os.path.join(self.dir.name, name + ext), "w") as fh:
                 fh.write("0\n")
+        for path in [os.path.join(self.dir.name, name + ext) for ext in (".log", ".exit")] + [
+                os.path.join(self.dir.name, "snap", name)]:
+            os.utime(path, (ended, ended))  # the job wrote them until it ended
 
     def files_of(self, name):
         base = self.dir.name
@@ -226,6 +229,39 @@ class Run(unittest.TestCase):
         self.assertEqual(self.files_of("old"), [True] * 4)
         self.assertEqual(sdpsched.main(["prune", "--keep-days", "1"]), 0)
         self.assertEqual(self.files_of("old"), [False] * 4)
+
+    def test_prune_leaves_a_job_that_was_queued_after_the_plan_was_made(self):
+        # Codex, #200: prune read the record, then another run queued the same name before the delete.
+        os.makedirs(sdpsched.jobs_dir())
+        self.make_job("again", "done", time.time() - sdpsched.KEEP - 3600, "t")
+        real = sdpsched.size_of
+        self.addCleanup(setattr, sdpsched, "size_of", real)
+
+        def requeue(path):  # runs between the plan and the delete
+            with sdpsched.locked():
+                sdpsched.write_json(sdpsched.job_path("again"), job("again", "queued", 1, time.time(), pid=os.getpid()))
+            for ext in (".log", ".exit"):
+                if os.path.exists(os.path.join(self.dir.name, "again" + ext)):
+                    os.utime(os.path.join(self.dir.name, "again" + ext))
+            os.utime(os.path.join(self.dir.name, "snap", "again"))
+            return real(path)
+        sdpsched.size_of = requeue
+        sdpsched.main(["prune"])
+        self.assertEqual(self.files_of("again"), [True] * 4)
+        self.assertEqual(sdpsched.read_json(sdpsched.job_path("again"))["state"], "queued")
+
+    def test_prune_leaves_files_a_new_run_wrote_before_it_queued(self):
+        # remote.py run copies the snapshot and starts the log before sdpsched.py queues the name.
+        os.makedirs(sdpsched.jobs_dir())
+        self.make_job("again", "done", time.time() - sdpsched.KEEP - 3600, "t")  # the old record still says done
+        old = time.time() - sdpsched.KEEP - 3600
+        for ext in (".log", ".exit"):
+            os.utime(os.path.join(self.dir.name, "again" + ext), (old, old))
+        os.remove(os.path.join(self.dir.name, "again.exit"))  # a new run removes the exit file
+        os.utime(os.path.join(self.dir.name, "snap", "again"))  # and has just copied its snapshot
+        sdpsched.main(["prune"])
+        self.assertTrue(os.path.isdir(os.path.join(self.dir.name, "snap", "again")))
+        self.assertTrue(os.path.exists(sdpsched.job_path("again")))
 
     def test_check_refuses_a_live_name(self):
         os.makedirs(sdpsched.jobs_dir())

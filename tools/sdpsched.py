@@ -337,8 +337,12 @@ def plan_prune(t, jobs, known=None, keep=KEEP, gone_keep=GONE_KEEP):
         seen.add(name)
         if live(job):
             continue
-        age = t - last_activity(job)
-        if age > (gone_keep if gone(job.get("tree")) else keep):
+        limit = gone_keep if gone(job.get("tree")) else keep
+        newest = max(mtime(p) for p in (os.path.join(snaps, name), os.path.join(BASE, name + ".log"),
+                                        os.path.join(BASE, name + ".exit")))
+        # a new run under the same name copies its snapshot and starts its log before it queues, while
+        # the old record still says done: files newer than the limit mean it is not an old job
+        if t - last_activity(job) > limit and t - newest > limit:
             plans.append(("job", name, [os.path.join(snaps, name), os.path.join(BASE, name + ".log"),
                                         os.path.join(BASE, name + ".exit"), job_path(name)]))
     for name in sorted(os.listdir(snaps)) if os.path.isdir(snaps) else []:  # snapshots with no job record
@@ -372,16 +376,22 @@ def cmd_prune(args):
     started from them, go after GONE_KEEP instead."""
     keep = int(args.keep_days * 86400) if args.keep_days is not None else KEEP
     plans = plan_prune(time.time(), load_jobs(), args.known, keep)
-    freed = 0
+    freed, removed = 0, 0
     for what, name, paths in plans:
         size = sum(size_of(p) for p in paths if os.path.isdir(p)) + sum(
             os.lstat(p).st_size for p in paths if os.path.isfile(p))
-        freed += size
-        print("%s %s %s (%.1f MB)" % ("would remove" if args.dry_run else "removed", what, name, size / 1e6))
         if not args.dry_run:
-            for path in paths:
-                subprocess.run(["rm", "-rf", path])
-    print("%s %d item(s), %.1f MB" % ("would free" if args.dry_run else "freed", len(plans), freed / 1e6))
+            with locked():  # a job of that name may have been queued since the plan: look again, under the lock
+                again = plan_prune(time.time(), load_jobs(), args.known, keep)
+                if not any(w == what and n == name for w, n, _p in again):
+                    print("kept %s %s (in use again)" % (what, name))
+                    continue
+                for path in paths:
+                    subprocess.run(["rm", "-rf", path])
+        freed += size
+        removed += 1
+        print("%s %s %s (%.1f MB)" % ("would remove" if args.dry_run else "removed", what, name, size / 1e6))
+    print("%s %d item(s), %.1f MB" % ("would free" if args.dry_run else "freed", removed, freed / 1e6))
     return 0
 
 
