@@ -358,11 +358,19 @@ footer { margin-top: 64px; border-top: 1px solid var(--line); padding-top: 16px;
   <h3>不等不会叫醒自己的东西</h3>
   <p>会话只在这几种情况下再运行：维护者发消息、它在后台启动的命令结束、子 agent 或子会话回报、定时任务触发、Auto-fix 看到 CI 失败、冲突或审阅评论。CI 通过、自动合并都不叫醒任何人。还有活要做时，结束前在后台启动一个等到事情发生就退出的命令：</p>
   <ul>
-    <li>PR：<code>gh pr checks 编号 --watch</code>，或循环到 PR 的状态是已合并；</li>
+    <li>PR：一批 PR 一个 <code>pr_wait.py 编号 … [--codex 编号 …]</code>，全部合并或有一个要人处理时才退出；</li>
     <li>第二台机器上的任务：<code>remote.py wait 名字</code>；</li>
-    <li>夜里另加一个约一小时后的定时兜底。</li>
+    <li>夜里另加一个约一小时后的定时兜底，一夜最多一个。</li>
   </ul>
   <p>最后一句话写明什么会叫醒自己。macOS 上夜里无人值守的运行还会被隐私弹窗卡住，开跑前先碰一遍要用的文件夹（<a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/docs/dev-macos.md">docs/dev-macos.md</a>“隐私弹窗”）。</p>
+  <h3>主会话：只分派，上下文小，少被叫醒</h3>
+  <p>主会话的花费大多是重读上下文：它一直开着，上下文越积越长，每被叫醒一次就整个重读一遍（数字见 <a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/docs/maintaining.md">docs/maintaining.md</a>“子 agent 怎么派”第 5 条）。</p>
+  <div class="cards">
+    <div class="card"><h4>上下文保持小</h4><p>主会话只分派、转达和收尾，目标在约 20 万 token 以内。超过了，到一个检查点（一批 PR 合并、发版的一步做完）请维护者压缩上下文，代理自己压缩不了。</p></div>
+    <div class="card"><h4>一个里程碑一个主会话</h4><p>发版后换新的主会话。旧的不留任何在跑的东西：后台命令、定时任务、在等的子 agent、Issue 监听都停掉；新的开始时重新开监听。要带过去的写在状态页、Issue、<code>docs/notes/</code> 和本机记忆里，不靠对话。</p></div>
+    <div class="card"><h4>少被叫醒</h4><p>一批 PR 只挂一个 <code>pr_wait.py</code>，中间步骤（一项检查跑完、Codex 审完没意见）不叫醒；CI 失败、冲突、Codex 有意见时马上退出。子 agent 交几行报告，主会话只读报告，不读它的原始输出。夜里的定时兜底最多一个。</p></div>
+    <div class="card"><h4>不用的工具关掉</h4><p>只分派的会话用不到的连接器（浏览器、文档、桌面控制之类）关掉：它们的工具定义每次调用都要重读。</p></div>
+  </div>
   <h3>做完就收尾，子 agent 的也算</h3>
   <ul>
     <li>PR 合并后：从 Claude Code 的 PR 栏移除，拉取 main，<code>worktree.py prune --remote</code> 清掉已合并的工作树和本地分支，以及 GitHub 上内容都已在 main 或发版 tag 里的分支（没开过 PR 的调研分支、合回 main 的发版分支），再清第二台机器上的实验目录（已删工作树的副本、过期任务的快照和日志，在排队和在跑的不碰）；带着 main 没有的改动的只列出来，状态页上能看到。子 agent 开的 PR 也挂在主会话的 PR 栏上，它自己移不掉，所以子 agent 报告合并后、每次发版后，主会话查一遍 PR 栏，把已合并、已关闭的都移除。</li>
@@ -501,7 +509,7 @@ footer { margin-top: 64px; border-top: 1px solid var(--line); padding-top: 16px;
     <div class="card"><h4>对外只写自己</h4><p>README、创意工坊、介绍页只介绍本模组；同类模组只列客观事实的对照表；和它们的对比数据放在开发者文档里。</p></div>
     <div class="card"><h4>机器有关的不进仓库</h4><p>仓库是公开的：worker 数、夜间时段、第二台机器写在本机配置里，仓库只写有哪些项和默认值；账号也不进仓库。反过来，怎么做事的规则都写进仓库，维护者本机的个人规则只留机器、账号和个人的东西，两边不一致以仓库为准。</p></div>
     <div class="card"><h4>子 agent 的上下文要短</h4><p>重读上下文是子 agent 花费的大头。模型怎么选、什么时候交接、交接说明写什么，见<a href="#dispatch">第 03 节</a>。</p></div>
-    <div class="card"><h4>结束前安排好叫醒</h4><p>CI 通过、自动合并都不会叫醒会话。还有活要做时，结束前在后台挂一个等待的命令，做法见<a href="#dispatch">第 03 节</a>最后一段。</p></div>
+    <div class="card"><h4>结束前安排好叫醒</h4><p>CI 通过、自动合并都不会叫醒会话。还有活要做时，结束前在后台挂一个等待的命令，一批 PR 只挂一个，做法见<a href="#dispatch">第 03 节</a>。</p></div>
     <div class="card"><h4>收尾不留尾巴</h4><p>PR 合并后，解除会话和 PR 的绑定、拉取 main、清掉工作树、本地分支和 GitHub 上多出来的分支（<code>worktree.py prune --remote</code>）；子会话做完由主会话归档，只留正在进行的工作。</p></div>
   </div>
   <p class="refs">参考：<a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/docs/maintaining.md#10-只对内的写作规则">写作规则</a><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/docs/maintaining.md#4-子-agent-怎么派">子 agent 怎么派（模型、交接、等待）</a><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/docs/pitfalls.md">Civ6 Modding 的坑（45 条）</a><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/tree/main/docs/notes">每个 Issue 的实现记录</a></p>
@@ -565,8 +573,8 @@ footer { margin-top: 64px; border-top: 1px solid var(--line); padding-top: 16px;
     ["真实点击、截图", 1, "系统鼠标事件逐个点控件；截图按面板位置裁剪", "第一次授予辅助功能和录屏权限；无人值守时屏幕不能锁，笔记本要开盖接电", "tools/realclick.py"],
     ["压力测试", 1, "读三张后期存档，逐步计时，在游戏里实际建出来核对", "—", "tools/stress.py"],
     ["夜间队列", 2, "开跑前先碰一遍夜里要用的文件夹，让隐私弹窗趁人还在时出现；主会话在本机配置的夜间时段按顺序跑队列，结果交给新的子 agent 改问题、开 PR", "macOS 上事先给夜里要跑的程序授予文件夹访问权限", "tools/preflight_night.py"],
-    ["代码审查", 2, "改了代码的 PR 由开 PR 的代理点名请 Codex 审，后台等它审完；每条意见先核实，属实的先写会失败的测试再改，不属实的写明原因，回复后标为已解决，都处理完再开自动合并；只改文档的不审。试两周，按记录的属实和误报条数决定留不留", "—（只有要改需求、默认值或权衡做法的意见才进“要你决定的事”）", "tools/codex_review.py"],
-    ["PR、CI、合并", 1, "一个 Issue 一个 PR；Ubuntu、Windows 两项检查通过后自动 squash 合并；CI 失败时自动叫醒代理修，通过和合并不叫醒，代理开 PR 后在后台等结果；合并后清理工作树、本地分支和 GitHub 上多出来的分支", "—", ".github/workflows/checks.yml"],
+    ["代码审查", 2, "改了代码的 PR 由开 PR 的代理点名请 Codex 审，主会话把这一批 PR 挂在一个 pr_wait.py --codex 上，审完没意见或没审成时它自己开自动合并，有意见才叫醒；每条意见先核实，属实的先写会失败的测试再改，不属实的写明原因，回复后标为已解决，都处理完再开自动合并；只改文档的不审。试两周，按记录的属实和误报条数决定留不留", "—（只有要改需求、默认值或权衡做法的意见才进“要你决定的事”）", "tools/pr_wait.py"],
+    ["PR、CI、合并", 1, "一个 Issue 一个 PR；Ubuntu、Windows 两项检查通过后自动 squash 合并；CI 失败时自动叫醒代理修，通过和合并不叫醒，一批 PR 挂一个后台等待（pr_wait.py），全部合并或有要处理的才退出；合并后清理工作树、本地分支和 GitHub 上多出来的分支", "—", ".github/workflows/checks.yml"],
     ["对外文字审阅", 3, "README、创意工坊简介、介绍页由代理改，PR 里附渲染好的页面和图", "合并前另一人看一下", null],
     ["要不要发版", 4, "每一版（含只修 bug 的）做完准备、报告可以发了，等维护者一句话；严重 bug 修好时马上告诉维护者", "说“发 vX.Y.Z”", ".claude/skills/sdp-release/SKILL.md"],
     ["发版准备", 2, "版本号、更新说明草稿、截图、自测报告里的表格", "—", "tools/release.py"],
