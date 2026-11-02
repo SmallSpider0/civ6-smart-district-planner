@@ -21,7 +21,8 @@
 | `refscene.py` | 手写的参照布局（社区公认布局）转成对比场景，画回文字或图片核对 | 0 成功；1 有错误；2 找不到场景 |
 | `civ6tuner.py` | FireTuner 客户端：收集 Lua 输出、远程执行 Lua | 见下文 |
 | `shots.py` | 仅 macOS：摆好页签（`tests/shots/`）、截面板存进 `docs/images/`、切换英文界面 | 0 成功 |
-| `release.py` | 发版：改版本号与 CHANGELOG、起草更新说明和发布说明、发 Release、上传创意工坊并核对 | 0 成功；1 下载回来与提交包不同 |
+| `release.py` | 发版：改版本号、把 `changelog.d/` 的片段收进 CHANGELOG、起草更新说明和发布说明、发 Release、上传创意工坊并核对 | 0 成功；1 下载回来与提交包不同 |
+| `changelog.py` | 更新记录片段 `changelog.d/`：列出下一版要收的条目、查格式（`validate.py`、`release.py prep` 调用它） | 0 格式没问题；1 有问题 |
 | `refresh_results.py` | 用当前代码重跑结果文件里本模组的行（`--check` 只比对、不改文件） | 0 成功；1 有变差的行或新违规 |
 | `remote.py` | 在第二台机器上跑离线重活：拷代码、按格子数排队运行、等待并取回结果 | 远端任务的退出码 |
 | `sdplock.py` | 并行会话共用资源：游戏锁、本机重活（一次一个、限 worker、开游戏时暂停）、夜间队列、一条命令看本机和第二台机器 | 0 成功；4 被别人占着 |
@@ -471,13 +472,15 @@ python3 -I tools/shots.py lang restore           # 恢复备份，核对逐字�
 ## release.py — 发版
 
 ```bash
-python3 -I tools/release.py prep 1.4.1       # 发版分支上：modinfo 版本加 1、VERSION、CHANGELOG 加日期、起草更新说明
+python3 -I tools/release.py prep 1.4.1       # 发版分支上：modinfo 版本加 1、VERSION、收 changelog.d/ 进 CHANGELOG、起草更新说明
+python3 -I tools/changelog.py                # 列出下一版会收进 CHANGELOG 的条目，格式不对时退出码 1
 python3 -I tools/release.py notes 1.4.1      # 从上一版的发布说明和这一版的更新说明生成 logs/release-v1.4.1.md
 python3 -I tools/release.py publish 1.4.1    # PR 合并后：发 Release，等工作流附上四个文件，查 GitHub Pages
 python3 -I tools/release.py workshop 1.4.1   # SteamCMD 上传、下载回来比对、把下载的那份移出游戏目录
 ```
 
-- `prep` 起草的更新说明英文部分是 TODO，要自己写；中文部分取 CHANGELOG 的条目，去掉 Issue 号。`notes` 遇到 TODO 拒绝生成。
+- `prep` 把 `changelog.d/` 的片段（一个 PR 一个 `<编号>.md`，每行一条，[格式](../changelog.d/README.md)）按编号写成 CHANGELOG 最上面的 `## vX.Y.Z（日期）` 一节并删掉片段（`tools/changelog.py`）；没有片段、片段格式不对或这一版已有一节时什么都不改就停下。`validate.py` 也查片段格式，并拒绝 CHANGELOG 里再出现“未发布”一节（#217）。
+- `prep` 起草的更新说明英文部分是 TODO，要自己写；中文部分取收进来的条目，去掉 Issue 号。`notes` 遇到 TODO 拒绝生成。
 - `workshop` 要设 `SDP_STEAM_LOGIN`（Steam 登录名），SteamCMD 默认 `~/steamcmd/steamcmd.sh`（`STEAMCMD` 可改）。SteamCMD 用单独的家目录 `~/steamcmd-home`（`STEAMCMD_HOME` 可改）：macOS 上它默认和 Steam 客户端共用 `~/Library/Application Support/Steam`，客户端改写 `config.vdf` 时会把 SteamCMD 的登录缓存冲掉（一两天就要重新登录），下载回来的物品也会落进游戏扫描的创意工坊文件夹（AGENTS.md 坑 38）。登录要已缓存：SteamCMD 要密码时停下，由维护者自己运行一次 `HOME=~/steamcmd-home ~/steamcmd/steamcmd.sh +login 登录名 +quit`。物品页上的简体中文简介和图片仍在网页上改，脚本最后打印这次要改什么。
 - 步骤和顺序见 `.claude/skills/sdp-release/SKILL.md`。
 

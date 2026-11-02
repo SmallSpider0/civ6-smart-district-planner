@@ -33,7 +33,8 @@ civ6mod/
 ├── CLAUDE.md                         # 让 Claude Code 读入 AGENTS.md、CONTRIBUTING.md 和 docs/maintaining.md
 ├── .claude/skills/                   # 固定流程：Issue 处理、游戏内测试、离线重活、发版、监听（sdp-*/SKILL.md）
 ├── CONTRIBUTING.md                   # 给外部开发者：开工前、环境、检查、代码约定、提交 PR（中英文）
-├── CHANGELOG.md                      # 各阶段与各版本改了什么
+├── CHANGELOG.md                      # 各阶段与各版本改了什么（发版时由 release.py 从 changelog.d/ 收集）
+├── changelog.d/                      # 一个 PR 一个更新记录片段 <编号>.md，格式见其中的 README.md
 ├── README.md                         # 项目简介（GitHub 首页）
 ├── LICENSE                           # MIT
 ├── civ6-mod-from-scratch-prompt.md   # 需求文档（锁定，勿改）
@@ -203,7 +204,7 @@ include("dmt_yieldcalculator");       -- 尾部会执行 DMT_Initialize()，见�
 ## 8. 代理行为约定
 
 - 需求文档第二节 > 第三、四节硬约束 > 本文其他约定 > 自行设计。
-- 不修改需求文档；设计决策写入 `docs/design.md` 或 `docs/multicity-design.md`，一个 Issue 的实现、实测与数字出处写进 `docs/notes/issue-<编号>-<主题>.md`，每段改动在 `CHANGELOG.md` 记一笔。
+- 不修改需求文档；设计决策写入 `docs/design.md` 或 `docs/multicity-design.md`，一个 Issue 的实现、实测与数字出处写进 `docs/notes/issue-<编号>-<主题>.md`，玩家能感觉到的改动在 `changelog.d/<编号>.md` 记一笔（发版时收进 `CHANGELOG.md`，见 CONTRIBUTING.md）。
 - 不把 DMT/AMT/EP/游戏本体的源码或数据复制进仓库，更不能进 `SmartDistrictPlanner/` 发布目录（版权与依赖关系：DMT 作为依赖 mod 由玩家自行订阅）。仓库是公开的。
 - 回复与文档使用中文；代码标识符与注释用英文或中文均可，但单文件内保持一致。
 - 调研和一个 Issue 的开发交给子 agent（维护者点名或改动很大的开发用子会话），几行的小修和协调留在主会话（docs/maintaining.md“谁来做”）。

@@ -116,7 +116,7 @@
   - `docs/images/`、`workshop/images/`
   - 自测报告里由脚本写入的表
 - 两人不要同时重跑同一组结果；要重跑时先在 PR 或 Issue 里说一声。
-- 行为有变化时同步更新相关文档，并在 [CHANGELOG.md](../CHANGELOG.md) 的“未发布”里加一行，写玩家能感觉到的变化。发版时这一段就是更新说明。
+- 行为有变化时同步更新相关文档，并加一个 `changelog.d/<Issue 编号>.md`（[格式](../changelog.d/README.md)），写玩家能感觉到的变化，不直接改 [CHANGELOG.md](../CHANGELOG.md)。发版时 `release.py prep` 按编号把这些片段收成新版本的一节、删掉片段，这一节就是更新说明。2026-11-03 起这样做：之前每个 PR 都往“未发布”末尾加行，2026-11-02 一夜 11 个分支跑了 27 轮 CI，约 15 轮是这类冲突逼出来的变基（#217）。文本键同理放在相关的键旁边，不追加到文件末尾（CONTRIBUTING.md“代码约定”）。
 
 ## 7. Codex 审查
 
@@ -166,7 +166,7 @@
 
    一版攒几项改动再发，挂在同一个里程碑上，不为单项发版；只有线上版本的严重问题单独发（见下文“其他情况”）。modinfo 的 `version` 每次发版加 1；`SmartDistrictPlanner/UI/SDP_Panel.lua` 的 `VERSION` 改成新版本号，启动栏按钮的悬停提示显示它，`validate.py` 检查它和 CHANGELOG 最新的版本一致。
 2. 发版前测试：三种规则集的游戏内测试、macOS 真实点击、后期存档压力测试（只改界面、不动求解和计分的版本不跑；不用在 Windows 上手动测）；改了求解器还要跑离线对比。
-3. 准备文字：CHANGELOG 的“未发布”改成 `vX.Y.Z（日期）`；写 `workshop/changenotes/vX.Y.Z.txt`（英文在前、中文在后）；每一版都按 CHANGELOG 这一版的每一条，把对外文档里还在说旧做法、旧数字、旧限制的地方改掉：README、安装说明（中英）、测试者说明、`workshop/` 的中英简介和示意图里的文字、介绍与评测页（含附录）、同类模组对照表（`report/similar.py`）和 `docs/notes/planner-comparison.md`、面板上提到这个数值的悬停提示。做法是在这些文件里按中英文搜旧的数字和说法，PR 描述里逐条写改了哪些文件，或“不用改”和搜了什么（清单见 sdp-release §1 第 5 步）。这些放在发版准备的 PR 里。
+3. 准备文字：`release.py prep` 把 `changelog.d/` 的片段按编号收进 CHANGELOG 新的 `vX.Y.Z（日期）` 一节并删掉片段；写 `workshop/changenotes/vX.Y.Z.txt`（英文在前、中文在后）；每一版都按 CHANGELOG 这一版的每一条，把对外文档里还在说旧做法、旧数字、旧限制的地方改掉：README、安装说明（中英）、测试者说明、`workshop/` 的中英简介和示意图里的文字、介绍与评测页（含附录）、同类模组对照表（`report/similar.py`）和 `docs/notes/planner-comparison.md`、面板上提到这个数值的悬停提示。做法是在这些文件里按中英文搜旧的数字和说法，PR 描述里逐条写改了哪些文件，或“不用改”和搜了什么（清单见 sdp-release §1 第 5 步）。这些放在发版准备的 PR 里。
 4. 在 GitHub 发布 Release `vX.Y.Z`，发布说明写给玩家，英文在前、中文在后。`.github/workflows/release.yml` 会：
    - 打出 `SmartDistrictPlanner-vX.Y.Z.zip`（mod、中英安装与使用说明、`REPORT.html`、`REPORT_EN.html`；不带给测试者的说明），连同中英两个单文件页面一起附到 Release；
    - 打出 `SmartDistrictPlanner-vX.Y.Z-workshop.zip`（创意工坊提交包，`tools/workshop.py pack`）附到 Release；

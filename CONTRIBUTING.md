@@ -70,7 +70,7 @@ python3 -I tools/run_tests.py tests/test_xxx.lua                 # run one test 
 
 ### Code conventions
 
-- Prefix our Lua files, globals and LuaEvents with `SDP_` or `sdp_`, and text keys with `LOC_SDP_`. Add every new key in both languages.
+- Prefix our Lua files, globals and LuaEvents with `SDP_` or `sdp_`, and text keys with `LOC_SDP_`. Add every new key in both languages, next to the keys it belongs with (the same page or control), not at the end of the file: pull requests that all append to the end conflict with each other.
 - Write plain Lua 5.1. In the game `_G`, `load`, `require`, `debug`, `utf8`, `table.unpack` and some others are nil (AGENTS.md section 6 has the list; `validate.py` reports them).
 - No result may depend on the order of `pairs()`. Collect into an array, sort by a stable key, then use `ipairs`. Every tie needs a fixed secondary key. No `math.random` and nothing based on time.
 - Tests of the panel go through the controls' own callbacks, not internal functions.
@@ -81,7 +81,7 @@ python3 -I tools/run_tests.py tests/test_xxx.lua                 # run one test 
 - Work on a branch of your fork. One issue per pull request; write `Closes #N` in the description.
 - Write the title as an English imperative sentence. Pull requests are squash-merged, so the title becomes the commit on `main`.
 - Fill in the pull request template: which tests you ran, on which platform, and why any were skipped.
-- If players will notice the change, add a line under 未发布 in [CHANGELOG.md](CHANGELOG.md).
+- If players will notice the change, add `changelog.d/<issue number>.md` with one line per entry, in players' words (the format is in [changelog.d/README.md](changelog.d/README.md)). Do not edit [CHANGELOG.md](CHANGELOG.md): the release collects these files into it.
 - If you commit generated files (comparison or stress results, images), name them and the command that made them.
 - Both CI checks, `offline (ubuntu-latest)` and `offline (windows-latest)`, must pass.
 - The maintainers review every pull request. Changes to code also get an automated review by Codex.
@@ -167,7 +167,7 @@ python3 -I tools/run_tests.py tests/test_xxx.lua                 # 在游戏里�
 
 ### 代码约定
 
-- 自有 Lua 文件、全局符号、LuaEvents 用 `SDP_` 或 `sdp_` 前缀，文本键用 `LOC_SDP_`，新键中英文都加。
+- 自有 Lua 文件、全局符号、LuaEvents 用 `SDP_` 或 `sdp_` 前缀，文本键用 `LOC_SDP_`，新键中英文都加，放在相关的键旁边（同一个页签或控件的），不追加到文件末尾：几个 PR 都加在末尾就会互相冲突。
 - 写纯 Lua 5.1。游戏里 `_G`、`load`、`require`、`debug`、`utf8`、`table.unpack` 等是 nil（清单在 AGENTS.md 第 6 节，`validate.py` 会报）。
 - 结果不能依赖 `pairs()` 的顺序：先收集成数组、按稳定的键排序，再用 `ipairs`。同分要有固定的次级键。不用 `math.random`，不用和时间有关的逻辑。
 - 面板的测试经过控件自己的回调，不直接调内部函数。
@@ -178,7 +178,7 @@ python3 -I tools/run_tests.py tests/test_xxx.lua                 # 在游戏里�
 - 在你 fork 的分支上做。一个 Issue 一个 PR，描述里写 `Closes #编号`。
 - 标题用英文祈使句。PR 以 squash 合并，标题就是 `main` 上的提交。
 - 填 PR 模板：跑了哪些测试、在哪个平台，没跑的写原因。
-- 玩家能感觉到的变化，在 [CHANGELOG.md](CHANGELOG.md) 的“未发布”下加一行。
+- 玩家能感觉到的变化，加一个 `changelog.d/<Issue 编号>.md`，每行一条，写玩家的话（格式见 [changelog.d/README.md](changelog.d/README.md)）。不直接改 [CHANGELOG.md](CHANGELOG.md)：发版时把这些文件收进去。
 - 提交了生成的文件（对比或压力测试结果、图片）时，写明是哪些文件、用什么命令生成的。
 - CI 的两项检查 `offline (ubuntu-latest)`、`offline (windows-latest)` 都要通过。
 - 每个 PR 由维护者审阅；改了代码的还会由 Codex 自动审一遍。

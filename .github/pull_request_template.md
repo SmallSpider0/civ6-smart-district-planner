@@ -13,5 +13,5 @@ Closes #
 - [ ] Changed the panel / 改了面板: clicked through it, screenshots attached / 点过一遍，附截图
 
 **Docs / 文档**
-- [ ] CHANGELOG.md (under 未发布) and the docs describing the changed behaviour / 行为变了的地方，CHANGELOG.md 的“未发布”和相关文档已更新
+- [ ] `changelog.d/<N>.md` (not CHANGELOG.md) and the docs describing the changed behaviour / 行为变了的地方，加了 `changelog.d/<编号>.md`（不改 CHANGELOG.md），相关文档已更新
 - [ ] Generated files and the command that made them / 生成的文件和生成命令:

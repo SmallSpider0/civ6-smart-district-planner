@@ -6,11 +6,13 @@
     python3 -I tools/release.py publish X.Y.Z     # after the PR is merged: GitHub release, wait for its files
     python3 -I tools/release.py workshop X.Y.Z    # upload the Workshop package with SteamCMD and check it
 
-prep: modinfo version + 1, VERSION in UI/SDP_Panel.lua, the CHANGELOG's
-"未发布" heading becomes "vX.Y.Z（today）", and workshop/changenotes/vX.Y.Z.txt
-is started from the CHANGELOG's lines (the Chinese half; the English half is
-left as TODO lines to write). Then validate.py and workshop.py check. It
-refuses when the CHANGELOG has no "未发布" section or the note exists.
+prep: modinfo version + 1, VERSION in UI/SDP_Panel.lua, the fragments in
+changelog.d/ become CHANGELOG.md's "vX.Y.Z（today）" section, by number, and
+are deleted (tools/changelog.py), and workshop/changenotes/vX.Y.Z.txt is
+started from those lines (the Chinese half; the English half is left as TODO
+lines to write). Then validate.py and workshop.py check. It refuses, before
+changing anything, when changelog.d/ has no fragments or one is malformed,
+or the note exists.
 
 notes: the GitHub release text, English then Chinese, from the last
 release's text with its change lists replaced by the change note's and the
@@ -45,11 +47,13 @@ import sys
 import time
 import zipfile
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import changelog  # noqa: E402
+
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MODINFO = os.path.join(ROOT, "SmartDistrictPlanner", "SmartDistrictPlanner.modinfo")
 PANEL = os.path.join(ROOT, "SmartDistrictPlanner", "UI", "SDP_Panel.lua")
-CHANGELOG = os.path.join(ROOT, "CHANGELOG.md")
 NOTES_DIR = os.path.join(ROOT, "workshop", "changenotes")
 LOGS = os.path.join(ROOT, "logs")
 ITEM = json.load(open(os.path.join(ROOT, "workshop", "item.json"), encoding="utf-8"))
@@ -75,14 +79,6 @@ def version_arg(v):
     return v.lstrip("v")
 
 
-def unreleased_lines():
-    text = open(CHANGELOG, encoding="utf-8").read()
-    m = re.search(r"^## 未发布\n(.*?)(?=^## )", text, re.S | re.M)
-    if not m:
-        raise SystemExit("CHANGELOG.md has no 未发布 section")
-    return [l for l in m.group(1).splitlines() if l.startswith("- ")]
-
-
 def previous_version(v):
     """The newest release tag before vX.Y.Z (pre-releases like -rc.1 left out)."""
     sh(["git", "fetch", "-q", "--tags", "origin"], check=False)
@@ -96,13 +92,13 @@ def prep(args):
     note = os.path.join(NOTES_DIR, "v%s.txt" % v)
     if os.path.exists(note):
         raise SystemExit("%s exists" % os.path.relpath(note, ROOT))
-    lines = unreleased_lines()
+    changelog.check_collect(v)
     old = int(re.search(r'<Mod id="[^"]+" version="(\d+)"', open(MODINFO, encoding="utf-8").read()).group(1))
     edit(MODINFO, 'version="%d">' % old, 'version="%d">' % (old + 1))
     panel = open(PANEL, encoding="utf-8").read()
     current = re.search(r'local VERSION = "(v[\d.]+)"', panel).group(1)
     edit(PANEL, 'local VERSION = "%s"' % current, 'local VERSION = "v%s"' % v)
-    edit(CHANGELOG, "## 未发布\n", "## v%s（%s）\n" % (v, datetime.date.today().isoformat()))
+    lines = changelog.collect(v, datetime.date.today().isoformat())
     prev = previous_version(v) or current
     zh = [re.sub(r"（#\d+(、#\d+)*）", "", l).rstrip() for l in lines]
     with open(note, "w", encoding="utf-8") as fh:
@@ -110,8 +106,8 @@ def prep(args):
         fh.writelines("- TODO English for: %s\n" % l[2:60] for l in zh)
         fh.write("\n自 %s 以来的变化：\n" % prev)
         fh.writelines(l + "\n" for l in zh)
-    print("modinfo version %d -> %d; VERSION %s -> v%s; CHANGELOG dated; %s started (write the English, shorten the "
-          "Chinese: no issue numbers, players' words)" % (old, old + 1, current, v, os.path.relpath(note, ROOT)))
+    print("modinfo version %d -> %d; VERSION %s -> v%s; %d changelog.d/ lines collected; %s started (write the English, shorten the "
+          "Chinese: no issue numbers, players' words)" % (old, old + 1, current, v, len(lines), os.path.relpath(note, ROOT)))
     for cmd in (["python3", "-I", "tools/validate.py"], ["python3", "-I", "tools/workshop.py", "check"]):
         out = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True)
         print((out.stdout + out.stderr).strip().splitlines()[-1])
