@@ -14,6 +14,8 @@ import unittest
 from contextlib import redirect_stdout
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "tools"))
+import remote  # noqa: E402
+import sdplock  # noqa: E402
 import worktree as wt  # noqa: E402
 
 LATER = 3 * wt.DAY  # "now" this far ahead makes every branch old enough
@@ -35,14 +37,16 @@ class LeftOver(unittest.TestCase):
         run(self.repo, "checkout", "-q", "-b", "main")
         self.commit("a.txt", "one")
         run(self.repo, "push", "-q", "-u", "origin", "main")
-        self.saved = (wt.ROOT, wt.merged_heads, wt.open_pr_branches)
+        self.saved = (wt.ROOT, wt.merged_heads, wt.open_pr_branches, wt.clean_remote_runs)
         wt.ROOT = self.repo
+        self.cleaned = []
+        wt.clean_remote_runs = lambda: self.cleaned.append(1)  # never reach a real second machine
         self.merged, self.busy = set(), set()
         wt.merged_heads = lambda: self.merged
         wt.open_pr_branches = lambda: self.busy
 
     def tearDown(self):
-        wt.ROOT, wt.merged_heads, wt.open_pr_branches = self.saved
+        wt.ROOT, wt.merged_heads, wt.open_pr_branches, wt.clean_remote_runs = self.saved
         shutil.rmtree(self.tmp, ignore_errors=True)
 
     def commit(self, name, text, cwd=None):
@@ -163,6 +167,29 @@ class LeftOver(unittest.TestCase):
         self.assertNotIn("research", heads)
         self.assertIn("idea", heads)
         self.assertIn("main", heads)
+        self.assertEqual(self.cleaned, [1])  # only the --remote run cleaned the second machine's folder
+
+    def test_cleaning_the_second_machine_never_fails_the_prune(self):
+        seen = []
+        saved = (sdplock.remote_host, remote.clean)
+        self.addCleanup(lambda: (setattr(sdplock, "remote_host", saved[0]), setattr(remote, "clean", saved[1])))
+        wt.clean_remote_runs = self.saved[3]
+        sdplock.remote_host = lambda: None  # not configured: nothing is tried
+        remote.clean = lambda args: seen.append(args)
+        wt.clean_remote_runs()
+        self.assertEqual(seen, [])
+        sdplock.remote_host = lambda: "second"
+
+        def unreachable(_args):
+            raise SystemExit("ssh second: connection refused")
+        remote.clean = unreachable
+        out = io.StringIO()
+        with redirect_stdout(out):
+            wt.clean_remote_runs()
+        self.assertIn("not cleaned", out.getvalue())
+        remote.clean = lambda args: seen.append(args)
+        wt.clean_remote_runs()
+        self.assertEqual((seen[0].dry_run, seen[0].keep_days), (False, None))
 
 
 if __name__ == "__main__":

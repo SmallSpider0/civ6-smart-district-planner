@@ -206,16 +206,42 @@ test("the sites tab shows each site's resources and both distances", function()
       SDP_UI.Number(math.floor(site.Parts.District * 10 + 0.5) / 10))
     T.ok(row.Detail:find(district, 1, true), "the districts part: " .. district)
     -- Housing (issue 188): the water's and each building's, in the game's
-    -- names, adding up to the total.
-    local info, parts, total = site.Info, {}, site.Info.HousingWater
+    -- names, adding up to the total; buildings whose technology or civic
+    -- the player lacks are named apart and not in the total.
+    local player = Players[Game.GetLocalPlayer()]
+    local function Researched(buildingType)
+      local row = GameInfo.Buildings[buildingType]
+      if row.PrereqTech ~= nil and not player:GetTechs():HasTech(GameInfo.Technologies[row.PrereqTech].Index) then return false end
+      if row.PrereqCivic ~= nil and not player:GetCulture():HasCivic(GameInfo.Civics[row.PrereqCivic].Index) then return false end
+      return true
+    end
+    local function List(list)
+      local names = {}
+      for _, part in ipairs(list) do
+        names[#names + 1] = Locale.Lookup("LOC_SDP_SITES_HOUSING_PART", Locale.Lookup(GameInfo.Buildings[part.Building].Name),
+          SDP_UI.Number(part.Housing))
+      end
+      return table.concat(names, ", ")
+    end
+    local info, total = site.Info, site.Info.HousingWater
     for _, part in ipairs(info.HousingParts) do
-      parts[#parts + 1] = Locale.Lookup("LOC_SDP_SITES_HOUSING_PART", Locale.Lookup(GameInfo.Buildings[part.Building].Name),
-        SDP_UI.Number(part.Housing))
+      T.ok(Researched(part.Building), part.Building .. " researched")
       total = total + part.Housing
     end
-    T.eq(total, info.Housing, "water and buildings add up")
-    T.ok(tip:find(Locale.Lookup("LOC_SDP_SITES_HOUSING_BUILT", SDP_UI.Number(info.Housing), SDP_UI.Number(info.HousingWater),
-      table.concat(parts, ", ")), 1, true), "the housing line")
+    for _, part in ipairs(info.HousingLater) do T.ok(not Researched(part.Building), part.Building .. " not researched") end
+    T.eq(total, info.Housing, "water and researched buildings add up")
+    local water, built, later = SDP_UI.Number(info.HousingWater), List(info.HousingParts), List(info.HousingLater)
+    local line
+    if #info.HousingParts > 0 and #info.HousingLater > 0 then
+      line = Locale.Lookup("LOC_SDP_SITES_HOUSING_BUILT_LATER", SDP_UI.Number(info.Housing), water, built, later)
+    elseif #info.HousingLater > 0 then
+      line = Locale.Lookup("LOC_SDP_SITES_HOUSING_LATER", SDP_UI.Number(info.Housing), water, later)
+    elseif #info.HousingParts > 0 then
+      line = Locale.Lookup("LOC_SDP_SITES_HOUSING_BUILT", SDP_UI.Number(info.Housing), water, built)
+    else
+      line = Locale.Lookup("LOC_SDP_SITES_HOUSING", SDP_UI.Number(info.Housing))
+    end
+    T.ok(tip:find(line, 1, true), "the housing line: " .. line)
     print(sites.State().View.Results[s].Name .. " | " .. sites.State().View.Results[s].Detail .. " | "
       .. tip:gsub("%[NEWLINE%]", " / "))
   end

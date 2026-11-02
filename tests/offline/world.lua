@@ -475,7 +475,9 @@ function World.New(spec)
   -- the granary (+2, a city-center building of the first era), the
   -- lighthouse (+1, and +2 more when the city center is next to the coast,
   -- a building modifier) and the seaport (+1, a later era). Added last, so
-  -- the other rows keep their indices.
+  -- the other rows keep their indices. The lighthouse and the seaport need
+  -- technologies of their own, as in the game (issue 188: housing of a
+  -- building whose technology the player lacks is not counted).
   if spec.housingBuildings then
     local function Append(tbl, key, extra)
       local rows = {}
@@ -483,12 +485,17 @@ function World.New(spec)
       for _, row in ipairs(extra) do rows[#rows + 1] = row end
       return Table(rows, key)
     end
+    gi.Technologies = Append(gi.Technologies, "TechnologyType", {
+      { TechnologyType = "TECH_CELESTIAL_NAVIGATION", Name = "LOC_TECH_CELESTIAL_NAVIGATION_NAME", EraType = "ERA_ANCIENT" },
+      { TechnologyType = "TECH_ELECTRICITY", Name = "LOC_TECH_ELECTRICITY_NAME", EraType = "ERA_CLASSICAL" },
+    })
     gi.Buildings.BUILDING_LIGHTHOUSE.Housing = 1
+    gi.Buildings.BUILDING_LIGHTHOUSE.PrereqTech = "TECH_CELESTIAL_NAVIGATION"
     gi.Buildings = Append(gi.Buildings, "BuildingType", {
       { BuildingType = "BUILDING_GRANARY", Name = "LOC_BUILDING_GRANARY_NAME", Cost = 65, Housing = 2,
         PrereqDistrict = "DISTRICT_CITY_CENTER", PrereqTech = "TECH_IRRIGATION" },
       { BuildingType = "BUILDING_SEAPORT", Name = "LOC_BUILDING_SEAPORT_NAME", Cost = 580, Housing = 1,
-        PrereqDistrict = "DISTRICT_HARBOR" },
+        PrereqDistrict = "DISTRICT_HARBOR", PrereqTech = "TECH_ELECTRICITY" },
     })
     gi.Modifiers = Append(gi.Modifiers, "ModifierId", {
       { ModifierId = "LIGHTHOUSE_COASTAL_CITY_HOUSING", ModifierType = "MODIFIER_CITY_OWNER_ADJUST_BUILDING_HOUSING",
@@ -1221,6 +1228,14 @@ function World.New(spec)
     OnImprovementAdded = Noop, OnImprovementRemoved = Noop, OnPlotVisibilityChanged = Noop,
     OnLoadGameViewStateDone = Noop, OnLocalPlayerTurnBegin = Noop,
   })
+
+  -- Gives the local player a technology or civic, or takes it away.
+  function w:SetTech(techType, has)
+    players[0].techs[gi.Technologies[techType].Index] = has or nil
+  end
+  function w:SetCivic(civicType, has)
+    players[0].civics[gi.Civics[civicType].Index] = has or nil
+  end
 
   function w:ResetCalls()
     self.Calls.GetBonusYields, self.Calls.CanPlacePin, self.Calls.ClearCache = 0, 0, 0
