@@ -519,6 +519,62 @@ test("several cities tab: a city's own list, role templates, an empire-limited d
   multi.SetPlanFor("ALL")
 end)
 
+-- Issue 187: a city given its own list goes back to the shared one with the
+-- back button beside the "Districts for" pulldown, shown only while the city
+-- picked there has its own list. Through the controls' own callbacks.
+test("several cities tab: a city's own list goes back to the shared list (issue 187)", function()
+  SDP_Panel.SelectTab("MULTI")
+  local multi = SDP_Panel.Multi
+  local c = UI_Mock.Controls
+  multi.Refresh()
+  multi.SetWonder("BUILDING_HANGING_GARDENS", false)
+  multi.SetPlanFor("ALL")
+  multi.ApplyPlan({ "DISTRICT_CAMPUS" })
+  local capital
+  for _, part in ipairs(SDP_Multi.Participants(0, {})) do
+    if part.Kind == "CITY" then capital = part.Key end
+  end
+  T.ok(capital ~= nil, "the capital takes part")
+  T.ok(c.MultiPlanShared:IsHidden(), "no back button on the shared list")
+  -- Pick the capital in the pulldown and change its list through a cell.
+  local function Pick(key)
+    -- Entry 1 is the shared list; the others follow the participants.
+    for i, part in ipairs(multi.Participants()) do
+      if part.Key == key then c.MultiPlanPull._entries[i + 1].Button:Click() end
+    end
+    if key == "ALL" then c.MultiPlanPull._entries[1].Button:Click() end
+  end
+  Pick(capital)
+  T.eq(multi.State().View.PlanFor, capital, "the capital's list is edited")
+  T.ok(c.MultiPlanShared:IsHidden(), "no back button while the city still uses the shared list")
+  for _, row in ipairs(multi.State().View.Districts) do
+    if row.Type == "DISTRICT_THEATER" then row.Cell:Click() end
+  end
+  T.ok(multi.State().View.Plans[capital] ~= nil, "the capital has its own list")
+  T.ok(c.MultiPlanPull:GetButton():GetText():find(Locale.Lookup("LOC_SDP_MULTI_OWN_PLAN"), 1, true) ~= nil,
+    "the pulldown says so")
+  T.eq(c.MultiPlanShared:IsHidden(), false, "the back button shows")
+  c.MultiPlanShared:Click()
+  T.eq(multi.State().View.Plans[capital], nil, "the capital is back on the shared list")
+  T.ok(c.MultiPlanShared:IsHidden(), "the back button hides again")
+  T.eq(multi.State().View.PlanFor, capital, "the capital stays picked")
+  local request = multi.Request()
+  T.eq(request.Plans, nil, "no city's own list is sent")
+  T.same(request.Districts, { "DISTRICT_CAMPUS" }, "the shared list is unchanged")
+  -- The template pulldown's entry does the same.
+  for _, row in ipairs(multi.State().View.Districts) do
+    if row.Type == "DISTRICT_THEATER" then row.Cell:Click() end
+  end
+  T.ok(multi.State().View.Plans[capital] ~= nil, "own list again")
+  local shared = Locale.Lookup("LOC_SDP_TEMPLATE_SHARED")
+  for _, entry in ipairs(c.MultiTemplatePull._entries) do
+    if entry.Button:GetText() == shared then entry.Button:Click() end
+  end
+  T.eq(multi.State().View.Plans[capital], nil, "back through the template pulldown")
+  Pick("ALL")
+  T.ok(c.MultiPlanShared:IsHidden(), "no back button on the shared list")
+end)
+
 -- Through the cells' own click handlers, round every state and back. (The
 -- game's mouse routing is not modelled here: validate.py checks that nothing
 -- covers a cell, see check_click_cover.)

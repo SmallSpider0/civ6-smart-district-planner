@@ -265,9 +265,11 @@
           <Stack ID="MultiCityStack" StackGrowth="Right" WrapWidth="462" WrapGrowth="Bottom" StackPadding="4"/>
         </ScrollPanel>
         <Container Size="480,28">
-          <Stack Anchor="L,C" StackGrowth="Right" StackPadding="6">
+          <Stack ID="MultiPlanStack" Anchor="L,C" StackGrowth="Right" StackPadding="6">
             <Label Anchor="L,C" Style="BodyTextDark16" String="LOC_SDP_MULTI_PLAN_FOR"/>
-            <PullDown ID="MultiPlanPull" Anchor="L,C" Style="PullDownBlue" Size="200,24" AutoSizePopUp="1"/>
+            <PullDown ID="MultiPlanPull" Anchor="L,C" Style="PullDownBlue" Size="190,24" AutoSizePopUp="1"/>
+            <!-- Back to the shared list: shown while the city picked has its own list (issue 187). -->
+            <Button ID="MultiPlanShared" Anchor="L,C" Style="BackButtonSmall" ToolTip="LOC_SDP_MULTI_PLAN_SHARED_TOOLTIP" Hidden="1"/>
           </Stack>
           <PullDown ID="MultiTemplatePull" Anchor="R,C" Style="PullDownBlue" Size="150,24" AutoSizePopUp="1"/>
         </Container>

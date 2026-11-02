@@ -535,6 +535,9 @@
     <Replace Tag="LOC_SDP_TEMPLATE_CLEAR" Language="en_US">
       <Text>Clear the list</Text>
     </Replace>
+    <Replace Tag="LOC_SDP_MULTI_PLAN_SHARED_TOOLTIP" Language="en_US">
+      <Text>Use the shared list again: this city drops its own list and is planned with the list every other city uses.</Text>
+    </Replace>
     <Replace Tag="LOC_SDP_TEMPLATE_SHARED" Language="en_US">
       <Text>Use the shared list again</Text>
     </Replace>
