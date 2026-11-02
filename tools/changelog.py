@@ -30,6 +30,18 @@ NAME = re.compile(r"^(\d+)(-[A-Za-z0-9_-]+)?\.md$")
 README = "README.md"
 
 
+def shown(path):
+    """The path as printed in a message: relative to the repository when it
+    is inside it, else as given. On Windows os.path.relpath raises ValueError
+    for a path on another drive (a temporary folder on C: while the checkout
+    is on D:, as on the CI runner)."""
+    try:
+        rel = os.path.relpath(path, ROOT)
+    except ValueError:
+        return path
+    return path if rel == os.pardir or rel.startswith(os.pardir + os.sep) else rel
+
+
 def fragment_files(folder=FOLDER):
     """[(number, name, path)] of the fragments: by number, <N>.md before <N>-<word>.md."""
     if not os.path.isdir(folder):
@@ -96,7 +108,7 @@ def check_collect(version, folder=FOLDER, changelog=CHANGELOG):
     fragments, or a section for this version already in CHANGELOG.md."""
     bad = problems(folder, changelog)
     if bad:
-        raise SystemExit("\n".join("%s:%d: %s" % (os.path.relpath(p, ROOT), n, m) for p, n, m in bad))
+        raise SystemExit("\n".join("%s:%d: %s" % (shown(p), n, m) for p, n, m in bad))
     if not entries(folder):
         raise SystemExit("changelog.d/ has no fragments: nothing to release")
     with open(changelog, encoding="utf-8") as f:
@@ -125,7 +137,7 @@ def collect(version, date, folder=FOLDER, changelog=CHANGELOG):
 def main():
     bad = problems()
     for path, lineno, message in bad:
-        print("%s:%d: %s" % (os.path.relpath(path, ROOT), lineno, message))
+        print("%s:%d: %s" % (shown(path), lineno, message))
     for line in entries():
         print(line)
     return 1 if bad else 0

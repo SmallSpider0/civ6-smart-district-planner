@@ -8,6 +8,7 @@ import shutil
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "tools"))
 import changelog  # noqa: E402
@@ -101,6 +102,20 @@ class FragmentTest(unittest.TestCase):
         finally:
             changelog.problems = old
         self.assertEqual([(i[0], os.path.basename(i[1]), i[3]) for i in report.items], [("error", "x.md", "changelog")])
+
+    def test_paths_on_another_drive(self):
+        # Windows: os.path.relpath raises ValueError when the temporary folder
+        # is on another drive than the checkout (C: and D: on the CI runner).
+        self.frag("x.md", "- bad name\n")
+        def relpath(path, start=None):
+            raise ValueError("path is on mount 'C:', start on mount 'D:'")
+        with mock.patch("os.path.relpath", relpath):
+            with self.assertRaises(SystemExit) as caught:
+                changelog.collect("1.7.1", "2026-11-04", self.folder, self.log)
+            self.assertIn(os.path.join(self.folder, "x.md"), str(caught.exception))
+            report = validate.Report()
+            report.error(os.path.join(self.folder, "x.md"), 0, "changelog", "m")
+            self.assertEqual(report.items[0][1], os.path.join(self.folder, "x.md"))
 
     def test_repository_is_clean(self):
         self.assertEqual(changelog.problems(), [])

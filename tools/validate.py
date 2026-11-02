@@ -102,7 +102,12 @@ class Report:
         self.items = []
 
     def add(self, severity, path, line, rule, message):
-        rel = os.path.relpath(path, ROOT) if os.path.isabs(path) else path
+        rel = path
+        if os.path.isabs(path):
+            try:
+                rel = os.path.relpath(path, ROOT)
+            except ValueError:  # Windows: another drive than the checkout
+                pass
         self.items.append((severity, rel, line or 0, rule, message))
 
     def error(self, path, line, rule, message):
