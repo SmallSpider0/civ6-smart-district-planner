@@ -31,7 +31,7 @@ Never start a job over a minute directly on this machine, subagents included: on
 The second machine has one queue for all sessions: `remote.py run` holds a job until its slots are free (first come, first served), so never start jobs there by hand:
 
 ```bash
-python3 -I tools/remote.py sync                       # this worktree, including uncommitted files
+python3 -I tools/remote.py sync                       # this worktree, including uncommitted files (run does it first anyway)
 python3 -I tools/remote.py run NAME [--slots N] -- node tools/compare.mjs ... --out logs/remote/NAME.jsonl
 python3 -I tools/remote.py wait NAME --fetch logs/remote/NAME.jsonl     # in the background
 ```
