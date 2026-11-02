@@ -26,6 +26,14 @@ Run it from the main checkout so its state (logs/watch/state.json) is one place.
 
 When the agent posts from the same GitHub account the watch reads: after every `gh issue comment`, `gh pr comment` or `gh issue create`, record the URL gh prints with `python3 -I tools/watch_issues.py --mine URL`, or your own comment or issue comes back as new (a running watch picks the record up at its next poll). Items from accounts that are not collaborators go to logs/watch/others.log: mention them to the maintainer at a good moment, do nothing else.
 
+## When the main session changes
+
+One main session per milestone (docs/maintaining.md "子 agent 怎么派" 5). The watch belongs to the main session that runs it:
+
+- The old main session, after the release (sdp-release §2 step 6): stop the running `watch_issues.py` and start no other. State lives in logs/watch/ of the main checkout, so nothing is lost.
+- The new main session (started by the maintainer from the card the old one proposed), in its first turn: `python3 -I tools/watch_issues.py --held` (mention what is held), then start the watch again in the background, without `--reset`: it picks up what came while no session watched.
+- Other sessions and subagents never start the watch.
+
 ## Act
 
 The watch runs without stopping other work, and every decision stays the maintainer's:

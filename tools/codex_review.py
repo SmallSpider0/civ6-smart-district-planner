@@ -105,11 +105,24 @@ def findings(number):
     return out
 
 
-def head_of(number):
-    pr = ghjson("pr", "view", str(number), "--json", "headRefOid,commits")
-    commit = pr["commits"][-1] if pr["commits"] else {}
+def head_since(pr):
+    """(head commit, ISO time of it) from `gh pr view --json headRefOid,commits`."""
+    commit = pr["commits"][-1] if pr.get("commits") else {}
     when = commit.get("committedDate") or datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     return pr["headRefOid"], when
+
+
+def head_of(number):
+    return head_since(ghjson("pr", "view", str(number), "--json", "headRefOid,commits"))
+
+
+def fetch_verdict(number, head, since):
+    """verdict() for PR number's head commit, from its comments, reviews and reactions on GitHub."""
+    comments = ghjson("api", "repos/{owner}/{repo}/issues/%d/comments?per_page=100" % number)
+    reviews = ghjson("api", "repos/{owner}/{repo}/pulls/%d/reviews?per_page=100" % number)
+    reactions = ghjson("api", "-H", "Accept: application/vnd.github+json",
+                       "repos/{owner}/{repo}/issues/%d/reactions?per_page=100" % number)
+    return verdict(head, since, comments, reviews, reactions)
 
 
 def wait(number, every, timeout):
@@ -119,11 +132,7 @@ def wait(number, every, timeout):
         try:
             if head_of(number)[0] != head:  # a new push: wait for the review of that one
                 head, since = head_of(number)
-            comments = ghjson("api", "repos/{owner}/{repo}/issues/%d/comments?per_page=100" % number)
-            reviews = ghjson("api", "repos/{owner}/{repo}/pulls/%d/reviews?per_page=100" % number)
-            reactions = ghjson("api", "-H", "Accept: application/vnd.github+json",
-                               "repos/{owner}/{repo}/issues/%d/reactions?per_page=100" % number)
-            v = verdict(head, since, comments, reviews, reactions)
+            v = fetch_verdict(number, head, since)
         except (RuntimeError, ValueError) as problem:
             print("gh: %s" % problem, file=sys.stderr, flush=True)
             v = None
