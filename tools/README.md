@@ -583,6 +583,7 @@ python3 -I tools/status/sync.py update decisions/issue-120 '{"status": "done", "
 python3 -I tools/status/sync.py delete jobs/old-job
 python3 -I tools/status/sync.py get [decisions]
 python3 -I tools/status/watch.py                      # 后台循环：每分钟 --quick --push，每 5 分钟全量
+python3 -I tools/status/watch.py --service            # 交给服务管理常驻时用：遇到超格子、游戏锁太久、证书快到期只记一行日志，接着推
 ```
 
 - `watch.py` 要一直跑，交给系统的服务管理常驻（macOS 用 launchd 的用户代理，Linux 用 systemd 的用户服务），不放在 Claude Code 会话的后台：应用一重启，会话里的后台任务就被关掉，页面停在最后一次推送（2026-11-02 起本机改成 launchd）。它出问题退出后由服务管理隔几分钟重启，输出写进日志文件。
