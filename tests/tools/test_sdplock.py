@@ -3,6 +3,8 @@
     python3 -I -m unittest discover -s tests/tools -v
 """
 import calendar
+import contextlib
+import io
 import os
 import signal
 import sys
@@ -201,8 +203,87 @@ class HeavyJobs(LockCase):
     def test_one_heavy_job_at_a_time(self):
         self.job("oracle", 777)
         with self.assertRaises(sdplock.Busy) as caught:
-            sdplock.run_heavy(self.a, "second", [sys.executable, "-c", "pass"])
+            sdplock.run_heavy(self.a, "second", [sys.executable, "-c", "pass"], wait=False)
         self.assertIn("oracle", str(caught.exception))
+        self.assertEqual(sdplock.heavy_waiting(), [])  # refusing does not queue
+
+    def test_waiting_jobs_go_first_come_first_served(self):
+        self.job("oracle", 777)
+        self.w.alive.update({11, 12, 13})
+        with sdplock._mutex():
+            self.assertFalse(sdplock.heavy_turn(self.a, "first", ["node"], 11)[0])
+        self.w.t += 60
+        with sdplock._mutex():
+            ok, ahead = sdplock.heavy_turn(self.b, "second", ["node"], 12)
+        self.assertFalse(ok)
+        self.assertEqual([j["name"] for j in ahead], ["oracle", "first"])
+        self.w.t += 60
+        with sdplock._mutex():
+            self.assertFalse(sdplock.heavy_turn(self.c, "third", ["node"], 13)[0])
+        self.assertEqual([w["name"] for w in sdplock.heavy_waiting()], ["first", "second", "third"])
+        self.w.alive.discard(777)  # the slot frees up: a later waiter that asks first still waits
+        with sdplock._mutex():
+            ok, ahead = sdplock.heavy_turn(self.c, "third", ["node"], 13)
+        self.assertFalse(ok)
+        self.assertEqual([j["name"] for j in ahead], ["first", "second"])
+        with sdplock._mutex():
+            self.assertFalse(sdplock.heavy_turn(self.b, "second", ["node"], 12)[0])
+        with sdplock._mutex():
+            self.assertEqual(sdplock.heavy_turn(self.a, "first", ["node"], 11), (True, []))
+        self.assertEqual([w["name"] for w in sdplock.heavy_waiting()], ["second", "third"])
+
+    def test_a_dead_waiter_leaves_the_queue(self):
+        self.job("oracle", 777)
+        self.w.alive.update({11, 12})
+        with sdplock._mutex():
+            sdplock.heavy_turn(self.a, "first", ["node"], 11)
+            sdplock.heavy_turn(self.b, "second", ["node"], 12)
+        self.w.alive.discard(11)  # killed while waiting
+        self.w.alive.discard(777)
+        with sdplock._mutex():
+            self.assertEqual(sdplock.heavy_turn(self.b, "second", ["node"], 12), (True, []))
+        self.assertEqual(sdplock._read(sdplock.heavy_queue_path(), None), [])
+
+    def test_run_heavy_waits_its_turn_then_runs(self):
+        self.job("oracle", 777)
+        me = os.getpid()
+        self.w.alive.add(me)
+        seen = []
+
+        def sleep(_):
+            seen.append([w["pid"] for w in sdplock.heavy_waiting()])
+            self.w.alive.discard(777)
+
+        code = sdplock.run_heavy(self.a, "quick", [sys.executable, "-c", "pass"], every=0, sleep=sleep)
+        self.assertEqual(code, 0)
+        self.assertEqual(seen, [[me]])
+        self.assertEqual(sdplock.heavy_waiting(), [])
+
+    def test_an_interrupted_wait_leaves_the_queue(self):
+        self.job("oracle", 777)
+        self.w.alive.add(os.getpid())
+
+        def sleep(_):
+            raise KeyboardInterrupt
+
+        with self.assertRaises(KeyboardInterrupt):
+            sdplock.run_heavy(self.a, "quick", [sys.executable, "-c", "pass"], sleep=sleep)
+        self.assertEqual(sdplock.heavy_waiting(), [])
+
+    def test_status_lists_the_waiting_order(self):
+        self.job("oracle", 777)
+        self.w.alive.update({11, 12})
+        with sdplock._mutex():
+            sdplock.heavy_turn(self.b, "later", ["node", "b"], 12)
+        self.w.t -= 600  # an earlier start of waiting goes first whatever the file order
+        with sdplock._mutex():
+            sdplock.heavy_turn(self.a, "earlier", ["node", "a"], 11)
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            sdplock.print_status(True)
+        text = out.getvalue()
+        self.assertIn("first come first served", text)
+        self.assertLess(text.index("1. earlier"), text.index("2. later"))
 
     def test_a_heavy_job_runs_and_unregisters(self):
         code = sdplock.run_heavy(self.a, "quick", [sys.executable, "-c", "import sys; sys.exit(3)"])
