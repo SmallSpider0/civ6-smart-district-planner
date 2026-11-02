@@ -583,6 +583,7 @@ python3 -I tools/status/sync.py get [decisions]
 python3 -I tools/status/watch.py                      # 后台循环：每分钟 --quick --push，每 5 分钟全量
 ```
 
+- `watch.py` 要一直跑，交给系统的服务管理常驻（macOS 用 launchd 的用户代理，Linux 用 systemd 的用户服务），不放在 Claude Code 会话的后台：应用一重启，会话里的后台任务就被关掉，页面停在最后一次推送（2026-11-02 起本机改成 launchd）。它出问题退出后由服务管理隔几分钟重启，输出写进日志文件。
 - 不认识的词和选项一律打印用法、以退出码 2 退出，什么都不建（以前第一个词被当成输出目录，`sync.py list` 在仓库里建出了 `list/`）。输出目录只能用 `--out DIR` 指定。
 - 手写的部分在事情发生的同一步写：要决定的事提出或定了、调研这类任务开始或结束、里程碑的目标变了。回答进度问题前先看一遍页面。
 
