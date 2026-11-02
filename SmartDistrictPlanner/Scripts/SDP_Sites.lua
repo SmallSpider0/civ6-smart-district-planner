@@ -317,9 +317,12 @@ function SDP_Sites.Context(playerID, request, k)
     Fresh = (GlobalParameters and GlobalParameters.CITY_POPULATION_RIVER_LAKE) or 5,
     Coast = (GlobalParameters and GlobalParameters.CITY_POPULATION_COAST) or 3,
     None = (GlobalParameters and GlobalParameters.CITY_POPULATION_NO_WATER) or 2,
-    Center = SDP_Land.CenterHousing(),
-    CenterParts = SDP_Land.CenterHousingParts(),
   }
+  -- Center buildings the player has researched count; the rest are only
+  -- named in the tooltip (issue 188).
+  ctx.Housing.CenterParts, ctx.Housing.CenterLater = SDP_Land.SplitResearched(SDP_Land.CenterHousingParts(), playerID)
+  ctx.Housing.Center = 0
+  for _, part in ipairs(ctx.Housing.CenterParts) do ctx.Housing.Center = ctx.Housing.Center + part.Housing end
   -- Districts on the coast (the harbor): their buildings' housing counts
   -- for the site (issue 55).
   ctx.CoastDistricts = {}
@@ -399,22 +402,33 @@ local Water = function(plot) return SDP_City.WaterKind(plot) end
 -- is SDP_Land.HousingValue with the population the plan needs as target
 -- and a new city's population, 1 (issue 91). The tooltip shows the water
 -- housing and each building's apart (Info.HousingWater, HousingParts: issue
--- 188), so the total does not read as what the new city has at once.
+-- 188), so the total does not read as what the new city has at once. Only
+-- buildings whose technology and civic the player has count (issue 188);
+-- the others are listed in Info.HousingLater and add nothing.
 function SDP_Sites.WaterPart(ctx, site, districts)
   local plot = Map.GetPlot(site.X, site.Y)
   local kind = site.Info.WaterKind
   local water = (kind == "FRESH" and ctx.Housing.Fresh) or (kind == "COAST" and ctx.Housing.Coast) or ctx.Housing.None
-  local housing, parts = water + ctx.Housing.Center, {}
+  local housing, parts, later = water + ctx.Housing.Center, {}, {}
   for _, part in ipairs(ctx.Housing.CenterParts) do parts[#parts + 1] = part end
+  for _, part in ipairs(ctx.Housing.CenterLater) do later[#later + 1] = part end
   for _, districtType in ipairs(districts) do
     if ctx.CoastDistricts[districtType] then
-      for _, part in ipairs(SDP_Land.BuildingHousingParts(districtType, plot:IsCoastalLand())) do
+      local key = districtType .. (plot:IsCoastalLand() and "+" or "-")
+      ctx.CoastHousing = ctx.CoastHousing or {}
+      if ctx.CoastHousing[key] == nil then
+        local c, l = SDP_Land.SplitResearched(SDP_Land.BuildingHousingParts(districtType, plot:IsCoastalLand()), ctx.PlayerID)
+        ctx.CoastHousing[key] = { Counted = c, Later = l }
+      end
+      local counted, notYet = ctx.CoastHousing[key].Counted, ctx.CoastHousing[key].Later
+      for _, part in ipairs(counted) do
         housing = housing + part.Housing
         parts[#parts + 1] = part
       end
+      for _, part in ipairs(notYet) do later[#later + 1] = part end
     end
   end
-  site.Info.Housing, site.Info.HousingWater, site.Info.HousingParts = housing, water, parts
+  site.Info.Housing, site.Info.HousingWater, site.Info.HousingParts, site.Info.HousingLater = housing, water, parts, later
   local dry = ctx.Housing.None + ctx.Housing.Center
   return ctx.Items.HOUSING * (SDP_Land.HousingValue(housing, ctx.Population, 1) - SDP_Land.HousingValue(dry, ctx.Population, 1))
 end
