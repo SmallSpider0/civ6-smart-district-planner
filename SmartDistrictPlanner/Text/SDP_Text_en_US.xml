@@ -331,6 +331,9 @@
     <Replace Tag="LOC_SDP_SITES_COUNT" Language="en_US">
       <Text>New cities</Text>
     </Replace>
+    <Replace Tag="LOC_SDP_SITES_COUNT_TOOLTIP" Language="en_US">
+      <Text>Raise it for more city sites at once. Settlers take many turns to build one after another, and the situation and the explored map change meanwhile, so plan a few and pick again once they are founded.</Text>
+    </Replace>
     <Replace Tag="LOC_SDP_SITES_DISTANCE" Language="en_US">
       <Text>Max distance</Text>
     </Replace>
@@ -377,10 +380,10 @@
       <Text>site scores are estimates; step 2 plans the districts exactly</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SITES_DENSE" Language="en_US">
-      <Text>Dense packing: as many new cities as fit</Text>
+      <Text>Dense packing: new cities close together</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SITES_DENSE_TOOLTIP" Language="en_US">
-      <Text>When on, as many new cities as possible go into the same area, closer together and with less land each; tick the sites you want in the results, then place their tacks.</Text>
+      <Text>When on, new cities go as close to your cities and to each other as allowed: denser, with less land each; tick the sites you want in the results, then place their tacks.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SITES_SUMMARY_DENSE" Language="en_US">
       <Text>{1_Count} new cities fit, score {2_Value}; {3_Ticked} ticked, Place site tacks places only those</Text>

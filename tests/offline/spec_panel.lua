@@ -1640,25 +1640,63 @@ test("issue 91: the preserve starts off, distance 0.5, the summary leads with th
   SDP_Panel.SetTier("STANDARD")
 end)
 
--- Issue 87: dense packing on the sites tab: its own count (12 by default)
--- and distance, kept; a tick box a site; only the ticked sites get a tack.
+-- Issue 191: one number of new cities for both modes. Switching dense
+-- packing on keeps it (it used to jump to its own, 12 by default); dense
+-- packing allows up to DENSE_MAX_K, and with it off the count runs as at
+-- most MAX_K and comes back when it is switched on again.
+test("issue 191: dense packing keeps the number of new cities", function()
+  SDP_Panel.Open()
+  SDP_Panel.SelectTab("SITES")
+  local c = UI_Mock.Controls
+  local sites = SDP_Panel.Sites
+  if sites.State().Dense then c.SitesDenseCheck:Toggle() end
+  while sites.State().K > 3 do c.SitesCountLess:Click() end
+  while sites.State().K < 3 do c.SitesCountMore:Click() end
+  c.SitesDenseCheck:Toggle()
+  T.eq(sites.State().Dense, true, "on through its box")
+  T.eq(sites.State().K, 3, "on: the same 3 new cities")
+  T.eq(c.SitesCount:GetText(), "3", "shown")
+  T.eq(sites.Request().K, 3, "and asked for")
+  c.SitesCountLess:Click()
+  T.eq(sites.State().K, 2, "down")
+  c.SitesDenseCheck:Toggle()
+  T.eq(sites.State().K, 2, "off: still 2")
+  for _ = 1, 20 do c.SitesCountMore:Click() end
+  T.eq(sites.State().K, SDP_SiteSolver.MAX_K, "off: at most 6")
+  T.eq(c.SitesCountMore:IsDisabled(), true, "no more")
+  c.SitesDenseCheck:Toggle()
+  for _ = 1, 20 do c.SitesCountMore:Click() end
+  T.eq(sites.State().K, SDP_SiteSolver.DENSE_MAX_K, "on: up to 12")
+  T.eq(c.SitesCountMore:IsDisabled(), true, "no more")
+  c.SitesDenseCheck:Toggle()
+  T.eq(sites.State().K, SDP_SiteSolver.MAX_K, "off: shown as 6")
+  T.eq(c.SitesCount:GetText(), tostring(SDP_SiteSolver.MAX_K), "shown")
+  T.eq(sites.Request().K, SDP_SiteSolver.MAX_K, "and asked for")
+  c.SitesDenseCheck:Toggle()
+  T.eq(sites.State().K, SDP_SiteSolver.DENSE_MAX_K, "on again: 12")
+  while sites.State().K > 3 do c.SitesCountLess:Click() end
+  c.SitesDenseCheck:Toggle()
+  T.eq(sites.State().K, 3, "off: 3")
+  SDP_Panel.SelectTab("SINGLE")
+end)
+
+-- Issue 87: dense packing on the sites tab: its own distance, kept; a tick
+-- box a site; only the ticked sites get a tack.
 test("issue 87: dense packing through its switch, tick boxes and Select all", function()
   SDP_Panel.Open()
   SDP_Panel.SelectTab("SITES")
   local c = UI_Mock.Controls
   local sites = SDP_Panel.Sites
-  local k, d = sites.State().K, sites.State().D
+  local d = sites.State().D
   c.SitesDenseCheck:Toggle()
   T.eq(sites.State().Dense, true, "on through its box")
-  T.eq(sites.State().K, SDP_SiteSolver.DENSE_MAX_K, "12 new cities by default")
-  c.SitesCountLess:Click()
-  T.eq(sites.State().K, SDP_SiteSolver.DENSE_MAX_K - 1, "its own count down")
-  T.ok(c.SitesCountMore:IsDisabled() == false, "up to 12")
+  local dd = sites.State().D
+  c.SitesDistanceMore:Click()
+  T.eq(sites.State().D, dd + 1, "its own distance up")
   c.SitesDenseCheck:Toggle()
-  T.eq(sites.State().K, k, "off: the usual count back")
-  T.eq(sites.State().D, d, "and the usual distance")
+  T.eq(sites.State().D, d, "off: the usual distance back")
   c.SitesDenseCheck:Toggle()
-  T.eq(sites.State().K, SDP_SiteSolver.DENSE_MAX_K - 1, "on again: its count kept")
+  T.eq(sites.State().D, dd + 1, "on again: its distance kept")
   sites.SetCount(4)
   sites.SetTier("FAST")
   T.ok(sites.Solve(), "started")

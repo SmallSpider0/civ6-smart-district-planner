@@ -61,16 +61,20 @@ local WEIGHT_WIDTH = 68
 local DEFAULT_K, DEFAULT_D = 3, 5
 local m_k, m_d = DEFAULT_K, DEFAULT_D
 local MIN_D, MAX_D = 4, 15
--- Dense packing (issue 87, decided 2026-10-26): its own number of new
--- cities (default 12) and distance, kept in the save; switching it off
--- brings the usual ones back. Its sites are ticked one by one (none by
--- default) and only the ticked ones get a tack.
+-- Dense packing (issue 87, decided 2026-10-26): its own distance, kept in
+-- the save; switching it off brings the usual one back. Its sites are
+-- ticked one by one (none by default) and only the ticked ones get a tack.
+-- The number of new cities is one for both modes (issue 191): switching
+-- dense packing on keeps it (it had its own, 12 by default, and a plan that
+-- far ahead was mostly out of date before the settlers got there). Dense
+-- packing allows up to DENSE_MAX_K; with it off the count shows and runs as
+-- at most MAX_K, and comes back when it is switched on again.
 local m_dense = false
-local m_dk, m_dd = SDP_SiteSolver.DENSE_MAX_K, DEFAULT_D
+local m_dd = DEFAULT_D
 local m_ticked = {} -- [site number in the solution] = true
-local function K() return m_dense and m_dk or m_k end
-local function D() return m_dense and m_dd or m_d end
 local function MaxK() return m_dense and SDP_SiteSolver.DENSE_MAX_K or SDP_SiteSolver.MAX_K end
+local function K() return math.min(m_k, MaxK()) end
+local function D() return m_dense and m_dd or m_d end
 -- The districts each site is scored with (issue 90): states as on the
 -- single-city tab, MUST / POOL / OFF, only the ones the player chose (the
 -- rest at SDP_Sites.DefaultState), and how many that take population.
@@ -112,7 +116,7 @@ for _, column in ipairs(COLUMNS_B) do ALL_COLUMNS[#ALL_COLUMNS + 1] = column end
 local m_fold = false -- the preset and weights folded into one line (issue 71)
 local m_keeper = SDP_UI.Keeper({ Tab = "SITES", Columns = ALL_COLUMNS, Weights = m_weights, Tiers = SDP_Tiers.Sites,
   Extra = { { Key = "FOLD", Default = false, Get = function() return m_fold end, Put = function(v) m_fold = v end },
-    { Key = "K", Kind = "number", Min = 1, Max = SDP_SiteSolver.MAX_K, Default = DEFAULT_K,
+    { Key = "K", Kind = "number", Min = 1, Max = SDP_SiteSolver.DENSE_MAX_K, Default = DEFAULT_K,
       Get = function() return m_k end, Put = function(v) m_k = math.floor(v) end },
     { Key = "D", Kind = "number", Min = MIN_D, Max = MAX_D, Default = DEFAULT_D,
       Get = function() return m_d end, Put = function(v) m_d = math.floor(v) end },
@@ -120,8 +124,6 @@ local m_keeper = SDP_UI.Keeper({ Tab = "SITES", Columns = ALL_COLUMNS, Weights =
       Get = function() return m_count end, Put = function(v) m_count = math.floor(v) end },
     { Key = "DISTRICTS", Kind = "list", Pattern = "^[%w_]+:[MPO]$", Default = "", Get = KeptStates, Put = PutStates },
     { Key = "DENSE", Default = false, Get = function() return m_dense end, Put = function(v) m_dense = v end },
-    { Key = "DK", Kind = "number", Min = 1, Max = SDP_SiteSolver.DENSE_MAX_K, Default = SDP_SiteSolver.DENSE_MAX_K,
-      Get = function() return m_dk end, Put = function(v) m_dk = math.floor(v) end },
     { Key = "DD", Kind = "number", Min = MIN_D, Max = MAX_D, Default = DEFAULT_D,
       Get = function() return m_dd end, Put = function(v) m_dd = math.floor(v) end } },
   GetTier = function() return m_tier end, PutTier = function(tier) m_tier = tier end,
@@ -247,7 +249,7 @@ end
 function P.SetCount(k)
   k = math.max(1, math.min(MaxK(), k))
   if k ~= K() then
-    if m_dense then m_dk = k else m_k = k end
+    m_k = k
     ClearResult()
     Remember()
   end
@@ -255,8 +257,8 @@ function P.SetCount(k)
   UpdateEstimate()
 end
 
--- Dense packing on or off (issue 87): the number of new cities and the
--- distance are each mode's own.
+-- Dense packing on or off (issue 87): the distance is each mode's own, the
+-- number of new cities stays (issue 191).
 function P.SetDense(on)
   on = on == true
   if on ~= m_dense then

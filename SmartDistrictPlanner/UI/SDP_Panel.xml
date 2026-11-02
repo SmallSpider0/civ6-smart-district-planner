@@ -167,9 +167,9 @@
       <Container ID="SitesPage" Anchor="C,T" Offset="0,88" Size="520,820" Hidden="1">
       <Stack ID="SitesBody" Anchor="C,T" StackGrowth="Bottom" StackPadding="4">
         <Container Size="480,30">
-          <Label Anchor="L,C" Style="BodyTextDark16" String="LOC_SDP_SITES_COUNT"/>
+          <Label Anchor="L,C" Style="BodyTextDark16" String="LOC_SDP_SITES_COUNT" ToolTip="LOC_SDP_SITES_COUNT_TOOLTIP"/>
           <Button ID="SitesCountLess" Anchor="L,C" Offset="100,0" Style="ArrowButtonLeft"/>
-          <!-- Room for two digits (dense sites reach 12, issue 87). -->
+          <!-- Room for two digits (dense packing allows 12, issue 87). -->
           <Label ID="SitesCount" Anchor="L,C" Offset="127,0" Style="BodyTextDark18"/>
           <Button ID="SitesCountMore" Anchor="L,C" Offset="156,0" Style="ArrowButtonRight"/>
           <Label Anchor="L,C" Offset="220,0" Style="BodyTextDark16" String="LOC_SDP_SITES_DISTANCE" ToolTip="LOC_SDP_SITES_DISTANCE_TOOLTIP"/>
@@ -177,7 +177,7 @@
           <Label ID="SitesDistance" Anchor="L,C" Offset="380,0" Style="BodyTextDark18"/>
           <Button ID="SitesDistanceMore" Anchor="L,C" Offset="404,0" Style="ArrowButtonRight"/>
         </Container>
-        <!-- Dense packing (issue 87): as many new cities as fit. -->
+        <!-- Dense packing (issue 87): new cities as close as allowed. -->
         <Container Size="480,26" ToolTip="LOC_SDP_SITES_DENSE_TOOLTIP">
           <CheckBox ID="SitesDenseCheck" Anchor="L,C" Style="MainCheckBox"/>
           <Label Anchor="L,C" Offset="26,0" Style="BodyTextDark16" String="LOC_SDP_SITES_DENSE"/>

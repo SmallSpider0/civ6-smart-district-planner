@@ -337,3 +337,35 @@ test("issue 87: dense packing on the real map", function()
   T.eq(again.Solutions[1].Sites[1].Index, best.Sites[1].Index, "same first site")
   print(("dense: %d sites, %d packings"):format(#best.Sites, result.Stats.Packings))
 end)
+
+-- Issue 191: switching dense packing on keeps the number of new cities;
+-- solved through the panel with dense packing and 3 new cities, the plan
+-- has at most 3 sites, spaced as the game needs.
+test("issue 191: dense packing keeps the panel's number of new cities", function()
+  if Players[pid]:GetCities():GetCapitalCity() == nil then T.skip("no capital") end
+  local sites = SDP_Panel.Sites
+  SDP_Panel.SelectTab("SITES")
+  sites.SetDense(false)
+  sites.SetCount(3)
+  sites.SetDense(true)
+  T.eq(sites.State().K, 3, "on: still 3")
+  T.eq(Controls.SitesCount:GetText(), "3", "shown")
+  sites.SetTier("FAST")
+  T.ok(sites.Solve(), "started")
+  SDP_Panel.RunTask(5000)
+  local result = sites.State().Result
+  if result and not result.Ok and result.Error == "NO_SITE" then T.skip("no room yet") end
+  T.ok(result and result.Ok, "result: " .. tostring(result and result.Error))
+  local best = result.Solutions[1].Sites
+  T.ok(#best >= 1 and #best <= 3, "1 to 3 sites: " .. #best)
+  local minRange = SDP_Sites.MinRange()
+  for a = 1, #best do
+    for b = a + 1, #best do
+      T.ok(Map.GetPlotDistance(best[a].X, best[a].Y, best[b].X, best[b].Y) > minRange, "spaced")
+    end
+    print(("dense 3: site %d,%d  %.1f"):format(best[a].X, best[a].Y, best[a].Value))
+  end
+  sites.SetDense(false)
+  T.eq(sites.State().K, 3, "off: 3")
+  SDP_Panel.SelectTab("SINGLE")
+end)

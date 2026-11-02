@@ -331,6 +331,9 @@
     <Replace Tag="LOC_SDP_SITES_COUNT" Language="zh_Hans_CN">
       <Text>新城数量</Text>
     </Replace>
+    <Replace Tag="LOC_SDP_SITES_COUNT_TOOLTIP" Language="zh_Hans_CN">
+      <Text>调高，一次给出更多城址。开拓者一个个造要很多回合，其间局势和探索到的地图都会变，少放几座、建好后再选一次更准。</Text>
+    </Replace>
     <Replace Tag="LOC_SDP_SITES_DISTANCE" Language="zh_Hans_CN">
       <Text>最远距离</Text>
     </Replace>
@@ -377,10 +380,10 @@
       <Text>城址分是估计值，区域在第 2 步精确规划</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SITES_DENSE" Language="zh_Hans_CN">
-      <Text>密铺：尽量多放新城</Text>
+      <Text>密铺：新城挨着放</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SITES_DENSE_TOOLTIP" Language="zh_Hans_CN">
-      <Text>打开后，同一片地方尽量多放新城，城挨得更近、每座城分到的地更少；结果里勾选要的城址再打钉。</Text>
+      <Text>打开后，新城尽量挨着你的城市和彼此放，城更密、每座城分到的地更少；结果里勾选要的城址再打钉。</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SITES_SUMMARY_DENSE" Language="zh_Hans_CN">
       <Text>放得下 {1_Count} 座新城，总分 {2_Value}；已勾选 {3_Ticked} 座，“打城址钉”只打勾选的</Text>
