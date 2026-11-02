@@ -306,7 +306,8 @@ end
 -- ===========================================================================
 -- Fold, fit, peek (issue 71)
 -- ===========================================================================
--- A tab's fold line: the summary `text`; `folded` hides the settings stack.
+-- A tab's fold line: the summary `text`; `folded` hides the settings (their
+-- scroll panel, issue 199).
 function SDP_UI.ShowFold(button, label, action, stack, folded, text)
   label:SetText(text)
   action:SetText(Locale.Lookup(folded and "LOC_SDP_FOLD_SHOW" or "LOC_SDP_FOLD_HIDE"))
@@ -379,12 +380,32 @@ end
 
 -- The result list takes what the page has left (M1): the window's height
 -- above or below the drawn 920 goes there, never below RESULT_MIN (a row).
+-- The settings (`settings`, a scroll panel around `settingsStack`) are as
+-- high as they are drawn; when the page is too short for them with the
+-- result list at one row, they scroll, down to SETTINGS_MIN, so the solve
+-- button below them stays on the page (issue 199: many wonders ticked, or a
+-- low screen).
 SDP_UI.RESULT_MIN = 40
-function SDP_UI.FitResults(body, page, scroll)
+SDP_UI.SETTINGS_MIN = 56
+function SDP_UI.FitResults(body, page, scroll, settings, settingsStack)
+  local full = nil
+  if settings ~= nil and not settings:IsHidden() then
+    settingsStack:CalculateSize()
+    full = settingsStack:GetSizeY()
+    settings:SetSizeY(full)
+    settings:CalculateSize()
+  end
   scroll:SetSizeY(SDP_UI.RESULT_MIN)
   scroll:CalculateSize()
   body:CalculateSize()
-  local height = SDP_UI.RESULT_MIN + math.max(0, page:GetSizeY() - body:GetSizeY())
+  local spare = page:GetSizeY() - body:GetSizeY()
+  if spare < 0 and full ~= nil then
+    settings:SetSizeY(math.max(math.min(full, SDP_UI.SETTINGS_MIN), full + spare))
+    settings:CalculateSize()
+    body:CalculateSize()
+    spare = page:GetSizeY() - body:GetSizeY()
+  end
+  local height = SDP_UI.RESULT_MIN + math.max(0, spare)
   scroll:SetSizeY(height)
   scroll:CalculateSize()
   body:CalculateSize()
@@ -404,7 +425,9 @@ local function Remember()
   m_keeper.Remember(m_preset)
   UpdateFold()
 end
-local function FitPage() SDP_UI.FitResults(Controls.Body, Controls.SinglePage, Controls.ResultScroll) end
+local function FitPage()
+  SDP_UI.FitResults(Controls.Body, Controls.SinglePage, Controls.ResultScroll, Controls.SettingsScroll, Controls.SettingsStack)
+end
 -- Read them from the save the first time the panel shows for this player.
 local function Restore()
   local kept = m_keeper.Restore()
@@ -1643,6 +1666,7 @@ PopulateWonders = function()
   SDP_UI.BuildWonders(Controls.WonderPull, m_chipIM, Controls.WonderChipStack,
     SDP_Wonders.List(Game.GetLocalPlayer(), ReplacedPins()),
     m_wonders, function(wonderType, on) SetWonder(wonderType, on) end)
+  FitPage() -- the tags take more or fewer rows (issue 199)
 end
 
 SetWonder = function(wonderType, on)
@@ -1669,7 +1693,7 @@ UpdateFold = function()
   if wonders > 0 then parts[#parts + 1] = Locale.Lookup("LOC_SDP_FOLD_WONDERS", wonders) end
   if m_heat ~= nil then parts[#parts + 1] = Locale.Lookup("LOC_SDP_FOLD_HEAT", TypeName(m_heat)) end
   local shown = m_keeper.Match(m_preset)
-  SDP_UI.ShowFold(Controls.FoldButton, Controls.FoldText, Controls.FoldAction, Controls.SettingsStack, m_fold,
+  SDP_UI.ShowFold(Controls.FoldButton, Controls.FoldText, Controls.FoldAction, Controls.SettingsScroll, m_fold,
     SDP_UI.FoldSummary(shown, parts))
   SDP_UI.ShowPreset(Controls.PresetPull, shown, function(name) SetPreset(name) end, { Tips = true })
 end
