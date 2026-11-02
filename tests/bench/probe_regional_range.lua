@@ -39,7 +39,46 @@ test("the reach of the industrial zone and entertainment complex is 3 longer", f
   local reach = SDP_Coverage.Reaches(pid)[IZ]
   T.eq(reach.Range, base + 3, "the reach used for planning")
   T.eq(reach.Extra, 3, "the bonus noted")
-  if GameInfo.Districts.DISTRICT_WATER_ENTERTAINMENT_COMPLEX ~= nil then
-    T.eq(extra.DISTRICT_WATER_ENTERTAINMENT_COMPLEX, 3, "the water park")
+  -- The water park only where the ruleset's requirement set names it (not
+  -- in Gathering Storm, 2026-11-02).
+  local set, named = GameInfo.Modifiers[BONUS].SubjectRequirementSetId, false
+  for row in GameInfo.RequirementSetRequirements() do
+    if row.RequirementSetId == set then
+      for arg in GameInfo.RequirementArguments() do
+        if arg.RequirementId == row.RequirementId and arg.Value == "DISTRICT_WATER_ENTERTAINMENT_COMPLEX" then named = true end
+      end
+    end
   end
+  T.eq(extra.DISTRICT_WATER_ENTERTAINMENT_COMPLEX, named and 3 or nil, "the water park as the rules say")
+end)
+
+-- How a suzerain bonus shows: the modifier a city-state's trait attaches to
+-- its suzerain is owned by the suzerain player, as the bonus attached above.
+test("a suzerain bonus's attached modifier is owned by the suzerain", function()
+  local attached = {}
+  for row in GameInfo.Modifiers() do
+    if row.ModifierType == "MODIFIER_ALL_PLAYERS_ATTACH_MODIFIER" and row.SubjectRequirementSetId == "PLAYER_IS_SUZERAIN" then
+      for arg in GameInfo.ModifierArguments() do
+        if arg.ModifierId == row.ModifierId and arg.Name == "ModifierId" then attached[arg.Value] = true end
+      end
+    end
+  end
+  local suzerainOf = 0
+  for _, minor in ipairs(PlayerManager.GetAliveMinors()) do
+    if minor:GetInfluence():GetSuzerain() == pid then suzerainOf = suzerainOf + 1 end
+  end
+  if suzerainOf == 0 then T.skip("the player is suzerain of no city-state") end
+  local owned = {}
+  for _, id in ipairs(GameEffects.GetModifiers()) do
+    local def = GameEffects.GetModifierDefinition(id)
+    if def ~= nil and attached[def.Id] and GameEffects.GetModifierActive(id) then
+      owned[#owned + 1] = def.Id .. "@" .. tostring(GameEffects.GetObjectsPlayerId(GameEffects.GetModifierOwner(id)))
+    end
+  end
+  print("SDP_PROBE suzerain bonuses: " .. table.concat(owned, ", "))
+  local mine = 0
+  for _, s in ipairs(owned) do
+    if s:sub(-#("@" .. pid)) == "@" .. pid then mine = mine + 1 end
+  end
+  T.ok(mine >= 1, "an attached suzerain bonus owned by the player")
 end)
