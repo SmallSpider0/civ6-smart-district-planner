@@ -229,10 +229,20 @@ test("a wonder's district goes to a city that picks one anyway (issue 182)", fun
     T.ok(result.Stats.Again ~= nil, "solved a second time with the complex in the second city")
     T.ok(result.Gain >= before.Gain - 1e-6, string.format("not worse than one solve: %.2f against %.2f", result.Gain,
       before.Gain))
+    -- The supplied one stands next to the colosseum; kept second, it is the
+    -- second city's and the first city only picks from its candidates (an
+    -- entertainment complex among them too, when it is worth it).
+    local supplied = {}
+    for _, p in ipairs(complexes) do
+      if p.ForWonder ~= nil then supplied[#supplied + 1] = p end
+    end
+    T.eq(#supplied, 1, "one entertainment complex supplied")
+    T.eq(Map.GetPlotDistance(supplied[1].X, supplied[1].Y, wonder.X, wonder.Y), 1, "next to the colosseum")
     if result.Stats.Again.Moved then
-      T.eq(#complexes, 1, "one entertainment complex")
-      T.eq(complexes[1].City, second, "in the second city")
-      T.eq(Map.GetPlotDistance(complexes[1].X, complexes[1].Y, wonder.X, wonder.Y), 1, "next to the colosseum")
+      T.eq(supplied[1].City, second, "in the second city")
+      for _, p in ipairs(result.Plan) do
+        if p.City == first and p.Kind ~= "WONDER" then T.ok(p.Picked, p.Type .. ": the first city picks it") end
+      end
     end
   end)
 end)
