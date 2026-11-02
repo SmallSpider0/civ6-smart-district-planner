@@ -458,14 +458,20 @@ function SDP_UI.TargetLabel(key)
 end
 
 -- Coverage on a result: label(key) names a target (default SDP_UI.TargetLabel).
--- The summary's tooltip lines: the newly covered cities by group.
+-- The summary's tooltip lines: the newly covered cities by group, with the
+-- group's range when the player's bonuses make it longer (issue 197).
 function SDP_UI.CoverageLines(solution, label)
   label = label or SDP_UI.TargetLabel
   local lines = {}
   for _, entry in ipairs(solution.CoveredBy or {}) do
     local names = {}
     for _, key in ipairs(entry.Keys) do names[#names + 1] = label(key) end
-    lines[#lines + 1] = Locale.Lookup("LOC_SDP_COVERAGE_GROUP", TypeName(entry.Group), #entry.Keys, Join(names))
+    if (entry.Extra or 0) > 0 then
+      lines[#lines + 1] = Locale.Lookup("LOC_SDP_COVERAGE_GROUP_EXTRA", TypeName(entry.Group), #entry.Keys, Join(names),
+        entry.Range, entry.Extra)
+    else
+      lines[#lines + 1] = Locale.Lookup("LOC_SDP_COVERAGE_GROUP", TypeName(entry.Group), #entry.Keys, Join(names))
+    end
   end
   if #lines == 0 then lines[1] = Locale.Lookup("LOC_SDP_COVERAGE_NOTHING") end
   return lines
