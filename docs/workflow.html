@@ -367,7 +367,7 @@ footer { margin-top: 64px; border-top: 1px solid var(--line); padding-top: 16px;
   <p>主会话的花费大多是重读上下文：它一直开着，上下文越积越长，每被叫醒一次就整个重读一遍（数字见 <a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/docs/maintaining.md">docs/maintaining.md</a>“子 agent 怎么派”第 5 条）。</p>
   <div class="cards">
     <div class="card"><h4>上下文保持小</h4><p>主会话只分派、转达和收尾，目标在约 20 万 token 以内。超过了，到一个检查点（一批 PR 合并、发版的一步做完）请维护者压缩上下文，代理自己压缩不了。</p></div>
-    <div class="card"><h4>一个里程碑一个主会话</h4><p>发版后换新的主会话。旧的不留任何在跑的东西：后台命令、定时任务、在等的子 agent、Issue 监听都停掉；新的开始时重新开监听。要带过去的写在状态页、Issue、<code>docs/notes/</code> 和本机记忆里，不靠对话。该换时旧的主会话直接开一张新会话卡片，附简短交接，维护者从卡片开始。</p></div>
+    <div class="card"><h4>一个里程碑一个主会话</h4><p>发版后换新的主会话。旧的不留任何在跑的东西：后台命令、定时任务、在等的子 agent、Issue 监听都停掉；新的开始时重新开监听。要带过去的写在状态页、Issue、<code>docs/notes/</code> 和本机记忆里，不靠对话。维护者说换时，旧的主会话直接开新会话（附简短交接），开好马上挪到顶层成为独立会话，不用提议卡片（卡片开出的也是子会话）；新的主会话确认旧的不在运行后直接归档它。</p></div>
     <div class="card"><h4>少被叫醒</h4><p>一批 PR 只挂一个 <code>pr_wait.py</code>，中间步骤（一项检查跑完、Codex 审完没意见）不叫醒；CI 失败、冲突、Codex 有意见时马上退出。子 agent 交几行报告，主会话只读报告，不读它的原始输出。夜里的定时兜底最多一个。</p></div>
     <div class="card"><h4>不用的工具关掉</h4><p>只分派的会话用不到的连接器（浏览器、文档、桌面控制之类）关掉：它们的工具定义每次调用都要重读。</p></div>
   </div>
