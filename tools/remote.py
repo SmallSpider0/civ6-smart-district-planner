@@ -6,6 +6,7 @@
     python3 -I tools/remote.py status [NAME]              # every session's jobs, free slots / one job
     python3 -I tools/remote.py wait NAME [--fetch PATH ...] [--every 60]
     python3 -I tools/remote.py fetch [--job NAME] PATH ...  # copy files back (paths relative to the worktree)
+    python3 -I tools/remote.py clean [--dry-run] [--keep-days N]  # delete what old and gone worktrees left there
 
 The host is $SDP_REMOTE, else "remote" in the local config (tools/sdplock.py:
 ~/.config/sdp/local.json, outside the repository): an ssh host name from
@@ -33,7 +34,12 @@ starting a heavy job anywhere. `wait` and `fetch --job` copy results back
 from the job's snapshot. `wait` checks every --every seconds until
 that file exists (no process matching), then fetches the given paths and
 exits with the job's exit code: start it in the background and its end is
-the signal to carry on. Node and python3 there: $SDP_REMOTE_PATH (or
+the signal to carry on. `clean` removes there (tools/sdpsched.py prune): jobs that ended over --keep-days (default 7) ago with their
+snapshot, log, exit file and record; copies of worktrees that no longer exist (`git worktree list` here)
+and the jobs started from them after a day; copies nobody synced for --keep-days. A queued or running job's
+files stay. `--dry-run` lists what would go. `tools/worktree.py prune --remote` runs it too, after it has
+removed the merged worktrees, and `run` runs the age rule before it starts a job.
+Node and python3 there: $SDP_REMOTE_PATH (or
 "remote_path" in the local config) is put in front of PATH (default
 /opt/homebrew/bin:/usr/local/bin).
 """
@@ -62,7 +68,7 @@ def host():
 
 
 def ssh(command, check=True, capture=True):
-    done = subprocess.run(["ssh", host(), command], capture_output=capture, text=True)
+    done = subprocess.run(["ssh", "-o", "ConnectTimeout=15", host(), command], capture_output=capture, text=True)
     if check and done.returncode != 0:
         raise SystemExit("ssh %s: %s" % (host(), (done.stderr or "").strip()))
     return done.stdout if capture else ""
@@ -143,6 +149,28 @@ def run(args):
     return 0
 
 
+def worktree_names():
+    """Names of the worktrees (and the main checkout) that exist here: the names of the copies there."""
+    out = subprocess.run(["git", "worktree", "list", "--porcelain"], cwd=ROOT, capture_output=True, text=True)
+    if out.returncode != 0:
+        raise SystemExit("git worktree list: %s" % out.stderr.strip())
+    names = {NAME}
+    for line in out.stdout.splitlines():
+        if line.startswith("worktree "):
+            names.add(os.path.basename(line[len("worktree "):].rstrip("/")))
+    return sorted(names)
+
+
+def clean(args):
+    install_sched()
+    cmd = "prune --known %s%s%s" % (" ".join(shlex.quote(n) for n in worktree_names()),
+                                    " --dry-run" if args.dry_run else "",
+                                    " --keep-days %s" % args.keep_days if args.keep_days is not None else "")
+    out = sched(cmd)
+    sys.stdout.write(out)
+    return 0
+
+
 def state(name):
     out = ssh("cat ~/%s/%s.exit 2>/dev/null; echo ---; tail -1 ~/%s/%s.log 2>/dev/null" % (BASE, name, BASE, name),
               check=False)
@@ -211,6 +239,9 @@ def main():
     w.add_argument("name")
     w.add_argument("--fetch", nargs="*", default=[])
     w.add_argument("--every", type=float, default=60)
+    c = sub.add_parser("clean")
+    c.add_argument("--dry-run", action="store_true")
+    c.add_argument("--keep-days", type=float, help="how old a finished job or an unused copy must be (default 7)")
     f = sub.add_parser("fetch")
     f.add_argument("--job", help="take the files from this job's snapshot")
     f.add_argument("paths", nargs="+")
@@ -218,7 +249,7 @@ def main():
     split = argv.index("--") if "--" in argv else len(argv)
     args = ap.parse_args(argv[:split])
     args.command = argv[split + 1:]
-    return {"sync": sync, "run": run, "status": status, "wait": wait, "fetch": fetch}[args.cmd](args)
+    return {"sync": sync, "run": run, "status": status, "wait": wait, "fetch": fetch, "clean": clean}[args.cmd](args)
 
 
 if __name__ == "__main__":

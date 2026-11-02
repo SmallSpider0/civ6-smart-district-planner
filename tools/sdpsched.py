@@ -7,8 +7,10 @@ through it; it is not run on this machine.
     python3 sdpsched.py run NAME --slots N [--exclusive] [--owner WHO] [--tree T] -- CMD ...
     python3 sdpsched.py status            # every job: who, slots, queued (in line order) / running / exit, last log line
     python3 sdpsched.py check NAME        # exit 1 when a job of that name is queued or running
-    python3 sdpsched.py prune             # drop snapshots of jobs that ended over a week ago, and worktree
-                                          # copies no job has used and nobody synced for a week
+    python3 sdpsched.py prune [--known TREE ...] [--keep-days N] [--dry-run]
+                                          # drop jobs that ended over a week ago (snapshot, log, exit file, record)
+                                          # and worktree copies nobody synced or used for a week; with --known,
+                                          # those of worktrees not listed after a day
 
 The machine has SDP_SLOTS slots (default: its cores minus two, left for the
 system). A job asks for N slots (its compare.mjs workers; 0 = all) and starts
@@ -44,6 +46,7 @@ SLOTS = int(os.environ.get("SDP_SLOTS") or max(1, (os.cpu_count() or 4) - 2))
 POLL = 15
 LEGACY_FRESH = 2 * 3600  # a log without a job record or exit file, written this recently, is a running job
 KEEP = 7 * 86400
+GONE_KEEP = 86400  # the same for what belongs to a worktree that no longer exists
 SYNCED = ".sdp-synced"  # tools/remote.py sync touches it in the worktree copy
 MAX_PASSED = 3  # later jobs that may start ahead of a waiting job; after that it keeps its place
 
@@ -303,30 +306,92 @@ def mtime(path):
         return 0
 
 
-def cmd_prune(_args):
-    """Snapshots of jobs that ended over KEEP ago (or have no record and are that old), and
-    worktree copies (tools/remote.py sync) that no live job uses and nothing touched for KEEP."""
-    t = time.time()
-    jobs = load_jobs()
+def size_of(path):
+    """Bytes under path, not following links."""
+    total = 0
+    for folder, _dirs, files in os.walk(path):
+        for f in files + _dirs:
+            try:
+                total += os.lstat(os.path.join(folder, f)).st_size
+            except OSError:
+                pass
+    return total
+
+
+def last_activity(job):
+    return job.get("ended_at") or job.get("started_at") or job.get("queued_at") or 0
+
+
+def plan_prune(t, jobs, known=None, keep=KEEP, gone_keep=GONE_KEEP):
+    """[(what, name, [paths])] to remove; nothing a live job uses. known: the worktree names that still
+    exist (None: unknown, so no copy counts as gone)."""
+    plans = []
     snaps = os.path.join(BASE, "snap")
-    for name in sorted(os.listdir(snaps)) if os.path.isdir(snaps) else []:
-        job = read_json(job_path(name))
-        if job and job["state"] == "done" and t - job.get("ended_at", t) > KEEP \
-                or job is None and t - mtime(os.path.join(snaps, name)) > KEEP:
-            subprocess.run(["rm", "-rf", os.path.join(snaps, name)])
-            print("removed snapshot", name)
-    for name in sorted(os.listdir(BASE)) if os.path.isdir(BASE) else []:
+
+    def gone(tree):
+        return known is not None and bool(tree) and tree not in known
+
+    seen = set()
+    for job in jobs:  # finished or lost jobs: record, log, exit file and snapshot go together
+        name = job["name"]
+        seen.add(name)
+        if live(job):
+            continue
+        limit = gone_keep if gone(job.get("tree")) else keep
+        newest = max(mtime(p) for p in (os.path.join(snaps, name), os.path.join(BASE, name + ".log"),
+                                        os.path.join(BASE, name + ".exit")))
+        # a new run under the same name copies its snapshot and starts its log before it queues, while
+        # the old record still says done: files newer than the limit mean it is not an old job
+        if t - last_activity(job) > limit and t - newest > limit:
+            plans.append(("job", name, [os.path.join(snaps, name), os.path.join(BASE, name + ".log"),
+                                        os.path.join(BASE, name + ".exit"), job_path(name)]))
+    for name in sorted(os.listdir(snaps)) if os.path.isdir(snaps) else []:  # snapshots with no job record
+        if name not in seen and t - mtime(os.path.join(snaps, name)) > keep:
+            plans.append(("snapshot", name, [os.path.join(snaps, name)]))
+    loose = {}  # logs and exit files of jobs that never had a record
+    for entry in sorted(os.listdir(BASE)) if os.path.isdir(BASE) else []:
+        for ext in (".log", ".exit"):
+            if entry.endswith(ext) and entry[:-len(ext)] not in seen:
+                loose.setdefault(entry[:-len(ext)], []).append(os.path.join(BASE, entry))
+    for name, paths in sorted(loose.items()):
+        if not legacy_running(name, t) and t - max(mtime(p) for p in paths) > keep:
+            plans.append(("log", name, paths))
+    for name in sorted(os.listdir(BASE)) if os.path.isdir(BASE) else []:  # worktree copies
         tree = os.path.join(BASE, name)
         if name in ("bin", "snap", "ref", "jobs") or not os.path.isfile(os.path.join(tree, "tools", "sdpsched.py")):
             continue
         mine = [j for j in jobs if j.get("tree") == name]
         if any(live(j) for j in mine):
             continue
-        last = max([mtime(os.path.join(tree, SYNCED)), mtime(tree)]
-                   + [j.get("ended_at") or j.get("queued_at") or 0 for j in mine])
-        if t - last > KEEP:
-            subprocess.run(["rm", "-rf", tree])
-            print("removed tree", name)
+        last = max([mtime(os.path.join(tree, SYNCED)), mtime(tree)] + [last_activity(j) for j in mine])
+        if t - last > (gone_keep if gone(name) else keep):
+            plans.append(("tree", name, [tree]))
+    return plans
+
+
+def cmd_prune(args):
+    """What was left behind: jobs that ended over --keep-days ago (their snapshot, log, exit file, record),
+    snapshots and logs with no record that old, and worktree copies (tools/remote.py sync) that no live job
+    uses and nothing touched for that long. With --known, copies of worktrees not in the list, and the jobs
+    started from them, go after GONE_KEEP instead."""
+    keep = int(args.keep_days * 86400) if args.keep_days is not None else KEEP
+    plans = plan_prune(time.time(), load_jobs(), args.known, keep)
+    freed, removed = 0, 0
+    for what, name, paths in plans:
+        size = sum(size_of(p) for p in paths if os.path.isdir(p)) + sum(
+            os.lstat(p).st_size for p in paths if os.path.isfile(p))
+        if not args.dry_run:
+            with locked():  # a job of that name may have been queued since the plan: look again, under the lock
+                again = plan_prune(time.time(), load_jobs(), args.known, keep)
+                if not any(w == what and n == name for w, n, _p in again):
+                    print("kept %s %s (in use again)" % (what, name))
+                    continue
+                for path in paths:
+                    subprocess.run(["rm", "-rf", path])
+        freed += size
+        removed += 1
+        print("%s %s %s (%.1f MB)" % ("would remove" if args.dry_run else "removed", what, name, size / 1e6))
+    print("%s %d item(s), %.1f MB" % ("would free" if args.dry_run else "freed", removed, freed / 1e6))
     return 0
 
 
@@ -342,7 +407,10 @@ def main(argv=None):
     c = sub.add_parser("check")
     c.add_argument("name")
     sub.add_parser("status")
-    sub.add_parser("prune")
+    pr = sub.add_parser("prune")
+    pr.add_argument("--known", nargs="*", default=None, help="names of the worktrees that still exist")
+    pr.add_argument("--keep-days", type=float, default=None, help="default 7")
+    pr.add_argument("--dry-run", action="store_true")
     argv = list(sys.argv[1:] if argv is None else argv)
     command = argv[argv.index("--") + 1:] if "--" in argv else []
     args = ap.parse_args(argv[:argv.index("--")] if "--" in argv else argv)

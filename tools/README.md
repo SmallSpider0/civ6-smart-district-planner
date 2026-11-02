@@ -498,12 +498,13 @@ python3 -I tools/remote.py sync               # 把这个工作树（含未提�
 python3 -I tools/remote.py run devcheck --slots 6 -- python3 -I tools/refresh_results.py --check
 python3 -I tools/remote.py status             # 所有会话的任务：谁的、几格、排队 / 在跑 / 退出码、日志最后一行；还剩几格
 python3 -I tools/remote.py wait devcheck --fetch logs/refresh/full_rejudged.jsonl.STANDARD.jsonl
+python3 -I tools/remote.py clean --dry-run    # 先看远端 ~/sdp-runs/ 里哪些会被清掉（去掉 --dry-run 才删；--keep-days N 改天数）
 ```
 
 - 不需要装游戏。远端在 `~/sdp-runs/<工作树名>/`，参考源码只拷 Lua。结果和本机相同（耗时字段除外），所以报告里要写耗时的那组结果放在同一台机器上跑。
 - **排队**：远端的格子数默认是它的核数减 2（留给系统；本机配置的 `remote_slots` 可改），所有会话共用。任务要 `--slots N` 格（默认取命令里的 `-j`，没写就是全部；`-j` 比 N 大会改小，子进程拿到 `SDP_JOBS=N`），按排队先后分格子：前面的任务拿走它们的格子后还剩 N 格就启动。别的方式启动的 `compare.mjs` 按它的 `-j` 计入（没写按全部）。`--exclusive` 等整台机器空下来再跑、跑时别人排队：报告里要写秒数的那组用它。同名任务还在排队或在跑时拒绝。队列是 `tools/sdpsched.py`，`sync` 和 `run` 把它拷到远端的 `~/sdp-runs/bin/`。
 - **回填与防饿死**：前面的任务格子不够时，后面放得下的任务先启动，空着的格子不闲着（例如 8 格用了 6 格，排头要 4 格，后面要 2 格的先跑）。为了不让大任务一直被小任务插队，每个排队的任务最多被后来的任务越过 3 次（`sdpsched.py` 的 `MAX_PASSED`），之后它守住位置：排在它后面的都等它先启动。任务没有预计时长，所以按次数而不按时间限。独占任务不被越过：排着的独占任务后面的任务都等它。`status` 里排队的任务按先后列出；回填启动的任务在日志里写“ahead of N waiting job(s)”。每个排队任务的 `sdpsched.py run` 进程每 15 秒用自己启动时的代码判断一次，所以换了规则后，只有之后提交的任务按新规则启动。
-- **快照**：`run` 把远端的工作树用 APFS 克隆（瞬间完成、不另占空间）到 `~/sdp-runs/snap/NAME/`，任务在快照里跑，之后再 `sync` 不会改到它正在读的文件；`wait --fetch` 和 `fetch --job NAME` 从快照取回结果。下次 `run` 时清理（`sdpsched.py prune`）：删掉结束超过 7 天的快照（没有任务记录的按修改时间算），以及 7 天没人 `sync`、也没有任务用过、现在没有任务在用的工作树副本（`sync` 在副本里留一个 `.sdp-synced` 记时间），所以工作树合并删掉后，它在远端的副本一周后也会删掉。2026-10-29 发现这一步从没成功过：它在设 PATH 之前调用 `python3`，远端拿到的是要先同意 Xcode 许可的空壳，积下 118 个快照和 30 多个早已合并的分支的副本。
+- **快照**：`run` 把远端的工作树用 APFS 克隆（瞬间完成、不另占空间）到 `~/sdp-runs/snap/NAME/`，任务在快照里跑，之后再 `sync` 不会改到它正在读的文件；`wait --fetch` 和 `fetch --job NAME` 从快照取回结果。下次 `run` 时清理（`sdpsched.py prune`）：删掉结束超过 7 天的快照（没有任务记录的按修改时间算），以及 7 天没人 `sync`、也没有任务用过、现在没有任务在用的工作树副本（`sync` 在副本里留一个 `.sdp-synced` 记时间），所以工作树合并删掉后，它在远端的副本一周后也会删掉。`remote.py clean` 把同一套规则单独跑一遍并多做三件事（2026-11-02，#198：目录涨到 3.5 GB、360 个条目）：任务结束超过 7 天时，连它的日志（`NAME.log`）、退出码文件（`NAME.exit`）和任务记录（`jobs/NAME.json`）一起删，不只删快照；没有任务记录的老日志也删；把本机 `git worktree list` 里还在的工作树名发过去，已不存在的工作树的副本，以及从它们启动的任务，结束满 1 天（不是 7 天）就删。在排队、在跑的任务的文件和副本从不动（按 `sdpsched.py` 的任务记录和进程判断，没有记录的旧式任务看日志是否 2 小时内写过）。`worktree.py prune --remote` 删完工作树后自动跑一遍 `clean`，`run` 仍在启动任务前跑按天数的那部分。公用的 `ref/`、`bin/` 不删。2026-10-29 发现这一步从没成功过：它在设 PATH 之前调用 `python3`，远端拿到的是要先同意 Xcode 许可的空壳，积下 118 个快照和 30 多个早已合并的分支的副本。
 - `run` 用 nohup 启动，ssh 断了也继续；结束时写 `~/sdp-runs/NAME.exit`。`wait` 只看这个文件（不按进程名查找），结束后取回 `--fetch` 列的文件，以远端任务的退出码退出：放在后台跑，它结束就是可以接着处理的信号。
 - 远端的 node、python3 不在默认 PATH 上：`SDP_REMOTE_PATH`（或本机配置的 `remote_path`）放在 PATH 前面（默认 `/opt/homebrew/bin:/usr/local/bin`）。
 
@@ -563,6 +564,7 @@ python3 -I tools/worktree.py prune --remote            # 删掉其中能删的�
 
 - 仓库只做 squash 合并，所以“已合并”按 PR 判断：分支当前的提交就是那个已合并 PR 的最后一个提交。分支名重复用过也不会误判。
 - 能删的是上面没有 `main` 缺的东西的分支：PR 已合并；或者分支超过一天，并且它的提交已在 `main` 里、它改过的每个文件在 `main` 上都一样（被别的 PR 带进去了，如调研记录）、或者发版的 tag 包含它（发版分支）。开着的 PR 用的分支（来源或目标）和一天内的分支算在做，不列。
+- 加 `--remote` 时，删完分支后接着跑 `remote.py clean`（没配第二台机器时跳过；连不上只报一句，不算失败）：本机已不存在的工作树在第二台机器上的副本，不用等 7 天。
 - 只列不删：有 `main` 没有的改动的分支（`unique`，要人看）、有未提交改动的工作树、游离的工作树、还没有自己提交的工作树分支。`gh` 用不了时什么都不删。
 
 ## status/ — 状态页
@@ -583,6 +585,7 @@ python3 -I tools/status/sync.py get [decisions]
 python3 -I tools/status/watch.py                      # 后台循环：每分钟 --quick --push，每 5 分钟全量
 ```
 
+- `watch.py` 要一直跑，交给系统的服务管理常驻（macOS 用 launchd 的用户代理，Linux 用 systemd 的用户服务），不放在 Claude Code 会话的后台：应用一重启，会话里的后台任务就被关掉，页面停在最后一次推送（2026-11-02 起本机改成 launchd）。它出问题退出后由服务管理隔几分钟重启，输出写进日志文件。
 - 不认识的词和选项一律打印用法、以退出码 2 退出，什么都不建（以前第一个词被当成输出目录，`sync.py list` 在仓库里建出了 `list/`）。输出目录只能用 `--out DIR` 指定。
 - 手写的部分在事情发生的同一步写：要决定的事提出或定了、调研这类任务开始或结束、里程碑的目标变了。回答进度问题前先看一遍页面。
 
