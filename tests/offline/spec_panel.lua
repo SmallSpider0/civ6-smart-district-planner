@@ -974,7 +974,7 @@ test("issue 71: the settings fold after a solve and a click unfolds them; kept i
   for _, column in ipairs(SDP_UI.WEIGHT_COLUMNS) do SDP_Panel.SetWeight(column.Key, column.Default or 1) end
   SDP_Panel.SetWeight("COVERAGE", 0)
   SDP_Panel.SetFold(false)
-  T.eq(c.SettingsStack:IsHidden(), false, "unfolded")
+  T.eq(c.SettingsScroll:IsHidden(), false, "unfolded")
   T.eq(c.FoldAction:GetText(), "LOC_SDP_FOLD_HIDE", "the line offers to hide")
   T.ok(c.FoldText:GetText():find("LOC_SDP_PRESET_BALANCED", 1, true) ~= nil, "the preset named: " .. c.FoldText:GetText())
   SDP_Panel.SetLand(false)
@@ -989,24 +989,103 @@ test("issue 71: the settings fold after a solve and a click unfolds them; kept i
   local result = SDP_Panel.Solve()
   T.ok(result and result.Ok, "solved")
   T.eq(SDP_Panel.State().Fold, true, "folded by the solve")
-  T.eq(c.SettingsStack:IsHidden(), true, "settings hidden")
+  T.eq(c.SettingsScroll:IsHidden(), true, "settings hidden")
   T.eq(c.FoldAction:GetText(), "LOC_SDP_FOLD_SHOW", "the line offers to show")
   T.ok(PlayerConfigurations[0]:GetValue("SDP_Settings_SINGLE"):find(";FOLD=1", 1, true) ~= nil, "kept in the save")
   c.FoldButton:Click()
   T.eq(SDP_Panel.State().Fold, false, "a click unfolds")
-  T.eq(c.SettingsStack:IsHidden(), false, "settings shown")
+  T.eq(c.SettingsScroll:IsHidden(), false, "settings shown")
   T.ok(PlayerConfigurations[0]:GetValue("SDP_Settings_SINGLE"):find("FOLD", 1, true) == nil, "unfolded is the default")
   -- The other tabs fold the same way.
   local multi = SDP_Panel.Multi
   multi.SetFold(true)
-  T.eq(c.MultiSettingsStack:IsHidden(), true, "several cities: folded")
+  T.eq(c.MultiSettingsScroll:IsHidden(), true, "several cities: folded")
   c.MultiFoldButton:Click()
   T.eq(multi.State().Fold, false, "and a click unfolds")
   local sites = SDP_Panel.Sites
   sites.SetFold(true)
-  T.eq(c.SitesSettingsStack:IsHidden(), true, "city sites: folded")
+  T.eq(c.SitesSettingsScroll:IsHidden(), true, "city sites: folded")
   c.SitesFoldButton:Click()
   T.eq(sites.State().Fold, false, "and unfolded")
+end)
+
+-- Issue 199: with many wonders ticked on a low screen, the settings pushed
+-- the solve button below the window. A stand-in for the game's layout: the
+-- page's body is a fixed part (the city, the districts, the solve row, the
+-- tacks' buttons), the settings as shown and the result list; the settings
+-- grow by a row of tags for every two wonders.
+local function LayoutStub(body, settings, stack, results, wonders)
+  local function Shown()
+    if settings:IsHidden() or stack:IsHidden() then return 0 end
+    -- Before the scroll panel (issue 199) the stack was drawn in full.
+    return rawget(settings, "_sizeY") or stack:GetSizeY()
+  end
+  function stack:GetSizeY() return 150 + 28 * math.ceil(#wonders() / 2) end
+  function body:GetSizeY() return 340 + Shown() + results:GetSizeY() end
+  return function() body.GetSizeY, stack.GetSizeY = nil, nil end
+end
+
+test("issue 199: ticked wonders never push the solve button off a low screen", function()
+  local c = UI_Mock.Controls
+  UI_Mock.Screen = 768
+  SDP_Panel.Open()
+  SDP_Panel.SelectTab("SINGLE")
+  SDP_Panel.SelectCity(1)
+  SDP_Panel.SetFold(false)
+  for _, wonder in ipairs(SDP_Panel.State().Wonders) do SDP_Panel.SetWonder(wonder, false) end
+  local undo = LayoutStub(c.Body, c.SettingsScroll, c.SettingsStack, c.ResultScroll,
+    function() return SDP_Panel.State().Wonders end)
+  SDP_Panel.FitWindow()
+  local page = c.SinglePage:GetSizeY()
+  T.eq(page, 768 - 120 - SDP_UI.PAGE_INSET, "the page on a 768 screen")
+  T.ok(c.Body:GetSizeY() <= page, "no wonders: the page holds it")
+  local all = {}
+  for _, entry in ipairs(c.WonderPull._entries) do all[#all + 1] = entry end
+  T.ok(#all >= 5, "wonders to tick: " .. #all)
+  -- Tick each through the pulldown, as the player does.
+  for _ = 1, #all do c.WonderPull._entries[1].Button:Click() end
+  T.eq(#SDP_Panel.State().Wonders, #all, "all ticked")
+  T.ok(c.Body:GetSizeY() <= page, "all ticked: the bottom stays on the page (" .. c.Body:GetSizeY() .. " > " .. page .. ")")
+  T.ok(c.SettingsScroll:GetSizeY() < c.SettingsStack:GetSizeY(), "the settings scroll")
+  T.ok(c.SettingsScroll:GetSizeY() >= SDP_UI.SETTINGS_MIN, "but keep two rows")
+  T.eq(SDP_Panel.State().ResultHeight, SDP_UI.RESULT_MIN, "the result list at one row")
+  -- Folded, the settings take no room and the result list has the rest.
+  c.FoldButton:Click()
+  T.eq(c.SettingsScroll:IsHidden(), true, "folded")
+  T.eq(c.Body:GetSizeY(), page, "the result list fills the page")
+  c.FoldButton:Click()
+  -- Untick through the tags: room again, the settings in full.
+  for _ = 1, #all do SDP_Panel.SetWonder(SDP_Panel.State().Wonders[1], false) end
+  T.eq(c.SettingsScroll:GetSizeY(), c.SettingsStack:GetSizeY(), "no wonders: drawn in full")
+  T.ok(c.Body:GetSizeY() <= page, "and on the page")
+  undo()
+  -- Several cities: the same.
+  local multi = SDP_Panel.Multi
+  SDP_Panel.SelectTab("MULTI")
+  multi.SetFold(false)
+  local function Chosen()
+    local list = {}
+    for _, view in ipairs(multi.State().View.Wonders) do
+      if view.Chosen then list[#list + 1] = view.Type end
+    end
+    return list
+  end
+  for _, wonder in ipairs(Chosen()) do multi.SetWonder(wonder, false) end
+  undo = LayoutStub(c.MultiBody, c.MultiSettingsScroll, c.MultiSettingsStack, c.MultiResultScroll, Chosen)
+  SDP_Panel.FitWindow()
+  T.ok(c.MultiBody:GetSizeY() <= page, "several cities, no wonders: on the page")
+  local count = #c.MultiWonderPull._entries
+  T.ok(count >= 5, "wonders to tick on the tab: " .. count)
+  for _ = 1, count do c.MultiWonderPull._entries[1].Button:Click() end
+  T.eq(#Chosen(), count, "all ticked on the tab")
+  T.ok(c.MultiBody:GetSizeY() <= page, "several cities: the bottom stays on the page (" .. c.MultiBody:GetSizeY() .. ")")
+  T.ok(c.MultiSettingsScroll:GetSizeY() < c.MultiSettingsStack:GetSizeY(), "the settings scroll")
+  for _, wonder in ipairs(Chosen()) do multi.SetWonder(wonder, false) end
+  undo()
+  UI_Mock.Screen = nil
+  SDP_Panel.SelectTab("SINGLE")
+  SDP_Panel.FitWindow()
+  SDP_Panel.Close()
 end)
 
 test("issue 71: peek hides the window and keeps the preview; the button or Esc bring it back", function()
