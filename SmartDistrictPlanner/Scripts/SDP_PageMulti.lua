@@ -401,6 +401,16 @@ function P.SetPlanFor(key)
   P.RefreshLists()
 end
 
+-- The city picked in "Districts for" drops its own list and uses the shared
+-- one again (issue 187; the back button beside the pulldown).
+function P.UseShared()
+  if m_planFor ~= "ALL" and m_plans[m_planFor] ~= nil then
+    m_plans[m_planFor] = nil
+    ClearResult()
+  end
+  P.RefreshLists()
+end
+
 -- Make the edited list require `types` (a template), everything else at its
 -- default; nil on a city: back to the shared list.
 function P.ApplyPlan(types)
@@ -820,6 +830,9 @@ function P.PopulatePlanPulls(participants)
   end
   pull:CalculateInternals()
   pull:GetButton():SetText(current)
+  -- The back button shows while the city picked has its own list (issue 187).
+  Controls.MultiPlanShared:SetHide(m_planFor == "ALL" or m_plans[m_planFor] == nil)
+  Controls.MultiPlanStack:CalculateSize()
 
   local templates = Controls.MultiTemplatePull
   templates:ClearEntries()
@@ -1136,6 +1149,7 @@ end
 
 Controls.MultiCityClear:RegisterCallback(Mouse.eLClick, function() P.ClearCities() end)
 Controls.MultiCityDefault:RegisterCallback(Mouse.eLClick, function() P.DefaultCities() end)
+Controls.MultiPlanShared:RegisterCallback(Mouse.eLClick, function() P.UseShared() end)
 Controls.MultiSwapCheck:RegisterCheckHandler(function() P.SetSwap(Controls.MultiSwapCheck:IsChecked()) end)
 Controls.MultiReplaceCheck:RegisterCheckHandler(function() P.SetReplace(Controls.MultiReplaceCheck:IsChecked()) end)
 Controls.MultiRemindCheck:RegisterCheckHandler(function() P.SetRemind(Controls.MultiRemindCheck:IsChecked()) end)

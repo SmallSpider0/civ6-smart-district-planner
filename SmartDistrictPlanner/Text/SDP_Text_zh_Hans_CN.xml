@@ -529,6 +529,9 @@
     <Replace Tag="LOC_SDP_TEMPLATE_CLEAR" Language="zh_Hans_CN">
       <Text>清空清单</Text>
     </Replace>
+    <Replace Tag="LOC_SDP_MULTI_PLAN_SHARED_TOOLTIP" Language="zh_Hans_CN">
+      <Text>改回共用清单：这座城不再用自己的清单，和其他城市一样按共用清单规划。</Text>
+    </Replace>
     <Replace Tag="LOC_SDP_TEMPLATE_SHARED" Language="zh_Hans_CN">
       <Text>改回共用清单</Text>
     </Replace>

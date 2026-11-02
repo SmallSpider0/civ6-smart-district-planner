@@ -542,3 +542,41 @@ test("single-city tab: on a save with several cities, the neighbours the zone ca
   SDP_Panel.SetLand(true)
   if not ok then error(err, 0) end
 end)
+
+-- Issue 187: the back button beside "Districts for" shows while the city
+-- picked has its own list, sits between that pulldown and the template
+-- pulldown, and puts the city back on the shared list.
+test("multi tab: a city's own list goes back to the shared list with the back button (issue 187)", function()
+  local city = Capital()
+  local multi = SDP_Panel.Multi
+  SDP_Panel.SelectTab("MULTI")
+  multi.Refresh()
+  multi.SetExisting(city:GetID(), true)
+  multi.SetPlanFor("ALL")
+  multi.ApplyPlan({ Resolve("DISTRICT_CAMPUS") })
+  local key = "C" .. city:GetID()
+  local ok, err = pcall(function()
+    T.ok(Controls.MultiPlanShared:IsHidden(), "hidden on the shared list")
+    multi.SetPlanFor(key)
+    T.ok(Controls.MultiPlanShared:IsHidden(), "hidden while the city uses the shared list")
+    multi.SetSelected(Resolve("DISTRICT_HOLY_SITE"), true)
+    T.ok(multi.State().View.Plans[key] ~= nil, "own list")
+    T.ok(not Controls.MultiPlanShared:IsHidden(), "shown with the city's own list")
+    local pullX = Controls.MultiPlanPull:GetScreenOffset()
+    local backX = Controls.MultiPlanShared:GetScreenOffset()
+    local templateX = Controls.MultiTemplatePull:GetScreenOffset()
+    T.ok(backX >= pullX + Controls.MultiPlanPull:GetSizeX(),
+      string.format("right of the pulldown: %d >= %d + %d", backX, pullX, Controls.MultiPlanPull:GetSizeX()))
+    T.ok(backX + Controls.MultiPlanShared:GetSizeX() <= templateX,
+      string.format("left of the template pulldown: %d + %d <= %d", backX, Controls.MultiPlanShared:GetSizeX(), templateX))
+    multi.UseShared()
+    T.eq(multi.State().View.Plans[key], nil, "back on the shared list")
+    T.ok(Controls.MultiPlanShared:IsHidden(), "hidden again")
+  end)
+  multi.ApplyPlan(nil)
+  multi.SetPlanFor("ALL")
+  multi.ApplyPlan({})
+  multi.SetExisting(city:GetID(), nil)
+  SDP_Panel.SelectTab("SINGLE")
+  if not ok then error(err, 0) end
+end)
