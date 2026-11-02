@@ -23,7 +23,9 @@ may be removed: worktrees without uncommitted changes with their branches,
 local branches, and with --remote the branches on GitHub (asks first unless
 --yes). The main checkout and main are never touched; a detached worktree or
 a worktree branch with no commits of its own is only listed. Without gh
-nothing is removed.
+nothing is removed. With --remote, `prune` then runs `tools/remote.py clean`
+(the second machine's scratch folder: copies of the worktrees that are gone,
+old finished jobs); a failure there is only reported.
 macOS and Linux get symbolic links; Windows gets directory junctions.
 """
 import argparse
@@ -281,7 +283,23 @@ def prune(args):
     print("removed: %s" % (", ".join(gone) or "nothing"))
     if kept:
         print("kept: %s" % ", ".join(kept))
+    if args.remote:
+        clean_remote_runs()
     return 0
+
+
+def clean_remote_runs():
+    """Also clean the second machine's scratch folder (tools/remote.py clean). Never fails the prune: the
+    machine may be unreachable or not configured."""
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # -I drops the script dir
+    import sdplock
+    if not sdplock.remote_host():
+        return
+    import remote
+    try:
+        remote.clean(argparse.Namespace(dry_run=False, keep_days=None))
+    except (SystemExit, OSError, subprocess.SubprocessError) as problem:
+        print("second machine not cleaned: %s" % problem)
 
 
 def main():
