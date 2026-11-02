@@ -18,7 +18,8 @@ include("cmp_lib")
 local arg = PROBE_ARG or ""
 local words, tier, count = {}, "STANDARD", 3
 for word in arg:gmatch("%S+") do
-  if word:match("^TIER=") then tier = word:sub(6)
+  if word == "REPEAT" or word == "DEBUG" then
+  elseif word:match("^TIER=") then tier = word:sub(6)
   elseif word:match("^COUNT=") then count = tonumber(word:sub(7))
   else words[#words + 1] = word end
 end
@@ -125,5 +126,28 @@ local function Run(way, again)
   Row(way, r, stats.Again and (stats.Again.Moved and "moved" or "kept") or "none", calls)
 end
 
-Run("BEFORE", false)
-Run("AFTER", true)
+-- "REPEAT": the same one solve twice (the same input must give the same plan).
+if arg:match("DEBUG") then
+  SDP_Overlay.With(0, function()
+    local first = SDP_Multi.NewSession(Request())
+    first:Run()
+    local r1 = first:Result()
+    print("DBG first alone", first.Search.BestGain, r1.Gain, tostring(r1.Stats.Mismatch))
+    local hosts = first:OtherHosts()
+    local again = Request({ SupplyTo = hosts })
+    local other = SDP_Multi.NewSession(again)
+    print("DBG elsewhere", tostring(other:SuppliedElsewhere(first)))
+    other:Run()
+    print("DBG other", other.Search.BestGain, tostring(other:Beats(first)), tostring(first:Beats(other)))
+    local r1b = first:Result()
+    print("DBG first after", first.Search.BestGain, r1b.Gain, tostring(r1b.Stats.Mismatch))
+    local r2 = other:Result()
+    print("DBG other result", r2.Gain, tostring(r2.Stats.Mismatch))
+  end)
+elseif arg:match("REPEAT") then
+  Run("BEFORE", false)
+  Run("BEFORE2", false)
+else
+  Run("BEFORE", false)
+  Run("AFTER", true)
+end

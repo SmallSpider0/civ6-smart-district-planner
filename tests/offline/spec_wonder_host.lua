@@ -39,9 +39,15 @@ local MAP = {
   "~~~~~~~~~~~~~~~~~~~~~~~~",
 }
 
-local function NewWorld()
+-- `flat`: without the mountains.
+local function NewWorld(flat)
+  local rows = MAP
+  if flat then
+    rows = {}
+    for y, row in ipairs(MAP) do rows[y] = row:gsub("M", ".") end
+  end
   return World.New({
-    rows = MAP,
+    rows = rows,
     cities = {
       { id = 1, x = 5, y = 5, population = 16, capital = true, radius = 3 },
       { id = 2, x = 13, y = 5, population = 16, radius = 3 },
@@ -96,6 +102,8 @@ test("issue 182: another city's pick stands next to the wonder, the first city p
   local plan = Check(result)
   T.eq(Count(plan, "C1", EC), 0, "city 1 gets no entertainment complex")
   T.ok(result.Stats.Again ~= nil and result.Stats.Again.Moved, "the second plan was kept")
+  -- The plan shown is scored on a map without the other plan's districts.
+  T.ok(not result.Stats.Mismatch, "the plan's value agrees with DMT")
   -- Where the district is supplied the result says so.
   T.eq(#result.Supplied, 1, "supplied once")
   T.eq(result.Supplied[1].City, "C2", "to city 2")
@@ -149,3 +157,38 @@ test("issue 182: repairing a wonder keeps each city's count", function()
   T.eq(counts[1], 2, "city 1: its two districts")
   T.eq(counts[2], 1, "city 2: its one district")
 end)
+
+-- Both solves share the map overlay: the second starts on a map without
+-- the first plan's districts, and after it neither plan's are left (the
+-- plan shown would be scored with the other's districts as neighbours).
+local function Left()
+  local left = {}
+  for index = 0, Map.GetPlotCount() - 1 do
+    local plot = Map.GetPlotByIndex(index)
+    local subject = GetMapPinSubject(0, plot:GetX(), plot:GetY())
+    if subject ~= nil then left[#left + 1] = tostring(subject.Key) .. "@" .. plot:GetX() .. "," .. plot:GetY() end
+  end
+  return table.concat(left, " ")
+end
+
+for _, flat in ipairs({ false, true }) do
+  test("issue 182: no district of either plan is left on the map overlay" .. (flat and " (flat map)" or ""), function()
+    NewWorld(flat)
+    local atSecond, after = nil, nil
+    local newSession = SDP_Multi.NewSession
+    SDP_Multi.NewSession = function(request)
+      if request.SupplyTo ~= nil then atSecond = Left() end
+      return newSession(request)
+    end
+    local ok, err = pcall(SDP_Overlay.With, 0, function()
+      local result = SDP_Multi.SolveNow(Request())
+      T.ok(result.Stats.Again ~= nil, "solved twice")
+      T.ok(not result.Stats.Mismatch, "the plan's value agrees with DMT")
+      after = Left()
+    end)
+    SDP_Multi.NewSession = newSession
+    T.ok(ok, tostring(err))
+    T.eq(atSecond, "", "nothing on the overlay when the second solve starts")
+    T.eq(after, "", "nothing left on the overlay")
+  end)
+end

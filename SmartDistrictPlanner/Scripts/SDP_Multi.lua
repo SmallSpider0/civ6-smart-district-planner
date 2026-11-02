@@ -1499,6 +1499,9 @@ function SDP_Multi.SolveNow(request)
   session:Run()
   local hosts = SDP_Multi.SUPPLY_AGAIN and session:OtherHosts() or nil
   if hosts ~= nil then
+    -- One overlay for both: each board's subjects leave it before the other
+    -- session evaluates anything (its last layout would be neighbours).
+    session.Board:Clear()
     local again = {}
     for key, value in pairs(request) do again[key] = value end
     again.SupplyTo = hosts
@@ -1511,6 +1514,7 @@ function SDP_Multi.SolveNow(request)
       local first = session
       if other:Beats(session) then session = other end
       local dropped = session == first and other or first
+      dropped.Board:Clear()
       session.Stats.Again = { Moved = session == other, Calls = dropped.Board.Calls + dropped.ExtraCalls }
     end
   end
