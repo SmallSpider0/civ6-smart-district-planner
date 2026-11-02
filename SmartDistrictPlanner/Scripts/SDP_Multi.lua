@@ -246,6 +246,9 @@ Session.__index = Session
 --   Wonders              wonder types (building types) to place, in any participating city;
 --                        a district one needs next to it that no city has is
 --                        supplied (issue 66, see below)
+--   SupplyTo             { [wonder type] = participant Key }: the city tried
+--                        first for the district a wonder needs (issue 182,
+--                        set by SolveNow)
 --   Off, Offs            { [district type] = true }: districts the player set to
 --                        "not wanted" (not by default) in the shared list, per Key;
 --                        never supplied for a wonder there
@@ -450,7 +453,16 @@ function SDP_Multi.NewSession(request)
             left[own] = row.MaxPerPlayer - (builtByPlayer[own] or 0) - (pinnedAnywhere[own] or 0)
           end
           local full = false
+          -- SupplyTo (issue 182, SolveNow): that city first, then the list.
+          local first, order = request.SupplyTo and request.SupplyTo[wonderType], {}
           for p, part in ipairs(participants) do
+            if part.Key == first then order[#order + 1] = p end
+          end
+          for p, part in ipairs(participants) do
+            if part.Key ~= first then order[#order + 1] = p end
+          end
+          for _, p in ipairs(order) do
+            local part = participants[p]
             local off = (request.Offs and request.Offs[part.Key]) or request.Off or {}
             local a = asked[p]
             local fits = not have[base] and not off[own] and not (limited and left[own] <= 0)
@@ -1114,9 +1126,12 @@ function Session:Repair()
       for _, i in ipairs(plots) do
         if search:OverBudget() then break end
         local base, block = Copy(search.BestLayout), {}
+        -- A candidate the layout does not pick stays out: placing it would
+        -- give its city more districts than its count (issue 182).
         for mm = 1, search.K do
           local other = self.SlotSpecs[search.SlotIndex[mm]]
-          if mm ~= m and (base[mm] == i or (spec.Wonder and other.Wonder)
+          local active = not search.Optional[mm] or base[mm] ~= 0
+          if mm ~= m and active and (base[mm] == i or (spec.Wonder and other.Wonder)
               or (spec.Requires ~= nil and Serves(search.Types[mm], spec.Requires))) then
             block[#block + 1] = mm
             base[mm] = 0
@@ -1138,6 +1153,61 @@ function Session:Repair()
     end
   end
   search.CallCap, search.TryCap = callCap, tryCap
+end
+
+-- For each district supplied for a wonder, the first other city whose
+-- candidates in the best layout include one of its kind: { [wonder type] =
+-- participant Key }, or nil when there is none (issue 182).
+function Session:OtherHosts()
+  local search, layout, hosts = self.Search, self.Search.BestLayout, nil
+  if layout == nil or #self.Supplied == 0 then return nil end
+  for _, supplied in ipairs(self.Supplied) do
+    local base, best = SDP_Rules.BaseDistrict(supplied.Type), nil
+    for m = 1, search.K do
+      local p = search.Groups[m]
+      if layout[m] ~= 0 and search.Optional[m] and self.Participants[p].Key ~= supplied.City
+          and SDP_Rules.BaseDistrict(search.Types[m]) == base and (best == nil or p < best) then
+        best = p
+      end
+    end
+    if best ~= nil then
+      hosts = hosts or {}
+      hosts[supplied.Wonder] = self.Participants[best].Key
+    end
+  end
+  return hosts
+end
+
+-- Whether some district for a wonder goes to another city here than in
+-- `other` (a session of the same request).
+function Session:SuppliedElsewhere(other)
+  local before = {}
+  for _, supplied in ipairs(other.Supplied) do before[supplied.Wonder] = supplied.City end
+  for _, supplied in ipairs(self.Supplied) do
+    if before[supplied.Wonder] ~= supplied.City then return true end
+  end
+  return false
+end
+
+-- Whether this session's best layout is better than `other`'s (another
+-- session of the same request, SolveNow): more wonders placed, then more
+-- slots placed, then a higher value. Ties keep `other`.
+function Session:WondersPlaced()
+  local search, count = self.Search, 0
+  for m = 1, search.K do
+    if search.Kinds[m] == "WONDER" and search.BestLayout[m] ~= 0 then count = count + 1 end
+  end
+  return count
+end
+
+function Session:Beats(other)
+  local a, b = self.Search, other.Search
+  if a.BestLayout == nil then return false end
+  if b.BestLayout == nil then return true end
+  local wa, wb = self:WondersPlaced(), other:WondersPlaced()
+  if wa ~= wb then return wa > wb end
+  if a.BestPlaced ~= b.BestPlaced then return a.BestPlaced > b.BestPlaced end
+  return a.BestGain > b.BestGain + 1e-9
 end
 
 function Session:CanContinue()
@@ -1414,9 +1484,40 @@ end
 -- ===========================================================================
 
 -- The solve itself; the overlay must be installed (SDP_Task jobs, tests).
+-- A district supplied for a wonder goes to the first city in the list that
+-- can take it, as a required one, and the wonder next to it. Where another
+-- city picks the same district from its candidates in the best plan, it is
+-- supplied to that city instead and the request solved again (issue 182):
+-- that city's own pick stands next to the wonder and the first city has the
+-- place for another candidate. The better plan is kept (Session:Beats).
+-- Stats.Again on the kept session: { Moved = whether the second plan was
+-- kept, Calls = the DMT calls of the one dropped }.
+SDP_Multi.SUPPLY_AGAIN = true -- false: one solve, as before issue 182 (offline comparison)
+
 function SDP_Multi.SolveNow(request)
   local session = SDP_Multi.NewSession(request)
   session:Run()
+  local hosts = SDP_Multi.SUPPLY_AGAIN and session:OtherHosts() or nil
+  if hosts ~= nil then
+    -- One overlay for both: each board's subjects leave it before the other
+    -- session evaluates anything (its last layout would be neighbours).
+    session.Board:Clear()
+    local again = {}
+    for key, value in pairs(request) do again[key] = value end
+    again.SupplyTo = hosts
+    local other = SDP_Multi.NewSession(again)
+    if other:SuppliedElsewhere(session) then
+      -- The progress shown: the second solve takes about as long again.
+      local job = SDP_Task ~= nil and SDP_Task.Current() or nil
+      if job ~= nil and job.Estimate ~= nil then job.Estimate = job.Units + job.Estimate end
+      other:Run()
+      local first = session
+      if other:Beats(session) then session = other end
+      local dropped = session == first and other or first
+      dropped.Board:Clear()
+      session.Stats.Again = { Moved = session == other, Calls = dropped.Board.Calls + dropped.ExtraCalls }
+    end
+  end
   return session:Result()
 end
 

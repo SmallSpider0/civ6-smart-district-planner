@@ -133,14 +133,17 @@ local m_keeper = SDP_UI.Keeper({ Tab = "SITES", Columns = ALL_COLUMNS, Weights =
 -- "Custom" when none (issue 89).
 local function UpdateFold()
   local shown = m_keeper.Match(m_preset)
-  SDP_UI.ShowFold(Controls.SitesFoldButton, Controls.SitesFoldText, Controls.SitesFoldAction, Controls.SitesSettingsStack,
+  SDP_UI.ShowFold(Controls.SitesFoldButton, Controls.SitesFoldText, Controls.SitesFoldAction, Controls.SitesSettingsScroll,
     m_fold, SDP_UI.FoldSummary(shown, {}))
   SDP_UI.ShowPreset(Controls.SitesPresetPull, shown, function(name) P.SetPreset(name) end,
     { Order = SDP_Sites.PRESET_ORDER, Tips = "LOC_SDP_SITES_PRESET_", CustomTip = "LOC_SDP_SITES_PRESET_CUSTOM_TOOLTIP",
       TipArgs = SDP_Sites.PresetTipArgs })
 end
 
-function P.FitPage() SDP_UI.FitResults(Controls.SitesBody, Controls.SitesPage, Controls.SitesResultScroll) end
+function P.FitPage()
+  SDP_UI.FitResults(Controls.SitesBody, Controls.SitesPage, Controls.SitesResultScroll,
+    Controls.SitesSettingsScroll, Controls.SitesSettingsStack)
+end
 
 -- Weights equal to another preset make it the current one (issue 89).
 local function Remember()

@@ -148,3 +148,46 @@ test("tier, land switch and continue update the panel", function()
   SDP_Panel.SetTier("STANDARD")
   SDP_Panel.SetLand(true)
 end)
+
+-- Issue 199: with wonders ticked, the settings pushed the solve button below
+-- the window on low screens. The real layout: every selectable wonder
+-- ticked, on this screen and on the shortest page (the window's minimum).
+test("issue 199: ticked wonders keep the solve button on the page", function()
+  Reset()
+  SDP_Panel.Open()
+  SDP_Panel.SelectTab("SINGLE")
+  SDP_Panel.SetFold(false)
+  local ticked = 0
+  for _, w in ipairs(SDP_Wonders.List(pid, nil)) do
+    if w.Status == nil then
+      SDP_Panel.SetWonder(w.Type, true)
+      ticked = ticked + 1
+    end
+  end
+  local ok, err = pcall(function()
+    T.ok(ticked >= 8, "selectable wonders: " .. ticked)
+    local function Check(label)
+      local page, body = Controls.SinglePage:GetSizeY(), Controls.Body:GetSizeY()
+      local _, pageTop = Controls.SinglePage:GetScreenOffset()
+      local _, solveTop = Controls.SolveButton:GetScreenOffset()
+      local solveBottom = solveTop + Controls.SolveButton:GetSizeY()
+      local _, screen = UIManager:GetScreenSizeVal()
+      print(string.format("issue 199 %s: wonders %d, page %d, body %d, settings %d of %d, solve bottom %d, page bottom %d, screen %d",
+        label, ticked, page, body, Controls.SettingsScroll:GetSizeY(), Controls.SettingsStack:GetSizeY(),
+        solveBottom, pageTop + page, screen))
+      T.ok(body <= page, label .. ": the body " .. body .. " fits the page " .. page)
+      T.ok(solveBottom <= pageTop + page, label .. ": the solve button ends at " .. solveBottom .. ", the page at " .. (pageTop + page))
+      T.ok(solveBottom <= screen, label .. ": the solve button ends at " .. solveBottom .. " on a " .. screen .. " screen")
+    end
+    SDP_Panel.FitWindow()
+    Check("this screen")
+    Controls.SinglePage:SetSizeY(SDP_UI.WINDOW_MIN - SDP_UI.PAGE_INSET)
+    SDP_UI.FitResults(Controls.Body, Controls.SinglePage, Controls.ResultScroll, Controls.SettingsScroll, Controls.SettingsStack)
+    T.ok(Controls.SettingsScroll:GetSizeY() < Controls.SettingsStack:GetSizeY(), "the shortest page: the settings scroll")
+    Check("the shortest page")
+  end)
+  for _, w in ipairs(SDP_Wonders.List(pid, nil)) do SDP_Panel.SetWonder(w.Type, false) end
+  SDP_Panel.FitWindow()
+  SDP_Panel.Close()
+  if not ok then error(err, 0) end
+end)

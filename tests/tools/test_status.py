@@ -9,6 +9,7 @@ import json
 import os
 import sys
 import tempfile
+import types
 import unittest
 from contextlib import redirect_stderr
 from unittest import mock
@@ -281,6 +282,24 @@ class Arguments(unittest.TestCase):
         cmd = run.call_args[0][0]
         self.assertEqual(sync.parse_args(cmd[3:])[2], {"out": "/some/dir", "push": True, "quick": True})
 
+    def test_watch_service_logs_a_trouble_and_goes_on(self):
+        import watch
+        done = types.SimpleNamespace(returncode=0, stderr="")
+
+        class Stop(Exception):
+            pass
+
+        with tempfile.TemporaryDirectory() as d, \
+                mock.patch.object(watch, "sync", return_value=done), \
+                mock.patch.object(watch, "troubles", return_value=["Mac mini: 9 slots used, cap 8"]), \
+                mock.patch.object(watch.time, "sleep", side_effect=Stop), \
+                mock.patch("sys.stdout", new_callable=io.StringIO) as out:
+            self.assertEqual(watch.main(["--out", d]), 1)
+            self.assertIn("trouble: Mac mini", out.getvalue())
+            os.remove(os.path.join(d, "troubles.json"))
+            with self.assertRaises(Stop):  # reached the next tick instead of exiting
+                watch.main(["--out", d, "--service"])
+            self.assertEqual(out.getvalue().count("trouble: Mac mini"), 2)
 
 if __name__ == "__main__":
     unittest.main()

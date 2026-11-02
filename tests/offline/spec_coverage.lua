@@ -396,3 +396,52 @@ test("issue 91: the city being planned is not counted as covered by its own dist
   T.eq(covered.C2 == true, Map.GetPlotDistance(z1.X, z1.Y, 11, 5) <= 6, "city 2 counts when city 1's zone reaches it")
   T.eq(covered.C1 == true, Map.GetPlotDistance(z2.X, z2.Y, 4, 5) <= 6, "city 1 counts when city 2's zone reaches it")
 end)
+
+-- Issue 197: a city-state's suzerain bonus (Toronto: +3 to the industrial
+-- zone's and entertainment complex's regional range) is a modifier the
+-- player owns; the reach is read from the game's modifiers and the rules.
+local TORONTO = "MINOR_CIV_TORONTO_REGIONAL_RANGE_BONUS"
+
+test("reaches: player-wide modifiers that add regional range count (a suzerain bonus)", function()
+  NewWorld({ effects = {} })
+  local r = SDP_Coverage.Reaches(0)
+  T.eq(r[IZ].Range, 6, "no bonus: the factory's range")
+  T.eq(r[IZ].Extra, 0, "nothing extra")
+  NewWorld({ effects = { { Id = TORONTO, Player = 0 } } })
+  r = SDP_Coverage.Reaches(0)
+  T.eq(r[IZ].Range, 9, "suzerain of Toronto: 6 + 3")
+  T.eq(r[IZ].Extra, 3, "the extra shown")
+  T.eq(r[EC].Range, 9, "the entertainment complex too")
+  T.eq(r.BUILDING_COLOSSEUM.Range, 6, "a wonder keeps its own range")
+  T.eq(r.DISTRICT_CAMPUS, nil, "still no reach for a campus")
+  T.eq(SDP_Coverage.Reaches(1)[IZ] and SDP_Coverage.Reaches(1)[IZ].Range or 6, 6, "another player's bonus is not ours")
+  for _, case in ipairs({
+    { { Id = TORONTO, Player = 1 } }, -- owned by another player
+    { { Id = TORONTO, Player = 0, Active = false } }, -- no longer in force
+    { { Id = TORONTO, Player = 0, OwnerMet = false } }, -- owner requirements not met
+    { { Id = "TEST_RANGE_NEAR_RIVER", Player = 0 } }, -- a requirement this mod does not read
+    { { Id = "GREATPERSON_EXTRA_REGIONAL_BUILDING_RANGE", Player = 0 } }, -- on one district only
+  }) do
+    NewWorld({ effects = case })
+    T.eq(SDP_Coverage.Reaches(0)[IZ].Range, 6, "not counted: " .. case[1].Id)
+  end
+  NewWorld({ effects = { { Id = TORONTO, Player = 0 }, { Id = TORONTO, Player = 0 } } })
+  T.eq(SDP_Coverage.Reaches(0)[IZ].Range, 12, "two bonuses add up")
+end)
+
+test("counting and the summary use the longer range", function()
+  NewWorld({ effects = { { Id = TORONTO, Player = 0 } } })
+  local model = SDP_Coverage.New({ PlayerID = 0, Weight = 1 })
+  local list = model:List(IZ, Map.GetPlotIndex(5, 8), 5, 8)
+  T.same(Keys(model, list), Within(model, 5, 8, 9), "every city within 9")
+  T.ok(#Within(model, 5, 8, 9) > #Within(model, 5, 8, 6), "more than within 6 here")
+  local count, groups = model:Summary(list)
+  T.eq(count, #list, "counted")
+  T.eq(groups[1].Group, IZ, "the group")
+  T.eq(groups[1].Range, 9, "its range")
+  T.eq(groups[1].Extra, 3, "and the bonus")
+  NewWorld({ effects = {} })
+  local plain = SDP_Coverage.New({ PlayerID = 0, Weight = 1 })
+  local _, g = plain:Summary(plain:List(IZ, Map.GetPlotIndex(5, 8), 5, 8))
+  T.eq(g[1].Extra, 0, "no bonus: nothing extra")
+end)

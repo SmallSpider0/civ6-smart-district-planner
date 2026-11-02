@@ -401,6 +401,16 @@ function P.SetPlanFor(key)
   P.RefreshLists()
 end
 
+-- The city picked in "Districts for" drops its own list and uses the shared
+-- one again (issue 187; the back button beside the pulldown).
+function P.UseShared()
+  if m_planFor ~= "ALL" and m_plans[m_planFor] ~= nil then
+    m_plans[m_planFor] = nil
+    ClearResult()
+  end
+  P.RefreshLists()
+end
+
 -- Make the edited list require `types` (a template), everything else at its
 -- default; nil on a city: back to the shared list.
 function P.ApplyPlan(types)
@@ -538,7 +548,8 @@ FitPage = function()
     Controls.MultiCityScroll:SetSizeY(shown * CHIP_HEIGHT + (shown - 1) * CHIP_GAP)
     Controls.MultiCityStack:CalculateSize()
     Controls.MultiCityScroll:CalculateSize()
-    return SDP_UI.FitResults(Controls.MultiBody, Controls.MultiPage, Controls.MultiResultScroll)
+    return SDP_UI.FitResults(Controls.MultiBody, Controls.MultiPage, Controls.MultiResultScroll,
+      Controls.MultiSettingsScroll, Controls.MultiSettingsStack)
   end
   local height = Apply()
   while height < RESULT_ROWS and shown > 2 do
@@ -606,7 +617,7 @@ UpdateFold = function()
   local wonders = #WonderTypes()
   if wonders > 0 then parts[#parts + 1] = Locale.Lookup("LOC_SDP_FOLD_WONDERS", wonders) end
   local shown = m_keeper.Match(m_preset)
-  SDP_UI.ShowFold(Controls.MultiFoldButton, Controls.MultiFoldText, Controls.MultiFoldAction, Controls.MultiSettingsStack,
+  SDP_UI.ShowFold(Controls.MultiFoldButton, Controls.MultiFoldText, Controls.MultiFoldAction, Controls.MultiSettingsScroll,
     m_fold, SDP_UI.FoldSummary(shown, parts))
   SDP_UI.ShowPreset(Controls.MultiPresetPull, shown, function(name) P.SetPreset(name) end, { Tips = true })
 end
@@ -736,6 +747,7 @@ ShowWonders = function()
     m_view.Wonders[#m_view.Wonders + 1] = { Type = w.Type, Status = w.Status, Chosen = m_wonders[w.Type] == true }
   end
   P.ShowSupply()
+  FitPage() -- the tags take more or fewer rows (issue 199)
 end
 
 function P.RefreshLists()
@@ -820,6 +832,9 @@ function P.PopulatePlanPulls(participants)
   end
   pull:CalculateInternals()
   pull:GetButton():SetText(current)
+  -- The back button shows while the city picked has its own list (issue 187).
+  Controls.MultiPlanShared:SetHide(m_planFor == "ALL" or m_plans[m_planFor] == nil)
+  Controls.MultiPlanStack:CalculateSize()
 
   local templates = Controls.MultiTemplatePull
   templates:ClearEntries()
@@ -1136,6 +1151,7 @@ end
 
 Controls.MultiCityClear:RegisterCallback(Mouse.eLClick, function() P.ClearCities() end)
 Controls.MultiCityDefault:RegisterCallback(Mouse.eLClick, function() P.DefaultCities() end)
+Controls.MultiPlanShared:RegisterCallback(Mouse.eLClick, function() P.UseShared() end)
 Controls.MultiSwapCheck:RegisterCheckHandler(function() P.SetSwap(Controls.MultiSwapCheck:IsChecked()) end)
 Controls.MultiReplaceCheck:RegisterCheckHandler(function() P.SetReplace(Controls.MultiReplaceCheck:IsChecked()) end)
 Controls.MultiRemindCheck:RegisterCheckHandler(function() P.SetRemind(Controls.MultiRemindCheck:IsChecked()) end)

@@ -77,6 +77,10 @@
           <Label ID="FoldText" Anchor="L,C" Offset="10,0" Style="FontNormal14" TruncateWidth="390" TruncatedTooltip="1"/>
           <Label ID="FoldAction" Anchor="R,C" Offset="10,0" Style="FontNormal14"/>
         </GridButton>
+        <!-- Scrolls when the page is too short for it (issue 199): the solve
+             button below stays on the page (SDP_UI.FitResults). -->
+        <ScrollPanel ID="SettingsScroll" Size="480,100" Vertical="1" AutoScrollBar="1">
+          <ScrollBar Anchor="R,C" AnchorSide="O,I" Offset="4,0" Style="Slider_Blue"/>
         <Stack ID="SettingsStack" StackGrowth="Bottom" StackPadding="4">
         <!-- Wonders as tags (feedback 2), good places -->
         <Container Size="480,26">
@@ -125,6 +129,7 @@
           </Container>
         </Container>
         </Stack>
+        </ScrollPanel>
 
         <!-- Tier, estimate, solve / continue (cancel while running) -->
         <Container Size="480,42">
@@ -181,6 +186,10 @@
           <Label ID="SitesFoldText" Anchor="L,C" Offset="10,0" Style="FontNormal14" TruncateWidth="390" TruncatedTooltip="1"/>
           <Label ID="SitesFoldAction" Anchor="R,C" Offset="10,0" Style="FontNormal14"/>
         </GridButton>
+        <!-- Scrolls when the page is too short for it (issue 199): the solve
+             button below stays on the page (SDP_UI.FitResults). -->
+        <ScrollPanel ID="SitesSettingsScroll" Size="480,100" Vertical="1" AutoScrollBar="1">
+          <ScrollBar Anchor="R,C" AnchorSide="O,I" Offset="4,0" Style="Slider_Blue"/>
         <Stack ID="SitesSettingsStack" StackGrowth="Bottom" StackPadding="4">
         <!-- As on the single-city tab: the title on the left, the preset on
              the right, the weight grid below over the full width, so a
@@ -197,6 +206,7 @@
           <Stack ID="SitesWeightStack2" Anchor="C,T" Offset="0,52" StackGrowth="Right" StackPadding="0"/>
         </Container>
         </Stack>
+        </ScrollPanel>
         <!-- The districts each site is scored with: the single-city tab's
              grid (required, candidates, not wanted) and count (issue 90). -->
         <Container Size="480,24">
@@ -265,9 +275,11 @@
           <Stack ID="MultiCityStack" StackGrowth="Right" WrapWidth="462" WrapGrowth="Bottom" StackPadding="4"/>
         </ScrollPanel>
         <Container Size="480,28">
-          <Stack Anchor="L,C" StackGrowth="Right" StackPadding="6">
+          <Stack ID="MultiPlanStack" Anchor="L,C" StackGrowth="Right" StackPadding="6">
             <Label Anchor="L,C" Style="BodyTextDark16" String="LOC_SDP_MULTI_PLAN_FOR"/>
-            <PullDown ID="MultiPlanPull" Anchor="L,C" Style="PullDownBlue" Size="200,24" AutoSizePopUp="1"/>
+            <PullDown ID="MultiPlanPull" Anchor="L,C" Style="PullDownBlue" Size="190,24" AutoSizePopUp="1"/>
+            <!-- Back to the shared list: shown while the city picked has its own list (issue 187). -->
+            <Button ID="MultiPlanShared" Anchor="L,C" Style="BackButtonSmall" ToolTip="LOC_SDP_MULTI_PLAN_SHARED_TOOLTIP" Hidden="1"/>
           </Stack>
           <PullDown ID="MultiTemplatePull" Anchor="R,C" Style="PullDownBlue" Size="150,24" AutoSizePopUp="1"/>
         </Container>
@@ -290,6 +302,10 @@
           <Label ID="MultiFoldText" Anchor="L,C" Offset="10,0" Style="FontNormal14" TruncateWidth="390" TruncatedTooltip="1"/>
           <Label ID="MultiFoldAction" Anchor="R,C" Offset="10,0" Style="FontNormal14"/>
         </GridButton>
+        <!-- Scrolls when the page is too short for it (issue 199): the solve
+             button below stays on the page (SDP_UI.FitResults). -->
+        <ScrollPanel ID="MultiSettingsScroll" Size="480,100" Vertical="1" AutoScrollBar="1">
+          <ScrollBar Anchor="R,C" AnchorSide="O,I" Offset="4,0" Style="Slider_Blue"/>
         <Stack ID="MultiSettingsStack" StackGrowth="Bottom" StackPadding="4">
         <Container Size="480,26">
           <Stack Anchor="L,C" StackGrowth="Right" StackPadding="6">
@@ -327,6 +343,7 @@
           </Container>
         </Container>
         </Stack>
+        </ScrollPanel>
         <Container Size="480,42">
           <Stack Anchor="L,C" StackGrowth="Right" StackPadding="6">
             <Label Anchor="L,C" Style="BodyTextDark16" String="LOC_SDP_TIER_SHORT"/>

@@ -13,7 +13,12 @@ background) only on trouble, each trouble once:
     than 2 days left: its renewal on the server is broken (checked hourly; skipped without page_host).
 The session reports the trouble to the main session and starts the loop again.
 
-    python3 -I tools/status/watch.py [--out DIR] [--interval 300] [--tick 60]
+With --service (run by the system's service manager, e.g. a launchd user agent) it does not exit on
+the last three: it prints each new one with the time and keeps pushing, since an exit only means a
+pause of several minutes until the manager restarts it. The current troubles stay in troubles.json
+in the output folder for the agent to read. It still exits on the first two, which stop pushing anyway.
+
+    python3 -I tools/status/watch.py [--out DIR] [--interval 300] [--tick 60] [--service]
 """
 import argparse
 import json
@@ -88,12 +93,13 @@ def troubles(out):
     return found
 
 
-def main():
+def main(argv=None):
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default=OUT)  # never positional: a stray word must not become a folder
     ap.add_argument("--interval", type=int, default=300)  # full sync: git, GitHub, queue, machines
     ap.add_argument("--tick", type=int, default=60)  # machines and the hand-written part
-    a = ap.parse_args()
+    ap.add_argument("--service", action="store_true")  # log troubles and go on instead of exiting
+    a = ap.parse_args(argv)
     os.makedirs(a.out, exist_ok=True)
     seen_file = os.path.join(a.out, "troubles.json")
     try:
@@ -123,8 +129,10 @@ def main():
         with open(seen_file, "w") as fh:
             json.dump(sorted(seen), fh)
         if new:
-            print("trouble: %s" % "; ".join(new))
-            return 1
+            print("%strouble: %s" % (time.strftime("%Y-%m-%d %H:%M ") if a.service else "", "; ".join(new)),
+                  flush=True)
+            if not a.service:
+                return 1
         time.sleep(a.tick)
 
 
