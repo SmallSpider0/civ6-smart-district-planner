@@ -535,6 +535,9 @@
     <Replace Tag="LOC_SDP_TEMPLATE_CLEAR" Language="zh_Hans_CN">
       <Text>清空清单</Text>
     </Replace>
+    <Replace Tag="LOC_SDP_MULTI_PLAN_SHARED_TOOLTIP" Language="zh_Hans_CN">
+      <Text>改回共用清单：这座城不再用自己的清单，和其他城市一样按共用清单规划。</Text>
+    </Replace>
     <Replace Tag="LOC_SDP_TEMPLATE_SHARED" Language="zh_Hans_CN">
       <Text>改回共用清单</Text>
     </Replace>
@@ -591,6 +594,9 @@
     </Replace>
     <Replace Tag="LOC_SDP_COVERAGE_GROUP" Language="zh_Hans_CN">
       <Text>{1_Name}：新覆盖 {2_N} 座城（{3_Names}）</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_COVERAGE_GROUP_EXTRA" Language="zh_Hans_CN">
+      <Text>{1_Name}（范围 {4_Range} 格，其中 {5_Extra} 格来自你现有的加成）：新覆盖 {2_N} 座城（{3_Names}）</Text>
     </Replace>
     <Replace Tag="LOC_SDP_COVERAGE_NOTHING" Language="zh_Hans_CN">
       <Text>覆盖：这套方案没有新覆盖的城市</Text>
@@ -894,7 +900,7 @@
       <Text>需要相邻{1_Other}，它已在{2_Where}：在那座城规划这个奇观</Text>
     </Replace>
     <Replace Tag="LOC_SDP_MULTI_SUPPLY" Language="zh_Hans_CN">
-      <Text>{2_Wonder}要挨着{1_District}：求解时补给列表里第一座还有名额、能放下的城，都没有名额时不放这个奇观（想指定哪座城，就给它开自己的列表并把{1_District}设为必建）</Text>
+      <Text>{2_Wonder}要挨着{1_District}：求解时补给列表里第一座还有名额、能放下的城；别的城本来就从候选里挑了{1_District}、改补给那座城方案更好时，补给那座城，第一座城省下名额。都没有名额时不放这个奇观（想指定哪座城，就给它开自己的列表并把{1_District}设为必建）</Text>
     </Replace>
     <Replace Tag="LOC_SDP_MULTI_SUPPLIED" Language="zh_Hans_CN">
       <Text>{1_District}随{2_Wonder}补给了{3_City}</Text>

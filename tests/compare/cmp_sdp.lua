@@ -283,8 +283,13 @@ function CmpAdapters.sdp(request, variant, w)
     if not r.Ok then out.notes[#out.notes + 1] = tostring(r.Error) end
     -- The districts placed around each site ("TYPE@x,y"), for comparing
     -- variants (issue 91); the judge does not read them.
+    -- By plot index, as before the sites came in the order to settle them
+    -- (issue 186), so the stored results do not change with the order.
     local siteDistricts = {}
-    for _, site in ipairs((r.Ok and r.Solutions[1] and r.Solutions[1].Sites) or {}) do
+    local byIndex = {}
+    for _, site in ipairs((r.Ok and r.Solutions[1] and r.Solutions[1].Sites) or {}) do byIndex[#byIndex + 1] = site end
+    table.sort(byIndex, function(a, b) return a.Index < b.Index end)
+    for _, site in ipairs(byIndex) do
       out.placements[#out.placements + 1] = { kind = "SITE", x = site.X, y = site.Y }
       for _, d in ipairs(site.Districts or {}) do
         siteDistricts[#siteDistricts + 1] = d.Type .. "@" .. d.X .. "," .. d.Y

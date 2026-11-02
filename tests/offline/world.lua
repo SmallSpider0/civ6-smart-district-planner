@@ -1077,6 +1077,77 @@ function World.New(spec)
   local traits = {}
   for _, t in ipairs(spec.traits or {}) do traits[t] = true end
 
+  -- The game's modifiers in play (GameEffects), issue 197: spec.effects =
+  -- { { Id = ModifierId, Player = owner, Active = false?, OwnerMet = false? } }.
+  -- The rules' rows of Toronto's suzerain bonus (Base Modifiers.xml) and a
+  -- made-up one with a requirement this mod does not read are added then.
+  if spec.effects ~= nil then
+    local function Rows(tbl)
+      local rows = {}
+      if tbl ~= nil then for row in tbl() do rows[#rows + 1] = row end end
+      return rows
+    end
+    local function Add(name, key, extra)
+      local rows = Rows(gi[name])
+      for _, row in ipairs(extra) do rows[#rows + 1] = row end
+      gi[name] = Table(rows, key)
+    end
+    Add("Modifiers", "ModifierId", {
+      { ModifierId = "MINOR_CIV_TORONTO_REGIONAL_RANGE_BONUS", ModifierType = "MODIFIER_PLAYER_DISTRICTS_ADJUST_EXTRA_REGIONAL_RANGE",
+        SubjectRequirementSetId = "DISTRICT_IS_INDUSTRIAL_ZONE_OR_ENTERTAINMENT_COMPLEX_OR_WATER_PARK" },
+      { ModifierId = "TEST_RANGE_NEAR_RIVER", ModifierType = "MODIFIER_PLAYER_DISTRICTS_ADJUST_EXTRA_REGIONAL_RANGE",
+        SubjectRequirementSetId = "TEST_DISTRICT_NEAR_RIVER" },
+      { ModifierId = "GREATPERSON_EXTRA_REGIONAL_BUILDING_RANGE", ModifierType = "MODIFIER_PLAYER_DISTRICT_ADJUST_EXTRA_REGIONAL_RANGE" },
+    })
+    Add("DynamicModifiers", "ModifierType", {
+      { ModifierType = "MODIFIER_PLAYER_DISTRICTS_ADJUST_EXTRA_REGIONAL_RANGE", CollectionType = "COLLECTION_PLAYER_DISTRICTS",
+        EffectType = "EFFECT_ADJUST_DISTRICT_EXTRA_REGIONAL_RANGE" },
+      { ModifierType = "MODIFIER_PLAYER_DISTRICT_ADJUST_EXTRA_REGIONAL_RANGE", CollectionType = "COLLECTION_OWNER",
+        EffectType = "EFFECT_ADJUST_DISTRICT_EXTRA_REGIONAL_RANGE" },
+    })
+    Add("ModifierArguments", nil, {
+      { ModifierId = "MINOR_CIV_TORONTO_REGIONAL_RANGE_BONUS", Name = "Amount", Value = "3" },
+      { ModifierId = "TEST_RANGE_NEAR_RIVER", Name = "Amount", Value = "2" },
+      { ModifierId = "GREATPERSON_EXTRA_REGIONAL_BUILDING_RANGE", Name = "Amount", Value = "3" },
+    })
+    Add("RequirementSets", "RequirementSetId", {
+      { RequirementSetId = "DISTRICT_IS_INDUSTRIAL_ZONE_OR_ENTERTAINMENT_COMPLEX_OR_WATER_PARK", RequirementSetType = "REQUIREMENTSET_TEST_ANY" },
+      { RequirementSetId = "TEST_DISTRICT_NEAR_RIVER", RequirementSetType = "REQUIREMENTSET_TEST_ALL" },
+    })
+    Add("RequirementSetRequirements", nil, {
+      { RequirementSetId = "DISTRICT_IS_INDUSTRIAL_ZONE_OR_ENTERTAINMENT_COMPLEX_OR_WATER_PARK", RequirementId = "REQUIRES_DISTRICT_IS_ENTERTAINMENT_COMPLEX" },
+      { RequirementSetId = "DISTRICT_IS_INDUSTRIAL_ZONE_OR_ENTERTAINMENT_COMPLEX_OR_WATER_PARK", RequirementId = "REQUIRES_DISTRICT_IS_INDUSTRIAL_ZONE" },
+      { RequirementSetId = "DISTRICT_IS_INDUSTRIAL_ZONE_OR_ENTERTAINMENT_COMPLEX_OR_WATER_PARK", RequirementId = "REQUIRES_DISTRICT_IS_WATER_PARK" },
+      { RequirementSetId = "TEST_DISTRICT_NEAR_RIVER", RequirementId = "REQUIRES_DISTRICT_IS_INDUSTRIAL_ZONE" },
+      { RequirementSetId = "TEST_DISTRICT_NEAR_RIVER", RequirementId = "TEST_REQUIRES_PLOT_ADJACENT_TO_RIVER" },
+    })
+    Add("Requirements", "RequirementId", {
+      { RequirementId = "REQUIRES_DISTRICT_IS_ENTERTAINMENT_COMPLEX", RequirementType = "REQUIREMENT_DISTRICT_TYPE_MATCHES" },
+      { RequirementId = "REQUIRES_DISTRICT_IS_INDUSTRIAL_ZONE", RequirementType = "REQUIREMENT_DISTRICT_TYPE_MATCHES" },
+      { RequirementId = "REQUIRES_DISTRICT_IS_WATER_PARK", RequirementType = "REQUIREMENT_DISTRICT_TYPE_MATCHES" },
+      { RequirementId = "TEST_REQUIRES_PLOT_ADJACENT_TO_RIVER", RequirementType = "REQUIREMENT_PLOT_ADJACENT_TO_RIVER" },
+    })
+    Add("RequirementArguments", nil, {
+      { RequirementId = "REQUIRES_DISTRICT_IS_ENTERTAINMENT_COMPLEX", Name = "DistrictType", Value = "DISTRICT_ENTERTAINMENT_COMPLEX" },
+      { RequirementId = "REQUIRES_DISTRICT_IS_INDUSTRIAL_ZONE", Name = "DistrictType", Value = "DISTRICT_INDUSTRIAL_ZONE" },
+      { RequirementId = "REQUIRES_DISTRICT_IS_WATER_PARK", Name = "DistrictType", Value = "DISTRICT_WATER_ENTERTAINMENT_COMPLEX" },
+    })
+  end
+  local effects = spec.effects or {}
+  local GameEffects = {
+    GetModifiers = function()
+      local ids = {}
+      for i = 1, #effects do ids[i] = 500 + i end
+      return ids
+    end,
+    GetModifierActive = function(id) return effects[id - 500].Active ~= false end,
+    GetModifierOwner = function(id) return 900 + effects[id - 500].Player end,
+    GetObjectsPlayerId = function(obj) return obj - 900 end,
+    GetModifierOwnerRequirementSet = function(id) return effects[id - 500].OwnerMet == false and "SET_" .. id or nil end,
+    GetRequirementSetState = function() return "NotMet" end,
+    GetModifierDefinition = function(id) return { Id = effects[id - 500].Id } end,
+  }
+
   local Events, LuaEvents = EventTable(), EventTable()
   LuaEvents.DMT_MapPinAdded.Add(function(pin) subjects[0][Key(pin:GetHexX(), pin:GetHexY())] = CreateSubject(pin) end)
   LuaEvents.DMT_MapPinRemoved.Add(function(pin) subjects[0][Key(pin:GetHexX(), pin:GetHexY())] = nil end)
@@ -1090,6 +1161,7 @@ function World.New(spec)
     Map = Map,
     RiverManager = { GetRiverForFloodplain = function(x, y) return RiverOf(GetPlot(x, y)) end },
     GameInfo = gi,
+    GameEffects = GameEffects,
     GlobalParameters = { CITY_MIN_RANGE = spec.cityMinRange or 3, CITY_POPULATION_RIVER_LAKE = 5,
       CITY_POPULATION_COAST = 3, CITY_POPULATION_NO_WATER = 2 },
     DirectionTypes = { NUM_DIRECTION_TYPES = 6 },
