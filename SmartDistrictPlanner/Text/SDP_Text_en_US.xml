@@ -472,6 +472,12 @@
     <Replace Tag="LOC_SDP_SITES_HOUSING_BUILT" Language="en_US">
       <Text>Housing {1_Housing} (water {2_Water}; once built: {3_Buildings})</Text>
     </Replace>
+    <Replace Tag="LOC_SDP_SITES_HOUSING_BUILT_LATER" Language="en_US">
+      <Text>Housing {1_Housing} (water {2_Water}; once built: {3_Buildings}; not counted until researched: {4_Later})</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_HOUSING_LATER" Language="en_US">
+      <Text>Housing {1_Housing} (water {2_Water}; not counted until researched: {3_Later})</Text>
+    </Replace>
     <Replace Tag="LOC_SDP_SITES_HOUSING_PART" Language="en_US">
       <Text>{1_Building} +{2_Housing}</Text>
     </Replace>

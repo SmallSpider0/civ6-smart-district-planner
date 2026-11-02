@@ -472,6 +472,12 @@
     <Replace Tag="LOC_SDP_SITES_HOUSING_BUILT" Language="zh_Hans_CN">
       <Text>住房 {1_Housing}（水源 {2_Water}，建好后另加：{3_Buildings}）</Text>
     </Replace>
+    <Replace Tag="LOC_SDP_SITES_HOUSING_BUILT_LATER" Language="zh_Hans_CN">
+      <Text>住房 {1_Housing}（水源 {2_Water}，建好后另加：{3_Buildings}；还没研究、未计入：{4_Later}）</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_HOUSING_LATER" Language="zh_Hans_CN">
+      <Text>住房 {1_Housing}（水源 {2_Water}；还没研究、未计入：{3_Later}）</Text>
+    </Replace>
     <Replace Tag="LOC_SDP_SITES_HOUSING_PART" Language="zh_Hans_CN">
       <Text>{1_Building} +{2_Housing}</Text>
     </Replace>

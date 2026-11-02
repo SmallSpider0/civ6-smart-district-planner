@@ -4,7 +4,9 @@
 -- with Gathering Storm's +2 for a city on the coast, and seaport); the line
 -- says how much of it comes from the water and how much from each building
 -- once built, so "Housing 11" on a river site with a harbor reads as 5 from
--- water plus the buildings. Driven through the panel's own controls.
+-- water plus the buildings. Only buildings whose technology the player has
+-- researched count; the others are named apart and add nothing (the
+-- maintainer, 2026-10-31). Driven through the panel's own controls.
 local test, T = ...
 
 local UI_Mock = include("ui")
@@ -25,8 +27,8 @@ local MAP = {
 }
 local rivers = {}
 for x = 2, 21 do rivers[#rivers + 1] = x .. ",2" end
-World.New({
-  rows = MAP, rivers = rivers, housingBuildings = true,
+local w = World.New({
+  rows = MAP, rivers = rivers, housingBuildings = true, techs = { "TECH_IRRIGATION" },
   cities = { { id = 1, x = 4, y = 7, population = 6, capital = true, radius = 1 } },
 })
 UI_Mock.Install()
@@ -62,6 +64,14 @@ local function Building(buildingType, coastal)
   end
   return n
 end
+-- Whether the local player has the technology and civic a building needs.
+local function Researched(buildingType)
+  local row = GameInfo.Buildings[buildingType]
+  local player = Players[0]
+  if row.PrereqTech and not player:GetTechs():HasTech(GameInfo.Technologies[row.PrereqTech].Index) then return false end
+  if row.PrereqCivic and not player:GetCulture():HasCivic(GameInfo.Civics[row.PrereqCivic].Index) then return false end
+  return true
+end
 
 test("the rules: granary, lighthouse with the coast bonus, seaport", function()
   T.eq(SDP_Land.CenterHousing(), GameInfo.Buildings.BUILDING_GRANARY.Housing, "the granary")
@@ -70,7 +80,11 @@ test("the rules: granary, lighthouse with the coast bonus, seaport", function()
   T.eq(Building("BUILDING_LIGHTHOUSE", true), 3, "lighthouse: 1 + 2 on the coast")
 end)
 
-test("a river site with a harbor: the tooltip splits its housing into water and buildings", function()
+-- Solves the City sites tab with the harbor required and checks every
+-- site's housing and its tooltip line against the rules and the player's
+-- technologies. Returns the number of river sites on the coast with a harbor
+-- and the housing each had.
+local function CheckSites()
   SDP_Panel.Open()
   SDP_Panel.SelectTab("SITES")
   local sites = SDP_Panel.Sites
@@ -86,7 +100,7 @@ test("a river site with a harbor: the tooltip splits its housing into water and 
   SDP_Panel.RunTask(500)
   local result = sites.State().Result
   T.ok(result and result.Ok, "sites result: " .. tostring(result and result.Error))
-  local checked = 0
+  local checked = {}
   for s, site in ipairs(result.Solutions[1].Sites) do
     local hasHarbor = false
     for _, d in ipairs(site.Districts or {}) do
@@ -96,26 +110,77 @@ test("a river site with a harbor: the tooltip splits its housing into water and 
     local kind = site.Info.WaterKind
     local coastal = plot:IsCoastalLand()
     local water = WaterHousing(kind)
-    local parts = { { "BUILDING_GRANARY", Building("BUILDING_GRANARY", coastal) } }
+    local buildings = { "BUILDING_GRANARY" }
     if hasHarbor then
-      parts[#parts + 1] = { "BUILDING_LIGHTHOUSE", Building("BUILDING_LIGHTHOUSE", coastal) }
-      parts[#parts + 1] = { "BUILDING_SEAPORT", Building("BUILDING_SEAPORT", coastal) }
+      buildings[#buildings + 1] = "BUILDING_LIGHTHOUSE"
+      buildings[#buildings + 1] = "BUILDING_SEAPORT"
     end
-    local total, list = water, {}
-    for _, p in ipairs(parts) do
-      total = total + p[2]
-      list[#list + 1] = "LOC_SDP_SITES_HOUSING_PART(" .. GameInfo.Buildings[p[1]].Name .. "," .. p[2] .. ")"
+    local total, built, later = water, {}, {}
+    for _, b in ipairs(buildings) do
+      local item = "LOC_SDP_SITES_HOUSING_PART(" .. GameInfo.Buildings[b].Name .. "," .. Building(b, coastal) .. ")"
+      if Researched(b) then
+        total = total + Building(b, coastal)
+        built[#built + 1] = item
+      else
+        later[#later + 1] = item
+      end
     end
     T.eq(site.Info.Housing, total, "housing at " .. site.X .. "," .. site.Y)
     local tip = sites.State().View.Results[s].ToolTip
-    local line = "LOC_SDP_SITES_HOUSING_BUILT(" .. total .. "," .. water .. "," .. table.concat(list, ", ") .. ")"
+    local line
+    if #later > 0 and #built > 0 then
+      line = "LOC_SDP_SITES_HOUSING_BUILT_LATER(" .. total .. "," .. water .. "," .. table.concat(built, ", ") .. ","
+        .. table.concat(later, ", ") .. ")"
+    elseif #later > 0 then
+      line = "LOC_SDP_SITES_HOUSING_LATER(" .. total .. "," .. water .. "," .. table.concat(later, ", ") .. ")"
+    else
+      line = "LOC_SDP_SITES_HOUSING_BUILT(" .. total .. "," .. water .. "," .. table.concat(built, ", ") .. ")"
+    end
     T.ok(tip:find(line, 1, true), "the housing line: " .. line .. " in " .. tip)
     T.ok(tip:find("LOC_SDP_SITES_HOUSING(", 1, true) == nil, "no bare total")
-    if hasHarbor and kind == "FRESH" and coastal then
-      T.eq(total, 11, "the issue's case: 5 + granary 2 + lighthouse 3 + seaport 1")
-      checked = checked + 1
-    end
+    if hasHarbor and kind == "FRESH" and coastal then checked[#checked + 1] = total end
   end
-  T.ok(checked > 0, "a river site on the coast with a harbor among the sites")
   SDP_Panel.Close()
+  return checked
+end
+
+test("all researched: a river site with a harbor has 5 + granary 2 + lighthouse 3 + seaport 1", function()
+  w:SetTech("TECH_CELESTIAL_NAVIGATION", true)
+  w:SetTech("TECH_ELECTRICITY", true)
+  local checked = CheckSites()
+  T.ok(#checked > 0, "a river site on the coast with a harbor among the sites")
+  for _, total in ipairs(checked) do T.eq(total, 11, "the issue's case") end
+end)
+
+test("without the lighthouse's technology: no lighthouse or seaport housing, named apart", function()
+  w:SetTech("TECH_CELESTIAL_NAVIGATION", false)
+  w:SetTech("TECH_ELECTRICITY", false)
+  local checked = CheckSites()
+  T.ok(#checked > 0, "a river site on the coast with a harbor among the sites")
+  for _, total in ipairs(checked) do T.eq(total, 7, "water 5 + granary 2") end
+end)
+
+test("with the lighthouse's technology only: the lighthouse counts, the seaport waits", function()
+  w:SetTech("TECH_CELESTIAL_NAVIGATION", true)
+  w:SetTech("TECH_ELECTRICITY", false)
+  local checked = CheckSites()
+  T.ok(#checked > 0, "a river site on the coast with a harbor among the sites")
+  for _, total in ipairs(checked) do T.eq(total, 10, "water 5 + granary 2 + lighthouse 3") end
+end)
+
+test("a planned city center counts the granary only once its technology is researched", function()
+  local scan = { PlayerID = 0, X = 10, Y = 2 }
+  w:SetTech("TECH_CELESTIAL_NAVIGATION", false)
+  w:SetTech("TECH_ELECTRICITY", false)
+  w:SetTech("TECH_IRRIGATION", false)
+  local without = SDP_Land.ScanHousing(scan)
+  w:SetTech("TECH_IRRIGATION", true)
+  T.eq(SDP_Land.ScanHousing(scan) - without, GameInfo.Buildings.BUILDING_GRANARY.Housing, "the granary's housing")
+  T.eq(SDP_Land.CenterHousing(0), GameInfo.Buildings.BUILDING_GRANARY.Housing, "researched")
+  w:SetTech("TECH_IRRIGATION", false)
+  T.eq(SDP_Land.CenterHousing(0), 0, "not researched")
+  local checked = CheckSites()
+  T.ok(#checked > 0, "sites")
+  for _, total in ipairs(checked) do T.eq(total, 5, "the water alone") end
+  w:SetTech("TECH_IRRIGATION", true)
 end)

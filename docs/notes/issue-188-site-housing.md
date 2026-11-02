@@ -40,3 +40,14 @@
 ## 留给维护者
 
 城址分里码头（现代时代、要电力）也算进去了，而市中心只算第一个时代的建筑（粮仓）。只影响计划里有港口的城址，且多出的 1 点住房多半已过拐点、按半价以下计。是否只算到灯塔，在 Issue 下问了，建议维持现状。
+
+## 只算已研究的建筑（2026-11-02，v1.7.0）
+
+合作者在 Issue 下要求住房按当前科技算，维护者定了：选城址的住房只算玩家已经研究到的建筑（科技和市政都看），码头没研究电力前也不算。上一节“留给维护者”的问题由此作废。
+
+- `SDP_Land.BuildingResearched(playerID, 建筑)` 查 `Buildings.PrereqTech`、`PrereqCivic`；`SDP_Land.SplitResearched` 把住房各部分分成已研究、未研究两组，顺序不变。不传玩家时全部计入（只看规则，`test_land.lua` 的规则检查用）。
+- `SDP_Sites.Context` 只把已研究的市中心建筑计入 `Housing.Center`（无水城址的基线也用它）；`WaterPart` 按区域类型和是否沿海缓存港口建筑的两组，未研究的记在 `Info.HousingLater`，不加住房。
+- `SDP_Land.ScanHousing`（多城、单城页里城址钉的住房）也只算已研究的市中心建筑。
+- 悬停：有已研究和未研究的写“住房 10（水源 5，建好后另加：粮仓 +2, 灯塔 +3；还没研究、未计入：码头 +1）”，只有未研究的写“住房 5（水源 5；还没研究、未计入：粮仓 +2）”。新键 `LOC_SDP_SITES_HOUSING_BUILT_LATER`、`LOC_SDP_SITES_HOUSING_LATER`。
+- 城址分会变：开局（没有制陶术、天文导航）挨着海、计划了港口的城址住房分下降。没有重跑离线对比的选城址集。
+- 测试：`tests/offline/spec_site_housing.lua` 三种研究状态（全有、只有天文导航、都没有）和城址钉的粮仓，经面板控件求解后核对住房和悬停，旧代码上 3 项失败；`world.lua` 给灯塔、码头加了前置科技，`w:SetTech`、`w:SetCivic` 改玩家的科技。游戏内 `test_land.lua`（`BuildingResearched` 与玩家的科技树一致，未研究电力时码头不计）、`test_sites.lua`（悬停的住房行四种写法）。2026-11-02 macOS 风云变幻：游戏内 12 项通过；固定对局第 1 回合 `CenterHousing(玩家)` = 0、港口建筑 0（不传玩家时 2、4）。
