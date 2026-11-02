@@ -90,7 +90,9 @@ def solve(label, timeout=900, at_once=True):
 def main(argv=None):
     ap = argparse.ArgumentParser()
     ap.add_argument("name")
-    ap.add_argument("--sites", type=int, default=0, help="place this many city-center pins first")
+    ap.add_argument("--sites", default="0", help="place this many city-center pins first (rounds: 12,12)")
+    ap.add_argument("--dense", action="store_true", help="the pins packed as densely as they fit (issue 87)")
+    ap.add_argument("--site-distance", type=int, default=8, help="the pins at most this far from a city")
     ap.add_argument("--max", type=int, default=8)
     ap.add_argument("--count", type=int, default=3)
     ap.add_argument("--tiers", default="FAST,STANDARD,FINE")
@@ -107,8 +109,9 @@ def main(argv=None):
     with open(os.path.join(ROOT, "tests", "bench", "multi_size.lua"), encoding="utf-8") as fh:
         run(fh.read())
     run('SDP_Panel.Open(); SDP_Panel.SelectTab("MULTI")')
-    if args.sites > 0:
-        print(run('SDP_Stress.Sites(%d, 8, "STANDARD"); SDP_Stress.PlaceSites()' % args.sites, timeout=300))
+    for k in [int(x) for x in args.sites.split(",") if int(x) > 0]:
+        print(run('SDP_Stress.Sites(%d, %d, "STANDARD", %s); SDP_Stress.PlaceSites()'
+                  % (k, args.site_distance, "true" if args.dense else "false"), timeout=900))
     order = emitted(run("SDP_MultiSize.Order()"))
     n_max = min(args.max, len(order["List"]))
     print("order:", [(e["Kind"], e["Name"], e["Distance"]) for e in order["List"]])

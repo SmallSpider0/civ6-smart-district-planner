@@ -4,7 +4,7 @@
 --
 --   Participants  every city-center pin that is not a city yet, plus the
 --                 player's cities within NEAR plots of one (default; each
---                 can be switched), at most MAX_CITIES, nearest first.
+--                 can be switched), any number of them (issue 142).
 --   Plots         each city's three rings as SDP_City sees them; a new city
 --                 cannot use plots of existing cities. Plots two cities can
 --                 reach may go to either, one subject per plot.

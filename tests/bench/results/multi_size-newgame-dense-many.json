@@ -1,0 +1,1788 @@
+{
+ "Name": "newgame-dense",
+ "Count": 3,
+ "Order": {
+  "Distances": [
+   [
+    0,
+    4,
+    4,
+    4,
+    5,
+    8,
+    8,
+    8,
+    9,
+    12,
+    12,
+    12,
+    12,
+    12
+   ],
+   [
+    4,
+    0,
+    4,
+    6,
+    4,
+    4,
+    6,
+    10,
+    11,
+    8,
+    9,
+    10,
+    10,
+    14
+   ],
+   [
+    4,
+    4,
+    0,
+    4,
+    7,
+    6,
+    4,
+    6,
+    7,
+    10,
+    13,
+    8,
+    8,
+    10
+   ],
+   [
+    4,
+    6,
+    4,
+    0,
+    9,
+    10,
+    7,
+    6,
+    5,
+    14,
+    15,
+    12,
+    10,
+    9
+   ],
+   [
+    5,
+    4,
+    7,
+    9,
+    0,
+    6,
+    10,
+    13,
+    14,
+    10,
+    9,
+    14,
+    14,
+    17
+   ],
+   [
+    8,
+    4,
+    6,
+    10,
+    6,
+    0,
+    7,
+    12,
+    13,
+    4,
+    7,
+    8,
+    11,
+    16
+   ],
+   [
+    8,
+    6,
+    4,
+    7,
+    10,
+    7,
+    0,
+    5,
+    9,
+    7,
+    14,
+    5,
+    4,
+    9
+   ],
+   [
+    8,
+    10,
+    6,
+    6,
+    13,
+    12,
+    5,
+    0,
+    4,
+    12,
+    19,
+    10,
+    5,
+    4
+   ],
+   [
+    9,
+    11,
+    7,
+    5,
+    14,
+    13,
+    9,
+    4,
+    0,
+    16,
+    20,
+    14,
+    9,
+    6
+   ],
+   [
+    12,
+    8,
+    10,
+    14,
+    10,
+    4,
+    7,
+    12,
+    16,
+    0,
+    7,
+    6,
+    11,
+    16
+   ],
+   [
+    12,
+    9,
+    13,
+    15,
+    9,
+    7,
+    14,
+    19,
+    20,
+    7,
+    0,
+    13,
+    18,
+    23
+   ],
+   [
+    12,
+    10,
+    8,
+    12,
+    14,
+    8,
+    5,
+    10,
+    14,
+    6,
+    13,
+    0,
+    5,
+    11
+   ],
+   [
+    12,
+    10,
+    8,
+    10,
+    14,
+    11,
+    4,
+    5,
+    9,
+    11,
+    18,
+    5,
+    0,
+    6
+   ],
+   [
+    12,
+    14,
+    10,
+    9,
+    17,
+    16,
+    9,
+    4,
+    6,
+    16,
+    23,
+    11,
+    6,
+    0
+   ]
+  ],
+  "List": [
+   {
+    "Distance": 0,
+    "ID": 65536,
+    "Key": "C65536",
+    "Kind": "CITY",
+    "Name": "罗马",
+    "X": 63,
+    "Y": 26
+   },
+   {
+    "Distance": 4,
+    "Key": "S1691",
+    "Kind": "SITE",
+    "Name": "site",
+    "X": 63,
+    "Y": 22
+   },
+   {
+    "Distance": 4,
+    "Key": "S1836",
+    "Kind": "SITE",
+    "Name": "site",
+    "X": 60,
+    "Y": 24
+   },
+   {
+    "Distance": 4,
+    "Key": "S2132",
+    "Kind": "SITE",
+    "Name": "site",
+    "X": 60,
+    "Y": 28
+   },
+   {
+    "Distance": 5,
+    "Key": "S1768",
+    "Kind": "SITE",
+    "Name": "site",
+    "X": 66,
+    "Y": 23
+   },
+   {
+    "Distance": 8,
+    "Key": "S1395",
+    "Kind": "SITE",
+    "Name": "site",
+    "X": 63,
+    "Y": 18
+   },
+   {
+    "Distance": 8,
+    "Key": "S1611",
+    "Kind": "SITE",
+    "Name": "site",
+    "X": 57,
+    "Y": 21
+   },
+   {
+    "Distance": 8,
+    "Key": "S1979",
+    "Kind": "SITE",
+    "Name": "site",
+    "X": 55,
+    "Y": 26
+   },
+   {
+    "Distance": 9,
+    "Key": "S2276",
+    "Kind": "SITE",
+    "Name": "site",
+    "X": 56,
+    "Y": 30
+   },
+   {
+    "Distance": 12,
+    "Key": "S1097",
+    "Kind": "SITE",
+    "Name": "site",
+    "X": 61,
+    "Y": 14
+   },
+   {
+    "Distance": 12,
+    "Key": "S1104",
+    "Kind": "SITE",
+    "Name": "site",
+    "X": 68,
+    "Y": 14
+   },
+   {
+    "Distance": 12,
+    "Key": "S1240",
+    "Kind": "SITE",
+    "Name": "site",
+    "X": 56,
+    "Y": 16
+   },
+   {
+    "Distance": 12,
+    "Key": "S1607",
+    "Kind": "SITE",
+    "Name": "site",
+    "X": 53,
+    "Y": 21
+   },
+   {
+    "Distance": 12,
+    "Key": "S2049",
+    "Kind": "SITE",
+    "Name": "site",
+    "X": 51,
+    "Y": 27
+   }
+  ],
+  "Step": "Order"
+ },
+ "Many": [
+  {
+   "Adjacency": 78,
+   "Calls": 13697,
+   "Cities": 8,
+   "CityXY": {
+    "C65536": {
+     "X": 63,
+     "Y": 26
+    },
+    "S1395": {
+     "X": 63,
+     "Y": 18
+    },
+    "S1611": {
+     "X": 57,
+     "Y": 21
+    },
+    "S1691": {
+     "X": 63,
+     "Y": 22
+    },
+    "S1768": {
+     "X": 66,
+     "Y": 23
+    },
+    "S1836": {
+     "X": 60,
+     "Y": 24
+    },
+    "S1979": {
+     "X": 55,
+     "Y": 26
+    },
+    "S2132": {
+     "X": 60,
+     "Y": 28
+    }
+   },
+   "Cross": [
+    {
+     "A": "S1691",
+     "B": "S1836",
+     "Distance": 4
+    },
+    {
+     "A": "S1691",
+     "B": "S1611",
+     "Distance": 6
+    },
+    {
+     "A": "S1691",
+     "B": "S1836",
+     "Distance": 4
+    },
+    {
+     "A": "S1836",
+     "B": "S1611",
+     "Distance": 4
+    },
+    {
+     "A": "S1691",
+     "B": "S1836",
+     "Distance": 4
+    },
+    {
+     "A": "S1691",
+     "B": "S1836",
+     "Distance": 4
+    },
+    {
+     "A": "S1691",
+     "B": "S1836",
+     "Distance": 4
+    },
+    {
+     "A": "S2132",
+     "B": "C65536",
+     "Distance": 4
+    }
+   ],
+   "Estimate": {
+    "Seconds": 54.6758726,
+    "Speed": 11000,
+    "Units": 601434.5986
+   },
+   "Exhaustive": false,
+   "Gain": 65.75,
+   "Label": "STANDARD n=8 ALL",
+   "Land": -6.25,
+   "Ok": true,
+   "Placed": 28,
+   "Plan": [
+    {
+     "City": "S1691",
+     "Type": "DISTRICT_DAM",
+     "X": 61,
+     "Y": 22
+    },
+    {
+     "City": "S1836",
+     "Type": "DISTRICT_DAM",
+     "X": 60,
+     "Y": 23
+    },
+    {
+     "City": "S2132",
+     "Type": "DISTRICT_BATH",
+     "X": 60,
+     "Y": 27
+    },
+    {
+     "City": "C65536",
+     "Type": "DISTRICT_BATH",
+     "X": 63,
+     "Y": 27
+    },
+    {
+     "City": "S1395",
+     "Type": "DISTRICT_CAMPUS",
+     "X": 62,
+     "Y": 18
+    },
+    {
+     "City": "S1395",
+     "Type": "DISTRICT_COMMERCIAL_HUB",
+     "X": 62,
+     "Y": 19
+    },
+    {
+     "City": "S1395",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 62,
+     "Y": 17
+    },
+    {
+     "City": "S1611",
+     "Type": "DISTRICT_CAMPUS",
+     "X": 58,
+     "Y": 21
+    },
+    {
+     "City": "S1611",
+     "Type": "DISTRICT_COMMERCIAL_HUB",
+     "X": 58,
+     "Y": 22
+    },
+    {
+     "City": "S1611",
+     "Type": "DISTRICT_INDUSTRIAL_ZONE",
+     "X": 60,
+     "Y": 22
+    },
+    {
+     "City": "S1691",
+     "Type": "DISTRICT_CAMPUS",
+     "X": 62,
+     "Y": 23
+    },
+    {
+     "City": "S1691",
+     "Type": "DISTRICT_COMMERCIAL_HUB",
+     "X": 62,
+     "Y": 21
+    },
+    {
+     "City": "S1691",
+     "Type": "DISTRICT_INDUSTRIAL_ZONE",
+     "X": 62,
+     "Y": 22
+    },
+    {
+     "City": "S1768",
+     "Type": "DISTRICT_CAMPUS",
+     "X": 65,
+     "Y": 21
+    },
+    {
+     "City": "S1768",
+     "Type": "DISTRICT_HARBOR",
+     "X": 66,
+     "Y": 22
+    },
+    {
+     "City": "S1768",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 65,
+     "Y": 22
+    },
+    {
+     "City": "S1836",
+     "Type": "DISTRICT_CAMPUS",
+     "X": 62,
+     "Y": 24
+    },
+    {
+     "City": "S1836",
+     "Type": "DISTRICT_COMMERCIAL_HUB",
+     "X": 61,
+     "Y": 24
+    },
+    {
+     "City": "S1836",
+     "Type": "DISTRICT_INDUSTRIAL_ZONE",
+     "X": 61,
+     "Y": 23
+    },
+    {
+     "City": "S1979",
+     "Type": "DISTRICT_CAMPUS",
+     "X": 55,
+     "Y": 25
+    },
+    {
+     "City": "S1979",
+     "Type": "DISTRICT_COMMERCIAL_HUB",
+     "X": 54,
+     "Y": 24
+    },
+    {
+     "City": "S1979",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 56,
+     "Y": 28
+    },
+    {
+     "City": "S2132",
+     "Type": "DISTRICT_HARBOR",
+     "X": 60,
+     "Y": 29
+    },
+    {
+     "City": "S2132",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 57,
+     "Y": 27
+    },
+    {
+     "City": "S2132",
+     "Type": "DISTRICT_INDUSTRIAL_ZONE",
+     "X": 61,
+     "Y": 28
+    },
+    {
+     "City": "C65536",
+     "Type": "DISTRICT_HARBOR",
+     "X": 64,
+     "Y": 26
+    },
+    {
+     "City": "C65536",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 62,
+     "Y": 28
+    },
+    {
+     "City": "C65536",
+     "Type": "DISTRICT_INDUSTRIAL_ZONE",
+     "X": 63,
+     "Y": 28
+    }
+   ],
+   "Selected": [
+    "S1395",
+    "S1611",
+    "S1691",
+    "S1768",
+    "S1836",
+    "S1979",
+    "S2132",
+    "C65536"
+   ],
+   "Step": "Solve",
+   "Tries": 56913,
+   "Truncated": true,
+   "Unplaced": 1,
+   "Wait": 8.88,
+   "AtOnce": true,
+   "Tier": "STANDARD",
+   "N": 8,
+   "Variant": "ALL",
+   "SetupSeconds": 0.18,
+   "Groups": {
+    "Groups": []
+   }
+  },
+  {
+   "Adjacency": 80,
+   "Calls": 15121,
+   "Cities": 8,
+   "CityXY": {
+    "C65536": {
+     "X": 63,
+     "Y": 26
+    },
+    "S1395": {
+     "X": 63,
+     "Y": 18
+    },
+    "S1611": {
+     "X": 57,
+     "Y": 21
+    },
+    "S1691": {
+     "X": 63,
+     "Y": 22
+    },
+    "S1768": {
+     "X": 66,
+     "Y": 23
+    },
+    "S1836": {
+     "X": 60,
+     "Y": 24
+    },
+    "S1979": {
+     "X": 55,
+     "Y": 26
+    },
+    "S2132": {
+     "X": 60,
+     "Y": 28
+    }
+   },
+   "Cross": [
+    {
+     "A": "S1691",
+     "B": "S1836",
+     "Distance": 4
+    },
+    {
+     "A": "S1691",
+     "B": "S1395",
+     "Distance": 4
+    },
+    {
+     "A": "S1691",
+     "B": "S1611",
+     "Distance": 6
+    },
+    {
+     "A": "S1691",
+     "B": "S1836",
+     "Distance": 4
+    },
+    {
+     "A": "S1836",
+     "B": "S1611",
+     "Distance": 4
+    },
+    {
+     "A": "S1395",
+     "B": "S1691",
+     "Distance": 4
+    },
+    {
+     "A": "S1395",
+     "B": "S1691",
+     "Distance": 4
+    },
+    {
+     "A": "S1395",
+     "B": "S1691",
+     "Distance": 4
+    },
+    {
+     "A": "S1611",
+     "B": "S1836",
+     "Distance": 4
+    },
+    {
+     "A": "S1611",
+     "B": "S1836",
+     "Distance": 4
+    },
+    {
+     "A": "S1611",
+     "B": "S1836",
+     "Distance": 4
+    },
+    {
+     "A": "S1611",
+     "B": "S1836",
+     "Distance": 4
+    },
+    {
+     "A": "S1611",
+     "B": "S1836",
+     "Distance": 4
+    },
+    {
+     "A": "S1691",
+     "B": "S1836",
+     "Distance": 4
+    },
+    {
+     "A": "S1691",
+     "B": "S1836",
+     "Distance": 4
+    },
+    {
+     "A": "S2132",
+     "B": "C65536",
+     "Distance": 4
+    }
+   ],
+   "Estimate": {
+    "Seconds": 54.6758726,
+    "Speed": 11000,
+    "Units": 601434.5986
+   },
+   "Exhaustive": false,
+   "Gain": 67.25,
+   "GroupCount": 2,
+   "Label": "STANDARD n=8 G4",
+   "Land": -5.25,
+   "Ok": true,
+   "Placed": 28,
+   "Plan": [
+    {
+     "City": "S1691",
+     "Type": "DISTRICT_DAM",
+     "X": 61,
+     "Y": 22
+    },
+    {
+     "City": "S1836",
+     "Type": "DISTRICT_DAM",
+     "X": 60,
+     "Y": 23
+    },
+    {
+     "City": "S2132",
+     "Type": "DISTRICT_BATH",
+     "X": 60,
+     "Y": 27
+    },
+    {
+     "City": "C65536",
+     "Type": "DISTRICT_BATH",
+     "X": 63,
+     "Y": 27
+    },
+    {
+     "City": "S1395",
+     "Type": "DISTRICT_CAMPUS",
+     "X": 62,
+     "Y": 17
+    },
+    {
+     "City": "S1395",
+     "Type": "DISTRICT_COMMERCIAL_HUB",
+     "X": 62,
+     "Y": 20
+    },
+    {
+     "City": "S1395",
+     "Type": "DISTRICT_INDUSTRIAL_ZONE",
+     "X": 61,
+     "Y": 21
+    },
+    {
+     "City": "S1611",
+     "Type": "DISTRICT_CAMPUS",
+     "X": 58,
+     "Y": 22
+    },
+    {
+     "City": "S1611",
+     "Type": "DISTRICT_COMMERCIAL_HUB",
+     "X": 58,
+     "Y": 21
+    },
+    {
+     "City": "S1611",
+     "Type": "DISTRICT_INDUSTRIAL_ZONE",
+     "X": 60,
+     "Y": 22
+    },
+    {
+     "City": "S1691",
+     "Type": "DISTRICT_CAMPUS",
+     "X": 62,
+     "Y": 23
+    },
+    {
+     "City": "S1691",
+     "Type": "DISTRICT_COMMERCIAL_HUB",
+     "X": 62,
+     "Y": 21
+    },
+    {
+     "City": "S1691",
+     "Type": "DISTRICT_INDUSTRIAL_ZONE",
+     "X": 62,
+     "Y": 22
+    },
+    {
+     "City": "S1768",
+     "Type": "DISTRICT_CAMPUS",
+     "X": 65,
+     "Y": 21
+    },
+    {
+     "City": "S1768",
+     "Type": "DISTRICT_HARBOR",
+     "X": 66,
+     "Y": 22
+    },
+    {
+     "City": "S1768",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 65,
+     "Y": 22
+    },
+    {
+     "City": "S1836",
+     "Type": "DISTRICT_CAMPUS",
+     "X": 59,
+     "Y": 21
+    },
+    {
+     "City": "S1836",
+     "Type": "DISTRICT_COMMERCIAL_HUB",
+     "X": 59,
+     "Y": 22
+    },
+    {
+     "City": "S1836",
+     "Type": "DISTRICT_INDUSTRIAL_ZONE",
+     "X": 61,
+     "Y": 23
+    },
+    {
+     "City": "S1979",
+     "Type": "DISTRICT_CAMPUS",
+     "X": 55,
+     "Y": 25
+    },
+    {
+     "City": "S1979",
+     "Type": "DISTRICT_COMMERCIAL_HUB",
+     "X": 54,
+     "Y": 24
+    },
+    {
+     "City": "S1979",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 56,
+     "Y": 28
+    },
+    {
+     "City": "S2132",
+     "Type": "DISTRICT_CAMPUS",
+     "X": 57,
+     "Y": 27
+    },
+    {
+     "City": "S2132",
+     "Type": "DISTRICT_HARBOR",
+     "X": 60,
+     "Y": 29
+    },
+    {
+     "City": "S2132",
+     "Type": "DISTRICT_INDUSTRIAL_ZONE",
+     "X": 61,
+     "Y": 28
+    },
+    {
+     "City": "C65536",
+     "Type": "DISTRICT_HARBOR",
+     "X": 64,
+     "Y": 26
+    },
+    {
+     "City": "C65536",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 62,
+     "Y": 28
+    },
+    {
+     "City": "C65536",
+     "Type": "DISTRICT_INDUSTRIAL_ZONE",
+     "X": 63,
+     "Y": 28
+    }
+   ],
+   "Selected": [
+    "S1395",
+    "S1611",
+    "S1691",
+    "S1768",
+    "S1836",
+    "S1979",
+    "S2132",
+    "C65536"
+   ],
+   "Step": "Solve",
+   "Tries": 122158,
+   "Truncated": false,
+   "Unplaced": 1,
+   "Wait": 17.56,
+   "AtOnce": true,
+   "Tier": "STANDARD",
+   "N": 8,
+   "Variant": "G4",
+   "SetupSeconds": 0.13,
+   "Groups": {
+    "Groups": [
+     [
+      2,
+      5,
+      6,
+      7
+     ],
+     [
+      1,
+      3,
+      4,
+      8
+     ]
+    ]
+   }
+  },
+  {
+   "Adjacency": 108,
+   "Calls": 19090,
+   "Cities": 12,
+   "CityXY": {
+    "C65536": {
+     "X": 63,
+     "Y": 26
+    },
+    "S1097": {
+     "X": 61,
+     "Y": 14
+    },
+    "S1104": {
+     "X": 68,
+     "Y": 14
+    },
+    "S1240": {
+     "X": 56,
+     "Y": 16
+    },
+    "S1395": {
+     "X": 63,
+     "Y": 18
+    },
+    "S1611": {
+     "X": 57,
+     "Y": 21
+    },
+    "S1691": {
+     "X": 63,
+     "Y": 22
+    },
+    "S1768": {
+     "X": 66,
+     "Y": 23
+    },
+    "S1836": {
+     "X": 60,
+     "Y": 24
+    },
+    "S1979": {
+     "X": 55,
+     "Y": 26
+    },
+    "S2132": {
+     "X": 60,
+     "Y": 28
+    },
+    "S2276": {
+     "X": 56,
+     "Y": 30
+    }
+   },
+   "Cross": [
+    {
+     "A": "S1691",
+     "B": "S1836",
+     "Distance": 4
+    },
+    {
+     "A": "S1691",
+     "B": "S1611",
+     "Distance": 6
+    },
+    {
+     "A": "S1691",
+     "B": "S1836",
+     "Distance": 4
+    },
+    {
+     "A": "S1836",
+     "B": "S1611",
+     "Distance": 4
+    },
+    {
+     "A": "S1097",
+     "B": "S1395",
+     "Distance": 4
+    },
+    {
+     "A": "S1097",
+     "B": "S1395",
+     "Distance": 4
+    },
+    {
+     "A": "S1097",
+     "B": "S1395",
+     "Distance": 4
+    },
+    {
+     "A": "S1691",
+     "B": "S1836",
+     "Distance": 4
+    },
+    {
+     "A": "S1691",
+     "B": "S1836",
+     "Distance": 4
+    },
+    {
+     "A": "S1691",
+     "B": "S1836",
+     "Distance": 4
+    },
+    {
+     "A": "S2132",
+     "B": "C65536",
+     "Distance": 4
+    }
+   ],
+   "Estimate": {
+    "Seconds": 82.01380891,
+    "Speed": 11000,
+    "Units": 902151.898
+   },
+   "Exhaustive": false,
+   "Gain": 90.41666667,
+   "Label": "STANDARD n=12 ALL",
+   "Land": -8.083333333,
+   "Ok": true,
+   "Placed": 40,
+   "Plan": [
+    {
+     "City": "S1691",
+     "Type": "DISTRICT_DAM",
+     "X": 61,
+     "Y": 22
+    },
+    {
+     "City": "S1836",
+     "Type": "DISTRICT_DAM",
+     "X": 60,
+     "Y": 23
+    },
+    {
+     "City": "S2132",
+     "Type": "DISTRICT_BATH",
+     "X": 60,
+     "Y": 27
+    },
+    {
+     "City": "C65536",
+     "Type": "DISTRICT_BATH",
+     "X": 63,
+     "Y": 27
+    },
+    {
+     "City": "S1097",
+     "Type": "DISTRICT_CAMPUS",
+     "X": 62,
+     "Y": 15
+    },
+    {
+     "City": "S1097",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 62,
+     "Y": 16
+    },
+    {
+     "City": "S1097",
+     "Type": "DISTRICT_THEATER",
+     "X": 61,
+     "Y": 15
+    },
+    {
+     "City": "S1104",
+     "Type": "DISTRICT_CAMPUS",
+     "X": 68,
+     "Y": 15
+    },
+    {
+     "City": "S1104",
+     "Type": "DISTRICT_COMMERCIAL_HUB",
+     "X": 66,
+     "Y": 14
+    },
+    {
+     "City": "S1104",
+     "Type": "DISTRICT_THEATER",
+     "X": 67,
+     "Y": 15
+    },
+    {
+     "City": "S1240",
+     "Type": "DISTRICT_CAMPUS",
+     "X": 57,
+     "Y": 16
+    },
+    {
+     "City": "S1240",
+     "Type": "DISTRICT_COMMERCIAL_HUB",
+     "X": 57,
+     "Y": 15
+    },
+    {
+     "City": "S1240",
+     "Type": "DISTRICT_THEATER",
+     "X": 58,
+     "Y": 16
+    },
+    {
+     "City": "S1395",
+     "Type": "DISTRICT_CAMPUS",
+     "X": 61,
+     "Y": 16
+    },
+    {
+     "City": "S1395",
+     "Type": "DISTRICT_COMMERCIAL_HUB",
+     "X": 62,
+     "Y": 18
+    },
+    {
+     "City": "S1395",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 62,
+     "Y": 17
+    },
+    {
+     "City": "S1611",
+     "Type": "DISTRICT_CAMPUS",
+     "X": 58,
+     "Y": 21
+    },
+    {
+     "City": "S1611",
+     "Type": "DISTRICT_COMMERCIAL_HUB",
+     "X": 58,
+     "Y": 22
+    },
+    {
+     "City": "S1611",
+     "Type": "DISTRICT_INDUSTRIAL_ZONE",
+     "X": 60,
+     "Y": 22
+    },
+    {
+     "City": "S1691",
+     "Type": "DISTRICT_CAMPUS",
+     "X": 62,
+     "Y": 23
+    },
+    {
+     "City": "S1691",
+     "Type": "DISTRICT_COMMERCIAL_HUB",
+     "X": 62,
+     "Y": 21
+    },
+    {
+     "City": "S1691",
+     "Type": "DISTRICT_INDUSTRIAL_ZONE",
+     "X": 62,
+     "Y": 22
+    },
+    {
+     "City": "S1768",
+     "Type": "DISTRICT_CAMPUS",
+     "X": 65,
+     "Y": 21
+    },
+    {
+     "City": "S1768",
+     "Type": "DISTRICT_HARBOR",
+     "X": 66,
+     "Y": 22
+    },
+    {
+     "City": "S1768",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 65,
+     "Y": 22
+    },
+    {
+     "City": "S1836",
+     "Type": "DISTRICT_CAMPUS",
+     "X": 62,
+     "Y": 24
+    },
+    {
+     "City": "S1836",
+     "Type": "DISTRICT_COMMERCIAL_HUB",
+     "X": 61,
+     "Y": 24
+    },
+    {
+     "City": "S1836",
+     "Type": "DISTRICT_INDUSTRIAL_ZONE",
+     "X": 61,
+     "Y": 23
+    },
+    {
+     "City": "S1979",
+     "Type": "DISTRICT_CAMPUS",
+     "X": 55,
+     "Y": 25
+    },
+    {
+     "City": "S1979",
+     "Type": "DISTRICT_COMMERCIAL_HUB",
+     "X": 54,
+     "Y": 24
+    },
+    {
+     "City": "S1979",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 56,
+     "Y": 28
+    },
+    {
+     "City": "S2132",
+     "Type": "DISTRICT_HARBOR",
+     "X": 60,
+     "Y": 29
+    },
+    {
+     "City": "S2132",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 57,
+     "Y": 27
+    },
+    {
+     "City": "S2132",
+     "Type": "DISTRICT_INDUSTRIAL_ZONE",
+     "X": 61,
+     "Y": 28
+    },
+    {
+     "City": "S2276",
+     "Type": "DISTRICT_CAMPUS",
+     "X": 57,
+     "Y": 30
+    },
+    {
+     "City": "S2276",
+     "Type": "DISTRICT_HARBOR",
+     "X": 56,
+     "Y": 31
+    },
+    {
+     "City": "S2276",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 54,
+     "Y": 29
+    },
+    {
+     "City": "C65536",
+     "Type": "DISTRICT_HARBOR",
+     "X": 64,
+     "Y": 26
+    },
+    {
+     "City": "C65536",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 62,
+     "Y": 28
+    },
+    {
+     "City": "C65536",
+     "Type": "DISTRICT_INDUSTRIAL_ZONE",
+     "X": 63,
+     "Y": 28
+    }
+   ],
+   "Selected": [
+    "S1097",
+    "S1104",
+    "S1240",
+    "S1395",
+    "S1611",
+    "S1691",
+    "S1768",
+    "S1836",
+    "S1979",
+    "S2132",
+    "S2276",
+    "C65536"
+   ],
+   "Step": "Solve",
+   "Tries": 72270,
+   "Truncated": true,
+   "Unplaced": 2,
+   "Wait": 18.87,
+   "AtOnce": true,
+   "Tier": "STANDARD",
+   "N": 12,
+   "Variant": "ALL",
+   "SetupSeconds": 0.16,
+   "Groups": {
+    "Groups": []
+   }
+  },
+  {
+   "Adjacency": 108,
+   "Calls": 24166,
+   "Cities": 12,
+   "CityXY": {
+    "C65536": {
+     "X": 63,
+     "Y": 26
+    },
+    "S1097": {
+     "X": 61,
+     "Y": 14
+    },
+    "S1104": {
+     "X": 68,
+     "Y": 14
+    },
+    "S1240": {
+     "X": 56,
+     "Y": 16
+    },
+    "S1395": {
+     "X": 63,
+     "Y": 18
+    },
+    "S1611": {
+     "X": 57,
+     "Y": 21
+    },
+    "S1691": {
+     "X": 63,
+     "Y": 22
+    },
+    "S1768": {
+     "X": 66,
+     "Y": 23
+    },
+    "S1836": {
+     "X": 60,
+     "Y": 24
+    },
+    "S1979": {
+     "X": 55,
+     "Y": 26
+    },
+    "S2132": {
+     "X": 60,
+     "Y": 28
+    },
+    "S2276": {
+     "X": 56,
+     "Y": 30
+    }
+   },
+   "Cross": [
+    {
+     "A": "S1691",
+     "B": "S1836",
+     "Distance": 4
+    },
+    {
+     "A": "S1691",
+     "B": "S1395",
+     "Distance": 4
+    },
+    {
+     "A": "S1691",
+     "B": "S1611",
+     "Distance": 6
+    },
+    {
+     "A": "S1691",
+     "B": "S1836",
+     "Distance": 4
+    },
+    {
+     "A": "S1836",
+     "B": "S1611",
+     "Distance": 4
+    },
+    {
+     "A": "S1097",
+     "B": "S1395",
+     "Distance": 4
+    },
+    {
+     "A": "S1395",
+     "B": "S1691",
+     "Distance": 4
+    },
+    {
+     "A": "S1395",
+     "B": "S1691",
+     "Distance": 4
+    },
+    {
+     "A": "S1395",
+     "B": "S1691",
+     "Distance": 4
+    },
+    {
+     "A": "S1691",
+     "B": "S1836",
+     "Distance": 4
+    },
+    {
+     "A": "S1691",
+     "B": "S1836",
+     "Distance": 4
+    },
+    {
+     "A": "S1691",
+     "B": "S1836",
+     "Distance": 4
+    },
+    {
+     "A": "S2132",
+     "B": "C65536",
+     "Distance": 4
+    }
+   ],
+   "Estimate": {
+    "Seconds": 82.01380891,
+    "Speed": 11000,
+    "Units": 902151.898
+   },
+   "Exhaustive": false,
+   "Gain": 91.75,
+   "GroupCount": 3,
+   "Label": "STANDARD n=12 G4",
+   "Land": -7.25,
+   "Ok": true,
+   "Placed": 40,
+   "Plan": [
+    {
+     "City": "S1691",
+     "Type": "DISTRICT_DAM",
+     "X": 61,
+     "Y": 22
+    },
+    {
+     "City": "S1836",
+     "Type": "DISTRICT_DAM",
+     "X": 60,
+     "Y": 23
+    },
+    {
+     "City": "S2132",
+     "Type": "DISTRICT_BATH",
+     "X": 60,
+     "Y": 27
+    },
+    {
+     "City": "C65536",
+     "Type": "DISTRICT_BATH",
+     "X": 63,
+     "Y": 27
+    },
+    {
+     "City": "S1097",
+     "Type": "DISTRICT_CAMPUS",
+     "X": 62,
+     "Y": 15
+    },
+    {
+     "City": "S1097",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 62,
+     "Y": 16
+    },
+    {
+     "City": "S1097",
+     "Type": "DISTRICT_THEATER",
+     "X": 62,
+     "Y": 14
+    },
+    {
+     "City": "S1104",
+     "Type": "DISTRICT_CAMPUS",
+     "X": 68,
+     "Y": 15
+    },
+    {
+     "City": "S1104",
+     "Type": "DISTRICT_COMMERCIAL_HUB",
+     "X": 66,
+     "Y": 14
+    },
+    {
+     "City": "S1104",
+     "Type": "DISTRICT_THEATER",
+     "X": 67,
+     "Y": 15
+    },
+    {
+     "City": "S1240",
+     "Type": "DISTRICT_CAMPUS",
+     "X": 57,
+     "Y": 16
+    },
+    {
+     "City": "S1240",
+     "Type": "DISTRICT_COMMERCIAL_HUB",
+     "X": 57,
+     "Y": 15
+    },
+    {
+     "City": "S1240",
+     "Type": "DISTRICT_THEATER",
+     "X": 58,
+     "Y": 16
+    },
+    {
+     "City": "S1395",
+     "Type": "DISTRICT_CAMPUS",
+     "X": 62,
+     "Y": 17
+    },
+    {
+     "City": "S1395",
+     "Type": "DISTRICT_COMMERCIAL_HUB",
+     "X": 62,
+     "Y": 20
+    },
+    {
+     "City": "S1395",
+     "Type": "DISTRICT_INDUSTRIAL_ZONE",
+     "X": 61,
+     "Y": 21
+    },
+    {
+     "City": "S1611",
+     "Type": "DISTRICT_CAMPUS",
+     "X": 58,
+     "Y": 21
+    },
+    {
+     "City": "S1611",
+     "Type": "DISTRICT_COMMERCIAL_HUB",
+     "X": 58,
+     "Y": 22
+    },
+    {
+     "City": "S1611",
+     "Type": "DISTRICT_INDUSTRIAL_ZONE",
+     "X": 60,
+     "Y": 22
+    },
+    {
+     "City": "S1691",
+     "Type": "DISTRICT_CAMPUS",
+     "X": 62,
+     "Y": 23
+    },
+    {
+     "City": "S1691",
+     "Type": "DISTRICT_COMMERCIAL_HUB",
+     "X": 62,
+     "Y": 21
+    },
+    {
+     "City": "S1691",
+     "Type": "DISTRICT_INDUSTRIAL_ZONE",
+     "X": 62,
+     "Y": 22
+    },
+    {
+     "City": "S1768",
+     "Type": "DISTRICT_HARBOR",
+     "X": 66,
+     "Y": 22
+    },
+    {
+     "City": "S1768",
+     "Type": "DISTRICT_THEATER",
+     "X": 65,
+     "Y": 23
+    },
+    {
+     "City": "S1768",
+     "Type": "DISTRICT_WATER_ENTERTAINMENT_COMPLEX",
+     "X": 66,
+     "Y": 24
+    },
+    {
+     "City": "S1836",
+     "Type": "DISTRICT_CAMPUS",
+     "X": 62,
+     "Y": 24
+    },
+    {
+     "City": "S1836",
+     "Type": "DISTRICT_COMMERCIAL_HUB",
+     "X": 61,
+     "Y": 24
+    },
+    {
+     "City": "S1836",
+     "Type": "DISTRICT_INDUSTRIAL_ZONE",
+     "X": 61,
+     "Y": 23
+    },
+    {
+     "City": "S1979",
+     "Type": "DISTRICT_CAMPUS",
+     "X": 55,
+     "Y": 25
+    },
+    {
+     "City": "S1979",
+     "Type": "DISTRICT_COMMERCIAL_HUB",
+     "X": 54,
+     "Y": 24
+    },
+    {
+     "City": "S1979",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 56,
+     "Y": 28
+    },
+    {
+     "City": "S2132",
+     "Type": "DISTRICT_HARBOR",
+     "X": 60,
+     "Y": 29
+    },
+    {
+     "City": "S2132",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 57,
+     "Y": 27
+    },
+    {
+     "City": "S2132",
+     "Type": "DISTRICT_INDUSTRIAL_ZONE",
+     "X": 61,
+     "Y": 28
+    },
+    {
+     "City": "S2276",
+     "Type": "DISTRICT_CAMPUS",
+     "X": 57,
+     "Y": 30
+    },
+    {
+     "City": "S2276",
+     "Type": "DISTRICT_HARBOR",
+     "X": 56,
+     "Y": 31
+    },
+    {
+     "City": "S2276",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 54,
+     "Y": 29
+    },
+    {
+     "City": "C65536",
+     "Type": "DISTRICT_HARBOR",
+     "X": 64,
+     "Y": 26
+    },
+    {
+     "City": "C65536",
+     "Type": "DISTRICT_HOLY_SITE",
+     "X": 62,
+     "Y": 28
+    },
+    {
+     "City": "C65536",
+     "Type": "DISTRICT_INDUSTRIAL_ZONE",
+     "X": 63,
+     "Y": 28
+    }
+   ],
+   "Selected": [
+    "S1097",
+    "S1104",
+    "S1240",
+    "S1395",
+    "S1611",
+    "S1691",
+    "S1768",
+    "S1836",
+    "S1979",
+    "S2132",
+    "S2276",
+    "C65536"
+   ],
+   "Step": "Solve",
+   "Tries": 173489,
+   "Truncated": false,
+   "Unplaced": 2,
+   "Wait": 49.53,
+   "AtOnce": true,
+   "Tier": "STANDARD",
+   "N": 12,
+   "Variant": "G4",
+   "SetupSeconds": 0.17,
+   "Groups": {
+    "Groups": [
+     [
+      1,
+      2,
+      4,
+      6
+     ],
+     [
+      3,
+      5,
+      8,
+      9
+     ],
+     [
+      7,
+      10,
+      11,
+      12
+     ]
+    ]
+   }
+  }
+ ]
+}

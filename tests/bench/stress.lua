@@ -188,14 +188,15 @@ function S.Single(cityID, mode, tier, twice)
 end
 
 -- City sites: K sites within D of the empire, scored with five districts.
-function S.Sites(k, d, tier)
+function S.Sites(k, d, tier, dense)
   local districts = {}
   for _, base in ipairs({ "DISTRICT_CAMPUS", "DISTRICT_HOLY_SITE", "DISTRICT_COMMERCIAL_HUB", "DISTRICT_THEATER",
     "DISTRICT_INDUSTRIAL_ZONE" }) do
     local t = Own(base)
     if t ~= nil then districts[#districts + 1] = t end
   end
-  local r = SDP_SiteSolver.Solve({ PlayerID = pid, Tier = tier, K = k, D = d, Districts = districts, PlanCount = 3 })
+  local r = SDP_SiteSolver.Solve({ PlayerID = pid, Tier = tier, K = k, D = d, Districts = districts, PlanCount = 3,
+    Dense = dense == true })
   local sites = (r.Ok and r.Solutions[1] and r.Solutions[1].Sites) or {}
   S.LastSites = sites
   Emit({ Step = "Sites", Ok = r.Ok == true, Error = r.Error and tostring(r.Error) or nil, Tier = tier, K = k, D = d,
