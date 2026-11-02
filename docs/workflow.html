@@ -463,7 +463,7 @@ footer { margin-top: 64px; border-top: 1px solid var(--line); padding-top: 16px;
   <ol class="steps">
     <li>里程碑里的 Issue 都合并后开始。发版前测试：三种规则集的游戏内测试；界面或文字改了加英文界面，界面改了加真实点击和中英截图；压力测试（只改界面的版本不跑）。占屏幕的进夜间队列；求解器或合法性改了再跑离线对比，放第二台机器。</li>
     <li><code>release.py prep</code> 改版本号，起草更新说明，再改成英文在前、中文在后、写给玩家的话。</li>
-    <li>功能或限制变了，同步改 README、创意工坊简介、介绍页；自测报告写这一轮。</li>
+    <li>每一版都按 CHANGELOG 逐条查对外文档：README、安装说明、测试者说明、创意工坊简介和示意图、介绍页、同类模组对照表、悬停提示里还在说旧做法、旧数字的地方都改掉，PR 里逐条写改了哪些；自测报告写这一轮。</li>
     <li>开一个发版准备的 PR，CI 过了自动合并。</li>
     <li><code>release.py publish</code> 发 GitHub Release。CI 打出模组压缩包和创意工坊提交包，把介绍页和本页发布到 GitHub Pages。</li>
     <li><code>release.py workshop</code> 用 SteamCMD 上传，再下载回来逐字节比对（也可由合作者在 Windows 上传）。简体中文的标题、简介和图片在物品页上改。</li>
