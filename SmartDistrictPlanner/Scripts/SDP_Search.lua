@@ -1478,6 +1478,7 @@ end
 -- pass instead of the best. Returns the local optimum and its value.
 function Search:LocalSearch(layout, gain, active)
   local k, n, legal, params, stats = self.K, self.N, self.Legal, self.Params, self.Stats
+  active = active or self.Active -- SDP_Multi's group in focus (issue 142); nil: all slots
   local adjacent, touching = self:Touching()
   local candidates, at, board = self.Candidates, self.CandidateAt, self.Board
   local first = params.Improve == "first"
@@ -1603,6 +1604,7 @@ end
 function Search:Kicks(count, state)
   state = state or self
   local k, n, legal, candidates = self.K, self.N, self.Legal, self.Candidates
+  local focus = self.Active -- only these slots are ruined (SDP_Multi's group in focus); nil: all
   local _, touching = self:Touching()
   state.KickIndex = state.KickIndex or 0
   state.KicksWithout = state.KicksWithout or 0
@@ -1618,8 +1620,11 @@ function Search:Kicks(count, state)
     -- (the others are candidates left out).
     local cycleSlots = {}
     for m = 1, k do
-      if not self:HasPools() or state.BestLayout[m] ~= 0 then cycleSlots[#cycleSlots + 1] = m end
+      if (not self:HasPools() or state.BestLayout[m] ~= 0) and (focus == nil or focus[m]) then
+        cycleSlots[#cycleSlots + 1] = m
+      end
     end
+    if focus ~= nil and #cycleSlots == 0 then return end
     local kk = math.max(1, #cycleSlots)
     local pos = (state.KickIndex - 1) % kk + 1
     local seed = cycleSlots[pos] or 1
@@ -1636,7 +1641,8 @@ function Search:Kicks(count, state)
     end
     for _, sd in ipairs(seeds) do
       for m = 1, k do
-        if not isRemoved[m] and layout[m] ~= 0 and layout[sd] ~= 0 and Near(layout[m], layout[sd], range) then
+        if not isRemoved[m] and layout[m] ~= 0 and layout[sd] ~= 0 and (focus == nil or focus[m])
+            and Near(layout[m], layout[sd], range) then
           removed[#removed + 1], isRemoved[m] = m, true
         end
       end
@@ -2051,7 +2057,7 @@ function Search:TypeSwaps(layout, gain)
   local best = nil
   for _, g in ipairs(self.PoolGroups) do
     if self:OverBudget() then break end
-    local move = self:SwapMoves(g, layout)[1]
+    local move = (self.ActiveGroups == nil or self.ActiveGroups[g]) and self:SwapMoves(g, layout)[1] or nil
     if move ~= nil and move.Gain > gain and (best == nil or move.Gain > best.Gain) then best = move end
   end
   if best == nil then return nil end

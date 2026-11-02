@@ -63,16 +63,31 @@ test("participants: city-center pins, cities near them, switches", function()
   local keys = {}
   for _, p in ipairs(switched) do keys[#keys + 1] = p.Key end
   T.same(keys, { "S" .. Map.GetPlotIndex(9, 6), "S" .. Map.GetPlotIndex(13, 9), "C1", "C3" }, "switches")
-  local cap = SDP_Multi.MAX_CITIES
-  SDP_Multi.MAX_CITIES = 3
-  local capped, all = SDP_Multi.Participants(0)
-  SDP_Multi.MAX_CITIES = cap
-  T.eq(#capped, 3, "cap")
-  T.eq(capped[3].CityID, 1, "the nearest existing city is kept")
-  for _, e in ipairs(all) do
-    if e.CityID == 2 then T.eq(e.Reason, "CAP", "the other is left out") end
-  end
+  -- No cap (issue 142: before, at most 8): every city switched on takes part.
+  local all = SDP_Multi.Participants(0, { Existing = { [1] = true, [2] = true, [3] = true } })
+  T.eq(#all, 5, "two sites and all three cities")
 end)
+
+-- Participants at given plots, for SDP_Multi.Groups.
+local function At(points)
+  local list = {}
+  for p, xy in ipairs(points) do list[p] = { Key = "P" .. p, X = xy[1], Y = xy[2] } end
+  return list
+end
+
+test("groups (issue 142): nearby cities together, sizes even, the edges first", function()
+  World.New({ rows = MAP })
+  -- Two clusters of three along the map, a city between them.
+  local parts = At({ { 2, 2 }, { 4, 3 }, { 2, 5 }, { 10, 3 }, { 17, 2 }, { 19, 4 }, { 17, 6 } })
+  local groups = SDP_Multi.Groups(parts, 4)
+  T.same(groups, { { 1, 2, 3, 4 }, { 5, 6, 7 } }, "an edge first; the middle city joins the nearer cluster")
+  T.same(SDP_Multi.Groups(parts, 4), groups, "same input, same groups")
+  T.same(SDP_Multi.Groups(parts, 7), { { 1, 2, 3, 4, 5, 6, 7 } }, "few enough: one group")
+  local sizes = {}
+  for g, group in ipairs(SDP_Multi.Groups(parts, 3)) do sizes[g] = #group end
+  T.same(sizes, { 3, 2, 2 }, "seven in threes: 3, 2, 2 rather than 3, 3, 1")
+end)
+
 
 test("a new city cannot use plots of existing cities", function()
   local w = NewWorld()
@@ -755,4 +770,37 @@ test("plans: the plans taken are ranked after untangling (issue 189)", function(
   stub.Swapped = nil
   local unsorted = { { Name = "B", Layout = { 1, 2, 4 }, Gain = 4 }, { Name = "A", Layout = { 1, 2, 3 }, Gain = 5 } }
   T.eq(Order(Pick(stub, unsorted, 3)), "A B", "without swaps: ranked too")
+end)
+
+test("groups (issue 142): more cities than GroupSize are planned group by group", function()
+  NewWorld()
+  local everyone = { [1] = true, [2] = true, [3] = true }
+  local two = { "DISTRICT_CAMPUS", "DISTRICT_HOLY_SITE", "DISTRICT_COMMERCIAL_HUB" }
+  local grouped = SDP_Multi.Solve(Request({ Districts = two, Existing = everyone, Params = { GroupSize = 2 } }))
+  T.ok(grouped.Ok, tostring(grouped.Error))
+  T.eq(grouped.Stats.Groups, 3, "five cities in groups of two at most: three groups")
+  T.ok(not grouped.Stats.Mismatch, "incremental and full evaluation agree")
+  T.ok(grouped.Gain >= grouped.FirstGain - 1e-9, "not worse than city by city")
+  T.eq(#grouped.Plan, 5 * 3, "every city got its districts")
+  local used = {}
+  for _, p in ipairs(grouped.Plan) do
+    T.ok(not used[p.Index], "plot used twice")
+    used[p.Index] = true
+  end
+  local again = SDP_Multi.Solve(Request({ Districts = two, Existing = everyone, Params = { GroupSize = 2 } }))
+  T.same(again.Plan, grouped.Plan, "same request, same plan")
+  -- One pass more only adds starts from the best plan so far.
+  local one = SDP_Multi.Solve(Request({ Districts = two, Existing = everyone, Params = { GroupSize = 2, GroupPasses = 1 } }))
+  T.ok(grouped.Gain >= one.Gain - 1e-9, "a second pass is never worse")
+  -- Up to GroupSize cities: one search as before, no groups.
+  local together = SDP_Multi.Solve(Request({ Districts = two, Existing = everyone, Params = { GroupSize = 5 } }))
+  T.eq(together.Stats.Groups, nil, "five cities, GroupSize 5: no groups")
+  -- Continue: one more pass over the groups, never worse.
+  local more = SDP_Multi.Continue(grouped)
+  T.ok(more.Ok and more.Gain >= grouped.Gain - 1e-9, "continue is never worse")
+  T.eq(more.Stats.Continues, 1, "one continue")
+  -- The estimate grows with the groups.
+  local params = SDP_Tiers.Params(SDP_Tiers.Multi, "STANDARD")
+  T.ok(SDP_Multi.EstimateUnits(16, 3, 0, params) > SDP_Multi.EstimateUnits(8, 3, 0, params), "16 cities above 8")
+  T.ok(SDP_Multi.EstimateUnits(16, 3, 0, params) < 3 * SDP_Multi.EstimateUnits(8, 3, 0, params), "about in proportion")
 end)

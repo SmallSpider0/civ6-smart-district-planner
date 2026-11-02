@@ -13,12 +13,20 @@ the capital, the other cities and the pins by distance from the capital, then
          city (each group's plan tacked before the next, as a player who
          plans a few cities at a time would); the tacks are undone after.
 
+  many   (--many, issue 142) for each n in --sizes (e.g. 8,12,16) the n
+         nearest, solved at once with each of --variants: ALL (one search,
+         no groups), G<size>[P<passes>] (groups of nearby cities; plain G4 is
+         the default GROUP_SIZE and GROUP_PASSES); written to
+         multi_size-NAME-many.json. Also times setting up the search alone
+         (the scans before the first slice of a solve over frames).
+
 Every city picks `--count` districts from the default pool (all specialty
 districts without an empire limit), land part on, reminder pins off.
 Changes the game in memory only (pins; do not save). Results are written to
 tests/bench/results/multi_size-NAME.json.
 
     python3 -I tests/bench/multi_size.py NAME [--sites 3] [--max 8] [--count 3] [--tiers FAST,STANDARD,FINE]
+    python3 -I tests/bench/multi_size.py NAME --many --sizes 8,12,16 --variants ALL,G4 --tiers STANDARD
 """
 import argparse
 import json
@@ -89,6 +97,9 @@ def main(argv=None):
     ap.add_argument("--group-tiers", default="STANDARD")
     ap.add_argument("--skip-grid", action="store_true")
     ap.add_argument("--frames", action="store_true")
+    ap.add_argument("--many", action="store_true", help="issue 142: groups against one search")
+    ap.add_argument("--sizes", default="8,12,16")
+    ap.add_argument("--variants", default="ALL,G4")
     args = ap.parse_args(argv)
 
     with open(os.path.join(ROOT, "tests", "bench", "stress.lua"), encoding="utf-8") as fh:
@@ -104,6 +115,9 @@ def main(argv=None):
     record = {"Name": args.name, "Count": args.count, "Order": order, "Grid": [], "Groups": []}
     os.makedirs(RESULTS, exist_ok=True)
     path = os.path.join(RESULTS, "multi_size-%s.json" % args.name)
+    if args.many:
+        many(args, order, os.path.join(RESULTS, "multi_size-%s-many.json" % args.name))
+        return
 
     def save():
         with open(path, "w", encoding="utf-8") as fh:
@@ -139,6 +153,36 @@ def main(argv=None):
             print("  %s groups of %d: %s" % (tier, size, total), flush=True)
             record["Groups"].append({"Tier": tier, "Size": size, "N": n_max, "Total": total, "Runs": groups})
             save()
+    print("written", path)
+
+
+def many(args, order, path):
+    """Issue 142: the n nearest cities in one search or in groups."""
+    record = {"Name": args.name, "Count": args.count, "Order": order, "Many": []}
+    for tier in args.tiers.split(","):
+        for n in [int(x) for x in args.sizes.split(",")]:
+            if n > len(order["List"]):
+                print("  only %d cities and pins: skip n=%d" % (len(order["List"]), n))
+                continue
+            for variant in args.variants.split(","):
+                if variant == "ALL":
+                    params = "{ GroupSize = 9999 }"
+                else:
+                    size, _, passes = variant[1:].partition("P")
+                    params = "{ GroupSize = %d%s }" % (int(size), ", GroupPasses = %d" % int(passes) if passes else "")
+                run('SDP_MultiSize.Setup("%s", %d); SDP_MultiSize.Select(1, %d); SDP_MultiSize.Params = %s'
+                    % (tier, args.count, n, params))
+                started = time.monotonic()
+                setup = run("SDP_MultiSize.SetupOnly()", timeout=600)
+                setup_seconds = time.monotonic() - started
+                data = solve("%s n=%d %s" % (tier, n, variant), timeout=3600)
+                data.update({"Tier": tier, "N": n, "Variant": variant, "SetupSeconds": round(setup_seconds, 2),
+                             "Groups": emitted(setup, "SDP_MSETUP ")})
+                print("    setup alone %.2fs" % setup_seconds, flush=True)
+                record["Many"].append(data)
+                with open(path, "w", encoding="utf-8") as fh:
+                    json.dump(record, fh, ensure_ascii=False, indent=1)
+    run("SDP_MultiSize.Params = nil")
     print("written", path)
 
 

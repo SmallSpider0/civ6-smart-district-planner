@@ -590,6 +590,31 @@ end
 WonderCities("HW", 31000)
 WonderCities("FW", 32000)
 
+-- Many cities settled densely (issue 142): 8 to 24 of the player's cities,
+-- each 4 or 5 plots from another, so every city touches the next and they
+-- form one block (as players who settle densely do). Every city wants a
+-- Campus, a Theater Square and a Commercial Hub; nothing built yet. A 40 x 32
+-- map. No runs by default: only with --add (the "all cities" comparison).
+local MANY = {
+  { "rome", "temperate", 8 }, { "japan", "temperate", 8 }, { "korea", "highland", 8 },
+  { "rome", "temperate", 12 }, { "japan", "temperate", 12 }, { "korea", "highland", 12 },
+  { "rome", "temperate", 16 }, { "japan", "temperate", 16 }, { "korea", "highland", 16 },
+  { "germany", "temperate", 24 },
+}
+for n, entry in ipairs(MANY) do
+  local civKey, biome, count = entry[1], entry[2], entry[3]
+  local civ = CIVS[civKey]
+  local built = {}
+  for c = 1, count do built[c] = {} end
+  Add({
+    id = string.format("XM%02d-%s-%s-%dc", n, civKey, biome, count), kind = "multi", title = civ[3] .. "; dense",
+    seed = 89000 + 37 * n, biome = biome, civKey = civKey, civ = civ[1], leader = civ[2], stage = "mid",
+    cities = count, dense = 5, width = 40, height = 32,
+    districts = { "DISTRICT_CAMPUS", "DISTRICT_THEATER", "DISTRICT_COMMERCIAL_HUB" }, built = built,
+    population = 10, samePopulation = true, set = "XM", runs = {},
+  })
+end
+
 CmpScenarios.List = list
 CmpScenarios.ById = byId
 CmpScenarios.Runs = Runs -- for the scenes cmp_lib adds from files

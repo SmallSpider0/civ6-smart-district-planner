@@ -6,8 +6,10 @@
 --             default the centre (the city selected on the map when the
 --             panel opened, else the capital) and the nearest ones joined
 --             to it within NEAR plots, at most DEFAULT_CITIES
---             (SDP_Multi.DefaultGroup, issue 63); "clear all" and "default"
---             buttons; at most MAX_CITIES at once.
+--             (SDP_Multi.DefaultGroup, issue 63); "all cities", "clear all"
+--             and "default" buttons. Any number of cities: more than
+--             SDP_Multi.GROUP_SIZE are planned in groups of nearby cities
+--             (issue 142).
 --   Plans     one district list for every city, or a city's own list (the
 --             "plan for" pulldown; role templates from SDP_Rules.Templates).
 --             A list gives each district a state (required, candidate, off,
@@ -469,7 +471,17 @@ function P.SetCenter(cityID)
   end)
 end
 
--- The two buttons over the chips: every city and pin off; the default group.
+-- The buttons over the chips: every city and pin on (issue 142); every city
+-- and pin off; the default group.
+function P.AllCities()
+  ChangeCities(function()
+    local _, _, group = Choice()
+    for _, e in ipairs(group.Order) do
+      if e.Kind == "CITY" then m_existing[e.CityID] = true else m_sites[e.Key] = true end
+    end
+  end)
+end
+
 function P.ClearCities()
   ChangeCities(function()
     local _, _, group = Choice()
@@ -661,7 +673,6 @@ function P.RefreshCities()
   for _, site in ipairs(siteList) do siteOf[site.Key] = site end
   for _, part in ipairs(participants) do taking[part.Key] = true end
   local numbers = SDP_City.CityNumbers(playerID)
-  local full = #participants >= SDP_Multi.MAX_CITIES
   local labels = {}
   for _, e in ipairs(group.Order) do
     if e.Kind == "SITE" then
@@ -691,24 +702,20 @@ function P.RefreshCities()
     local city = e.Kind == "CITY" and cityOf[e.CityID] or nil
     if on then
       lines[#lines + 1] = Locale.Lookup("LOC_SDP_MULTI_TAKES_PART")
-    elseif city ~= nil and city.Reason == "CAP" then
-      lines[#lines + 1] = Locale.Lookup("LOC_SDP_MULTI_CAP", SDP_Multi.MAX_CITIES)
     else
       lines[#lines + 1] = Locale.Lookup("LOC_SDP_MULTI_NEIGHBOUR_ONLY")
     end
     if on and m_plans[key] ~= nil then lines[#lines + 1] = Locale.Lookup("LOC_SDP_MULTI_OWN_PLAN") end
-    local disabled = full and not on
-    local hint = disabled and Locale.Lookup("LOC_SDP_MULTI_FULL", SDP_Multi.MAX_CITIES)
-      or Locale.Lookup(e.Kind == "SITE" and "LOC_SDP_MULTI_SITE_TOOLTIP" or "LOC_SDP_MULTI_CITY_TOOLTIP")
-    ShowChip(inst, labels[key], on, disabled, table.concat(lines, "[NEWLINE]") .. "[NEWLINE][NEWLINE]" .. hint)
+    local hint = Locale.Lookup(e.Kind == "SITE" and "LOC_SDP_MULTI_SITE_TOOLTIP" or "LOC_SDP_MULTI_CITY_TOOLTIP")
+    ShowChip(inst, labels[key], on, false, table.concat(lines, "[NEWLINE]") .. "[NEWLINE][NEWLINE]" .. hint)
     local view = { Key = key, Kind = e.Kind, Included = on, Center = e == group.Center, Default = false,
-      Chip = inst.Root, Disabled = disabled }
+      Chip = inst.Root, Disabled = false }
     if e.Kind == "SITE" then
       view.Default = group.Sites[key] == true
       inst.Root:RegisterCallback(Mouse.eLClick, function() P.SetSite(key, not on) end)
     else
       local cityID = e.CityID
-      view.CityID, view.On, view.Reason, view.Default = cityID, city.On, city.Reason, group.Cities[cityID] == true
+      view.CityID, view.On, view.Default = cityID, city.On, group.Cities[cityID] == true
       inst.Root:RegisterCallback(Mouse.eLClick, function() P.SetExisting(cityID, not city.On) end)
     end
     m_view.Cities[#m_view.Cities + 1] = view
@@ -719,6 +726,7 @@ function P.RefreshCities()
   for _, view in ipairs(m_view.Cities) do
     if view.Included ~= view.Default then default = false end
   end
+  Controls.MultiCityAll:SetDisabled(#participants == #m_view.Cities)
   Controls.MultiCityClear:SetDisabled(#participants == 0)
   Controls.MultiCityDefault:SetDisabled(default)
   m_view.Center = group.Center and group.Center.Key or nil
@@ -1134,6 +1142,7 @@ function P.State()
   }
 end
 
+Controls.MultiCityAll:RegisterCallback(Mouse.eLClick, function() P.AllCities() end)
 Controls.MultiCityClear:RegisterCallback(Mouse.eLClick, function() P.ClearCities() end)
 Controls.MultiCityDefault:RegisterCallback(Mouse.eLClick, function() P.DefaultCities() end)
 Controls.MultiSwapCheck:RegisterCheckHandler(function() P.SetSwap(Controls.MultiSwapCheck:IsChecked()) end)

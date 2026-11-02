@@ -2,7 +2,8 @@
 -- follows the city selected on the map when it opens; the default group is
 -- that city (else the capital) and the nearest cities and city-center pins
 -- joined to it within NEAR plots, at most DEFAULT_CITIES; the list is a grid
--- of chips with "clear all" and "default" buttons, at most MAX_CITIES on.
+-- of chips with "all cities", "clear all" and "default" buttons; any number
+-- on (issue 142: before, at most 8).
 -- Everything goes through the controls' own callbacks (Click).
 local test, T = ...
 
@@ -25,8 +26,8 @@ local MAP = {
   "~~~~~~~~~~~~~~~~~~~~~~",
 }
 
--- Four cities and five city-center pins: nine in all, one more than can
--- take part at once.
+-- Four cities and five city-center pins: nine in all (before issue 142, one
+-- more than could take part at once).
 local CITIES = {
   { id = 1, x = 4, y = 5, population = 6, capital = true, radius = 1 },
   { id = 2, x = 8, y = 3, population = 4, radius = 1 },
@@ -337,22 +338,25 @@ test("chips: a click switches a city or a pin; clear all; default", function()
   SDP_Panel.Close()
 end)
 
-test("chips: at most MAX_CITIES on; the others cannot be switched on", function()
+test("chips: all cities (issue 142): every city and pin on, none dimmed, all in the request", function()
   SDP_Panel.Open()
   SDP_Panel.SelectTab("MULTI")
   multi.DefaultCities()
+  T.ok(not UI_Mock.Controls.MultiCityAll:IsDisabled(), "some are off: the button can be used")
+  UI_Mock.Controls.MultiCityAll:Click()
+  T.eq(#multi.Participants(), #CITIES + #PINS, "nine on, more than the old cap of eight")
   for _, c in ipairs(multi.State().View.Cities) do
-    if not Chip(c.Key).Included and not Chip(c.Key).Disabled then Chip(c.Key).Chip:Click() end
+    T.eq(c.Included, true, c.Key .. " on")
+    T.eq(c.Disabled, false, c.Key .. " not dimmed")
   end
-  T.eq(#multi.Participants(), SDP_Multi.MAX_CITIES, "eight on")
-  local last
-  for _, c in ipairs(multi.State().View.Cities) do
-    if not c.Included then last = c end
-  end
-  T.ok(last ~= nil and last.Disabled, "the ninth is dimmed")
-  T.ok(last.Chip:GetToolTipString():find("LOC_SDP_MULTI_FULL", 1, true), "and says why")
-  last.Chip:Click()
-  T.eq(#multi.Participants(), SDP_Multi.MAX_CITIES, "a click on it changes nothing")
+  T.ok(UI_Mock.Controls.MultiCityAll:IsDisabled(), "all on: nothing left to add")
+  T.ok(not UI_Mock.Controls.MultiCityDefault:IsDisabled(), "not the default")
+  -- A chip still switches one off and on again.
+  local key = multi.State().View.Cities[1].Key
+  Chip(key).Chip:Click()
+  T.eq(#multi.Participants(), #CITIES + #PINS - 1, "one off by a click")
+  T.ok(not UI_Mock.Controls.MultiCityAll:IsDisabled(), "one off: the button can be used again")
+  Chip(key).Chip:Click()
   -- The request names every city and pin, so the solver sees the same cities.
   multi.SetSelected("DISTRICT_CAMPUS", true)
   local request = multi.Request()
@@ -361,7 +365,25 @@ test("chips: at most MAX_CITIES on; the others cannot be switched on", function(
   for _, part in ipairs(parts) do keys[#keys + 1] = part.Key end
   table.sort(keys)
   T.same(keys, Taking(), "the request's cities are the chips' cities")
+  T.eq(#keys, #CITIES + #PINS, "all nine")
+  -- Solved through the button: more than GROUP_SIZE cities, so in groups of
+  -- nearby cities; every one gets its district, one per plot.
+  multi.SetTier("FAST")
+  UI_Mock.Controls.MultiSolveButton:Click()
+  SDP_Panel.RunTask(5000)
+  local result = multi.State().Result
+  T.ok(result and result.Ok, "solved: " .. tostring(result and result.Error))
+  T.eq(result.Stats.Groups, math.ceil((#CITIES + #PINS) / SDP_Multi.GROUP_SIZE), "in groups")
+  T.ok(not result.Stats.Mismatch, "board and full evaluation agree")
+  T.ok(result.Gain >= result.FirstGain - 1e-9, "not worse than city by city")
+  local used, cities = {}, {}
+  for _, p in ipairs(result.Plan) do
+    T.ok(not used[p.Index], "plot used twice")
+    used[p.Index], cities[p.City] = true, true
+  end
+  for _, key in ipairs(keys) do T.ok(cities[key], key .. " has its Campus") end
   multi.SetSelected("DISTRICT_CAMPUS", false)
+  multi.SetTier("STANDARD")
   multi.DefaultCities()
   SDP_Panel.Close()
 end)
