@@ -843,6 +843,37 @@ function World.New(spec)
     return list
   end
 
+  -- Rivers: the river plots joined through their neighbours, numbered from
+  -- 0 in plot order; a river's floodplains are its plots with floodplains.
+  -- RiverOf(plot) is the river of a floodplain plot, or -1.
+  local riverId
+  local function RiverOf(plot)
+    if riverId == nil then
+      riverId = {}
+      local count = 0
+      for index = 0, width * height - 1 do
+        local start = byIndex[index]
+        if start ~= nil and start.river and riverId[start] == nil then
+          local queue, head = { start }, 1
+          riverId[start] = count
+          while queue[head] ~= nil do
+            local p = queue[head]
+            head = head + 1
+            for _, n in ipairs(Neighbours(p.x, p.y)) do
+              if n.river and riverId[n] == nil then
+                riverId[n] = count
+                queue[#queue + 1] = n
+              end
+            end
+          end
+          count = count + 1
+        end
+      end
+    end
+    if plot == nil or plot.feature == nil or plot.feature.FeatureType ~= "FEATURE_FLOODPLAINS" then return -1 end
+    return riverId[plot] or -1
+  end
+
   local function AdjacentTo(pid, x, y, districtType)
     for _, n in ipairs(Neighbours(x, y)) do
       local d = Realized(pid, n).district
@@ -892,6 +923,17 @@ function World.New(spec)
       if subject.Key == "DISTRICT_DAM" and not (plot.river and plot.feature ~= nil
           and plot.feature.FeatureType == "FEATURE_FLOODPLAINS") then
         return false, "dam"
+      end
+      -- One dam per river, built or planned (DMT's IsValidDamPosition reads
+      -- the other floodplains of the river through GetMapPinSubject).
+      if subject.Key == "DISTRICT_DAM" then
+        local river = RiverOf(plot)
+        for index = 0, width * height - 1 do
+          local p = byIndex[index]
+          if p ~= nil and p ~= plot and RiverOf(p) == river and Realized(pid, p).district == "DISTRICT_DAM" then
+            return false, "one dam per river"
+          end
+        end
       end
       if row.Aqueduct then
         local ok = false
@@ -1046,6 +1088,7 @@ function World.New(spec)
 
   sdp_install_globals({
     Map = Map,
+    RiverManager = { GetRiverForFloodplain = function(x, y) return RiverOf(GetPlot(x, y)) end },
     GameInfo = gi,
     GlobalParameters = { CITY_MIN_RANGE = spec.cityMinRange or 3, CITY_POPULATION_RIVER_LAKE = 5,
       CITY_POPULATION_COAST = 3, CITY_POPULATION_NO_WATER = 2 },

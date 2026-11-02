@@ -804,3 +804,29 @@ test("groups (issue 142): more cities than GroupSize are planned group by group"
   T.ok(SDP_Multi.EstimateUnits(16, 3, 0, params) > SDP_Multi.EstimateUnits(8, 3, 0, params), "16 cities above 8")
   T.ok(SDP_Multi.EstimateUnits(16, 3, 0, params) < 3 * SDP_Multi.EstimateUnits(8, 3, 0, params), "about in proportion")
 end)
+
+test("one dam per river: two cities on one river plan one dam (issue 142)", function()
+  -- DMT refuses a second dam on a river's floodplains, built or planned
+  -- (Districts_XP2.OnePerRiver). The board remembers legality per plot, so
+  -- the search itself has to keep two planned dams off one river.
+  local function Dams(rows, rivers)
+    World.New({ rows = rows, rivers = rivers, cities = {
+      { id = 1, x = 2, y = 3, population = 6, capital = true, radius = 1 },
+      { id = 2, x = 9, y = 3, population = 6, radius = 1 },
+    } })
+    local result = SDP_Multi.Solve(Request({ Districts = { "DISTRICT_DAM" }, Existing = { [1] = true, [2] = true } }))
+    T.ok(result.Ok, tostring(result.Error))
+    T.ok(not result.Stats.Mismatch, "incremental and full evaluation agree")
+    local dams = 0
+    for _, p in ipairs(result.Plan) do
+      if p.Type == "DISTRICT_DAM" then dams = dams + 1 end
+    end
+    return dams
+  end
+  local one = Dams({ "~~~~~~~~~~~~", "~..........~", "~...FF.....~", "~....FF....~", "~..........~", "~..........~", "~~~~~~~~~~~~" },
+    { "4,2", "5,2", "5,3", "6,3" })
+  T.eq(one, 1, "one river: one dam")
+  local two = Dams({ "~~~~~~~~~~~~", "~..........~", "~...FF.....~", "~..........~", "~.....FF...~", "~..........~", "~~~~~~~~~~~~" },
+    { "4,2", "5,2", "6,4", "7,4" })
+  T.eq(two, 2, "two rivers: a dam on each")
+end)
