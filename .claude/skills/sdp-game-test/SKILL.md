@@ -49,7 +49,7 @@ Several sessions may run at once, each in its own worktree, and there is one gam
 - For a PR: the test files related to the change (`run_tests.py tests/test_x.lua ...`); before a release the whole set with `--rulesets all` (base, Rise and Fall, Gathering Storm). Skips are tests whose content the ruleset or the account's DLC lacks; report them as skips, not passes.
 - English: `game.py quit` → `shots.py lang en` → launch → newgame → tests and English screenshots → `game.py quit` → `shots.py lang restore` (must print "identical").
 - Real clicks (macOS, UI changes): `python3 -I tools/realclick.py suite`. It brings the game forward per click and takes the mouse for a few minutes; say so first. "no Civilization VI window on screen": `open -b com.aspyr.civ6.steam`, retry.
-- Screenshots: `shots.py stage single|sites|multi`, then `shots.py capture v<round>-panel-<tab>` (and `-en-` for English). Look at every picture before using it. Without the screen recording grant for SDPClick: `shots.py region` and computer-use zoom, then `shots.py save`.
+- Screenshots: `shots.py stage single|sites|multi|settings`, then `shots.py capture v<round>-panel-<tab>` (and `-en-` for English). Look at every picture before using it. Without the screen recording grant for SDPClick: `shots.py region` and computer-use zoom, then `shots.py save`.
 - Stress test (before a release): for each of `pangaea-gs continents-gs islands-rf`: `stress.py load N`, `stress.py run N`; then `stress.py check N` each; `tools/refresh_stress_md.py` writes the tables into the self-test report.
 - Popups (natural wonders, historic moments) hold the game's event queue: `game.py popups --close`.
 

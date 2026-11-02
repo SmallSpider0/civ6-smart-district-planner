@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """shots - panel screenshots for docs/images/ (macOS).
 
-    python3 -I tools/shots.py stage NAME     # tests/shots/NAME.lua in the SDP_Panel state (single, sites, multi)
+    python3 -I tools/shots.py stage NAME     # tests/shots/NAME.lua in the SDP_Panel state (single, sites, multi, settings)
     python3 -I tools/shots.py capture NAME   # the panel as it is now -> docs/images/NAME.jpg
     python3 -I tools/shots.py region         # where the panel is on screen (for computer-use instead)
     python3 -I tools/shots.py save SRC NAME  # crop SRC and write docs/images/NAME.jpg

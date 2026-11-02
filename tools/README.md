@@ -454,7 +454,7 @@ python3 -I tools/civ6tuner.py exec -s MainMenu 'print(_VERSION)'
 ## shots.py — 截图（仅 macOS）
 
 ```bash
-python3 -I tools/shots.py stage single           # 在 SDP_Panel 状态执行 tests/shots/single.lua（single、sites、multi）
+python3 -I tools/shots.py stage single           # 在 SDP_Panel 状态执行 tests/shots/single.lua（single、sites、multi、settings）
 python3 -I tools/shots.py capture v10-panel-single   # 截面板 -> docs/images/v10-panel-single.jpg
 python3 -I tools/shots.py region                 # 没有录屏权限时：打印面板的屏幕区域，用 computer-use 缩放截图后
 python3 -I tools/shots.py save 截图文件 v10-panel-single

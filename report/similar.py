@@ -33,7 +33,7 @@ MARKED = [
     ("几座城一起规划", "Cities planned together", [("y", "最多 4 座", "up to 4"),
                                                 ("y", "全部现有城市和新城址一次规划", "every existing city and the new sites, in one go"),
                                                 ("y", "可勾选全部城市", "all cities, with a tick"),
-                                                ("y", "最多 8 座（含城址钉）", "up to 8 (site tacks included)")]),
+                                                ("y", "全部城市和城址钉，超过 8 座时分组轮流规划", "every city and site tack, in groups taken in turns above 8")]),
     ("打地图钉", "Places map tacks", [("y", "", ""), ("y", "", ""), ("y", "", ""), ("y", "", "")]),
     ("需要 DMT", "Needs DMT", [("y", "", ""), ("n", "作者建议关掉 DMT", "the author advises turning DMT off"),
                                ("y", "", ""), ("y", "", "")]),
