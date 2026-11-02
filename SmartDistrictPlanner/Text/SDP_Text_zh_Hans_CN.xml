@@ -595,6 +595,9 @@
     <Replace Tag="LOC_SDP_COVERAGE_GROUP" Language="zh_Hans_CN">
       <Text>{1_Name}：新覆盖 {2_N} 座城（{3_Names}）</Text>
     </Replace>
+    <Replace Tag="LOC_SDP_COVERAGE_GROUP_EXTRA" Language="zh_Hans_CN">
+      <Text>{1_Name}（范围 {4_Range} 格，其中 {5_Extra} 格来自你现有的加成）：新覆盖 {2_N} 座城（{3_Names}）</Text>
+    </Replace>
     <Replace Tag="LOC_SDP_COVERAGE_NOTHING" Language="zh_Hans_CN">
       <Text>覆盖：这套方案没有新覆盖的城市</Text>
     </Replace>
