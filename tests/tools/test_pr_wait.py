@@ -4,7 +4,10 @@
 """
 import json
 import os
+import shutil
+import subprocess
 import sys
+import tempfile
 import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "tools"))
@@ -27,7 +30,7 @@ PASSED = [check("offline (ubuntu-latest)"), check("offline (windows-latest)")]
 def pr(state="OPEN", rollup=None, auto=AUTO, mergeable="MERGEABLE", head=HEAD):
     return {"state": state, "mergeable": mergeable, "mergeStateStatus": "BLOCKED", "autoMergeRequest": auto,
             "statusCheckRollup": RUNNING if rollup is None else rollup, "headRefOid": head,
-            "commits": [{"committedDate": WHEN}]}
+            "commits": [{"committedDate": WHEN}], "headRefName": "mac/x", "isCrossRepository": False}
 
 
 def codex_summary(status, unresolved=False):
@@ -43,9 +46,11 @@ class Fake:
         self.comments = comments or {}  # PR -> issue comments (Codex's summary)
         self.threads = threads or []
         self.errors = errors  # this many `pr view` calls fail like a dropped connection first
-        self.calls, self.sleeps, self.mine = [], 0, []
+        self.calls, self.sleeps, self.mine, self.merged = [], 0, [], []
+        self.merge_result = (False, "a conflict changes existing lines")
         for mod, name, value in ((cr, "gh", self.gh), (pr_wait.time, "sleep", self.sleep),
-                                 (pr_wait, "record_mine", self.mine.append)):
+                                 (pr_wait, "record_mine", self.mine.append),
+                                 (pr_wait, "merge_main", self.merge_main)):
             test.addCleanup(setattr, mod, name, getattr(mod, name))
             setattr(mod, name, value)
         self.clock = 1000.0
@@ -83,6 +88,10 @@ class Fake:
             return "[]"
         raise AssertionError("unexpected gh call %r" % (args,))
 
+    def merge_main(self, repo, branch, head):
+        self.merged.append((branch, head))
+        return self.merge_result
+
     def merges(self):
         return [a for a in self.calls if a[:2] == ("pr", "merge")]
 
@@ -106,8 +115,25 @@ class Exits(unittest.TestCase):
         self.assertEqual(fake.sleeps, 5)
 
     def test_merge_conflict_needs_action(self):
-        Fake(self, {3: [pr(), pr(mergeable="CONFLICTING")]})
+        fake = Fake(self, {3: [pr(), pr(mergeable="CONFLICTING")]})
         self.assertEqual(pr_wait.watch([3], [], 60, 1800), 1)
+        self.assertEqual(fake.merged, [("mac/x", HEAD)])  # tried, and the conflict was of another kind
+
+    def test_conflict_that_only_adds_lines_is_merged_and_the_wait_goes_on(self):
+        # 2026-11-02: one night, 11 branches ran 27 CI rounds, most after someone woke up to merge
+        # main for a CHANGELOG.md conflict where both sides had only added lines.
+        new = "b" * 40
+        fake = Fake(self, {14: [pr(), pr(mergeable="CONFLICTING"), pr(mergeable="CONFLICTING"),
+                                pr(head=new), pr("MERGED", PASSED, head=new)]})
+        fake.merge_result = (True, "merged origin/main into mac/x")
+        self.assertEqual(pr_wait.watch([14], [], 60, 1800), 0)
+        self.assertEqual(fake.merged, [("mac/x", HEAD)])  # once: the second view still showed the old head
+
+    def test_conflict_on_a_fork_pr_is_not_merged(self):
+        fork = dict(pr(mergeable="CONFLICTING"), isCrossRepository=True)
+        fake = Fake(self, {15: [fork]})
+        self.assertEqual(pr_wait.watch([15], [], 60, 1800), 1)
+        self.assertEqual(fake.merged, [])
 
     def test_open_with_auto_merge_off_needs_action_once_ci_is_done(self):
         fake = Fake(self, {4: [pr(auto=None), pr(auto=None), pr(rollup=PASSED, auto=None)]})
@@ -198,6 +224,110 @@ class CodexReview(unittest.TestCase):
             return orig(*args, data=data)
         cr.gh = gh
         self.assertEqual(pr_wait.watch([], [13], 60, 1800), 0)
+
+
+def run(cwd, *args):
+    done = subprocess.run(["git"] + list(args), cwd=cwd, capture_output=True, text=True)
+    if done.returncode != 0:
+        raise AssertionError("git %s: %s" % (" ".join(args), done.stderr))
+    return done.stdout.strip()
+
+
+class MergeMain(unittest.TestCase):
+    """merge_main on real git repositories: a bare remote, a clone, main and a branch that both changed a file."""
+
+    BASE = "# Changelog\n\n## Unreleased\n\n- one\n\n## v1.0\n\n- first\n"
+
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp(prefix="test_pr_wait-")
+        self.addCleanup(shutil.rmtree, self.tmp, True)
+        self.remote = os.path.join(self.tmp, "remote.git")
+        self.repo = os.path.join(self.tmp, "repo")
+        run(self.tmp, "init", "-q", "--bare", "-b", "main", self.remote)
+        run(self.tmp, "clone", "-q", self.remote, self.repo)
+        for k, v in (("user.name", "t"), ("user.email", "t@t"), ("commit.gpgsign", "false")):
+            run(self.repo, "config", k, v)
+        run(self.repo, "checkout", "-q", "-b", "main")
+        self.commit({"CHANGELOG.md": self.BASE, "other.txt": "a\nb\n"}, "base")
+        run(self.repo, "push", "-q", "origin", "main")
+
+    def commit(self, files, message, cwd=None):
+        cwd = cwd or self.repo
+        for name, text in files.items():
+            with open(os.path.join(cwd, name), "w", newline="") as f:
+                f.write(text)
+        run(cwd, "add", "-A")
+        run(cwd, "commit", "-q", "-m", message)
+
+    def diverge(self, main_text, branch_text):
+        run(self.repo, "checkout", "-q", "-b", "mac/x")
+        self.commit({"CHANGELOG.md": branch_text, "other.txt": "a\nb\nc\n"}, "branch")
+        run(self.repo, "push", "-q", "origin", "mac/x")
+        head = run(self.repo, "rev-parse", "HEAD")
+        run(self.repo, "checkout", "-q", "main")
+        self.commit({"CHANGELOG.md": main_text}, "main")
+        run(self.repo, "push", "-q", "origin", "main")
+        run(self.repo, "checkout", "-q", "--detach")
+        run(self.repo, "branch", "-q", "-D", "mac/x")  # the branch is only on the remote, like a PR's
+        return head
+
+    def remote_file(self, name):
+        return run(self.repo, "show", "origin/mac/x:" + name)
+
+    def test_both_sides_only_added_lines(self):
+        head = self.diverge(self.BASE.replace("- one\n", "- one\n- from main\n"),
+                            self.BASE.replace("- one\n", "- one\n- from branch\n- and more\n"))
+        done, text = pr_wait.merge_main(self.repo, "mac/x", head)
+        self.assertTrue(done, text)
+        self.assertEqual(self.remote_file("CHANGELOG.md") + "\n",
+                         self.BASE.replace("- one\n", "- one\n- from main\n- from branch\n- and more\n"))
+        self.assertEqual(self.remote_file("other.txt"), "a\nb\nc")
+        parents = run(self.repo, "log", "-1", "--format=%P", "origin/mac/x").split()
+        self.assertEqual(parents, [head, run(self.repo, "rev-parse", "origin/main")])
+        self.assertEqual(len(run(self.repo, "worktree", "list").splitlines()), 1)  # temporary worktree gone
+
+    def test_a_changed_line_is_left_for_a_person(self):
+        head = self.diverge(self.BASE.replace("- one\n", "- one, from main\n"),
+                            self.BASE.replace("- one\n", "- one\n- from branch\n"))
+        done, text = pr_wait.merge_main(self.repo, "mac/x", head)
+        self.assertFalse(done)
+        self.assertIn("CHANGELOG.md", text)
+        self.assertEqual(run(self.repo, "rev-parse", "origin/mac/x"), head)  # nothing pushed
+        self.assertEqual(len(run(self.repo, "worktree", "list").splitlines()), 1)
+
+    def test_a_worktree_with_uncommitted_changes_is_left_alone(self):
+        head = self.diverge(self.BASE.replace("- one\n", "- one\n- from main\n"),
+                            self.BASE.replace("- one\n", "- one\n- from branch\n"))
+        own = os.path.join(self.tmp, "own")
+        run(self.repo, "worktree", "add", "-q", "-b", "mac/x", own, "origin/mac/x")
+        with open(os.path.join(own, "other.txt"), "a") as f:
+            f.write("work in progress\n")
+        done, text = pr_wait.merge_main(self.repo, "mac/x", head)
+        self.assertFalse(done)
+        self.assertIn("uncommitted", text)
+        self.assertEqual(run(self.repo, "rev-parse", "origin/mac/x"), head)
+
+    def test_a_clean_worktree_of_the_branch_follows_the_merge(self):
+        head = self.diverge(self.BASE.replace("- one\n", "- one\n- from main\n"),
+                            self.BASE.replace("- one\n", "- one\n- from branch\n"))
+        own = os.path.join(self.tmp, "own")
+        run(self.repo, "worktree", "add", "-q", "-b", "mac/x", own, "origin/mac/x")
+        done, text = pr_wait.merge_main(self.repo, "mac/x", head)
+        self.assertTrue(done, text)
+        self.assertEqual(run(own, "rev-parse", "HEAD"), run(self.repo, "rev-parse", "origin/mac/x"))
+
+
+class ResolveAdded(unittest.TestCase):
+    def test_keeps_main_lines_first(self):
+        text = "a\r\n<<<<<<< HEAD\r\nbranch\r\n||||||| base\r\n=======\r\nmain\r\n>>>>>>> origin/main\r\nz\r\n"
+        self.assertEqual(pr_wait.resolve_added(text), "a\r\nmain\r\nbranch\r\nz\r\n")
+
+    def test_any_base_line_in_a_block_refuses(self):
+        text = "<<<<<<< HEAD\nx\n||||||| base\nold\n=======\ny\n>>>>>>> origin/main\n"
+        self.assertIsNone(pr_wait.resolve_added(text))
+
+    def test_without_a_base_part_refuses(self):
+        self.assertIsNone(pr_wait.resolve_added("<<<<<<< HEAD\nx\n=======\ny\n>>>>>>> origin/main\n"))
 
 
 if __name__ == "__main__":
