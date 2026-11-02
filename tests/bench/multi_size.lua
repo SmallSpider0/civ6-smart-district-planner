@@ -133,8 +133,25 @@ function M.Start(label)
   print("STARTED " .. tostring(ok))
 end
 
+-- Search parameters for the next solves (issue 142: GroupSize, GroupPasses).
+M.Params = nil
+
+-- Only build the search (the scans, the base, each slot's plots), as the
+-- first part of a solve does, to time it; prints the groups.
+function M.SetupOnly()
+  local request = P.Request()
+  if request == nil then return end
+  request.Params = M.Params
+  local groups = SDP_Overlay.With(pid, function()
+    local session = SDP_Multi.NewSession(request)
+    return session.GroupList
+  end)
+  print("SDP_MSETUP " .. Json({ Groups = groups or {} }))
+end
+
 function M.SolveNow(label)
   local request = P.Request()
+  if request ~= nil then request.Params = M.Params end
   M.Label, M.Job = label, nil
   M.Estimate = { Units = request and EstimateUnits(request, request.Tier) or 0, Speed = SDP_Task.Speed() }
   M.Estimate.Seconds = SDP_Task.EstimateSeconds(M.Estimate.Units)
@@ -160,6 +177,7 @@ function M.Report(label)
   out.Gain, out.Adjacency, out.Land = r.Gain, r.Adjacency, r.LandDelta
   out.Placed, out.Unplaced = #(r.Plan or {}), #(r.Unplaced or {})
   out.Calls, out.Tries = r.Stats and r.Stats.Calls, r.Stats and r.Stats.Tries
+  out.GroupCount, out.Truncated = r.Stats and r.Stats.Groups, r.Stats and r.Stats.Truncated
   out.Exhaustive = r.Quality and r.Quality.Exhaustive or false
   out.Cities = #(r.Cities or {})
   -- New districts of different cities next to each other, by how far apart

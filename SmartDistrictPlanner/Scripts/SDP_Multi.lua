@@ -4,7 +4,7 @@
 --
 --   Participants  every city-center pin that is not a city yet, plus the
 --                 player's cities within NEAR plots of one (default; each
---                 can be switched), at most MAX_CITIES, nearest first.
+--                 can be switched), any number of them (issue 142).
 --   Plots         each city's three rings as SDP_City sees them; a new city
 --                 cannot use plots of existing cities. Plots two cities can
 --                 reach may go to either, one subject per plot.
@@ -23,15 +23,30 @@
 --                 rotations). Starting from the city-by-city plan and only
 --                 accepting improvements, the result is never worse than
 --                 planning the cities one after another (design 4.7).
+--   Groups        more than GROUP_ABOVE cities (issue 142): first all of them
+--                 city by city, then groups of nearby cities (Groups) one
+--                 after another, each searched as above with every other
+--                 city's districts fixed where the best plan so far has them,
+--                 GROUP_PASSES times over. Each group has the tier's budget,
+--                 so the work grows with the number of groups.
 -- Budgets are counts (SDP_Tiers.Multi), all loops over sorted arrays, ties
 -- to smaller plot indices: same input, same result (constraint 6).
 -- The overlay must be installed while a session computes.
 
 SDP_Multi = {}
 
-SDP_Multi.MAX_CITIES = 8 -- participants, new and existing
 SDP_Multi.NEAR = 7       -- existing cities this close to a new city take part by default
 SDP_Multi.DEFAULT_CITIES = 4 -- the Several cities tab's default group (DefaultGroup, issue 63)
+-- More than GROUP_ABOVE cities are planned in groups of nearby cities, at
+-- most GROUP_SIZE each, GROUP_PASSES times over; Continue adds a pass
+-- (issue 142, numbers from the offline comparison of dense empires in
+-- docs/notes/issue-142-all-cities.md: up to 8 cities one search plans best,
+-- above that groups of 4 a little better than one search in the same time).
+-- Params.GroupAbove, GroupSize and GroupPasses override them (tests, the
+-- offline comparison).
+SDP_Multi.GROUP_ABOVE = 8
+SDP_Multi.GROUP_SIZE = 4
+SDP_Multi.GROUP_PASSES = 1
 
 local Copy = SDP_Search.Copy
 
@@ -123,9 +138,9 @@ end
 -- fixed neighbours like any pin. options.Only = { [cityID] = true }:
 -- exactly these cities and no new ones (the single-city tab with wonders). Returns the participants (new
 -- cities by plot index, then existing cities by ID), every existing city
--- with { CityID, Name, Distance, Default, On, Included, Reason } (Reason
--- "CAP" when switched on but beyond MAX_CITIES), and every city-center pin
--- with { Key, X, Y, Name, Number, SiteNumber, Included }.
+-- with { CityID, Name, Distance, Default, On, Included }, and every
+-- city-center pin with { Key, X, Y, Name, Number, SiteNumber, Included }.
+-- Any number of cities may take part (issue 142: before, at most 8).
 function SDP_Multi.Participants(playerID, options)
   options = options or {}
   local participants = {}
@@ -166,21 +181,8 @@ function SDP_Multi.Participants(playerID, options)
       Distance = distance, Default = default, On = on, Included = false,
     }
   end
-  local wanted = {}
   for _, e in ipairs(existing) do
-    if e.On then wanted[#wanted + 1] = e end
-  end
-  table.sort(wanted, function(a, b)
-    if a.Distance ~= b.Distance then return a.Distance < b.Distance end
-    return a.CityID < b.CityID
-  end)
-  local room = SDP_Multi.MAX_CITIES - #participants
-  for _, e in ipairs(wanted) do
-    if room > 0 then
-      e.Included, room = true, room - 1
-    else
-      e.Reason = "CAP"
-    end
+    e.Included = e.On == true
   end
   for _, e in ipairs(existing) do
     if e.Included then
@@ -191,6 +193,61 @@ function SDP_Multi.Participants(playerID, options)
     end
   end
   return participants, existing, siteList
+end
+
+-- Nearby participants in groups of at most `size` (issue 142), as a list of
+-- lists of participant indices, in the order they are planned: ceil(n /
+-- size) groups, each of ceil(left / groups left) cities. Each one starts from the city
+-- farthest from the others left (summed plot distance; ties: the smaller
+-- index), so the edges of a block of cities are taken first and the groups
+-- stay compact, and grows by the city whose farthest member is nearest
+-- (ties: summed distance, then index). Cities 4 or 5 plots apart that are
+-- planned in different groups still see each other: each group is searched
+-- with the others' districts in place (Session:RunGroups).
+function SDP_Multi.Groups(participants, size)
+  local n = #participants
+  local count = math.max(1, math.ceil(n / size))
+  local left, groups = {}, {}
+  for p = 1, n do left[p] = true end
+  local function D(a, b)
+    return Map.GetPlotDistance(participants[a].X, participants[a].Y, participants[b].X, participants[b].Y)
+  end
+  local remaining = n
+  while remaining > 0 do
+    local seed, seedSum = nil, nil
+    for p = 1, n do
+      if left[p] then
+        local sum = 0
+        for q = 1, n do
+          if left[q] then sum = sum + D(p, q) end
+        end
+        if seed == nil or sum > seedSum then seed, seedSum = p, sum end
+      end
+    end
+    local target = math.ceil(remaining / (count - #groups))
+    local group = { seed }
+    left[seed], remaining = false, remaining - 1
+    while #group < target and remaining > 0 do
+      local best, bestFar, bestSum = nil, nil, nil
+      for p = 1, n do
+        if left[p] then
+          local far, sum = 0, 0
+          for _, q in ipairs(group) do
+            local d = D(p, q)
+            far, sum = math.max(far, d), sum + d
+          end
+          if best == nil or far < bestFar or (far == bestFar and sum < bestSum) then
+            best, bestFar, bestSum = p, far, sum
+          end
+        end
+      end
+      group[#group + 1] = best
+      left[best], remaining = false, remaining - 1
+    end
+    table.sort(group)
+    groups[#groups + 1] = group
+  end
+  return groups
 end
 
 -- The city (its name) where the player has built or pinned a district of
@@ -851,6 +908,10 @@ function SDP_Multi.NewSession(request)
   self.Stats.Cities = #participants
   self.Starts = {}
   self.NextStartIndex = 1
+  if #participants > (params.GroupAbove or SDP_Multi.GROUP_ABOVE) then
+    self.GroupList = SDP_Multi.Groups(participants, params.GroupSize or SDP_Multi.GROUP_SIZE)
+    self.Stats.Groups = #self.GroupList
+  end
   return self
 end
 
@@ -865,21 +926,54 @@ end
 --   4 reversed, full beam        5 reversed, a third of the beam
 --   6+ rotations, alternating full and a third of the beam
 function Session:StartPlan(s)
-  local count = #self.Participants
+  local members = self:Members()
+  local count = #members
   local order, scale = {}, 1
   if s <= 3 then
-    for p = 1, count do order[p] = p end
+    for p = 1, count do order[p] = members[p] end
     if s == 3 then scale = 1 / 3 end
   elseif s <= 5 then
-    for p = 1, count do order[p] = count - p + 1 end
+    for p = 1, count do order[p] = members[count - p + 1] end
     if s == 5 then scale = 1 / 3 end
   else
     local shift = math.floor((s - 4) / 2) % math.max(1, count)
-    for p = 1, count do order[p] = (p - 1 + shift) % count + 1 end
+    for p = 1, count do order[p] = members[(p - 1 + shift) % count + 1] end
     if s % 2 == 1 then scale = 1 / 3 end
   end
   order[#order + 1] = self.WonderGroup
   return order, scale
+end
+
+-- The participants being searched: the group in focus (Session:RunGroups),
+-- else all of them.
+function Session:Members()
+  if self.Focus ~= nil then return self.Focus end
+  local all = {}
+  for p = 1, #self.Participants do all[p] = p end
+  return all
+end
+
+-- Search one group (a list of participant indices) with every other city's
+-- slots fixed where the best layout so far has them: the starts begin from
+-- that layout with the group's and the wonders' slots off, and only those
+-- slots move (SDP_Search's Active). nil: back to all participants.
+function Session:SetFocus(group)
+  local search = self.Search
+  if group == nil then
+    self.Focus, self.FocusBase, search.Active, search.ActiveGroups = nil, nil, nil, nil
+    return
+  end
+  local members = { [self.WonderGroup] = true }
+  for _, p in ipairs(group) do members[p] = true end
+  local base = search.BestLayout ~= nil and Copy(search.BestLayout) or search:EmptyLayout()
+  local active = {}
+  for m = 1, search.K do
+    if members[search.Groups[m]] then
+      active[m] = true
+      base[m] = 0
+    end
+  end
+  self.Focus, self.FocusBase, search.Active, search.ActiveGroups = group, base, active, members
 end
 
 -- Place the slots of a block one by one, each on its best free plot (when
@@ -962,17 +1056,18 @@ function Session:RunStart(s, wide)
   local order, scale = self:StartPlan(s)
   local beam = params.Beam
   params.Beam = math.max(10, math.floor(beam * scale))
-  local layout = search:EmptyLayout()
+  local layout = self.FocusBase ~= nil and Copy(self.FocusBase) or search:EmptyLayout()
   local function Pooled(p) return (search.PoolCount[p] or 0) > 0 end
   if s == 2 then
     -- Each city with candidates takes its best ranked combination here.
     local active = {}
-    for p = 1, #self.Participants do
+    local members = self:Members()
+    for _, p in ipairs(members) do
       active[p] = Pooled(p) and search:ActiveOrder(p, search:Combos(p)[1].Slots) or self.Blocks[p]
     end
     active[self.WonderGroup] = self.Blocks[self.WonderGroup]
     local districts = {}
-    for p = 1, #self.Participants do
+    for _, p in ipairs(members) do
       for _, m in ipairs(active[p]) do districts[#districts + 1] = m end
     end
     if #districts > 0 and not search:OverBudget() then
@@ -1062,6 +1157,10 @@ function Session:Run()
   search:SetBudgets()
   if search.K == 0 then return end
   search.Stats.Method = "multi"
+  if self.GroupList ~= nil then
+    self:RunGroups()
+    return
+  end
   if params.Prelude ~= nil then
     self:RunPrelude(params.Prelude)
     search:SetBudgets() -- the tier's own starts get its whole budget
@@ -1076,6 +1175,54 @@ function Session:Run()
   self:Repair()
 end
 
+-- Many cities (issue 142): every city planned city by city (start 1 of the
+-- whole plan: what the result is never worse than, design 4.7), then each
+-- group in turn searched like a session of its own (its own budget, the
+-- lighter tier's starts first, the tier's starts, the wide joint start and
+-- the kicks) with the other cities' districts where the best plan so far has
+-- them, GROUP_PASSES times over; a city at the edge of a group sees its
+-- neighbours in the next one. Only the last pass's starts are alternatives:
+-- they are whole plans with every group at its best but one.
+function Session:RunGroups()
+  local search, params = self.Search, self.Params
+  local layout = search:EmptyLayout()
+  for _, p in ipairs(self:StartPlan(1)) do
+    if (#self.Blocks[p] > 0 or (search.PoolCount[p] or 0) > 0) and not search:OverBudget() then
+      local best = self:SolveCity(p, layout, true)
+      layout = best or self:Greedy(self.Blocks[p], layout)
+    end
+  end
+  local gain, legal = search:Evaluate(layout)
+  search:Consider(gain, legal, layout)
+  self.First = { Layout = Copy(layout), Gain = gain }
+  for _ = 1, params.GroupPasses or SDP_Multi.GROUP_PASSES do self:RunGroupPass(1, true) end
+  self.NextStartIndex = params.Starts + 1
+  self:Repair()
+end
+
+-- One pass over the groups: in each, the starts from `first` on (with
+-- `prelude`, the lighter tier's starts before and the wide joint start
+-- after, as Session:Run), then the kicks.
+function Session:RunGroupPass(first, prelude)
+  local search, params = self.Search, self.Params
+  self.Starts = {}
+  for _, group in ipairs(self.GroupList) do
+    self:SetFocus(group)
+    search:SetBudgets()
+    if prelude and params.Prelude ~= nil then
+      self:RunPrelude(params.Prelude)
+      search:SetBudgets()
+    end
+    for s = first, first + params.Starts - 1 do
+      if search:OverBudget() then break end
+      self:RunStart(s)
+    end
+    if prelude then self:RunWideJoint() end
+    search:Kicks(params.Kicks or 0)
+  end
+  self:SetFocus(nil)
+end
+
 -- The joint start once more with a wider beam (Params.WideJoint times the
 -- tier's), on top of the fixed starts: widening start 2 itself is not
 -- monotone (a wider beam's best model layout can polish to less), so the
@@ -1083,7 +1230,7 @@ end
 -- beam misses (offline benchmark, 2026-10-21).
 function Session:RunWideJoint()
   local wide = self.Params.WideJoint
-  if wide == nil or wide <= 1 or #self.Participants < 2 or self.Search:OverBudget() then return end
+  if wide == nil or wide <= 1 or #self:Members() < 2 or self.Search:OverBudget() then return end
   self:RunStart(2, wide)
 end
 
@@ -1222,6 +1369,13 @@ function Session:Continue()
   search:SetBudgets()
   local before = search.BestGain
   search.Stats.Continues = search.Stats.Continues + 1
+  if self.GroupList ~= nil then
+    self:RunGroupPass(self.NextStartIndex, false)
+    self.NextStartIndex = self.NextStartIndex + params.Starts
+    self:Repair()
+    search.Converged = before ~= nil and search.BestGain == before
+    return true
+  end
   for _ = 1, params.Starts do
     if search:OverBudget() then break end
     self:RunStart(self.NextStartIndex)
@@ -1462,6 +1616,15 @@ end
 -- pick: districts each city picks from a pool of `pool` (0: none).
 function SDP_Multi.EstimateUnits(cities, districts, wonders, params, pick, pool)
   pick, pool = pick or 0, pool or 0
+  if cities > (params.GroupAbove or SDP_Multi.GROUP_ABOVE) then
+    -- In groups (Session:RunGroups): each group a session of its own, every pass.
+    local groups = math.ceil(cities / (params.GroupSize or SDP_Multi.GROUP_SIZE))
+    local passes = params.GroupPasses or SDP_Multi.GROUP_PASSES
+    local inner = {}
+    for k, v in pairs(params) do inner[k] = v end
+    inner.GroupAbove = math.huge
+    return passes * groups * SDP_Multi.EstimateUnits(math.ceil(cities / groups), districts, wonders, inner, pick, pool)
+  end
   local slots = cities * (districts + pick) + wonders
   if slots == 0 then return 0 end
   local n = 30 -- plots a city can use, typically

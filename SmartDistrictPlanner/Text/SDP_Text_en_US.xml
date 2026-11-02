@@ -274,6 +274,12 @@
     <Replace Tag="LOC_SDP_MULTI_CITIES_TOOLTIP" Language="en_US">
       <Text>Click a city or site to plan it with the others or not; cities planned together can give each other adjacency, and more cities take longer.</Text>
     </Replace>
+    <Replace Tag="LOC_SDP_MULTI_ALL" Language="en_US">
+      <Text>All cities</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_MULTI_ALL_TOOLTIP" Language="en_US">
+      <Text>Switch every city and site on and plan them together, so the districts of neighbouring cities can cluster and give each other adjacency. With more than 8, 4 neighbouring cities are planned at a time, in turn; more cities take longer.</Text>
+    </Replace>
     <Replace Tag="LOC_SDP_MULTI_CLEAR" Language="en_US">
       <Text>Clear all</Text>
     </Replace>
@@ -295,17 +301,11 @@
     <Replace Tag="LOC_SDP_MULTI_TAKES_PART" Language="en_US">
       <Text>Planned</Text>
     </Replace>
-    <Replace Tag="LOC_SDP_MULTI_FULL" Language="en_US">
-      <Text>{1_Max} are on, the most planned at once. Switch one off first.</Text>
-    </Replace>
     <Replace Tag="LOC_SDP_MULTI_CITY_TOOLTIP" Language="en_US">
       <Text>Click to switch it on or off; a city left out is not planned, but its districts and tacks still count for the bonuses next to them.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_MULTI_SITE_PIN" Language="en_US">
       <Text>map tack {1_Where}</Text>
-    </Replace>
-    <Replace Tag="LOC_SDP_MULTI_CAP" Language="en_US">
-      <Text>Beyond the {1_Max} cities planned at once: a fixed neighbor only</Text>
     </Replace>
     <Replace Tag="LOC_SDP_MULTI_NEIGHBOUR_ONLY" Language="en_US">
       <Text>Not planned, a fixed neighbor only</Text>

@@ -13,12 +13,20 @@ the capital, the other cities and the pins by distance from the capital, then
          city (each group's plan tacked before the next, as a player who
          plans a few cities at a time would); the tacks are undone after.
 
+  many   (--many, issue 142) for each n in --sizes (e.g. 8,12,16) the n
+         nearest, solved at once with each of --variants: ALL (one search,
+         no groups), G<size>[P<passes>] (groups of nearby cities; plain G4 is
+         the default GROUP_SIZE and GROUP_PASSES); written to
+         multi_size-NAME-many.json. Also times setting up the search alone
+         (the scans before the first slice of a solve over frames).
+
 Every city picks `--count` districts from the default pool (all specialty
 districts without an empire limit), land part on, reminder pins off.
 Changes the game in memory only (pins; do not save). Results are written to
 tests/bench/results/multi_size-NAME.json.
 
     python3 -I tests/bench/multi_size.py NAME [--sites 3] [--max 8] [--count 3] [--tiers FAST,STANDARD,FINE]
+    python3 -I tests/bench/multi_size.py NAME --many --sizes 8,12,16 --variants ALL,G4 --tiers STANDARD
 """
 import argparse
 import json
@@ -82,13 +90,18 @@ def solve(label, timeout=900, at_once=True):
 def main(argv=None):
     ap = argparse.ArgumentParser()
     ap.add_argument("name")
-    ap.add_argument("--sites", type=int, default=0, help="place this many city-center pins first")
+    ap.add_argument("--sites", default="0", help="place this many city-center pins first (rounds: 12,12)")
+    ap.add_argument("--dense", action="store_true", help="the pins packed as densely as they fit (issue 87)")
+    ap.add_argument("--site-distance", type=int, default=8, help="the pins at most this far from a city")
     ap.add_argument("--max", type=int, default=8)
     ap.add_argument("--count", type=int, default=3)
     ap.add_argument("--tiers", default="FAST,STANDARD,FINE")
     ap.add_argument("--group-tiers", default="STANDARD")
     ap.add_argument("--skip-grid", action="store_true")
     ap.add_argument("--frames", action="store_true")
+    ap.add_argument("--many", action="store_true", help="issue 142: groups against one search")
+    ap.add_argument("--sizes", default="8,12,16")
+    ap.add_argument("--variants", default="ALL,G4")
     args = ap.parse_args(argv)
 
     with open(os.path.join(ROOT, "tests", "bench", "stress.lua"), encoding="utf-8") as fh:
@@ -96,14 +109,18 @@ def main(argv=None):
     with open(os.path.join(ROOT, "tests", "bench", "multi_size.lua"), encoding="utf-8") as fh:
         run(fh.read())
     run('SDP_Panel.Open(); SDP_Panel.SelectTab("MULTI")')
-    if args.sites > 0:
-        print(run('SDP_Stress.Sites(%d, 8, "STANDARD"); SDP_Stress.PlaceSites()' % args.sites, timeout=300))
+    for k in [int(x) for x in args.sites.split(",") if int(x) > 0]:
+        print(run('SDP_Stress.Sites(%d, %d, "STANDARD", %s); SDP_Stress.PlaceSites()'
+                  % (k, args.site_distance, "true" if args.dense else "false"), timeout=900))
     order = emitted(run("SDP_MultiSize.Order()"))
     n_max = min(args.max, len(order["List"]))
     print("order:", [(e["Kind"], e["Name"], e["Distance"]) for e in order["List"]])
     record = {"Name": args.name, "Count": args.count, "Order": order, "Grid": [], "Groups": []}
     os.makedirs(RESULTS, exist_ok=True)
     path = os.path.join(RESULTS, "multi_size-%s.json" % args.name)
+    if args.many:
+        many(args, order, os.path.join(RESULTS, "multi_size-%s-many.json" % args.name))
+        return
 
     def save():
         with open(path, "w", encoding="utf-8") as fh:
@@ -139,6 +156,36 @@ def main(argv=None):
             print("  %s groups of %d: %s" % (tier, size, total), flush=True)
             record["Groups"].append({"Tier": tier, "Size": size, "N": n_max, "Total": total, "Runs": groups})
             save()
+    print("written", path)
+
+
+def many(args, order, path):
+    """Issue 142: the n nearest cities in one search or in groups."""
+    record = {"Name": args.name, "Count": args.count, "Order": order, "Many": []}
+    for tier in args.tiers.split(","):
+        for n in [int(x) for x in args.sizes.split(",")]:
+            if n > len(order["List"]):
+                print("  only %d cities and pins: skip n=%d" % (len(order["List"]), n))
+                continue
+            for variant in args.variants.split(","):
+                if variant == "ALL":
+                    params = "{ GroupAbove = 9999 }"
+                else:
+                    size, _, passes = variant[1:].partition("P")
+                    params = "{ GroupAbove = %d, GroupSize = %d%s }" % (int(size), int(size), ", GroupPasses = %d" % int(passes) if passes else "")
+                run('SDP_MultiSize.Setup("%s", %d); SDP_MultiSize.Select(1, %d); SDP_MultiSize.Params = %s'
+                    % (tier, args.count, n, params))
+                started = time.monotonic()
+                setup = run("SDP_MultiSize.SetupOnly()", timeout=600)
+                setup_seconds = time.monotonic() - started
+                data = solve("%s n=%d %s" % (tier, n, variant), timeout=3600)
+                data.update({"Tier": tier, "N": n, "Variant": variant, "SetupSeconds": round(setup_seconds, 2),
+                             "Groups": emitted(setup, "SDP_MSETUP ")})
+                print("    setup alone %.2fs" % setup_seconds, flush=True)
+                record["Many"].append(data)
+                with open(path, "w", encoding="utf-8") as fh:
+                    json.dump(record, fh, ensure_ascii=False, indent=1)
+    run("SDP_MultiSize.Params = nil")
     print("written", path)
 
 

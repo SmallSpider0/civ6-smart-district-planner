@@ -261,6 +261,9 @@
         <Container Size="480,26">
           <Label Anchor="L,C" Style="BodyTextDark16" String="LOC_SDP_MULTI_CITIES" ToolTip="LOC_SDP_MULTI_CITIES_TOOLTIP"/>
           <Stack Anchor="R,C" StackGrowth="Right" StackPadding="4">
+            <GridButton ID="MultiCityAll" Size="96,24" Style="ButtonControl" ToolTip="LOC_SDP_MULTI_ALL_TOOLTIP">
+              <Label Anchor="C,C" Style="FontNormal14" String="LOC_SDP_MULTI_ALL"/>
+            </GridButton>
             <GridButton ID="MultiCityClear" Size="96,24" Style="ButtonControl" ToolTip="LOC_SDP_MULTI_CLEAR_TOOLTIP">
               <Label Anchor="C,C" Style="FontNormal14" String="LOC_SDP_MULTI_CLEAR"/>
             </GridButton>

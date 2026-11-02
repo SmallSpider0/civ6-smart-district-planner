@@ -20,9 +20,10 @@
 -- (district, plot). A wonder can require an adjacent district
 -- (IsAdjacentToDistrict reads the overlay), so its legality is remembered per
 -- neighbourhood like a score. Planned city centers are not supported.
--- Exceptions to locality (one dam per river) are caught by the final full
--- evaluation the solvers do; tests/test_incremental.lua checks the
--- assumptions against full evaluations in the game.
+-- The one exception to locality, one dam per river, the search keeps apart
+-- itself (SDP_Search: SharesRiver); the final full evaluation the solvers do
+-- would catch others. tests/test_incremental.lua checks the assumptions
+-- against full evaluations in the game.
 --
 -- Requires the overlay installed (SDP_Overlay). Every DMT call is counted
 -- and reported to SDP_Task.Tick, the unit of work for frame slicing.

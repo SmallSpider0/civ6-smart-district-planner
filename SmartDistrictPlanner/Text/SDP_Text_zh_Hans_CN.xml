@@ -274,6 +274,12 @@
     <Replace Tag="LOC_SDP_MULTI_CITIES_TOOLTIP" Language="zh_Hans_CN">
       <Text>点一座城或城址，切换是否一起规划；一起规划的城能互相给相邻加成，城越多算得越久。</Text>
     </Replace>
+    <Replace Tag="LOC_SDP_MULTI_ALL" Language="zh_Hans_CN">
+      <Text>全部城市</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_MULTI_ALL_TOOLTIP" Language="zh_Hans_CN">
+      <Text>选上全部城市和城址钉一起规划，相邻城市的区域能凑在一起互给加成。超过 8 座时按位置每次规划 4 座相邻的城、轮流进行，城越多算得越久。</Text>
+    </Replace>
     <Replace Tag="LOC_SDP_MULTI_CLEAR" Language="zh_Hans_CN">
       <Text>全部取消</Text>
     </Replace>
@@ -295,17 +301,11 @@
     <Replace Tag="LOC_SDP_MULTI_TAKES_PART" Language="zh_Hans_CN">
       <Text>参与规划</Text>
     </Replace>
-    <Replace Tag="LOC_SDP_MULTI_FULL" Language="zh_Hans_CN">
-      <Text>已选 {1_Max} 座，一次最多规划这么多。先取消一座再选。</Text>
-    </Replace>
     <Replace Tag="LOC_SDP_MULTI_CITY_TOOLTIP" Language="zh_Hans_CN">
       <Text>点一下切换是否参与；不参与的城不规划，但它的区域和钉照样影响旁边的加成。</Text>
     </Replace>
     <Replace Tag="LOC_SDP_MULTI_SITE_PIN" Language="zh_Hans_CN">
       <Text>地图钉 {1_Where}</Text>
-    </Replace>
-    <Replace Tag="LOC_SDP_MULTI_CAP" Language="zh_Hans_CN">
-      <Text>超出一次最多 {1_Max} 座，只作固定邻居</Text>
     </Replace>
     <Replace Tag="LOC_SDP_MULTI_NEIGHBOUR_ONLY" Language="zh_Hans_CN">
       <Text>不参与，只作固定邻居</Text>

@@ -62,6 +62,11 @@
 --                                    few cities at a time); each city gets
 --                                    its own list ("_GROUP<n>S": the shared
 --                                    list, as the tab sends it)
+--   variant <TIER>_G<n>[_P<m>]       multi: planned in groups of at most n
+--                                    nearby cities, m passes (issue 142:
+--                                    SDP_Multi's GroupSize, GroupPasses)
+--   variant <TIER>_ALL               multi: all cities in one search, no
+--                                    groups however many (issue 142)
 
 CmpAdapters = CmpAdapters or {}
 
@@ -241,6 +246,13 @@ function CmpAdapters.sdp(request, variant, w)
   end
   local swap = variant:match("_SWAP$") ~= nil
   variant = variant:gsub("_SWAP$", "")
+  local groupParams = nil
+  local gsize = tonumber(variant:match("_G(%d+)") or "")
+  local gpasses = tonumber(variant:match("_P(%d)") or "")
+  if variant:match("_ALL$") then gsize = 9999 end
+  -- _G<n>: groups of n from more than n cities; _ALL: one search for all.
+  if gsize ~= nil or gpasses ~= nil then groupParams = { GroupAbove = gsize, GroupSize = gsize, GroupPasses = gpasses } end
+  variant = variant:gsub("_ALL$", ""):gsub("_G%d+", ""):gsub("_P%d", "")
   local group = tonumber(variant:match("_GROUP(%d+)S?$") or "")
   local sharedList = variant:match("_GROUP%d+S$") ~= nil
   variant = variant:gsub("_GROUP%d+S?$", "")
@@ -385,7 +397,8 @@ function CmpAdapters.sdp(request, variant, w)
     local only = #request.cities == 1 and existing or nil
     local r = SDP_Multi.Solve({ PlayerID = 0, Tier = variant, Districts = plans and {} or request.districts, Plans = plans,
       Existing = existing, Only = only, Land = land, Weights = request.weights, Coverage = coverage, Swap = swap,
-      Distance = distance })
+      Distance = distance, Params = groupParams })
+    if r.Stats then stats.sdpGroups, stats.sdpTruncated = r.Stats.Groups, r.Stats.Truncated end
     if not r.Ok then out.notes[#out.notes + 1] = tostring(r.Error) end
     local byKey = {}
     for _, c in ipairs(r.Cities or {}) do byKey[c.Key] = c.CityID end

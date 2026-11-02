@@ -522,6 +522,10 @@ local function BuiltSpot(spec, gi, city, districtType, rng, occupied)
 end
 
 function CmpMapgen.Generate(scn)
+  -- Most scenes use the 30 x 24 map; the dense many-city scenes (issue 142)
+  -- need room for 16 or more cities.
+  W, H = scn.width or 30, scn.height or 24
+  CmpMapgen.W, CmpMapgen.H = W, H
   local gi = CmpGame.LoadGameInfo()
   local rng = Rng(scn.seed)
   local biome = BIOMES[scn.biome] or error("unknown biome " .. tostring(scn.biome))
@@ -551,7 +555,31 @@ function CmpMapgen.Generate(scn)
   taken[#taken + 1] = capital
   local own = { capital }
   for c = 2, scn.cities or 1 do
-    local site = NearestSite(spec, own[1], 4, 6, taken, rng) or NearestSite(spec, own[#own], 4, 7, taken, rng)
+    local site
+    if scn.dense then
+      -- Dense settling (issue 142): each new city 4 to `dense` plots from one
+      -- of the player's cities (the game's minimum is 4), as close to the
+      -- capital as the land allows, so the cities form one connected block.
+      local best, bestScore = nil, nil
+      for i = 0, W * H - 1 do
+        local x, y = XY(i)
+        if x >= 2 and y >= 2 and x <= W - 3 and y <= H - 3 then
+          local near = false
+          for _, o in ipairs(own) do
+            local d = Dist(i, o)
+            if d >= 4 and d <= scn.dense then near = true end
+          end
+          local s = near and SiteScore(spec, i, taken) or -1
+          if s >= 0 then
+            s = s - 1.2 * Dist(i, own[1]) + rng() * 1.5
+            if bestScore == nil or s > bestScore then best, bestScore = i, s end
+          end
+        end
+      end
+      site = best
+    else
+      site = NearestSite(spec, own[1], 4, 6, taken, rng) or NearestSite(spec, own[#own], 4, 7, taken, rng)
+    end
     if site then
       taken[#taken + 1] = site
       own[#own + 1] = site
