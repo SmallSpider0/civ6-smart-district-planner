@@ -60,6 +60,30 @@ test("housing from the rules: granary for a new city, harbor buildings", functio
     return total
   end
   T.eq(Sum(SDP_Land.CenterHousingParts()), SDP_Land.CenterHousing(), "center parts")
+  -- With a player, only the buildings whose technology and civic the player
+  -- has count (issue 188), checked against the game's own tech tree.
+  local playerID = Game.GetLocalPlayer()
+  local player = Players[playerID]
+  local function Researched(buildingType)
+    local row = GameInfo.Buildings[buildingType]
+    if row.PrereqTech ~= nil and not player:GetTechs():HasTech(GameInfo.Technologies[row.PrereqTech].Index) then return false end
+    if row.PrereqCivic ~= nil and not player:GetCulture():HasCivic(GameInfo.Civics[row.PrereqCivic].Index) then return false end
+    return true
+  end
+  local function Researchable(parts)
+    local total = 0
+    for _, part in ipairs(parts) do
+      T.eq(SDP_Land.BuildingResearched(playerID, part.Building), Researched(part.Building), part.Building .. " researched")
+      if Researched(part.Building) then total = total + part.Housing end
+    end
+    return total
+  end
+  T.eq(SDP_Land.CenterHousing(playerID), Researchable(SDP_Land.CenterHousingParts()), "center, researched only")
+  T.eq(SDP_Land.BuildingHousing("DISTRICT_HARBOR", true, playerID),
+    Researchable(SDP_Land.BuildingHousingParts("DISTRICT_HARBOR", true)), "harbor, researched only")
+  if not Researched("BUILDING_SEAPORT") then
+    T.ok(SDP_Land.BuildingHousing("DISTRICT_HARBOR", true, playerID) < coastal, "the seaport not counted yet")
+  end
   T.eq(Sum(SDP_Land.BuildingHousingParts("DISTRICT_HARBOR", true)), coastal, "harbor parts on the coast")
   T.eq(Sum(SDP_Land.BuildingHousingParts("DISTRICT_HARBOR", false)), inland, "harbor parts inland")
   for _, part in ipairs(SDP_Land.BuildingHousingParts("DISTRICT_HARBOR", false)) do

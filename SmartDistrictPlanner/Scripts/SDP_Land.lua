@@ -610,8 +610,44 @@ local function Sum(parts)
   return total
 end
 
-function SDP_Land.CenterHousing()
-  return Sum(SDP_Land.CenterHousingParts())
+-- Whether `playerID` has the technology and civic `buildingType` needs
+-- (Buildings.PrereqTech, PrereqCivic). Issue 188: a planned city counts
+-- the housing of the buildings the player can build now, not of those still
+-- to research. Without a player every building counts (the rules alone).
+function SDP_Land.BuildingResearched(playerID, buildingType)
+  local row = GameInfo.Buildings[buildingType]
+  local player = playerID ~= nil and Players ~= nil and Players[playerID] or nil
+  if row == nil or player == nil then return true end
+  if row.PrereqTech ~= nil then
+    local tech = GameInfo.Technologies[row.PrereqTech]
+    local techs = player.GetTechs ~= nil and player:GetTechs() or nil
+    if tech == nil or techs == nil or not techs:HasTech(tech.Index) then return false end
+  end
+  if row.PrereqCivic ~= nil then
+    local civic = GameInfo.Civics[row.PrereqCivic]
+    local culture = player.GetCulture ~= nil and player:GetCulture() or nil
+    if civic == nil or culture == nil or not culture:HasCivic(civic.Index) then return false end
+  end
+  return true
+end
+
+-- Splits housing parts, in their order, into those `playerID` has
+-- researched (counted) and those still to research (later).
+function SDP_Land.SplitResearched(parts, playerID)
+  local counted, later = {}, {}
+  for _, part in ipairs(parts) do
+    if SDP_Land.BuildingResearched(playerID, part.Building) then
+      counted[#counted + 1] = part
+    else
+      later[#later + 1] = part
+    end
+  end
+  return counted, later
+end
+
+-- The center buildings' housing; with `playerID`, only the researched ones.
+function SDP_Land.CenterHousing(playerID)
+  return Sum((SDP_Land.SplitResearched(SDP_Land.CenterHousingParts(), playerID)))
 end
 
 -- Whether every requirement of requirement set `id` is of type `kind`.
@@ -682,12 +718,14 @@ function SDP_Land.BuildingHousingParts(districtType, coastal)
   return giving
 end
 
-function SDP_Land.BuildingHousing(districtType, coastal)
-  return Sum(SDP_Land.BuildingHousingParts(districtType, coastal))
+-- With `playerID`, only the buildings the player has researched.
+function SDP_Land.BuildingHousing(districtType, coastal, playerID)
+  return Sum((SDP_Land.SplitResearched(SDP_Land.BuildingHousingParts(districtType, coastal), playerID)))
 end
 
 -- A city's housing now (issue 55): the game's figure for a city, water
--- housing plus CenterHousing for a planned one (a city-center pin or site).
+-- housing plus CenterHousing for a planned one (a city-center pin or site),
+-- of the center buildings the player has researched (issue 188).
 function SDP_Land.ScanHousing(scan)
   if scan.CityID ~= nil then
     local city = CityManager.GetCity(scan.PlayerID, scan.CityID)
@@ -698,5 +736,5 @@ function SDP_Land.ScanHousing(scan)
   local kind = SDP_City.WaterKind(Map.GetPlot(scan.X, scan.Y))
   local water = (kind == "FRESH" and (p.CITY_POPULATION_RIVER_LAKE or 5)) or (kind == "COAST" and (p.CITY_POPULATION_COAST or 3))
     or (p.CITY_POPULATION_NO_WATER or 2)
-  return water + SDP_Land.CenterHousing()
+  return water + SDP_Land.CenterHousing(scan.PlayerID)
 end

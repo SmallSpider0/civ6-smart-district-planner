@@ -438,14 +438,25 @@ local function SiteToolTip(site, result)
   local info = site.Info
   lines[#lines + 1] = Locale.Lookup("LOC_SDP_SITES_WATER_" .. info.WaterKind)
   -- Housing: the water's and each building's apart (issue 188), so the
-  -- total does not read as what the new city has at once.
-  if info.Housing ~= nil and info.HousingParts ~= nil and #info.HousingParts > 0 then
-    local parts = {}
-    for _, part in ipairs(info.HousingParts) do
-      parts[#parts + 1] = Locale.Lookup("LOC_SDP_SITES_HOUSING_PART", SDP_UI.TypeName(part.Building), SDP_UI.Number(part.Housing))
+  -- total does not read as what the new city has at once; buildings the
+  -- player has not researched yet are named apart and not in the total.
+  local function List(parts)
+    local list = {}
+    for _, part in ipairs(parts or {}) do
+      list[#list + 1] = Locale.Lookup("LOC_SDP_SITES_HOUSING_PART", SDP_UI.TypeName(part.Building), SDP_UI.Number(part.Housing))
     end
+    return list
+  end
+  local built, later = List(info.HousingParts), List(info.HousingLater)
+  if info.Housing ~= nil and #built > 0 and #later > 0 then
+    lines[#lines + 1] = Locale.Lookup("LOC_SDP_SITES_HOUSING_BUILT_LATER", SDP_UI.Number(info.Housing),
+      SDP_UI.Number(info.HousingWater), table.concat(built, ", "), table.concat(later, ", "))
+  elseif info.Housing ~= nil and #built > 0 then
     lines[#lines + 1] = Locale.Lookup("LOC_SDP_SITES_HOUSING_BUILT", SDP_UI.Number(info.Housing),
-      SDP_UI.Number(info.HousingWater), table.concat(parts, ", "))
+      SDP_UI.Number(info.HousingWater), table.concat(built, ", "))
+  elseif info.Housing ~= nil and #later > 0 then
+    lines[#lines + 1] = Locale.Lookup("LOC_SDP_SITES_HOUSING_LATER", SDP_UI.Number(info.Housing), SDP_UI.Number(info.HousingWater),
+      table.concat(later, ", "))
   elseif info.Housing ~= nil then
     lines[#lines + 1] = Locale.Lookup("LOC_SDP_SITES_HOUSING", SDP_UI.Number(info.Housing))
   end
