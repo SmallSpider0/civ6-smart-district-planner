@@ -772,11 +772,11 @@ test("plans: the plans taken are ranked after untangling (issue 189)", function(
   T.eq(Order(Pick(stub, unsorted, 3)), "A B", "without swaps: ranked too")
 end)
 
-test("groups (issue 142): more cities than GroupSize are planned group by group", function()
+test("groups (issue 142): more cities than GroupAbove are planned group by group", function()
   NewWorld()
   local everyone = { [1] = true, [2] = true, [3] = true }
   local two = { "DISTRICT_CAMPUS", "DISTRICT_HOLY_SITE", "DISTRICT_COMMERCIAL_HUB" }
-  local grouped = SDP_Multi.Solve(Request({ Districts = two, Existing = everyone, Params = { GroupSize = 2 } }))
+  local grouped = SDP_Multi.Solve(Request({ Districts = two, Existing = everyone, Params = { GroupAbove = 2, GroupSize = 2, GroupPasses = 2 } }))
   T.ok(grouped.Ok, tostring(grouped.Error))
   T.eq(grouped.Stats.Groups, 3, "five cities in groups of two at most: three groups")
   T.ok(not grouped.Stats.Mismatch, "incremental and full evaluation agree")
@@ -787,14 +787,15 @@ test("groups (issue 142): more cities than GroupSize are planned group by group"
     T.ok(not used[p.Index], "plot used twice")
     used[p.Index] = true
   end
-  local again = SDP_Multi.Solve(Request({ Districts = two, Existing = everyone, Params = { GroupSize = 2 } }))
+  local again = SDP_Multi.Solve(Request({ Districts = two, Existing = everyone, Params = { GroupAbove = 2, GroupSize = 2, GroupPasses = 2 } }))
   T.same(again.Plan, grouped.Plan, "same request, same plan")
   -- One pass more only adds starts from the best plan so far.
-  local one = SDP_Multi.Solve(Request({ Districts = two, Existing = everyone, Params = { GroupSize = 2, GroupPasses = 1 } }))
+  local one = SDP_Multi.Solve(Request({ Districts = two, Existing = everyone, Params = { GroupAbove = 2, GroupSize = 2, GroupPasses = 1 } }))
   T.ok(grouped.Gain >= one.Gain - 1e-9, "a second pass is never worse")
-  -- Up to GroupSize cities: one search as before, no groups.
-  local together = SDP_Multi.Solve(Request({ Districts = two, Existing = everyone, Params = { GroupSize = 5 } }))
-  T.eq(together.Stats.Groups, nil, "five cities, GroupSize 5: no groups")
+  -- Up to GroupAbove cities: one search as before, no groups (the default:
+  -- up to 8).
+  local together = SDP_Multi.Solve(Request({ Districts = two, Existing = everyone, Params = { GroupSize = 2 } }))
+  T.eq(together.Stats.Groups, nil, "five cities, not above GROUP_ABOVE: no groups")
   -- Continue: one more pass over the groups, never worse.
   local more = SDP_Multi.Continue(grouped)
   T.ok(more.Ok and more.Gain >= grouped.Gain - 1e-9, "continue is never worse")

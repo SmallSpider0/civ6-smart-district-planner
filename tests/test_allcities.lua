@@ -1,9 +1,9 @@
 -- @state SDP_Panel
 -- @timeout 900
 -- "All cities" on the Several cities tab (issue 142): every city and
--- city-center pin takes part; more than SDP_Multi.GROUP_SIZE are planned in
+-- city-center pin takes part; more than SDP_Multi.GROUP_ABOVE are planned in
 -- groups of nearby cities, each searched with the others' districts in
--- place. Needs a game with more than GROUP_SIZE cities and pins: a late save
+-- place. Needs a game with more than GROUP_ABOVE cities and pins: a late save
 -- (tools/stress.py load pangaea-gs). Changes nothing on the map.
 local test, T = ...
 
@@ -17,7 +17,7 @@ end
 
 test("all cities: every city and pin on, planned in groups, one district per plot", function()
   local n = Count()
-  if n <= SDP_Multi.GROUP_SIZE then
+  if n <= SDP_Multi.GROUP_ABOVE then
     T.skip(n .. " cities and pins: load a late save (tools/stress.py load pangaea-gs)")
   end
   SDP_Panel.Open()

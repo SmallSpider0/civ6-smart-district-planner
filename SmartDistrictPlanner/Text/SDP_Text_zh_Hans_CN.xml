@@ -278,7 +278,7 @@
       <Text>全部城市</Text>
     </Replace>
     <Replace Tag="LOC_SDP_MULTI_ALL_TOOLTIP" Language="zh_Hans_CN">
-      <Text>选上全部城市和城址钉一起规划，相邻城市的区域能凑在一起互给加成。城多时按位置每次规划几座相邻的城、轮流进行，城越多算得越久。</Text>
+      <Text>选上全部城市和城址钉一起规划，相邻城市的区域能凑在一起互给加成。超过 8 座时按位置每次规划 4 座相邻的城、轮流进行，城越多算得越久。</Text>
     </Replace>
     <Replace Tag="LOC_SDP_MULTI_CLEAR" Language="zh_Hans_CN">
       <Text>全部取消</Text>

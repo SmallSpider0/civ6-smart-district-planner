@@ -23,7 +23,7 @@
 --                 rotations). Starting from the city-by-city plan and only
 --                 accepting improvements, the result is never worse than
 --                 planning the cities one after another (design 4.7).
---   Groups        more than GROUP_SIZE cities (issue 142): first all of them
+--   Groups        more than GROUP_ABOVE cities (issue 142): first all of them
 --                 city by city, then groups of nearby cities (Groups) one
 --                 after another, each searched as above with every other
 --                 city's districts fixed where the best plan so far has them,
@@ -37,11 +37,16 @@ SDP_Multi = {}
 
 SDP_Multi.NEAR = 7       -- existing cities this close to a new city take part by default
 SDP_Multi.DEFAULT_CITIES = 4 -- the Several cities tab's default group (DefaultGroup, issue 63)
--- More cities than this are planned in groups of nearby cities, at most this
--- many each, GROUP_PASSES times over (issue 142). Params.GroupSize and
--- Params.GroupPasses override them (tests, the offline comparison).
+-- More than GROUP_ABOVE cities are planned in groups of nearby cities, at
+-- most GROUP_SIZE each, GROUP_PASSES times over; Continue adds a pass
+-- (issue 142, numbers from the offline comparison of dense empires in
+-- docs/notes/issue-142-all-cities.md: up to 8 cities one search plans best,
+-- above that groups of 4 a little better than one search in the same time).
+-- Params.GroupAbove, GroupSize and GroupPasses override them (tests, the
+-- offline comparison).
+SDP_Multi.GROUP_ABOVE = 8
 SDP_Multi.GROUP_SIZE = 4
-SDP_Multi.GROUP_PASSES = 2
+SDP_Multi.GROUP_PASSES = 1
 
 local Copy = SDP_Search.Copy
 
@@ -891,9 +896,8 @@ function SDP_Multi.NewSession(request)
   self.Stats.Cities = #participants
   self.Starts = {}
   self.NextStartIndex = 1
-  local size = params.GroupSize or SDP_Multi.GROUP_SIZE
-  if #participants > size then
-    self.GroupList = SDP_Multi.Groups(participants, size)
+  if #participants > (params.GroupAbove or SDP_Multi.GROUP_ABOVE) then
+    self.GroupList = SDP_Multi.Groups(participants, params.GroupSize or SDP_Multi.GROUP_SIZE)
     self.Stats.Groups = #self.GroupList
   end
   return self
@@ -1542,14 +1546,13 @@ end
 -- pick: districts each city picks from a pool of `pool` (0: none).
 function SDP_Multi.EstimateUnits(cities, districts, wonders, params, pick, pool)
   pick, pool = pick or 0, pool or 0
-  local size = params.GroupSize or SDP_Multi.GROUP_SIZE
-  if cities > size then
+  if cities > (params.GroupAbove or SDP_Multi.GROUP_ABOVE) then
     -- In groups (Session:RunGroups): each group a session of its own, every pass.
-    local groups = math.ceil(cities / size)
+    local groups = math.ceil(cities / (params.GroupSize or SDP_Multi.GROUP_SIZE))
     local passes = params.GroupPasses or SDP_Multi.GROUP_PASSES
     local inner = {}
     for k, v in pairs(params) do inner[k] = v end
-    inner.GroupSize = math.huge
+    inner.GroupAbove = math.huge
     return passes * groups * SDP_Multi.EstimateUnits(math.ceil(cities / groups), districts, wonders, inner, pick, pool)
   end
   local slots = cities * (districts + pick) + wonders

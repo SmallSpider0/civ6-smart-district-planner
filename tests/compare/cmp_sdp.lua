@@ -250,7 +250,8 @@ function CmpAdapters.sdp(request, variant, w)
   local gsize = tonumber(variant:match("_G(%d+)") or "")
   local gpasses = tonumber(variant:match("_P(%d)") or "")
   if variant:match("_ALL$") then gsize = 9999 end
-  if gsize ~= nil or gpasses ~= nil then groupParams = { GroupSize = gsize, GroupPasses = gpasses } end
+  -- _G<n>: groups of n from more than n cities; _ALL: one search for all.
+  if gsize ~= nil or gpasses ~= nil then groupParams = { GroupAbove = gsize, GroupSize = gsize, GroupPasses = gpasses } end
   variant = variant:gsub("_ALL$", ""):gsub("_G%d+", ""):gsub("_P%d", "")
   local group = tonumber(variant:match("_GROUP(%d+)S?$") or "")
   local sharedList = variant:match("_GROUP%d+S$") ~= nil

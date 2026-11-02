@@ -278,7 +278,7 @@
       <Text>All cities</Text>
     </Replace>
     <Replace Tag="LOC_SDP_MULTI_ALL_TOOLTIP" Language="en_US">
-      <Text>Switch every city and site on and plan them together, so the districts of neighbouring cities can cluster and give each other adjacency. With many cities, a few neighbouring cities are planned at a time, in turn; more cities take longer.</Text>
+      <Text>Switch every city and site on and plan them together, so the districts of neighbouring cities can cluster and give each other adjacency. With more than 8, 4 neighbouring cities are planned at a time, in turn; more cities take longer.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_MULTI_CLEAR" Language="en_US">
       <Text>Clear all</Text>

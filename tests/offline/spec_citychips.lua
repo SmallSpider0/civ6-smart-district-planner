@@ -366,8 +366,9 @@ test("chips: all cities (issue 142): every city and pin on, none dimmed, all in 
   table.sort(keys)
   T.same(keys, Taking(), "the request's cities are the chips' cities")
   T.eq(#keys, #CITIES + #PINS, "all nine")
-  -- Solved through the button: more than GROUP_SIZE cities, so in groups of
+  -- Solved through the button: more than GROUP_ABOVE cities, so in groups of
   -- nearby cities; every one gets its district, one per plot.
+  T.ok(#keys > SDP_Multi.GROUP_ABOVE, "setup: enough cities for groups")
   multi.SetTier("FAST")
   UI_Mock.Controls.MultiSolveButton:Click()
   SDP_Panel.RunTask(5000)

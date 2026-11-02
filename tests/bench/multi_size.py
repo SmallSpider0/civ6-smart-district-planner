@@ -169,10 +169,10 @@ def many(args, order, path):
                 continue
             for variant in args.variants.split(","):
                 if variant == "ALL":
-                    params = "{ GroupSize = 9999 }"
+                    params = "{ GroupAbove = 9999 }"
                 else:
                     size, _, passes = variant[1:].partition("P")
-                    params = "{ GroupSize = %d%s }" % (int(size), ", GroupPasses = %d" % int(passes) if passes else "")
+                    params = "{ GroupAbove = %d, GroupSize = %d%s }" % (int(size), int(size), ", GroupPasses = %d" % int(passes) if passes else "")
                 run('SDP_MultiSize.Setup("%s", %d); SDP_MultiSize.Select(1, %d); SDP_MultiSize.Params = %s'
                     % (tier, args.count, n, params))
                 started = time.monotonic()

@@ -8,7 +8,7 @@
 --             to it within NEAR plots, at most DEFAULT_CITIES
 --             (SDP_Multi.DefaultGroup, issue 63); "all cities", "clear all"
 --             and "default" buttons. Any number of cities: more than
---             SDP_Multi.GROUP_SIZE are planned in groups of nearby cities
+--             SDP_Multi.GROUP_ABOVE are planned in groups of nearby cities
 --             (issue 142).
 --   Plans     one district list for every city, or a city's own list (the
 --             "plan for" pulldown; role templates from SDP_Rules.Templates).
