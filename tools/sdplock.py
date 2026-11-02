@@ -5,7 +5,7 @@
     python3 -I tools/sdplock.py take [--purpose TEXT] [--next | --stale | --force]
     python3 -I tools/sdplock.py release [--force]
     python3 -I tools/sdplock.py wait [--take] [--purpose TEXT] [--every 20]
-    python3 -I tools/sdplock.py heavy NAME -- CMD ...  # one heavy local job, paused while the game is held
+    python3 -I tools/sdplock.py heavy [--no-wait] NAME -- CMD ...  # one heavy local job at a time, queued first come first served
     python3 -I tools/sdplock.py queue add --what TEXT --why TEXT [--cmd CMD ...]
     python3 -I tools/sdplock.py queue list [--all]
     python3 -I tools/sdplock.py queue done ID [--failed] [--result TEXT]
@@ -26,7 +26,11 @@ the booking worktree can take it for 15 minutes. `--force` overrides
 everything; use it only when you know the holder is gone.
 
 Heavy local jobs (compare.mjs, refresh_results.py) start through `heavy`:
-one at a time on this machine, with at most the configured workers (`-j` is
+one at a time on this machine. While one runs, the others wait in a queue
+in the order they started waiting and only its head takes the free slot
+(`status` lists the order); a waiting process that exits or is killed
+drops out by itself (its pid is gone). `--no-wait` refuses instead (exit
+code 4). Each job runs with at most the configured workers (`-j` is
 lowered, or added, to fit), paused (SIGSTOP to the job's process group)
 while the game lock is held and resumed when it is released. A job that was
 paused reports it at the end: its timing fields are not usable.
@@ -487,24 +491,86 @@ def fit_workers(cmd, cap):
     return cmd
 
 
-def run_heavy(root, name, cmd):
-    """Run one heavy job here; returns its exit code."""
+def heavy_queue_path():
+    return _path("heavy-queue.json")
+
+
+def heavy_waiting(prune=False):
+    """Live processes waiting for the heavy slot, first come first; with prune
+    (under the mutex) the entries of dead ones are written out of the file."""
+    queue = _read(heavy_queue_path(), [])
+    live = [w for w in queue if pid_alive(w.get("pid"))]
+    live.sort(key=lambda w: (w.get("since", 0), w.get("seq", 0)))
+    if prune and len(live) != len(queue):
+        _write(heavy_queue_path(), live)
+    return live
+
+
+def _leave_heavy_queue(pid):
+    with _mutex():
+        queue = heavy_waiting(prune=True)
+        rest = [w for w in queue if w.get("pid") != pid]
+        if len(rest) != len(queue):
+            _write(heavy_queue_path(), rest)
+
+
+def heavy_turn(root, name, cmd, pid, enqueue=True):
+    """Call under the mutex. Returns (True, []) when pid may start now (it leaves
+    the queue); otherwise (False, what is ahead of it), queued at the back if
+    enqueue and not queued yet. Only the head of the queue gets a free slot."""
+    jobs = heavy_jobs()
+    queue = heavy_waiting(prune=True)
+    mine = [i for i, w in enumerate(queue) if w.get("pid") == pid]
+    ahead = queue[:mine[0]] if mine else list(queue)
+    if not jobs and not ahead:
+        if mine:
+            _write(heavy_queue_path(), [w for w in queue if w.get("pid") != pid])
+        return True, []
+    if enqueue and not mine:
+        me = identity(root)
+        queue.append({"name": name, "pid": pid, "owner": me["owner"], "tree": me["tree"], "since": now(),
+                      "seq": max([w.get("seq", 0) for w in queue] or [0]) + 1, "cmd": list(cmd)})
+        _write(heavy_queue_path(), queue)
+    return False, jobs + ahead
+
+
+def run_heavy(root, name, cmd, wait=True, every=5.0, sleep=time.sleep):
+    """Run one heavy job here; returns its exit code. While another job runs
+    (or others wait), wait in the first-come-first-served queue, or with
+    wait=False refuse (Busy)."""
     cap = local_cap()
     fitted = fit_workers(cmd, cap)
     if fitted != list(cmd):
         print("sdplock: workers capped at %d: %s" % (cap, " ".join(fitted)), flush=True)
     path = os.path.join(jobs_dir(), name + ".json")
-    with _mutex():
-        others = heavy_jobs()
-        if others:
-            raise Busy("heavy local job %s of %s is running (one at a time here); use the second machine "
-                       "(tools/remote.py) or wait for it" % (others[0]["name"], others[0].get("owner")))
-        env = dict(os.environ, SDP_JOBS=str(cap))
-        child = subprocess.Popen(fitted, cwd=root, env=env, start_new_session=True)
-        me = identity(root)
-        job = {"name": name, "pid": child.pid, "cmd": fitted, "owner": me["owner"], "tree": me["tree"],
-               "started": now(), "workers": cap, "paused": False, "pauses": 0}
-        _write(path, job)
+    pid = os.getpid()
+    shown = None
+    started = False
+    try:
+        while True:
+            with _mutex():
+                ok, ahead = heavy_turn(root, name, fitted, pid, enqueue=wait)
+                if ok:
+                    env = dict(os.environ, SDP_JOBS=str(cap))
+                    child = subprocess.Popen(fitted, cwd=root, env=env, start_new_session=True)
+                    started = True
+                    me = identity(root)
+                    job = {"name": name, "pid": child.pid, "cmd": fitted, "owner": me["owner"], "tree": me["tree"],
+                           "started": now(), "workers": cap, "paused": False, "pauses": 0}
+                    _write(path, job)
+                    break
+            if not wait:
+                raise Busy("heavy local job %s of %s is running (one at a time here); use the second machine "
+                           "(tools/remote.py) or wait for it" % (ahead[0]["name"], ahead[0].get("owner")))
+            line = "%d ahead of %s (first come, first served): %s" % (
+                len(ahead), name, ", ".join("%s of %s" % (w["name"], w.get("owner")) for w in ahead))
+            if line != shown:
+                print("sdplock: %s waiting: %s" % (time.strftime("%H:%M"), line), flush=True)
+                shown = line
+            sleep(every)
+    finally:
+        if not started:
+            _leave_heavy_queue(pid)
     if load_game().get("holder"):
         pause_heavy()
         print("sdplock: the game is held, so %s waits until it is released" % name, flush=True)
@@ -578,6 +644,13 @@ def print_status(local_only):
         print("  %-24s %-8s %s, started %s, %s" % (job["name"], "PAUSED" if job.get("paused") else "running",
                                                  job.get("owner"), time.strftime("%H:%M", localtime(job["started"])),
                                                  " ".join(job["cmd"])[:100]))
+    waiting = heavy_waiting()
+    if waiting:
+        print("  waiting, first come first served:")
+    for n, w in enumerate(waiting, 1):
+        print("  %d. %-21s %s, since %s, %s" % (n, w["name"], w.get("owner"),
+                                              time.strftime("%H:%M", localtime(w.get("since", 0))),
+                                              " ".join(w.get("cmd") or [])[:100]))
     items = queue_items()
     print("night queue: %d item(s)" % len(items))
     for item in items:
@@ -629,6 +702,7 @@ def main(argv=None):
     w.add_argument("--every", type=float, default=20)
     h = sub.add_parser("heavy")
     h.add_argument("name")
+    h.add_argument("--no-wait", action="store_true", help="refuse (exit 4) instead of queuing while another job runs")
     h.add_argument("command", nargs=argparse.REMAINDER)
     q = sub.add_parser("queue")
     qs = q.add_subparsers(dest="qcmd", required=True)
@@ -656,7 +730,7 @@ def main(argv=None):
             command = args.command[1:] if args.command[:1] == ["--"] else args.command
             if not command:
                 raise SystemExit("give the command after --")
-            return run_heavy(ROOT, args.name, command)
+            return run_heavy(ROOT, args.name, command, wait=not args.no_wait)
         elif args.qcmd == "add":
             item = queue_add(ROOT, args.what, args.why, args.cmd)
             print("queued #%d" % item["id"])

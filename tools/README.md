@@ -519,7 +519,7 @@ python3 -I tools/sdplock.py take --purpose "#71 测试"     # 拿游戏锁并写
 python3 -I tools/sdplock.py wait --take --purpose "..."  # 放后台：锁一空就拿下并结束
 python3 -I tools/sdplock.py take --next --purpose "v1.4.2 发版测试"  # 发版测试排到下一个
 python3 -I tools/sdplock.py release                     # 不退游戏也放锁（game.py quit 会自己放）
-python3 -I tools/sdplock.py heavy NAME -- node tools/compare.mjs ...   # 本机重活
+python3 -I tools/sdplock.py heavy NAME -- node tools/compare.mjs ...   # 本机重活（有别的在跑就排队等）
 python3 -I tools/sdplock.py queue add --what "realclick suite" --why "#71 界面" --cmd "python3 -I tools/realclick.py suite"
 python3 -I tools/sdplock.py queue list                  # 由一个会话在机器空闲时按顺序跑，跑完 queue done ID --result ...
 ```
@@ -527,7 +527,7 @@ python3 -I tools/sdplock.py queue list                  # 由一个会话在机�
 - **游戏锁**：`deploy.py`、`game.py`、`run_tests.py`、`realclick.py`、`shots.py`、`stress.py` 和 `civ6tuner.py serve`/`exec` 自己拿锁、续约；别的工作树拿着时以退出码 4 停下，写明谁、做什么、从几点开始。`civ6tuner.py states` 谁都能用。`game.py quit` 放锁并停掉本工作树的 Tuner 后台进程。
 - **过期**：30 分钟没续约，并且游戏已经关了或持有者的 Tuner 后台进程不在了，才算过期，`take --stale` 接手（接手后先 `game.py quit`，从新对局开始）。`--force` 不看状态直接拿，只在确定持有者已经不在时用。
 - **插队**：`take --next` 预订下一个；持有者放锁后 15 分钟内只有预订的工作树能拿。
-- **本机重活**：一次一个；worker 上限按本机配置（没有配置时 4 个），`-j` 超了就改小，`compare.mjs`、`refresh_results.py` 没写 `-j` 就补上；游戏锁被拿走时发 `SIGSTOP` 暂停（整个进程组），放锁时 `SIGCONT` 继续。暂停过的任务结束时会说，它的耗时字段不能用。Windows 上不能暂停。
+- **本机重活**：一次一个。有任务在跑时，后来的 `heavy` 按开始等待的先后排队（记在共用目录的 `heavy-queue.json`），槽空出来时只有排头能拿，后来的不会抢在前面（2026-11-03，#219：之前谁先抢到谁跑，早排上的任务可能一直抢不到）；`status` 按顺序列出排队的任务。排队的进程退出或被杀时按进程是否还在自己出队，不挡后面的；Ctrl-C 也出队。`--no-wait`（写在 NAME 前）不排队，有任务在跑就以退出码 4 停下。用旧代码的 `heavy` 不排队、不看队列，各工作树并入 `main` 后才都按先来后到。worker 上限按本机配置（没有配置时 4 个），`-j` 超了就改小，`compare.mjs`、`refresh_results.py` 没写 `-j` 就补上；游戏锁被拿走时发 `SIGSTOP` 暂停（整个进程组），放锁时 `SIGCONT` 继续。暂停过的任务结束时会说，它的耗时字段不能用。Windows 上不能暂停。
 - **共用目录**：`$SDP_SHARED`，否则 macOS `~/Library/Application Support/SDP`，Windows `%LOCALAPPDATA%\SDP`。显示的会话名是 `$SDP_OWNER`，没设就是分支名。
 - **本机配置**：和机器有关的数值不进仓库，写在 `~/.config/sdp/local.json`（`SDP_LOCAL_CONFIG` 可改路径），每项都可省：`workers_day`（默认 4）、`workers_night`（默认同白天）、`night`（如 `"00:00-08:00"`，默认没有夜间；夜间队列和夜里的 worker 上限都按它）、`weekend_is_night`（默认 false）、`remote`（第二台机器的 ssh 主机名，`SDP_REMOTE` 优先）、`remote_slots`（默认那台机器的核数减 2）、`remote_path`（那边 node 和 python3 所在目录）、`preflight_folders`（`preflight_night.py` 另外要碰的文件夹）。
 - 离线测试：`python3 -I -m unittest discover -s tests/tools`（假时钟、假进程、假游戏；CI 上也跑）。
