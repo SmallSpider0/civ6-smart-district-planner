@@ -900,7 +900,7 @@
       <Text>needs a {1_Other} next to it, which is in {2_Where} already: plan the wonder in that city</Text>
     </Replace>
     <Replace Tag="LOC_SDP_MULTI_SUPPLY" Language="en_US">
-      <Text>{2_Wonder} needs a {1_District} next to it: the first city of the list that has room for one more district and can take it gets it; with no such city the wonder is left out (to choose the city, give it a list of its own with the {1_District} set to Must)</Text>
+      <Text>{2_Wonder} needs a {1_District} next to it: the first city of the list that has room for one more district and can take it gets it, or, when that gives a better plan, another city that picks a {1_District} from its pool anyway, and the first city keeps its place; with no such city the wonder is left out (to choose the city, give it a list of its own with the {1_District} set to Must)</Text>
     </Replace>
     <Replace Tag="LOC_SDP_MULTI_SUPPLIED" Language="en_US">
       <Text>{1_District} added to {3_City} for {2_Wonder}</Text>

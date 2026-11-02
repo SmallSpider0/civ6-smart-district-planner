@@ -185,6 +185,58 @@ test("wonders: legal where placed, built ones left out", function()
   end)
 end)
 
+-- Issue 182: the second city picks an entertainment complex from its
+-- candidates (the only one it has); the colosseum's complex, supplied to the
+-- first city before, may go to it instead, the first city then planning
+-- another candidate. Never worse than the one solve of before.
+test("a wonder's district goes to a city that picks one anyway (issue 182)", function()
+  WithSitePin(function()
+    local ec = Types({ "DISTRICT_ENTERTAINMENT_COMPLEX" })[1]
+    local colosseum = nil
+    for _, w in ipairs(SDP_Wonders.List(pid)) do
+      if w.Type == "BUILDING_COLOSSEUM" and w.Status == nil then colosseum = w.Type end
+    end
+    if ec == nil or colosseum == nil then T.skip("no entertainment complex or colosseum to plan") end
+    local parts = SDP_Multi.Participants(pid)
+    T.ok(#parts >= 2, "two cities")
+    local first, second = parts[1].Key, parts[2].Key
+    local request = { PlayerID = pid, Tier = "FAST", Districts = {}, Plans = { [first] = {}, [second] = {} },
+      Pools = { [first] = Types({ "DISTRICT_CAMPUS", "DISTRICT_HOLY_SITE", "DISTRICT_THEATER", "DISTRICT_ENTERTAINMENT_COMPLEX" }),
+        [second] = { ec } },
+      Counts = { [first] = 2, [second] = 1 }, Wonders = { colosseum } }
+    for _, p in ipairs(parts) do
+      if p.Key ~= first and p.Key ~= second then request.Plans[p.Key], request.Pools[p.Key] = {}, {} end
+    end
+    SDP_Multi.SUPPLY_AGAIN = false
+    local before = SDP_Multi.Solve(request)
+    SDP_Multi.SUPPLY_AGAIN = true
+    local result = SDP_Multi.Solve(request)
+    T.ok(before.Ok and result.Ok, tostring(before.Error) .. " " .. tostring(result.Error))
+    T.ok(not result.Stats.Mismatch, "legality agrees with DMT")
+    local placed, complexes, perCity, wonder = 0, {}, {}, nil
+    for _, p in ipairs(result.Plan) do
+      if p.Kind == "WONDER" then
+        placed = placed + 1
+        wonder = p
+      else
+        perCity[p.City] = (perCity[p.City] or 0) + 1
+        if p.Type == ec then complexes[#complexes + 1] = p end
+      end
+    end
+    T.eq(placed, 1, "the colosseum is placed")
+    T.eq(perCity[first], 2, "the first city: two districts")
+    T.eq(perCity[second], 1, "the second city: one district")
+    T.ok(result.Stats.Again ~= nil, "solved a second time with the complex in the second city")
+    T.ok(result.Gain >= before.Gain - 1e-6, string.format("not worse than one solve: %.2f against %.2f", result.Gain,
+      before.Gain))
+    if result.Stats.Again.Moved then
+      T.eq(#complexes, 1, "one entertainment complex")
+      T.eq(complexes[1].City, second, "in the second city")
+      T.eq(Map.GetPlotDistance(complexes[1].X, complexes[1].Y, wonder.X, wonder.Y), 1, "next to the colosseum")
+    end
+  end)
+end)
+
 -- Independent check of issue 35: each city's districts join the city's own
 -- plots (a planned city: its center and first ring) through unowned plots
 -- within 3 rings that no other city's district takes.
