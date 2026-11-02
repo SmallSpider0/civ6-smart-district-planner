@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """remote - run heavy offline jobs (compare.mjs, the oracle) on a second machine over ssh.
 
-    python3 -I tools/remote.py sync                       # copy this worktree there
+    python3 -I tools/remote.py sync                       # copy this worktree there (run does it too)
     python3 -I tools/remote.py run NAME [--slots N | --exclusive] -- node tools/compare.mjs ... --out logs/remote/NAME.jsonl
     python3 -I tools/remote.py status [NAME]              # every session's jobs, free slots / one job
     python3 -I tools/remote.py wait NAME [--fetch PATH ...] [--every 60]
@@ -17,7 +17,7 @@ tests/compare/.cache (following links) and the Lua sources under reference/
 name>/ and ~/sdp-runs/ref/. Results there match this machine's except for
 timing fields, so keep runs whose seconds get reported on one machine.
 
-`run` clones the copy (APFS clone: instant, no extra space) to
+`run` syncs first, then clones the copy (APFS clone: instant, no extra space) to
 ~/sdp-runs/snap/NAME/, so a later `sync` does not change files under a
 running job, and starts the command there under nohup (it keeps running when
 ssh drops) through tools/sdpsched.py, the machine's one queue for all
@@ -70,7 +70,8 @@ def host():
 def ssh(command, check=True, capture=True):
     done = subprocess.run(["ssh", "-o", "ConnectTimeout=15", host(), command], capture_output=capture, text=True)
     if check and done.returncode != 0:
-        raise SystemExit("ssh %s: %s" % (host(), (done.stderr or "").strip()))
+        why = (done.stderr or "").strip() if capture else "the output above"
+        raise SystemExit("ssh %s: exit %d: %s" % (host(), done.returncode, why or "no message"))
     return done.stdout if capture else ""
 
 
@@ -126,7 +127,9 @@ def sync(_args):
 def run(args):
     if not args.command:
         raise SystemExit("give the command after --")
-    install_sched()
+    # the job runs on a clone of this worktree's copy there: copy the files first, or a worktree that was
+    # never synced has no copy (cp fails, #210) and one synced earlier runs old code
+    sync(args)
     if sched("check %s" % shlex.quote(args.name), check=False).strip():
         raise SystemExit("a job named %s is queued or running there; pick another name "
                          "(tools/remote.py status)" % args.name)

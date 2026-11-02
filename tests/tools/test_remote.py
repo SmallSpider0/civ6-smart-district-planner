@@ -15,10 +15,19 @@ class Run(unittest.TestCase):
     def setUp(self):
         self.sent = []
         fakes = {"ssh": lambda cmd, **_kw: self.sent.append(cmd) or "", "rsync": lambda *_a, **_kw: None,
-                 "host": lambda: "second", "remote_env": lambda: "export PATH=/opt/homebrew/bin:$PATH"}
+                 "host": lambda: "second", "remote_env": lambda: "export PATH=/opt/homebrew/bin:$PATH",
+                 "sync": lambda _args: self.sent.append("SYNC") or 0}
         for name, value in fakes.items():
             self.addCleanup(setattr, remote, name, getattr(remote, name))
             setattr(remote, name, value)
+
+    def test_run_copies_the_worktree_before_cloning_it(self):
+        # #210: a worktree that was never synced had no copy there; the clone failed with
+        # "cp: ...: No such file or directory" and an empty ssh error, and nothing was queued.
+        remote.run(argparse.Namespace(name="job", slots=1, exclusive=False, command=["node", "x.mjs"]))
+        clone = [i for i, c in enumerate(self.sent) if "cp -c -R" in c]
+        self.assertEqual(len(clone), 1)
+        self.assertIn("SYNC", self.sent[:clone[0]])
 
     def test_prune_runs_with_the_remote_path(self):
         # Without the PATH, python3 on macOS can be a stub that asks for the Xcode license and fails,
