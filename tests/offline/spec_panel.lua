@@ -1542,12 +1542,13 @@ test("issue 87: dense packing through its switch, tick boxes and Select all", fu
   local d = sites.State().D
   c.SitesDenseCheck:Toggle()
   T.eq(sites.State().Dense, true, "on through its box")
+  local dd = sites.State().D
   c.SitesDistanceMore:Click()
-  T.eq(sites.State().D, d + 1, "its own distance up")
+  T.eq(sites.State().D, dd + 1, "its own distance up")
   c.SitesDenseCheck:Toggle()
   T.eq(sites.State().D, d, "off: the usual distance back")
   c.SitesDenseCheck:Toggle()
-  T.eq(sites.State().D, d + 1, "on again: its distance kept")
+  T.eq(sites.State().D, dd + 1, "on again: its distance kept")
   sites.SetCount(4)
   sites.SetTier("FAST")
   T.ok(sites.Solve(), "started")
