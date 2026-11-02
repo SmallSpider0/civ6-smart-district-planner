@@ -462,7 +462,7 @@ footer { margin-top: 64px; border-top: 1px solid var(--line); padding-top: 16px;
   <h3>步骤</h3>
   <ol class="steps">
     <li>里程碑里的 Issue 都合并后开始。发版前测试：三种规则集的游戏内测试；界面或文字改了加英文界面，界面改了加真实点击和中英截图；压力测试（只改界面的版本不跑）。占屏幕的进夜间队列；求解器或合法性改了再跑离线对比，放第二台机器。</li>
-    <li><code>release.py prep</code> 改版本号，起草更新说明，再改成英文在前、中文在后、写给玩家的话。</li>
+    <li><code>release.py prep</code> 改版本号，把各 PR 的 <code>changelog.d/</code> 片段按编号收进 CHANGELOG 并删掉片段，起草更新说明，再改成英文在前、中文在后、写给玩家的话。</li>
     <li>每一版都按 CHANGELOG 逐条查对外文档：README、安装说明、测试者说明、创意工坊简介和示意图、介绍页、同类模组对照表、悬停提示里还在说旧做法、旧数字的地方都改掉，PR 里逐条写改了哪些；自测报告写这一轮。</li>
     <li>开一个发版准备的 PR，CI 过了自动合并。</li>
     <li><code>release.py publish</code> 发 GitHub Release。CI 打出模组压缩包和创意工坊提交包，把介绍页和本页发布到 GitHub Pages。</li>
@@ -504,7 +504,7 @@ footer { margin-top: 64px; border-top: 1px solid var(--line); padding-top: 16px;
   <h2><span class="n">09</span>几条约定</h2>
   <div class="cards">
     <div class="card"><h4>不卡在提问上</h4><p>需要定的事写进 Issue，然后先做别的。方案以维护者在对话里的话，或合作者在带 auto 标签的 Issue 下的明确回复为准；含糊的赞同只当意见。</p></div>
-    <div class="card"><h4>一个 Issue 一个 PR</h4><p>小 PR 好审、好回退，分支活得短不容易冲突。CI 一次约 6 分钟，只改文档的只跑校验；往 PR 上推新提交会取消没跑完的那一轮，所以提交攒几个一起推。</p></div>
+    <div class="card"><h4>一个 Issue 一个 PR</h4><p>小 PR 好审、好回退，分支活得短不容易冲突。更新记录写进这个 PR 自己的 <code>changelog.d/&lt;编号&gt;.md</code>，新文本键放在相关的键旁边，不都加在文件末尾，几个 PR 之间就不冲突。CI 一次约 6 分钟，只改文档的只跑校验；往 PR 上推新提交会取消没跑完的那一轮，所以提交攒几个一起推。</p></div>
     <div class="card"><h4>先调研、再动手</h4><p>功能类 Issue 的调研评论固定分“已查证的规则 / 玩家共识 / 个别意见 / 建议方案 / 待定问题”，写给懂游戏、不看代码的人：每个待定问题是一句能直接回答的问话，附上建议；代码位置和公式折叠在末尾。</p></div>
     <div class="card"><h4>对外只写自己</h4><p>README、创意工坊、介绍页只介绍本模组；同类模组只列客观事实的对照表；和它们的对比数据放在开发者文档里。</p></div>
     <div class="card"><h4>机器有关的不进仓库</h4><p>仓库是公开的：worker 数、夜间时段、第二台机器写在本机配置里，仓库只写有哪些项和默认值；账号也不进仓库。反过来，怎么做事的规则都写进仓库，维护者本机的个人规则只留机器、账号和个人的东西，两边不一致以仓库为准。</p></div>

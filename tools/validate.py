@@ -16,6 +16,8 @@ restart (AGENTS.md section 5):
   lua        tools/luacheck.mjs: Lua 5.1 syntax, banned globals, determinism
   refscene   tests/compare/refscenes/*.txt read back the same and their scene
              files and index.json entries are current (tools/refscene.py)
+  changelog  changelog.d/ fragments: <number>.md, one "- " entry per line;
+             CHANGELOG.md has no "未发布" section (tools/changelog.py)
   markdown   every **bold** in the repository's .md files opens and closes on
              GitHub: "**标题。**正文" shows the stars, "**标题**。正文" is bold
 
@@ -457,6 +459,17 @@ def check_refscenes(report):
         report.error(os.path.join(ROOT, path), 0, "refscene", message)
 
 
+def check_changelog(report):
+    """Change-log fragments (tools/changelog.py, issue 217)."""
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    try:
+        import changelog
+    except ImportError:
+        return
+    for path, lineno, message in changelog.problems():
+        report.error(path, lineno, "changelog", message)
+
+
 def _punct(ch):
     return ch in "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~" or unicodedata.category(ch).startswith("P")
 
@@ -568,6 +581,7 @@ def run(mod_dir=MOD_DIR, tests_dir=TESTS_DIR, strict=False, quiet=False):
     if os.path.isdir(os.path.join(ROOT, "workshop")):
         check_workshop(report)
     check_refscenes(report)
+    check_changelog(report)
     check_markdown(report)
     tool_ok = check_lua(report, [p for p in mod_files + test_files if p.endswith(".lua")])
 
