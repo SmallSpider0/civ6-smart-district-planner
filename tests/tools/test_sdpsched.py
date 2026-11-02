@@ -164,6 +164,69 @@ class Run(unittest.TestCase):
         left = sorted(n for n in os.listdir(base) if n.startswith("t-") or n == "logs")
         self.assertEqual(left, ["logs", "t-live", "t-recent", "t-synced"])
 
+    def make_job(self, name, state, ended, tree, pid=11):
+        record = dict(job(name, state, 1, ended - 60, pid=pid), ended_at=ended, tree=tree)
+        sdpsched.write_json(sdpsched.job_path(name), record)
+        os.makedirs(os.path.join(self.dir.name, "snap", name))
+        for ext in (".log", ".exit"):
+            with open(os.path.join(self.dir.name, name + ext), "w") as fh:
+                fh.write("0\n")
+
+    def files_of(self, name):
+        base = self.dir.name
+        return [os.path.exists(os.path.join(base, "snap", name)), os.path.exists(os.path.join(base, name + ".log")),
+                os.path.exists(os.path.join(base, name + ".exit")), os.path.exists(sdpsched.job_path(name))]
+
+    def test_prune_takes_a_finished_jobs_log_exit_file_and_record_with_its_snapshot(self):
+        now, week = time.time(), sdpsched.KEEP
+        os.makedirs(sdpsched.jobs_dir())
+        self.make_job("old", "done", now - week - 3600, "t")
+        self.make_job("fresh", "done", now - 3600, "t")
+        self.make_job("running", "running", now - week - 3600, "t", pid=os.getpid())  # old, but alive
+        for ext in (".log", ".exit"):  # no record at all
+            path = os.path.join(self.dir.name, "loose" + ext)
+            open(path, "w").close()
+            os.utime(path, (now - week - 3600, now - week - 3600))
+        open(os.path.join(self.dir.name, "recent.log"), "w").close()  # a running job of the old kind
+        self.assertEqual(sdpsched.main(["prune"]), 0)
+        self.assertEqual(self.files_of("old"), [False] * 4)
+        self.assertEqual(self.files_of("fresh"), [True] * 4)
+        self.assertEqual(self.files_of("running"), [True] * 4)
+        self.assertEqual(sorted(os.listdir(self.dir.name)),
+                         ["fresh.exit", "fresh.log", "jobs", "recent.log", "running.exit", "running.log", "snap"])
+
+    def test_prune_of_worktrees_that_are_gone_waits_a_day_not_a_week(self):
+        now, day = time.time(), sdpsched.GONE_KEEP
+        os.makedirs(sdpsched.jobs_dir())
+        self.make_job("gone-job", "done", now - day - 3600, "t-gone")
+        self.make_job("gone-recent", "done", now - 3600, "t-other")
+        self.make_job("kept-tree", "done", now - day - 3600, "t-here")
+        self.make_job("busy", "running", now - day - 3600, "t-gone-live", pid=os.getpid())
+        for tree in ("t-gone", "t-here", "t-gone-live"):
+            os.makedirs(os.path.join(self.dir.name, tree, "tools"))
+            open(os.path.join(self.dir.name, tree, "tools", "sdpsched.py"), "w").close()
+            for path in (os.path.join(self.dir.name, tree, sdpsched.SYNCED), os.path.join(self.dir.name, tree)):
+                if path.endswith(sdpsched.SYNCED):
+                    open(path, "w").close()
+                os.utime(path, (now - day - 3600, now - day - 3600))
+        self.assertEqual(sdpsched.main(["prune", "--known", "t-here", "main"]), 0)
+        self.assertEqual(self.files_of("gone-job"), [False] * 4)
+        self.assertEqual(self.files_of("gone-recent"), [True] * 4)
+        self.assertEqual(self.files_of("kept-tree"), [True] * 4)  # its worktree exists: the week rule
+        self.assertEqual(self.files_of("busy"), [True] * 4)
+        left = sorted(n for n in os.listdir(self.dir.name) if n.startswith("t-"))
+        self.assertEqual(left, ["t-gone-live", "t-here"])  # t-gone is removed; t-gone-live has a live job
+
+    def test_prune_dry_run_changes_nothing(self):
+        os.makedirs(sdpsched.jobs_dir())
+        self.make_job("old", "done", time.time() - sdpsched.KEEP - 3600, "t")
+        self.assertEqual(sdpsched.main(["prune", "--dry-run"]), 0)
+        self.assertEqual(self.files_of("old"), [True] * 4)
+        self.assertEqual(sdpsched.main(["prune", "--keep-days", "1", "--dry-run"]), 0)
+        self.assertEqual(self.files_of("old"), [True] * 4)
+        self.assertEqual(sdpsched.main(["prune", "--keep-days", "1"]), 0)
+        self.assertEqual(self.files_of("old"), [False] * 4)
+
     def test_check_refuses_a_live_name(self):
         os.makedirs(sdpsched.jobs_dir())
         sdpsched.write_json(sdpsched.job_path("busy"), job("busy", "running", 1, 1, pid=os.getpid()))
