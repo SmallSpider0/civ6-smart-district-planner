@@ -6,6 +6,7 @@
     python3 -I tools/watch_issues.py --mine URL ...  # comment or issue URLs the agent posted: never reported
     python3 -I tools/watch_issues.py --reset         # start from now (forget the old state)
     python3 -I tools/watch_issues.py --held [--clear]  # print what was held for the maintainer (then empty it)
+    python3 -I tools/watch_issues.py --workshop-every 2700  # how often the Workshop is read (seconds)
 
 Only the accounts in $SDP_WATCH_USERS (comma separated; default the
 repository's collaborators, read once with gh) count; anything else goes to
@@ -21,6 +22,12 @@ Without --once it polls every --every seconds (default 120) and exits with
 the first new items: run it in the background; its end is the signal. A
 failed poll (network) is retried after --retry seconds (default 30). It
 does not handle anything itself (.claude/skills/sdp-watch says how).
+
+The same loop reads the Steam Workshop item $SDP_WORKSHOP_ITEM (default
+3824473635; empty turns it off) every --workshop-every seconds (default 2700,
+45 minutes; after a failure again in 10 minutes): new comments and discussion
+posts go to held.log only and never end the watch; the item's owner and
+contributors are left out (watch_workshop.py).
 State: logs/watch/state.json of the main checkout (shared by all worktrees).
 """
 import argparse
@@ -31,6 +38,9 @@ import re
 import subprocess
 import sys
 import time
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # -I drops the script dir
+import watch_workshop  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -49,6 +59,8 @@ STATE = os.path.join(DIR, "state.json")
 OTHERS = os.path.join(DIR, "others.log")
 HELD = os.path.join(DIR, "held.log")
 LABEL = os.environ.get("SDP_WATCH_LABEL", "auto")
+ITEM = os.environ.get("SDP_WORKSHOP_ITEM", watch_workshop.ITEM)
+WORKSHOP_RETRY = 600
 
 
 def gh(path):
@@ -152,6 +164,30 @@ def poll(state):
     return out
 
 
+def hold(lines, stamp):
+    if lines:
+        os.makedirs(os.path.dirname(HELD), exist_ok=True)
+        with open(HELD, "a", encoding="utf-8") as f:
+            for line in lines:
+                f.write(stamp + " " + line + "\n")
+
+
+def workshop(state, every, clock=time.time, get=watch_workshop.fetch):
+    """Read the Workshop when it is due: new posts go to the held list, never to the caller.
+    A failure is printed and tried again in WORKSHOP_RETRY seconds; it never stops the watch."""
+    if not ITEM:
+        return
+    ws = state.setdefault("workshop", watch_workshop.fresh(clock()))
+    if clock() < ws.get("next", 0):
+        return
+    try:
+        hold(watch_workshop.poll(ws, get=get, item=ITEM, now=clock()), now())
+        ws["next"] = clock() + every
+    except RuntimeError as problem:
+        ws["next"] = clock() + min(every, WORKSHOP_RETRY)
+        print("%s workshop: %s" % (now(), problem), file=sys.stderr, flush=True)
+
+
 def held(clear):
     """Print what was held for the maintainer; empty the list with clear."""
     lines = []
@@ -159,6 +195,9 @@ def held(clear):
         with open(HELD, encoding="utf-8") as f:
             lines = f.read().splitlines()
     print("\n".join(lines) if lines else "nothing held")
+    workshop_lines = sum(1 for line in lines if " WORKSHOP " in line)
+    if workshop_lines:
+        print("(%d from the Steam Workshop)" % workshop_lines)
     if clear and lines:
         open(HELD, "w", encoding="utf-8").close()
 
@@ -172,13 +211,14 @@ def main():
     ap.add_argument("--reset", action="store_true")
     ap.add_argument("--held", action="store_true")
     ap.add_argument("--clear", action="store_true")
+    ap.add_argument("--workshop-every", type=float, default=2700)
     args = ap.parse_args()
     os.makedirs(DIR, exist_ok=True)
     if args.held:
         held(args.clear)
         return 0
     if args.reset:
-        save({"since": now(), "seen": [], "mine": []})
+        save({"since": now(), "seen": [], "mine": [], "workshop": watch_workshop.fresh()})
         print("watching from", now())
         return 0
     state = load()
@@ -200,6 +240,7 @@ def main():
         except RuntimeError as problem:  # network: try again soon, not a whole round later
             new, wait = [], args.retry
             print("%s gh: %s" % (now(), problem), file=sys.stderr, flush=True)
+        workshop(state, args.workshop_every)
         save(state)
         if new or args.once:
             print("\n".join(new) if new else "nothing new")
