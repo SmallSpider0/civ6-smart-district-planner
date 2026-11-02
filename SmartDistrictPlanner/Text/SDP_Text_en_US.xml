@@ -586,6 +586,9 @@
     <Replace Tag="LOC_SDP_COVERAGE_GROUP" Language="en_US">
       <Text>{1_Name}: covers {2_N} more ({3_Names})</Text>
     </Replace>
+    <Replace Tag="LOC_SDP_COVERAGE_GROUP_EXTRA" Language="en_US">
+      <Text>{1_Name} (range {4_Range}, {5_Extra} more from bonuses you have now): covers {2_N} more ({3_Names})</Text>
+    </Replace>
     <Replace Tag="LOC_SDP_COVERAGE_NOTHING" Language="en_US">
       <Text>Reach: this plan covers no new city</Text>
     </Replace>

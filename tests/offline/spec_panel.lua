@@ -672,6 +672,19 @@ test("single-city tab: the coverage column", function()
   T.eq(rows, 1, "the industrial zone's row")
   T.ok(UI_Mock.Controls.Summary:GetToolTipString():find("LOC_SDP_COVERAGE_GROUP", 1, true) ~= nil,
     "the summary's tooltip lists the newly covered cities")
+  T.ok(UI_Mock.Controls.Summary:GetToolTipString():find("LOC_SDP_COVERAGE_GROUP_EXTRA", 1, true) == nil,
+    "no bonus: the range is not mentioned")
+  -- Issue 197: with a bonus to the range (a suzerain's), the tooltip says
+  -- the range and how much of it is the bonus.
+  local extraRanges = SDP_Coverage.ExtraRanges
+  SDP_Coverage.ExtraRanges = function() return { [IZ] = 3 } end
+  local ok, far = pcall(SDP_Panel.Solve)
+  SDP_Coverage.ExtraRanges = extraRanges
+  T.ok(ok and far and far.Ok, "solved with the bonus: " .. tostring(far and (far.Error or far)))
+  T.ok(UI_Mock.Controls.Summary:GetToolTipString():find("LOC_SDP_COVERAGE_GROUP_EXTRA(", 1, true) ~= nil,
+    "the tooltip gives the longer range")
+  T.ok(UI_Mock.Controls.Summary:GetToolTipString():find(",9,3)", 1, true) ~= nil, "range 9, 3 of it from the bonus")
+  T.eq(SDP_Panel.Solve().Ok, true, "solved again without it")
   -- With a wonder the city goes to SDP_Multi: the weight goes with it.
   SDP_Panel.SetWonder("BUILDING_STONEHENGE", true)
   T.eq(SDP_Panel.Solve(), nil, "a task")
