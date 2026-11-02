@@ -31,7 +31,7 @@ When the agent posts from the same GitHub account the watch reads: after every `
 One main session per milestone (docs/maintaining.md "子 agent 怎么派" 5). The watch belongs to the main session that runs it:
 
 - The old main session, after the release (sdp-release §2 step 6): stop the running `watch_issues.py` and start no other. State lives in logs/watch/ of the main checkout, so nothing is lost.
-- The new main session (started by the maintainer from the card the old one proposed), in its first turn: `python3 -I tools/watch_issues.py --held` (mention what is held), then start the watch again in the background, without `--reset`: it picks up what came while no session watched.
+- The new main session (started by the old one with `start_session` `user_asked` when the maintainer said to switch, then detached to top level: docs/maintaining.md §4 item 5), in its first turn: if `get_session self` still shows it nested (`parentSessionId`, not `detached`), `detach_session self`; archive the old main session once `get_session` shows it not running; then `python3 -I tools/watch_issues.py --held` (mention what is held), then start the watch again in the background, without `--reset`: it picks up what came while no session watched.
 - Other sessions and subagents never start the watch.
 
 ## Act
