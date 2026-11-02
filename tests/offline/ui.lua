@@ -36,7 +36,36 @@ function Control:SetToolTipString(text) self._tooltip = text end
 function Control:GetToolTipString() return self._tooltip end
 function Control:RegisterCallback(event, fn) self._callbacks[event] = fn end
 function Control:RegisterCheckHandler(fn) self._check = fn end
-function Control:GetSizeX() return self._sizeX or 100 end
+-- Text widths, only while a test sets UI_Mock.Measure = { Width = fn(text,
+-- fontSize), Default = width of a control without text } (issue 216): a
+-- label is as wide as its text, cut to its truncate width; with a wrap width
+-- it is no wider than that, except for a word too long to break. Otherwise
+-- every control is 100 wide and no text is truncated.
+function Control:SetFontSize(size) self._font = size end
+function Control:SetTruncateWidth(width) self._truncate = width end
+function Control:SetWrapWidth(width) self._wrap = width end
+local function TextWidth(self)
+  local m = UI_Mock.Measure
+  return m.Width(self._text, self._font or 14)
+end
+function Control:IsTextTruncated()
+  if UI_Mock.Measure == nil or self._text == "" then return nil end
+  return (self._truncate or 0) > 0 and (self._wrap or 0) == 0 and TextWidth(self) > self._truncate
+end
+function Control:GetSizeX()
+  if self._sizeX ~= nil then return self._sizeX end
+  local m = UI_Mock.Measure
+  if m == nil then return 100 end
+  if self._text == "" then return m.Default or 100 end
+  local width = TextWidth(self)
+  if (self._wrap or 0) > 0 then
+    local longest = 0
+    for word in self._text:gmatch("%S+") do longest = math.max(longest, m.Width(word, self._font or 14)) end
+    return math.max(math.min(width, self._wrap), longest)
+  end
+  if (self._truncate or 0) > 0 and width > self._truncate then return self._truncate end
+  return width
+end
 function Control:SetSizeX(x) self._sizeX = x end
 function Control:GetSizeY() return self._sizeY or 30 end
 function Control:SetSizeY(y) self._sizeY = y end

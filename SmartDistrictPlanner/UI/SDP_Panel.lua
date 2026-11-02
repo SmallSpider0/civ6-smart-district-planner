@@ -631,9 +631,9 @@ end
 
 -- A name in a fixed-width cell (TruncateWidth in the XML): one line in the
 -- normal 14 point font; when that would cut it off (English names are
--- longer), two lines at 11 points. Cut off, with the full name as tooltip,
--- only when even that does not fit. `width`: the room for the name (80, a
--- district cell's, by default).
+-- longer), two lines at 11 points. Cut off at 11 points, with the full name
+-- as tooltip, only when even that does not fit (one long word does not
+-- wrap, issue 216). `width`: the room for the name (80 by default).
 local function FitName(label, text, width)
   width = width or 80
   label:SetFontSize(14)
@@ -645,22 +645,52 @@ local function FitName(label, text, width)
     label:SetTruncateWidth(0)
     label:SetWrapWidth(width)
     label:SetText(text)
+    if (label:GetSizeX() or 0) > width then
+      label:SetWrapWidth(0)
+      label:SetTruncateWidth(width)
+      label:SetText(text)
+    end
   end
 end
 SDP_UI.FitName = FitName
 
+-- A district cell's layout (DistrictCell in the XML): the name starts at
+-- CELL_NAME_X, the state ends CELL_STATE_RIGHT from the right edge, and
+-- CELL_GAP keeps them apart. A state wider than CELL_STATE_MAX (English
+-- "Empire limit reached") goes to two lines at 11 points.
+local CELL_NAME_X, CELL_STATE_RIGHT, CELL_GAP, CELL_STATE_MAX = 30, 12, 6, 60
+
+-- Set a cell's state label and return its width.
+local function FitState(label, text)
+  label:SetFontSize(14)
+  label:SetWrapWidth(0)
+  label:SetText(text)
+  if (label:GetSizeX() or 0) > CELL_STATE_MAX then
+    label:SetFontSize(11)
+    label:SetWrapWidth(CELL_STATE_MAX)
+    label:SetText(text)
+  end
+  return math.min(label:GetSizeX() or 0, CELL_STATE_MAX)
+end
+
+-- The room a cell leaves for the name next to a state `stateWidth` wide.
+function SDP_UI.CellNameRoom(cellWidth, stateWidth)
+  return math.max(24, cellWidth - CELL_NAME_X - CELL_STATE_RIGHT - CELL_GAP - stateWidth)
+end
+
 -- Show one district cell: its icon, name and state; the selected look for
 -- MUST and AUTO; dimmed when OFF or when it cannot be planned (`status`).
+-- The name gets the room the state leaves (issue 216: in English, long
+-- names such as Encampment ran into "Wonder").
 function SDP_UI.ShowCell(inst, d, state, status)
   -- WONDER: shown for a district a chosen wonder needs (issue 66), not stored.
   local selected = status == nil and (state == "MUST" or state == "AUTO" or state == "WONDER")
   local name = Locale.Lookup(d.Name)
   local label = status and Locale.Lookup("LOC_SDP_STATUS_" .. status) or Locale.Lookup("LOC_SDP_STATE_" .. state)
   inst.Icon:SetIcon(d.Icon, 26)
-  FitName(inst.Name, name)
-  FitName(inst.NameDark, name)
-  inst.State:SetText(label)
-  inst.StateDark:SetText(label)
+  local cellWidth = inst.Root:GetSizeX()
+  FitName(inst.Name, name, SDP_UI.CellNameRoom(cellWidth, FitState(inst.State, label)))
+  FitName(inst.NameDark, name, SDP_UI.CellNameRoom(cellWidth, FitState(inst.StateDark, label)))
   inst.Selected:SetHide(not selected)
   inst.Name:SetHide(selected)
   inst.State:SetHide(selected)
@@ -675,7 +705,7 @@ end
 
 -- Fill the two district grids (districts that take population, the others)
 -- in name order. stateOf(d), statusOf(d) (or nil), onClick(d). Returns the
--- rows { Type, Name, State, Status, Group, Cell, Click } (tests).
+-- rows { Type, Name, State, Status, Group, Cell, Click, Inst } (tests).
 function SDP_UI.BuildCells(im, otherIM, stack, otherStack, districts, stateOf, statusOf, onClick)
   im:ResetInstances()
   otherIM:ResetInstances()
@@ -696,7 +726,7 @@ function SDP_UI.BuildCells(im, otherIM, stack, otherStack, districts, stateOf, s
     -- Click: the function the cell calls on a click (in-game tests; the
     -- game's controls cannot be clicked from Lua).
     rows[#rows + 1] = { Type = d.Type, Name = entry.Name, State = state, Status = status,
-      Group = d.Specialty and "SPECIALTY" or "OTHER", Cell = inst.Root, Click = click }
+      Group = d.Specialty and "SPECIALTY" or "OTHER", Cell = inst.Root, Click = click, Inst = inst }
   end
   stack:CalculateSize()
   otherStack:CalculateSize()

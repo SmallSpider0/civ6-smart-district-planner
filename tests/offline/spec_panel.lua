@@ -1287,6 +1287,62 @@ test("issue 66: a wonder's district is supplied, shown, marked; not wanted stand
   SDP_Panel.SetCount(0)
 end)
 
+-- Issue 216: in English a district's name ran into its state ("Encampment"
+-- under "Wonder" showed as "EncampmenWonder"). Every cell's name ends before
+-- its state starts, whatever the state, with English texts measured at about
+-- 0.55 em a letter in a cell 156 wide (DistrictCell in the XML).
+test("issue 216: a district's name and its state do not overlap in English", function()
+  local EN = {
+    LOC_SDP_STATE_MUST = "Must", LOC_SDP_STATE_POOL = "Pool", LOC_SDP_STATE_OFF = "Off",
+    LOC_SDP_STATE_AUTO = "Auto", LOC_SDP_STATE_WONDER = "Wonder", LOC_SDP_STATUS_BUILT = "Built",
+    LOC_DISTRICT_ENCAMPMENT_NAME = "Encampment", LOC_DISTRICT_ENTERTAINMENT_COMPLEX_NAME = "Entertainment Complex",
+    LOC_DISTRICT_COMMERCIAL_HUB_NAME = "Commercial Hub", LOC_DISTRICT_INDUSTRIAL_ZONE_NAME = "Industrial Zone",
+  }
+  local lookup = Locale.Lookup
+  Locale.Lookup = function(key, ...)
+    if EN[key] ~= nil and select("#", ...) == 0 then return EN[key] end
+    return lookup(key, ...)
+  end
+  UI_Mock.Measure = { Default = 156, Width = function(text, size) return math.ceil(#text * size * 0.55) end }
+  local ok, err = pcall(function()
+    SDP_Panel.Open()
+    SDP_Panel.SelectTab("SINGLE")
+    SDP_Panel.SelectCity(1)
+    local ENT, CAMP = "DISTRICT_ENTERTAINMENT_COMPLEX", "DISTRICT_ENCAMPMENT"
+    for _, d in ipairs(SDP_Rules.PlannableDistricts(0)) do SDP_Panel.SetState(d.Type, SDP_UI.DefaultState(d)) end
+    local function Row(districtType)
+      for _, r in ipairs(SDP_Panel.State().DistrictRows) do
+        if r.Type == districtType then return r end
+      end
+    end
+    local function Check(when)
+      for _, r in ipairs(SDP_Panel.State().DistrictRows) do
+        local inst = r.Inst
+        local selected = not inst.NameDark:IsHidden()
+        local name = selected and inst.NameDark or inst.Name
+        local state = selected and inst.StateDark or inst.State
+        local width = inst.Root:GetSizeX()
+        local nameEnd, stateStart = 30 + name:GetSizeX(), width - 12 - state:GetSizeX()
+        T.ok(nameEnd + 4 <= stateStart, when .. ": " .. r.Type .. " name ends at " .. nameEnd
+          .. ", state " .. state:GetText() .. " starts at " .. stateStart)
+        T.ok(stateStart >= 30, when .. ": " .. r.Type .. " state inside the cell")
+      end
+    end
+    Check("defaults")
+    SDP_Panel.SetWonder("BUILDING_COLOSSEUM", true)
+    T.eq(Row(ENT).State, "WONDER", "for the wonder")
+    Check("for the wonder")
+    for i = 1, 4 do
+      Row(CAMP).Cell:Click()
+      Check("encampment, click " .. i)
+    end
+    SDP_Panel.SetWonder("BUILDING_COLOSSEUM", false)
+  end)
+  Locale.Lookup = lookup
+  UI_Mock.Measure = nil
+  T.ok(ok, tostring(err))
+end)
+
 -- Issue 49: a preset from its pulldown entry sets the weights; the save
 -- keeps the preset's name. Issue 89: the pulldown and the fold line show the
 -- preset the values equal, else Custom; picking a preset puts it back (no
