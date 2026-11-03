@@ -76,6 +76,18 @@ function SDP_Board.New(playerID, fixed, weights, bases)
     total = 0, illegal = 0,
     cacheDirty = true,
   }, Board)
+  self:AddFixed(fixed, bases)
+  return self
+end
+
+-- More fixed subjects (same as `fixed` and `bases` of SDP_Board.New); one
+-- on a plot the board has already is skipped. Only while no planned
+-- subject is on the board: their baselines are asked with nothing planned.
+-- A subject's score depends on its six neighbours only, so a board that
+-- gets the fixed subjects near a layout before the layout is placed scores
+-- it as one that had every fixed subject from the start (issue 226).
+function Board:AddFixed(fixed, bases)
+  if next(self.slots) ~= nil then error("SDP_Board: AddFixed with planned subjects on the board", 2) end
   for f, subject in ipairs(fixed) do
     local plot = Map.GetPlotIndex(subject.X, subject.Y)
     if self.fixedAt[plot] == nil then
@@ -90,7 +102,6 @@ function SDP_Board.New(playerID, fixed, weights, bases)
       self.fixedAt[plot] = entry
     end
   end
-  return self
 end
 
 function Board:TypeId(key)

@@ -220,7 +220,8 @@ function SDP_Sites.Candidates(playerID, options)
   local visibility = PlayersVisibility[playerID]
   local list = {}
   for index = 0, Map.GetPlotCount() - 1 do
-    if SDP_Task ~= nil and index % 256 == 255 then SDP_Task.Tick(1) end
+    -- About a unit per four plots (issue 226), outside the estimate.
+    if SDP_Task ~= nil and index % 64 == 63 then SDP_Task.Extra(16) end
     if visibility:IsRevealed(index) then
       local plot = Map.GetPlotByIndex(index)
       if SiteExclusion(playerID, plot, centers, minRange, reach) == nil then
@@ -609,7 +610,7 @@ end
 -- shared between sites (SDP_Board's memo). The overlay must be installed.
 SDP_Sites.CENTER_SLOT = 1000
 
-function SDP_Sites.Board(ctx, sites)
+local function FixedNear(sites)
   local fixed, seen = {}, {}
   for _, site in ipairs(sites) do
     for _, subject in ipairs(SDP_Overlay.FixedSubjects(site.Scan)) do
@@ -621,11 +622,32 @@ function SDP_Sites.Board(ctx, sites)
     end
   end
   table.sort(fixed, function(a, b) return Map.GetPlotIndex(a.X, a.Y) < Map.GetPlotIndex(b.X, b.Y) end)
+  return fixed
+end
+
+function SDP_Sites.Board(ctx, sites)
   -- Adjacency: 1 a yield, as on the single-city tab (issue 88), times the
   -- tab's yield weights and the district weight.
   ctx.AdjacencyWeights = {}
   for _, y in ipairs(SDP_Rules.YIELDS) do ctx.AdjacencyWeights[y] = ctx.Weights[y] * ctx.Items.DISTRICT end
-  ctx.Board = SDP_Board.New(ctx.PlayerID, fixed, ctx.AdjacencyWeights)
+  ctx.Board = SDP_Board.New(ctx.PlayerID, FixedNear(sites), ctx.AdjacencyWeights)
+  ctx.BoardSites = {}
+  for _, site in ipairs(sites) do ctx.BoardSites[site] = true end
+  return ctx.Board
+end
+
+-- The board with the fixed subjects near `site` (issue 226): made empty the
+-- first time, each site's fixed subjects added before it is refined. A
+-- site's districts and their neighbours lie within RADIUS + 1 of it, where
+-- its scan finds the fixed subjects, so its fine score is the same as on a
+-- board made for every candidate at once; a late-game map with thousands of
+-- candidates no longer scans them all.
+function SDP_Sites.BoardFor(ctx, site)
+  if ctx.Board == nil then SDP_Sites.Board(ctx, {}) end
+  if not ctx.BoardSites[site] then
+    ctx.BoardSites[site] = true
+    ctx.Board:AddFixed(FixedNear({ site }))
+  end
   return ctx.Board
 end
 
@@ -635,7 +657,7 @@ end
 -- (DMT gain of the districts and the center around them), updates Farm and
 -- Feature for the plots the districts take, and site.Fine (the full score).
 function SDP_Sites.Fine(ctx, site, params)
-  local board = ctx.Board
+  local board = SDP_Sites.BoardFor(ctx, site)
   local center = { Key = "DISTRICT_CITY_CENTER", Type = "DISTRICT", X = site.X, Y = site.Y }
   board:Put(SDP_Sites.CENTER_SLOT, center)
   local _, centerLegal = board:Total()
