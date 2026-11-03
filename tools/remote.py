@@ -299,6 +299,7 @@ def run(args):
         raise SystemExit("give the command after --")
     if local_live(args.name):
         raise SystemExit("a job named %s runs on this machine; pick another name (tools/remote.py status)" % args.name)
+    args.command = relative_args(args.command)  # run in a snapshot: absolute worktree paths would miss it
     slots = 0 if args.exclusive else (args.slots or sdpsched.workers_of(" ".join(args.command)) or 0)
     if not args.exclusive and not getattr(args, "remote_only", False) and local_free():
         where = remote_fits(args.name, slots)
@@ -507,6 +508,20 @@ def can_go_remote(cmd, cwd):
     return True
 
 
+def relative_args(cmd):
+    """The command with every absolute path into this worktree made relative to its root: the job runs in a
+    snapshot (here or on the second machine), where the worktree's absolute paths name the wrong files."""
+    root = os.path.realpath(ROOT)
+    result = list(cmd[:1])
+    for a in cmd[1:]:
+        if os.path.isabs(a):
+            path = os.path.realpath(a)
+            if path.startswith(root + os.sep):
+                a = os.path.relpath(path, root)
+        result.append(a)
+    return result
+
+
 def outputs(cmd):
     """Files a compare.mjs run writes, relative to the worktree (fetched back after a remote run)."""
     if not any(os.path.basename(a) == "compare.mjs" for a in cmd):
@@ -539,7 +554,7 @@ def direct(args):
             return run_short(name, cmd, cwd, env, key, me)
         if can_go_remote(cmd, cwd) and not (local_free() and remote_fits(name, slots_of(cmd)) == "no"):
             try:
-                return run_remote_and_wait(name, cmd)
+                return run_remote_and_wait(name, relative_args(cmd))
             except SystemExit as problem:
                 print("remote.py: the second machine cannot take %s (%s); running it here" % (name, problem),
                       file=sys.stderr, flush=True)

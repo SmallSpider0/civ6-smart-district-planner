@@ -356,6 +356,18 @@ class Direct(unittest.TestCase):
             self.assertEqual(remote.direct(argparse.Namespace(command=cmd)), 0)
             self.assertEqual(calls, [where], (free, fits))
 
+    def test_long_run_sent_there_names_worktree_paths_relatively(self):
+        # the job runs in the copy on the second machine: an absolute path into this worktree must not
+        # survive, or the test file is missing there and --out writes outside the snapshot fetched back
+        sent = []
+        patch(self, remote, can_go_remote=lambda cmd, cwd: True, local_free=lambda: False,
+              run_remote_and_wait=lambda name, cmd: sent.append(cmd) or 0)
+        spec = os.path.join(remote.ROOT, "tests", "offline", "spec_multi.lua")
+        out = os.path.join(remote.ROOT, "logs", "remote", "a.jsonl")
+        remote.direct(argparse.Namespace(command=["node", "tools/offline_tests.mjs", spec, "--out", out]))
+        self.assertEqual(sent, [["node", "tools/offline_tests.mjs", os.path.join("tests", "offline", "spec_multi.lua"),
+                                 "--out", os.path.join("logs", "remote", "a.jsonl")]])
+
     def test_long_run_that_cannot_go_there_runs_heavy_here(self):
         calls = []
         patch(self, remote, can_go_remote=lambda cmd, cwd: False,
