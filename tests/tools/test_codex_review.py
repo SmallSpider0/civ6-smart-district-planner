@@ -142,5 +142,5 @@ class TrialTable(unittest.TestCase):
         rows = {r.split("|")[1].strip(): r for r in self.rows()}
         self.assertIn("| 2 | 1 | 1 | 约 5 分钟 |", rows["#7"])
         self.assertIn("| 0 | 0 | 0 | 没审 |", rows["#8"])
-        self.assertEqual(cr.write_table(self.path), (0, 2))  # rendering again changes nothing
+        self.assertEqual(cr.write_table(self.path), (0, 1))  # rendering again adds nothing; a "not reviewed" row is kept
         self.assertEqual(len(self.rows()), 4)
