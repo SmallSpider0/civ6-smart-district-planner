@@ -150,9 +150,46 @@ test("a government plaza every city asks for goes to one; the others fill their 
       if row ~= nil and row.RequiresPopulation then perCity[p.City] = (perCity[p.City] or 0) + 1 end
       if p.Type == plaza then plazas[#plazas + 1] = p.City end
     end
-    T.same(plazas, { result.Cities[1].Key }, "one plaza, in the first city of the list")
+    T.eq(#plazas, 1, "one plaza")
     for _, c in ipairs(result.Cities) do
       T.eq(perCity[c.Key], 3, c.Name .. ": districts that take population")
+    end
+    -- Issue 234: every city asking was tried, and the plan kept is the
+    -- best of the hosts solved one by one.
+    T.eq(result.Stats.Hosts and result.Stats.Hosts.Tried, math.min(#result.Cities, SDP_Multi.HOST_TRIES), "hosts tried")
+    SDP_Multi.HOSTS_AGAIN = false
+    local ok, err = pcall(function()
+      for _, c in ipairs(result.Cities) do
+        local one = SDP_Multi.Solve({ PlayerID = pid, Tier = "FAST", Count = 3, UniqueTo = { [plaza] = c.Key },
+          Districts = { plaza, Types({ "DISTRICT_CAMPUS" })[1] },
+          Pool = Types({ "DISTRICT_HOLY_SITE", "DISTRICT_THEATER", "DISTRICT_COMMERCIAL_HUB", "DISTRICT_INDUSTRIAL_ZONE" }) })
+        T.ok(one.Gain <= result.Gain + 1e-6, c.Name .. " alone is not better: " .. one.Gain .. " > " .. result.Gain)
+      end
+    end)
+    SDP_Multi.HOSTS_AGAIN = true
+    if not ok then error(err, 0) end
+  end)
+end)
+
+test("a wonder given one city goes on that city's tiles (issue 234)", function()
+  WithSitePin(function(city, site)
+    local wonders = {}
+    for _, w in ipairs(SDP_Wonders.List(pid)) do
+      if w.Status == nil and #wonders < 3 then wonders[#wonders + 1] = w.Type end
+    end
+    if #wonders == 0 then T.skip("no free wonder") end
+    local siteKey = "S" .. Map.GetPlotIndex(site.X, site.Y)
+    local cities = {}
+    for _, wonderType in ipairs(wonders) do cities[wonderType] = siteKey end
+    local result = SDP_Multi.Solve({ PlayerID = pid, Tier = "FAST", Wonders = wonders, WonderCities = cities,
+      Districts = Types({ "DISTRICT_CAMPUS", "DISTRICT_THEATER" }) })
+    T.ok(result.Ok, tostring(result.Error))
+    T.ok(not result.Stats.Mismatch, "legality of the wonders agrees with DMT")
+    for _, p in ipairs(result.Plan) do
+      if p.Kind == "WONDER" then
+        T.eq(p.City, siteKey, p.Type .. " in the site")
+        T.ok(Map.GetPlotDistance(p.X, p.Y, site.X, site.Y) <= 3, p.Type .. " on the site's tiles")
+      end
     end
   end)
 end)

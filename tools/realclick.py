@@ -237,6 +237,22 @@ SDP_Panel.Multi.Refresh()
     s.check("multi swap switch off by click", value("SDP_Panel.Multi.State().Swap"), "false")
     click_control("Controls.MultiSwapCheck")
     s.check("multi swap switch on again", value("SDP_Panel.Multi.State().Swap"), "true")
+    # A wonder's city pulldown (issue 234): open it, pick the first city
+    # taking part, then automatic again.
+    lua("SDP_Panel.Multi.SetWonder('BUILDING_STONEHENGE', true)")
+    wonder = ("(function() for _, w in ipairs(SDP_Panel.Multi.State().View.Wonders) do "
+              "if w.Type == 'BUILDING_STONEHENGE' then return w end end end)()")
+    first = value("SDP_Panel.Multi.Participants()[1].Key")
+    click_control(wonder + ".CityPull:GetButton()")
+    time.sleep(0.5)
+    click_control(wonder + ".CityEntries[2]")
+    s.check("wonder city by click", value(wonder + ".City"), first)
+    s.check("wonder city sent", value("SDP_Panel.Multi.Request().WonderCities.BUILDING_STONEHENGE"), first)
+    click_control(wonder + ".CityPull:GetButton()")
+    time.sleep(0.5)
+    click_control(wonder + ".CityEntries[1]")
+    s.check("wonder city automatic again by click", value(wonder + ".City"), "nil")
+    lua("SDP_Panel.Multi.SetWonder('BUILDING_STONEHENGE', false)")
     # Back to the single-city tab: solve, a solution row, place, undo.
     click_control("Controls.SingleTab")
     s.check("single tab by click", value("SDP_Panel.Tab()"), "SINGLE")

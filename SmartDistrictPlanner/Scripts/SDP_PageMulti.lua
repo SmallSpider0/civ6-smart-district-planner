@@ -779,15 +779,16 @@ ShowWonders = function()
   -- Each tag's city pulldown (issue 234): automatic, or one of the cities
   -- taking part; a city that no longer takes part shows as automatic.
   local participants = Participants()
-  local pulls, shown = {}, {}
+  local pulls, shown, buttons = {}, {}, {}
   local function Decorate(inst, wonderType)
     local pull = inst.City
     pull:ClearEntries()
     local auto = Locale.Lookup("LOC_SDP_WONDER_CITY_AUTO")
-    local current, currentKey = auto, nil
+    local current, currentKey, entries = auto, nil, {}
     local function Add(label, key)
       local entry = {}
       pull:BuildEntry("InstanceOne", entry)
+      entries[#entries + 1] = entry.Button
       entry.Button:SetText(label)
       entry.Button:RegisterCallback(Mouse.eLClick, function() P.SetWonderCity(wonderType, key) end)
       if key ~= nil and key == m_wonderCities[wonderType] then current, currentKey = label, key end
@@ -797,14 +798,14 @@ ShowWonders = function()
     pull:CalculateInternals()
     pull:GetButton():SetText(current)
     pull:GetButton():SetToolTipString(Locale.Lookup("LOC_SDP_WONDER_CITY_TOOLTIP"))
-    pulls[wonderType], shown[wonderType] = pull, currentKey
+    pulls[wonderType], shown[wonderType], buttons[wonderType] = pull, currentKey, entries
   end
   SDP_UI.BuildWonders(Controls.MultiWonderPull, m_chipIM, Controls.MultiWonderChipStack, wonders, m_wonders, P.SetWonder,
     Decorate)
   m_view.Wonders = {}
   for _, w in ipairs(wonders) do
     m_view.Wonders[#m_view.Wonders + 1] = { Type = w.Type, Status = w.Status, Chosen = m_wonders[w.Type] == true,
-      CityPull = pulls[w.Type], City = shown[w.Type] }
+      CityPull = pulls[w.Type], CityEntries = buttons[w.Type], City = shown[w.Type] }
   end
   P.ShowSupply()
   FitPage() -- the tags take more or fewer rows (issue 199)
