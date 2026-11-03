@@ -232,6 +232,51 @@ class CodexReview(unittest.TestCase):
         self.assertEqual(pr_wait.watch([], [13], 60, 1800), 0)
 
 
+class NightTest(unittest.TestCase):
+    """#255: PR #254 changed the panel and had to wait for the night in-game test before auto-merge, and
+    for Codex too. --codex turned auto-merge on too early; without it the wait ended at once."""
+
+    def test_auto_merge_off_is_not_an_exit_and_is_never_turned_on(self):
+        views = [pr(rollup=PASSED, auto=None)] * 10 + [pr(rollup=PASSED, auto=AUTO), pr("MERGED", PASSED)]
+        fake = Fake(self, {16: views})
+        self.assertEqual(pr_wait.watch([], [], 60, 1800, night={16}), 0)
+        self.assertEqual(fake.sleeps, 11)
+        self.assertEqual(fake.merges(), [])
+
+    def test_clean_review_leaves_auto_merge_to_the_night_test(self):
+        views = [pr(rollup=PASSED, auto=None)] * 5 + [pr(rollup=PASSED, auto=AUTO), pr("MERGED", PASSED)]
+        fake = Fake(self, {17: views}, comments={17: [codex_summary("completed", False)]})
+        self.assertEqual(pr_wait.watch([], [17], 60, 1800, night={17}), 0)
+        self.assertEqual(fake.merges(), [])
+        self.assertEqual(fake.logged, [(17, "clean")])
+
+    def test_no_review_in_time_says_so_without_turning_on_auto_merge(self):
+        views = [pr(rollup=PASSED, auto=None)] * 40 + [pr(rollup=PASSED, auto=AUTO), pr("MERGED", PASSED)]
+        fake = Fake(self, {18: views}, comments={18: []})
+        self.assertEqual(pr_wait.watch([], [18], 60, 1800, night={18}), 0)
+        self.assertEqual(fake.merges(), [])
+        self.assertEqual(len(fake.comments_posted()), 1)
+        self.assertIn("night", fake.comments_posted()[0][4])
+
+    def test_findings_and_failed_ci_still_end_the_wait(self):
+        fake = Fake(self, {19: [pr(auto=None)]}, comments={19: [codex_summary("completed", True)]},
+                    threads=["P1: this breaks"])
+        self.assertEqual(pr_wait.watch([], [19], 60, 1800, night={19}), 1)
+        self.assertEqual(fake.merges(), [])
+        failed = [check("offline (ubuntu-latest)", conclusion="FAILURE"), check("offline (windows-latest)")]
+        Fake(self, {20: [pr(auto=None), pr(rollup=failed, auto=None)]})
+        self.assertEqual(pr_wait.watch([], [], 60, 1800, night={20}), 1)
+
+    def test_night_option_on_the_command_line(self):
+        seen = []
+        self.addCleanup(setattr, pr_wait, "watch", pr_wait.watch)
+        pr_wait.watch = lambda *a: seen.append(a) or 0
+        self.addCleanup(setattr, sys, "argv", sys.argv)
+        sys.argv = ["pr_wait.py", "1", "--codex", "254", "--night", "254"]
+        self.assertEqual(pr_wait.main(), 0)
+        self.assertEqual(seen, [([1], [254], 60, 1800, {254})])
+
+
 def run(cwd, *args):
     done = subprocess.run(["git"] + list(args), cwd=cwd, capture_output=True, text=True)
     if done.returncode != 0:
