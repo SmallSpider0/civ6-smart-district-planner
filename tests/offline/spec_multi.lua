@@ -1117,3 +1117,18 @@ test("one dam per river: two cities on one river plan one dam (issue 142)", func
     { "4,2", "5,2", "6,4", "7,4" })
   T.eq(two, 2, "two rivers: a dam on each")
 end)
+
+-- Issue 243 (found by spec_mixed): a wonder that must touch a district, on a
+-- plot at the map's edge (a neighbour off the map), crashed the search.
+test("a wonder next to a district on the map's edge", function()
+  World.New({ rows = { ".......", ".......", ".......", "~~~~~~~" },
+    cities = { { id = 1, x = 3, y = 1, population = 8, capital = true, radius = 1 } } })
+  local result = SDP_Multi.Solve(Request({ Districts = { "DISTRICT_CAMPUS" }, Wonders = { "BUILDING_GREAT_LIBRARY" },
+    Only = { [1] = true } }))
+  T.ok(result.Ok, tostring(result.Error))
+  local library
+  for _, p in ipairs(result.Plan) do
+    if p.Type == "BUILDING_GREAT_LIBRARY" then library = p end
+  end
+  T.ok(library ~= nil, "the library is placed")
+end)

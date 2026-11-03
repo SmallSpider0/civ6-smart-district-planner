@@ -173,7 +173,7 @@ function Search:OwnDistrictNext(required, i, layout, group)
   local cities = owners.Wonder[i]
   if cities == nil or (group ~= nil and not cities[group]) then return false end
   for _, index in ipairs(self.Board:Neighbours(self.Candidates[i].Index)) do
-    local f = index and owners.Fixed[index]
+    local f = index and owners.Fixed[index] or nil -- index false: off the map
     if f ~= nil and Serves(f.Type, required) then
       if group ~= nil then
         if f.Groups[group] then return true end
