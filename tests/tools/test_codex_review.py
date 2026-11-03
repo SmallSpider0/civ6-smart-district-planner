@@ -5,6 +5,7 @@
 import json
 import os
 import sys
+import tempfile
 import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "tools"))
@@ -62,3 +63,80 @@ class Verdict(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+TABLE = """# Trial
+
+| PR | 日期 | 意见 | 属实 | 误报 | 等了多久 | 备注 |
+|---|---|---|---|---|---|---|
+| #1 | 2026-10-27 | 0 | 0 | 0 | — | |
+| #2 | 2026-10-28 | 1 | 1 | 0 | — | kept note |
+
+after the table
+"""
+
+
+def thread(resolved, *replies):
+    nodes = [{"author": {"login": "chatgpt-codex-connector"}, "url": "u", "body": "P2 finding"}]
+    nodes += [{"author": {"login": "me"}, "url": "u", "body": b} for b in replies]
+    return {"id": "T", "isResolved": resolved, "path": "a", "line": 1, "comments": {"nodes": nodes}}
+
+
+class TrialTable(unittest.TestCase):
+    def setUp(self):
+        self.dir = tempfile.mkdtemp()
+        self.path = os.path.join(self.dir, "trial.md")
+        with open(self.path, "w", encoding="utf-8") as f:
+            f.write(TABLE)
+
+    def rows(self):
+        with open(self.path, encoding="utf-8") as f:
+            return [line for line in f.read().split("\n") if line.startswith("| #")]
+
+    def test_counts_true_false_and_unresolved(self):
+        threads = [thread(True, "Confirmed, fixed"), thread(True, cr.FALSE_POSITIVE + "no"), thread(False)]
+        self.assertEqual(cr.thread_counts(threads), (3, 1, 1, 1))
+        self.assertEqual(cr.row_cells((3, 1, 1, 1), "findings", 4.2), ("3", "1（另 1 条待核实）", "1", "约 4 分钟"))
+        self.assertEqual(cr.row_cells((1, 0, 0, 1), "findings", 0.3), ("1", "待核实", "0", "不到 1 分钟"))
+        self.assertEqual(cr.row_cells((0, 0, 0, 0), "clean", 2), ("0", "0", "0", "约 2 分钟"))
+
+    def test_new_row_is_added_after_the_last_row(self):
+        self.assertEqual(cr.upsert_row(self.path, 3, ("0", "0", "0", "约 2 分钟"), "2026-11-03"), "added")
+        self.assertEqual(self.rows()[-1], "| #3 | 2026-11-03 | 0 | 0 | 0 | 约 2 分钟 |  |")
+        self.assertEqual(len(self.rows()), 3)
+        with open(self.path, encoding="utf-8") as f:
+            self.assertTrue(f.read().endswith("after the table\n"))
+
+    def test_existing_row_gets_new_counts_but_keeps_date_and_note(self):
+        cr.upsert_row(self.path, 2, ("1", "1", "0", "约 3 分钟"), "2026-11-09")
+        self.assertEqual(self.rows()[1], "| #2 | 2026-10-28 | 1 | 1 | 0 | 约 3 分钟 | kept note |")
+        cr.upsert_row(self.path, 2, ("1", "0", "1", "约 9 分钟"), "2026-11-09")  # the time of the first round stays
+        self.assertEqual(self.rows()[1], "| #2 | 2026-10-28 | 1 | 0 | 1 | 约 3 分钟 | kept note |")
+
+    def test_a_failed_review_does_not_overwrite_real_counts(self):
+        self.assertEqual(cr.upsert_row(self.path, 2, ("0", "0", "0", "没审"), "2026-11-03"), "kept")
+        self.assertEqual(self.rows()[1], "| #2 | 2026-10-28 | 1 | 1 | 0 | — | kept note |")
+        self.assertEqual(cr.upsert_row(self.path, 4, ("0", "0", "0", "没审"), "2026-11-03"), "added")
+
+    def test_log_review_writes_the_row_from_github(self):
+        cr_orig = (cr.gh, cr.codex_threads, cr.ROOT)
+        self.addCleanup(lambda: setattr(cr, "gh", cr_orig[0]) or setattr(cr, "codex_threads", cr_orig[1])
+                        or setattr(cr, "ROOT", cr_orig[2]))
+        os.makedirs(os.path.join(self.dir, "docs", "notes"))
+        os.replace(self.path, os.path.join(self.dir, cr.TRIAL))
+        self.path = os.path.join(self.dir, cr.TRIAL)
+        now = cr.datetime.datetime.now(cr.datetime.timezone.utc)
+        asked = (now - cr.datetime.timedelta(minutes=5)).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+        def gh(*args, data=None):
+            if args[:2] == ("pr", "view"):
+                return json.dumps({"headRefName": "mac/x"})
+            if args[0] == "api":
+                return json.dumps([{"body": "@codex review", "created_at": asked}])
+            raise AssertionError(args)
+        cr.gh = gh
+        cr.ROOT = self.dir
+        cr.codex_threads = lambda number: [thread(True, "Confirmed"), thread(False)]
+        self.assertIn("added", cr.log_review(7, "findings", here=True))
+        row = [r for r in self.rows() if r.startswith("| #7 |")][0]
+        self.assertIn("| 2 | 1（另 1 条待核实） | 0 | 约 5 分钟 |", row)

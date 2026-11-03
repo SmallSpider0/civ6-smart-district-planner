@@ -46,7 +46,9 @@ class Fake:
         self.comments = comments or {}  # PR -> issue comments (Codex's summary)
         self.threads = threads or []
         self.errors = errors  # this many `pr view` calls fail like a dropped connection first
-        self.calls, self.sleeps, self.mine, self.merged = [], 0, [], []
+        self.calls, self.sleeps, self.mine, self.merged, self.logged = [], 0, [], [], []
+        test.addCleanup(setattr, cr, "log_review", cr.log_review)
+        cr.log_review = lambda number, outcome, here=False: self.logged.append((number, outcome)) or "row"
         self.merge_result = (False, "a conflict changes existing lines")
         for mod, name, value in ((cr, "gh", self.gh), (pr_wait.time, "sleep", self.sleep),
                                  (pr_wait, "record_mine", self.mine.append),
@@ -181,6 +183,7 @@ class CodexReview(unittest.TestCase):
         self.assertEqual(pr_wait.watch([], [8], 60, 1800), 0)
         self.assertEqual(fake.merges(), [("pr", "merge", "8", "--auto", "--squash")])
         self.assertEqual(fake.comments_posted(), [])
+        self.assertEqual(fake.logged, [(8, "clean")])  # once, not once per poll
 
     def test_failed_review_turns_on_auto_merge_and_says_so_once(self):
         views = [pr(auto=None), pr(auto=AUTO), pr(auto=AUTO), pr("MERGED", PASSED)]
@@ -189,6 +192,7 @@ class CodexReview(unittest.TestCase):
         self.assertEqual(len(fake.merges()), 1)
         self.assertEqual(len(fake.comments_posted()), 1)
         self.assertEqual(len(fake.mine), 1)
+        self.assertEqual(fake.logged, [(9, "failed")])
 
     def test_no_review_in_time_turns_on_auto_merge(self):
         views = [pr(auto=None)] * 40 + [pr(auto=AUTO), pr("MERGED", PASSED)]
@@ -200,12 +204,14 @@ class CodexReview(unittest.TestCase):
         first = next(i for i, a in enumerate(fake.calls) if a[:2] == ("pr", "merge"))
         views_before = sum(1 for a in fake.calls[:first] if a[:2] == ("pr", "view"))
         self.assertGreaterEqual(views_before, 31)
+        self.assertEqual(fake.logged, [(10, "timeout")])
 
     def test_unresolved_findings_need_action(self):
         fake = Fake(self, {11: [pr(auto=None)]}, comments={11: [codex_summary("completed", True)]},
                     threads=["P1: this breaks"])
         self.assertEqual(pr_wait.watch([], [11], 60, 1800), 1)
         self.assertEqual(fake.merges(), [])
+        self.assertEqual(fake.logged, [(11, "findings")])
 
     def test_findings_all_resolved_count_as_clean(self):
         fake = Fake(self, {12: [pr(auto=None), pr("MERGED", PASSED)]},
