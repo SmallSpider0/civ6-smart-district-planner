@@ -24,7 +24,7 @@ python3 -I tools/watch_issues.py            # in the background (polls every 2 m
 
 Run it from the main checkout so its state (logs/watch/state.json) is one place. When it exits, the watch side session starts it again and passes on what it printed ("Who runs it"). Started again later without `--reset`, it picks up what came while it was off. To check once between tasks: `--once`. While no watch runs (no watch side session, or turned off), the main session runs `--once` after every finished task, so an issue does not sit unseen for hours.
 
-When the agent posts from the same GitHub account the watch reads: after every `gh issue comment`, `gh pr comment` or `gh issue create`, record the URL gh prints with `python3 -I tools/watch_issues.py --mine URL`, or your own comment or issue comes back as new (a running watch picks the record up at its next poll). Items from accounts that are not collaborators go to logs/watch/others.log: mention them to the maintainer at a good moment, do nothing else.
+The maintainer and the agents share one GitHub account (the one `gh api user` returns, or `$SDP_WATCH_SELF`). The watch only marks that account's issues and comments seen: it never reports or holds them, since the maintainer decides in Claude Code, not on the issue. So comments the agent posts need no `--mine` any more; `--mine URL` still keeps any other URL from being reported. Items from accounts that are not collaborators go to logs/watch/others.log: mention them to the maintainer at a good moment, do nothing else.
 
 ## Steam Workshop comments (maintainer, 2026-11-03, #229)
 
