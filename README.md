@@ -10,27 +10,28 @@
 
 ## English
 
-A district planner for Civilization VI: pick a city and the districts you want, and in a few seconds it finds the layout with the highest adjacency bonus within the city's 3 rings and places it as map tacks with district icons. It also chooses sites for new cities and plans several cities together. Where a district fits and what it gets come from [Detailed Map Tacks](https://steamcommunity.com/sharedfiles/filedetails/?id=2428969051) (DMT), so the numbers in a plan are the numbers on the tacks.
+Smart District Planner is a Civilization VI mod. Pick a city and the districts you want, and within a few seconds it finds the layout with the highest adjacency bonus in the city's 3 rings and places it as map tacks with district icons. It can also choose sites for new cities and plan several cities together.
+
+It needs [Detailed Map Tacks](https://steamcommunity.com/sharedfiles/filedetails/?id=2428969051) (DMT), which decides where a district fits and what it gets, so the numbers in a plan match the numbers on the tacks.
 
 **[Steam Workshop](https://steamcommunity.com/sharedfiles/filedetails/?id=3824473635)** · **[Download](https://github.com/SmallSpider0/civ6-smart-district-planner/releases/latest)** · **[Overview](https://smallspider0.github.io/civ6-smart-district-planner/en/)** · **[Install and use](docs/install-en.md)**
 
 ### Why use it
 
-- **Your civilization's rules, with no setup.** Adjacency and placement rules from your civilization, your leader, your pantheon and your religion's beliefs are counted, and your unique districts are used: Japan's districts get +1 from each other, Korea's Seowon loses yield next to districts, Gaul's specialty districts stay off the City Center, Vietnam's go on Woods, Rainforest or Marsh.
-- **Close to the best possible, and it tells you how close.** With few districts it tries every layout, so the plan is the best one; otherwise it says at most how far from the best it may be, and you can press **Improve**. Checked against real games: from games that 8 strong players shared with their saves on CivFanatics, 17 city layouts (turns 58–276; [each scene with maps](docs/reference-scenes.md), in Chinese) were planned again on the saved maps, counting adjacency only. The players' layouts reach on average 90.4% of the proven optimum; the Standard effort reaches 99.8% and hits it exactly in 16 of 17. The players built their cities step by step, though, without knowing what would come later.
-- **Several cities at once.** Every city you have, and site tacks for cities not founded yet. Districts share adjacency across cities, and districts limited to one per empire, like the Government Plaza, go to the city where they do the most. In the test scenarios, planning the cities one at a time reaches only about 95% of the best known plan.
-- **Borrows tiles from your other cities.** Tiles you can swap from your own cities are used (on by default, can be turned off). On real saves this gives about 13% more adjacency for one city and 19% for several; some districts then need a Swap in Manage Citizens, and the result marks them.
-- **Never a tile you cannot build on, never moves what you have.** Luxury and strategic resources stay uncovered, empire limits and city borders are checked, and on tiles a city owns the game's own list of valid tiles is checked too. Built districts and your own tacks stay where they are and count as neighbors.
-- **Wonders with their rules.** Add wonders and they are planned with the districts: the Colosseum gets an Entertainment Complex next to it when the city has none, and the Temple of Artemis comes with its Camp.
+- It follows your civilization's rules with no setup: adjacency and placement rules from your civilization, leader, pantheon and beliefs are counted, and your unique districts are used. For example, Japan's districts get +1 from each other, and Vietnam's specialty districts go only on Woods, Rainforest or Marsh.
+- With few districts it tries every layout, so the plan is the best one. With more, it says at most how far from the best the plan may be, and **Improve** keeps searching. Of 17 city layouts that strong players shared with their saves on CivFanatics, it finds the best possible one in 16, counting adjacency only ([each scene](docs/reference-scenes.md), in Chinese).
+- It never plans a district where you cannot build it, and never moves what you have. Luxury and strategic resources stay uncovered, empire limits and city borders are checked, and on tiles a city owns the game's own list of valid tiles is checked too. Built districts and your own tacks stay where they are and count as neighbors.
 
 The panel has three tabs:
 
 - **One city**: set the districts you must have to Must, leave the rest in the Pool, and say how many districts the city should end up with. **Solve** gives three plans with different districts; click one to preview it on the map, then **Place tacks**. **Undo tacks** works too, also after loading a save.
 - **City sites**: chooses spots for new cities on the explored map. Each site is scored on district potential, tiles, resources and Housing; hover a score for the yields behind it. **Dense packing** puts new cities as close together as allowed; tick the sites you want.
-- **Several cities**: plans the city selected on the map with the nearest cities and site tacks (4 by default); **All cities** selects every city and site tack, and above 8 they are planned in groups of up to 4 neighbouring cities, taken in turns. Each city can have its own district list; **Apply a template** fills one for Science, Production or another yield from your civilization's rules.
+- **Several cities**: plans the city selected on the map with the nearest cities and site tacks (4 by default); **All cities** selects every city and site tack, and above 8 they are planned in groups of up to 4 neighbouring cities, taken in turns. Districts share adjacency across cities, and a district limited to one per empire, like the Government Plaza, goes to the city where it does the most. Each city can have its own district list; **Apply a template** fills one for Science, Production or another yield from your civilization's rules.
 
 Also:
 
+- Wonders are planned with the districts: the Colosseum gets an Entertainment Complex next to it when the city has none, and the Temple of Artemis comes with its Camp.
+- Tiles you can swap from your other cities are used too (on by default, can be turned off), which gives more adjacency; such a district needs a Swap in Manage Citizens, and the result marks it.
 - Lean toward a yield with the Science, Culture or Religion preset, or set each weight yourself.
 - Districts stay off tiles that would make good farms or mines unless the bonus is worth it.
 - Neighborhoods go where Appeal gives the most Housing. An Aqueduct is added when a city lacks fresh water, a Dam when it has enough Floodplains.
@@ -40,9 +41,9 @@ Also:
 - Long searches run over several frames, so you can keep playing or close the panel. <kbd>Shift</kbd>+<kbd>L</kbd> opens the panel. Settings are kept in the save.
 - Base game, Rise and Fall, and Gathering Storm; the panel is in English and Chinese and follows the game's language.
 
-How close its plans come to the true optimum, its speed and known limitations: see the [overview](https://smallspider0.github.io/civ6-smart-district-planner/en/).
+How close its plans come to the best, its speed and known limitations: see the [overview](https://smallspider0.github.io/civ6-smart-district-planner/en/).
 
-> ⚠️ **One planner per game**: do not enable it together with Auto Map Tacks Planner, Empire Planner or another district planner; they disturb each other.
+Use one planner per game: do not enable it together with Auto Map Tacks Planner, Empire Planner or another district planner, since they disturb each other.
 
 ### Install
 
@@ -116,27 +117,28 @@ The development documents are in Chinese; issues and pull requests in English ar
 
 ## 中文
 
-《文明6》区域规划模组：选一座城和想建的区域，几秒钟在城市三环内算出相邻加成最高的摆法，一键打成带区域图标的地图钉；也能给新城选址，让几座城一起规划。能不能放、加成多少都由 [Detailed Map Tacks](https://steamcommunity.com/sharedfiles/filedetails/?id=2428969051)（DMT）算，规划里的数就是打钉后钉上显示的数。
+智能区域规划器是《文明6》的模组。选一座城和想建的区域，几秒内在城市三环内找出相邻加成最高的摆法，打成带区域图标的地图钉。也能给新城选址，让几座城一起规划。
+
+需要同时订阅 [Detailed Map Tacks](https://steamcommunity.com/sharedfiles/filedetails/?id=2428969051)（DMT）。区域能不能放、加成多少都由它算，所以规划里的数和钉上显示的一样。
 
 **[创意工坊](https://steamcommunity.com/sharedfiles/filedetails/?id=3824473635)** · **[下载](https://github.com/SmallSpider0/civ6-smart-district-planner/releases/latest)** · **[介绍页](https://smallspider0.github.io/civ6-smart-district-planner/)** · **[安装与使用](docs/install-and-test.md)**
 
 ### 为什么用它
 
-- **按你的文明来算，不用设置**。文明能力、领袖能力、万神殿和宗教信条里的相邻加成和放置限制都自动算进去，特色区域也自动换上：日本的区域互相挨着各 +1，朝鲜的书院挨着别的区域会减产，高卢的特色区域不能挨市中心，越南的特色区域只能建在森林、雨林、沼泽上。
-- **接近最优，还告诉你差多少**。区域少时把所有摆法都试一遍，结果就是最优；区域多时写明“最多还差百分之几”，可以点“继续优化”。拿实战对照：从 CivFanatics 上 8 位高手附存档分享的对局里取出 17 个城市布局（回合 58–276，[逐个场景的图](docs/reference-scenes.md)），按存档里的地图重新规划、只算相邻加成，高手的布局平均是证明过的真最优的 90.4%，本模组标准档平均 99.8%，17 个里 16 个正好最优。不过高手的城是一步步建起来的，早放的区域不知道后来的情况。
-- **几座城一起摆**。全部城市（含还没建的城址钉）可以一起规划，区域可以跨城互相给加成，市政广场这类全帝国只有一个的区域会放到最合适的那座城。测试场景里，一座一座分开规划平均只拿到已知最好方案的约 95%。
-- **借邻城的格**。本方其他城能换过来的格也会用上（默认打开，可关）。真实存档上，相邻加成单城平均多约 13%、多城多约 19%；代价是部分区域要在“市民管理”里点“切换”把格换过来，结果里会标出来。
-- **不给你建不了的位置，不动你已有的**。不压奢侈和战略资源，查帝国上限和城市范围，城市已有的格再用游戏自己的可建格核对一遍。已建的区域和你自己打的钉一律不动，还会当作邻居算加成。
-- **奇观一起放**。选上想建的奇观，它连同区域一起规划：罗马斗兽场要挨着娱乐中心，城里没有就补一个；阿耳忒弥斯神庙会带上它要的营地。
+- 你的文明、领袖、万神殿和宗教信条带来的相邻加成和放置限制都会算进去，特色区域也会自动换上，不用设置。比如日本的区域互相挨着各 +1，越南的特色区域只能建在森林、雨林、沼泽上。
+- 区域少时它把所有摆法都试一遍，给出的就是最优；区域多时，结果写明离最优最多还差百分之几，可以点“继续优化”接着算。CivFanatics 上高手附存档分享的 17 个城市布局里，16 个它摆得和最优一样（只算相邻加成，[逐个场景的图](docs/reference-scenes.md)）。
+- 不给你建不了的位置，也不动你已有的：不压奢侈和战略资源，查帝国上限和城市范围，城市已有的格再用游戏自己的可建格核对一遍；已建的区域和你自己打的钉留在原处，当作邻居算加成。
 
 面板有三个页签：
 
 - **单城**：把想要的区域点成“必建”，其余留作“候选”，说这座城一共要几个区域。点“求解”得到三套组合不同的方案，点一套在地图上预览，满意就“打钉”；可以“撤销”，读档后也能撤销。
 - **选城址**：在已探索的地图上给新城选位置。每个城址按区域潜力、地块、资源、住房打分，悬停看每项背后是多少产出；打开“密铺”让新城尽量挨着放，再勾选要哪几座。
-- **多城**：以地图上选中的城为中心，和离它最近的城市、城址钉（默认 4 座）一起规划；“全部城市”把全部城市和城址钉都选上，超过 8 座时按位置分成每组至多 4 座相邻的城轮流规划。每座城可以有自己的区域清单；“套用模板”按你文明的规则，为科技、生产力等产出一键生成区域清单。
+- **多城**：以地图上选中的城为中心，和离它最近的城市、城址钉（默认 4 座）一起规划；“全部城市”把全部城市和城址钉都选上，超过 8 座时按位置分成每组至多 4 座相邻的城轮流规划。区域可以跨城互相给加成，市政广场这类全帝国只有一个的区域会放到最合适的那座城。每座城可以有自己的区域清单；“套用模板”按你文明的规则，为科技、生产力等产出一键生成区域清单。
 
 还能做什么：
 
+- 选上想建的奇观，它连同区域一起规划：罗马斗兽场要挨着娱乐中心，城里没有就补一个；阿耳忒弥斯神庙会带上它要的营地。
+- 本方其他城能换过来的格也会用上（默认打开，可关），相邻加成更高；这些区域要在“市民管理”里点“切换”把格换过来，结果里会标出来。
 - 偏向某种产出：选“科技”“文化”“宗教”预设，或自己调各项权重。
 - 不乱占好地：区域尽量不压能修出好改良的格。
 - 社区放在魅力高的地方，多给住房；缺淡水时自动加水渠，泛滥平原多时自动加堤坝。
@@ -146,9 +148,9 @@ The development documents are in Chinese; issues and pull requests in English ar
 - 算得久时分几帧算，游戏照常操作，关掉面板也会算完。<kbd>Shift</kbd>+<kbd>L</kbd> 打开面板。设置随存档保存。
 - 原版、迭起兴衰、风云变幻都能用；界面中英双语，跟随游戏语言。
 
-方案离真最优多远、速度和已知限制，见[介绍页](https://smallspider0.github.io/civ6-smart-district-planner/)。
+方案离最优多远、速度和已知限制，见[介绍页](https://smallspider0.github.io/civ6-smart-district-planner/)。
 
-> ⚠️ **一局只开一个规划器**：不要和 Auto Map Tacks Planner、Empire Planner 等区域规划模组同时启用，它们会互相干扰。
+一局只开一个规划器：不要和 Auto Map Tacks Planner、Empire Planner 等区域规划模组同时启用，它们会互相干扰。
 
 ### 安装
 
