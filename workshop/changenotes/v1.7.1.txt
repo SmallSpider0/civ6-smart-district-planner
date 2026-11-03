@@ -1,0 +1,21 @@
+Changes since v1.7.0:
+- English interface: on the One city and Several cities tabs, a district’s name no longer runs into its state on the right (such as ‘EncampmenWonder’). The name gets the room the state leaves, shrinks and wraps at spaces when it does not fit, and shows in full on hover; long states such as ‘Empire limit reached’ shrink onto two lines.
+- City sites tab: with dense packing, many new cities and a long Max distance, the plan comes faster and the progress bar moves evenly instead of standing still. The plan is the same.
+- Several cities tab: a Government Plaza or Diplomatic Quarter set to Must in ‘Every city (shared list)’ is tried in each of up to 4 cities nearest the middle and goes where the plan scores best; before, it always went to the first city in the list. The plan can change and takes a little longer.
+- A Government Plaza or Diplomatic Quarter set to Must in one city’s own list now stays in that city; a city earlier in the list using the shared list no longer takes it.
+- Several cities tab: a wonder goes by default to the city planned together with the most Production that has room for it (for a new city, from the tiles it will work), then to that city’s best tile; before, only the adjacency decided. The wonder and the district added for it can move to another city.
+- Several cities tab: each chosen wonder has a dropdown for the city that builds it: Auto (as above) or one of the cities in the plan; the wonder then goes only on that city’s tiles, next to that city’s districts.
+- Several cities tab: a wonder is counted for the city that will build it: a wonder that needs a district next to it (such as the Great Library next to a Campus) for that district’s city, any other wonder for the city that owns the tile, and an unowned tile for the nearest city. Before, it went to the first city in the list that could reach it, and the game refused to build it there.
+- City sites tab: with dense packing off, each site in the result has a tick box too, all ticked; unticked sites get no map tack. ‘Select all’ is there in both modes.
+- Fixed: planning a wonder that needs a district next to it failed with no result when a tile next to it was on the map’s edge.
+
+自 v1.7.0 以来的变化：
+- 英文界面下，单城、多城页设置区里区域名不再和右边的状态挤在一起（如“EncampmenWonder”）。名字放不下时缩小、在空格处换行，悬停看全名；“Empire limit reached”这类长状态缩成两行。
+- 选城址页密铺很多座新城、最远距离又大时算得更快，进度条匀速前进，不再长时间停住；方案不变。
+- 多城页：市政广场、外交区在“所有城市（共用清单）”里设为必建时，在离中心最近的至多 4 座城里各试一遍，放在总分最高的那座；之前一律给城市列表最上面的城。方案可能变，计算稍久。
+- 某座城在自己的清单里把市政广场或外交区设为必建时，就放在那座城，不再被排在前面、用共用清单的城拿走。
+- 多城页的奇观默认放在一起规划的城里生产力最高、放得下它的那座（新城按它将来能工作的格子估），再挑这座城里总分最高的格子；之前只看相邻加成。奇观和为它补的区域可能换到另一座城。
+- 多城页每个选上的奇观旁边有“放在哪座城”的下拉框：默认“自动”（同上），也可以指定一座参与规划的城，奇观就只放在这座城的格子上、挨着这座城的区域。
+- 多城页的奇观记到真正建它的那座城：要挨某种区域的奇观（如大图书馆挨学院）记到那个区域所在的城，其他奇观记到格子所属的城，没有主人的格子记到最近的城。之前记在列表最前面够得着的城，照着建会被游戏拒绝。
+- 选城址不开密铺时，结果里每个城址也有勾选框，默认全勾上，取消勾选的不打钉；“全选”两种模式都有。
+- 修好：规划要挨某种区域的奇观时，旁边的格子贴着地图边会让规划出错、没有结果。
