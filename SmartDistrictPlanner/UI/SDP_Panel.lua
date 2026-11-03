@@ -629,38 +629,111 @@ function SDP_UI.WonderNeeds(playerID, wonders, districts, states, scan, status, 
   return needs
 end
 
+-- A wrap width no text reaches: "do not wrap" for a label without a
+-- truncate width. A wrap width of 0 wraps after every character there
+-- (2026-11-03, issue 216: the state showed one letter a line); the game's
+-- NotificationPanel.lua passes the screen width the same way.
+local NO_WRAP = 4096
+
+-- Whether `text` has a multi-byte (non-ASCII) character. A byte loop: in the
+-- game's Lua a pattern such as "[\128-\255]" matches no byte (2026-11-03).
+local function HasMultiByte(text)
+  for i = 1, #text do
+    if text:byte(i) >= 128 then return true end
+  end
+  return false
+end
+
+-- The widest word of `text` at the label's font size, measured on the label
+-- itself (it is set again after). Words are runs without spaces and without
+-- multi-byte characters: a Chinese name may wrap anywhere.
+local function WidestWord(label, text)
+  local widest = 0
+  label:SetTruncateWidth(0)
+  label:SetWrapWidth(NO_WRAP)
+  for word in text:gmatch("%S+") do
+    if not HasMultiByte(word) then
+      label:SetText(word)
+      widest = math.max(widest, label:GetSizeX() or 0)
+    end
+  end
+  return widest
+end
+
 -- A name in a fixed-width cell (TruncateWidth in the XML): one line in the
 -- normal 14 point font; when that would cut it off (English names are
--- longer), two lines at 11 points. Cut off, with the full name as tooltip,
--- only when even that does not fit. `width`: the room for the name (80, a
--- district cell's, by default).
+-- longer), two lines at 11 points, broken only at spaces. Cut off at 11
+-- points, with the full name as tooltip, when a word is wider than the room:
+-- the game breaks such a word in two ("Encampme / nt", issue 216). Returns
+-- false when the name was cut off. `width`: the room for the name (80 by
+-- default).
 local function FitName(label, text, width)
   width = width or 80
   label:SetFontSize(14)
   label:SetWrapWidth(0)
   label:SetTruncateWidth(width)
   label:SetText(text)
-  if label.IsTextTruncated ~= nil and label:IsTextTruncated() then
-    label:SetFontSize(11)
+  if label.IsTextTruncated == nil or not label:IsTextTruncated() then return true end
+  label:SetFontSize(11)
+  if WidestWord(label, text) <= width then
     label:SetTruncateWidth(0)
     label:SetWrapWidth(width)
     label:SetText(text)
+    return true
   end
+  label:SetWrapWidth(0)
+  label:SetTruncateWidth(width)
+  label:SetText(text)
+  return false
 end
 SDP_UI.FitName = FitName
 
+-- A district cell's layout (DistrictCell in the XML): the name starts at
+-- CELL_NAME_X, the state ends CELL_STATE_RIGHT from the right edge, and
+-- CELL_GAP keeps them apart. A state wider than CELL_STATE_MAX (English
+-- "Empire limit reached") goes to two lines at 11 points.
+local CELL_NAME_X, CELL_STATE_RIGHT, CELL_GAP, CELL_STATE_MAX = 30, 12, 6, 60
+
+-- Set a cell's state label and return its width; at 11 points when `small`.
+local function FitState(label, text, small)
+  label:SetFontSize(14)
+  label:SetWrapWidth(NO_WRAP)
+  label:SetText(text)
+  if small or (label:GetSizeX() or 0) > CELL_STATE_MAX then
+    label:SetFontSize(11)
+    label:SetWrapWidth(CELL_STATE_MAX)
+    label:SetText(text)
+  end
+  return math.min(label:GetSizeX() or 0, CELL_STATE_MAX)
+end
+
+-- The room a cell leaves for the name next to a state `stateWidth` wide.
+function SDP_UI.CellNameRoom(cellWidth, stateWidth)
+  return math.max(24, cellWidth - CELL_NAME_X - CELL_STATE_RIGHT - CELL_GAP - stateWidth)
+end
+
+-- A cell's name next to its state. When a word of the name does not fit
+-- beside the state (English "Encampment" beside "Wonder"), the state goes to
+-- 11 points to leave the name more room.
+local function FitCell(nameLabel, stateLabel, name, state, cellWidth)
+  if not FitName(nameLabel, name, SDP_UI.CellNameRoom(cellWidth, FitState(stateLabel, state))) then
+    FitName(nameLabel, name, SDP_UI.CellNameRoom(cellWidth, FitState(stateLabel, state, true)))
+  end
+end
+
 -- Show one district cell: its icon, name and state; the selected look for
 -- MUST and AUTO; dimmed when OFF or when it cannot be planned (`status`).
+-- The name gets the room the state leaves (issue 216: in English, long
+-- names such as Encampment ran into "Wonder").
 function SDP_UI.ShowCell(inst, d, state, status)
   -- WONDER: shown for a district a chosen wonder needs (issue 66), not stored.
   local selected = status == nil and (state == "MUST" or state == "AUTO" or state == "WONDER")
   local name = Locale.Lookup(d.Name)
   local label = status and Locale.Lookup("LOC_SDP_STATUS_" .. status) or Locale.Lookup("LOC_SDP_STATE_" .. state)
   inst.Icon:SetIcon(d.Icon, 26)
-  FitName(inst.Name, name)
-  FitName(inst.NameDark, name)
-  inst.State:SetText(label)
-  inst.StateDark:SetText(label)
+  local cellWidth = inst.Root:GetSizeX()
+  FitCell(inst.Name, inst.State, name, label, cellWidth)
+  FitCell(inst.NameDark, inst.StateDark, name, label, cellWidth)
   inst.Selected:SetHide(not selected)
   inst.Name:SetHide(selected)
   inst.State:SetHide(selected)
@@ -675,7 +748,7 @@ end
 
 -- Fill the two district grids (districts that take population, the others)
 -- in name order. stateOf(d), statusOf(d) (or nil), onClick(d). Returns the
--- rows { Type, Name, State, Status, Group, Cell, Click } (tests).
+-- rows { Type, Name, State, Status, Group, Cell, Click, Inst } (tests).
 function SDP_UI.BuildCells(im, otherIM, stack, otherStack, districts, stateOf, statusOf, onClick)
   im:ResetInstances()
   otherIM:ResetInstances()
@@ -696,7 +769,7 @@ function SDP_UI.BuildCells(im, otherIM, stack, otherStack, districts, stateOf, s
     -- Click: the function the cell calls on a click (in-game tests; the
     -- game's controls cannot be clicked from Lua).
     rows[#rows + 1] = { Type = d.Type, Name = entry.Name, State = state, Status = status,
-      Group = d.Specialty and "SPECIALTY" or "OTHER", Cell = inst.Root, Click = click }
+      Group = d.Specialty and "SPECIALTY" or "OTHER", Cell = inst.Root, Click = click, Inst = inst }
   end
   stack:CalculateSize()
   otherStack:CalculateSize()
