@@ -1679,7 +1679,10 @@ function Session:PlanFor(layout)
     elseif not search.Optional[m] then
       local spec = self.SlotSpecs[search.SlotIndex[m]]
       local city = spec.Wonder and "WONDERS" or self.Participants[spec.Group].Key
-      out.Unplaced[#out.Unplaced + 1] = { City = city, Type = spec.Key, Reason = "NO_FREE_PLOT", ForWonder = spec.ForWonder }
+      -- A district the city needs that no plot is left for says so, as on
+      -- the single-city path (issue 250).
+      out.Unplaced[#out.Unplaced + 1] = { City = city, Type = spec.Key, Reason = "NO_FREE_PLOT", ForWonder = spec.ForWonder,
+        Auto = (not spec.Wonder) and self.Participants[spec.Group].Auto[spec.Key] or nil }
     end
   end
   -- A city that could not fit as many candidates as asked.

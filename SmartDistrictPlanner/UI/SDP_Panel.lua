@@ -1261,6 +1261,126 @@ function SDP_UI.SolutionDetail(solution)
   return Locale.Lookup("LOC_SDP_SOLUTION_DISTRICTS", #solution.Plan)
 end
 
+-- ---------------------------------------------------------------------------
+-- One path after the solve (issue 250). Without wonders the city is solved
+-- by SDP_Solver, with wonders by SDP_Multi with this city alone (Solve
+-- below); both results go through CityResult once, when they arrive, which
+-- gives every solution the same fields:
+--   Plan, Unplaced (this solution's own, a pool that falls short as one
+--   POOL_SHORT entry), Picked (the types picked from the pool), Together,
+--   Remind, Neighbours, ImprovementHousing and the summary's values.
+-- The result rows (CityRows), the preview (CityIcons) and the tacks
+-- (CityTacks) read only these, whichever solver made the plan.
+-- ---------------------------------------------------------------------------
+function SDP_UI.CityResult(result, cityID)
+  if result == nil or not result.Ok or result.CityShaped then return result end
+  result.CityShaped = true
+  local session = result.Session
+  -- SDP_Multi reports a pool that falls short itself; SDP_Solver picks
+  -- fewer without a word: as many as it set out to pick (Session.Pick,
+  -- capped by what can stand together), less what the plan picked.
+  local pick = (session ~= nil and session.Participants == nil) and session.Pick or nil
+  local function Shape(s)
+    local city = nil
+    for _, c in ipairs(s.Cities or {}) do
+      if c.CityID == cityID then city = c end
+    end
+    s.Picked = s.Picked or (city and city.Picked) or {}
+    if s.Together == nil and city ~= nil then s.Together = city.Together end
+    local unplaced = {}
+    for _, u in ipairs(s.Unplaced or result.Unplaced or {}) do unplaced[#unplaced + 1] = u end
+    if pick ~= nil and pick > #s.Picked then
+      unplaced[#unplaced + 1] = { Type = "POOL", Reason = "POOL_SHORT", Count = pick - #s.Picked }
+    end
+    s.Unplaced = unplaced
+  end
+  local best = result.Solutions and result.Solutions[1]
+  if best == nil then
+    Shape(result)
+  else
+    for _, s in ipairs(result.Solutions) do Shape(s) end
+    -- The best solution's fields at the top level, as both solvers keep them.
+    result.Unplaced, result.Picked, result.Together = best.Unplaced, best.Picked, best.Together
+  end
+  return result
+end
+
+-- Solution n of a result (CityResult), or the result itself when it has none.
+function SDP_UI.CitySolution(result, n)
+  return (result.Solutions and result.Solutions[n]) or result
+end
+
+-- The result rows of a solution (CityResult): what it leaves out first, so
+-- a long list does not hide it (issue 60), then each planned item, the
+-- woods and rainforest it relies on, the neighbours whose adjacency it
+-- changes, partner districts left together, the housing it takes.
+-- add(icon, name, detail, toolTip, x, y); `parts` the summary's (SummaryText);
+-- `cityID` the planned city.
+function SDP_UI.CityRows(s, parts, add, cityID)
+  for _, u in ipairs(s.Unplaced) do
+    if u.Reason == "POOL_SHORT" then
+      add("ICON_DISTRICT_CITY_CENTER", Locale.Lookup("LOC_SDP_RESULT_POOL_SHORT", SDP_UI.TargetLabel("C" .. tostring(cityID))),
+        Locale.Lookup("LOC_SDP_REASON_POOL_SHORT", u.Count or 1), "")
+    else
+      add("ICON_" .. u.Type, SDP_UI.UnplacedName(u), SDP_UI.ReasonText(u), UnplacedTip(u))
+    end
+  end
+  -- Each planned district: where, its yields, and DMT's own breakdown on hover.
+  for _, p in ipairs(s.Plan) do
+    local toolTip = (p.ToolTip ~= nil and p.ToolTip ~= "") and p.ToolTip or Locale.Lookup("LOC_SDP_NO_ADJACENCY")
+    local detail
+    detail, toolTip = SDP_UI.CoverageRow(p, SDP_UI.PlanDetail(p), toolTip)
+    toolTip = SDP_UI.PartsTip(p, parts, toolTip)
+    add("ICON_" .. p.Type, TypeName(p.Type) .. "  " .. Where(p.X, p.Y), detail, toolTip, p.X, p.Y)
+    SDP_UI.SupportRow(p, add, "  ")
+  end
+  -- Woods and rainforest the plan relies on (feedback item 5).
+  for _, r in ipairs(s.Remind or {}) do
+    add(SDP_Pins.REMIND_ICON, Locale.Lookup("LOC_SDP_RESULT_REMIND", TypeName(r.Feature), Where(r.X, r.Y)),
+      SDP_UI.RemindText(r), Locale.Lookup("LOC_SDP_REMIND_TOOLTIP"), r.X, r.Y)
+  end
+  -- Districts and locked pins whose adjacency the plan changes.
+  for _, n in ipairs(s.Neighbours or {}) do
+    local subject = n.Subject
+    add("ICON_" .. subject.Key, Locale.Lookup("LOC_SDP_RESULT_NEIGHBOUR", TypeName(subject.Key), Where(subject.X, subject.Y)),
+      Locale.Lookup("LOC_SDP_RESULT_NEIGHBOUR_DETAIL", Number(n.Before), Number(n.After)),
+      (n.ToolTip ~= nil and n.ToolTip ~= "") and n.ToolTip or Locale.Lookup("LOC_SDP_NO_ADJACENCY"), subject.X, subject.Y)
+  end
+  -- Partner districts left together (required ones, or the count needed them).
+  SDP_UI.TogetherRows(s.Together, nil, add)
+  SDP_UI.ImprovementHousingRow(s.ImprovementHousing, add)
+end
+
+-- The preview's icons of a solution (CityResult): each planned item with
+-- its adjacency, the improvements wonders need, the reminders.
+function SDP_UI.CityIcons(s)
+  local icons = {}
+  for _, p in ipairs(s.Plan) do
+    icons[#icons + 1] = { X = p.X, Y = p.Y, Icon = "ICON_" .. p.Type, Text = PinText(p.Yields) }
+  end
+  SDP_UI.SupportIcons(s.Plan, icons)
+  for _, r in ipairs(s.Remind or {}) do
+    icons[#icons + 1] = { X = r.X, Y = r.Y, Icon = SDP_Pins.REMIND_ICON, Text = "" }
+  end
+  return icons
+end
+
+-- The tacks of a solution (CityResult): each planned item and the
+-- improvement a wonder needs, named with the city's number, and with
+-- `remind` its reminders.
+function SDP_UI.CityTacks(s, number, remind)
+  local name = tostring(number or "")
+  local entries = {}
+  for _, p in ipairs(s.Plan) do
+    entries[#entries + 1] = { Type = p.Type, X = p.X, Y = p.Y, Name = name }
+    entries[#entries + 1] = SDP_UI.SupportEntry(p, name)
+  end
+  if remind then
+    for _, e in ipairs(SDP_UI.RemindEntries(s.Remind, function() return number end)) do entries[#entries + 1] = e end
+  end
+  return entries
+end
+
 -- Show solution n on the map: the city's rings, the plan's icons and values.
 local function Preview(n)
   local solution = m_result and m_result.Ok and m_result.Solutions and m_result.Solutions[n]
@@ -1270,15 +1390,7 @@ local function Preview(n)
   end
   local plots = {}
   for _, entry in ipairs(SDP_City.PlotsInRange(m_scan.X, m_scan.Y, SDP_City.RADIUS)) do plots[#plots + 1] = entry.Index end
-  local icons = {}
-  for _, p in ipairs(solution.Plan) do
-    icons[#icons + 1] = { X = p.X, Y = p.Y, Icon = "ICON_" .. p.Type, Text = PinText(p.Yields) }
-  end
-  SDP_UI.SupportIcons(solution.Plan, icons)
-  for _, r in ipairs(solution.Remind or {}) do
-    icons[#icons + 1] = { X = r.X, Y = r.Y, Icon = SDP_Pins.REMIND_ICON, Text = "" }
-  end
-  SDP_Preview.Show(Game.GetLocalPlayer(), { { Plots = plots, Color = 1 } }, icons)
+  SDP_Preview.Show(Game.GetLocalPlayer(), { { Plots = plots, Color = 1 } }, SDP_UI.CityIcons(solution))
 end
 
 local function ShowResult()
@@ -1300,8 +1412,8 @@ local function ShowResult()
   else
     local solutions = result.Solutions or { result }
     if solutions[m_solution] == nil then m_solution = 1 end
-    local shown = solutions[m_solution] or result
-    local request = result.Session and result.Session.Request or {}
+    local shown = SDP_UI.CitySolution(result, m_solution)
+    local request = result.PanelRequest or {}
     local summaryParts = { Land = request.Land, Distance = (request.Distance or 0) > 0, Coverage = shown.Covered ~= nil }
     Controls.Summary:SetText(SDP_UI.SummaryText(shown, summaryParts))
     -- How the solutions are ranked, and the cities the plan covers; the
@@ -1327,37 +1439,7 @@ local function ShowResult()
         end)
       end
     end
-    -- What the plan leaves out comes first, so a long list does not hide it
-    -- (issue 60).
-    for _, u in ipairs(shown.Unplaced or result.Unplaced or {}) do
-      AddResultRow("ICON_" .. u.Type, SDP_UI.UnplacedName(u), SDP_UI.ReasonText(u), UnplacedTip(u))
-    end
-    -- Each planned district: where, its yields, and DMT's own breakdown on hover.
-    for _, p in ipairs(shown.Plan) do
-      local toolTip = (p.ToolTip ~= nil and p.ToolTip ~= "") and p.ToolTip or Locale.Lookup("LOC_SDP_NO_ADJACENCY")
-      local detail
-      detail, toolTip = SDP_UI.CoverageRow(p, SDP_UI.PlanDetail(p), toolTip)
-      toolTip = SDP_UI.PartsTip(p, summaryParts, toolTip)
-      AddResultRow("ICON_" .. p.Type, TypeName(p.Type) .. "  " .. Where(p.X, p.Y), detail, toolTip, p.X, p.Y)
-      SDP_UI.SupportRow(p, AddResultRow, "  ")
-    end
-    -- Woods and rainforest the plan relies on (feedback item 5).
-    for _, r in ipairs(shown.Remind or {}) do
-      AddResultRow(SDP_Pins.REMIND_ICON, Locale.Lookup("LOC_SDP_RESULT_REMIND", TypeName(r.Feature), Where(r.X, r.Y)),
-        SDP_UI.RemindText(r), Locale.Lookup("LOC_SDP_REMIND_TOOLTIP"), r.X, r.Y)
-    end
-    -- Districts and locked pins whose adjacency the plan changes.
-    for _, n in ipairs(shown.Neighbours or {}) do
-      local s = n.Subject
-      AddResultRow("ICON_" .. s.Key, Locale.Lookup("LOC_SDP_RESULT_NEIGHBOUR", TypeName(s.Key), Where(s.X, s.Y)),
-        Locale.Lookup("LOC_SDP_RESULT_NEIGHBOUR_DETAIL", Number(n.Before), Number(n.After)),
-        (n.ToolTip ~= nil and n.ToolTip ~= "") and n.ToolTip or Locale.Lookup("LOC_SDP_NO_ADJACENCY"), s.X, s.Y)
-    end
-    -- Partner districts left together (required ones, or the count needed them).
-    local together = shown.Together
-    if together == nil and shown.Cities ~= nil and shown.Cities[1] ~= nil then together = shown.Cities[1].Together end
-    SDP_UI.TogetherRows(together, nil, AddResultRow)
-    SDP_UI.ImprovementHousingRow(shown.ImprovementHousing, AddResultRow)
+    SDP_UI.CityRows(shown, summaryParts, AddResultRow, m_cityID)
     Preview(m_solution)
     -- A new result or another solution: the city beside the panel (issue
     -- 67); not on reopening the panel or changing a setting.
@@ -2053,6 +2135,14 @@ local function WonderRequest(request)
   }
 end
 
+-- Keep a result of either solver (issue 250): one shape (SDP_UI.CityResult),
+-- and the panel's request it was solved for (the summary's parts, the pins
+-- to replace, a continue's estimate).
+local function Keep(result, request)
+  if result ~= nil then result.PanelRequest = result.PanelRequest or request end
+  m_result = SDP_UI.CityResult(result, request and request.CityID)
+end
+
 -- Solve now (fast and standard tiers without picking: returns the result) or
 -- start a sliced computation (returns nil, the result shows when it is done).
 local function Solve()
@@ -2066,7 +2156,8 @@ local function Solve()
   if request ~= nil and #request.Wonders > 0 then
     local multi = WonderRequest(request)
     m_result = nil
-    StartTask(function() return SDP_Multi.SolveNow(multi) end, EstimateFor(request), function(result) m_result = result end)
+    StartTask(function() return SDP_Multi.SolveNow(multi) end, EstimateFor(request),
+      function(result) Keep(result, request) end)
     return nil
   end
   if request ~= nil and Sliced(request) then
@@ -2074,11 +2165,11 @@ local function Solve()
     if scan ~= nil then
       m_result = nil
       StartTask(function() return SDP_Solver.SolveScan(request, scan) end, EstimateFor(request),
-        function(result) m_result = result end)
+        function(result) Keep(result, request) end)
       return nil
     end
   end
-  m_result = request and SDP_Solver.Solve(request) or nil
+  Keep(request and SDP_Solver.Solve(request) or nil, request)
   ShowResult()
   return m_result
 end
@@ -2091,15 +2182,15 @@ local function Continue()
   if session.Params.Sliced or session.Pick ~= nil and session.Pick > 0 or session.Participants ~= nil then
     -- A continue runs SINGLE_CONTINUE_STARTS local searches; the first run
     -- had Starts + Kicks of them.
-    local params = session.Params
-    local estimate = EstimateFor(session.Request) * SDP_Tiers.SINGLE_CONTINUE_STARTS / math.max(1, params.Starts + (params.Kicks or 0))
+    local params, request = session.Params, m_result.PanelRequest
+    local estimate = EstimateFor(request) * SDP_Tiers.SINGLE_CONTINUE_STARTS / math.max(1, params.Starts + (params.Kicks or 0))
     StartTask(function()
       session:Continue()
       return session:Result()
-    end, estimate, function(result) m_result = result end)
+    end, estimate, function(result) Keep(result, request) end)
     return nil
   end
-  m_result = SDP_Solver.Continue(m_result)
+  Keep(SDP_Solver.Continue(m_result), m_result.PanelRequest)
   ShowResult()
   return m_result
 end
@@ -2112,19 +2203,11 @@ end
 local function PlacePins()
   if SDP_Task.IsRunning() or m_result == nil or not m_result.Ok or m_result.Placed then return 0 end
   local playerID = Game.GetLocalPlayer()
-  local solution = (m_result.Solutions and m_result.Solutions[m_solution]) or m_result
-  local number = SDP_City.CityNumbers(playerID)[m_cityID]
-  local entries = {}
-  for _, p in ipairs(solution.Plan) do
-    entries[#entries + 1] = { Type = p.Type, X = p.X, Y = p.Y, Name = tostring(number or "") }
-    entries[#entries + 1] = SDP_UI.SupportEntry(p, tostring(number or ""))
-  end
-  if m_remind then
-    for _, e in ipairs(SDP_UI.RemindEntries(solution.Remind, function() return number end)) do entries[#entries + 1] = e end
-  end
+  local solution = SDP_UI.CitySolution(m_result, m_solution)
+  local entries = SDP_UI.CityTacks(solution, SDP_City.CityNumbers(playerID)[m_cityID], m_remind)
   -- The plan was made as if this mod's earlier pins were gone: remove them.
-  local session = m_result.Session
-  local placed = SDP_Pins.Place(playerID, entries, { Replace = session and session.Request.IgnorePins })
+  local request = m_result.PanelRequest
+  local placed = SDP_Pins.Place(playerID, entries, { Replace = request and request.IgnorePins })
   m_result.Placed = true
   SDP_Preview.Clear()
   UpdateReplaceLabel()
