@@ -1290,11 +1290,14 @@ end)
 -- Issue 216: in English a district's name ran into its state ("Encampment"
 -- under "Wonder" showed as "EncampmenWonder"). Every cell's name ends before
 -- its state starts, whatever the state, in English and in Chinese, with
--- texts measured at about 0.55 em a Latin letter and 1 em a Chinese
--- character in a cell 156 wide (DistrictCell in the XML). The state keeps
--- the width its text needs: one line, or two at 11 points when longer than
--- 60 (2026-11-03: in the game the state wrapped one letter a line and ran
--- over the row below, while the name took the room).
+-- texts measured at about 0.6 em a Latin letter (as in the game: Encampment
+-- is 84 wide at 14 points) and 1 em a Chinese character in a cell 156 wide
+-- (DistrictCell in the XML). The state keeps the width its text needs: one
+-- line, or two at 11 points when longer than 60 (2026-11-03: in the game the
+-- state wrapped one letter a line and ran over the row below, while the name
+-- took the room). A name that is not cut off is at least as wide as each of
+-- its words: the game breaks a longer word in two (2026-11-03: "Encampme /
+-- nt" beside "Wonder").
 local function Issue216Texts(lang)
   if lang == "en" then
     return {
@@ -1317,7 +1320,7 @@ end
 local function Issue216Width(text, size)
   local _, chars = UI_Mock.Pieces(text)
   local em = 0
-  for _, ch in ipairs(chars) do em = em + (#ch > 1 and 1 or 0.55) end
+  for _, ch in ipairs(chars) do em = em + (#ch > 1 and 1 or 0.6) end
   return math.ceil(em * size)
 end
 
@@ -1352,6 +1355,15 @@ for _, lang in ipairs({ "en", "zh" }) do
           T.ok(nameEnd + 4 <= stateStart, when .. ": " .. r.Type .. " name ends at " .. nameEnd
             .. ", state " .. state:GetText() .. " starts at " .. stateStart)
           T.ok(stateStart >= 30, when .. ": " .. r.Type .. " state inside the cell")
+          if not name:IsTextTruncated() then
+            for word in name:GetText():gmatch("%S+") do
+              if not word:find("[\128-\255]") then
+                local wide = Issue216Width(word, name._font or 14)
+                T.ok(wide <= name:GetSizeX(), when .. ": " .. r.Type .. " name " .. name:GetText()
+                  .. " is " .. name:GetSizeX() .. " wide, the word " .. word .. " needs " .. wide)
+              end
+            end
+          end
           local need = math.min(Issue216Width(state:GetText(), 11), 60)
           T.ok(state:GetSizeX() >= need, when .. ": " .. r.Type .. " state " .. state:GetText()
             .. " is " .. state:GetSizeX() .. " wide, its text needs " .. need)
