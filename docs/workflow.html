@@ -430,7 +430,7 @@ footer { margin-top: 64px; border-top: 1px solid var(--line); padding-top: 16px;
     <table>
       <thead><tr><th>层</th><th>做什么</th><th>在哪跑</th><th>什么时候</th><th>工具</th></tr></thead>
       <tbody>
-        <tr><td class="step">离线逻辑</td><td>在模拟的游戏接口里跑 Lua，证明搜索与记账正确</td><td>CI、本机或第二台机器</td><td>每个 PR</td><td><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/tools/offline_tests.mjs"><code>offline_tests.mjs</code></a></td></tr>
+        <tr><td class="step">离线逻辑</td><td>在模拟的游戏接口里跑 Lua，证明搜索与记账正确；每次求解后查方案不变量（#242）</td><td>CI、本机或第二台机器</td><td>每个 PR</td><td><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/tools/offline_tests.mjs"><code>offline_tests.mjs</code></a></td></tr>
         <tr><td class="step">校验</td><td>XML、modinfo、双语文本键、Lua 语法、禁用随机数、界面控件在游戏里有先例</td><td>CI</td><td>每个 PR</td><td><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/tools/validate.py"><code>validate.py</code></a></td></tr>
         <tr><td class="step">游戏内</td><td>经调试连接在真实游戏里跑断言；发版前三种规则集，界面或文字改了再跑英文界面</td><td>有游戏的机器（游戏在后台）</td><td>改了模组代码（相关的文件）；发版前整套</td><td><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/tools/run_tests.py"><code>run_tests.py</code></a></td></tr>
         <tr><td class="step">离线对比</td><td>用真实规则库和固定场景集，对照已存的结果和可证明的真最优，检查质量和零违规</td><td>第二台机器（没有就本机）</td><td>改了求解器或合法性</td><td><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/tools/compare.mjs"><code>compare.mjs</code></a></td></tr>
