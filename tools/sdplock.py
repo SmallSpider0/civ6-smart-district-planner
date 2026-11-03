@@ -131,6 +131,10 @@ def game_running():
     return subprocess.run(["pgrep", "-f", "Civ6_Exe"], capture_output=True).returncode == 0
 
 
+def spawn(cmd, **kw):
+    return subprocess.Popen(cmd, **kw)
+
+
 def signal_group(pgid, sig):
     """Send sig to a job's process group; False where that cannot be done."""
     if not hasattr(os, "killpg"):
@@ -223,6 +227,11 @@ def _git(root, *args):
         return done.stdout.strip() if done.returncode == 0 else ""
     except (OSError, subprocess.SubprocessError):
         return ""
+
+
+def session():
+    """The Claude Code session that started this process, when there is one (shown on the status page)."""
+    return (os.environ.get("CLAUDE_CODE_SESSION_ID") or "")[:8]
 
 
 def identity(root):
@@ -514,7 +523,7 @@ def _leave_heavy_queue(pid):
             _write(heavy_queue_path(), rest)
 
 
-def heavy_turn(root, name, cmd, pid, enqueue=True):
+def heavy_turn(root, name, cmd, pid, enqueue=True, me=None):
     """Call under the mutex. Returns (True, []) when pid may start now (it leaves
     the queue); otherwise (False, what is ahead of it), queued at the back if
     enqueue and not queued yet. Only the head of the queue gets a free slot."""
@@ -527,17 +536,21 @@ def heavy_turn(root, name, cmd, pid, enqueue=True):
             _write(heavy_queue_path(), [w for w in queue if w.get("pid") != pid])
         return True, []
     if enqueue and not mine:
-        me = identity(root)
+        me = me or identity(root)
         queue.append({"name": name, "pid": pid, "owner": me["owner"], "tree": me["tree"], "since": now(),
                       "seq": max([w.get("seq", 0) for w in queue] or [0]) + 1, "cmd": list(cmd)})
         _write(heavy_queue_path(), queue)
     return False, jobs + ahead
 
 
-def run_heavy(root, name, cmd, wait=True, every=5.0, sleep=time.sleep):
-    """Run one heavy job here; returns its exit code. While another job runs
+PLACED = "SDP_PLACED"  # set for the commands the tools start: offline_tests.mjs and compare.mjs then run as asked
+
+
+def run_heavy(root, name, cmd, wait=True, every=5.0, sleep=time.sleep, me=None):
+    """Run one heavy job here (in root); returns its exit code. While another job runs
     (or others wait), wait in the first-come-first-served queue, or with
-    wait=False refuse (Busy)."""
+    wait=False refuse (Busy). me: the worktree to show (identity), when root is a snapshot."""
+    me = me or identity(root)
     cap = local_cap()
     fitted = fit_workers(cmd, cap)
     if fitted != list(cmd):
@@ -549,14 +562,13 @@ def run_heavy(root, name, cmd, wait=True, every=5.0, sleep=time.sleep):
     try:
         while True:
             with _mutex():
-                ok, ahead = heavy_turn(root, name, fitted, pid, enqueue=wait)
+                ok, ahead = heavy_turn(root, name, fitted, pid, enqueue=wait, me=me)
                 if ok:
-                    env = dict(os.environ, SDP_JOBS=str(cap))
-                    child = subprocess.Popen(fitted, cwd=root, env=env, start_new_session=True)
+                    env = dict(os.environ, SDP_JOBS=str(cap), **{PLACED: "1"})
+                    child = spawn(fitted, cwd=root, env=env, start_new_session=True)
                     started = True
-                    me = identity(root)
                     job = {"name": name, "pid": child.pid, "cmd": fitted, "owner": me["owner"], "tree": me["tree"],
-                           "started": now(), "workers": cap, "paused": False, "pauses": 0}
+                           "session": session(), "started": now(), "workers": cap, "paused": False, "pauses": 0}
                     _write(path, job)
                     break
             if not wait:
@@ -586,6 +598,41 @@ def run_heavy(root, name, cmd, wait=True, every=5.0, sleep=time.sleep):
         print("sdplock: %s was paused %d time(s) for the game: its timing fields are not usable"
               % (name, job["pauses"]), flush=True)
     return code
+
+
+# -- short runs, registered -------------------------------------------------------
+def light_dir():
+    return _path("light")
+
+
+def light_register(name, pids, root, cmd, show=True, me=None):
+    """Record a run that needs no heavy slot (a short offline test, or a process that waits for a
+    job placed elsewhere), so the status page does not list its processes as unregistered."""
+    me = me or identity(root)
+    _write(os.path.join(light_dir(), "%s.json" % name), {
+        "name": name, "pids": [p for p in pids if p], "pid": pids[0], "owner": me["owner"], "tree": me["tree"],
+        "session": session(), "cmd": list(cmd), "started": now(), "show": show})
+
+
+def light_forget(name):
+    with contextlib.suppress(OSError):
+        os.remove(os.path.join(light_dir(), "%s.json" % name))
+
+
+def light_jobs():
+    """Registered short runs still alive (entries of dead ones are removed)."""
+    out = []
+    folder = light_dir()
+    for name in sorted(os.listdir(folder)) if os.path.isdir(folder) else []:
+        if not name.endswith(".json"):
+            continue
+        job = _read(os.path.join(folder, name), None)
+        if job and pid_alive(job.get("pid")):
+            out.append(job)
+        else:
+            with contextlib.suppress(OSError):
+                os.remove(os.path.join(folder, name))
+    return out
 
 
 # -- the night queue ----------------------------------------------------------
@@ -651,6 +698,11 @@ def print_status(local_only):
         print("  %d. %-21s %s, since %s, %s" % (n, w["name"], w.get("owner"),
                                               time.strftime("%H:%M", localtime(w.get("since", 0))),
                                               " ".join(w.get("cmd") or [])[:100]))
+    for job in light_jobs():
+        if job.get("show"):
+            print("  short run %-14s %s, started %s, %s" % (job["name"], job.get("owner"),
+                                                          time.strftime("%H:%M", localtime(job["started"])),
+                                                          " ".join(job["cmd"])[:100]))
     items = queue_items()
     print("night queue: %d item(s)" % len(items))
     for item in items:

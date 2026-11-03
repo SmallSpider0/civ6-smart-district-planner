@@ -20,6 +20,10 @@ include("SDP_Remind")
 include("SDP_Solver")
 include("SDP_Wonders")
 include("SDP_Multi")
+-- The wonder free to go in any city (issue 234 puts an automatic wonder in
+-- the city with the most production; this path remains for when none can
+-- take it, and for the offline comparison).
+SDP_Multi.WONDER_BY_PRODUCTION = false
 
 local EC, CAMPUS, HOLY = "DISTRICT_ENTERTAINMENT_COMPLEX", "DISTRICT_CAMPUS", "DISTRICT_HOLY_SITE"
 local COLOSSEUM = "BUILDING_COLOSSEUM"

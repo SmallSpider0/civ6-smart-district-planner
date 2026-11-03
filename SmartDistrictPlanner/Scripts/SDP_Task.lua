@@ -64,6 +64,18 @@ function SDP_Task.Tick(units)
   end
 end
 
+-- Count `units` of work the job's Estimate did not include (issue 226: the
+-- site solver's scan of the map and coarse scores, whose amount is known
+-- only once it runs). They pace the frames like Tick, and the estimate grows
+-- by as much, so the progress shown does not run ahead of the work left;
+-- the speed kept for time estimates leaves them out.
+function SDP_Task.Extra(units)
+  if not m_inWorker then return end
+  m_job.Estimate = (m_job.Estimate or 0) + units
+  m_job.Extra = (m_job.Extra or 0) + units
+  SDP_Task.Tick(units)
+end
+
 function SDP_Task.IsRunning()
   return m_job ~= nil
 end
@@ -97,8 +109,9 @@ local function Finish(job, status, value)
   job.Status = status
   if status == "done" then
     local slow = job.Frames > 0 and job.Seconds / job.Frames > SDP_Task.TARGET_FRAME * SDP_Task.SLOW_FRAMES
-    if job.Seconds > 0 and job.Units > 0 and not slow then
-      local speed = job.Units / job.Seconds
+    local units = job.Units - (job.Extra or 0)
+    if job.Seconds > 0 and units > 0 and not slow then
+      local speed = units / job.Seconds
       m_speed = m_speed and (m_speed + speed) / 2 or speed
     end
     if job.OnDone then job.OnDone(value, job) end

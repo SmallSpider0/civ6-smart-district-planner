@@ -202,7 +202,16 @@ class Codex:
         self.started = None   # when this wait began on that head
         self.verdict = None   # None (waiting), "clean", "not reviewed: ...", "findings"
         self.commented = False
+        self.logged = None    # the verdict last written to the trial table
         self.merge_on = False
+
+
+def log_once(number, st, outcome):
+    """Write the trial-table row (codex_review.log_review) once per outcome and head commit."""
+    key = (st.head, outcome)
+    if st.logged != key:
+        st.logged = key
+        print(cr.log_review(number, outcome), file=sys.stderr, flush=True)
 
 
 def step_codex(number, pr, st, now, timeout):
@@ -215,6 +224,7 @@ def step_codex(number, pr, st, now, timeout):
         if v == "findings":
             items = cr.findings(number)
             if items:
+                log_once(number, st, "findings")
                 return "%d unresolved Codex finding(s) (codex_review.py findings %d)" % (len(items), number)
             v = "clean"  # all answered already
         if v == "clean":
@@ -224,6 +234,10 @@ def step_codex(number, pr, st, now, timeout):
         elif now - st.started >= timeout:
             st.verdict = "not reviewed: %d 分钟内没审完 / no finished review within %d min" % (
                 timeout // 60, timeout // 60)
+    if st.verdict == "clean":
+        log_once(number, st, "clean")
+    elif st.verdict:
+        log_once(number, st, "failed" if "失败" in st.verdict else "timeout")
     if st.verdict and st.verdict.startswith("not reviewed") and not st.commented:
         why = st.verdict[len("not reviewed: "):].split(" / ")
         url = cr.gh("pr", "comment", str(number), "--body", NOT_REVIEWED % (why[0], why[-1])).strip()

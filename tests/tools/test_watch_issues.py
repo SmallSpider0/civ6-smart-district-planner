@@ -40,7 +40,11 @@ class Where(unittest.TestCase):
         self.assertEqual(wi.where("DracoYus", False, {"DracoYus"}), "held")
 
     def test_other_accounts_stay_others_even_on_a_labelled_issue(self):
+        self.assertEqual(wi.where("SmallSpider", True, {"DracoYus", "SmallSpider"}), "report")  # no own account given
         self.assertEqual(wi.where("someone", True, {"DracoYus"}), "others")
+
+    def test_the_shared_account_is_only_seen(self):
+        self.assertEqual(wi.where("SmallSpider", True, {"DracoYus", "SmallSpider"}, "SmallSpider"), "seen")
 
 
 class Poll(unittest.TestCase):
@@ -58,6 +62,8 @@ class Poll(unittest.TestCase):
         self.event_reads = []
 
         def fake(path):
+            if path == "user":
+                return {"login": "SmallSpider"}
             if "/events" in path:
                 number = int(path.split("/issues/")[1].split("/")[0])
                 self.event_reads.append(number)
@@ -132,6 +138,23 @@ class Poll(unittest.TestCase):
         self.assertIn(500, wi.labelled())
         self.assertEqual(len(pages), 2)
 
+    def test_own_account_on_an_auto_issue_is_not_reported(self):
+        self.issues = [issue(12, "SmallSpider")]
+        self.comments = [comment(20, 7, "SmallSpider"), comment(21, 7, "DracoYus")]
+        state = {"since": SINCE, "seen": [], "mine": [], "users": ["DracoYus", "SmallSpider"]}
+        saved = os.environ.pop("SDP_WATCH_SELF", None)
+        try:
+            out = wi.poll(state)
+        finally:
+            if saved is not None:
+                os.environ["SDP_WATCH_SELF"] = saved
+        self.assertEqual(state["self"], "SmallSpider")  # read once with gh, then cached
+        self.assertEqual(len(out), 1)
+        self.assertTrue(out[0].startswith("NEW COMMENT on #7 by DracoYus: text 21"))  # the collaborator still wakes it
+        self.assertNotIn("SmallSpider", self.read(wi.HELD) + self.read(wi.OTHERS))
+        self.assertIn("comment-20", state["seen"])
+        self.assertIn("issue-12", state["seen"])
+
     def test_held_prints_and_clears(self):
         with open(wi.HELD, "w", encoding="utf-8") as f:
             f.write("a\nb\n")
@@ -139,6 +162,29 @@ class Poll(unittest.TestCase):
         self.assertEqual(self.read(wi.HELD), "a\nb\n")
         wi.held(True)
         self.assertEqual(self.read(wi.HELD), "")
+
+
+class MineRace(unittest.TestCase):
+    """A --mine recorded while the loop polls must not be overwritten by its save."""
+
+    def setUp(self):
+        self.dir = tempfile.mkdtemp()
+        self.saved = (wi.DIR, wi.STATE, wi.poll, wi.workshop, sys.argv)
+        wi.DIR, wi.STATE = self.dir, os.path.join(self.dir, "state.json")
+        wi.save({"since": SINCE, "seen": [], "mine": ["1"]})
+
+    def tearDown(self):
+        wi.DIR, wi.STATE, wi.poll, wi.workshop, sys.argv = self.saved
+
+    def test_mine_written_during_a_poll_survives(self):
+        def poll(state):  # another process runs --mine while this one polls
+            sys.argv = ["watch_issues.py", "--mine", URL + "7#issuecomment-99"]
+            wi.main()
+            return []
+        wi.poll, wi.workshop = poll, lambda state, every: None
+        sys.argv = ["watch_issues.py", "--once"]
+        wi.main()
+        self.assertEqual(sorted(wi.load()["mine"]), ["1", "99"])
 
 
 if __name__ == "__main__":

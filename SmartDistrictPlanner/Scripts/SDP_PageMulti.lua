@@ -17,8 +17,14 @@
 --             take population each city plans; above the required ones the
 --             solver picks from the candidates (feedback item 11).
 --             A district with an empire limit (government plaza) goes to one
---             of the cities that require it: in the shared list, the solver
---             picks the city; in one city's own list only, it stays there.
+--             of the cities that require it: a city requiring it in its own
+--             list comes first; otherwise the solver tries each city that
+--             requires it in the shared list, at most SDP_Multi.HOST_TRIES
+--             nearest the centre, and keeps the best plan (issue 234).
+--   Wonders   chosen in a pulldown, shown as tags; each tag has a pulldown
+--             for the city it goes in: automatic (the city with the most
+--             production that can take it) or one city (issue 234,
+--             SDP_Multi's WonderCities).
 --   Weights   the five yields, the land part, the distance cost and the
 --             coverage part (SDP_Coverage, design 19): 0 = off, the default.
 --   Solve     always over several frames (SDP_Task); the result lists up to
@@ -33,7 +39,7 @@ P.Name = "MULTI"
 local m_cityIM = InstanceManager:new("CityChip", "Root", Controls.MultiCityStack)
 local m_cellIM = InstanceManager:new("DistrictCell", "Root", Controls.MultiDistrictStack)
 local m_utilityIM = InstanceManager:new("DistrictCell", "Root", Controls.MultiUtilityStack)
-local m_chipIM = InstanceManager:new("WonderChip", "Root", Controls.MultiWonderChipStack)
+local m_chipIM = InstanceManager:new("MultiWonderChip", "Root", Controls.MultiWonderChipStack)
 local m_weightIM = InstanceManager:new("WeightColumn", "Root", Controls.MultiWeightStack)
 local m_solutionIM = InstanceManager:new("SolutionRow", "Root", Controls.MultiSolutionStack)
 local m_resultIM = InstanceManager:new("ResultRow", "Root", Controls.MultiResultStack)
@@ -45,6 +51,7 @@ local m_shared = { States = {}, Count = nil } -- every city without its own
 local m_plans = {}     -- [participant Key] = a city's own list
 local m_planFor = "ALL" -- the list the grid edits: "ALL" or a participant Key
 local m_wonders = {}   -- [BuildingType] = true
+local m_wonderCities = {} -- [BuildingType] = participant Key: the city a wonder goes in (issue 234; nil: automatic)
 local m_center = nil   -- the city the default group is around (nil: the capital)
 local m_existing = {}  -- [cityID] = true | false: switches over the default group
 local m_sites = {}     -- [site Key] = true | false: city-center pins switched over the default group
@@ -248,7 +255,7 @@ function P.Request()
   local shared = ListOf(m_shared)
   local weights = {}
   for key, value in pairs(m_weights) do weights[key] = value end
-  local existing, sites = Choice()
+  local existing, sites, group = Choice()
   -- Cities with their own list; lists of cities no longer taking part are
   -- kept for later but not sent.
   local plans, pools, counts, autos, offs = nil, nil, nil, nil, nil
@@ -266,9 +273,20 @@ function P.Request()
   end
   local wonders = WonderTypes()
   if #participants == 0 or (not anything and #wonders == 0) then return nil end
+  -- The city each wonder goes in (issue 234), when that city takes part.
+  local wonderCities = nil
+  for _, wonderType in ipairs(wonders) do
+    for _, part in ipairs(participants) do
+      if part.Key == m_wonderCities[wonderType] then
+        wonderCities = wonderCities or {}
+        wonderCities[wonderType] = part.Key
+      end
+    end
+  end
   return {
     PlayerID = playerID, Tier = m_tier, Districts = shared.Must, Pool = shared.Pool, Count = shared.Target, Auto = shared.Auto, Target = true,
     Plans = plans, Pools = pools, Counts = counts, Autos = autos, Wonders = wonders, Sites = sites,
+    WonderCities = wonderCities, Center = group.Center and group.Center.Key or nil,
     Off = SDP_UI.OffSet(m_shared.States), Offs = offs,
     Existing = existing, Weights = weights, Land = m_weights.LAND > 0, Coverage = m_weights.COVERAGE, Distance = m_weights.DISTANCE,
     Remind = m_remind, Apart = true, IgnorePins = m_replace and P.OwnPins() or nil, Swap = m_swap,
@@ -433,11 +451,21 @@ end
 function P.SetWonder(wonderType, on)
   if (m_wonders[wonderType] == true) ~= (on == true) then
     m_wonders[wonderType] = on or nil
+    if not on then m_wonderCities[wonderType] = nil end
     ClearResult()
     Remember() -- kept in the save with the other settings (issue 166)
   end
   P.RefreshLists()
   UpdateFold()
+end
+
+-- The city a wonder goes in (issue 234): a participant Key, nil: automatic.
+function P.SetWonderCity(wonderType, key)
+  if m_wonderCities[wonderType] ~= key then
+    m_wonderCities[wonderType] = key
+    ClearResult()
+  end
+  ShowWonders()
 end
 
 -- A change to who takes part: the result goes only when the cities differ.
@@ -572,8 +600,8 @@ end
 P.FitPage = FitPage
 
 -- Under the wonder tags (issue 66): the districts the chosen wonders need
--- that no city of the group has. Before a solve: they go to the first city
--- of the list that can take them; after it: which city got them.
+-- that no city of the group has. Before a solve: they go to the city that
+-- builds the wonder (issue 234); after it: which city got them.
 function P.ShowSupply()
   local lines = {}
   local supplied = m_result ~= nil and m_result.Ok and m_result.Supplied or nil
@@ -749,10 +777,36 @@ end
 -- pin is left out unless that pin is being replaced (issue 154).
 ShowWonders = function()
   local wonders = SDP_Wonders.List(Game.GetLocalPlayer(), ReplacedPins())
-  SDP_UI.BuildWonders(Controls.MultiWonderPull, m_chipIM, Controls.MultiWonderChipStack, wonders, m_wonders, P.SetWonder)
+  -- Each tag's city pulldown (issue 234): automatic, or one of the cities
+  -- taking part; a city that no longer takes part shows as automatic.
+  local participants = Participants()
+  local pulls, shown, buttons = {}, {}, {}
+  local function Decorate(inst, wonderType)
+    local pull = inst.City
+    pull:ClearEntries()
+    local auto = Locale.Lookup("LOC_SDP_WONDER_CITY_AUTO")
+    local current, currentKey, entries = auto, nil, {}
+    local function Add(label, key)
+      local entry = {}
+      pull:BuildEntry("InstanceOne", entry)
+      entries[#entries + 1] = entry.Button
+      entry.Button:SetText(label)
+      entry.Button:RegisterCallback(Mouse.eLClick, function() P.SetWonderCity(wonderType, key) end)
+      if key ~= nil and key == m_wonderCities[wonderType] then current, currentKey = label, key end
+    end
+    Add(auto, nil)
+    for _, part in ipairs(participants) do Add(P.CityLabel(part), part.Key) end
+    pull:CalculateInternals()
+    pull:GetButton():SetText(current)
+    pull:GetButton():SetToolTipString(Locale.Lookup("LOC_SDP_WONDER_CITY_TOOLTIP"))
+    pulls[wonderType], shown[wonderType], buttons[wonderType] = pull, currentKey, entries
+  end
+  SDP_UI.BuildWonders(Controls.MultiWonderPull, m_chipIM, Controls.MultiWonderChipStack, wonders, m_wonders, P.SetWonder,
+    Decorate)
   m_view.Wonders = {}
   for _, w in ipairs(wonders) do
-    m_view.Wonders[#m_view.Wonders + 1] = { Type = w.Type, Status = w.Status, Chosen = m_wonders[w.Type] == true }
+    m_view.Wonders[#m_view.Wonders + 1] = { Type = w.Type, Status = w.Status, Chosen = m_wonders[w.Type] == true,
+      CityPull = pulls[w.Type], CityEntries = buttons[w.Type], City = shown[w.Type] }
   end
   P.ShowSupply()
   FitPage() -- the tags take more or fewer rows (issue 199)
@@ -789,15 +843,23 @@ function P.RefreshLists()
       if where ~= nil then status = status .. " " .. Locale.Lookup("LOC_SDP_MULTI_LIMITED_BUILT", Locale.Lookup(where)) end
       row.Cell:SetToolTipString(status)
     elseif d.MaxPerPlayer and d.MaxPerPlayer > 0 then
-      -- Where an empire-limited district can go: the cities that require it.
-      local planners = {}
+      -- Where an empire-limited district can go (as SDP_Multi.NewSession,
+      -- issue 234): the cities that require it in a list of their own,
+      -- else those that require it in the shared list; with several, each
+      -- is tried, at most HOST_TRIES nearest the centre.
+      local own, shared = {}, {}
       for _, part in ipairs(participants) do
-        local own = m_plans[part.Key] or m_shared
-        if SDP_UI.StateOf(own.States, d) == "MUST" then planners[#planners + 1] = part end
+        local list = m_plans[part.Key] or m_shared
+        if SDP_UI.StateOf(list.States, d) == "MUST" then
+          if m_plans[part.Key] ~= nil then own[#own + 1] = part else shared[#shared + 1] = part end
+        end
       end
+      local planners = #own > 0 and own or shared
       status = Locale.Lookup("LOC_SDP_MULTI_EMPIRE_LIMIT", d.MaxPerPlayer)
       if #planners == 1 then
         status = status .. " " .. Locale.Lookup("LOC_SDP_MULTI_LIMITED_ONE", P.CityLabel(planners[1]))
+      elseif #planners > SDP_Multi.HOST_TRIES then
+        status = status .. " " .. Locale.Lookup("LOC_SDP_MULTI_LIMITED_NEAREST", SDP_Multi.HOST_TRIES)
       elseif #planners > 1 then
         status = status .. " " .. Locale.Lookup("LOC_SDP_MULTI_LIMITED_AUTO", #planners)
       end

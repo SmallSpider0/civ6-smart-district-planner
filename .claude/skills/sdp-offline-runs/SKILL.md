@@ -21,19 +21,15 @@ Before any compare.mjs run: `node tools/compare.mjs --list -s 'REGEX'` and count
 
 First `python3 -I tools/sdplock.py status`: the game lock, the heavy job on this machine and, when there is a second machine, its slots and queue (all sessions share them).
 
-| Job | Where |
-|---|---|
-| anything over about a minute: the full `offline_tests.mjs`, comparisons, refreshes, `--check`, oracle runs, experiments | the second machine, when there is one (`$SDP_REMOTE`, or `remote` in the local config); here only when all its slots are taken and the job cannot wait |
-| under a minute: `validate.py`, a spec known to finish within a minute, a single scene | here (sending it would cost more than running it) |
+The tools choose the machine; do not choose it yourself (#249, details in tools/README.md "remote.py"):
 
-Never start a job over a minute directly on this machine, subagents included: only jobs the two tools started are in the shared queue, so other sessions and the status page see nothing else. A job that runs here although it is not small (no second machine, its slots all taken, or both machines on one job by splitting the scenes and rerunning only missing rows, only when the maintainer says so) goes through `python3 -I tools/sdplock.py heavy NAME -- CMD`: one at a time (later ones wait first come, first served; `status` shows the order), with the workers the local config allows (4 without one; `-j` is lowered to fit), paused while the game lock is held. A job that was paused says so at the end: its timing fields are not usable.
-
-The second machine has one queue for all sessions: `remote.py run` holds a job until its slots are free (first come, first served), so never start jobs there by hand:
+- `node tools/offline_tests.mjs [FILE...]` and `node tools/compare.mjs ...` started by hand register themselves. Short ones (by the time recorded for each test file) run here; long ones (the full suite, `spec_multi`, benchmarks, comparisons) are placed like `remote.py run` below, and the command waits and prints their output. Run them from the worktree's root so a long one can go to the second machine.
+- A job you start in the background, or anything else heavy (refreshes, `--check`, oracle runs, experiments): `remote.py run`. It starts the job on the second machine when it can start there now, else in a snapshot on this machine when the heavy slot here is free and the game lock is not held, else queues it on the second machine (one queue for all sessions, first come, first served). Never start jobs on the second machine by hand.
+- Only both machines on one job (splitting the scenes, rerunning only missing rows, when the maintainer says so) or a job that needs this machine's files outside the worktree uses `python3 -I tools/sdplock.py heavy NAME -- CMD` directly: one at a time (later ones wait first come, first served; `status` shows the order), with the workers the local config allows (4 without one; `-j` is lowered to fit), paused while the game lock is held. A job that was paused says so at the end: its timing fields are not usable.
 
 ```bash
-python3 -I tools/remote.py sync                       # this worktree, including uncommitted files (run does it first anyway)
 python3 -I tools/remote.py run NAME [--slots N] -- node tools/compare.mjs ... --out logs/remote/NAME.jsonl
-python3 -I tools/remote.py wait NAME --fetch logs/remote/NAME.jsonl     # in the background
+python3 -I tools/remote.py wait NAME --fetch logs/remote/NAME.jsonl     # in the background, wherever it runs
 ```
 
 - Slots default to the command's `-j` (all slots without one); ask for what the job needs, not the whole machine. Names are unique across sessions: prefix them with your topic.

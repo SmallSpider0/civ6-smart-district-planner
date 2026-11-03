@@ -210,8 +210,8 @@ footer { margin-top: 64px; border-top: 1px solid var(--line); padding-top: 16px;
           <text x="514" y="314" text-anchor="middle" font-size="14" font-weight="600">CI · 自动合并</text><text class="sub" x="514" y="333" text-anchor="middle">Ubuntu + Windows</text>
         </g>
         <g>
-          <rect class="node k3" x="594" y="290" width="140" height="56" rx="8"/><rect class="tab3" x="594" y="290" width="6" height="56" rx="3"/>
-          <text x="664" y="314" text-anchor="middle" font-size="14" font-weight="600">要不要发版</text><text class="sub" x="664" y="333" text-anchor="middle">只修 bug 时自动</text>
+          <rect class="node k4" x="594" y="290" width="140" height="56" rx="8"/><rect class="tab4" x="594" y="290" width="6" height="56" rx="3"/>
+          <text x="664" y="314" text-anchor="middle" font-size="14" font-weight="600">要不要发版</text><text class="sub" x="664" y="333" text-anchor="middle">每一版等维护者说</text>
         </g>
         <g>
           <rect class="node k1" x="754" y="290" width="120" height="56" rx="8"/><rect class="tab1" x="754" y="290" width="6" height="56" rx="3"/>
@@ -243,7 +243,8 @@ footer { margin-top: 64px; border-top: 1px solid var(--line); padding-top: 16px;
     <ul class="overview">
       <li>方案由维护者在 Claude Code 对话里拍板，或由合作者在带 <code>auto</code> 标签的 Issue 下明确回复（选定方案、逐条回答）来定；两人意见不同以维护者为准。发版只等维护者的话。</li>
       <li>客观的自己定，主观的等人：查规则库、读游戏和依赖模组的代码、做离线实验能非常大概率确定的事实（游戏怎么算、能不能放、哪种摆法加成更高），代理自己定，在 Issue 下写明证据；玩家偏好和个性化的取舍（默认值、预设、权重、文案、面板布局、做不做某个玩法）等维护者或合作者回复。</li>
-      <li>主会话管全局：提 Issue、分派、转达决定、管里程碑、更新状态页、跑夜间队列、Issue 监听、改对外页面（创意工坊）、汇报；几行的小修也在这里做。</li>
+      <li>主会话管全局：提 Issue、分派（含夜间队列和监听转来的 Issue）、转达决定、管里程碑、更新状态页、改对外页面（创意工坊）、汇报；几行的小修也在这里做。它不挂任何长时间运行的东西，维护者随时能清空它、接着用。</li>
+      <li>值守子会话是主会话开的一个子会话，只挂常驻的等待：Issue 和创意工坊评论的监听、PR 等待、夜间队列的定时提醒。有动静时它先把命令重新挂上，再把发生了什么转给主会话，由主会话派 agent；它自己不派 agent、不发评论、不改代码。</li>
       <li>调研、测量和每个 Issue 的开发交给子 agent，开发的各用自己的 git 工作树；它们任何时候都能派出去，怎么选模型、什么时候交接见<a href="#dispatch">第 03 节</a>。维护者点名要看着做的、或改动大来回多的，主会话直接另开子会话（不先问），做完归档。要求一次写完整：会话正在做事时发给它的消息，要等它这一轮结束才看得到。</li>
       <li>维护者事先同意不用问的事（各种评论、自己分支的提交和 PR、自动合并、测试、里程碑）对每个会话和子 agent 都有效，它们不再请示，也不等转来的同意；要等维护者的事只由主会话处理。</li>
       <li>需要人确认的问题写到 Issue 上和状态页“要你决定的事”里，工作照常往下走，不停下来等。</li>
@@ -252,7 +253,7 @@ footer { margin-top: 64px; border-top: 1px solid var(--line); padding-top: 16px;
   </div>
   <figure>
     <div class="frame wide">
-      <svg viewBox="0 0 960 330" role="img" aria-label="角色关系：维护者在对话里给主会话拍板，主会话向维护者汇报；合作者在 GitHub 上提 Issue，合作者在带 auto 标签的 Issue 下的明确回复也能定方案，维护者要求时主会话开监听，只处理带 auto 标签的 Issue；主会话把调研和开发分派给子 agent，维护者点名的大改动开子会话，它们做完后把结果报回主会话；状态页由主会话更新。">
+      <svg viewBox="0 0 960 330" role="img" aria-label="角色关系：维护者在对话里给主会话拍板，主会话向维护者汇报；合作者在 GitHub 上提 Issue，合作者在带 auto 标签的 Issue 下的明确回复也能定方案，值守子会话监听，只把带 auto 标签的 Issue 转给主会话；主会话把调研和开发分派给子 agent，维护者点名的大改动开子会话，它们做完后把结果报回主会话；状态页由主会话更新。">
         <defs><marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="arrowhead"/></marker></defs>
         <g><rect class="node k4" x="20" y="110" width="150" height="58" rx="8"/><rect class="tab4" x="20" y="110" width="6" height="58" rx="3"/>
           <text x="95" y="135" text-anchor="middle" font-size="14" font-weight="600">维护者</text><text class="sub" x="95" y="154" text-anchor="middle">方案 · 发版 · 对外文字</text></g>
@@ -273,7 +274,7 @@ footer { margin-top: 64px; border-top: 1px solid var(--line); padding-top: 16px;
         <path class="edge" d="M170 130 H296" marker-end="url(#ar2)"/><text class="lbl" x="196" y="122">拍板</text>
         <path class="edge" d="M296 152 H174" marker-end="url(#ar2)"/><text class="lbl" x="196" y="172">汇报、提问</text>
         <path class="edge" d="M170 269 H296" marker-end="url(#ar2)"/><text class="lbl" x="186" y="261">明确回复可定方案</text>
-        <path class="edge dash" d="M385 240 V172" marker-end="url(#ar2)"/><text class="lbl" x="392" y="212">监听（只处理 auto 标签）</text>
+        <path class="edge dash" d="M385 240 V172" marker-end="url(#ar2)"/><text class="lbl" x="392" y="212">值守子会话监听（auto 标签）</text>
         <path class="edge" d="M470 130 C520 130 520 45 566 45" marker-end="url(#ar2)"/>
         <path class="edge" d="M470 136 C520 136 520 110 566 110" marker-end="url(#ar2)"/>
         <path class="edge" d="M470 142 C520 142 520 175 566 175" marker-end="url(#ar2)"/>
@@ -363,12 +364,13 @@ footer { margin-top: 64px; border-top: 1px solid var(--line); padding-top: 16px;
     <li>第二台机器上的任务：<code>remote.py wait 名字</code>；</li>
     <li>夜里另加一个约一小时后的定时兜底，一夜最多一个。</li>
   </ul>
-  <p>最后一句话写明什么会叫醒自己。macOS 上夜里无人值守的运行还会被隐私弹窗卡住，开跑前先碰一遍要用的文件夹（<a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/docs/dev-macos.md">docs/dev-macos.md</a>“隐私弹窗”）。</p>
-  <h3>主会话：只分派，上下文小，少被叫醒</h3>
+  <p>主会话自己不挂这些，交给值守子会话（下文）。最后一句话写明什么会叫醒自己。macOS 上夜里无人值守的运行还会被隐私弹窗卡住，开跑前先碰一遍要用的文件夹（<a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/docs/dev-macos.md">docs/dev-macos.md</a>“隐私弹窗”）。</p>
+  <h3>主会话：只分派，上下文小，随时可清空</h3>
   <p>主会话的花费大多是重读上下文：它一直开着，上下文越积越长，每被叫醒一次就整个重读一遍。</p>
   <div class="cards">
-    <div class="card"><h4>上下文保持小</h4><p>主会话只分派、转达和收尾，目标在约 20 万 token 以内。超过了，到一个检查点（一批 PR 合并、发版的一步做完）请维护者压缩上下文，代理自己压缩不了。</p></div>
-    <div class="card"><h4>一个里程碑一个主会话</h4><p>发版后换新的主会话。旧的不留任何在跑的东西：后台命令、定时任务、在等的子 agent、Issue 监听都停掉；新的开始时重新开监听。要带过去的写在状态页、Issue、<code>docs/notes/</code> 和本机记忆里，不靠对话。维护者说换时，旧的主会话直接开新会话（附简短交接），开好马上挪到顶层成为独立会话，不用提议卡片（卡片开出的也是子会话）；新的主会话确认旧的不在运行后直接归档它。</p></div>
+    <div class="card"><h4>上下文保持小</h4><p>主会话只分派、转达和收尾，目标在约 20 万 token 以内。超过了，到一个检查点（一批 PR 合并、发版的一步做完）请维护者清空或压缩上下文，代理自己做不了。</p></div>
+    <div class="card"><h4>随时可清空</h4><p>监听、PR 等待、定时提醒都挂在值守子会话上，主会话不挂长时间运行的东西，维护者随时能清空它，清空后直接接着用，不用交接；文件夹、模型、权限设置和桌面控制的授权都保留。要长期记住的写在状态页、Issue、<code>docs/notes/</code> 和本机记忆里。会话里有在跑的后台命令、子 agent 或没到点的会话定时任务时清空不了（桌面版的定时任务不挡），所以等派出的子 agent 回报后再清。</p></div>
+    <div class="card"><h4>值守子会话</h4><p>主会话开的一个子会话（Sonnet、medium），只挂监听、一批 PR 一个 <code>pr_wait.py</code> 和定时提醒。后台命令结束或提醒到点时，它先把命令重新挂上，再用一段能单独看懂的话结束这一轮，第一句写发生了什么、要主会话做什么；这段话自动转给主会话。主会话要等新的 PR 时发消息给它，它把新旧编号合成一个等待重新挂。它没了（被归档、应用重启后后台命令断了）时，主会话照同样的要求重开一个。</p></div>
     <div class="card"><h4>少被叫醒</h4><p>一批 PR 只挂一个 <code>pr_wait.py</code>，中间步骤（一项检查跑完、Codex 审完没意见）不叫醒；只是两边各加了几行的冲突（如 CHANGELOG）它自己并入 main、推上去接着等；CI 失败、别的冲突、Codex 有意见时马上退出。子 agent 交几行报告，主会话只读报告，不读它的原始输出。夜里的定时兜底最多一个。</p></div>
     <div class="card"><h4>不用的工具关掉</h4><p>只分派的会话用不到的连接器（浏览器、文档、桌面控制之类）关掉：它们的工具定义每次调用都要重读。</p></div>
   </div>
@@ -388,9 +390,9 @@ footer { margin-top: 64px; border-top: 1px solid var(--line); padding-top: 16px;
   </div>
   <div class="cards">
     <div class="card"><h4>游戏锁</h4><p>游戏、调试连接、Mods 文件夹只有一套。碰游戏的工具（部署、测试、点击、截图）自己拿锁；别的工作树正拿着，就以退出码 4 停下，可以在后台等锁。退出游戏时放锁。</p><p class="refs"><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/tools/sdplock.py">tools/sdplock.py</a></p></div>
-    <div class="card"><h4>本机重活</h4><p>有第二台机器时，超过约一分钟的计算都排到它上面；本机只跑不到一分钟的小任务，或第二台机器格子全满又不能等的。本机上一次只跑一个，等着的按开始等的先后排队，槽空出来只给排头；worker 上限按本机配置（白天、夜里可以不同），游戏锁被拿走时自动暂停。不经这两个工具直接启动的计算不进排队，别的会话看不到它；子 agent 也照此办理。</p><p class="refs"><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/tools/README.md">tools/README.md「sdplock.py」</a></p></div>
+    <div class="card"><h4>本机重活</h4><p>放哪台机器由工具选，代理不用判断：重活交给 <code>remote.py run</code>，第二台机器马上能跑就放那边，不能而本机空着就在本机的工作树快照里跑，都不行才在第二台机器排队。直接运行的离线测试和对比自己登记，按记下的耗时，短的在本机跑，长的照同样的规则选机器。本机上一次只跑一个重活，等着的按开始等的先后排队，槽空出来只给排头；worker 上限按本机配置（白天、夜里可以不同），游戏锁被拿走时自动暂停。</p><p class="refs"><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/tools/README.md">tools/README.md「remote.py」「sdplock.py」</a></p></div>
     <div class="card"><h4>第二台机器</h4><p>可选，用 ssh 连接，不用装游戏。所有会话共用一个队列，按排队先后分格子；排在前面的任务放不下时，后面放得下的先跑，每个排队任务最多被越过 3 次，独占任务不被越过。任务在工作树的快照里跑，结果取回本机；用完的快照和没人再用的工作树副本一周后自动清掉。</p><p class="refs"><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/tools/remote.py">tools/remote.py</a><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/tools/sdpsched.py">tools/sdpsched.py</a></p></div>
-    <div class="card"><h4>夜间队列</h4><p>机器有人用时，占屏幕的步骤（真实点击、截图、压力测试、发版前的三种规则集）由各会话排进共用队列，由主会话在本机配置的夜间时段（工作日白天不开游戏）统一跑：队列不空时，主会话安排一个在时段开始后几分钟叫醒自己的一次性定时任务；游戏内测试也可以排进去。周末可按本机配置算作夜间。</p><p class="refs"><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/.claude/skills/sdp-game-test/SKILL.md">sdp-game-test</a></p></div>
+    <div class="card"><h4>夜间队列</h4><p>机器有人用时，占屏幕的步骤（真实点击、截图、压力测试、发版前的三种规则集）由各会话排进共用队列，在本机配置的夜间时段（工作日白天不开游戏）统一跑：队列不空时，值守子会话挂一个在时段开始后几分钟到点的一次性定时提醒，到点转告主会话，主会话派一个子 agent 按顺序跑；游戏内测试也可以排进去。周末可按本机配置算作夜间。</p><p class="refs"><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/.claude/skills/sdp-game-test/SKILL.md">sdp-game-test</a></p></div>
   </div>
   <figure>
     <div class="frame wide">
@@ -428,7 +430,7 @@ footer { margin-top: 64px; border-top: 1px solid var(--line); padding-top: 16px;
     <table>
       <thead><tr><th>层</th><th>做什么</th><th>在哪跑</th><th>什么时候</th><th>工具</th></tr></thead>
       <tbody>
-        <tr><td class="step">离线逻辑</td><td>在模拟的游戏接口里跑 Lua，证明搜索与记账正确</td><td>CI、本机或第二台机器</td><td>每个 PR</td><td><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/tools/offline_tests.mjs"><code>offline_tests.mjs</code></a></td></tr>
+        <tr><td class="step">离线逻辑</td><td>在模拟的游戏接口里跑 Lua，证明搜索与记账正确；每次求解后查方案不变量（#242）</td><td>CI、本机或第二台机器</td><td>每个 PR</td><td><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/tools/offline_tests.mjs"><code>offline_tests.mjs</code></a></td></tr>
         <tr><td class="step">校验</td><td>XML、modinfo、双语文本键、Lua 语法、禁用随机数、界面控件在游戏里有先例</td><td>CI</td><td>每个 PR</td><td><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/tools/validate.py"><code>validate.py</code></a></td></tr>
         <tr><td class="step">游戏内</td><td>经调试连接在真实游戏里跑断言；发版前三种规则集，界面或文字改了再跑英文界面</td><td>有游戏的机器（游戏在后台）</td><td>改了模组代码（相关的文件）；发版前整套</td><td><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/tools/run_tests.py"><code>run_tests.py</code></a></td></tr>
         <tr><td class="step">离线对比</td><td>用真实规则库和固定场景集，对照已存的结果和可证明的真最优，检查质量和零违规</td><td>第二台机器（没有就本机）</td><td>改了求解器或合法性</td><td><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/tools/compare.mjs"><code>compare.mjs</code></a></td></tr>
@@ -468,8 +470,8 @@ footer { margin-top: 64px; border-top: 1px solid var(--line); padding-top: 16px;
     <li>开一个发版准备的 PR，CI 过了自动合并。</li>
     <li><code>release.py publish</code> 发 GitHub Release。CI 打出模组压缩包和创意工坊提交包，把介绍页和本页发布到 GitHub Pages。</li>
     <li><code>release.py workshop</code> 用 SteamCMD 上传，再下载回来逐字节比对（也可由合作者在 Windows 上传）。简体中文的标题、简介和图片在物品页上改。</li>
-    <li>没做完的 Issue 移到下一个里程碑，关掉这个里程碑，告诉维护者发了什么、查过什么、没查什么。</li>
-    <li>清理记忆和规则文档：每发一个第二位版本之后做一次，只发第三位版本时最多隔 3 个版本也做一次，只按版本号算。换主会话前派一个子 agent，本机的记忆和个人规则一份，仓库的规则文档一个只改文档的 PR：只删重复和过时的，不改规则的意思，拿不准的列给维护者；每次在 <code>docs/notes/rules-cleanup.md</code> 记一行。</li>
+    <li>没做完的 Issue 移到下一个里程碑，关掉这个里程碑，告诉维护者发了什么、查过什么、没查什么，并列出这一版修好的创意工坊评论、各附一句回复草稿，维护者确认后由主会话在物品页发。发版后不换会话。</li>
+    <li>清理记忆和规则文档：每发一个第二位版本之后做一次，只发第三位版本时最多隔 3 个版本也做一次，只按版本号算。发版后派一个子 agent，本机的记忆和个人规则一份，仓库的规则文档一个只改文档的 PR：只删重复和过时的，不改规则的意思，拿不准的列给维护者；每次在 <code>docs/notes/rules-cleanup.md</code> 记一行。</li>
   </ol>
   <p class="refs">参考：<a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/.claude/skills/sdp-release/SKILL.md">sdp-release</a><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/tools/release.py">tools/release.py</a><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/.github/workflows/release.yml">release.yml</a><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/releases/tag/v1.5.0">示例：v1.5.0</a></p>
 </section>
@@ -495,7 +497,7 @@ footer { margin-top: 64px; border-top: 1px solid var(--line); padding-top: 16px;
 <section id="board">
   <h2><span class="n">08</span>状态页</h2>
   <div class="prose">
-    <p>状态页是维护者自己看进度用的一个网页：要维护者处理的事、开着的 Issue 和谁该回复、各里程碑的进度和下一步、两台机器上正在跑和排队的任务、夜间队列及结果、最近的发版。</p>
+    <p>状态页是维护者自己看进度用的一个网页：要维护者处理的事、开着的 Issue 和谁该回复、各里程碑的进度和下一步、两台机器上正在跑和排队的任务、夜间队列及结果、创意工坊还没处理的新评论、最近的发版。</p>
     <p>代码在仓库的 <a href="https://github.com/SmallSpider0/civ6-smart-district-planner/tree/main/tools/status"><code>tools/status/</code></a>（用法见 <a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/tools/README.md">tools/README.md</a>“status/”；服务器端的模板在 <code>tools/status/server/</code>，搭服务器的步骤在同一节）。页面上的内容几乎都是自动生成的：后台一个循环每分钟读一遍两台机器的调度记录，每 5 分钟读一遍 git 和 GitHub（分支和 PR、里程碑、Issue、发版）和夜间队列，概览和每个里程碑的“下一步”由页面从这些数据算出来。发版记录只从 GitHub 来，摘要取自发布说明，不手写。</p>
     <p>手写的只有三类，主会话在事情发生的那一步写：要维护者决定的事、调度记录说不清的任务说明（如调研）、里程碑的目标和预计时间。页面的地址、推送用的服务器、账号和机器名只在维护者的本机配置里，不进仓库；推送前脚本会查一遍有没有路径、IP、邮箱和这些词。</p>
   </div>
@@ -563,19 +565,20 @@ footer { margin-top: 64px; border-top: 1px solid var(--line); padding-top: 16px;
   ];
   // [step, level, how (may contain a file link), what a person still does]
   var ROWS = [
-    ["发现新 Issue", 2, "维护者要求时开监听脚本，每 2 分钟轮询（连不上 GitHub 时 30 秒后重试），只把维护者或合作者打了 auto 标签的 Issue 上的动静交给代理；合作者的其余 Issue 和评论记进待看列表，等维护者看；不开时在两件事之间查一次", "—", "tools/watch_issues.py"],
+    ["发现新 Issue", 2, "值守子会话挂着监听脚本，每 2 分钟轮询（连不上 GitHub 时 30 秒后重试），只把维护者或合作者打了 auto 标签的 Issue 上的动静转给主会话，维护者和代理共用的账号发的不转、不记；合作者的其余 Issue 和评论记进待看列表，等维护者看；创意工坊的新评论也记进待看列表；不开时在两件事之间查一次", "—", "tools/watch_issues.py"],
+    ["创意工坊评论", 3, "同一个监听每 45 分钟读一次创意工坊的评论区和讨论区（公开页面，不登录），新帖只记进待看列表、不叫醒代理，物品主人和贡献者的不算，状态页自动列出还没处理的；维护者说处理时代理归类，确定的 bug 开 Issue 并修，功能开 Issue 等维护者看；回复起草好给维护者，不提 GitHub、不放链接，口吻照合作者在评论区的回复，短而口语；发版时列出这一版修好了哪些评论里报的问题", "维护者说处理时才归类；确认每条回复后，代理才在 Chrome 里发", "tools/watch_workshop.py"],
     ["分诊、修 bug", 2, "先照报告和截图自己复现（同样的文明、页签、开关和地图上的钉），复现不了才请报告人给存档；写一个在旧代码上失败的测试，修好，挂到下一个小版本的里程碑", "—", ".claude/skills/sdp-issue/SKILL.md"],
     ["功能调研", 2, "子 agent 查规则库、游戏与依赖模组的源码、同类模组、玩家社区，写成 Issue 评论", "—", null],
     ["功能方案", 4, "代理列出方案 A、B 和建议，用玩家看得懂的话写在 Issue 里；研究能非常大概率确定的客观问题代理自己定，写明证据", "主观的取舍（偏好、默认值、预设、文案、布局）由维护者在对话里拍板，或合作者在带 auto 标签的 Issue 下明确回复", null],
     ["里程碑", 2, "bug 确认时、功能方案定了时挂上对应版本，没有就新建；版本号按改动大小定；不做的关掉，以后再说的打 later；发版时移走没做完的、关掉里程碑", "—", null],
     ["并行开发", 2, "每个 Issue 一个子 agent，各自的 git 工作树和分支；维护者点名的大改动开子会话", "—", "tools/worktree.py"],
     ["锁与排队", 1, "游戏锁、本机重活暂停与恢复、第二台机器的格子队列与回填", "—", "tools/sdplock.py"],
-    ["离线测试与校验", 1, "fengari 里跑 Lua；校验 XML、文本、语法、确定性；超过一分钟的放第二台机器", "—", "tools/validate.py"],
+    ["离线测试与校验", 1, "fengari 里跑 Lua；校验 XML、文本、语法、确定性；直接运行时自己登记、按记下的耗时选机器", "—", "tools/validate.py"],
     ["游戏内测试", 1, "经调试连接在游戏里执行断言；开局、换规则集、关弹窗都由脚本完成；游戏留在后台", "（macOS 上启动器的“开始”按钮由代理用电脑操控点击）", "tools/run_tests.py"],
     ["真实点击、截图", 1, "系统鼠标事件逐个点控件；截图按面板位置裁剪", "第一次授予辅助功能和录屏权限；无人值守时屏幕不能锁，笔记本要开盖接电", "tools/realclick.py"],
     ["压力测试", 1, "读三张后期存档，逐步计时，在游戏里实际建出来核对", "—", "tools/stress.py"],
-    ["夜间队列", 2, "开跑前先碰一遍夜里要用的文件夹，让隐私弹窗趁人还在时出现；主会话在本机配置的夜间时段按顺序跑队列，结果交给新的子 agent 改问题、开 PR", "macOS 上事先给夜里要跑的程序授予文件夹访问权限", "tools/preflight_night.py"],
-    ["代码审查", 2, "改了代码的 PR 由开 PR 的代理点名请 Codex 审，主会话把这一批 PR 挂在一个 pr_wait.py --codex 上，审完没意见或没审成时它自己开自动合并，有意见才叫醒；每条意见先核实，属实的先写会失败的测试再改，不属实的写明原因，回复后标为已解决，都处理完再开自动合并；只改文档的不审。试两周，按记录的属实和误报条数决定留不留", "—（只有要改需求、默认值或权衡做法的意见才进“要你决定的事”）", "tools/pr_wait.py"],
+    ["夜间队列", 2, "开跑前先碰一遍夜里要用的文件夹，让隐私弹窗趁人还在时出现；值守子会话在本机配置的夜间时段开始时提醒主会话，主会话派子 agent 按顺序跑队列，结果交给新的子 agent 改问题、开 PR", "macOS 上事先给夜里要跑的程序授予文件夹访问权限", "tools/preflight_night.py"],
+    ["代码审查", 2, "改了代码的 PR 由开 PR 的代理点名请 Codex 审，值守子会话把这一批 PR 挂在一个 pr_wait.py --codex 上，审完没意见或没审成时它自己开自动合并，有意见才叫醒；每条意见先核实，属实的先写会失败的测试再改，不属实的写明原因，回复后标为已解决，都处理完再开自动合并；只改文档的不审。试两周，按记录的属实和误报条数决定留不留", "—（只有要改需求、默认值或权衡做法的意见才进“要你决定的事”）", "tools/pr_wait.py"],
     ["PR、CI、合并", 1, "一个 Issue 一个 PR；Ubuntu、Windows 两项检查通过后自动 squash 合并；CI 失败时自动叫醒代理修，通过和合并不叫醒，一批 PR 挂一个后台等待（pr_wait.py），全部合并或有要处理的才退出，只是两边各加了行的冲突它自己并入 main；合并后清理工作树、本地分支和 GitHub 上多出来的分支", "—", ".github/workflows/checks.yml"],
     ["对外文字审阅", 3, "README、创意工坊简介、介绍页由代理改，PR 里附渲染好的页面和图", "合并前另一人看一下", null],
     ["要不要发版", 4, "每一版（含只修 bug 的）做完准备、报告可以发了，等维护者一句话；严重 bug 修好时马上告诉维护者", "说“发 vX.Y.Z”", ".claude/skills/sdp-release/SKILL.md"],
@@ -584,7 +587,7 @@ footer { margin-top: 64px; border-top: 1px solid var(--line); padding-top: 16px;
     ["Release 与介绍页", 1, "打模组包和创意工坊包，生成中英介绍页，连同本页发布到 GitHub Pages", "—", ".github/workflows/release.yml"],
     ["创意工坊上传", 2, "SteamCMD 上传后再下载回来，与提交包逐字节比对", "Steam 要密码或验证码时由人输入", "tools/workshop.py"],
     ["创意工坊网页", 2, "代理在浏览器里改简体中文的标题和简介、换图，把简介里的图作为 Steam 艺术作品上传，先和线上原文比对", "封面只有物品所有者能换", null],
-    ["状态页", 2, "后台循环（交给系统的服务管理常驻，不放在会话后台）每分钟从调度记录、git、GitHub、夜间队列生成并推送，发版记录只取自 GitHub；主会话只在事情发生时手写要决定的事、任务说明和里程碑目标（见第 08 节）", "—", "tools/status/sync.py"],
+    ["状态页", 2, "后台循环（交给系统的服务管理常驻，不放在会话后台）每分钟从调度记录、git、GitHub、夜间队列、监听的待看列表（创意工坊新评论）生成并推送，发版记录只取自 GitHub；主会话只在事情发生时手写要决定的事、任务说明和里程碑目标（见第 08 节）", "—", "tools/status/sync.py"],
     ["Windows 实测", 4, "—", "合作者手动测界面缩放与布局", "docs/dev-windows.md"],
     ["改游戏配置", 4, "需要时代理先问，游戏必须关着", "同意后才改", null]
   ];

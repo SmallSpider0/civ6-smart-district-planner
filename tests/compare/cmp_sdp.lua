@@ -67,6 +67,14 @@
 --                                    SDP_Multi's GroupSize, GroupPasses)
 --   variant <TIER>_ALL               multi: all cities in one search, no
 --                                    groups however many (issue 142)
+--   variant ..._ASMULTI (anywhere)   single: solved as SDP_Multi with only
+--                                    this city, the request the single-city
+--                                    tab sends when wonders are ticked
+--                                    (SDP_Panel's WonderRequest), also
+--                                    without wonders (issue 250)
+-- Every run records stats.sdpUnits, the SDP_Tiers work units the solver
+-- ticked (SDP_Task.Tick), and stats.sdpEstimate, the panel's estimate of
+-- them (issue 250).
 
 CmpAdapters = CmpAdapters or {}
 
@@ -211,6 +219,9 @@ function CmpAdapters.sdp(request, variant, w)
     CmpOracle.NODE_LIMIT = tonumber(variant:match("@(%d+)$") or "1") * 1e6
     variant = "FINE"
   end
+  -- "_ASMULTI" (issue 250): the single-city request through SDP_Multi.
+  local asMulti = variant:match("_ASMULTI") ~= nil
+  variant = variant:gsub("_ASMULTI", "")
   local oracle = variant:match("^ORACLE") ~= nil
   local check = oracle and variant:match("_CHECK$") ~= nil
   if oracle then variant = "FINE" .. variant:gsub("_CHECK$", ""):gsub("^ORACLE", "") end
@@ -263,6 +274,27 @@ function CmpAdapters.sdp(request, variant, w)
   local stats = {}
   if land then stats.sdpLambda = lambda end
   CmpRun.CountDMT(stats)
+  -- The work units the solver ticks (one is about one DMT call), outside a
+  -- task too, for the time estimate (issue 250).
+  local units = 0
+  local tick = SDP_Task.Tick
+  SDP_Task.Tick = function(n)
+    units = units + n
+    return tick(n)
+  end
+  local out = CmpAdapters.sdpSolve(request, variant, stats, {
+    asMulti = asMulti, oracle = oracle, check = check, longrun = longrun, land = land, lambda = lambda,
+    swap = swap, coverage = coverage, distance = distance, dense = dense, count = count, grid = grid,
+    growth = growth, group = group, sharedList = sharedList, groupParams = groupParams })
+  SDP_Task.Tick = tick
+  stats.sdpUnits = units
+  return out
+end
+
+function CmpAdapters.sdpSolve(request, variant, stats, o)
+  local asMulti, oracle, check, longrun, land, lambda = o.asMulti, o.oracle, o.check, o.longrun, o.land, o.lambda
+  local swap, coverage, distance, dense, count, grid = o.swap, o.coverage, o.distance, o.dense, o.count, o.grid
+  local growth, group, sharedList, groupParams = o.growth, o.group, o.sharedList, o.groupParams
   local scn = request.scenario
   local out = { placements = {}, stats = stats, notes = {} }
   local function Take(plan, cityID)
@@ -297,12 +329,19 @@ function CmpAdapters.sdp(request, variant, w)
     end
     stats.sdpSiteDistricts = siteDistricts
     stats.method = "sites"
-  elseif scn.kind == "single" and #(request.wonders or {}) > 0 then
+  elseif scn.kind == "single" and (#(request.wonders or {}) > 0 or asMulti) then
     -- Wonders with the districts: the single-city tab solves this city as
-    -- SDP_Multi with only this city (SDP_Panel's WonderRequest).
+    -- SDP_Multi with only this city (SDP_Panel's WonderRequest). "_ASMULTI"
+    -- also sends the city's own list as Plans, as WonderRequest does.
     local id = request.target:GetID()
     local r = SDP_Multi.Solve({ PlayerID = 0, Tier = variant, Districts = request.districts, Wonders = request.wonders,
+      Plans = asMulti and { ["C" .. id] = request.districts } or nil, Pool = request.pool, Count = request.count,
       Only = { [id] = true }, Weights = request.weights, Land = land, Swap = swap, Coverage = coverage, Distance = distance })
+    -- As in the single-city branch, no estimate when picking from a pool.
+    if request.pool == nil then
+      stats.sdpEstimate = SDP_Multi.EstimateUnits(1, #request.districts, #(request.wonders or {}),
+        SDP_Tiers.Params(SDP_Tiers.Multi, variant), 0, 0)
+    end
     if not r.Ok then out.notes[#out.notes + 1] = tostring(r.Error) end
     for _, p in ipairs(r.Plan or {}) do
       out.placements[#out.placements + 1] = { city = id, type = p.Type, x = p.X, y = p.Y, kind = p.Kind }
@@ -326,6 +365,10 @@ function CmpAdapters.sdp(request, variant, w)
       Pool = request.pool, Count = request.count,
       Land = land, Tier = variant, Weights = request.weights, Swap = swap, Coverage = coverage, Distance = distance })
     if not r.Ok then out.notes[#out.notes + 1] = tostring(r.Error) end
+    if r.Ok and r.Session and r.Session.Scan and request.pool == nil then
+      stats.sdpEstimate = SDP_Solver.EstimateUnits(#r.Session.Scan.Candidates, #request.districts,
+        SDP_Tiers.Params(SDP_Tiers.Single, variant), 0, 0)
+    end
     Take(r.Plan, request.target:GetID())
     if longrun and r.Ok then
       local id = request.target:GetID()
