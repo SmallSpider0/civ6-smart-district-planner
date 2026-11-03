@@ -21,13 +21,14 @@
 | `refscene.py` | 手写的参照布局（社区公认布局）转成对比场景，画回文字或图片核对 | 0 成功；1 有错误；2 找不到场景 |
 | `civ6tuner.py` | FireTuner 客户端：收集 Lua 输出、远程执行 Lua | 见下文 |
 | `shots.py` | 仅 macOS：摆好页签（`tests/shots/`）、截面板存进 `docs/images/`、切换英文界面 | 0 成功 |
-| `release.py` | 发版：改版本号与 CHANGELOG、起草更新说明和发布说明、发 Release、上传创意工坊并核对 | 0 成功；1 下载回来与提交包不同 |
+| `release.py` | 发版：改版本号、把 `changelog.d/` 的片段收进 CHANGELOG、起草更新说明和发布说明、发 Release、上传创意工坊并核对 | 0 成功；1 下载回来与提交包不同 |
+| `changelog.py` | 更新记录片段 `changelog.d/`：列出下一版要收的条目、查格式（`validate.py`、`release.py prep` 调用它） | 0 格式没问题；1 有问题 |
 | `refresh_results.py` | 用当前代码重跑结果文件里本模组的行（`--check` 只比对、不改文件） | 0 成功；1 有变差的行或新违规 |
 | `remote.py` | 在第二台机器上跑离线重活：拷代码、按格子数排队运行、等待并取回结果 | 远端任务的退出码 |
 | `sdplock.py` | 并行会话共用资源：游戏锁、本机重活（一次一个、限 worker、开游戏时暂停）、夜间队列、一条命令看本机和第二台机器 | 0 成功；4 被别人占着 |
 | `sdpsched.py` | 第二台机器上所有会话共用的任务队列（`remote.py` 拷过去调用，本机不直接用） | 任务的退出码 |
 | `preflight_night.py` | 仅 macOS 有用：碰一遍夜里要用的文件夹，让隐私弹窗在人还在时出现 | 0 都能访问；1 有文件夹出问题 |
-| `pr_wait.py` | 一批 PR 一个后台等待：全部合并或有一个要人处理时才退出；`--codex` 的 PR 审完没意见或没审成时开自动合并 | 0 全部合并；1 有要处理的；2 没有这个 PR |
+| `pr_wait.py` | 一批 PR 一个后台等待：全部合并或有一个要人处理时才退出；只是两边各加了行的冲突自己并入 `main` 接着等；`--codex` 的 PR 审完没意见或没审成时开自动合并 | 0 全部合并；1 有要处理的；2 没有这个 PR |
 | `worktree.py` | 新建能直接用的工作树（接好依赖和参考源码的链接）、列出与清理已合并的 | 0 成功 |
 | `status/sync.py`、`status/watch.py` | 维护者的状态页：从调度记录、git、GitHub、夜间队列和几条手写说明生成数据并推送；后台循环 | 见下文 |
 
@@ -471,13 +472,15 @@ python3 -I tools/shots.py lang restore           # 恢复备份，核对逐字�
 ## release.py — 发版
 
 ```bash
-python3 -I tools/release.py prep 1.4.1       # 发版分支上：modinfo 版本加 1、VERSION、CHANGELOG 加日期、起草更新说明
+python3 -I tools/release.py prep 1.4.1       # 发版分支上：modinfo 版本加 1、VERSION、收 changelog.d/ 进 CHANGELOG、起草更新说明
+python3 -I tools/changelog.py                # 列出下一版会收进 CHANGELOG 的条目，格式不对时退出码 1
 python3 -I tools/release.py notes 1.4.1      # 从上一版的发布说明和这一版的更新说明生成 logs/release-v1.4.1.md
 python3 -I tools/release.py publish 1.4.1    # PR 合并后：发 Release，等工作流附上四个文件，查 GitHub Pages
 python3 -I tools/release.py workshop 1.4.1   # SteamCMD 上传、下载回来比对、把下载的那份移出游戏目录
 ```
 
-- `prep` 起草的更新说明英文部分是 TODO，要自己写；中文部分取 CHANGELOG 的条目，去掉 Issue 号。`notes` 遇到 TODO 拒绝生成。
+- `prep` 把 `changelog.d/` 的片段（一个 PR 一个 `<编号>.md`，每行一条，[格式](../changelog.d/README.md)）按编号写成 CHANGELOG 最上面的 `## vX.Y.Z（日期）` 一节并删掉片段（`tools/changelog.py`）；没有片段、片段格式不对或这一版已有一节时什么都不改就停下。`validate.py` 也查片段格式，并拒绝 CHANGELOG 里再出现“未发布”一节（#217）。
+- `prep` 起草的更新说明英文部分是 TODO，要自己写；中文部分取收进来的条目，去掉 Issue 号。`notes` 遇到 TODO 拒绝生成。
 - `workshop` 要设 `SDP_STEAM_LOGIN`（Steam 登录名），SteamCMD 默认 `~/steamcmd/steamcmd.sh`（`STEAMCMD` 可改）。SteamCMD 用单独的家目录 `~/steamcmd-home`（`STEAMCMD_HOME` 可改）：macOS 上它默认和 Steam 客户端共用 `~/Library/Application Support/Steam`，客户端改写 `config.vdf` 时会把 SteamCMD 的登录缓存冲掉（一两天就要重新登录），下载回来的物品也会落进游戏扫描的创意工坊文件夹（AGENTS.md 坑 38）。登录要已缓存：SteamCMD 要密码时停下，由维护者自己运行一次 `HOME=~/steamcmd-home ~/steamcmd/steamcmd.sh +login 登录名 +quit`。物品页上的简体中文简介和图片仍在网页上改，脚本最后打印这次要改什么。
 - 步骤和顺序见 `.claude/skills/sdp-release/SKILL.md`。
 
@@ -505,7 +508,7 @@ python3 -I tools/remote.py clean --dry-run    # 先看远端 ~/sdp-runs/ 里哪�
 - 不需要装游戏。远端在 `~/sdp-runs/<工作树名>/`，参考源码只拷 Lua。结果和本机相同（耗时字段除外），所以报告里要写耗时的那组结果放在同一台机器上跑。
 - **排队**：远端的格子数默认是它的核数减 2（留给系统；本机配置的 `remote_slots` 可改），所有会话共用。任务要 `--slots N` 格（默认取命令里的 `-j`，没写就是全部；`-j` 比 N 大会改小，子进程拿到 `SDP_JOBS=N`），按排队先后分格子：前面的任务拿走它们的格子后还剩 N 格就启动。别的方式启动的 `compare.mjs` 按它的 `-j` 计入（没写按全部）。`--exclusive` 等整台机器空下来再跑、跑时别人排队：报告里要写秒数的那组用它。同名任务还在排队或在跑时拒绝。队列是 `tools/sdpsched.py`，`sync` 和 `run` 把它拷到远端的 `~/sdp-runs/bin/`。
 - **回填与防饿死**：前面的任务格子不够时，后面放得下的任务先启动，空着的格子不闲着（例如 8 格用了 6 格，排头要 4 格，后面要 2 格的先跑）。为了不让大任务一直被小任务插队，每个排队的任务最多被后来的任务越过 3 次（`sdpsched.py` 的 `MAX_PASSED`），之后它守住位置：排在它后面的都等它先启动。任务没有预计时长，所以按次数而不按时间限。独占任务不被越过：排着的独占任务后面的任务都等它。`status` 里排队的任务按先后列出；回填启动的任务在日志里写“ahead of N waiting job(s)”。每个排队任务的 `sdpsched.py run` 进程每 15 秒用自己启动时的代码判断一次，所以换了规则后，只有之后提交的任务按新规则启动。
-- **快照**：`run` 先 `sync`（增量，通常一两秒；新工作树第一次约 10 秒），所以从没 `sync` 过的工作树也能直接 `run`，跑的也总是本机工作树现在的文件（2026-11-03，#210：之前没 `sync` 过的工作树 `run` 时克隆失败，只报一句空的 ssh 错误）。然后把远端的工作树用 APFS 克隆（瞬间完成、不另占空间）到 `~/sdp-runs/snap/NAME/`，任务在快照里跑，之后再 `sync` 不会改到它正在读的文件；`wait --fetch` 和 `fetch --job NAME` 从快照取回结果。下次 `run` 时清理（`sdpsched.py prune`）：删掉结束超过 7 天的快照（没有任务记录的按修改时间算），以及 7 天没人 `sync`、也没有任务用过、现在没有任务在用的工作树副本（`sync` 在副本里留一个 `.sdp-synced` 记时间），所以工作树合并删掉后，它在远端的副本一周后也会删掉。`remote.py clean` 把同一套规则单独跑一遍并多做三件事（2026-11-02，#198：目录涨到 3.5 GB、360 个条目）：任务结束超过 7 天时，连它的日志（`NAME.log`）、退出码文件（`NAME.exit`）和任务记录（`jobs/NAME.json`）一起删，不只删快照；没有任务记录的老日志也删；把本机 `git worktree list` 里还在的工作树名发过去，已不存在的工作树的副本，以及从它们启动的任务，结束满 1 天（不是 7 天）就删。在排队、在跑的任务的文件和副本从不动（按 `sdpsched.py` 的任务记录和进程判断，没有记录的旧式任务看日志是否 2 小时内写过）。`worktree.py prune --remote` 删完工作树后自动跑一遍 `clean`，`run` 仍在启动任务前跑按天数的那部分。公用的 `ref/`、`bin/` 不删。2026-10-29 发现这一步从没成功过：它在设 PATH 之前调用 `python3`，远端拿到的是要先同意 Xcode 许可的空壳，积下 118 个快照和 30 多个早已合并的分支的副本。
+- **快照**：`run` 先 `sync`（增量，通常一两秒；新工作树第一次约 10 秒），所以从没 `sync` 过的工作树也能直接 `run`，跑的也总是本机工作树现在的文件（#210）。然后把远端的工作树用 APFS 克隆（瞬间完成、不另占空间）到 `~/sdp-runs/snap/NAME/`，任务在快照里跑，之后再 `sync` 不会改到它正在读的文件；`wait --fetch` 和 `fetch --job NAME` 从快照取回结果。下次 `run` 时清理（`sdpsched.py prune`）：删掉结束超过 7 天的快照（没有任务记录的按修改时间算），以及 7 天没人 `sync`、也没有任务用过、现在没有任务在用的工作树副本（`sync` 在副本里留一个 `.sdp-synced` 记时间），所以工作树合并删掉后，它在远端的副本一周后也会删掉。`remote.py clean` 把同一套规则单独跑一遍并多做三件事（#198）：任务结束超过 7 天时，连它的日志（`NAME.log`）、退出码文件（`NAME.exit`）和任务记录（`jobs/NAME.json`）一起删，不只删快照；没有任务记录的老日志也删；把本机 `git worktree list` 里还在的工作树名发过去，已不存在的工作树的副本，以及从它们启动的任务，结束满 1 天（不是 7 天）就删。在排队、在跑的任务的文件和副本从不动（按 `sdpsched.py` 的任务记录和进程判断，没有记录的旧式任务看日志是否 2 小时内写过）。`worktree.py prune --remote` 删完工作树后自动跑一遍 `clean`，`run` 仍在启动任务前跑按天数的那部分。公用的 `ref/`、`bin/` 不删。
 - `run` 用 nohup 启动，ssh 断了也继续；结束时写 `~/sdp-runs/NAME.exit`。`wait` 只看这个文件（不按进程名查找），结束后取回 `--fetch` 列的文件，以远端任务的退出码退出：放在后台跑，它结束就是可以接着处理的信号。
 - 远端的 node、python3 不在默认 PATH 上：`SDP_REMOTE_PATH`（或本机配置的 `remote_path`）放在 PATH 前面（默认 `/opt/homebrew/bin:/usr/local/bin`）。
 
@@ -519,7 +522,7 @@ python3 -I tools/sdplock.py take --purpose "#71 测试"     # 拿游戏锁并写
 python3 -I tools/sdplock.py wait --take --purpose "..."  # 放后台：锁一空就拿下并结束
 python3 -I tools/sdplock.py take --next --purpose "v1.4.2 发版测试"  # 发版测试排到下一个
 python3 -I tools/sdplock.py release                     # 不退游戏也放锁（game.py quit 会自己放）
-python3 -I tools/sdplock.py heavy NAME -- node tools/compare.mjs ...   # 本机重活
+python3 -I tools/sdplock.py heavy NAME -- node tools/compare.mjs ...   # 本机重活（有别的在跑就排队等）
 python3 -I tools/sdplock.py queue add --what "realclick suite" --why "#71 界面" --cmd "python3 -I tools/realclick.py suite"
 python3 -I tools/sdplock.py queue list                  # 由一个会话在机器空闲时按顺序跑，跑完 queue done ID --result ...
 ```
@@ -527,7 +530,7 @@ python3 -I tools/sdplock.py queue list                  # 由一个会话在机�
 - **游戏锁**：`deploy.py`、`game.py`、`run_tests.py`、`realclick.py`、`shots.py`、`stress.py` 和 `civ6tuner.py serve`/`exec` 自己拿锁、续约；别的工作树拿着时以退出码 4 停下，写明谁、做什么、从几点开始。`civ6tuner.py states` 谁都能用。`game.py quit` 放锁并停掉本工作树的 Tuner 后台进程。
 - **过期**：30 分钟没续约，并且游戏已经关了或持有者的 Tuner 后台进程不在了，才算过期，`take --stale` 接手（接手后先 `game.py quit`，从新对局开始）。`--force` 不看状态直接拿，只在确定持有者已经不在时用。
 - **插队**：`take --next` 预订下一个；持有者放锁后 15 分钟内只有预订的工作树能拿。
-- **本机重活**：一次一个；worker 上限按本机配置（没有配置时 4 个），`-j` 超了就改小，`compare.mjs`、`refresh_results.py` 没写 `-j` 就补上；游戏锁被拿走时发 `SIGSTOP` 暂停（整个进程组），放锁时 `SIGCONT` 继续。暂停过的任务结束时会说，它的耗时字段不能用。Windows 上不能暂停。
+- **本机重活**：一次一个。有任务在跑时，后来的 `heavy` 按开始等待的先后排队（记在共用目录的 `heavy-queue.json`），槽空出来时只有排头能拿，后来的不会抢在前面（#219）；`status` 按顺序列出排队的任务。排队的进程退出或被杀时按进程是否还在自己出队，不挡后面的；Ctrl-C 也出队。`--no-wait`（写在 NAME 前）不排队，有任务在跑就以退出码 4 停下。用旧代码的 `heavy` 不排队、不看队列，各工作树并入 `main` 后才都按先来后到。worker 上限按本机配置（没有配置时 4 个），`-j` 超了就改小，`compare.mjs`、`refresh_results.py` 没写 `-j` 就补上；游戏锁被拿走时发 `SIGSTOP` 暂停（整个进程组），放锁时 `SIGCONT` 继续。暂停过的任务结束时会说，它的耗时字段不能用。Windows 上不能暂停。
 - **共用目录**：`$SDP_SHARED`，否则 macOS `~/Library/Application Support/SDP`，Windows `%LOCALAPPDATA%\SDP`。显示的会话名是 `$SDP_OWNER`，没设就是分支名。
 - **本机配置**：和机器有关的数值不进仓库，写在 `~/.config/sdp/local.json`（`SDP_LOCAL_CONFIG` 可改路径），每项都可省：`workers_day`（默认 4）、`workers_night`（默认同白天）、`night`（如 `"00:00-08:00"`，默认没有夜间；夜间队列和夜里的 worker 上限都按它）、`weekend_is_night`（默认 false）、`remote`（第二台机器的 ssh 主机名，`SDP_REMOTE` 优先）、`remote_slots`（默认那台机器的核数减 2）、`remote_path`（那边 node 和 python3 所在目录）、`preflight_folders`（`preflight_night.py` 另外要碰的文件夹）。
 - 离线测试：`python3 -I -m unittest discover -s tests/tools`（假时钟、假进程、假游戏；CI 上也跑）。
@@ -561,7 +564,8 @@ python3 -I tools/pr_wait.py 207 208 --codex 209 210     # 后台跑：等 207、
 python3 -I tools/pr_wait.py 211 --every 30              # 每 30 秒查一次（默认 60）；--codex-timeout 秒数改 30 分钟的审查期限
 ```
 
-- 只在两种时候退出：列出的 PR 全部合并（退出码 0），或有一个要人处理（退出码 1）。要处理的是：最新提交上有检查失败（失败、取消、超时等，同一项检查重跑过的按最后一次）、合并冲突、Codex 有没解决的意见（`codex_review.py findings 编号` 列出）、PR 被关掉没合并、PR 开着却没开自动合并也没有在跑的 CI 或在等的审查（没人会合并它）。中间步骤（一项检查跑完、Codex 审完没意见、开了自动合并）都不退出，所以一批 PR 只挂这一个等待，主会话只在它退出时醒一次（docs/maintaining.md“子 agent 怎么派”第 5 条）。
+- 只在两种时候退出：列出的 PR 全部合并（退出码 0），或有一个要人处理（退出码 1）。要处理的是：最新提交上有检查失败（失败、取消、超时等，同一项检查重跑过的按最后一次）、自己合并不了的冲突（见下一条）、Codex 有没解决的意见（`codex_review.py findings 编号` 列出）、PR 被关掉没合并、PR 开着却没开自动合并也没有在跑的 CI 或在等的审查（没人会合并它）。中间步骤（一项检查跑完、Codex 审完没意见、开了自动合并）都不退出，所以一批 PR 只挂这一个等待，主会话只在它退出时醒一次（docs/maintaining.md“子 agent 怎么派”第 5 条）。
+- 冲突时先试一次自己合并：每一处冲突都只是两边在同一个地方各加了行（没删改共同的原有行，如 `CHANGELOG.md`、文本 XML）时，在临时的游离工作树里 `git merge origin/main`（diff3 冲突格式），每处留下两边新加的行（`main` 的在前、分支的在后），提交合并、普通推送（不强推），接着等，不退出。以下照旧作为冲突退出：有一处冲突改了或删了原有的行；不是两边都改了同一个文件的冲突（一边删、两边都新建、二进制）；PR 来自 fork；分支在本机有工作树，而那个工作树有未提交的改动或不在 PR 的最新提交上（可能有会话正在改）。本机工作树干净且在 PR 最新提交上时，推送后把它快进到合并提交。同一个提交只试一次；不用 `git stash`（docs/maintaining.md“共用资源”）。
 - `--codex` 后面的 PR 是请 Codex 审过、没开自动合并的。判断审完和 `codex_review.py wait` 一样；审完没意见（或意见都已解决）就 `gh pr merge 编号 --auto --squash`；30 分钟没审完或 Codex 报审查失败也开自动合并，并在 PR 下写一句“没审成”（记进 watch_issues 的 `--mine`）。开自动合并之前又推了新提交的，等新提交的审查。
 - 退出时每个 PR 打一行：已合并、要处理什么，或还在等什么。`gh` 和网络出错（如 `unexpected EOF`）只在标准错误打一行，下一轮重试，不退出；GitHub 说没有这个 PR 时退出码 2。
 

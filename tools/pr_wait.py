@@ -6,7 +6,7 @@
 Exits only when every PR is merged, or when one needs someone: never on an
 intermediate step (a check finishing, a review arriving). Needs action:
   - a failed CI check (failure, cancelled, timed out, ...) on the PR's head commit;
-  - a merge conflict;
+  - a merge conflict that is not only lines added on both sides (see below);
   - Codex findings that are not resolved yet (`codex_review.py findings N` lists them);
   - a PR closed without merging;
   - a PR still open with auto-merge off and nothing else pending (CI done, no
@@ -19,21 +19,36 @@ auto-merge (`gh pr merge N --auto --squash`) and goes on waiting. In the
 not-reviewed case it also says so on the PR (docs/maintaining.md, "Codex 审查")
 and records that comment as ours (`watch_issues.py --mine`).
 
+A merge conflict where, in every conflicting block, both main and the branch
+only added lines (no line of the common base changed or removed; typically
+CHANGELOG.md or a text XML) is resolved here and the wait goes on: origin/main
+is merged into the branch in a temporary detached worktree, each such block
+keeps main's new lines first and the branch's after, and the merge commit is
+pushed (a plain push, never forced). It is not tried, and the conflict is an
+exit as before, when the PR comes from a fork, when the branch is checked out
+in a local worktree that has uncommitted changes or a commit other than the
+PR's head (a session may be working there), or when any conflict is of another
+kind. A clean local worktree of the branch is fast-forwarded to the pushed
+merge. `git stash` is never used (docs/maintaining.md, "共用资源").
+
 Network and gh errors are retried, never an exit. At the end it prints one
 line per PR. Exit 0: all merged; 1: something needs action; 2: a PR number
 GitHub does not know. Run it in the background: its end is the signal.
 """
 import argparse
 import os
+import shutil
 import subprocess
 import sys
+import tempfile
 import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # -I drops the script dir
 import codex_review as cr  # noqa: E402
 
 ROOT = cr.ROOT
-FIELDS = "state,mergeable,mergeStateStatus,autoMergeRequest,statusCheckRollup,headRefOid,commits"
+FIELDS = ("state,mergeable,mergeStateStatus,autoMergeRequest,statusCheckRollup,headRefOid,commits,"
+          "headRefName,isCrossRepository")
 FAILED = ("FAILURE", "CANCELLED", "TIMED_OUT", "ACTION_REQUIRED", "STARTUP_FAILURE", "ERROR")
 NOT_REVIEWED = ("Codex 没审成（%s），按 docs/maintaining.md“Codex 审查”开了自动合并。"
                 "\n\nCodex was not able to review this PR (%s); auto-merge is on.")
@@ -61,6 +76,116 @@ def checks(pr):
         elif (c.get("conclusion") or "") in FAILED:
             failed.append(name)
     return failed, running
+
+
+def git(repo, *args, check=True):
+    done = subprocess.run(["git", "-C", repo] + list(args), capture_output=True, text=True)
+    if check and done.returncode != 0:
+        raise RuntimeError("git %s: %s" % (" ".join(args[:2]), (done.stderr or done.stdout).strip()[:300]))
+    return done
+
+
+def resolve_added(text):
+    """text with diff3 conflict blocks -> resolved text, or None unless every block only adds lines.
+
+    "Only adds" means the block's base part is empty: both sides inserted lines at the
+    same place and changed nothing that was there. During `git merge origin/main` on the
+    branch, ours is the branch and theirs is main; main's lines come first."""
+    out, part, ours, base, theirs, blocks = [], None, [], [], [], 0
+    for line in text.splitlines(True):
+        bare = line.rstrip("\r\n")
+        if part is None:
+            if bare.startswith("<<<<<<< ") or bare == "<<<<<<<":
+                part, ours, base, theirs = "ours", [], [], []
+            else:
+                out.append(line)
+        elif bare.startswith("||||||| ") or bare == "|||||||":
+            if part != "ours":
+                return None
+            part = "base"
+        elif bare == "=======":
+            if part != "base":
+                return None  # no base part: not diff3 output, cannot tell
+            part = "theirs"
+        elif bare.startswith(">>>>>>> ") or bare == ">>>>>>>":
+            if part != "theirs" or base:
+                return None
+            out.extend(theirs + ours)
+            blocks += 1
+            part = None
+        elif bare.startswith("<<<<<<<"):
+            return None
+        else:
+            {"ours": ours, "base": base, "theirs": theirs}[part].append(line)
+    return "".join(out) if part is None and blocks else None
+
+
+def branch_worktree(repo, branch):
+    """Path of the worktree that has branch checked out, or None."""
+    path = None
+    for line in git(repo, "worktree", "list", "--porcelain").stdout.splitlines():
+        if line.startswith("worktree "):
+            path = line[len("worktree "):]
+        elif line == "branch refs/heads/" + branch:
+            return path
+    return None
+
+
+def merge_main(repo, branch, head, remote="origin", base="main"):
+    """Merge remote/base into branch when every conflict only adds lines; push. (done, text)."""
+    own = branch_worktree(repo, branch)
+    if own:
+        if git(own, "status", "--porcelain", "--untracked-files=no").stdout.strip():
+            return False, "local worktree %s has uncommitted changes" % own
+        if git(own, "rev-parse", "HEAD").stdout.strip() != head:
+            return False, "local worktree %s is not at the PR's head" % own
+    git(repo, "fetch", "-q", remote, base, branch)
+    if git(repo, "rev-parse", "%s/%s" % (remote, branch)).stdout.strip() != head:
+        return False, "the branch moved while reading it"
+    tmp = tempfile.mkdtemp(prefix="pr_wait-")
+    work = os.path.join(tmp, "wt")
+    try:
+        git(repo, "worktree", "add", "-q", "--detach", work, head)
+        merged = git(work, "-c", "merge.conflictStyle=diff3", "merge", "--no-ff", "--no-edit",
+                     "%s/%s" % (remote, base), check=False)
+        if merged.returncode == 0:
+            return False, "no conflict with %s/%s here" % (remote, base)
+        stages = {}
+        for line in git(work, "ls-files", "-u", "-z").stdout.split("\0"):
+            if line:
+                meta, name = line.split("\t", 1)
+                stages.setdefault(name, set()).add(meta.split()[2])
+        if not stages:
+            return False, "merge failed: %s" % (merged.stderr or merged.stdout).strip()[:200]
+        for name in sorted(stages):
+            if stages[name] != {"1", "2", "3"}:
+                return False, "%s: not a change on both sides of one file" % name
+            path = os.path.join(work, name)
+            try:
+                with open(path, encoding="utf-8", newline="") as f:
+                    text = f.read()
+            except (UnicodeDecodeError, OSError):
+                return False, "%s: not a text file" % name
+            fixed = resolve_added(text)
+            if fixed is None:
+                return False, "%s: a conflict changes existing lines" % name
+            with open(path, "w", encoding="utf-8", newline="") as f:
+                f.write(fixed)
+            git(work, "add", "--", name)
+        git(work, "commit", "-q", "--no-edit", "-m",
+            "Merge %s/%s into %s\n\nBoth sides only added lines in %s; pr_wait.py kept both, %s's first."
+            % (remote, base, branch, ", ".join(sorted(stages)), base))
+        new = git(work, "rev-parse", "HEAD").stdout.strip()
+        git(work, "push", "-q", remote, "HEAD:refs/heads/" + branch)
+    finally:
+        git(repo, "worktree", "remove", "--force", work, check=False)
+        shutil.rmtree(tmp, ignore_errors=True)
+        git(repo, "worktree", "prune", check=False)
+    if own:
+        git(own, "merge", "-q", "--ff-only", new, check=False)
+    git(repo, "fetch", "-q", remote, branch, check=False)
+    return True, "merged %s/%s into %s (both sides only added lines in %s)" % (
+        remote, base, branch, ", ".join(sorted(stages)))
 
 
 def record_mine(url):
@@ -118,8 +243,30 @@ def step_codex(number, pr, st, now, timeout):
     return None
 
 
-def assess(number, pr, codex, now, timeout):
-    """('merged' | 'action' | 'waiting', short text) for one PR; may turn on auto-merge for --codex PRs."""
+def conflict(number, pr, tried):
+    """Try merge_main once per head commit; ('waiting' | 'action', text)."""
+    head = pr.get("headRefOid")
+    if pr.get("isCrossRepository"):
+        return "action", "merge conflict (PR from a fork)"
+    if not pr.get("headRefName"):
+        return "action", "merge conflict"
+    if tried.get(number) == head:  # pushed the merge; GitHub still shows the old head
+        return "waiting", "merged main, GitHub catching up"
+    tried[number] = head
+    try:
+        done, text = merge_main(ROOT, pr["headRefName"], head)
+    except RuntimeError as problem:
+        done, text = False, str(problem)
+    print("#%d: %s" % (number, text), file=sys.stderr, flush=True)
+    if done:
+        return "waiting", text
+    tried.pop(number)
+    return "action", "merge conflict (%s)" % text
+
+
+def assess(number, pr, codex, now, timeout, tried=None):
+    """('merged' | 'action' | 'waiting', short text) for one PR; may turn on auto-merge for --codex PRs,
+    and may merge main into the branch when a conflict only adds lines (tried: PR -> head tried)."""
     state = pr.get("state")
     if state == "MERGED":
         return "merged", "merged"
@@ -129,7 +276,7 @@ def assess(number, pr, codex, now, timeout):
     if failed:
         return "action", "CI failed: %s" % ", ".join(failed)
     if pr.get("mergeable") == "CONFLICTING" or pr.get("mergeStateStatus") == "DIRTY":
-        return "action", "merge conflict"
+        return conflict(number, pr, {} if tried is None else tried)
     if codex is not None:
         problem = step_codex(number, pr, codex, now, timeout)
         if problem:
@@ -152,6 +299,7 @@ def watch(numbers, codex_numbers, every, timeout):
     order = sorted(set(numbers) | set(codex_numbers))
     codex = {n: Codex() for n in codex_numbers}
     last = {n: ("waiting", "not read yet") for n in order}
+    tried = {}  # PR -> head commit a merge of main was tried on
     while True:
         now = time.time()
         for n in order:
@@ -159,7 +307,7 @@ def watch(numbers, codex_numbers, every, timeout):
                 continue
             try:
                 pr = cr.ghjson("pr", "view", str(n), "--json", FIELDS)
-                last[n] = assess(n, pr, codex.get(n), now, timeout)
+                last[n] = assess(n, pr, codex.get(n), now, timeout, tried)
             except (RuntimeError, ValueError, KeyError, TypeError) as problem:
                 text = str(problem)
                 if "Could not resolve to a PullRequest" in text or "no pull requests found" in text:
