@@ -171,6 +171,37 @@ test("a government plaza every city asks for goes to one; the others fill their 
   end)
 end)
 
+test("an automatic wonder goes in the city with the most production that can take it (issue 234)", function()
+  WithSitePin(function()
+    local wonders = {}
+    for _, w in ipairs(SDP_Wonders.List(pid)) do
+      if w.Status == nil and #wonders < 3 then wonders[#wonders + 1] = w.Type end
+    end
+    if #wonders == 0 then T.skip("no free wonder") end
+    local request = { PlayerID = pid, Tier = "FAST", Wonders = wonders, Districts = Types({ "DISTRICT_CAMPUS" }) }
+    local result = SDP_Multi.Solve(request)
+    T.ok(result.Ok, tostring(result.Error))
+    T.ok(not result.Stats.Mismatch, "legality of the wonders agrees with DMT")
+    local production = {}
+    for _, part in ipairs(SDP_Multi.Participants(pid)) do
+      part.PlanPopulation = 1
+      production[part.Key] = SDP_Multi.Production(pid, part.Kind == "SITE" and
+        (function() part.Scan = SDP_City.ScanSite(pid, part.X, part.Y, {}) return part end)() or part)
+      print(part.Key, production[part.Key])
+    end
+    local best = -math.huge
+    for _, value in pairs(production) do best = math.max(best, value) end
+    for _, p in ipairs(result.Plan) do
+      if p.Kind == "WONDER" then
+        print(p.Type, p.City, production[p.City])
+        T.ok(production[p.City] ~= nil, p.Type .. " in a city taking part")
+      end
+    end
+    local capital = Capital()
+    T.eq(production["C" .. capital:GetID()], capital:GetYield(YieldTypes.PRODUCTION), "a city's production as its panel shows it")
+  end)
+end)
+
 test("a wonder given one city goes on that city's tiles (issue 234)", function()
   WithSitePin(function(city, site)
     local wonders = {}
@@ -244,10 +275,14 @@ test("a wonder's district goes to a city that picks one anyway (issue 182)", fun
     for _, p in ipairs(parts) do
       if p.Key ~= first and p.Key ~= second then request.Plans[p.Key], request.Pools[p.Key] = {}, {} end
     end
+    -- The wonder free to go in any city: issue 234 puts an automatic one in
+    -- the city with the most production, where this does not arise.
+    SDP_Multi.WONDER_BY_PRODUCTION = false
     SDP_Multi.SUPPLY_AGAIN = false
     local before = SDP_Multi.Solve(request)
     SDP_Multi.SUPPLY_AGAIN = true
     local result = SDP_Multi.Solve(request)
+    SDP_Multi.WONDER_BY_PRODUCTION = true
     T.ok(before.Ok and result.Ok, tostring(before.Error) .. " " .. tostring(result.Error))
     T.ok(not result.Stats.Mismatch, "legality agrees with DMT")
     local placed, complexes, perCity, wonder = 0, {}, {}, nil
