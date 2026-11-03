@@ -383,7 +383,7 @@
       <Text>密铺：新城挨着放</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SITES_DENSE_TOOLTIP" Language="zh_Hans_CN">
-      <Text>打开后，新城尽量挨着你的城市和彼此放，城更密、每座城分到的地更少；结果里勾选要的城址再打钉。</Text>
+      <Text>打开后，新城尽量挨着你的城市和彼此放，城更密、每座城分到的地更少；结果里的城址默认不勾，勾选要的再打钉。</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SITES_SUMMARY_DENSE" Language="zh_Hans_CN">
       <Text>放得下 {1_Count} 座新城，总分 {2_Value}；已勾选 {3_Ticked} 座，“打城址钉”只打勾选的</Text>

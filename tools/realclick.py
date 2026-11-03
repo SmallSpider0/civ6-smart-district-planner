@@ -329,6 +329,14 @@ SDP_Panel.Multi.Refresh()
         s.check("sites: next site by click, round to the first", value("SDP_UI.LastLook"), value(at[0]))
         click_control("Controls.PeekReturn")
         s.check("sites: next site gone with the peek", value("Controls.PeekNextSite:IsHidden()"), "true")
+        # Issue 241: dense packing off, every site ticked; a click on a box
+        # unticks it, another ticks it again.
+        box = "SDP_Panel.Sites.State().View.Results[1].Check"
+        s.check("sites: ticked by default", value("tostring(%s:IsChecked())" % box), "true")
+        click_control(box)
+        s.check("sites: unticked by click", value("tostring(SDP_Panel.Sites.State().Ticked[1] == true)"), "false")
+        click_control(box)
+        s.check("sites: ticked again by click", value("tostring(SDP_Panel.Sites.State().Ticked[1] == true)"), "true")
     else:
         s.check("sites: a plan with two sites", value("SDP_Panel.Sites.State().Result.Ok and #%s.Sites" % sol), "2")
     lua("SDP_Panel.Sites.SetSelected('%s', false); SDP_Panel.Sites.SetDistrictCount(3); "
