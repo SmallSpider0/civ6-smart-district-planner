@@ -111,6 +111,34 @@ test("several cities tab: the tooltip says which cities the government plaza is 
   multi.SetPlanFor("ALL")
 end)
 
+test("several cities tab: a government plaza tacked in a city is greyed out in every list, as the solver plans none (issue 244)", function()
+  local multi = SDP_Panel.Multi
+  multi.SetPlanFor("ALL")
+  multi.SetSelected(PLAZA, true)
+  T.eq(Row(multi, PLAZA).State, "MUST", "required in the shared list")
+  -- The player's own tack (not this mod's, so never replaced) near the second city.
+  local pin = w:AddPin(12, 4, "ICON_" .. PLAZA, "")
+  multi.Refresh()
+  local row = Row(multi, PLAZA)
+  T.ok(row.Cell:IsDisabled(), "the cell takes no click")
+  T.eq(row.Why, "MAX_PER_PLAYER", "at the empire's limit, as SDP_City.DistrictStatus says")
+  T.eq(row.Built, nil, "not written as built")
+  T.eq(row.Status, "LOC_SDP_MULTI_EMPIRE_LIMIT(1)", "the tooltip: the limit only")
+  local request = multi.Request()
+  for _, districtType in ipairs(request.Districts) do T.ok(districtType ~= PLAZA, "not sent as required") end
+  -- Each city's own list: the same.
+  for _, part in ipairs(multi.Participants()) do
+    multi.SetPlanFor(part.Key)
+    T.ok(Row(multi, PLAZA).Cell:IsDisabled(), "greyed out in the list of " .. part.Key)
+  end
+  multi.SetPlanFor("ALL")
+  -- The tack gone: it can be required again.
+  PlayerConfigurations[0]:DeleteMapPin(pin:GetID())
+  multi.Refresh()
+  T.ok(not Row(multi, PLAZA).Cell:IsDisabled(), "the cell takes clicks again")
+  T.eq(Row(multi, PLAZA).State, "MUST", "still required")
+end)
+
 test("several cities tab: a built government plaza shows as built, takes no click and is never planned (issue 108)", function()
   -- Required before it was built (the list is remembered between openings).
   local multi = SDP_Panel.Multi

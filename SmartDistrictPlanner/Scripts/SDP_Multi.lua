@@ -63,15 +63,6 @@ SDP_Multi.WONDER_BY_PRODUCTION = true
 
 local Copy = SDP_Search.Copy
 
-local function DefaultWeights(weights)
-  local out = {}
-  for _, yieldType in ipairs(SDP_Rules.YIELDS) do
-    local w = weights and weights[yieldType]
-    out[yieldType] = (w == nil) and 1 or w
-  end
-  return out
-end
-
 -- A participant's production per turn (issue 234): an existing city's, as
 -- its city panel shows it; a city-center pin's estimated from its tiles:
 -- the centre plus the best of the plots it could work, as many as the
@@ -385,15 +376,10 @@ local function WonderOwner(participants, playerID, search, m, i, layout)
   end
   if #pool <= 1 then return pool[1] end
   if spec.Requires ~= nil and search.Owners ~= nil then
-    local r = search.RequiresM and search.RequiresM[m] or nil
-    if layout ~= nil and r ~= nil and layout[r] ~= 0 then
-      local _, is = search:Touching()
-      if is[i][layout[r]] then
-        for _, p in ipairs(pool) do
-          if p == search.Groups[r] then return p end
-        end
-      end
-    end
+    -- Next to the district supplied for it: that one's city (as the
+    -- search's legality, Search:SuppliedNext; Owners.Wonder[i] is the pool).
+    local _, supplied = search:SuppliedNext(m, i, layout)
+    if supplied ~= nil then return supplied end
     local touching = {}
     for _, p in ipairs(pool) do
       if search:OwnDistrictNext(spec.Requires, i, layout, p) then touching[#touching + 1] = p end
@@ -417,13 +403,25 @@ local function WonderOwner(participants, playerID, search, m, i, layout)
   return best
 end
 
+-- The participant slot m on candidate i is planned for: its group's, or
+-- for a wonder the city that builds it (WonderOwner; when none can take i,
+-- the wonders' group, no participant). The one answer the search (coverage
+-- without a layout, swaps with the layout tried) and the finished plan
+-- (Session:OwnerOf, with its layout) both use: they differ only in the
+-- layout passed (issue 238).
+local function SlotCity(participants, playerID, search, m, i, layout)
+  local spec = search.SlotSpecs[search.SlotIndex[m]]
+  if spec.Wonder then return WonderOwner(participants, playerID, search, m, i, layout) or spec.Group end
+  return spec.Group
+end
+
 function SDP_Multi.NewSession(request)
   local self = setmetatable({}, Session)
   SDP_Overlay.HidePins(request.IgnorePins)
   local playerID = request.PlayerID
   local params = SDP_Tiers.Params(SDP_Tiers.Multi, request.Tier, request.Params)
   self.Request, self.Params, self.PlayerID = request, params, playerID
-  self.Weights = DefaultWeights(request.Weights)
+  self.Weights = SDP_Rules.YieldWeights(request.Weights)
   local land = request.Land ~= false
   local options = SDP_City.ScanOptions(request)
 
@@ -436,19 +434,9 @@ function SDP_Multi.NewSession(request)
   for _, d in ipairs(plannable) do byType[d.Type] = d end
   local unplaced = {}
   self.Auto = {}
-  local builtByPlayer = {}
-  for _, district in Players[playerID]:GetDistricts():Members() do
-    local districtType = GameInfo.Districts[district:GetType()].DistrictType
-    builtByPlayer[districtType] = (builtByPlayer[districtType] or 0) + 1
-  end
-  local pinnedAnywhere = {}
-  for _, pin in pairs(PlayerConfigurations[playerID]:GetMapPins()) do
-    -- Pins being replaced (this mod's earlier ones) do not count.
-    if not (options.ignorePins and options.ignorePins[pin:GetID()]) then
-      local key = (pin:GetIconName() or ""):gsub("^ICON_", "")
-      pinnedAnywhere[key] = (pinnedAnywhere[key] or 0) + 1
-    end
-  end
+  -- Toward each empire limit: built and pinned, pins being replaced left
+  -- out (the same count as each city's SDP_City.DistrictStatus).
+  local empireCount = SDP_City.EmpireCounts(playerID, options.ignorePins)
   local asked = {} -- per participant: what the candidates below need to know
   for p, part in ipairs(participants) do
     local wanted = (request.Plans and request.Plans[part.Key]) or request.Districts or {}
@@ -553,7 +541,7 @@ function SDP_Multi.NewSession(request)
         if askers[districtType] == nil then
           askers[districtType] = {}
           limitedTypes[#limitedTypes + 1] = districtType
-          left[districtType] = row.MaxPerPlayer - (builtByPlayer[districtType] or 0) - (pinnedAnywhere[districtType] or 0)
+          left[districtType] = row.MaxPerPlayer - (empireCount[districtType] or 0)
         end
         askers[districtType][#askers[districtType] + 1] = p
       end
@@ -720,7 +708,7 @@ function SDP_Multi.NewSession(request)
         if row ~= nil and not row.CityCenter then
           local limited = row.MaxPerPlayer and row.MaxPerPlayer > 0
           if limited and left[own] == nil then
-            left[own] = row.MaxPerPlayer - (builtByPlayer[own] or 0) - (pinnedAnywhere[own] or 0)
+            left[own] = row.MaxPerPlayer - (empireCount[own] or 0)
           end
           local full = false
           -- SupplyTo (issue 182, SolveNow): that city first, then the list.
@@ -1064,13 +1052,10 @@ function SDP_Multi.NewSession(request)
     return best
   end
   -- The city a slot's placement is planned for is not counted as covered by
-  -- it (issue 91): its group's, or for a wonder the city that builds it
-  -- (as Session:OwnerOf; with `layout` counting its planned districts too).
+  -- it (issue 91): SlotCity, as Session:OwnerOf; with `layout` counting its
+  -- planned districts too.
   local function SlotOwner(search, m, i, layout)
-    local spec = slots[search.SlotIndex[m]]
-    local p = spec.Group
-    if spec.Wonder then p = WonderOwner(participants, playerID, search, m, i, layout) end
-    return p ~= nil and participants[p] or nil
+    return participants[SlotCity(participants, playerID, search, m, i, layout)]
   end
   local function CoverOwner(search, m, i)
     local part = SlotOwner(search, m, i)
@@ -1475,12 +1460,6 @@ end
 -- the tier's, so it also runs after a search that used up its own; the first
 -- plot that works ends the slot's repair.
 
-local function Serves(slotType, required)
-  if slotType == required then return true end
-  local row = GameInfo.DistrictReplaces[slotType]
-  return row ~= nil and row.ReplacesDistrictType == required
-end
-
 function Session:Repair()
   local search, params = self.Search, self.Params
   if search.BestLayout == nil or SDP_Search.Placed(search.BestLayout) == search.Selected then return end
@@ -1507,7 +1486,7 @@ function Session:Repair()
           local other = self.SlotSpecs[search.SlotIndex[mm]]
           local active = not search.Optional[mm] or base[mm] ~= 0
           if mm ~= m and active and (base[mm] == i or (spec.Wonder and other.Wonder)
-              or (spec.Requires ~= nil and Serves(search.Types[mm], spec.Requires))) then
+              or (spec.Requires ~= nil and SDP_Rules.Serves(search.Types[mm], spec.Requires))) then
             block[#block + 1] = mm
             base[mm] = 0
           end
@@ -1632,13 +1611,9 @@ function Session:Continue()
 end
 
 -- The participant a placed slot belongs to: its city, or for a wonder the
--- city that builds it (WonderOwner, with the layout's districts).
+-- city that builds it (SlotCity, with the layout's districts).
 function Session:OwnerOf(m, i, layout)
-  local spec = self.SlotSpecs[self.Search.SlotIndex[m]]
-  if spec.Wonder then
-    return WonderOwner(self.Participants, self.PlayerID, self.Search, m, i, layout) or spec.Group
-  end
-  return spec.Group
+  return SlotCity(self.Participants, self.PlayerID, self.Search, m, i, layout)
 end
 
 -- Up to `count` layouts that differ enough (design 4.5): the best one and

@@ -157,12 +157,6 @@ function Search:Subject(m, i)
   return subject
 end
 
-local function Serves(slotType, required)
-  if slotType == required then return true end
-  local row = GameInfo.DistrictReplaces[slotType]
-  return row ~= nil and row.ReplacesDistrictType == required
-end
-
 -- Whether a district of type `required` next to candidate i belongs to a
 -- city that could own i (spec.Owners): a fixed one, or (with `layout`) a
 -- placed slot of such a city's group. Without Owners any city's counts.
@@ -174,7 +168,7 @@ function Search:OwnDistrictNext(required, i, layout, group)
   if cities == nil or (group ~= nil and not cities[group]) then return false end
   for _, index in ipairs(self.Board:Neighbours(self.Candidates[i].Index)) do
     local f = index and owners.Fixed[index] or nil -- index false: off the map
-    if f ~= nil and Serves(f.Type, required) then
+    if f ~= nil and SDP_Rules.Serves(f.Type, required) then
       if group ~= nil then
         if f.Groups[group] then return true end
       else
@@ -189,7 +183,7 @@ function Search:OwnDistrictNext(required, i, layout, group)
     for m = 1, self.K do
       local j = layout[m]
       if j ~= 0 and is[i][j] and self.Kinds[m] == "DISTRICT" and cities[self.Groups[m]]
-          and (group == nil or self.Groups[m] == group) and Serves(self.Types[m], required) then
+          and (group == nil or self.Groups[m] == group) and SDP_Rules.Serves(self.Types[m], required) then
         return true
       end
     end
@@ -197,24 +191,35 @@ function Search:OwnDistrictNext(required, i, layout, group)
   return false
 end
 
+-- The district supplied for wonder slot m (RequiresSlot, issue 180) with
+-- the wonder on candidate i: whether `layout` places it (false without a
+-- layout or a supplied district), and its city (group) when it touches i
+-- and that city could own i, else nil. The one rule both WondersServed
+-- (legality) and SDP_Multi's wonder owner (which city builds it) use.
+function Search:SuppliedNext(m, i, layout)
+  local r = self.RequiresM and self.RequiresM[m]
+  if layout == nil or r == nil or layout[r] == 0 then return false, nil end
+  local _, is = self:Touching()
+  local cities = self.Owners and self.Owners.Wonder[i] or nil
+  local group = self.Groups[r]
+  if is[i][layout[r]] and cities ~= nil and cities[group] then return true, group end
+  return true, nil
+end
+
 -- Whether every placed wonder that must be next to a district has one of
 -- its own city's (OwnDistrictNext).
 -- A wonder with a district supplied for it (RequiresSlot, issue 180) must
 -- stand next to that one, placed, of a city that could own its plot: the
--- district was added only for it. Unplaced, any of its own city's serves.
+-- district was added only for it (SuppliedNext). Unplaced, any of its own
+-- city's serves.
 function Search:WondersServed(layout)
   for m = 1, self.K do
     local spec = self.SlotSpecs[self.SlotIndex[m]]
     local i, required, only = layout[m], spec.Requires, spec.City
     if i ~= 0 and required ~= nil then
-      local r = self.RequiresM[m]
-      if r ~= nil and layout[r] ~= 0 then
-        local _, is = self:Touching()
-        local cities = self.Owners.Wonder[i]
-        if not (is[i][layout[r]] and cities ~= nil and cities[self.Groups[r]]
-            and (only == nil or self.Groups[r] == only)) then
-          return false
-        end
+      local placed, group = self:SuppliedNext(m, i, layout)
+      if placed then
+        if group == nil or (only ~= nil and group ~= only) then return false end
       elseif not self:OwnDistrictNext(required, i, layout, only) then
         return false
       end
@@ -1151,7 +1156,7 @@ function Search:Model()
           local count = 0
           for _, nq in ipairs(board:Neighbours(q)) do
             local other = nq and DistrictAt(nq)
-            if other ~= nil and (row.Any or Serves(other, row.District)) then count = count + 1 end
+            if other ~= nil and (row.Any or SDP_Rules.Serves(other, row.District)) then count = count + 1 end
           end
           local r = count % row.TilesRequired
           if r + 1 < row.TilesRequired then
@@ -1186,7 +1191,7 @@ function Search:Model()
       end
       if self.Kinds[m] == "DISTRICT" and SDP_Search.FIXED_CREDIT then
         for _, c in ipairs(credit[i]) do
-          if c.Row.Any or Serves(self.Types[m], c.Row.District) then value = value + c.Value end
+          if c.Row.Any or SDP_Rules.Serves(self.Types[m], c.Row.District) then value = value + c.Value end
         end
       end
       single[m][i] = value
