@@ -11,13 +11,14 @@ Issue：<https://github.com/SmallSpider0/civ6-smart-district-planner/issues/234>
 2. **自定清单优先**：同上，自定清单（请求里 `Plans[Key]` 存在）的城先分名额。
 3. **奇观指定城**：请求 `WonderCities = { [奇观] = 参与者 Key }`。指定后：奇观槽位的 `Allowed` 只有那座城的格子、`City` 字段记下那座城；`Search:OwnDistrictNext` / `WondersServed` / `Singles` 只认那座城的区域；`WonderOwner` 直接返回那座城；缺区域时只补给那座城（`Missing` 按那座城判断），#182 的换城再算跳过指定了城的奇观。指定的城不参与时当“自动”。面板：多城页奇观标签换成 `MultiWonderChip`（标签 + `PullDown`，先例是游戏本体 `Options.xml` 的 `PullDownParameterInstance`），选项“自动”和每座参与的城，状态只在本次会话里记（和自定清单一样，不进存档）。
 
-## 待定（没做）
-
-“自动”时按生产力选城：做法写在 Issue 评论 <https://github.com/SmallSpider0/civ6-smart-district-planner/issues/234#issuecomment-6593479288>，建议方案 A（生产力最高、放得下的城，格子再按总分挑），等合作者回答。实现思路：`NewSession` 里给“自动”的奇观替玩家填 `WonderCities`，求解不变。
+4. **“自动”的奇观按生产力选城**（合作者 [2026-11-03 选方案 A](https://github.com/SmallSpider0/civ6-smart-district-planner/issues/234#issuecomment-6593790153)，提议见[这条评论](https://github.com/SmallSpider0/civ6-smart-district-planner/issues/234#issuecomment-6593479288)）。`SDP_Multi.Production`：现有城 `city:GetYield(生产力)`（城市面板的每回合数字）；城址 = 市中心格 + `SDP_Land.Workable` 里生产力最高的 `PlanPopulation` 格（和 `ScanSite` 用的人口相同）。`NewSession` 按生产力从高到低（同分按参与者顺序）给没指定城的奇观填 `WonderCity`（记在 `AutoWonder`），跳过 `request.AutoSkip[奇观]` 座；建好搜索后，这样选的奇观没建成槽位（那座城补不了要挨的区域）或 `Singles` 说没有合法格时记 `AutoRetry`，`SolveNow` 的 `Prepared` 把 `AutoSkip` 加一、重建会话（还没求解，只多扫描一遍），直到都放得下或排名用完（用完就照旧在所有城里按总分放）。指定了城的奇观（包括自动选的）不做 #182 的换城再算。
+   - `SDP_Multi.WONDER_BY_PRODUCTION = false` 回到按总分在所有城里放（#182 的测试 `spec_wonder_host.lua` 和游戏内 #182 测试用它）。
+   - 离线世界新加 `City:GetYield`：给了 `production` 用它，否则 1 + 3 环内最好的“人口”格。
+   - 悬停、求解前奇观标签下的补区域说明、安装说明中英文都改成按生产力选城。补区域说明仍只在“参与的城都没有这种区域”时显示（不提前算排名），求解后照旧写明补给了哪座城。
 
 ## 测试
 
-- 离线：`spec_multi.lua` 三个 `issue 234` 测试（共用清单留最好的城、`HOST_TRIES` 只试最近的几座、自定清单优先、两座自定清单之间比较、奇观指定城和补区域），`spec_unique.lua` 两个面板测试（悬停、`Center`、自定清单，奇观下拉框经控件回调），都在 #240 的代码上失败过。`spec_wonder_memory.lua` 跟着改了多城页标签的实例名。
+- 离线：`spec_multi.lua` 四个 `issue 234` 测试（共用清单留最好的城、`HOST_TRIES` 只试最近的几座、自定清单优先、两座自定清单之间比较、奇观指定城和补区域、按生产力选城，最高的城没有河流放不下空中花园时换下一座），`spec_unique.lua` 两个面板测试（悬停、`Center`、自定清单，奇观下拉框经控件回调），都在 #240 的代码上失败过。`spec_wonder_memory.lua` 跟着改了多城页标签的实例名。
 - 离线测试世界的数字（假 DMT，只用来说明）：学院 + 剧院广场 + 市政广场共用清单必建，4 座城各自放市政广场的总加成：S141 16、S211 16、C1（首都）17、C2 14；之前给列表第一座 S141，现在给 C1。
-- 游戏内：`tests/test_multi.lua` 的 #28 测试改成“一个市政广场、每座城都试过、不比逐个指定差”，加了奇观指定给城址的测试；`tools/realclick.py suite` 加了奇观下拉框的真实点击。排进夜间队列，结果见 PR。
+- 游戏内：`tests/test_multi.lua` 的 #28 测试改成“一个市政广场、每座城都试过、不比逐个指定差”，加了奇观指定给城址、自动按生产力选城（核对 `Production` 和城市面板的数字一致）的测试，#182 测试关掉按生产力选城；`tools/realclick.py suite` 加了奇观下拉框的真实点击。排进夜间队列，结果见 PR。
 - 开发集 `refresh_results.py --check` 在第二台机器上跑，结果见 PR。
