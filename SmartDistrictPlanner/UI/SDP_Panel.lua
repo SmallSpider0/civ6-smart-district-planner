@@ -659,11 +659,16 @@ SDP_UI.FitName = FitName
 -- CELL_GAP keeps them apart. A state wider than CELL_STATE_MAX (English
 -- "Empire limit reached") goes to two lines at 11 points.
 local CELL_NAME_X, CELL_STATE_RIGHT, CELL_GAP, CELL_STATE_MAX = 30, 12, 6, 60
+-- A wrap width no text reaches: "do not wrap" for a label without a
+-- truncate width. A wrap width of 0 wraps after every character there
+-- (2026-11-03, issue 216: the state showed one letter a line); the game's
+-- NotificationPanel.lua passes the screen width the same way.
+local NO_WRAP = 4096
 
 -- Set a cell's state label and return its width.
 local function FitState(label, text)
   label:SetFontSize(14)
-  label:SetWrapWidth(0)
+  label:SetWrapWidth(NO_WRAP)
   label:SetText(text)
   if (label:GetSizeX() or 0) > CELL_STATE_MAX then
     label:SetFontSize(11)

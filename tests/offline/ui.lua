@@ -39,14 +39,42 @@ function Control:RegisterCheckHandler(fn) self._check = fn end
 -- Text widths, only while a test sets UI_Mock.Measure = { Width = fn(text,
 -- fontSize), Default = width of a control without text } (issue 216): a
 -- label is as wide as its text, cut to its truncate width; with a wrap width
--- it is no wider than that, except for a word too long to break. Otherwise
--- every control is 100 wide and no text is truncated.
+-- it is no wider than that, except for a piece too long to break (a word; a
+-- Chinese character breaks anywhere). A wrap width of 0 without a truncate
+-- width wraps after every character, as in the game (2026-11-03: the state
+-- labels showed one letter a line); with a truncate width it does not wrap.
+-- Otherwise every control is 100 wide and no text is truncated.
 function Control:SetFontSize(size) self._font = size end
 function Control:SetTruncateWidth(width) self._truncate = width end
 function Control:SetWrapWidth(width) self._wrap = width end
 local function TextWidth(self)
   local m = UI_Mock.Measure
   return m.Width(self._text, self._font or 14)
+end
+-- The pieces a wrap can break between, and every single character.
+local function Pieces(text)
+  local pieces, chars, word = {}, {}, ""
+  for ch in text:gmatch("[\0-\127\194-\244][\128-\191]*") do
+    chars[#chars + 1] = ch
+    if ch:match("^%s$") then
+      if word ~= "" then pieces[#pieces + 1] = word end
+      word = ""
+    elseif #ch > 1 then
+      if word ~= "" then pieces[#pieces + 1] = word end
+      word = ""
+      pieces[#pieces + 1] = ch
+    else
+      word = word .. ch
+    end
+  end
+  if word ~= "" then pieces[#pieces + 1] = word end
+  return pieces, chars
+end
+UI_Mock.Pieces = Pieces
+local function Widest(list, size)
+  local widest = 0
+  for _, piece in ipairs(list) do widest = math.max(widest, UI_Mock.Measure.Width(piece, size)) end
+  return widest
 end
 function Control:IsTextTruncated()
   if UI_Mock.Measure == nil or self._text == "" then return nil end
@@ -57,11 +85,13 @@ function Control:GetSizeX()
   local m = UI_Mock.Measure
   if m == nil then return 100 end
   if self._text == "" then return m.Default or 100 end
-  local width = TextWidth(self)
+  local width, size = TextWidth(self), self._font or 14
+  local pieces, chars = Pieces(self._text)
+  if self._wrap ~= nil and self._wrap <= 0 and (self._truncate or 0) <= 0 then
+    return Widest(chars, size)
+  end
   if (self._wrap or 0) > 0 then
-    local longest = 0
-    for word in self._text:gmatch("%S+") do longest = math.max(longest, m.Width(word, self._font or 14)) end
-    return math.max(math.min(width, self._wrap), longest)
+    return math.max(math.min(width, self._wrap), Widest(pieces, size))
   end
   if (self._truncate or 0) > 0 and width > self._truncate then return self._truncate end
   return width
