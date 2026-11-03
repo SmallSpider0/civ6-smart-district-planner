@@ -244,6 +244,20 @@ function Session:Continue()
   return self.Search:Continue()
 end
 
+-- What the plan for `layout` leaves out: what the session could not plan
+-- at all, then the required slots the layout has no plot for
+-- (Search:PlaceWhatFits; the search's slots all have a legal plot of their own).
+function Session:UnplacedFor(layout)
+  local search, unplaced = self.Search, {}
+  for _, u in ipairs(self.Unplaced) do unplaced[#unplaced + 1] = u end
+  for m = 1, search.K do
+    if layout[m] == 0 and not search.Optional[m] then
+      unplaced[#unplaced + 1] = { Type = search.Types[m], Reason = "NO_FREE_PLOT", Auto = self.Auto[search.Types[m]] }
+    end
+  end
+  return unplaced
+end
+
 -- Plan, values and neighbours of one layout, with DMT's yields and
 -- tooltips. The board must be clear.
 function Session:PlanFor(layout)
@@ -315,7 +329,8 @@ end
 --   Ok, Error,
 --   Solutions   best first, each { Plan, Neighbours, Picked (types chosen from
 --               the pool), Gain, Adjacency, LandDelta, CostDelta, CoverageDelta,
---               Covered, CoveredBy, AppealDelta, Total, Remind, Together }
+--               Covered, CoveredBy, AppealDelta, Total, Remind, Together,
+--               Unplaced (what this solution leaves out, as below) }
 --   and the best solution's fields at the top level:
 --   Plan        { Type, X, Y, Index, Yields, ToolTip, Score, Auto, Picked, Reach
 --               (coverage on, a type with a reach: keys of the targets it newly
@@ -368,26 +383,19 @@ function Session:Result()
     -- moves the board: clear it again before the plans.
     local entries = search:Solutions(self.Params.Solutions or 3)
     board:Clear()
+    -- Each solution with what it leaves out (issue 250: the second plan may
+    -- leave out another district than the first).
     for _, entry in ipairs(entries) do
-      result.Solutions[#result.Solutions + 1] = self:PlanFor(entry.Layout)
+      local solution = self:PlanFor(entry.Layout)
+      solution.Unplaced = self:UnplacedFor(entry.Layout)
+      result.Solutions[#result.Solutions + 1] = solution
     end
     local best = result.Solutions[1]
-    for _, key in ipairs({ "Plan", "Neighbours", "Total", "Adjacency", "LandDelta", "CostDelta", "CoverageDelta", "Covered",
-      "CoveredBy", "AppealDelta", "ImprovementHousing", "Gain", "Remind", "Picked", "Together", "Rest",
+    for _, key in ipairs({ "Plan", "Unplaced", "Neighbours", "Total", "Adjacency", "LandDelta", "CostDelta", "CoverageDelta",
+      "Covered", "CoveredBy", "AppealDelta", "ImprovementHousing", "Gain", "Remind", "Picked", "Together", "Rest",
       "YieldAdjacency", "YieldWeighted" }) do
       result[key] = best[key]
     end
-    -- Required slots the best layout leaves out (Search:PlaceWhatFits; the
-    -- search's slots all have a legal plot of their own). The plan shown
-    -- first: untangling may put another layout ahead of the search's best.
-    local unplaced, shown = {}, entries[1].Layout
-    for _, u in ipairs(self.Unplaced) do unplaced[#unplaced + 1] = u end
-    for m = 1, search.K do
-      if shown[m] == 0 and not search.Optional[m] then
-        unplaced[#unplaced + 1] = { Type = search.Types[m], Reason = "NO_FREE_PLOT", Auto = self.Auto[search.Types[m]] }
-      end
-    end
-    result.Unplaced = unplaced
     -- The board's incremental value must match the full evaluation.
     stats.Mismatch = (not best.Legal) or math.abs(best.Gain - entries[1].Gain) > 1e-6 or nil
   end

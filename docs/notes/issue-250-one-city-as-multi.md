@@ -59,3 +59,27 @@ python3 -I tests/compare/asmulti250.py tests/compare/results/one_city_as_multi.j
 - 汇总：`tests/compare/asmulti250.py`。
 - 对比里的变体：`cmp_sdp.lua` 的 `_ASMULTI`；每次运行都记 `stats.sdpUnits`、`stats.sdpEstimate`。
 - Codex 审查（PR #262）后：汇总脚本改成按城、区域、种类、坐标比较方案（多城分支写 `kind`，单城分支不写，原来直接比 JSON 得 0/72）；`_ASMULTI` 也传候选池和数量（`Pool`、`Count`，和面板的 `WonderRequest` 一样），只影响 `P` 系列这类带候选池的场景，本实验的 `S` 场景没有候选池，结果不变、不用重跑。`P01`、`P02` 标准档试跑：多城一座城也从候选池选了区域，和单城选的相同。
+
+## 方案 A 的实现（维护者 2026-11-03 定）
+
+求解保持两套（不勾奇观 `SDP_Solver`，勾了奇观 `SDP_Multi` 只规划这座城），算完之后合成一条路，都在 `SDP_Panel.lua`：
+
+- `Keep(result, request)`：`Solve` 的三支（奇观、分帧、一次算完）和 `Continue` 的两支都经它存结果，带上面板自己的请求（`PanelRequest`：摘要的分项、要替换的钉、继续时的预计，原来从两种 session 的 `Request` 读，多城那份没有 `MustSpecialty`）。
+- `SDP_UI.CityResult(result, cityID)`：结果到了先整理一次，每个方案都有同样的字段：`Unplaced`（这个方案自己的；候选不够记成一条 `POOL_SHORT`）、`Picked`、`Together`；顶层的同名字段跟第一个方案。
+- `SDP_UI.CityRows`（结果行）、`SDP_UI.CityIcons`（预览）、`SDP_UI.CityTacks`（打钉，含奇观要的改良设施和提醒钉）、`SDP_UI.CitySolution`（第 n 个方案）只读这些字段，`ShowResult`、`Preview`、`PlacePins` 调它们。
+
+两条路原来不一致的地方，改成哪边、为什么：
+
+| 不一致 | 原来 | 现在 |
+|---|---|---|
+| 候选不够（数量要的比放得下的多，#133 的“放得下几个挑几个”） | 多城报 `POOL_SHORT`，单城页把它当成叫 `POOL` 的区域显示，原因空着；单城不报 | 两条路都报，按多城页的样子显示一行“候选不够：城名”“少挑了 N 个”。单城的个数 = `Session.Pick`（已按能共存的封顶）− 方案挑出的个数，和多城的算法相同 |
+| 方案按钮的提示 | 单城列挑出的区域；多城的方案没有顶层 `Picked`（在 `Cities[1].Picked`），只写“N 个区域” | 都列挑出的区域 |
+| 每个方案没放下的 | 多城每个方案自己的；单城一律是第一个方案的，第二、三个方案可能把放下了的区域列成没放下 | 都是每个方案自己的：`SDP_Solver` 的 `Session:UnplacedFor(layout)`，每个方案带 `Unplaced`（顶层 `Unplaced` 仍是第一个方案的，离线对比的记录不变） |
+| 自动加入的区域没地方放（`NO_FREE_PLOT`） | 单城写“自动加入的……放不下”；多城没带 `Auto`，只写“……放不下” | `SDP_Multi.PlanFor` 给这条带上 `Auto`，多城页也跟着改 |
+| 结伴区域（`Together`） | 单城在方案上，多城在 `Cities[1]` 上，显示时临时兜底 | `CityResult` 统一放到方案上 |
+
+两条路本来就一样、没改的：替换钉（都用面板请求的 `IgnorePins`）、提醒钉、换格（单城读候选格的 `Swap`，多城按格子所属的城算，同一个意思）、覆盖范围（键都是 `C<城 ID>`）、改良设施的住房、邻居、奇观要的改良设施。
+
+没改：方案按钮在没挑区域时写“N 个区域”，多城的 N 把奇观也算进去了。只在勾了奇观、方案不止一个、又没从候选里挑时出现，离线世界里造不出来（多城没挑区域时只给一个方案），没有能经控件回调的测试，先不动。
+
+测试：`tests/offline/spec_one_city_result.lua`，三项都经控件回调（数量加减钮、奇观下拉条目、求解钮、方案按钮），不勾奇观和勾了奇观各走一遍；旧代码上三项都失败（候选不够那行、勾奇观时方案提示、不勾奇观时第 3 个方案把放下了的商业中心列成没放下），只换回旧的 `SDP_Multi.lua` 时第三项在“自动加入的水渠”失败。求解器看到的东西没变（搜索、目标、候选都没动），离线对比不用重跑。
