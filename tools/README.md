@@ -85,6 +85,7 @@ node tools/offline_tests.mjs -v -k k6 tests/offline/bench_single.lua   # 单城�
 - Lua 跑在 [fengari](https://github.com/fengari-lua/fengari)（JavaScript 写的 Lua 5.3 虚拟机，`tools/node_modules`，`npm install` 安装）里，不需要游戏。每个文件一个新状态，提供 `unpack`、`loadstring`、`include`（按名字找 `SmartDistrictPlanner/Scripts|UI/` 或 `tests/offline/`），游戏自己的文件（`MapTacks`、`dmt_yieldcalculator` 等）由假世界提供。
 - `tests/offline/world.lua` 是一个小的假游戏：六边形地图（文字描述或按种子随机生成）、城市、区域、地图钉、`GameInfo` 的相关表，以及**简化的 DMT**（`CanPlacePin`、`GetBonusYields`、钉子数据）。规则照游戏数据缩减，只用来测求解器的搜索和记账；游戏里的真实数值一律来自真正的 DMT，所以离线通过之后仍要在游戏里跑 `tests/test_*.lua`。
 - 测试文件写法与游戏内测试相同（`local test, T = ...`）；文件名用 `spec_` 前缀（`test_` 开头的会被 `run_tests.py` 当成游戏内测试）。基准文件用 `bench_` 前缀，只在点名时运行。
+- **方案不变量**（#242）：`tests/offline/invariants.lua` 装进每个状态（全局 `SDP_Invariants`），单城、多城求解器每次出结果（`Session:Result`）都查一遍：每城占人口的区域不超过要求的数量、全帝国限一个的区域不超、一城一个的区域不重复、一格一个、区域和奇观在它记的那座城够得着的格上、奇观挨着自己那座城的所需区域、为奇观补的区域挨着奇观、各城小计加起来等于总数、要求的区域和奇观不是放了就是列在没放下里。查出问题时那个测试失败，信息以 `plan invariants` 开头。故意造不合法状态的测试写明原因关掉：`SDP_Invariants.OptOut("原因")`（全部）或 `SDP_Invariants.OptOut("原因", { "reach" })`（只关这几项）；在测试里调用只管这个测试，在文件顶上调用管整个文件。检查只读地图和请求，不调假 DMT，不改 `World.Calls`。各项检查本身的测试在 `spec_invariants.lua`。
 - 假 DMT 统计调用次数（`World.Calls`）。基准用"调用次数 + 布局评估次数 + 搜索节点数"按游戏内单价折算预计耗时，不依赖本虚拟机的速度。
 - `tests/offline/ui.lua` 提供面板用到的 UI 对象替身（`Controls`、`ContextPtr`、`UIManager`、`InstanceManager`、透镜），`spec_panel.lua` 用它加载整个面板跑三个页签。布局和真实点击仍要在游戏里看。
 - 基准：`bench_single.lua`（单城）、`bench_multi.lua`（多城，`SDP_BENCH_SEEDS` 可选种子）、`bench_pools.lua`（单城从候选里挑区域，参照为逐个组合单独求解的最好结果）、`bench_multipools.lua`（多城每城挑区域，参照为“各城单独挑好再联合求解”和最好已知结果）。

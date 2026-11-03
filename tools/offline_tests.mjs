@@ -13,6 +13,9 @@
 //     pins, GameInfo, a simplified DMT) that a test builds with World.New;
 //   - test(name, fn) and T, the same assertions as tools/run_tests.py.
 //
+// After every solve the plan invariants (tests/offline/invariants.lua) are
+// checked; a test whose solves break one fails.
+//
 // Tests: tests/offline/spec_*.lua (not test_*.lua, which run_tests.py runs in
 // the game). Benchmarks: tests/offline/bench_*.lua, run only when named.
 //
@@ -95,10 +98,16 @@ function sdp_run_tests(filter)
   local S = "\31"
   for _, t in ipairs(__tests) do
     if filter == nil or string.find(t.name, filter, 1, true) then
+      if SDP_Invariants then SDP_Invariants.BeginTest() end
       local ok, err = xpcall(t.fn, function(e)
         if type(e) == "table" then return e end
         return debug.traceback(tostring(e), 2)
       end)
+      -- Plan invariants (tests/offline/invariants.lua): every solve the test made.
+      local found = SDP_Invariants and SDP_Invariants.EndTest() or nil
+      if found ~= nil and (ok or type(err) ~= "table") then
+        ok, err = false, (ok and "" or tostring(err) .. "\n") .. found
+      end
       if ok then
         sdp_emit("SDP_TEST" .. S .. "PASS" .. S .. t.name)
       elseif type(err) == "table" and err.sdp_skip then
@@ -183,6 +192,10 @@ function newState(output) {
   loadFile(L, join(OFFLINE, "world.lua"));
   lua.lua_call(L, 0, 1);
   lua.lua_setglobal(L, to_luastring("World"));
+  // Plan invariants, checked after every solve (issue 242).
+  loadFile(L, join(OFFLINE, "invariants.lua"));
+  lua.lua_call(L, 0, 1);
+  lua.lua_setglobal(L, to_luastring("SDP_Invariants"));
   // A tiny default world, so scripts can be included before a test builds its own.
   if (lauxlib.luaL_dostring(L, to_luastring('World.New({ rows = { "...", "..." } })')) !== lua.LUA_OK) {
     throw new Error("default world: " + lua.lua_tojsstring(L, -1));
