@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """pr_wait - one background wait for a batch of pull requests.
 
-    python3 -I tools/pr_wait.py 207 208 [--codex 209 210] [--every 60] [--codex-timeout 1800]
+    python3 -I tools/pr_wait.py 207 208 [--codex 209 210] [--night 210] [--every 60] [--codex-timeout 1800]
 
 Exits only when every PR is merged, or when one needs someone: never on an
 intermediate step (a check finishing, a review arriving). Needs action:
@@ -18,6 +18,12 @@ within --codex-timeout seconds, or Codex reports it failed), it turns on
 auto-merge (`gh pr merge N --auto --squash`) and goes on waiting. In the
 not-reviewed case it also says so on the PR (docs/maintaining.md, "Codex 审查")
 and records that comment as ours (`watch_issues.py --mine`).
+
+PRs after --night wait for the night in-game test (#255): the wait never turns
+on their auto-merge, and their auto-merge being off is not an exit. It still
+waits for their CI and, when also after --codex, their review, and exits as
+usual on a failed check, a conflict, findings or a close. Whoever runs the
+night test turns on auto-merge; the wait then goes on until the merge.
 
 A merge conflict where, in every conflicting block, both main and the branch
 only added lines (no line of the common base changed or removed; typically
@@ -52,6 +58,8 @@ FIELDS = ("state,mergeable,mergeStateStatus,autoMergeRequest,statusCheckRollup,h
 FAILED = ("FAILURE", "CANCELLED", "TIMED_OUT", "ACTION_REQUIRED", "STARTUP_FAILURE", "ERROR")
 NOT_REVIEWED = ("Codex 没审成（%s），按 docs/maintaining.md“Codex 审查”开了自动合并。"
                 "\n\nCodex was not able to review this PR (%s); auto-merge is on.")
+NOT_REVIEWED_NIGHT = ("Codex 没审成（%s）。这个 PR 等夜间游戏内测试，测完再开自动合并。"
+                      "\n\nCodex was not able to review this PR (%s). Auto-merge waits for the night in-game test.")
 
 
 def checks(pr):
@@ -214,8 +222,9 @@ def log_once(number, st, outcome):
         print(cr.log_review(number, outcome), file=sys.stderr, flush=True)
 
 
-def step_codex(number, pr, st, now, timeout):
-    """Advance PR number's Codex state; return a needs-action text or None."""
+def step_codex(number, pr, st, now, timeout, night=False):
+    """Advance PR number's Codex state; return a needs-action text or None.
+    night: the PR waits for the night test, so auto-merge is left to whoever runs it."""
     head, since = cr.head_since(pr)
     if head != st.head and not st.merge_on:  # a new push before auto-merge: wait for its review
         st.head, st.since, st.started, st.verdict = head, since, now, None
@@ -240,11 +249,14 @@ def step_codex(number, pr, st, now, timeout):
         log_once(number, st, "failed" if "失败" in st.verdict else "timeout")
     if st.verdict and st.verdict.startswith("not reviewed") and not st.commented:
         why = st.verdict[len("not reviewed: "):].split(" / ")
-        url = cr.gh("pr", "comment", str(number), "--body", NOT_REVIEWED % (why[0], why[-1])).strip()
+        text = NOT_REVIEWED_NIGHT if night else NOT_REVIEWED
+        url = cr.gh("pr", "comment", str(number), "--body", text % (why[0], why[-1])).strip()
         st.commented = True
         if url:
             record_mine(url)
-    if st.verdict and not st.merge_on and not pr.get("autoMergeRequest"):
+    if night and not pr.get("autoMergeRequest"):
+        pass  # held: a new push still waits for its own review
+    elif st.verdict and not st.merge_on and not pr.get("autoMergeRequest"):
         try:
             cr.gh("pr", "merge", str(number), "--auto", "--squash")
         except RuntimeError as problem:
@@ -278,9 +290,11 @@ def conflict(number, pr, tried):
     return "action", "merge conflict (%s)" % text
 
 
-def assess(number, pr, codex, now, timeout, tried=None):
-    """('merged' | 'action' | 'waiting', short text) for one PR; may turn on auto-merge for --codex PRs,
-    and may merge main into the branch when a conflict only adds lines (tried: PR -> head tried)."""
+def assess(number, pr, codex, now, timeout, tried=None, night=False):
+    """('merged' | 'action' | 'waiting', short text) for one PR; may turn on auto-merge for --codex PRs
+    (not for night ones: they wait for the night test), and may merge main into the branch when a
+    conflict only adds lines (tried: PR -> head tried)."""
+    held = "waiting for the night test"
     state = pr.get("state")
     if state == "MERGED":
         return "merged", "merged"
@@ -292,7 +306,7 @@ def assess(number, pr, codex, now, timeout, tried=None):
     if pr.get("mergeable") == "CONFLICTING" or pr.get("mergeStateStatus") == "DIRTY":
         return conflict(number, pr, {} if tried is None else tried)
     if codex is not None:
-        problem = step_codex(number, pr, codex, now, timeout)
+        problem = step_codex(number, pr, codex, now, timeout, night)
         if problem:
             return "action", problem
         if codex.verdict is None:
@@ -301,7 +315,10 @@ def assess(number, pr, codex, now, timeout, tried=None):
             note = "Codex " + codex.verdict.split(" / ")[-1]
         else:
             note = "Codex clean"
-        return "waiting", "%s, auto-merge on%s" % (note, ", CI running" if running else "")
+        merge = held if night and not pr.get("autoMergeRequest") else "auto-merge on"
+        return "waiting", "%s, %s%s" % (note, merge, ", CI running" if running else "")
+    if night and not pr.get("autoMergeRequest"):
+        return "waiting", ("CI running, " if running else "CI passed, ") + held
     if running:
         return "waiting", "CI running" + ("" if pr.get("autoMergeRequest") else ", auto-merge off")
     if not pr.get("autoMergeRequest"):
@@ -309,8 +326,8 @@ def assess(number, pr, codex, now, timeout, tried=None):
     return "waiting", "auto-merge on, merging"
 
 
-def watch(numbers, codex_numbers, every, timeout):
-    order = sorted(set(numbers) | set(codex_numbers))
+def watch(numbers, codex_numbers, every, timeout, night=()):
+    order = sorted(set(numbers) | set(codex_numbers) | set(night))
     codex = {n: Codex() for n in codex_numbers}
     last = {n: ("waiting", "not read yet") for n in order}
     tried = {}  # PR -> head commit a merge of main was tried on
@@ -321,7 +338,7 @@ def watch(numbers, codex_numbers, every, timeout):
                 continue
             try:
                 pr = cr.ghjson("pr", "view", str(n), "--json", FIELDS)
-                last[n] = assess(n, pr, codex.get(n), now, timeout, tried)
+                last[n] = assess(n, pr, codex.get(n), now, timeout, tried, n in night)
             except (RuntimeError, ValueError, KeyError, TypeError) as problem:
                 text = str(problem)
                 if "Could not resolve to a PullRequest" in text or "no pull requests found" in text:
@@ -342,13 +359,15 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("numbers", type=int, nargs="*", help="PRs to wait for")
     ap.add_argument("--codex", type=int, nargs="+", default=[], help="PRs waiting for a Codex review (also waited for)")
+    ap.add_argument("--night", type=int, nargs="+", default=[],
+                    help="PRs waiting for the night in-game test: never turn on their auto-merge (also waited for)")
     ap.add_argument("--every", type=float, default=60, help="seconds between checks (default 60)")
     ap.add_argument("--codex-timeout", type=int, default=1800,
                     help="seconds without a finished Codex review before auto-merge goes on anyway (default 1800)")
     args = ap.parse_args()
-    if not args.numbers and not args.codex:
+    if not args.numbers and not args.codex and not args.night:
         ap.error("give at least one PR number")
-    return watch(args.numbers, args.codex, args.every, args.codex_timeout)
+    return watch(args.numbers, args.codex, args.every, args.codex_timeout, set(args.night))
 
 
 if __name__ == "__main__":
