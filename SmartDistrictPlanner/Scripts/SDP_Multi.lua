@@ -1900,7 +1900,7 @@ end
 
 -- Solve `request` as well and keep the better of it and `session`
 -- (Session:Beats; ties keep `session`). Returns the kept session, whether
--- it is the new one and the DMT calls of the one dropped. One overlay for
+-- it is the new one, the DMT calls of the one dropped and the new one. One overlay for
 -- both: each board's subjects leave it before the other session evaluates
 -- anything (its last layout would be neighbours).
 -- A session for `request`, built again with the next city for every
@@ -1933,7 +1933,7 @@ local function TryAgain(session, request, needed)
   local kept, dropped = session, other
   if other:Beats(session) then kept, dropped = other, session end
   dropped.Board:Clear()
-  return kept, kept == other, dropped.Board.Calls + dropped.ExtraCalls
+  return kept, kept == other, dropped.Board.Calls + dropped.ExtraCalls, other
 end
 
 -- The solve itself; the overlay must be installed (SDP_Task jobs, tests).
@@ -1979,20 +1979,22 @@ function SDP_Multi.SolveNow(request)
   end
   -- An automatic wonder the plan leaves out although it has a valid tile
   -- in its city (the city's districts took the room): the next city,
-  -- solved again, kept when it places more (Session:Beats); until one
-  -- does not, or the ranking is used up (issue 234).
+  -- solved again, kept when it is better (Session:Beats). The ranking
+  -- moves on from the last solve, kept or not, until it places the wonders
+  -- or no city is left (past the last one a wonder is not automatic, so
+  -- at most cities x wonders solves; issue 234).
+  local tried = session
   while true do
-    local missing = session:AutoUnplaced()
+    local missing = tried:AutoUnplaced()
     if #missing == 0 then break end
     local again = {}
-    for k, v in pairs(session.Request) do again[k] = v end
+    for k, v in pairs(tried.Request) do again[k] = v end
     local skip = {}
-    for k, v in pairs(session.Request.AutoSkip or {}) do skip[k] = v end
+    for k, v in pairs(tried.Request.AutoSkip or {}) do skip[k] = v end
     for _, wonderType in ipairs(missing) do skip[wonderType] = (skip[wonderType] or 0) + 1 end
     again.AutoSkip = skip
-    local moved
-    session, moved = TryAgain(session, again)
-    if not moved then break end
+    local _
+    session, _, _, tried = TryAgain(session, again)
   end
   request = session.Request
   local hosts = SDP_Multi.SUPPLY_AGAIN and session:OtherHosts() or nil
