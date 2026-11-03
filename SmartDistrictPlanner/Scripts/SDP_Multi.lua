@@ -1577,6 +1577,20 @@ function Session:WondersPlaced()
   return count
 end
 
+-- The automatic wonders (AutoWonder, issue 234) the best layout leaves out,
+-- by type, sorted.
+function Session:AutoUnplaced()
+  local search, out = self.Search, {}
+  if search.BestLayout == nil then return out end
+  for m = 1, search.K do
+    if search.Kinds[m] == "WONDER" and self.AutoWonder[search.Types[m]] ~= nil and search.BestLayout[m] == 0 then
+      out[#out + 1] = search.Types[m]
+    end
+  end
+  table.sort(out)
+  return out
+end
+
 function Session:Beats(other)
   local a, b = self.Search, other.Search
   if a.BestLayout == nil then return false end
@@ -1962,6 +1976,23 @@ function SDP_Multi.SolveNow(request)
       end
       hostStats[choice.Type] = best
     end
+  end
+  -- An automatic wonder the plan leaves out although it has a valid tile
+  -- in its city (the city's districts took the room): the next city,
+  -- solved again, kept when it places more (Session:Beats); until one
+  -- does not, or the ranking is used up (issue 234).
+  while true do
+    local missing = session:AutoUnplaced()
+    if #missing == 0 then break end
+    local again = {}
+    for k, v in pairs(session.Request) do again[k] = v end
+    local skip = {}
+    for k, v in pairs(session.Request.AutoSkip or {}) do skip[k] = v end
+    for _, wonderType in ipairs(missing) do skip[wonderType] = (skip[wonderType] or 0) + 1 end
+    again.AutoSkip = skip
+    local moved
+    session, moved = TryAgain(session, again)
+    if not moved then break end
   end
   request = session.Request
   local hosts = SDP_Multi.SUPPLY_AGAIN and session:OtherHosts() or nil

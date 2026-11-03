@@ -110,6 +110,16 @@ local function Request(extra)
   return r
 end
 
+-- Run fn with automatic wonders free to go in any city (issue 234 puts
+-- them in the city with the most production; the free path remains for
+-- when none can take a wonder, and is what these tests look at).
+local function FreeWonders(fn)
+  SDP_Multi.WONDER_BY_PRODUCTION = false
+  local ok, err = pcall(fn)
+  SDP_Multi.WONDER_BY_PRODUCTION = true
+  if not ok then error(err, 0) end
+end
+
 test("a planned city's first ring is left to it (issue 26)", function()
   local w = World.New({
     rows = MAP,
@@ -404,77 +414,79 @@ test("wonder list: by era, then production cost, then type (issue 7)", function(
 end)
 
 test("wonders: legal places, a required district next to it, unplaceable ones reported", function()
-  local w = NewWorld()
-  for _, xy in ipairs({ { 10, 7 }, { 11, 7 }, { 8, 7 } }) do w:Plot(xy[1], xy[2]).terrain = GameInfo.Terrains.TERRAIN_DESERT end
-  w:AddBuilding(1, "BUILDING_STONEHENGE")
-  local result = SDP_Multi.Solve(Request({
-    Districts = { "DISTRICT_CAMPUS", "DISTRICT_THEATER", "DISTRICT_HOLY_SITE" },
-    Wonders = { "BUILDING_PYRAMIDS", "BUILDING_GREAT_LIBRARY", "BUILDING_STONEHENGE", "BUILDING_COLOSSEUM" },
-  }))
-  T.ok(result.Ok, tostring(result.Error))
-  T.ok(not result.Stats.Mismatch, "incremental and full evaluation agree (legality included)")
-  local placed, reasons = {}, {}
-  for _, p in ipairs(result.Plan) do
-    if p.Kind == "WONDER" then placed[p.Type] = p end
-  end
-  local others = {}
-  for _, u in ipairs(result.Unplaced) do reasons[u.Type], others[u.Type] = u.Reason, u.Other end
-  T.ok(placed.BUILDING_PYRAMIDS ~= nil, "pyramids placed")
-  T.eq(Map.GetPlot(placed.BUILDING_PYRAMIDS.X, placed.BUILDING_PYRAMIDS.Y):GetTerrainType(), GameInfo.Terrains.TERRAIN_DESERT.Index,
-    "pyramids on desert")
-  local library = placed.BUILDING_GREAT_LIBRARY
-  T.ok(library ~= nil, "great library placed")
-  local nextToCampus = false
-  for _, p in ipairs(result.Plan) do
-    if p.Type == "DISTRICT_CAMPUS" and Map.GetPlotDistance(p.X, p.Y, library.X, library.Y) == 1 then nextToCampus = true end
-  end
-  T.ok(nextToCampus, "great library next to a planned campus")
-  T.eq(reasons.BUILDING_STONEHENGE, "BUILT", "built wonder not planned")
-  -- No city has an entertainment complex: the first city of the list that
-  -- can take one plans it for the colosseum (issue 66, plan A).
-  local ENT = "DISTRICT_ENTERTAINMENT_COMPLEX"
-  T.eq(reasons.BUILDING_COLOSSEUM, nil, "the colosseum is not left out")
-  T.eq(#result.Supplied, 1, "one district supplied")
-  local supplied = result.Supplied[1]
-  T.eq(supplied.Type, ENT, "an entertainment complex")
-  T.eq(supplied.Wonder, "BUILDING_COLOSSEUM", "for the colosseum")
-  T.eq(supplied.City, SDP_Multi.Participants(0)[1].Key, "in the first city of the list")
-  local colosseum, complex = placed.BUILDING_COLOSSEUM, nil
-  for _, p in ipairs(result.Plan) do
-    if p.Type == ENT then complex = p end
-  end
-  T.ok(colosseum ~= nil and complex ~= nil, "both placed")
-  T.eq(complex.ForWonder, "BUILDING_COLOSSEUM", "the district's entry says what it is for")
-  T.eq(complex.City, supplied.City, "in that city")
-  T.eq(Map.GetPlotDistance(colosseum.X, colosseum.Y, complex.X, complex.Y), 1, "the colosseum next to it")
+  FreeWonders(function()
+    local w = NewWorld()
+    for _, xy in ipairs({ { 10, 7 }, { 11, 7 }, { 8, 7 } }) do w:Plot(xy[1], xy[2]).terrain = GameInfo.Terrains.TERRAIN_DESERT end
+    w:AddBuilding(1, "BUILDING_STONEHENGE")
+    local result = SDP_Multi.Solve(Request({
+      Districts = { "DISTRICT_CAMPUS", "DISTRICT_THEATER", "DISTRICT_HOLY_SITE" },
+      Wonders = { "BUILDING_PYRAMIDS", "BUILDING_GREAT_LIBRARY", "BUILDING_STONEHENGE", "BUILDING_COLOSSEUM" },
+    }))
+    T.ok(result.Ok, tostring(result.Error))
+    T.ok(not result.Stats.Mismatch, "incremental and full evaluation agree (legality included)")
+    local placed, reasons = {}, {}
+    for _, p in ipairs(result.Plan) do
+      if p.Kind == "WONDER" then placed[p.Type] = p end
+    end
+    local others = {}
+    for _, u in ipairs(result.Unplaced) do reasons[u.Type], others[u.Type] = u.Reason, u.Other end
+    T.ok(placed.BUILDING_PYRAMIDS ~= nil, "pyramids placed")
+    T.eq(Map.GetPlot(placed.BUILDING_PYRAMIDS.X, placed.BUILDING_PYRAMIDS.Y):GetTerrainType(), GameInfo.Terrains.TERRAIN_DESERT.Index,
+      "pyramids on desert")
+    local library = placed.BUILDING_GREAT_LIBRARY
+    T.ok(library ~= nil, "great library placed")
+    local nextToCampus = false
+    for _, p in ipairs(result.Plan) do
+      if p.Type == "DISTRICT_CAMPUS" and Map.GetPlotDistance(p.X, p.Y, library.X, library.Y) == 1 then nextToCampus = true end
+    end
+    T.ok(nextToCampus, "great library next to a planned campus")
+    T.eq(reasons.BUILDING_STONEHENGE, "BUILT", "built wonder not planned")
+    -- No city has an entertainment complex: the first city of the list that
+    -- can take one plans it for the colosseum (issue 66, plan A).
+    local ENT = "DISTRICT_ENTERTAINMENT_COMPLEX"
+    T.eq(reasons.BUILDING_COLOSSEUM, nil, "the colosseum is not left out")
+    T.eq(#result.Supplied, 1, "one district supplied")
+    local supplied = result.Supplied[1]
+    T.eq(supplied.Type, ENT, "an entertainment complex")
+    T.eq(supplied.Wonder, "BUILDING_COLOSSEUM", "for the colosseum")
+    T.eq(supplied.City, SDP_Multi.Participants(0)[1].Key, "in the first city of the list")
+    local colosseum, complex = placed.BUILDING_COLOSSEUM, nil
+    for _, p in ipairs(result.Plan) do
+      if p.Type == ENT then complex = p end
+    end
+    T.ok(colosseum ~= nil and complex ~= nil, "both placed")
+    T.eq(complex.ForWonder, "BUILDING_COLOSSEUM", "the district's entry says what it is for")
+    T.eq(complex.City, supplied.City, "in that city")
+    T.eq(Map.GetPlotDistance(colosseum.X, colosseum.Y, complex.X, complex.Y), 1, "the colosseum next to it")
 
-  -- The player's own "not wanted" stands: in the shared list no city gets
-  -- one, and the reason names the district (it was empty before, #73).
-  local request = Request({ Districts = { "DISTRICT_CAMPUS" }, Wonders = { "BUILDING_COLOSSEUM" } })
-  request.Off = { [ENT] = true }
-  local off = SDP_Multi.Solve(request)
-  T.ok(off.Ok, tostring(off.Error))
-  local reason, other = nil, nil
-  for _, u in ipairs(off.Unplaced) do
-    if u.Type == "BUILDING_COLOSSEUM" then reason, other = u.Reason, u.Other end
-  end
-  T.eq(reason, "NEEDS_DISTRICT", "not wanted anywhere: left out")
-  T.eq(other, ENT, "the missing district named")
-  T.eq(#off.Supplied, 0, "nothing supplied")
-  -- In the first city's own list only: the next city gets it.
-  local first, second = SDP_Multi.Participants(0)[1].Key, SDP_Multi.Participants(0)[2].Key
-  request = Request({ Districts = { "DISTRICT_CAMPUS" }, Wonders = { "BUILDING_COLOSSEUM" } })
-  request.Offs = { [first] = { [ENT] = true } }
-  local next = SDP_Multi.Solve(request)
-  T.eq(next.Supplied[1] and next.Supplied[1].City, second, "the next city of the list")
-  -- A first city that plans a water park cannot have one too.
-  request = Request({ Districts = { "DISTRICT_CAMPUS" }, Wonders = { "BUILDING_COLOSSEUM" },
-    Plans = { [first] = { "DISTRICT_WATER_ENTERTAINMENT_COMPLEX" } } })
-  local park = SDP_Multi.Solve(request)
-  T.ok(park.Supplied[1] == nil or park.Supplied[1].City ~= first, "not next to a planned water park")
-  -- A city that plans one already: nothing is supplied.
-  request = Request({ Districts = { "DISTRICT_CAMPUS", ENT }, Wonders = { "BUILDING_COLOSSEUM" } })
-  T.eq(#SDP_Multi.Solve(request).Supplied, 0, "planned already: nothing supplied")
+    -- The player's own "not wanted" stands: in the shared list no city gets
+    -- one, and the reason names the district (it was empty before, #73).
+    local request = Request({ Districts = { "DISTRICT_CAMPUS" }, Wonders = { "BUILDING_COLOSSEUM" } })
+    request.Off = { [ENT] = true }
+    local off = SDP_Multi.Solve(request)
+    T.ok(off.Ok, tostring(off.Error))
+    local reason, other = nil, nil
+    for _, u in ipairs(off.Unplaced) do
+      if u.Type == "BUILDING_COLOSSEUM" then reason, other = u.Reason, u.Other end
+    end
+    T.eq(reason, "NEEDS_DISTRICT", "not wanted anywhere: left out")
+    T.eq(other, ENT, "the missing district named")
+    T.eq(#off.Supplied, 0, "nothing supplied")
+    -- In the first city's own list only: the next city gets it.
+    local first, second = SDP_Multi.Participants(0)[1].Key, SDP_Multi.Participants(0)[2].Key
+    request = Request({ Districts = { "DISTRICT_CAMPUS" }, Wonders = { "BUILDING_COLOSSEUM" } })
+    request.Offs = { [first] = { [ENT] = true } }
+    local next = SDP_Multi.Solve(request)
+    T.eq(next.Supplied[1] and next.Supplied[1].City, second, "the next city of the list")
+    -- A first city that plans a water park cannot have one too.
+    request = Request({ Districts = { "DISTRICT_CAMPUS" }, Wonders = { "BUILDING_COLOSSEUM" },
+      Plans = { [first] = { "DISTRICT_WATER_ENTERTAINMENT_COMPLEX" } } })
+    local park = SDP_Multi.Solve(request)
+    T.ok(park.Supplied[1] == nil or park.Supplied[1].City ~= first, "not next to a planned water park")
+    -- A city that plans one already: nothing is supplied.
+    request = Request({ Districts = { "DISTRICT_CAMPUS", ENT }, Wonders = { "BUILDING_COLOSSEUM" } })
+    T.eq(#SDP_Multi.Solve(request).Supplied, 0, "planned already: nothing supplied")
+  end)
 end)
 
 test("a wonder counts only its own city's district (issue 45)", function()
@@ -605,16 +617,6 @@ test("an automatic wonder goes in the city with the most production that can tak
     if p.Type == "BUILDING_STONEHENGE" then T.eq(p.City, "C1", "given to the capital") end
   end
 end)
-
--- Run fn with automatic wonders free to go in any city (issue 234 puts
--- them in the city with the most production; the free path remains for
--- when none can take a wonder, and is what these tests look at).
-local function FreeWonders(fn)
-  SDP_Multi.WONDER_BY_PRODUCTION = false
-  local ok, err = pcall(fn)
-  SDP_Multi.WONDER_BY_PRODUCTION = true
-  if not ok then error(err, 0) end
-end
 
 test("a wonder without a district rule goes to the plot's city, else the nearest (issue 238)", function()
   FreeWonders(function()
