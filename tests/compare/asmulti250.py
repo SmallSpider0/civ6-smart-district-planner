@@ -129,9 +129,14 @@ for s in scenes:
     elif a < b: l += 1
     else: e += 1
 print("  judged gain W/T/L %d/%d/%d" % (w, e, l))
-same = sum(1 for s in scenes if sorted(map(json.dumps, (rows[(s, PANEL)].get("plan") or {}).get("placements", []))) ==
-           sorted(map(json.dumps, (rows[(s, PANEL + "_ASMULTI")].get("plan") or {}).get("placements", []))))
-print("  identical plans %d/%d" % (same, len(scenes)))
+def layout(r):
+    # The multi-city branch writes kind "DISTRICT", the single-city one leaves
+    # it out: compare city, type, kind and tile only.
+    return sorted((str(p.get("city")), p.get("type"), p.get("kind") or "DISTRICT", p.get("x"), p.get("y"))
+                  for p in ((r or {}).get("plan") or {}).get("placements", []))
+for t in ADJ + LAND + [PANEL]:
+    same = sum(1 for s in scenes if (s, t) in rows and layout(rows[(s, t)]) == layout(rows.get((s, t + "_ASMULTI"))))
+    print("  identical plans %-28s %d/%d" % (t, same, len(scenes)))
 
 print()
 print("violations, missing")

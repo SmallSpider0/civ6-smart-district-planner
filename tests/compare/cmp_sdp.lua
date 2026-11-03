@@ -335,10 +335,13 @@ function CmpAdapters.sdpSolve(request, variant, stats, o)
     -- also sends the city's own list as Plans, as WonderRequest does.
     local id = request.target:GetID()
     local r = SDP_Multi.Solve({ PlayerID = 0, Tier = variant, Districts = request.districts, Wonders = request.wonders,
-      Plans = asMulti and { ["C" .. id] = request.districts } or nil,
+      Plans = asMulti and { ["C" .. id] = request.districts } or nil, Pool = request.pool, Count = request.count,
       Only = { [id] = true }, Weights = request.weights, Land = land, Swap = swap, Coverage = coverage, Distance = distance })
-    stats.sdpEstimate = SDP_Multi.EstimateUnits(1, #request.districts, #(request.wonders or {}),
-      SDP_Tiers.Params(SDP_Tiers.Multi, variant), 0, 0)
+    -- As in the single-city branch, no estimate when picking from a pool.
+    if request.pool == nil then
+      stats.sdpEstimate = SDP_Multi.EstimateUnits(1, #request.districts, #(request.wonders or {}),
+        SDP_Tiers.Params(SDP_Tiers.Multi, variant), 0, 0)
+    end
     if not r.Ok then out.notes[#out.notes + 1] = tostring(r.Error) end
     for _, p in ipairs(r.Plan or {}) do
       out.placements[#out.placements + 1] = { city = id, type = p.Type, x = p.X, y = p.Y, kind = p.Kind }

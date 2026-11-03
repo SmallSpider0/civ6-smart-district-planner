@@ -30,7 +30,7 @@ python3 -I tests/compare/asmulti250.py tests/compare/results/one_city_as_multi.j
 | 面板默认（无真最优） | — | — | 目标值 1 / 71 / 0 |
 
 - 标准、精细两档没到最优的都是 `S14-mali-desert-late`（差 1）。计入地块时单城差在 `S22-rome-volcanic-late`，多城差在 `S19-kongo-jungle-late`，各差 1。面板默认多城赢的一个是 `S16-indonesia-island-late`（目标值 +0.5）。
-- 方案完全相同的：标准 68、精细 68、面板默认 67 个场景，其余是同分的别的摆法或上面几处。
+- 方案完全相同的（按城、区域、种类、坐标比，`asmulti250.py` 输出）：快速 62、标准 68、精细 68、标准计入地块 62、精细计入地块 70、面板默认 67 个场景，其余是同分的别的摆法或上面几处。
 
 **违规、漏放**：两条路都是 0 违规；每档都漏放 5 个，全是“范围内没有合法格”（no_plot），没有“有位置却没放”。没放下的区域及原因两条路逐场景相同。
 
@@ -58,3 +58,4 @@ python3 -I tests/compare/asmulti250.py tests/compare/results/one_city_as_multi.j
 - 结果：`tests/compare/results/one_city_as_multi.jsonl`（1008 行，`env.code` 是本分支的提交）。
 - 汇总：`tests/compare/asmulti250.py`。
 - 对比里的变体：`cmp_sdp.lua` 的 `_ASMULTI`；每次运行都记 `stats.sdpUnits`、`stats.sdpEstimate`。
+- Codex 审查（PR #262）后：汇总脚本改成按城、区域、种类、坐标比较方案（多城分支写 `kind`，单城分支不写，原来直接比 JSON 得 0/72）；`_ASMULTI` 也传候选池和数量（`Pool`、`Count`，和面板的 `WonderRequest` 一样），只影响 `P` 系列这类带候选池的场景，本实验的 `S` 场景没有候选池，结果不变、不用重跑。`P01`、`P02` 标准档试跑：多城一座城也从候选池选了区域，和单城选的相同。
