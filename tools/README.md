@@ -24,7 +24,7 @@
 | `release.py` | 发版：改版本号、把 `changelog.d/` 的片段收进 CHANGELOG、起草更新说明和发布说明、发 Release、上传创意工坊并核对 | 0 成功；1 下载回来与提交包不同 |
 | `changelog.py` | 更新记录片段 `changelog.d/`：列出下一版要收的条目、查格式（`validate.py`、`release.py prep` 调用它） | 0 格式没问题；1 有问题 |
 | `refresh_results.py` | 用当前代码重跑结果文件里本模组的行（`--check` 只比对、不改文件） | 0 成功；1 有变差的行或新违规 |
-| `remote.py` | 在第二台机器上跑离线重活：拷代码、按格子数排队运行、等待并取回结果 | 远端任务的退出码 |
+| `remote.py` | 离线重活自动选机器（第二台机器马上能跑就放那边，不能而本机重活空着就在本机快照里跑，否则在那边排队）、等待并取回结果；也替手动运行的 `offline_tests.mjs`、`compare.mjs` 登记和选机器（`tools/place.mjs` 调它） | 任务的退出码 |
 | `sdplock.py` | 并行会话共用资源：游戏锁、本机重活（一次一个、限 worker、开游戏时暂停）、夜间队列、一条命令看本机和第二台机器 | 0 成功；4 被别人占着 |
 | `sdpsched.py` | 第二台机器上所有会话共用的任务队列（`remote.py` 拷过去调用，本机不直接用） | 任务的退出码 |
 | `preflight_night.py` | 仅 macOS 有用：碰一遍夜里要用的文件夹，让隐私弹窗在人还在时出现 | 0 都能访问；1 有文件夹出问题 |
@@ -495,17 +495,20 @@ python3 -I tools/refresh_results.py tests/compare/results/land.jsonl   # 重跑�
 - `--check` 报告方案变了几行、提升变高和变低各几行、新出现的违规（“范围内没有合法位置”不算）；有变低或新违规时退出码 1。改了求解器后、发版前跑它，不要整组重跑开发集的权重组合和真最优。
 - 重跑整份结果很慢，有第二台机器时用 `remote.py` 放到那边跑。
 
-## remote.py — 在第二台机器上跑离线重活
+## remote.py — 离线重活放哪台机器跑
 
 ```bash
 export SDP_REMOTE=build-box                   # ~/.ssh/config 里能免密登录的主机名（或写进本机配置的 remote）
 python3 -I tools/remote.py sync               # 把这个工作树（含未提交的文件）、node_modules、规则缓存和参考源码拷过去（run 自己也先做这一步）
-python3 -I tools/remote.py run devcheck --slots 6 -- python3 -I tools/refresh_results.py --check
-python3 -I tools/remote.py status             # 所有会话的任务：谁的、几格、排队 / 在跑 / 退出码、日志最后一行；还剩几格
+python3 -I tools/remote.py run devcheck --slots 6 -- python3 -I tools/refresh_results.py --check   # 自动选机器
+python3 -I tools/remote.py run devcheck --remote-only -- ...   # 只在第二台机器上跑，那边满了也在那边排队
+python3 -I tools/remote.py status             # 放在本机的任务，和第二台机器上所有会话的任务：谁的、几格、排队 / 在跑 / 退出码、日志最后一行；还剩几格
 python3 -I tools/remote.py wait devcheck --fetch logs/refresh/full_rejudged.jsonl.STANDARD.jsonl
 python3 -I tools/remote.py clean --dry-run    # 先看远端 ~/sdp-runs/ 里哪些会被清掉（去掉 --dry-run 才删；--keep-days N 改天数）
 ```
 
+- **自动选机器**（#249）：`run` 先问第二台机器这个任务现在能不能马上启动（格子够、前面没有排着的任务先占掉；同名任务在那边排队或在跑时拒绝）。不能、而本机重活空着（没有 `heavy` 任务在跑或排队）且游戏锁没人拿时，改在本机跑：把工作树的文件（已跟踪和新建的，不含忽略的）复制到共用目录的 `runs/snap/NAME/`（`node_modules`、规则缓存、`reference/` 下的链接照原样链过去），在快照里经 `sdplock.py heavy` 后台运行（一次一个、worker 上限按本机配置、游戏锁被拿时暂停），日志和退出码在 `runs/NAME.log`、`runs/NAME.exit`。`status`、`wait NAME [--fetch ...]`、`fetch --job NAME` 用法不变，结果从本机快照取回到同样的位置；`status` 写明在哪台机器。`--exclusive` 和 `--remote-only` 的任务总在第二台机器。连不上第二台机器也算“不能马上启动”。`clean` 和 `run` 顺带删本机结束超过 7 天的这类任务。已经在第二台机器排队的任务不挪回本机：要先在那边取消它，取消和它恰好启动之间有竞争，可能跑两遍，而且调用者的 `wait` 已经在看那边；空出来的本机由后来的任务用上。
+- **手动运行的离线测试和对比**（#249）：有本机配置时，直接运行的 `node tools/offline_tests.mjs ...` 和 `node tools/compare.mjs ...` 先交给 `remote.py direct`（`tools/place.mjs`），代理不用自己判断放哪。按共用目录 `durations.json` 里记下的每个测试文件的耗时判断长短：没记录的单个 `spec_*` 按短的算，跑完记下；`spec_multi`、`bench_*`、整套离线测试和 `compare.mjs` 的对比按长的算；`compare.mjs` 的 `--list`、`--dump`、`--snapshot`、`--probe`、`--reference-only` 按短的算。不到 1 分钟的在本机直接跑，登记在共用目录的 `light/`（工作树、分支、Claude Code 会话），状态页显示为短任务。长的按上一条选机器：本机那份不复制快照，就在当前目录经 `sdplock.py heavy` 跑、输出直接显示；放到第二台机器时这个进程等它结束，取回 `--out` 的文件，再打印日志。不在工作树根目录运行、带 `bench_*`（会写文件）、参数里有工作树外或被忽略的文件时，长任务只在本机跑。工具自己启动的命令带 `SDP_PLACED=1`（`run`、`heavy`、第二台机器上的任务），照原样运行；没有本机配置时（CI、新克隆）也照原样运行。
 - 不需要装游戏。远端在 `~/sdp-runs/<工作树名>/`，参考源码只拷 Lua。结果和本机相同（耗时字段除外），所以报告里要写耗时的那组结果放在同一台机器上跑。
 - **排队**：远端的格子数默认是它的核数减 2（留给系统；本机配置的 `remote_slots` 可改），所有会话共用。任务要 `--slots N` 格（默认取命令里的 `-j`，没写就是全部；`-j` 比 N 大会改小，子进程拿到 `SDP_JOBS=N`），按排队先后分格子：前面的任务拿走它们的格子后还剩 N 格就启动。别的方式启动的 `compare.mjs` 按它的 `-j` 计入（没写按全部）。`--exclusive` 等整台机器空下来再跑、跑时别人排队：报告里要写秒数的那组用它。同名任务还在排队或在跑时拒绝。队列是 `tools/sdpsched.py`，`sync` 和 `run` 把它拷到远端的 `~/sdp-runs/bin/`。
 - **回填与防饿死**：前面的任务格子不够时，后面放得下的任务先启动，空着的格子不闲着（例如 8 格用了 6 格，排头要 4 格，后面要 2 格的先跑）。为了不让大任务一直被小任务插队，每个排队的任务最多被后来的任务越过 3 次（`sdpsched.py` 的 `MAX_PASSED`），之后它守住位置：排在它后面的都等它先启动。任务没有预计时长，所以按次数而不按时间限。独占任务不被越过：排着的独占任务后面的任务都等它。`status` 里排队的任务按先后列出；回填启动的任务在日志里写“ahead of N waiting job(s)”。每个排队任务的 `sdpsched.py run` 进程每 15 秒用自己启动时的代码判断一次，所以换了规则后，只有之后提交的任务按新规则启动。

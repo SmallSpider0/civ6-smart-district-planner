@@ -28,6 +28,7 @@ import { readFileSync, readdirSync, existsSync, writeFileSync } from "node:fs";
 import { join, relative, resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { performance } from "node:perf_hooks";
+import { placeRun } from "./place.mjs";
 
 const require = createRequire(import.meta.url);
 const { lua, lauxlib, lualib, to_luastring, to_jsstring } = require("fengari");
@@ -257,4 +258,5 @@ function main(argv) {
   return total.FAIL || total.ERROR ? 1 : 0;
 }
 
+placeRun(import.meta.url); // started by hand: registered and placed by tools/remote.py direct
 process.exit(main(process.argv.slice(2)));

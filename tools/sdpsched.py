@@ -7,6 +7,8 @@ through it; it is not run on this machine.
     python3 sdpsched.py run NAME --slots N [--exclusive] [--owner WHO] [--tree T] -- CMD ...
     python3 sdpsched.py status            # every job: who, slots, queued (in line order) / running / exit, last log line
     python3 sdpsched.py check NAME        # exit 1 when a job of that name is queued or running
+    python3 sdpsched.py fits --slots N [--name NAME]   # "yes" when a job of N slots would start now,
+                                          # "taken" when NAME is queued or running, else "no"
     python3 sdpsched.py prune [--known TREE ...] [--keep-days N] [--dry-run]
                                           # drop jobs that ended over a week ago (snapshot, log, exit file, record)
                                           # and worktree copies nobody synced or used for a week; with --known,
@@ -268,6 +270,26 @@ def cmd_check(args):
     return 0
 
 
+def fits(jobs, slots, other_slots=0, capacity=SLOTS, t=None, alive=pid_alive):
+    """Would a job of that many slots (0 = all), queued now at the back of the line, start at once?"""
+    probe = {"name": "\0probe", "state": "queued", "queued_at": time.time() if t is None else t,
+             "slots": capacity if slots <= 0 else min(slots, capacity), "sched_pid": -1, "exclusive": False}
+    probe["queued_at"] = max([probe["queued_at"]] + [j.get("queued_at", 0) for j in jobs]) + 1
+    return probe["name"] in startable(jobs + [probe], other_slots, capacity,
+                                      alive=lambda pid: pid == -1 or alive(pid))
+
+
+def cmd_fits(args):
+    jobs = load_jobs()
+    old = next((j for j in jobs if j.get("name") == args.name), None)
+    if old and live(old):
+        print("taken")
+        return 0
+    _mine, other = usage(jobs)
+    print("yes" if fits(jobs, args.slots, other) else "no")
+    return 0
+
+
 def cmd_status(_args):
     t = time.time()
     jobs = load_jobs()
@@ -407,6 +429,9 @@ def main(argv=None):
     c = sub.add_parser("check")
     c.add_argument("name")
     sub.add_parser("status")
+    f = sub.add_parser("fits")
+    f.add_argument("--slots", type=int, default=0, help="0: all slots")
+    f.add_argument("--name", default="")
     pr = sub.add_parser("prune")
     pr.add_argument("--known", nargs="*", default=None, help="names of the worktrees that still exist")
     pr.add_argument("--keep-days", type=float, default=None, help="default 7")
@@ -417,7 +442,8 @@ def main(argv=None):
     args.command = command
     if args.cmd == "run" and not command:
         raise SystemExit("give the command after --")
-    return {"run": cmd_run, "check": cmd_check, "status": cmd_status, "prune": cmd_prune}[args.cmd](args)
+    return {"run": cmd_run, "check": cmd_check, "status": cmd_status, "fits": cmd_fits,
+            "prune": cmd_prune}[args.cmd](args)
 
 
 if __name__ == "__main__":
