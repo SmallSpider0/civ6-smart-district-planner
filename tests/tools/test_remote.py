@@ -5,6 +5,7 @@
 import argparse
 import json
 import os
+import shlex
 import shutil
 import subprocess
 import sys
@@ -308,6 +309,43 @@ class Snapshot(unittest.TestCase):
         self.assertTrue(os.path.isdir(os.path.join(dest, "logs", "remote")))
         self.assertEqual(os.path.realpath(os.path.join(dest, "tools", "node_modules")),
                          os.path.realpath(os.path.join(tmp, "mods")))
+
+
+@unittest.skipUnless(shutil.which("git") and shutil.which("rsync") and sys.platform != "win32",
+                     "needs git, rsync and sh")
+class Sync(unittest.TestCase):
+    """#269: a tracked file deleted but not committed made rsync --files-from fail, so run never started.
+    ssh is a script that runs the command here in a home directory of its own; rsync is the real one."""
+
+    def setUp(self):
+        tmp = isolate(self)
+        self.root, self.home, fake = (os.path.join(tmp, d) for d in ("tree", "home", "bin"))
+        os.makedirs(self.home)
+        os.makedirs(fake)
+        with open(os.path.join(fake, "ssh"), "w") as fh:  # ssh [-o opt]... host command...
+            fh.write('#!/bin/sh\nwhile [ "$1" = -o ]; do shift 2; done\nshift\n'
+                     'export HOME=%s\ncd "$HOME" && exec sh -c "$*"\n' % shlex.quote(self.home))
+        os.chmod(os.path.join(fake, "ssh"), 0o755)
+        self.addCleanup(os.environ.__setitem__, "PATH", os.environ["PATH"])
+        os.environ["PATH"] = fake + os.pathsep + os.environ["PATH"]
+        subprocess.run(["git", "init", "-q", self.root], check=True)
+        for rel in ("keep.txt", "changelog.d/1.md"):
+            os.makedirs(os.path.dirname(os.path.join(self.root, rel)), exist_ok=True)
+            with open(os.path.join(self.root, rel), "w") as fh:
+                fh.write(rel)
+        subprocess.run(["git", "add", "."], cwd=self.root, check=True)
+        patch(self, remote, ROOT=self.root, install_sched=lambda: None)
+
+    def there(self, rel):
+        return os.path.exists(os.path.join(self.home, remote.TREE, rel))
+
+    def test_a_deleted_uncommitted_file_is_removed_there_too(self):
+        remote.sync(None)
+        self.assertTrue(self.there("changelog.d/1.md"))
+        os.remove(os.path.join(self.root, "changelog.d", "1.md"))
+        self.assertEqual(remote.sync(None), 0)
+        self.assertFalse(self.there("changelog.d/1.md"))
+        self.assertTrue(self.there("keep.txt"))
 
 
 class Direct(unittest.TestCase):
