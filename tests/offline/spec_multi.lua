@@ -430,6 +430,76 @@ test("a wonder counts only its own city's district (issue 45)", function()
   T.eq(Map.GetPlotDistance(alone.X, alone.Y, campus.X, campus.Y), 1, "next to the site's own campus")
 end)
 
+-- Issue 238: a wonder goes to the city that builds it, not to the first
+-- city in the list that can take the plot.
+test("a wonder next to a district is listed under that district's city (issue 238)", function()
+  -- The capital's campus at (7,5); site A at (9,6) can reach the library's
+  -- plot too, and comes first in the list.
+  local w = NewWorld()
+  w:Own(7, 5, 0, w:City(1))
+  w:AddDistrict(1, "DISTRICT_CAMPUS", 7, 5, true)
+  local result = SDP_Multi.Solve(Request({
+    Districts = { "DISTRICT_THEATER" }, Wonders = { "BUILDING_GREAT_LIBRARY" }, Swap = true,
+  }))
+  T.ok(result.Ok, tostring(result.Error))
+  local library = nil
+  for _, p in ipairs(result.Plan) do
+    if p.Type == "BUILDING_GREAT_LIBRARY" then library = p end
+  end
+  T.ok(library ~= nil, "placed")
+  T.eq(Map.GetPlotDistance(library.X, library.Y, 7, 5), 1, "next to the capital's campus")
+  T.eq(library.City, "C1", "listed under the capital")
+  T.eq(library.Swap, nil, "no swap")
+  -- The per-city subtotals follow the plan's cities.
+  local sums = {}
+  for _, p in ipairs(result.Plan) do sums[p.City] = (sums[p.City] or 0) + p.Score end
+  for _, city in ipairs(result.Cities) do
+    T.near(city.Gain, sums[city.Key] or 0, 1e-6, city.Key .. ": subtotal of its own plans")
+  end
+end)
+
+test("a wonder without a district rule goes to the plot's city, else the nearest (issue 238)", function()
+  local w = NewWorld()
+  w:Own(6, 6, 0, w:City(1))
+  local checked = { owned = 0, nearest = 0, moved = 0 }
+  SDP_Overlay.With(0, function()
+    local s = SDP_Multi.NewSession(Request({ Districts = { "DISTRICT_THEATER" }, Wonders = { "BUILDING_STONEHENGE" } }))
+    local search = s.Search
+    local m = nil
+    for k = 1, search.K do
+      if search.Types[k] == "BUILDING_STONEHENGE" then m = k end
+    end
+    T.ok(m ~= nil, "a wonder slot")
+    for i, c in ipairs(search.Candidates) do
+      local first, list = nil, {}
+      for p, part in ipairs(s.Participants) do
+        if part.Allowed[i] then
+          first = first or p
+          list[#list + 1] = p
+        end
+      end
+      if #list >= 1 then
+        local got = s:OwnerOf(m, i, nil)
+        local plot = Map.GetPlotByIndex(c.Index)
+        local city = plot:GetOwner() == 0 and Cities.GetPlotPurchaseCity(plot) or nil
+        local expected, best = nil, math.huge
+        for _, p in ipairs(list) do
+          local part = s.Participants[p]
+          if city ~= nil and part.CityID == city:GetID() then expected, best = p, -1 end
+          local d = Map.GetPlotDistance(part.X, part.Y, c.X, c.Y)
+          if d < best then expected, best = p, d end
+        end
+        T.eq(got, expected, c.X .. "," .. c.Y)
+        if city ~= nil then checked.owned = checked.owned + 1 elseif #list > 1 then checked.nearest = checked.nearest + 1 end
+        if got ~= first then checked.moved = checked.moved + 1 end
+      end
+    end
+  end)
+  T.ok(checked.owned > 0, "plots of a city checked")
+  T.ok(checked.nearest > 0, "unowned plots two cities can take checked")
+  T.ok(checked.moved > 0, "some not given to the first city in the list")
+end)
+
 test("repair: a wonder the search left off goes back in, next to its district", function()
   NewWorld()
   local result = SDP_Overlay.With(0, function()

@@ -163,16 +163,21 @@ end
 -- Whether a district of type `required` next to candidate i belongs to a
 -- city that could own i (spec.Owners): a fixed one, or (with `layout`) a
 -- placed slot of such a city's group. Without Owners any city's counts.
-function Search:OwnDistrictNext(required, i, layout)
+-- With `group`, only that city's district counts (issue 238).
+function Search:OwnDistrictNext(required, i, layout, group)
   local owners = self.Owners
   if owners == nil then return true end
   local cities = owners.Wonder[i]
-  if cities == nil then return false end
+  if cities == nil or (group ~= nil and not cities[group]) then return false end
   for _, index in ipairs(self.Board:Neighbours(self.Candidates[i].Index)) do
     local f = index and owners.Fixed[index]
     if f ~= nil and Serves(f.Type, required) then
-      for g in pairs(f.Groups) do
-        if cities[g] then return true end
+      if group ~= nil then
+        if f.Groups[group] then return true end
+      else
+        for g in pairs(f.Groups) do
+          if cities[g] then return true end
+        end
       end
     end
   end
@@ -181,7 +186,7 @@ function Search:OwnDistrictNext(required, i, layout)
     for m = 1, self.K do
       local j = layout[m]
       if j ~= 0 and is[i][j] and self.Kinds[m] == "DISTRICT" and cities[self.Groups[m]]
-          and Serves(self.Types[m], required) then
+          and (group == nil or self.Groups[m] == group) and Serves(self.Types[m], required) then
         return true
       end
     end
