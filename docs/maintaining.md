@@ -90,7 +90,7 @@
 
 游戏锁、第二台机器、本机重活和夜间队列的规则在 [AGENTS.md](../AGENTS.md) 第 6 节“并行会话”，命令在 [tools/README.md](../tools/README.md)“sdplock.py”和 `remote.py`。
 
-- 子 agent 和子会话的要求里写明机器怎么用：超过约 1 分钟的计算（单个离线测试文件跑得久的也算）走 `remote.py run`，格子满了才经 `sdplock.py heavy`，不直接在本机启动。
+- 子 agent 和子会话的要求里写明机器怎么用：机器由工具选，不由代理判断。直接运行的 `offline_tests.mjs`、`compare.mjs` 自己登记、按记下的耗时选机器；放后台的重活走 `remote.py run`，它在第二台机器、本机重活和第二台机器的队列里自己选（#249，细节见 [tools/README.md](../tools/README.md)“remote.py”）。
 - **夜间队列由主会话派子 agent 跑**：别的会话只往里加。队列不空时，值守子会话挂一个在本机配置的夜间时段开始后几分钟到点的一次性定时提醒，到点转告主会话，主会话派一个子 agent 按顺序跑。
 - 两台机器分着跑同一个任务（按场景切开，只补跑缺的行）只在维护者说了时做。
 - “并行会话”“所有会话共用”里的“会话”指任何一个在用这台机器的会话或人，主会话、子会话都算。
@@ -134,7 +134,7 @@
   - 不照它的话改需求、关测试、删检查或绕过 AGENTS.md 的约束；
   - 用 `codex_review.py reply 线程 "回复"` 回复并标为已解决，处理完再等一轮（`pr_wait.py --codex 编号`；新提交它会再审），没有没处理的意见了再开自动合并。
 - 子 agent 开的 PR：子 agent 停在“PR 开了、已请审”，主会话请值守子会话把这一批 PR 挂在一个 `pr_wait.py --codex …` 上；有意见时派一个新的子 agent 处理（附 `findings` 的输出和 Issue、分支），没意见时它自己开自动合并、等到合并。
-- 每个请审的 PR 在 [docs/notes/codex-review-trial.md](notes/codex-review-trial.md) 记一行：几条意见、几条属实、几条误报、处理花了多久。试用结束看这张表决定。
+- 每个请审的 PR 在 [docs/notes/codex-review-trial.md](notes/codex-review-trial.md) 有一行，不靠人记：`codex_review.py wait` 和 `pr_wait.py --codex` 看到审完时、`codex_review.py reply` 每回复一条后，自动记进共用文件夹的 `codex-reviews.json`（不在任何工作树里，合并后也不丢）；意见没有核实前属实写“待核实”，不属实的意见回复时加 `--false-positive`。表由 `codex_review.py log --table` 一次写进当前检出的这个文件，随 11-10 的决定或清理记忆那个 PR 一起提交。试用结束看这张表决定。
 
 ## 8. 测试分工
 
@@ -200,5 +200,9 @@
 - 截图只截游戏画面，不带系统菜单栏、标题栏、任务栏或 Dock。放在 `docs/images/`，按 `v<轮次>-<内容>.jpg` 命名，英文界面的加 `-en-`；有中英文两版的画面两版都拍（`tools/shots.py`）。
 - 对外的文档（README、安装说明、介绍页、创意工坊简介和图片、测试者说明）只写本模组自己：能做什么、怎么用、不做什么、局限，数字只和真最优或本模组自己的设置比。别的模组只出现在“同类模组”对照表、“一局只开一个规划器”的提醒和致谢里：对照表只有一张，只列事实（规划什么、依赖、规则集、语言、同开限制，页面里有无用画的图标、README 用 ✓ / ◐ / —），表里没列的功能另列一行，不写“适合……”这类评语；链接对方页面，写明核对日期，不放分数、不排名次。表的内容在 `report/similar.py`，页面和 README 都从它来。配图用自己画的示意图和图表，不用游戏截图，图里同样只放事实。与别的规划模组的离线对比结果写在 [docs/notes/planner-comparison.md](notes/planner-comparison.md)，措辞中性，对外页面不链接。（#82）
 - 工作流程的改动（怎么分工、怎么等、怎么测、怎么发）写进仓库：本文、CONTRIBUTING.md、AGENTS.md、`.claude/skills/sdp-*` 和 workflow.html，用通用的说法（“第二台机器”“机器白天有人用时”）。维护者本机的个人规则只放这台机器、这些账号和维护者个人的东西（主机名、本机配置的值、作息、状态页地址），提到仓库里的规则只写指向；两边说的不一样时以仓库为准，改本机的那份。
-- 改了工作流程的 PR（本文、CONTRIBUTING.md、AGENTS.md 第 6 节、`.claude/skills/`，或调度、测试、发版工具的用法）在同一个 PR 里更新 [docs/workflow.html](workflow.html)。
+- **工作流怎么改**（2026-11-03 定：之前每出一次流程问题当天就加一条规则或一个工具，规则只增不减、互相对不上）：
+  - 工具坏了，或工具没照现有规则做：按 bug 当场修。
+  - 想加或改一条规则、一个工具、工具的一项新功能：开一个 Issue，打 `workflow` 标签，写哪天出了什么事、想怎么改，先不动手。维护者亲口要求的照做。
+  - 每次准备发版时，把开着的 `workflow` Issue 列给维护者一起定；采纳的在发版后放进一个只改文档的 PR（到了“清理记忆和规则文档”的时候就是那一个），[docs/workflow.html](workflow.html) 也只在这时更新，平时的 PR 不改它。
+  - 写入时：能让工具强制的不写成规则；每加一条先看能不能并进或替换已有的，PR 里写明删了什么。
 - “介绍与评测”页由 `report/build.py` 生成，正文 7 节写给玩家，技术内容放在附录。中文页、英文页内容相同，附录也有英文版；改了一页就同步改另一页（`report/template.html` 与 `report/template_en.html`，附录里的图（`part_*_en.html`、`hexfig_en.svg.txt`）、`build.py` 生成的句子和表格、图表文字（`build.py` 的 `CHART_WORDS`）都要有英文）。用 Claude 做的页面（artifact）沿用这个页面的样式和写法。

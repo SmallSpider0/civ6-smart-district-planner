@@ -46,7 +46,7 @@ local chipIMs = {}
 local NewIM = InstanceManager.new
 InstanceManager.new = function(self, name, root, parent)
   local im = NewIM(self, name, root, parent)
-  if name == "WonderChip" then chipIMs[parent] = im end
+  if name == "WonderChip" or name == "MultiWonderChip" then chipIMs[parent] = im end
   return im
 end
 include("SDP_Panel")
@@ -66,7 +66,8 @@ end
 local function DropWonder(stack, wonderType)
   for _, inst in ipairs(chipIMs[stack].Instances) do
     if inst.Name:GetText() == "LOC_SDP_WONDER_CHIP(LOC_" .. wonderType .. "_NAME)" then
-      inst.Root:Click()
+      -- On the several cities tab the tag is the Chip beside the city pulldown (issue 234).
+      if chipIMs[stack].Name == "MultiWonderChip" then inst.Chip:Click() else inst.Root:Click() end
       return true
     end
   end

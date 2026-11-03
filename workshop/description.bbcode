@@ -1,46 +1,40 @@
 [h1]Smart District Planner[/h1]
-[b]Pick a city and the districts you want. In a few seconds it finds the layout with the highest adjacency bonus and places it as map tacks with district icons.[/b]
+Pick a city and the districts you want, and within a few seconds it finds the layout with the highest adjacency bonus and places it as map tacks with district icons. It can also choose sites for new cities and plan several cities together.
 
-[b]Requires Detailed Map Tacks.[/b] It decides where a district fits and what it gets, so the numbers in a plan are the numbers on the tacks.
+Requires Detailed Map Tacks, which decides where a district fits and what it gets, so the numbers in a plan match the numbers on the tacks.
 
 [h2]Why use it[/h2]
 [list]
-[*][b]Your civilization's rules, with no setup.[/b] Adjacency and placement rules from your civilization, your leader, your pantheon and your religion's beliefs are counted, and your unique districts are used: Japan's districts get +1 from each other, Korea's Seowon loses yield next to districts, Gaul's specialty districts stay off the City Center, Vietnam's go on Woods, Rainforest or Marsh.
-[*][b]Close to the best possible, and it tells you how close.[/b] With few districts it tries every layout, so the plan is the best one; otherwise it says at most how far from the best it may be, and you can press Improve. Checked against real games: from games that 8 strong players shared with their saves on CivFanatics, 17 city layouts (turns 58–276; [url=https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/docs/reference-scenes.md]each scene with maps[/url], in Chinese) were planned again on the saved maps, counting adjacency only. The players’ layouts reach on average 90.4% of the proven optimum; the Standard effort reaches 99.8% and hits it exactly in 16 of 17. The players built their cities step by step, though, without knowing what would come later.
+[*]It follows your civilization's rules with no setup: adjacency and placement rules from your civilization, leader, pantheon and beliefs are counted, and your unique districts are used. For example, Japan's districts get +1 from each other, and Vietnam's specialty districts go only on Woods, Rainforest or Marsh.
+[*]With few districts it tries every layout, so the plan is the best one. With more, it says at most how far from the best the plan may be, and Improve keeps searching. Of 17 city layouts that strong players shared with their saves on CivFanatics, it finds the best possible one in 16, counting adjacency only ([url=https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/docs/reference-scenes.md]each scene[/url], in Chinese).
+[*]It never plans a district where you cannot build it, and never moves what you have. Luxury and strategic resources stay uncovered, empire limits and city borders are checked, and on tiles a city owns the game's own list of valid tiles is checked too. Built districts and your own tacks stay where they are and count as neighbors.
 [/list]
 
 [img]https://images.steamusercontent.com/ugc/11999830916440841608/48A761AE4348AD3360EA326E18E9E9A6B279A8EA/[/img]
-Xi’an, turn 145 of a one-city challenge (Gathering Storm). Counting adjacency only, the player’s Holy Site, Theater Square and Campus give +12; the planner puts the Theater Square among the wonders (+6) and the Holy Site by the mountains to the west (+4), +15 in all, the proven best.
+Xi’an, turn 145 of a one-city challenge (Gathering Storm). The player’s Holy Site, Theater Square and Campus get +12 adjacency; the planner puts the Theater Square among the wonders (+6) and the Holy Site by the mountains to the west (+4), +15 in all, which is the best possible.
 
 [img]https://images.steamusercontent.com/ugc/12566266383868626793/78082900019C8026A0E3538FE1F8E1185556A85C/[/img]
-Amsterdam and Haarlem, Netherlands, turn 237, two cities planned together. Counting adjacency only, the player’s seven districts give +29; the planner moves Amsterdam’s Industrial Zone to the tile of the player’s Commercial Hub (+6) and puts Amsterdam’s Commercial Hub and Haarlem’s Campus and Commercial Hub between the two cities next to the Theater Squares (Amsterdam’s goes from +6 to +8), +32 in all, the proven best, with the Grote Rivieren river bonus counted. The save is Rise and Fall, scored here with Gathering Storm rules, where the Industrial Zone’s adjacency differs.
-
-[list]
-[*][b]Several cities at once.[/b] Every city you have, and site tacks for cities not founded yet; above 8 they are planned in groups of neighbouring cities, taken in turns. Districts share adjacency across cities, and districts limited to one per empire, like the Government Plaza, go to the city where they do the most. In the test scenarios, planning the cities one at a time reaches only about 95% of the best known plan.
-[*][b]Borrows tiles from your other cities.[/b] Tiles you can swap from your own cities are used (on by default, can be turned off). On real saves this gives about 13% more adjacency for one city and 19% for several; some districts then need a Swap in Manage Citizens, and the result marks them.
-[*][b]Never a tile you cannot build on, never moves what you have.[/b] Luxury and strategic resources stay uncovered, empire limits and city borders are checked, and on tiles a city owns the game's own list of valid tiles is checked too. Built districts and your own tacks stay where they are and count as neighbors.
-[*][b]Wonders with their rules.[/b] Add wonders and they are planned with the districts: the Colosseum gets an Entertainment Complex next to it when the city has none, and the Temple of Artemis comes with its Camp.
-[/list]
+Amsterdam and Haarlem, Netherlands, turn 237, two cities planned together. The player’s seven districts get +29 adjacency; the planner moves Amsterdam’s Industrial Zone to the tile of the player’s Commercial Hub (+6) and puts Amsterdam’s Commercial Hub and Haarlem’s Campus and Commercial Hub between the two cities next to the Theater Squares, +32 in all, again the best possible. The Grote Rivieren river bonus is counted on its own. The save is Rise and Fall, scored here with Gathering Storm rules (the Industrial Zone’s adjacency differs between them).
 
 [h2]How to use it[/h2]
 [list]
 [*]In a game, click the hexagon button in the toolbar at the upper left, or press Shift+L.
-[*]One city: pick a city, set the districts you must have to Must, leave the rest in the Pool, and say how many districts the city should end up with.
-[*]Click Solve for three plans with different districts. Click one to preview it on the map, then Place tacks. Undo tacks works too, also after loading a save.
-[*]City sites chooses spots for new cities; Several cities plans a group of cities together.
+[*]One city: pick a city, set the districts you must have to Must, leave the rest in the Pool, and say how many districts the city should end up with. Click Solve for three plans with different districts. Click one to preview it on the map, then Place tacks. Undo tacks works too, also after loading a save.
+[*]City sites: chooses spots for new cities on the explored map. Each site is scored on district potential, tiles, resources and Housing; hover a score for the yields behind it. Dense packing puts new cities close together.
+[*]Several cities: plans a group of cities together, site tacks for cities not founded yet included; above 8 they are planned in groups taken in turns. Districts share adjacency across cities, and a district limited to one per empire, like the Government Plaza, goes to the city where it does the most.
 [/list]
 
 [h2]Also[/h2]
 [list]
+[*]Wonders are planned with the districts: the Colosseum gets an Entertainment Complex next to it when the city has none, and the Temple of Artemis comes with its Camp.
+[*]Tiles you can swap from your other cities are used too (on by default, can be turned off), which gives more adjacency; such a district needs a Swap in Manage Citizens, and the result marks it.
 [*]Lean toward a yield with the Science, Culture or Religion preset, or set each weight yourself.
 [*]Districts stay off tiles that would make good farms or mines unless the bonus is worth it.
 [*]Neighborhoods go where Appeal gives the most Housing. An Aqueduct is added when a city lacks fresh water, a Dam when it has enough Floodplains.
 [*]When a plan relies on nearby Woods or Rainforest, a “Don't chop” tack on those tiles says what chopping would cost.
 [*]Good places: pick a district and the map colors every tile it can go on by its bonus.
 [*]To plan again, turn on “Replace this mod's earlier tacks”: the old tacks are replaced, and Undo tacks puts them back.
-[*]City sites scores each site on district potential, tiles, resources and Housing; hover a score for the yields behind it. Dense packing puts new cities close together.
-[*]Long searches run over several frames, so you can keep playing or close the panel. One city with 6–8 districts usually takes under half a second.
-[*]Settings are kept in the save.
+[*]Long searches run over several frames, so you can keep playing or close the panel. One city with 6–8 districts usually takes under half a second. Settings are kept in the save.
 [/list]
 
 [h2]Questions[/h2]

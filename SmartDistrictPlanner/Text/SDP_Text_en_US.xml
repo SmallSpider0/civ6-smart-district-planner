@@ -548,7 +548,10 @@
       <Text>· only in {1_City}</Text>
     </Replace>
     <Replace Tag="LOC_SDP_MULTI_LIMITED_AUTO" Language="en_US">
-      <Text>· best of {1_N} cities</Text>
+      <Text>· each of the {1_N} cities that want it is tried, and it goes where the plan scores best (takes longer)</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_MULTI_LIMITED_NEAREST" Language="en_US">
+      <Text>· the {1_N} cities nearest the center that want it are each tried, and it goes where the plan scores best (takes longer)</Text>
     </Replace>
     <Replace Tag="LOC_SDP_MULTI_LIMITED_BUILT" Language="en_US">
       <Text>· built in {1_City}</Text>
@@ -752,6 +755,12 @@
     <Replace Tag="LOC_SDP_WONDER_CHIP_TOOLTIP" Language="en_US">
       <Text>Click to take this wonder off</Text>
     </Replace>
+    <Replace Tag="LOC_SDP_WONDER_CITY_AUTO" Language="en_US">
+      <Text>Auto</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_WONDER_CITY_TOOLTIP" Language="en_US">
+      <Text>Which city builds this wonder. Auto: the city planned together with the most Production that has room for it, on the tile where the plan scores best. A city: only on that city's tiles, next to that city's own districts where the wonder needs one.</Text>
+    </Replace>
     <Replace Tag="LOC_SDP_REPLACE_OWN_SHORT" Language="en_US">
       <Text>Replace ({1_N})</Text>
     </Replace>
@@ -903,7 +912,7 @@
       <Text>needs a {1_Other} next to it, which is in {2_Where} already: plan the wonder in that city</Text>
     </Replace>
     <Replace Tag="LOC_SDP_MULTI_SUPPLY" Language="en_US">
-      <Text>{2_Wonder} needs a {1_District} next to it: the first city of the list that has room for one more district and can take it gets it, or, when that gives a better plan, another city that picks a {1_District} from its pool anyway, and the first city keeps its place; with no such city the wonder is left out (to choose the city, give it a list of its own with the {1_District} set to Must)</Text>
+      <Text>{2_Wonder} needs a {1_District} next to it: the city that builds the wonder gets one (with Auto, the city with the most Production that has room for it); when that city has no room for one more district, Auto tries the next city, and with none the wonder is left out</Text>
     </Replace>
     <Replace Tag="LOC_SDP_MULTI_SUPPLIED" Language="en_US">
       <Text>{1_District} added to {3_City} for {2_Wonder}</Text>

@@ -717,7 +717,10 @@ end
 
 -- Wonder tags (feedback item 2): one per chosen wonder, a click removes it;
 -- the pulldown lists the others, a click adds one. onSet(type, on).
-function SDP_UI.BuildWonders(pull, chipIM, chipStack, wonders, chosen, onSet)
+-- decorate(inst, type), optional: the tag is the instance's Chip inside its
+-- Root, and decorate fills in the rest (the several cities tab's city
+-- choice, issue 234).
+function SDP_UI.BuildWonders(pull, chipIM, chipStack, wonders, chosen, onSet, decorate)
   pull:ClearEntries()
   chipIM:ResetInstances()
   local count = 0
@@ -728,10 +731,15 @@ function SDP_UI.BuildWonders(pull, chipIM, chipStack, wonders, chosen, onSet)
       if chosen[wonderType] then
         count = count + 1
         local inst = chipIM:GetInstance()
+        local chip = decorate ~= nil and inst.Chip or inst.Root
         inst.Name:SetText(Locale.Lookup("LOC_SDP_WONDER_CHIP", name))
-        inst.Root:SetSizeX(math.max(60, inst.Name:GetSizeX() + 20))
-        inst.Root:SetToolTipString(Locale.Lookup("LOC_SDP_WONDER_CHIP_TOOLTIP"))
-        inst.Root:RegisterCallback(Mouse.eLClick, function() onSet(wonderType, false) end)
+        chip:SetSizeX(math.max(60, inst.Name:GetSizeX() + 20))
+        chip:SetToolTipString(Locale.Lookup("LOC_SDP_WONDER_CHIP_TOOLTIP"))
+        chip:RegisterCallback(Mouse.eLClick, function() onSet(wonderType, false) end)
+        if decorate ~= nil then
+          decorate(inst, wonderType)
+          inst.Root:CalculateSize()
+        end
       else
         local entry = {}
         pull:BuildEntry("InstanceOne", entry)

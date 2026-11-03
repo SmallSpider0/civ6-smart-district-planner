@@ -103,7 +103,11 @@ end
 -- The report's case: a later plan leaves a wonder out and shows a higher
 -- weighted adjacency than the plan before it.
 test("several cities: a plan that places fewer says so (issue 189)", function()
+  -- The wonders free to go in any city (issue 234 puts them in the city
+  -- with the most production): the setup needs plans that differ in them.
+  SDP_Multi.WONDER_BY_PRODUCTION = false
   local result, multi = Solve(5, { "BUILDING_HANGING_GARDENS", "BUILDING_STONEHENGE" })
+  SDP_Multi.WONDER_BY_PRODUCTION = true
   CheckOrder(result)
   local found = false
   for n = 2, #result.Solutions do
@@ -119,7 +123,11 @@ end)
 -- The same number placed: ranked by the adjacency plus the items in
 -- brackets, while the button shows the adjacency alone.
 test("several cities: a plan ranked lower by the items in brackets says so (issue 189)", function()
+  -- The wonders free to go in any city (issue 234 puts them in the city
+  -- with the most production): the setup needs plans that differ in them.
+  SDP_Multi.WONDER_BY_PRODUCTION = false
   local result, multi = Solve(3, { "BUILDING_HANGING_GARDENS", "BUILDING_STONEHENGE", "BUILDING_GREAT_LIBRARY" })
+  SDP_Multi.WONDER_BY_PRODUCTION = true
   CheckOrder(result)
   local found = false
   for n = 2, #result.Solutions do

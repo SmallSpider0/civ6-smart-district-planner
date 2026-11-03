@@ -71,7 +71,9 @@ SDP_Search.Better = Better
 --                 RequiresSlot = the index in Slots of the district supplied for this wonder: with
 --                   Owners, the wonder must be next to that one when it is placed (issue 180),
 --                 Support = SDP_Wonders.Support: the improvement a wonder must be next to
---                   (Buildings.AdjacentImprovement, issue 51) }
+--                   (Buildings.AdjacentImprovement, issue 51),
+--                 City = the group a wonder is given to (issue 234): with Owners, only
+--                   that group's districts serve its Requires }
 --   Lands       SDP_Land models whose part counts (each only sees its own plots)
 --   Coverage    SDP_Coverage model or nil (off)
 --   CoverOwner  function(search, m, i) -> the coverage target key of the city
@@ -171,7 +173,7 @@ function Search:OwnDistrictNext(required, i, layout, group)
   local cities = owners.Wonder[i]
   if cities == nil or (group ~= nil and not cities[group]) then return false end
   for _, index in ipairs(self.Board:Neighbours(self.Candidates[i].Index)) do
-    local f = index and owners.Fixed[index]
+    local f = index and owners.Fixed[index] or nil -- index false: off the map
     if f ~= nil and Serves(f.Type, required) then
       if group ~= nil then
         if f.Groups[group] then return true end
@@ -202,14 +204,18 @@ end
 -- district was added only for it. Unplaced, any of its own city's serves.
 function Search:WondersServed(layout)
   for m = 1, self.K do
-    local i, required = layout[m], self.SlotSpecs[self.SlotIndex[m]].Requires
+    local spec = self.SlotSpecs[self.SlotIndex[m]]
+    local i, required, only = layout[m], spec.Requires, spec.City
     if i ~= 0 and required ~= nil then
       local r = self.RequiresM[m]
       if r ~= nil and layout[r] ~= 0 then
         local _, is = self:Touching()
         local cities = self.Owners.Wonder[i]
-        if not (is[i][layout[r]] and cities ~= nil and cities[self.Groups[r]]) then return false end
-      elseif not self:OwnDistrictNext(required, i, layout) then
+        if not (is[i][layout[r]] and cities ~= nil and cities[self.Groups[r]]
+            and (only == nil or self.Groups[r] == only)) then
+          return false
+        end
+      elseif not self:OwnDistrictNext(required, i, layout, only) then
         return false
       end
     end
@@ -303,9 +309,12 @@ function Search:Singles()
         local gain, isLegal = board:Total()
         if not supported then isLegal = false end
         -- Next to another city's district only: not legal alone (issue 45).
-        if isLegal and slot.Requires ~= nil and not self:OwnDistrictNext(slot.Requires, i) then isLegal = false end
+        if isLegal and slot.Requires ~= nil and not self:OwnDistrictNext(slot.Requires, i, nil, slot.City) then
+          isLegal = false
+        end
         if not isLegal and slot.Requires ~= nil then
           local mine = self.Owners and self.Owners.Wonder[i] or nil
+          if mine ~= nil and slot.City ~= nil then mine = { [slot.City] = mine[slot.City] } end
           for _, j in ipairs(adjacent[i]) do
             local shared = mine == nil
             for g in pairs(mine or {}) do

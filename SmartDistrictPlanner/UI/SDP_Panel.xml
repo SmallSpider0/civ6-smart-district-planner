@@ -400,6 +400,16 @@
     </GridButton>
   </Instance>
 
+  <!-- A wonder on the several cities tab: the tag and which city it goes in (issue 234). -->
+  <Instance Name="MultiWonderChip">
+    <Stack ID="Root" StackGrowth="Right" StackPadding="2">
+      <GridButton ID="Chip" Size="120,24" Style="ButtonControl">
+        <Label ID="Name" Anchor="C,C" Style="FontNormal14"/>
+      </GridButton>
+      <PullDown ID="City" Style="PullDownBlue" Size="120,24" AutoSizePopUp="1"/>
+    </Stack>
+  </Instance>
+
   <Instance Name="WeightColumn">
     <Container ID="Root" Size="60,52" ConsumeMouseOver="1">
       <!-- The game's font icons: one family for every column (feedback 3). -->

@@ -548,7 +548,10 @@
       <Text>· 只放在 {1_City}</Text>
     </Replace>
     <Replace Tag="LOC_SDP_MULTI_LIMITED_AUTO" Language="zh_Hans_CN">
-      <Text>· {1_N} 座城中自动选</Text>
+      <Text>· 要它的 {1_N} 座城都试一遍，放在总分最高的那座（算得更久）</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_MULTI_LIMITED_NEAREST" Language="zh_Hans_CN">
+      <Text>· 要它的城里离中心最近的 {1_N} 座都试一遍，放在总分最高的那座（算得更久）</Text>
     </Replace>
     <Replace Tag="LOC_SDP_MULTI_LIMITED_BUILT" Language="zh_Hans_CN">
       <Text>· 已建在{1_City}</Text>
@@ -752,6 +755,12 @@
     <Replace Tag="LOC_SDP_WONDER_CHIP_TOOLTIP" Language="zh_Hans_CN">
       <Text>点一下去掉这个奇观</Text>
     </Replace>
+    <Replace Tag="LOC_SDP_WONDER_CITY_AUTO" Language="zh_Hans_CN">
+      <Text>自动</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_WONDER_CITY_TOOLTIP" Language="zh_Hans_CN">
+      <Text>这个奇观放在哪座城。自动：放在一起规划的城里生产力最高、放得下它的那座，格子按总分挑。选一座城：只放在这座城的格子上，要挨着某种区域的奇观也只认这座城自己的区域。</Text>
+    </Replace>
     <Replace Tag="LOC_SDP_REPLACE_OWN_SHORT" Language="zh_Hans_CN">
       <Text>替换旧钉（{1_N}）</Text>
     </Replace>
@@ -903,7 +912,7 @@
       <Text>需要相邻{1_Other}，它已在{2_Where}：在那座城规划这个奇观</Text>
     </Replace>
     <Replace Tag="LOC_SDP_MULTI_SUPPLY" Language="zh_Hans_CN">
-      <Text>{2_Wonder}要挨着{1_District}：求解时补给列表里第一座还有名额、能放下的城；别的城本来就从候选里挑了{1_District}、改补给那座城方案更好时，补给那座城，第一座城省下名额。都没有名额时不放这个奇观（想指定哪座城，就给它开自己的列表并把{1_District}设为必建）</Text>
+      <Text>{2_Wonder}要挨着{1_District}：求解时补给放这个奇观的城（“自动”时是生产力最高、放得下它的城）；这座城没有名额时，“自动”换下一座城，都不行时不放这个奇观</Text>
     </Replace>
     <Replace Tag="LOC_SDP_MULTI_SUPPLIED" Language="zh_Hans_CN">
       <Text>{1_District}随{2_Wonder}补给了{3_City}</Text>

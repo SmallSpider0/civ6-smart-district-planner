@@ -45,6 +45,7 @@ import { fileURLToPath } from "node:url";
 import { performance } from "node:perf_hooks";
 import { Worker, isMainThread, parentPort, workerData } from "node:worker_threads";
 import { availableParallelism } from "node:os";
+import { placeRun } from "./place.mjs";
 
 const require = createRequire(import.meta.url);
 const { lua, lauxlib, lualib, to_luastring, to_jsstring } = require("fengari");
@@ -453,6 +454,7 @@ if (!isMainThread) {
     parentPort.postMessage(runTask(task));
   });
 } else {
+  placeRun(import.meta.url); // started by hand: registered and placed by tools/remote.py direct
   const argv = process.argv.slice(2);
   let filter = null;
   let planners = ["sdp", "amt", "ep", "dwp"];
