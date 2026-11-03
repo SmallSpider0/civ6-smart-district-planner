@@ -146,8 +146,64 @@ class Bundle(TempShared):
         self.assertEqual([m["id"] for m in b["machines"]], ["macbook"])
         self.assertEqual(b["work"]["releases"]["items"][0]["version"], "v1.6.0")
         self.assertIsNone(b["work"]["branches"])
+        self.assertIn("workshop", b["work"])
         self.assertEqual(b["jobs"], [])
         self.assertTrue(b["meta"]["updated"])
+
+
+class Workshop(unittest.TestCase):
+    """The Workshop posts on the watch's held list, as the page shows them."""
+    HELD = [
+        "2026-11-03T01:00:00Z NEW ISSUE #9 by someone: not from the Workshop https://github.com/x/y/issues/9",
+        "2026-11-03T01:00:00Z WORKSHOP COMMENT by Ann (2026-11-03T00:50:00Z): crashes at 24% "
+        "https://steamcommunity.com/sharedfiles/filedetails/comments/1#comment_5",
+        '2026-11-03T02:00:00Z WORKSHOP REPLY in "Bug (v1.7)" by Bo (x) (2026-11-03T01:40:00Z): mail me a@b.com '
+        "or see /Users/me/x https://steamcommunity.com/workshop/filedetails/discussion/1/2/#c7",
+        "2026-11-03T02:00:00Z WORKSHOP TOPIC by Cy (2026-11-03T01:30:00Z): odd link https://example.com/x",
+    ]
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.held = os.path.join(self.tmp.name, "held.log")
+        self.state = os.path.join(self.tmp.name, "state.json")
+        with open(self.held, "w", encoding="utf-8") as fh:
+            fh.write("\n".join(self.HELD) + "\n")
+        with open(self.state, "w", encoding="utf-8") as fh:
+            json.dump({"since": "x", "workshop": {"next": 1000.0}}, fh)
+
+    def read(self, now=1000.0, st=None):
+        return sync.workshop(now, held=self.held, state=self.state, st=st or {})
+
+    def test_posts_newest_first_and_only_from_the_workshop(self):
+        d = self.read()
+        self.assertEqual(d["count"], 3)
+        self.assertEqual([p["name"] for p in d["items"]], ["Bo (x)", "Cy", "Ann"])
+        bo = d["items"][0]
+        self.assertEqual((bo["kind"], bo["title"]), ("reply", "Bug (v1.7)"))
+        self.assertTrue(bo["url"].endswith("/discussion/1/2/#c7"))
+        self.assertEqual(d["items"][2]["text"], "crashes at 24%")
+        self.assertEqual(d["items"][2]["posted"], sync.utc_local("2026-11-03T00:50:00Z"))
+
+    def test_private_strings_masked_and_foreign_links_dropped(self):
+        d = self.read(st={"private_words": ["Ann"]})
+        self.assertEqual(sync.private_hits(json.dumps(d), {"private_words": ["Ann"]}), [])
+        self.assertEqual(d["items"][2]["name"], "…")
+        self.assertEqual(d["items"][1]["url"], "")  # Cy's post: text kept, its odd link is part of it
+
+    def test_count_covers_more_than_shown(self):
+        with mock.patch.object(sync, "WORKSHOP_SHOWN", 2):
+            d = self.read()
+        self.assertEqual((d["count"], len(d["items"])), (3, 2))
+
+    def test_late_when_the_read_is_overdue(self):
+        self.assertFalse(self.read(now=1000.0 + 1800)["late"])
+        self.assertTrue(self.read(now=1000.0 + 1801)["late"])
+        self.assertEqual(self.read()["next"], sync.hm(1000.0))
+
+    def test_no_files(self):
+        d = sync.workshop(0, held=os.path.join(self.tmp.name, "none"), state=os.path.join(self.tmp.name, "none"), st={})
+        self.assertEqual(d, {"count": 0, "items": [], "next": "", "late": False})
 
 
 class Private(unittest.TestCase):
