@@ -29,6 +29,7 @@
 | `sdpsched.py` | 第二台机器上所有会话共用的任务队列（`remote.py` 拷过去调用，本机不直接用） | 任务的退出码 |
 | `preflight_night.py` | 仅 macOS 有用：碰一遍夜里要用的文件夹，让隐私弹窗在人还在时出现 | 0 都能访问；1 有文件夹出问题 |
 | `pr_wait.py` | 一批 PR 一个后台等待：全部合并或有一个要人处理时才退出；只是两边各加了行的冲突自己并入 `main` 接着等；`--codex` 的 PR 审完没意见或没审成时开自动合并 | 0 全部合并；1 有要处理的；2 没有这个 PR |
+| `watch_issues.py`、`watch_workshop.py` | Issue 监听：新 Issue 和评论（只有带 `auto` 标签的叫醒代理），外加创意工坊的评论区和讨论区（只记进待看列表） | 0 有新的或 `--once`；2 `--mine` 的地址不对 |
 | `worktree.py` | 新建能直接用的工作树（接好依赖和参考源码的链接）、列出与清理已合并的 | 0 成功 |
 | `status/sync.py`、`status/watch.py` | 维护者的状态页：从调度记录、git、GitHub、夜间队列和几条手写说明生成数据并推送；后台循环 | 见下文 |
 
@@ -568,6 +569,23 @@ python3 -I tools/pr_wait.py 211 --every 30              # 每 30 秒查一次（
 - 冲突时先试一次自己合并：每一处冲突都只是两边在同一个地方各加了行（没删改共同的原有行，如 `CHANGELOG.md`、文本 XML）时，在临时的游离工作树里 `git merge origin/main`（diff3 冲突格式），每处留下两边新加的行（`main` 的在前、分支的在后），提交合并、普通推送（不强推），接着等，不退出。以下照旧作为冲突退出：有一处冲突改了或删了原有的行；不是两边都改了同一个文件的冲突（一边删、两边都新建、二进制）；PR 来自 fork；分支在本机有工作树，而那个工作树有未提交的改动或不在 PR 的最新提交上（可能有会话正在改）。本机工作树干净且在 PR 最新提交上时，推送后把它快进到合并提交。同一个提交只试一次；不用 `git stash`（docs/maintaining.md“共用资源”）。
 - `--codex` 后面的 PR 是请 Codex 审过、没开自动合并的。判断审完和 `codex_review.py wait` 一样；审完没意见（或意见都已解决）就 `gh pr merge 编号 --auto --squash`；30 分钟没审完或 Codex 报审查失败也开自动合并，并在 PR 下写一句“没审成”（记进 watch_issues 的 `--mine`）。开自动合并之前又推了新提交的，等新提交的审查。
 - 退出时每个 PR 打一行：已合并、要处理什么，或还在等什么。`gh` 和网络出错（如 `unexpected EOF`）只在标准错误打一行，下一轮重试，不退出；GitHub 说没有这个 PR 时退出码 2。
+
+## watch_issues.py — Issue 与创意工坊监听
+
+```bash
+python3 -I tools/watch_issues.py --reset             # 开监听时一次：从现在开始
+python3 -I tools/watch_issues.py                     # 后台跑：GitHub 每 2 分钟一次，有要处理的就打出来、退出
+python3 -I tools/watch_issues.py --once              # 只查一次
+python3 -I tools/watch_issues.py --held [--clear]    # 列出待看列表（再清空），末尾写创意工坊的有几条
+python3 -I tools/watch_issues.py --mine URL          # 代理自己发的评论或 Issue，不当成新的
+python3 -I tools/watch_issues.py --workshop-every 1800  # 创意工坊多久读一次（秒，默认 2700）
+```
+
+- 怎么处理打出来的和待看的，见 [sdp-watch](../.claude/skills/sdp-watch/SKILL.md)。状态在主检出的 `logs/watch/`（`state.json`、`held.log`、`others.log`），所有工作树共用。
+- 创意工坊（`watch_workshop.py`，由 `watch_issues.py` 调用）：读物品 `$SDP_WORKSHOP_ITEM`（默认 3824473635，设成空就不读）的公开页面，不登录：物品页（取物品主人和“创建者”里的贡献者）、评论区（`comment/PublishedFile_Public/render/<主人>/<物品>/`，JSON）、讨论区列表和各帖子页（`?ctp=N`，每页 15 条回复）。只读最后一次发帖晚于上次的帖子，每次最多读 20 个帖子页，两次请求隔 1 秒（连着请求时 Steam 回 429）。
+- 创意工坊的新评论、新帖、新回复只写进 `held.log`（`WORKSHOP COMMENT|TOPIC|REPLY`，作者、时间、去掉标记的正文、链接），不让监听退出，不叫醒任何人。物品主人和贡献者的帖子不记。第一次读从那时开始，以前的帖子不列出。
+- 读失败（网络、Steam 回错、页面改了样子）在标准错误打一行，10 分钟后再读，不影响 GitHub 那边。
+- 测试：`tests/tools/test_watch_issues.py`、`tests/tools/test_watch_workshop.py`，用 `tests/tools/workshop/` 里存下的页面样例（结构照 2026-11-03 的真页面删减，文字是编的），不联网。
 
 ## worktree.py — 工作树
 
