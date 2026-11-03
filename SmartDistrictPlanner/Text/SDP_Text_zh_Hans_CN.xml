@@ -548,7 +548,10 @@
       <Text>· 只放在 {1_City}</Text>
     </Replace>
     <Replace Tag="LOC_SDP_MULTI_LIMITED_AUTO" Language="zh_Hans_CN">
-      <Text>· {1_N} 座城中自动选</Text>
+      <Text>· 要它的 {1_N} 座城都试一遍，放在总分最高的那座（算得更久）</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_MULTI_LIMITED_NEAREST" Language="zh_Hans_CN">
+      <Text>· 要它的城里离中心最近的 {1_N} 座都试一遍，放在总分最高的那座（算得更久）</Text>
     </Replace>
     <Replace Tag="LOC_SDP_MULTI_LIMITED_BUILT" Language="zh_Hans_CN">
       <Text>· 已建在{1_City}</Text>
@@ -751,6 +754,12 @@
     </Replace>
     <Replace Tag="LOC_SDP_WONDER_CHIP_TOOLTIP" Language="zh_Hans_CN">
       <Text>点一下去掉这个奇观</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_WONDER_CITY_AUTO" Language="zh_Hans_CN">
+      <Text>自动</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_WONDER_CITY_TOOLTIP" Language="zh_Hans_CN">
+      <Text>这个奇观放在哪座城。自动：在一起规划的所有城里找最好的位置。选一座城：只放在这座城的格子上，要挨着某种区域的奇观也只认这座城自己的区域。</Text>
     </Replace>
     <Replace Tag="LOC_SDP_REPLACE_OWN_SHORT" Language="zh_Hans_CN">
       <Text>替换旧钉（{1_N}）</Text>

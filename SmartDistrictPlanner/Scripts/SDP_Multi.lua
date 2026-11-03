@@ -9,9 +9,12 @@
 --                 cannot use plots of existing cities. Plots two cities can
 --                 reach may go to either, one subject per plot.
 --   Slots         (city, district) for every city's plan. A district with an
---                 empire limit (government plaza) goes to the first cities
+--                 empire limit (government plaza) goes to one of the cities
 --                 that ask for it, as many as the limit leaves; the others
---                 take a candidate instead (issue 28).
+--                 take a candidate instead (issue 28). Cities asking in a
+--                 list of their own come first; among the rest, SolveNow
+--                 tries up to HOST_TRIES of them and keeps the best plan
+--                 (issue 234). A wonder may be given one city (WonderCities).
 --   Objective     SDP_Board's exact DMT gain over all fixed subjects of all
 --                 participants, plus each city's land part (a plot two
 --                 cities could work counts for the nearer one), plus, when
@@ -47,6 +50,10 @@ SDP_Multi.DEFAULT_CITIES = 4 -- the Several cities tab's default group (DefaultG
 SDP_Multi.GROUP_ABOVE = 8
 SDP_Multi.GROUP_SIZE = 4
 SDP_Multi.GROUP_PASSES = 1
+-- An empire-limited district several cities ask for (issue 234): the cities
+-- tried as its host, nearest the centre city first. Each one more is one
+-- more solve.
+SDP_Multi.HOST_TRIES = 4
 
 local Copy = SDP_Search.Copy
 
@@ -303,9 +310,17 @@ Session.__index = Session
 --   Wonders              wonder types (building types) to place, in any participating city;
 --                        a district one needs next to it that no city has is
 --                        supplied (issue 66, see below)
+--   WonderCities         { [wonder type] = participant Key }: the city a wonder
+--                        goes in, next to that city's districts only (issue
+--                        234); other wonders go in any participating city
 --   SupplyTo             { [wonder type] = participant Key }: the city tried
 --                        first for the district a wonder needs (issue 182,
 --                        set by SolveNow)
+--   Center               participant Key of the centre city (the panel's);
+--                        nil: the capital. Hosts of an empire-limited
+--                        district are tried nearest it first (issue 234)
+--   UniqueTo             { [district type] = participant Key }: the host of
+--                        an empire-limited district (issue 234, set by SolveNow)
 --   Off, Offs            { [district type] = true }: districts the player set to
 --                        "not wanted" (not by default) in the shared list, per Key;
 --                        never supplied for a wonder there
@@ -326,15 +341,18 @@ Session.__index = Session
 -- the cities whose such district it touches (OwnDistrictNext: fixed ones,
 -- and with `layout` the planned ones), the one supplied for it first when
 -- it touches; then the city owning the plot; then the nearest city; ties
--- go to the first in the participants' order. Nil when no city can take i.
+-- go to the first in the participants' order. A wonder given one city
+-- (spec.City, issue 234) is that city's. Nil when no city can take i.
 local function WonderOwner(participants, playerID, search, m, i, layout)
+  local spec = search.SlotSpecs[search.SlotIndex[m]]
+  -- A wonder given one city (issue 234) is that city's.
+  if spec.City ~= nil then return participants[spec.City].Allowed[i] and spec.City or nil end
   local cities = search.Owners and search.Owners.Wonder[i] or nil
   local pool = {}
   for p, part in ipairs(participants) do
     if part.Allowed[i] and (cities == nil or cities[p]) then pool[#pool + 1] = p end
   end
   if #pool <= 1 then return pool[1] end
-  local spec = search.SlotSpecs[search.SlotIndex[m]]
   if spec.Requires ~= nil and search.Owners ~= nil then
     local r = search.RequiresM and search.RequiresM[m] or nil
     if layout ~= nil and r ~= nil and layout[r] ~= 0 then
@@ -474,26 +492,87 @@ function SDP_Multi.NewSession(request)
   end
 
   -- A district with an empire limit (government plaza, diplomatic quarter)
-  -- asked by more cities than the limit leaves goes to the first of them in
-  -- participant order (the top of the panel's list); the others drop it and
-  -- take a candidate in its place, so every city still gets its count (issue
-  -- 28). To put it in another city, give that city a list of its own.
-  local left = {}
+  -- asked by more cities than the limit leaves (issue 234): the cities that
+  -- ask for it in a list of their own (Plans) get it first, then those with
+  -- the shared list. Where more of one kind ask than the limit leaves, the
+  -- HOST_TRIES of them nearest the centre city (ties: the participants'
+  -- order) are its possible hosts: this session gives it to the one
+  -- UniqueTo names, else to the nearest, and SolveNow solves again with each
+  -- other one and keeps the best plan (self.HostChoices = { { Type, Keys } },
+  -- Keys nearest first). The cities left without it drop it and take a
+  -- candidate in its place, so every city still gets its count (issue 28).
+  local centerX, centerY = nil, nil
+  for _, part in ipairs(participants) do
+    if part.Key == request.Center then centerX, centerY = part.X, part.Y end
+  end
+  if centerX == nil then
+    local center = SDP_Multi.DefaultGroup(playerID, nil).Center
+    if center ~= nil then centerX, centerY = center.X, center.Y end
+  end
+  local function FromCenter(p)
+    if centerX == nil then return 0 end
+    return Map.GetPlotDistance(centerX, centerY, participants[p].X, participants[p].Y)
+  end
+  local left, limitedTypes, askers = {}, {}, {}
   for p, part in ipairs(participants) do
-    local plan = {}
     for _, districtType in ipairs(part.Plan) do
       local row = byType[districtType]
       if row.MaxPerPlayer and row.MaxPerPlayer > 0 then
-        if left[districtType] == nil then
+        if askers[districtType] == nil then
+          askers[districtType] = {}
+          limitedTypes[#limitedTypes + 1] = districtType
           left[districtType] = row.MaxPerPlayer - (builtByPlayer[districtType] or 0) - (pinnedAnywhere[districtType] or 0)
         end
-        if left[districtType] > 0 then
-          left[districtType] = left[districtType] - 1
-          plan[#plan + 1] = districtType
-        else
-          unplaced[#unplaced + 1] = { City = part.Key, Type = districtType, Reason = "MAX_PER_PLAYER" }
-          asked[p].Kept[districtType] = nil
+        askers[districtType][#askers[districtType] + 1] = p
+      end
+    end
+  end
+  self.HostChoices = {}
+  local hosts = {} -- [district type] = { [participant] = true }
+  for _, districtType in ipairs(limitedTypes) do
+    local own, shared = {}, {}
+    for _, p in ipairs(askers[districtType]) do
+      if request.Plans and request.Plans[participants[p].Key] then own[#own + 1] = p else shared[#shared + 1] = p end
+    end
+    local got = {}
+    for _, kind in ipairs({ own, shared }) do
+      local n = left[districtType]
+      if n > 0 and #kind <= n then
+        for _, p in ipairs(kind) do got[p] = true end
+        left[districtType] = n - #kind
+      elseif n > 0 then
+        local ranked = {}
+        for _, p in ipairs(kind) do ranked[#ranked + 1] = p end
+        table.sort(ranked, function(a, b)
+          local da, db = FromCenter(a), FromCenter(b)
+          if da ~= db then return da < db end
+          return a < b
+        end)
+        local tried = {}
+        for k = 1, math.min(#ranked, math.max(n + 1, SDP_Multi.HOST_TRIES)) do tried[k] = ranked[k] end
+        local named = request.UniqueTo and request.UniqueTo[districtType]
+        local order = {}
+        for _, p in ipairs(tried) do
+          if participants[p].Key == named then order[#order + 1] = p end
         end
+        for _, p in ipairs(tried) do
+          if participants[p].Key ~= named then order[#order + 1] = p end
+        end
+        for k = 1, n do got[order[k]] = true end
+        left[districtType] = 0
+        local keys = {}
+        for _, p in ipairs(tried) do keys[#keys + 1] = participants[p].Key end
+        self.HostChoices[#self.HostChoices + 1] = { Type = districtType, Keys = keys }
+      end
+    end
+    hosts[districtType] = got
+  end
+  for p, part in ipairs(participants) do
+    local plan = {}
+    for _, districtType in ipairs(part.Plan) do
+      if hosts[districtType] ~= nil and not hosts[districtType][p] then
+        unplaced[#unplaced + 1] = { City = part.Key, Type = districtType, Reason = "MAX_PER_PLAYER" }
+        asked[p].Kept[districtType] = nil
       else
         plan[#plan + 1] = districtType
       end
@@ -515,6 +594,24 @@ function SDP_Multi.NewSession(request)
   -- empire-limited district stands already; NoRoom[wonder] true when only
   -- the count kept it out.
   self.Supplied, self.Elsewhere, self.NoRoom = {}, {}, {}
+  -- Whether participant p has or plans a district of a base type.
+  local function Has(p, base)
+    for districtType in pairs(participants[p].Present) do
+      if SDP_Rules.BaseDistrict(districtType) == base then return true end
+    end
+    for _, districtType in ipairs(participants[p].Plan) do
+      if SDP_Rules.BaseDistrict(districtType) == base then return true end
+    end
+    return false
+  end
+  -- Wonders given one city (issue 234): [wonder type] = participant; a
+  -- city that does not take part leaves the wonder free.
+  self.WonderCity = {}
+  for wonderType, key in pairs(request.WonderCities or {}) do
+    for p, part in ipairs(participants) do
+      if part.Key == key then self.WonderCity[wonderType] = p end
+    end
+  end
   if request.Wonders and #request.Wonders > 0 then
     local wonderRows = {}
     for _, w in ipairs(SDP_Wonders.List(playerID, options.ignorePins)) do wonderRows[w.Type] = w end
@@ -545,7 +642,13 @@ function SDP_Multi.NewSession(request)
     for _, wonderType in ipairs(wonders) do
       local w = wonderRows[wonderType]
       local base = (w ~= nil and w.Status == nil) and w.AdjacentDistrict or nil
-      if base ~= nil and not have[base] then
+      -- A wonder given one city (issue 234) needs that city's district.
+      local only = self.WonderCity[wonderType]
+      local function Missing()
+        if only ~= nil then return not Has(only, base) end
+        return not have[base]
+      end
+      if base ~= nil and Missing() then
         -- The player's own district where a unique one replaces it (Rome: the Bath).
         local own = byType[base] ~= nil and base or nil
         for _, d in ipairs(plannable) do
@@ -561,16 +664,16 @@ function SDP_Multi.NewSession(request)
           -- SupplyTo (issue 182, SolveNow): that city first, then the list.
           local first, order = request.SupplyTo and request.SupplyTo[wonderType], {}
           for p, part in ipairs(participants) do
-            if part.Key == first then order[#order + 1] = p end
+            if part.Key == first and only == nil then order[#order + 1] = p end
           end
           for p, part in ipairs(participants) do
-            if part.Key ~= first then order[#order + 1] = p end
+            if part.Key ~= first and (only == nil or p == only) then order[#order + 1] = p end
           end
           for _, p in ipairs(order) do
             local part = participants[p]
             local off = (request.Offs and request.Offs[part.Key]) or request.Off or {}
             local a = asked[p]
-            local fits = not have[base] and not off[own] and not (limited and left[own] <= 0)
+            local fits = Missing() and not off[own] and not (limited and left[own] <= 0)
                 and a.Status[own] == nil and not a.PinnedHere[own]
                 and SDP_Rules.ExcludedBy(own, a.Kept) == nil and SDP_Rules.ExcludedBy(own, part.Present) == nil
                 and Placeable(part, own)
@@ -585,9 +688,9 @@ function SDP_Multi.NewSession(request)
               self.Supplied[#self.Supplied + 1] = { City = part.Key, Type = own, Wonder = wonderType }
             end
           end
-          if not have[base] and limited and left[own] <= 0 then
+          if Missing() and limited and left[own] <= 0 then
             self.Elsewhere[wonderType] = SDP_Multi.WhereBuilt(playerID, own)
-          elseif not have[base] and full then
+          elseif Missing() and full then
             self.NoRoom[wonderType] = true
           end
         end
@@ -787,7 +890,8 @@ function SDP_Multi.NewSession(request)
           unplaced[#unplaced + 1] = { City = "WONDERS", Type = wonderType, Reason = "NOT_AVAILABLE" }
         elseif w.Status ~= nil then
           unplaced[#unplaced + 1] = { City = "WONDERS", Type = wonderType, Reason = w.Status }
-        elseif w.AdjacentDistrict ~= nil and not present[w.AdjacentDistrict] then
+        elseif w.AdjacentDistrict ~= nil and not (self.WonderCity[wonderType] == nil and present[w.AdjacentDistrict])
+            and not (self.WonderCity[wonderType] ~= nil and Has(self.WonderCity[wonderType], w.AdjacentDistrict)) then
           -- Other names the district the player would set to Must: their own
           -- unique district where it replaces the one the wonder needs (Rome: the Bath).
           local own = w.AdjacentDistrict
@@ -819,7 +923,10 @@ function SDP_Multi.NewSession(request)
             for s, spec in ipairs(slots) do
               if requiresSlot == nil and spec.ForWonder == wonderType then requiresSlot = s end
             end
-            slots[#slots + 1] = { Key = wonderType, Type = "WONDER", Group = wonderGroup, Allowed = everywhere,
+            -- Given one city (issue 234): that city's plots, next to its districts.
+            local only = self.WonderCity[wonderType]
+            slots[#slots + 1] = { Key = wonderType, Type = "WONDER", Group = wonderGroup,
+              Allowed = only ~= nil and participants[only].Allowed or everywhere, City = only,
               Requires = w.AdjacentDistrict, RequiresSlot = requiresSlot, Support = support, Wonder = true }
             slotCity[#slots] = nil
           end
@@ -1354,7 +1461,9 @@ function Session:OtherHosts()
   if layout == nil or #self.Supplied == 0 then return nil end
   for _, supplied in ipairs(self.Supplied) do
     local base, best = SDP_Rules.BaseDistrict(supplied.Type), nil
-    for m = 1, search.K do
+    -- A wonder given one city (issue 234) keeps its district there.
+    local only = self.WonderCity[supplied.Wonder] ~= nil
+    for m = 1, only and 0 or search.K do
       local p = search.Groups[m]
       if layout[m] ~= 0 and search.Optional[m] and self.Participants[p].Key ~= supplied.City
           and SDP_Rules.BaseDistrict(search.Types[m]) == base and (best == nil or p < best) then
@@ -1688,7 +1797,42 @@ end
 -- Entry points
 -- ===========================================================================
 
+-- A copy of `request` with map[key] = value in its table `field`.
+local function With(request, field, key, value)
+  local again, map = {}, {}
+  for k, v in pairs(request) do again[k] = v end
+  for k, v in pairs(request[field] or {}) do map[k] = v end
+  map[key] = value
+  again[field] = map
+  return again
+end
+
+-- Solve `request` as well and keep the better of it and `session`
+-- (Session:Beats; ties keep `session`). Returns the kept session, whether
+-- it is the new one and the DMT calls of the one dropped. One overlay for
+-- both: each board's subjects leave it before the other session evaluates
+-- anything (its last layout would be neighbours).
+local function TryAgain(session, request, needed)
+  session.Board:Clear()
+  local other = SDP_Multi.NewSession(request)
+  if needed ~= nil and not needed(other) then return session, false, 0 end
+  -- The progress shown: another solve takes about as long again.
+  local job = SDP_Task ~= nil and SDP_Task.Current() or nil
+  if job ~= nil and job.Estimate ~= nil then job.Estimate = job.Units + job.Estimate end
+  other:Run()
+  local kept, dropped = session, other
+  if other:Beats(session) then kept, dropped = other, session end
+  dropped.Board:Clear()
+  return kept, kept == other, dropped.Board.Calls + dropped.ExtraCalls
+end
+
 -- The solve itself; the overlay must be installed (SDP_Task jobs, tests).
+-- An empire-limited district several cities ask for (issue 234,
+-- NewSession's HostChoices): solved with each host in turn, nearest the
+-- centre first, keeping the best plan; with two such districts the second
+-- is tried with the first's best host. Stats.Hosts on the kept session:
+-- { Tried = solves, Calls = the DMT calls of those dropped, [district type]
+-- = the host's Key }.
 -- A district supplied for a wonder goes to the first city in the list that
 -- can take it, as a required one, and the wonder next to it. Where another
 -- city picks the same district from its candidates in the best plan, it is
@@ -1698,31 +1842,42 @@ end
 -- Stats.Again on the kept session: { Moved = whether the second plan was
 -- kept, Calls = the DMT calls of the one dropped }.
 SDP_Multi.SUPPLY_AGAIN = true -- false: one solve, as before issue 182 (offline comparison)
+SDP_Multi.HOSTS_AGAIN = true -- false: the nearest host only (offline comparison)
 
 function SDP_Multi.SolveNow(request)
   local session = SDP_Multi.NewSession(request)
   session:Run()
+  local hostStats = nil
+  if SDP_Multi.HOSTS_AGAIN and #session.HostChoices > 0 then
+    hostStats = { Tried = 1, Calls = 0 }
+    local current = request
+    for _, choice in ipairs(session.HostChoices) do
+      local best = choice.Keys[1]
+      if current.UniqueTo and current.UniqueTo[choice.Type] then best = current.UniqueTo[choice.Type] end
+      for _, key in ipairs(choice.Keys) do
+        if key ~= best then
+          local again = With(current, "UniqueTo", choice.Type, key)
+          local moved, calls
+          session, moved, calls = TryAgain(session, again)
+          hostStats.Tried, hostStats.Calls = hostStats.Tried + 1, hostStats.Calls + calls
+          if moved then best = key end
+        end
+      end
+      current = With(current, "UniqueTo", choice.Type, best)
+      hostStats[choice.Type] = best
+    end
+    request = current
+  end
   local hosts = SDP_Multi.SUPPLY_AGAIN and session:OtherHosts() or nil
   if hosts ~= nil then
-    -- One overlay for both: each board's subjects leave it before the other
-    -- session evaluates anything (its last layout would be neighbours).
-    session.Board:Clear()
     local again = {}
     for key, value in pairs(request) do again[key] = value end
     again.SupplyTo = hosts
-    local other = SDP_Multi.NewSession(again)
-    if other:SuppliedElsewhere(session) then
-      -- The progress shown: the second solve takes about as long again.
-      local job = SDP_Task ~= nil and SDP_Task.Current() or nil
-      if job ~= nil and job.Estimate ~= nil then job.Estimate = job.Units + job.Estimate end
-      other:Run()
-      local first = session
-      if other:Beats(session) then session = other end
-      local dropped = session == first and other or first
-      dropped.Board:Clear()
-      session.Stats.Again = { Moved = session == other, Calls = dropped.Board.Calls + dropped.ExtraCalls }
-    end
+    local first, moved, calls = session, false, 0
+    session, moved, calls = TryAgain(session, again, function(other) return other:SuppliedElsewhere(first) end)
+    if moved or calls > 0 then session.Stats.Again = { Moved = moved, Calls = calls } end
   end
+  if hostStats ~= nil then session.Stats.Hosts = hostStats end
   return session:Result()
 end
 

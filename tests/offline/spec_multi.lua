@@ -144,7 +144,7 @@ test("a planned city's first ring is left to it (issue 26)", function()
   end
 end)
 
-test("an empire-limited district every city asks for goes to the first; the others fill their count (issue 28)", function()
+test("an empire-limited district every city asks for goes to one; the others fill their count (issue 28)", function()
   NewWorld()
   local result = SDP_Multi.Solve(Request({
     Districts = { "DISTRICT_GOVERNMENT", "DISTRICT_CAMPUS" },
@@ -157,7 +157,7 @@ test("an empire-limited district every city asks for goes to the first; the othe
     perCity[p.City] = (perCity[p.City] or 0) + 1
     if p.Type == "DISTRICT_GOVERNMENT" then plazas[#plazas + 1] = p.City end
   end
-  T.same(plazas, { result.Cities[1].Key }, "one plaza, in the first city of the list")
+  T.eq(#plazas, 1, "one plaza")
   for _, c in ipairs(result.Cities) do T.eq(perCity[c.Key], 3, c.Key .. ": three districts") end
   local told = 0
   for _, u in ipairs(result.Unplaced) do
@@ -167,6 +167,86 @@ test("an empire-limited district every city asks for goes to the first; the othe
     end
   end
   T.eq(told, #result.Cities - 1, "every other city is told")
+end)
+
+-- Issue 234: the government plaza in the shared list goes where the plan
+-- scores best, not to the first city of the list; a city's own list wins.
+local PLAZA_LIST = { "DISTRICT_CAMPUS", "DISTRICT_THEATER", "DISTRICT_GOVERNMENT" }
+local function PlazaCity(result)
+  local at = nil
+  for _, p in ipairs(result.Plan) do
+    if p.Type == "DISTRICT_GOVERNMENT" then
+      T.eq(at, nil, "one plaza")
+      at = p.City
+    end
+  end
+  return at
+end
+
+test("an empire-limited district in the shared list goes to the city with the best plan (issue 234)", function()
+  NewWorld()
+  local siteA = "S" .. Map.GetPlotIndex(9, 6)
+  -- Each host on its own (SolveNow's comparison off).
+  SDP_Multi.HOSTS_AGAIN = false
+  local gains, bestKey, bestGain = {}, nil, -math.huge
+  for _, part in ipairs(SDP_Multi.Participants(0)) do
+    local result = SDP_Multi.Solve(Request({ Districts = PLAZA_LIST, UniqueTo = { DISTRICT_GOVERNMENT = part.Key } }))
+    T.ok(result.Ok, tostring(result.Error))
+    T.eq(PlazaCity(result), part.Key, "the plaza where it was put")
+    gains[part.Key] = result.Gain
+    if result.Gain > bestGain + 1e-9 then bestKey, bestGain = part.Key, result.Gain end
+  end
+  SDP_Multi.HOSTS_AGAIN = true
+  T.ok(bestKey ~= siteA and gains[siteA] < bestGain - 1e-9, "the first city of the list is not the best host here")
+  -- The centre at site A: it is tried first, and the others after it.
+  local result = SDP_Multi.Solve(Request({ Districts = PLAZA_LIST, Center = siteA }))
+  T.ok(result.Ok, tostring(result.Error))
+  T.eq(PlazaCity(result), bestKey, "the plaza in the best host")
+  T.near(result.Gain, bestGain, 1e-6, "the best plan")
+  T.eq(result.Stats.Hosts and result.Stats.Hosts.Tried, 4, "four hosts tried")
+  T.eq(result.Stats.Hosts.DISTRICT_GOVERNMENT, bestKey, "stats name the host")
+  for _, u in ipairs(result.Unplaced) do
+    if u.Type == "DISTRICT_GOVERNMENT" then T.eq(u.Reason, "MAX_PER_PLAYER", u.City) end
+  end
+  local again = SDP_Multi.Solve(Request({ Districts = PLAZA_LIST, Center = siteA }))
+  T.same(again.Plan, result.Plan, "same request, same plan")
+  -- At most HOST_TRIES, nearest the centre first.
+  local tries = SDP_Multi.HOST_TRIES
+  SDP_Multi.HOST_TRIES = 2
+  local two = SDP_Multi.Solve(Request({ Districts = PLAZA_LIST, Center = siteA }))
+  SDP_Multi.HOST_TRIES = tries
+  T.eq(two.Stats.Hosts.Tried, 2, "two hosts tried")
+  local partsByKey = {}
+  for _, part in ipairs(SDP_Multi.Participants(0)) do partsByKey[part.Key] = part end
+  local host = partsByKey[PlazaCity(two)]
+  local far = 0
+  for _, part in pairs(partsByKey) do
+    if Map.GetPlotDistance(9, 6, part.X, part.Y) < Map.GetPlotDistance(9, 6, host.X, host.Y) then far = far + 1 end
+  end
+  T.ok(far <= 1, "the host is one of the two nearest the centre")
+end)
+
+test("an empire-limited district in a city's own list stays there (issue 234)", function()
+  NewWorld()
+  -- C2 is the worst host (see above), and asks in its own list.
+  local result = SDP_Multi.Solve(Request({ Districts = PLAZA_LIST, Plans = { C2 = PLAZA_LIST } }))
+  T.ok(result.Ok, tostring(result.Error))
+  T.eq(PlazaCity(result), "C2", "the city's own list wins over the shared list")
+  T.eq(result.Stats.Hosts, nil, "nothing to compare")
+  -- Two cities' own lists: the better of the two.
+  local siteB = "S" .. Map.GetPlotIndex(13, 9)
+  SDP_Multi.HOSTS_AGAIN = false
+  local gains = {}
+  for _, key in ipairs({ "C2", siteB }) do
+    local one = SDP_Multi.Solve(Request({ Districts = PLAZA_LIST, Plans = { C2 = PLAZA_LIST, [siteB] = PLAZA_LIST },
+      UniqueTo = { DISTRICT_GOVERNMENT = key } }))
+    gains[key] = one.Gain
+  end
+  SDP_Multi.HOSTS_AGAIN = true
+  local both = SDP_Multi.Solve(Request({ Districts = PLAZA_LIST, Plans = { C2 = PLAZA_LIST, [siteB] = PLAZA_LIST } }))
+  local best = gains[siteB] > gains.C2 + 1e-9 and siteB or "C2"
+  T.eq(PlazaCity(both), best, "the better of the two own lists")
+  T.eq(both.Stats.Hosts.Tried, 2, "only those two tried")
 end)
 
 test("a multi-city plan: legal plots, one per plot, empire limit, never worse than city by city", function()
@@ -456,6 +536,42 @@ test("a wonder next to a district is listed under that district's city (issue 23
   for _, city in ipairs(result.Cities) do
     T.near(city.Gain, sums[city.Key] or 0, 1e-6, city.Key .. ": subtotal of its own plans")
   end
+end)
+
+test("a wonder given one city goes on its tiles, next to its own district (issue 234)", function()
+  -- The capital's campus at (7,5) serves the library when it is automatic;
+  -- given to site A, the library needs a campus of A's own.
+  local w = NewWorld()
+  w:Own(7, 5, 0, w:City(1))
+  w:AddDistrict(1, "DISTRICT_CAMPUS", 7, 5, true)
+  local siteA = "S" .. Map.GetPlotIndex(9, 6)
+  local function Library(cities)
+    local result = SDP_Multi.Solve(Request({
+      Districts = { "DISTRICT_THEATER" }, Wonders = { "BUILDING_GREAT_LIBRARY", "BUILDING_STONEHENGE" },
+      WonderCities = cities,
+    }))
+    T.ok(result.Ok, tostring(result.Error))
+    T.ok(not result.Stats.Mismatch, "incremental and full evaluation agree")
+    local found = {}
+    for _, p in ipairs(result.Plan) do found[p.Type] = found[p.Type] or p end
+    return found, result
+  end
+  local auto = Library(nil)
+  T.eq(auto.BUILDING_GREAT_LIBRARY and auto.BUILDING_GREAT_LIBRARY.City, "C1", "automatic: next to the capital's campus")
+  local given, result = Library({ BUILDING_GREAT_LIBRARY = siteA, BUILDING_STONEHENGE = "C2" })
+  local library, campus = given.BUILDING_GREAT_LIBRARY, given.DISTRICT_CAMPUS
+  T.ok(library ~= nil and campus ~= nil, "the library and a campus for it placed")
+  T.eq(library.City, siteA, "the library in site A")
+  T.eq(campus.City, siteA, "the campus supplied to site A")
+  T.eq(result.Supplied[1] and result.Supplied[1].City, siteA, "supplied to site A")
+  T.eq(Map.GetPlotDistance(library.X, library.Y, campus.X, campus.Y), 1, "next to A's own campus")
+  local stonehenge = given.BUILDING_STONEHENGE
+  T.ok(stonehenge ~= nil, "Stonehenge placed")
+  T.eq(stonehenge.City, "C2", "Stonehenge in the city given")
+  T.ok(Map.GetPlotDistance(stonehenge.X, stonehenge.Y, 17, 5) <= 3, "on that city's tiles")
+  -- A city that does not take part leaves the wonder automatic.
+  local free = Library({ BUILDING_GREAT_LIBRARY = "C3" })
+  T.eq(free.BUILDING_GREAT_LIBRARY and free.BUILDING_GREAT_LIBRARY.City, "C1", "C3 does not take part: automatic")
 end)
 
 test("a wonder without a district rule goes to the plot's city, else the nearest (issue 238)", function()

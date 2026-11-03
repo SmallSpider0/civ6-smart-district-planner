@@ -548,7 +548,10 @@
       <Text>· only in {1_City}</Text>
     </Replace>
     <Replace Tag="LOC_SDP_MULTI_LIMITED_AUTO" Language="en_US">
-      <Text>· best of {1_N} cities</Text>
+      <Text>· each of the {1_N} cities that want it is tried, and it goes where the plan scores best (takes longer)</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_MULTI_LIMITED_NEAREST" Language="en_US">
+      <Text>· the {1_N} cities nearest the center that want it are each tried, and it goes where the plan scores best (takes longer)</Text>
     </Replace>
     <Replace Tag="LOC_SDP_MULTI_LIMITED_BUILT" Language="en_US">
       <Text>· built in {1_City}</Text>
@@ -751,6 +754,12 @@
     </Replace>
     <Replace Tag="LOC_SDP_WONDER_CHIP_TOOLTIP" Language="en_US">
       <Text>Click to take this wonder off</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_WONDER_CITY_AUTO" Language="en_US">
+      <Text>Auto</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_WONDER_CITY_TOOLTIP" Language="en_US">
+      <Text>Which city builds this wonder. Auto: the best place in any city planned together. A city: only on that city's tiles, next to that city's own districts where the wonder needs one.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_REPLACE_OWN_SHORT" Language="en_US">
       <Text>Replace ({1_N})</Text>
