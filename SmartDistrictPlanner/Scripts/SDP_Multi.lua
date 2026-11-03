@@ -14,7 +14,9 @@
 --                 take a candidate instead (issue 28). Cities asking in a
 --                 list of their own come first; among the rest, SolveNow
 --                 tries up to HOST_TRIES of them and keeps the best plan
---                 (issue 234). A wonder may be given one city (WonderCities).
+--                 (issue 234). A wonder goes in the city given it
+--                 (WonderCities), else in the one with the most production
+--                 that has a valid tile for it (issue 234).
 --   Objective     SDP_Board's exact DMT gain over all fixed subjects of all
 --                 participants, plus each city's land part (a plot two
 --                 cities could work counts for the nearer one), plus, when
@@ -54,6 +56,10 @@ SDP_Multi.GROUP_PASSES = 1
 -- tried as its host, nearest the centre city first. Each one more is one
 -- more solve.
 SDP_Multi.HOST_TRIES = 4
+-- Wonders left automatic go in the city with the most production that can
+-- take them (issue 234); false: anywhere, by the plan's value alone
+-- (tests of that path, the offline comparison).
+SDP_Multi.WONDER_BY_PRODUCTION = true
 
 local Copy = SDP_Search.Copy
 
@@ -64,6 +70,27 @@ local function DefaultWeights(weights)
     out[yieldType] = (w == nil) and 1 or w
   end
   return out
+end
+
+-- A participant's production per turn (issue 234): an existing city's, as
+-- its city panel shows it; a city-center pin's estimated from its tiles:
+-- the centre plus the best of the plots it could work, as many as the
+-- population its plan needs (part.PlanPopulation), the way the land part
+-- picks them.
+function SDP_Multi.Production(playerID, part)
+  local index = GameInfo.Yields["YIELD_PRODUCTION"].Index
+  if part.Kind == "CITY" then
+    local city = CityManager.GetCity(playerID, part.CityID)
+    return city ~= nil and (city:GetYield(index) or 0) or 0
+  end
+  local values = {}
+  for _, plotIndex in ipairs(SDP_Land.Workable(part.Scan)) do
+    values[#values + 1] = Map.GetPlotByIndex(plotIndex):GetYield(index)
+  end
+  table.sort(values, function(a, b) return a > b end)
+  local total = Map.GetPlot(part.X, part.Y):GetYield(index)
+  for k = 1, math.min(#values, part.PlanPopulation or 1) do total = total + values[k] end
+  return total
 end
 
 -- The planned cities: SDP_City.Sites.
@@ -312,7 +339,8 @@ Session.__index = Session
 --                        supplied (issue 66, see below)
 --   WonderCities         { [wonder type] = participant Key }: the city a wonder
 --                        goes in, next to that city's districts only (issue
---                        234); other wonders go in any participating city
+--                        234); the others in the city with the most
+--                        production that can take them (WONDER_BY_PRODUCTION)
 --   SupplyTo             { [wonder type] = participant Key }: the city tried
 --                        first for the district a wonder needs (issue 182,
 --                        set by SolveNow)
@@ -321,6 +349,9 @@ Session.__index = Session
 --                        district are tried nearest it first (issue 234)
 --   UniqueTo             { [district type] = participant Key }: the host of
 --                        an empire-limited district (issue 234, set by SolveNow)
+--   AutoSkip             { [wonder type] = n }: an automatic wonder skips the n
+--                        cities with the most production (issue 234, set by
+--                        SolveNow when it has no valid tile there)
 --   Off, Offs            { [district type] = true }: districts the player set to
 --                        "not wanted" (not by default) in the shared list, per Key;
 --                        never supplied for a wonder there
@@ -427,9 +458,10 @@ function SDP_Multi.NewSession(request)
       if byType[districtType] and byType[districtType].Specialty then specialty = specialty + 1 end
     end
     if part.Kind == "SITE" then
+      part.PlanPopulation = SDP_Land.RequiredPopulation(math.max(specialty, count))
       part.Scan = SDP_City.ScanSite(playerID, part.X, part.Y, {
         allowFeatureRemoval = options.allowFeatureRemoval, ignorePins = options.ignorePins, name = part.Name,
-        population = SDP_Land.RequiredPopulation(math.max(specialty, count)),
+        population = part.PlanPopulation,
       })
     else
       part.Scan = SDP_City.Scan(playerID, part.CityID, options)
@@ -610,6 +642,36 @@ function SDP_Multi.NewSession(request)
   for wonderType, key in pairs(request.WonderCities or {}) do
     for p, part in ipairs(participants) do
       if part.Key == key then self.WonderCity[wonderType] = p end
+    end
+  end
+  -- The other wonders ("automatic", issue 234, plan A decided 2026-11-03)
+  -- go in the city with the most production (SDP_Multi.Production; ties:
+  -- the participants' order), skipping the first AutoSkip[wonder] of that
+  -- ranking; within it the tile is still chosen by the plan's value.
+  -- self.AutoWonder[wonder] = the city picked; when the wonder cannot go
+  -- there (no valid tile, no district for it), self.AutoRetry[wonder] is
+  -- set below and SolveNow builds the session again with the next city.
+  -- Past the last city the wonder goes in any city, as before.
+  self.AutoWonder = {}
+  if SDP_Multi.WONDER_BY_PRODUCTION and request.Wonders and #request.Wonders > 0 and #participants > 1 then
+    local production, ranked = {}, {}
+    for p, part in ipairs(participants) do
+      production[p] = SDP_Multi.Production(playerID, part)
+      ranked[p] = p
+    end
+    table.sort(ranked, function(a, b)
+      if production[a] ~= production[b] then return production[a] > production[b] end
+      return a < b
+    end)
+    self.Production = production
+    local wonders = {}
+    for _, wonderType in ipairs(request.Wonders) do wonders[#wonders + 1] = wonderType end
+    table.sort(wonders)
+    for _, wonderType in ipairs(wonders) do
+      if self.WonderCity[wonderType] == nil then
+        local p = ranked[(request.AutoSkip and request.AutoSkip[wonderType] or 0) + 1]
+        if p ~= nil then self.WonderCity[wonderType], self.AutoWonder[wonderType] = p, p end
+      end
     end
   end
   if request.Wonders and #request.Wonders > 0 then
@@ -853,6 +915,7 @@ function SDP_Multi.NewSession(request)
   -- (a pin being replaced does not count, issue 154).
   local wonderGroup = #participants + 1
   self.WonderGroup = wonderGroup
+  local wonderSlot = {} -- [wonder type] = its slot
   if request.Wonders and #request.Wonders > 0 then
     local list, byWonder = SDP_Wonders.List(playerID, options.ignorePins), {}
     for _, w in ipairs(list) do byWonder[w.Type] = w end
@@ -883,6 +946,7 @@ function SDP_Multi.NewSession(request)
     for _, subject in ipairs(fixed) do taken[Map.GetPlotIndex(subject.X, subject.Y)] = true end
     local seenWonder = {}
     for _, wonderType in ipairs(request.Wonders) do
+      if byWonder[wonderType] == nil or byWonder[wonderType].Status ~= nil then self.AutoWonder[wonderType] = nil end
       local w = byWonder[wonderType]
       if not seenWonder[wonderType] then
         seenWonder[wonderType] = true
@@ -925,6 +989,7 @@ function SDP_Multi.NewSession(request)
             end
             -- Given one city (issue 234): that city's plots, next to its districts.
             local only = self.WonderCity[wonderType]
+            wonderSlot[wonderType] = #slots + 1
             slots[#slots + 1] = { Key = wonderType, Type = "WONDER", Group = wonderGroup,
               Allowed = only ~= nil and participants[only].Allowed or everywhere, City = only,
               Requires = w.AdjacentDistrict, RequiresSlot = requiresSlot, Support = support, Wonder = true }
@@ -1037,7 +1102,19 @@ function SDP_Multi.NewSession(request)
     Appeal = { Fixed = fixed, Weights = request.Weights, Workable = workable, Cities = housingCities,
       FixedGroup = HousingGroup },
   })
-  for _, s in ipairs(self.Search:Singles()) do
+  local singles = self.Search:Singles()
+  local noPlot = {}
+  for _, s in ipairs(singles) do noPlot[s] = true end
+  -- A wonder that cannot go in the city picked for it (no slot: no district
+  -- for it there; or no valid tile): the next city (issue 234).
+  for _, wonderType in ipairs(request.Wonders or {}) do
+    local s = wonderSlot[wonderType]
+    if self.AutoWonder[wonderType] ~= nil and (s == nil or noPlot[s]) then
+      self.AutoRetry = self.AutoRetry or {}
+      self.AutoRetry[wonderType] = true
+    end
+  end
+  for _, s in ipairs(singles) do
     if not slots[s].Optional then
       local city = slotCity[s] and participants[slotCity[s]].Key or "WONDERS"
       local auto = slotCity[s] and participants[slotCity[s]].Auto[slots[s].Key] or nil
@@ -1812,9 +1889,28 @@ end
 -- it is the new one and the DMT calls of the one dropped. One overlay for
 -- both: each board's subjects leave it before the other session evaluates
 -- anything (its last layout would be neighbours).
+-- A session for `request`, built again with the next city for every
+-- automatic wonder that cannot go in the one picked (Session.AutoRetry,
+-- issue 234); before it runs. The overlay holds no other session's subjects.
+local function Prepared(request)
+  local session = SDP_Multi.NewSession(request)
+  while session.AutoRetry ~= nil do
+    session.Board:Clear()
+    local again = {}
+    for k, v in pairs(request) do again[k] = v end
+    local skip = {}
+    for k, v in pairs(request.AutoSkip or {}) do skip[k] = v end
+    for wonderType in pairs(session.AutoRetry) do skip[wonderType] = (skip[wonderType] or 0) + 1 end
+    again.AutoSkip = skip
+    request = again
+    session = SDP_Multi.NewSession(request)
+  end
+  return session
+end
+
 local function TryAgain(session, request, needed)
   session.Board:Clear()
-  local other = SDP_Multi.NewSession(request)
+  local other = Prepared(request)
   if needed ~= nil and not needed(other) then return session, false, 0 end
   -- The progress shown: another solve takes about as long again.
   local job = SDP_Task ~= nil and SDP_Task.Current() or nil
@@ -1845,29 +1941,29 @@ SDP_Multi.SUPPLY_AGAIN = true -- false: one solve, as before issue 182 (offline 
 SDP_Multi.HOSTS_AGAIN = true -- false: the nearest host only (offline comparison)
 
 function SDP_Multi.SolveNow(request)
-  local session = SDP_Multi.NewSession(request)
+  local session = Prepared(request)
   session:Run()
   local hostStats = nil
   if SDP_Multi.HOSTS_AGAIN and #session.HostChoices > 0 then
     hostStats = { Tried = 1, Calls = 0 }
-    local current = request
     for _, choice in ipairs(session.HostChoices) do
       local best = choice.Keys[1]
-      if current.UniqueTo and current.UniqueTo[choice.Type] then best = current.UniqueTo[choice.Type] end
+      local named = session.Request.UniqueTo and session.Request.UniqueTo[choice.Type]
+      if named ~= nil then best = named end
       for _, key in ipairs(choice.Keys) do
         if key ~= best then
-          local again = With(current, "UniqueTo", choice.Type, key)
+          -- From the kept session's request (its AutoSkip included).
+          local again = With(session.Request, "UniqueTo", choice.Type, key)
           local moved, calls
           session, moved, calls = TryAgain(session, again)
           hostStats.Tried, hostStats.Calls = hostStats.Tried + 1, hostStats.Calls + calls
           if moved then best = key end
         end
       end
-      current = With(current, "UniqueTo", choice.Type, best)
       hostStats[choice.Type] = best
     end
-    request = current
   end
+  request = session.Request
   local hosts = SDP_Multi.SUPPLY_AGAIN and session:OtherHosts() or nil
   if hosts ~= nil then
     local again = {}

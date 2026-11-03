@@ -574,6 +574,38 @@ test("a wonder given one city goes on its tiles, next to its own district (issue
   T.eq(free.BUILDING_GREAT_LIBRARY and free.BUILDING_GREAT_LIBRARY.City, "C1", "C3 does not take part: automatic")
 end)
 
+test("an automatic wonder goes in the city with the most production that can take it (issue 234)", function()
+  -- The second city (17,5) makes the most production; it has no river for
+  -- the Hanging Gardens, so they go in the next one, the capital.
+  local w = NewWorld()
+  w:City(2).production = 30
+  w:Own(7, 5, 0, w:City(1))
+  w:AddDistrict(1, "DISTRICT_CAMPUS", 7, 5, true)
+  local result = SDP_Multi.Solve(Request({ Districts = { "DISTRICT_THEATER" },
+    Wonders = { "BUILDING_STONEHENGE", "BUILDING_HANGING_GARDENS", "BUILDING_GREAT_LIBRARY" } }))
+  T.ok(result.Ok, tostring(result.Error))
+  T.ok(not result.Stats.Mismatch, "incremental and full evaluation agree")
+  local found = {}
+  for _, p in ipairs(result.Plan) do
+    if found[p.Type] == nil or p.City == "C2" then found[p.Type] = p end
+  end
+  local stonehenge, gardens, library = found.BUILDING_STONEHENGE, found.BUILDING_HANGING_GARDENS, found.BUILDING_GREAT_LIBRARY
+  T.ok(stonehenge ~= nil and gardens ~= nil and library ~= nil, "all three placed")
+  T.eq(stonehenge.City, "C2", "Stonehenge in the city with the most production")
+  T.ok(Map.GetPlotDistance(stonehenge.X, stonehenge.Y, 17, 5) <= 3, "on its tiles")
+  T.eq(gardens.City, "C1", "the Hanging Gardens in the next city: no river in the first")
+  T.eq(library.City, "C2", "the Great Library there too, not next to the capital's campus")
+  local campus = found.DISTRICT_CAMPUS
+  T.ok(campus ~= nil and campus.City == "C2", "a campus supplied to the second city")
+  T.eq(Map.GetPlotDistance(library.X, library.Y, campus.X, campus.Y), 1, "the library next to it")
+  -- Given a city, a wonder stays there whatever the production.
+  local given = SDP_Multi.Solve(Request({ Districts = { "DISTRICT_THEATER" }, Wonders = { "BUILDING_STONEHENGE" },
+    WonderCities = { BUILDING_STONEHENGE = "C1" } }))
+  for _, p in ipairs(given.Plan) do
+    if p.Type == "BUILDING_STONEHENGE" then T.eq(p.City, "C1", "given to the capital") end
+  end
+end)
+
 test("a wonder without a district rule goes to the plot's city, else the nearest (issue 238)", function()
   local w = NewWorld()
   w:Own(6, 6, 0, w:City(1))

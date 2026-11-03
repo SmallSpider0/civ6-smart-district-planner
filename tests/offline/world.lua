@@ -650,6 +650,22 @@ function World.New(spec)
   function City:GetName() return self.name end
   function City:GetPopulation() return self.population end
   function City:IsCapital() return self.capital == true end
+  -- Yield per turn (the city panel's number): the spec's `production` for
+  -- production; else 1 for the centre plus the best `population` plots
+  -- within 3 (issue 234). Other yields: 0.
+  function City:GetYield(yieldIndex)
+    local yieldType = gi.Yields[yieldIndex].YieldType
+    if yieldType ~= "YIELD_PRODUCTION" then return 0 end
+    if self.production ~= nil then return self.production end
+    local values = {}
+    for _, p in pairs(byIndex) do
+      if not p.isCity and Distance(self.x, self.y, p.x, p.y) <= 3 then values[#values + 1] = p:GetYield(yieldIndex) end
+    end
+    table.sort(values, function(a, b) return a > b end)
+    local total = 1
+    for k = 1, math.min(#values, self.population) do total = total + values[k] end
+    return total
+  end
   function City:GetBuildings()
     local built = self.buildings
     return { HasBuilding = function(_, index) return built[index] == true end }
@@ -707,6 +723,7 @@ function World.New(spec)
     local city = setmetatable({
       id = c.id, owner = owner, x = c.x, y = c.y, name = c.name or ("CITY_" .. c.id),
       population = c.population or 1, capital = c.capital, districts = {}, buildings = {}, housing = c.housing,
+      production = c.production,
     }, City)
     cities[owner .. ":" .. c.id] = city
     cityList[#cityList + 1] = city

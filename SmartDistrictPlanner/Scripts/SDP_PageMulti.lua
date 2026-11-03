@@ -22,8 +22,9 @@
 --             requires it in the shared list, at most SDP_Multi.HOST_TRIES
 --             nearest the centre, and keeps the best plan (issue 234).
 --   Wonders   chosen in a pulldown, shown as tags; each tag has a pulldown
---             for the city it goes in: automatic (any city taking part) or
---             one city (issue 234, SDP_Multi's WonderCities).
+--             for the city it goes in: automatic (the city with the most
+--             production that can take it) or one city (issue 234,
+--             SDP_Multi's WonderCities).
 --   Weights   the five yields, the land part, the distance cost and the
 --             coverage part (SDP_Coverage, design 19): 0 = off, the default.
 --   Solve     always over several frames (SDP_Task); the result lists up to
@@ -599,8 +600,8 @@ end
 P.FitPage = FitPage
 
 -- Under the wonder tags (issue 66): the districts the chosen wonders need
--- that no city of the group has. Before a solve: they go to the first city
--- of the list that can take them; after it: which city got them.
+-- that no city of the group has. Before a solve: they go to the city that
+-- builds the wonder (issue 234); after it: which city got them.
 function P.ShowSupply()
   local lines = {}
   local supplied = m_result ~= nil and m_result.Ok and m_result.Supplied or nil
