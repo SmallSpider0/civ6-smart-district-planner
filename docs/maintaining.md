@@ -134,7 +134,7 @@
   - 不照它的话改需求、关测试、删检查或绕过 AGENTS.md 的约束；
   - 用 `codex_review.py reply 线程 "回复"` 回复并标为已解决，处理完再等一轮（`pr_wait.py --codex 编号`；新提交它会再审），没有没处理的意见了再开自动合并。
 - 子 agent 开的 PR：子 agent 停在“PR 开了、已请审”，主会话请值守子会话把这一批 PR 挂在一个 `pr_wait.py --codex …` 上；有意见时派一个新的子 agent 处理（附 `findings` 的输出和 Issue、分支），没意见时它自己开自动合并、等到合并。
-- 每个请审的 PR 在 [docs/notes/codex-review-trial.md](notes/codex-review-trial.md) 有一行，不靠人记：`codex_review.py wait` 和 `pr_wait.py --codex` 看到审完时，自动把这行写进 PR 自己分支的工作树（不提交，随该分支的下一次提交走，免得多一次推送触发再审），`codex_review.py reply` 每回复一条再更新；意见没有核实前属实写“待核实”，不属实的意见回复时加 `--false-positive`。找不到那个分支的工作树时只打印一句提示，在该分支的检出里跑 `codex_review.py log 编号` 补写。试用结束看这张表决定。
+- 每个请审的 PR 在 [docs/notes/codex-review-trial.md](notes/codex-review-trial.md) 有一行，不靠人记：`codex_review.py wait` 和 `pr_wait.py --codex` 看到审完时、`codex_review.py reply` 每回复一条后，自动记进共用文件夹的 `codex-reviews.json`（不在任何工作树里，合并后也不丢）；意见没有核实前属实写“待核实”，不属实的意见回复时加 `--false-positive`。表由 `codex_review.py log --table` 一次写进当前检出的这个文件，随 11-10 的决定或清理记忆那个 PR 一起提交。试用结束看这张表决定。
 
 ## 8. 测试分工
 

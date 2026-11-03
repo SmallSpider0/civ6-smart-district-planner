@@ -118,25 +118,29 @@ class TrialTable(unittest.TestCase):
         self.assertEqual(self.rows()[1], "| #2 | 2026-10-28 | 1 | 1 | 0 | — | kept note |")
         self.assertEqual(cr.upsert_row(self.path, 4, ("0", "0", "0", "没审"), "2026-11-03"), "added")
 
-    def test_log_review_writes_the_row_from_github(self):
-        cr_orig = (cr.gh, cr.codex_threads, cr.ROOT)
-        self.addCleanup(lambda: setattr(cr, "gh", cr_orig[0]) or setattr(cr, "codex_threads", cr_orig[1])
-                        or setattr(cr, "ROOT", cr_orig[2]))
-        os.makedirs(os.path.join(self.dir, "docs", "notes"))
-        os.replace(self.path, os.path.join(self.dir, cr.TRIAL))
-        self.path = os.path.join(self.dir, cr.TRIAL)
+    def test_reviews_are_logged_outside_the_worktree_and_rendered_into_the_table(self):
+        saved = (cr.gh, cr.codex_threads, os.environ.get("SDP_SHARED"))
+
+        def restore():
+            cr.gh, cr.codex_threads = saved[0], saved[1]
+            os.environ.pop("SDP_SHARED", None)
+            if saved[2]:
+                os.environ["SDP_SHARED"] = saved[2]
+        self.addCleanup(restore)
+        os.environ["SDP_SHARED"] = os.path.join(self.dir, "shared")
         now = cr.datetime.datetime.now(cr.datetime.timezone.utc)
         asked = (now - cr.datetime.timedelta(minutes=5)).strftime("%Y-%m-%dT%H:%M:%SZ")
-
-        def gh(*args, data=None):
-            if args[:2] == ("pr", "view"):
-                return json.dumps({"headRefName": "mac/x"})
-            if args[0] == "api":
-                return json.dumps([{"body": "@codex review", "created_at": asked}])
-            raise AssertionError(args)
-        cr.gh = gh
-        cr.ROOT = self.dir
+        cr.gh = lambda *args, data=None: json.dumps([{"body": "@codex review", "created_at": asked}])
         cr.codex_threads = lambda number: [thread(True, "Confirmed"), thread(False)]
-        self.assertIn("added", cr.log_review(7, "findings", here=True))
-        row = [r for r in self.rows() if r.startswith("| #7 |")][0]
-        self.assertIn("| 2 | 1（另 1 条待核实） | 0 | 约 5 分钟 |", row)
+        self.assertIn("recorded", cr.log_review(7, "findings"))
+        cr.codex_threads = lambda number: [thread(True, "Confirmed"), thread(True, cr.FALSE_POSITIVE + "no")]
+        cr.log_review(7, "findings")  # after the replies: counts follow, time and date stay
+        cr.codex_threads = lambda number: []
+        cr.log_review(8, "failed")
+        cr.log_review(7, "failed")  # a failed round does not overwrite a real review
+        self.assertEqual(cr.write_table(self.path), (2, 0))
+        rows = {r.split("|")[1].strip(): r for r in self.rows()}
+        self.assertIn("| 2 | 1 | 1 | 约 5 分钟 |", rows["#7"])
+        self.assertIn("| 0 | 0 | 0 | 没审 |", rows["#8"])
+        self.assertEqual(cr.write_table(self.path), (0, 2))  # rendering again changes nothing
+        self.assertEqual(len(self.rows()), 4)

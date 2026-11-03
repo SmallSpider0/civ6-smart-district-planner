@@ -556,7 +556,7 @@ python3 -I tools/codex_review.py reply 线程ID "已修，见 abc1234"   # 回�
 ```
 
 - 什么时候用、意见怎么处理见 docs/maintaining.md“Codex 审查”。
-- 审完（`wait`、`pr_wait.py --codex`）和每次 `reply` 都自动写 `docs/notes/codex-review-trial.md` 里这个 PR 的一行（意见数、属实、误报、等了多久），写在 PR 分支的工作树里、不提交；`reply ... --false-positive` 把这条记为误报；`log 125` 在当前检出里补写。
+- 审完（`wait`、`pr_wait.py --codex`）和每次 `reply` 都自动把这个 PR 的意见数、属实、误报、等了多久记进共用文件夹的 `codex-reviews.json`；`reply ... --false-positive` 把这条记为误报；`log --table` 把全部记录写进当前检出的 `docs/notes/codex-review-trial.md`（`log 125` 先从 GitHub 补记一个 PR）。
 - 判断审完读三处：Codex 汇总评论里的状态、它对最新提交发的审查、它在 PR 上点的 👍（没有意见时）。网络出错会重试。
 
 ## pr_wait.py — 一批 PR 一个等待

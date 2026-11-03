@@ -5,7 +5,7 @@
     python3 -I tools/codex_review.py wait N               # until Codex finished reviewing PR N's head commit
     python3 -I tools/codex_review.py findings N           # Codex's unresolved review threads on PR N
     python3 -I tools/codex_review.py reply THREAD "text" [--false-positive]  # answer one thread and resolve it
-    python3 -I tools/codex_review.py log N                # write PR N's row in docs/notes/codex-review-trial.md of this checkout
+    python3 -I tools/codex_review.py log [N] [--table]    # record PR N from GitHub; --table writes the rows into docs/notes/codex-review-trial.md here
 
 wait polls every --every seconds (default 30) and exits 0 when the review
 ended without findings, 1 when there are unresolved findings (they are
@@ -17,9 +17,11 @@ Network errors are retried. Run it in the background: its end is the signal.
 Codex marks its progress in three places, all read here: a summary comment
 with a machine-readable state, a review with inline comments when it has
 findings, and a thumbs-up reaction on the PR when it finished without any.
-Every finished review (and every reply) also writes the PR's row in
-docs/notes/codex-review-trial.md, in the worktree of the PR's own branch, left
-uncommitted for that branch's next commit (`log N` writes it in this checkout).
+Every finished review (and every reply) is also recorded in
+codex-reviews.json in the shared folder (sdplock.shared_dir(), outside every
+worktree, so no row depends on a later commit); `log --table` writes all of it
+into docs/notes/codex-review-trial.md of this checkout, to be committed with
+the next PR (the 2026-11-10 decision, the release clean-up).
 A reply made with --false-positive starts with "误报 / False positive:", which
 is what counts a thread as a false positive; other resolved threads count as
 true, unresolved ones stay "待核实".
@@ -34,6 +36,8 @@ import re
 import subprocess
 import sys
 import time
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BOT = "chatgpt-codex-connector[bot]"
@@ -176,21 +180,6 @@ def upsert_row(path, number, cells, today, note=""):
     return action
 
 
-def branch_worktree(branch):
-    """The checkout directory where branch is checked out, or None."""
-    try:
-        out = subprocess.run(["git", "worktree", "list", "--porcelain"], cwd=ROOT, capture_output=True, text=True).stdout
-    except OSError:
-        return None
-    path = None
-    for line in out.splitlines():
-        if line.startswith("worktree "):
-            path = line[9:]
-        elif line.strip() == "branch refs/heads/" + branch:
-            return path
-    return None
-
-
 def request_minutes(number):
     """Minutes since the latest '@codex review' comment of PR number, or None."""
     comments = ghjson("api", "repos/{owner}/{repo}/issues/%d/comments?per_page=100" % number)
@@ -201,20 +190,59 @@ def request_minutes(number):
     return (datetime.datetime.now(datetime.timezone.utc) - then).total_seconds() / 60
 
 
-def log_review(number, outcome, here=False):
-    """Record a finished review of PR number in the trial table (see the module docstring). Never raises:
+def log_path():
+    import sdplock
+    return os.path.join(sdplock.shared_dir(), "codex-reviews.json")
+
+
+def load_log():
+    try:
+        with open(log_path(), encoding="utf-8") as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return {}
+
+
+def save_log(data):
+    path = log_path()
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=1, sort_keys=True)
+    os.replace(tmp, path)
+
+
+def log_review(number, outcome):
+    """Record a finished review of PR number in the shared log (see the module docstring). Never raises:
     a logging problem must not hide the review's own result. Returns a one-line message."""
     try:
-        pr = ghjson("pr", "view", str(number), "--json", "headRefName")
-        base = ROOT if here else branch_worktree(pr["headRefName"])
-        if not base:
-            return "row for #%d not written: no worktree of branch %s (run `codex_review.py log %d` in a checkout of it)" % (
-                number, pr["headRefName"], number)
-        cells = row_cells(thread_counts(codex_threads(number)), outcome, request_minutes(number) if outcome in ("clean", "findings") else None)
-        action = upsert_row(os.path.join(base, TRIAL), number, cells, datetime.date.today().isoformat())
-        return "row for #%d %s in %s" % (number, action, os.path.join(base, TRIAL))
+        counts = thread_counts(codex_threads(number))
+        old = load_log().get(str(number))
+        real = outcome in ("clean", "findings")
+        if old and old["outcome"] in ("clean", "findings") and not real:
+            return "review of #%d already recorded" % number
+        entry = {"date": (old or {}).get("date") or datetime.date.today().isoformat(), "counts": list(counts),
+                 "outcome": outcome, "minutes": (old or {}).get("minutes")}
+        if real and entry["minutes"] is None:
+            entry["minutes"] = request_minutes(number)
+        data = load_log()
+        data[str(number)] = entry
+        save_log(data)
+        return "review of #%d recorded in %s" % (number, log_path())
     except (RuntimeError, ValueError, OSError, KeyError) as problem:
-        return "row for #%d not written: %s" % (number, problem)
+        return "review of #%d not recorded: %s" % (number, problem)
+
+
+def write_table(path=None):
+    """Write every recorded review into the trial table at path (default: this checkout's). Returns (added, updated)."""
+    path = path or os.path.join(ROOT, TRIAL)
+    done = {"added": 0, "updated": 0}
+    for number, e in sorted(load_log().items(), key=lambda kv: int(kv[0])):
+        cells = row_cells(tuple(e["counts"]), e["outcome"], e.get("minutes"))
+        action = upsert_row(path, int(number), cells, e["date"])
+        if action in done:
+            done[action] += 1
+    return done["added"], done["updated"]
 
 
 def head_since(pr):
@@ -290,7 +318,8 @@ def main():
     p.add_argument("text")
     p.add_argument("--false-positive", action="store_true", help="the finding is wrong: counted as a false positive in the trial table")
     p = sub.add_parser("log")
-    p.add_argument("number", type=int)
+    p.add_argument("number", type=int, nargs="?")
+    p.add_argument("--table", action="store_true", help="write all recorded reviews into this checkout's trial table")
     args = ap.parse_args()
     if args.cmd == "request":
         url = gh("pr", "comment", str(args.number), "--body", "@codex review").strip()
@@ -305,7 +334,10 @@ def main():
             print("- %s %s\n  %s\n  %s" % (tid, where, url, text))
         return 0
     if args.cmd == "log":
-        print(log_review(args.number, "findings", here=True))
+        if args.number:
+            print(log_review(args.number, "findings"))
+        if args.table:
+            print("trial table: %d row(s) added, %d updated" % write_table())
         return 0
     text = FALSE_POSITIVE + args.text if args.false_positive else args.text
     graphql("mutation($t:ID!,$b:String!){addPullRequestReviewThreadReply(input:{pullRequestReviewThreadId:$t,body:$b}){comment{url}}}",
