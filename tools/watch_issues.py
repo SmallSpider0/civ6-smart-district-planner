@@ -3,7 +3,7 @@
 
     python3 -I tools/watch_issues.py                 # wait until something new, print it, exit 0
     python3 -I tools/watch_issues.py --once          # print what is new now (exit 0 even if nothing)
-    python3 -I tools/watch_issues.py --mine URL ...  # comment or issue URLs the agent posted: never reported
+    python3 -I tools/watch_issues.py --mine URL ...  # comment or issue URLs never to report (not needed for the shared account)
     python3 -I tools/watch_issues.py --reset         # start from now (forget the old state)
     python3 -I tools/watch_issues.py --held [--clear]  # print what was held for the maintainer (then empty it)
     python3 -I tools/watch_issues.py --workshop-every 2700  # how often the Workshop is read (seconds)
@@ -15,9 +15,11 @@ logs/watch/others.log and is not acted on. Of theirs, only items on issues
 and wake the agent, and only when one of those accounts added the label (a
 label put on by anyone else, an issue template included, does not count);
 the rest, new issues included, go to logs/watch/held.log for the maintainer
-to look at (--held), and wake nobody. The maintainer and the
-agent share one GitHub account, so the agent records the comments it posts
-(--mine, with the URL gh prints) or they would come back as new.
+to look at (--held), and wake nobody. The maintainer and the agents share one
+GitHub account ($SDP_WATCH_SELF, default the account `gh api user` returns,
+read once): its issues and comments are never reported nor held, only marked
+seen, since the maintainer decides in Claude Code, not on the issue. --mine
+still works for other URLs but is not needed for that account.
 Without --once it polls every --every seconds (default 120) and exits with
 the first new items: run it in the background; its end is the signal. A
 failed poll (network) is retried after --retry seconds (default 30). It
@@ -80,6 +82,12 @@ def load():
     return {"since": now(), "seen": [], "mine": []}
 
 
+def merge_mine(state):
+    """Take the --mine records written to disk since state was loaded."""
+    disk = load() if os.path.exists(STATE) else {}
+    state["mine"] = sorted(set(state["mine"]) | set(disk.get("mine", [])))
+
+
 def save(state):
     os.makedirs(DIR, exist_ok=True)
     state["seen"] = state["seen"][-2000:]
@@ -94,8 +102,20 @@ def users(state):
     return set(state["users"])
 
 
-def where(login, watched, who):
-    """Where an item goes: "report" (wakes the agent), "held" (for the maintainer) or "others"."""
+def me(state):
+    """The GitHub account the maintainer and the agents share."""
+    if os.environ.get("SDP_WATCH_SELF"):
+        return os.environ["SDP_WATCH_SELF"].strip()
+    if not state.get("self"):
+        state["self"] = gh("user")["login"]
+    return state["self"]
+
+
+def where(login, watched, who, own=None):
+    """Where an item goes: "report" (wakes the agent), "held" (for the maintainer),
+    "others", or "seen" (the shared account's own: nothing to do)."""
+    if login == own:
+        return "seen"
     if login not in who:
         return "others"
     return "report" if watched else "held"
@@ -127,7 +147,7 @@ def labelled():
 
 def poll(state):
     """New items from the watched accounts since the last poll: list of lines to report."""
-    who, since, stamp = users(state), state["since"], now()
+    who, own, since, stamp = users(state), me(state), state["since"], now()
     seen, mine, out, labels, checked = set(state["seen"]), set(state["mine"]), [], labelled(), {}
     files = {"others": OTHERS, "held": HELD}
 
@@ -137,10 +157,10 @@ def poll(state):
         return checked[number]
 
     def put(login, number, line):
-        place = where(login, login in who and watched(number), who)
+        place = where(login, login != own and login in who and watched(number), who, own)
         if place == "report":
             out.append(line)
-        else:
+        elif place != "seen":
             with open(files[place], "a", encoding="utf-8") as f:
                 f.write(stamp + " " + line + "\n")
 
@@ -232,8 +252,7 @@ def main():
         save(state)
         return 0
     while True:
-        # --mine may have been run while this waited: take its records
-        state["mine"] = sorted(set(state["mine"]) | set(load()["mine"]))
+        merge_mine(state)  # --mine may have been run while this waited
         wait = args.every
         try:
             new = poll(state)
@@ -241,6 +260,7 @@ def main():
             new, wait = [], args.retry
             print("%s gh: %s" % (now(), problem), file=sys.stderr, flush=True)
         workshop(state, args.workshop_every)
+        merge_mine(state)  # and while poll() and workshop() ran: keep its records
         save(state)
         if new or args.once:
             print("\n".join(new) if new else "nothing new")
