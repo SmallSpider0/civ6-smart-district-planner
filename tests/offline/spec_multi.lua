@@ -110,6 +110,16 @@ local function Request(extra)
   return r
 end
 
+-- Run fn with automatic wonders free to go in any city (issue 234 puts
+-- them in the city with the most production; the free path remains for
+-- when none can take a wonder, and is what these tests look at).
+local function FreeWonders(fn)
+  SDP_Multi.WONDER_BY_PRODUCTION = false
+  local ok, err = pcall(fn)
+  SDP_Multi.WONDER_BY_PRODUCTION = true
+  if not ok then error(err, 0) end
+end
+
 test("a planned city's first ring is left to it (issue 26)", function()
   local w = World.New({
     rows = MAP,
@@ -144,7 +154,7 @@ test("a planned city's first ring is left to it (issue 26)", function()
   end
 end)
 
-test("an empire-limited district every city asks for goes to the first; the others fill their count (issue 28)", function()
+test("an empire-limited district every city asks for goes to one; the others fill their count (issue 28)", function()
   NewWorld()
   local result = SDP_Multi.Solve(Request({
     Districts = { "DISTRICT_GOVERNMENT", "DISTRICT_CAMPUS" },
@@ -157,7 +167,7 @@ test("an empire-limited district every city asks for goes to the first; the othe
     perCity[p.City] = (perCity[p.City] or 0) + 1
     if p.Type == "DISTRICT_GOVERNMENT" then plazas[#plazas + 1] = p.City end
   end
-  T.same(plazas, { result.Cities[1].Key }, "one plaza, in the first city of the list")
+  T.eq(#plazas, 1, "one plaza")
   for _, c in ipairs(result.Cities) do T.eq(perCity[c.Key], 3, c.Key .. ": three districts") end
   local told = 0
   for _, u in ipairs(result.Unplaced) do
@@ -167,6 +177,86 @@ test("an empire-limited district every city asks for goes to the first; the othe
     end
   end
   T.eq(told, #result.Cities - 1, "every other city is told")
+end)
+
+-- Issue 234: the government plaza in the shared list goes where the plan
+-- scores best, not to the first city of the list; a city's own list wins.
+local PLAZA_LIST = { "DISTRICT_CAMPUS", "DISTRICT_THEATER", "DISTRICT_GOVERNMENT" }
+local function PlazaCity(result)
+  local at = nil
+  for _, p in ipairs(result.Plan) do
+    if p.Type == "DISTRICT_GOVERNMENT" then
+      T.eq(at, nil, "one plaza")
+      at = p.City
+    end
+  end
+  return at
+end
+
+test("an empire-limited district in the shared list goes to the city with the best plan (issue 234)", function()
+  NewWorld()
+  local siteA = "S" .. Map.GetPlotIndex(9, 6)
+  -- Each host on its own (SolveNow's comparison off).
+  SDP_Multi.HOSTS_AGAIN = false
+  local gains, bestKey, bestGain = {}, nil, -math.huge
+  for _, part in ipairs(SDP_Multi.Participants(0)) do
+    local result = SDP_Multi.Solve(Request({ Districts = PLAZA_LIST, UniqueTo = { DISTRICT_GOVERNMENT = part.Key } }))
+    T.ok(result.Ok, tostring(result.Error))
+    T.eq(PlazaCity(result), part.Key, "the plaza where it was put")
+    gains[part.Key] = result.Gain
+    if result.Gain > bestGain + 1e-9 then bestKey, bestGain = part.Key, result.Gain end
+  end
+  SDP_Multi.HOSTS_AGAIN = true
+  T.ok(bestKey ~= siteA and gains[siteA] < bestGain - 1e-9, "the first city of the list is not the best host here")
+  -- The centre at site A: it is tried first, and the others after it.
+  local result = SDP_Multi.Solve(Request({ Districts = PLAZA_LIST, Center = siteA }))
+  T.ok(result.Ok, tostring(result.Error))
+  T.eq(PlazaCity(result), bestKey, "the plaza in the best host")
+  T.near(result.Gain, bestGain, 1e-6, "the best plan")
+  T.eq(result.Stats.Hosts and result.Stats.Hosts.Tried, 4, "four hosts tried")
+  T.eq(result.Stats.Hosts.DISTRICT_GOVERNMENT, bestKey, "stats name the host")
+  for _, u in ipairs(result.Unplaced) do
+    if u.Type == "DISTRICT_GOVERNMENT" then T.eq(u.Reason, "MAX_PER_PLAYER", u.City) end
+  end
+  local again = SDP_Multi.Solve(Request({ Districts = PLAZA_LIST, Center = siteA }))
+  T.same(again.Plan, result.Plan, "same request, same plan")
+  -- At most HOST_TRIES, nearest the centre first.
+  local tries = SDP_Multi.HOST_TRIES
+  SDP_Multi.HOST_TRIES = 2
+  local two = SDP_Multi.Solve(Request({ Districts = PLAZA_LIST, Center = siteA }))
+  SDP_Multi.HOST_TRIES = tries
+  T.eq(two.Stats.Hosts.Tried, 2, "two hosts tried")
+  local partsByKey = {}
+  for _, part in ipairs(SDP_Multi.Participants(0)) do partsByKey[part.Key] = part end
+  local host = partsByKey[PlazaCity(two)]
+  local far = 0
+  for _, part in pairs(partsByKey) do
+    if Map.GetPlotDistance(9, 6, part.X, part.Y) < Map.GetPlotDistance(9, 6, host.X, host.Y) then far = far + 1 end
+  end
+  T.ok(far <= 1, "the host is one of the two nearest the centre")
+end)
+
+test("an empire-limited district in a city's own list stays there (issue 234)", function()
+  NewWorld()
+  -- C2 is the worst host (see above), and asks in its own list.
+  local result = SDP_Multi.Solve(Request({ Districts = PLAZA_LIST, Plans = { C2 = PLAZA_LIST } }))
+  T.ok(result.Ok, tostring(result.Error))
+  T.eq(PlazaCity(result), "C2", "the city's own list wins over the shared list")
+  T.eq(result.Stats.Hosts, nil, "nothing to compare")
+  -- Two cities' own lists: the better of the two.
+  local siteB = "S" .. Map.GetPlotIndex(13, 9)
+  SDP_Multi.HOSTS_AGAIN = false
+  local gains = {}
+  for _, key in ipairs({ "C2", siteB }) do
+    local one = SDP_Multi.Solve(Request({ Districts = PLAZA_LIST, Plans = { C2 = PLAZA_LIST, [siteB] = PLAZA_LIST },
+      UniqueTo = { DISTRICT_GOVERNMENT = key } }))
+    gains[key] = one.Gain
+  end
+  SDP_Multi.HOSTS_AGAIN = true
+  local both = SDP_Multi.Solve(Request({ Districts = PLAZA_LIST, Plans = { C2 = PLAZA_LIST, [siteB] = PLAZA_LIST } }))
+  local best = gains[siteB] > gains.C2 + 1e-9 and siteB or "C2"
+  T.eq(PlazaCity(both), best, "the better of the two own lists")
+  T.eq(both.Stats.Hosts.Tried, 2, "only those two tried")
 end)
 
 test("a multi-city plan: legal plots, one per plot, empire limit, never worse than city by city", function()
@@ -324,77 +414,79 @@ test("wonder list: by era, then production cost, then type (issue 7)", function(
 end)
 
 test("wonders: legal places, a required district next to it, unplaceable ones reported", function()
-  local w = NewWorld()
-  for _, xy in ipairs({ { 10, 7 }, { 11, 7 }, { 8, 7 } }) do w:Plot(xy[1], xy[2]).terrain = GameInfo.Terrains.TERRAIN_DESERT end
-  w:AddBuilding(1, "BUILDING_STONEHENGE")
-  local result = SDP_Multi.Solve(Request({
-    Districts = { "DISTRICT_CAMPUS", "DISTRICT_THEATER", "DISTRICT_HOLY_SITE" },
-    Wonders = { "BUILDING_PYRAMIDS", "BUILDING_GREAT_LIBRARY", "BUILDING_STONEHENGE", "BUILDING_COLOSSEUM" },
-  }))
-  T.ok(result.Ok, tostring(result.Error))
-  T.ok(not result.Stats.Mismatch, "incremental and full evaluation agree (legality included)")
-  local placed, reasons = {}, {}
-  for _, p in ipairs(result.Plan) do
-    if p.Kind == "WONDER" then placed[p.Type] = p end
-  end
-  local others = {}
-  for _, u in ipairs(result.Unplaced) do reasons[u.Type], others[u.Type] = u.Reason, u.Other end
-  T.ok(placed.BUILDING_PYRAMIDS ~= nil, "pyramids placed")
-  T.eq(Map.GetPlot(placed.BUILDING_PYRAMIDS.X, placed.BUILDING_PYRAMIDS.Y):GetTerrainType(), GameInfo.Terrains.TERRAIN_DESERT.Index,
-    "pyramids on desert")
-  local library = placed.BUILDING_GREAT_LIBRARY
-  T.ok(library ~= nil, "great library placed")
-  local nextToCampus = false
-  for _, p in ipairs(result.Plan) do
-    if p.Type == "DISTRICT_CAMPUS" and Map.GetPlotDistance(p.X, p.Y, library.X, library.Y) == 1 then nextToCampus = true end
-  end
-  T.ok(nextToCampus, "great library next to a planned campus")
-  T.eq(reasons.BUILDING_STONEHENGE, "BUILT", "built wonder not planned")
-  -- No city has an entertainment complex: the first city of the list that
-  -- can take one plans it for the colosseum (issue 66, plan A).
-  local ENT = "DISTRICT_ENTERTAINMENT_COMPLEX"
-  T.eq(reasons.BUILDING_COLOSSEUM, nil, "the colosseum is not left out")
-  T.eq(#result.Supplied, 1, "one district supplied")
-  local supplied = result.Supplied[1]
-  T.eq(supplied.Type, ENT, "an entertainment complex")
-  T.eq(supplied.Wonder, "BUILDING_COLOSSEUM", "for the colosseum")
-  T.eq(supplied.City, SDP_Multi.Participants(0)[1].Key, "in the first city of the list")
-  local colosseum, complex = placed.BUILDING_COLOSSEUM, nil
-  for _, p in ipairs(result.Plan) do
-    if p.Type == ENT then complex = p end
-  end
-  T.ok(colosseum ~= nil and complex ~= nil, "both placed")
-  T.eq(complex.ForWonder, "BUILDING_COLOSSEUM", "the district's entry says what it is for")
-  T.eq(complex.City, supplied.City, "in that city")
-  T.eq(Map.GetPlotDistance(colosseum.X, colosseum.Y, complex.X, complex.Y), 1, "the colosseum next to it")
+  FreeWonders(function()
+    local w = NewWorld()
+    for _, xy in ipairs({ { 10, 7 }, { 11, 7 }, { 8, 7 } }) do w:Plot(xy[1], xy[2]).terrain = GameInfo.Terrains.TERRAIN_DESERT end
+    w:AddBuilding(1, "BUILDING_STONEHENGE")
+    local result = SDP_Multi.Solve(Request({
+      Districts = { "DISTRICT_CAMPUS", "DISTRICT_THEATER", "DISTRICT_HOLY_SITE" },
+      Wonders = { "BUILDING_PYRAMIDS", "BUILDING_GREAT_LIBRARY", "BUILDING_STONEHENGE", "BUILDING_COLOSSEUM" },
+    }))
+    T.ok(result.Ok, tostring(result.Error))
+    T.ok(not result.Stats.Mismatch, "incremental and full evaluation agree (legality included)")
+    local placed, reasons = {}, {}
+    for _, p in ipairs(result.Plan) do
+      if p.Kind == "WONDER" then placed[p.Type] = p end
+    end
+    local others = {}
+    for _, u in ipairs(result.Unplaced) do reasons[u.Type], others[u.Type] = u.Reason, u.Other end
+    T.ok(placed.BUILDING_PYRAMIDS ~= nil, "pyramids placed")
+    T.eq(Map.GetPlot(placed.BUILDING_PYRAMIDS.X, placed.BUILDING_PYRAMIDS.Y):GetTerrainType(), GameInfo.Terrains.TERRAIN_DESERT.Index,
+      "pyramids on desert")
+    local library = placed.BUILDING_GREAT_LIBRARY
+    T.ok(library ~= nil, "great library placed")
+    local nextToCampus = false
+    for _, p in ipairs(result.Plan) do
+      if p.Type == "DISTRICT_CAMPUS" and Map.GetPlotDistance(p.X, p.Y, library.X, library.Y) == 1 then nextToCampus = true end
+    end
+    T.ok(nextToCampus, "great library next to a planned campus")
+    T.eq(reasons.BUILDING_STONEHENGE, "BUILT", "built wonder not planned")
+    -- No city has an entertainment complex: the first city of the list that
+    -- can take one plans it for the colosseum (issue 66, plan A).
+    local ENT = "DISTRICT_ENTERTAINMENT_COMPLEX"
+    T.eq(reasons.BUILDING_COLOSSEUM, nil, "the colosseum is not left out")
+    T.eq(#result.Supplied, 1, "one district supplied")
+    local supplied = result.Supplied[1]
+    T.eq(supplied.Type, ENT, "an entertainment complex")
+    T.eq(supplied.Wonder, "BUILDING_COLOSSEUM", "for the colosseum")
+    T.eq(supplied.City, SDP_Multi.Participants(0)[1].Key, "in the first city of the list")
+    local colosseum, complex = placed.BUILDING_COLOSSEUM, nil
+    for _, p in ipairs(result.Plan) do
+      if p.Type == ENT then complex = p end
+    end
+    T.ok(colosseum ~= nil and complex ~= nil, "both placed")
+    T.eq(complex.ForWonder, "BUILDING_COLOSSEUM", "the district's entry says what it is for")
+    T.eq(complex.City, supplied.City, "in that city")
+    T.eq(Map.GetPlotDistance(colosseum.X, colosseum.Y, complex.X, complex.Y), 1, "the colosseum next to it")
 
-  -- The player's own "not wanted" stands: in the shared list no city gets
-  -- one, and the reason names the district (it was empty before, #73).
-  local request = Request({ Districts = { "DISTRICT_CAMPUS" }, Wonders = { "BUILDING_COLOSSEUM" } })
-  request.Off = { [ENT] = true }
-  local off = SDP_Multi.Solve(request)
-  T.ok(off.Ok, tostring(off.Error))
-  local reason, other = nil, nil
-  for _, u in ipairs(off.Unplaced) do
-    if u.Type == "BUILDING_COLOSSEUM" then reason, other = u.Reason, u.Other end
-  end
-  T.eq(reason, "NEEDS_DISTRICT", "not wanted anywhere: left out")
-  T.eq(other, ENT, "the missing district named")
-  T.eq(#off.Supplied, 0, "nothing supplied")
-  -- In the first city's own list only: the next city gets it.
-  local first, second = SDP_Multi.Participants(0)[1].Key, SDP_Multi.Participants(0)[2].Key
-  request = Request({ Districts = { "DISTRICT_CAMPUS" }, Wonders = { "BUILDING_COLOSSEUM" } })
-  request.Offs = { [first] = { [ENT] = true } }
-  local next = SDP_Multi.Solve(request)
-  T.eq(next.Supplied[1] and next.Supplied[1].City, second, "the next city of the list")
-  -- A first city that plans a water park cannot have one too.
-  request = Request({ Districts = { "DISTRICT_CAMPUS" }, Wonders = { "BUILDING_COLOSSEUM" },
-    Plans = { [first] = { "DISTRICT_WATER_ENTERTAINMENT_COMPLEX" } } })
-  local park = SDP_Multi.Solve(request)
-  T.ok(park.Supplied[1] == nil or park.Supplied[1].City ~= first, "not next to a planned water park")
-  -- A city that plans one already: nothing is supplied.
-  request = Request({ Districts = { "DISTRICT_CAMPUS", ENT }, Wonders = { "BUILDING_COLOSSEUM" } })
-  T.eq(#SDP_Multi.Solve(request).Supplied, 0, "planned already: nothing supplied")
+    -- The player's own "not wanted" stands: in the shared list no city gets
+    -- one, and the reason names the district (it was empty before, #73).
+    local request = Request({ Districts = { "DISTRICT_CAMPUS" }, Wonders = { "BUILDING_COLOSSEUM" } })
+    request.Off = { [ENT] = true }
+    local off = SDP_Multi.Solve(request)
+    T.ok(off.Ok, tostring(off.Error))
+    local reason, other = nil, nil
+    for _, u in ipairs(off.Unplaced) do
+      if u.Type == "BUILDING_COLOSSEUM" then reason, other = u.Reason, u.Other end
+    end
+    T.eq(reason, "NEEDS_DISTRICT", "not wanted anywhere: left out")
+    T.eq(other, ENT, "the missing district named")
+    T.eq(#off.Supplied, 0, "nothing supplied")
+    -- In the first city's own list only: the next city gets it.
+    local first, second = SDP_Multi.Participants(0)[1].Key, SDP_Multi.Participants(0)[2].Key
+    request = Request({ Districts = { "DISTRICT_CAMPUS" }, Wonders = { "BUILDING_COLOSSEUM" } })
+    request.Offs = { [first] = { [ENT] = true } }
+    local next = SDP_Multi.Solve(request)
+    T.eq(next.Supplied[1] and next.Supplied[1].City, second, "the next city of the list")
+    -- A first city that plans a water park cannot have one too.
+    request = Request({ Districts = { "DISTRICT_CAMPUS" }, Wonders = { "BUILDING_COLOSSEUM" },
+      Plans = { [first] = { "DISTRICT_WATER_ENTERTAINMENT_COMPLEX" } } })
+    local park = SDP_Multi.Solve(request)
+    T.ok(park.Supplied[1] == nil or park.Supplied[1].City ~= first, "not next to a planned water park")
+    -- A city that plans one already: nothing is supplied.
+    request = Request({ Districts = { "DISTRICT_CAMPUS", ENT }, Wonders = { "BUILDING_COLOSSEUM" } })
+    T.eq(#SDP_Multi.Solve(request).Supplied, 0, "planned already: nothing supplied")
+  end)
 end)
 
 test("a wonder counts only its own city's district (issue 45)", function()
@@ -458,98 +550,170 @@ test("a wonder next to a district is listed under that district's city (issue 23
   end
 end)
 
-test("a wonder without a district rule goes to the plot's city, else the nearest (issue 238)", function()
+test("a wonder given one city goes on its tiles, next to its own district (issue 234)", function()
+  -- The capital's campus at (7,5) serves the library when it is automatic;
+  -- given to site A, the library needs a campus of A's own.
   local w = NewWorld()
-  w:Own(6, 6, 0, w:City(1))
-  local checked = { owned = 0, nearest = 0, moved = 0 }
-  SDP_Overlay.With(0, function()
-    local s = SDP_Multi.NewSession(Request({ Districts = { "DISTRICT_THEATER" }, Wonders = { "BUILDING_STONEHENGE" } }))
-    local search = s.Search
-    local m = nil
-    for k = 1, search.K do
-      if search.Types[k] == "BUILDING_STONEHENGE" then m = k end
-    end
-    T.ok(m ~= nil, "a wonder slot")
-    for i, c in ipairs(search.Candidates) do
-      local first, list = nil, {}
-      for p, part in ipairs(s.Participants) do
-        if part.Allowed[i] then
-          first = first or p
-          list[#list + 1] = p
+  w:Own(7, 5, 0, w:City(1))
+  w:AddDistrict(1, "DISTRICT_CAMPUS", 7, 5, true)
+  local siteA = "S" .. Map.GetPlotIndex(9, 6)
+  local function Library(cities)
+    local result = SDP_Multi.Solve(Request({
+      Districts = { "DISTRICT_THEATER" }, Wonders = { "BUILDING_GREAT_LIBRARY", "BUILDING_STONEHENGE" },
+      WonderCities = cities,
+    }))
+    T.ok(result.Ok, tostring(result.Error))
+    T.ok(not result.Stats.Mismatch, "incremental and full evaluation agree")
+    local found = {}
+    for _, p in ipairs(result.Plan) do found[p.Type] = found[p.Type] or p end
+    return found, result
+  end
+  local auto = Library(nil)
+  T.eq(auto.BUILDING_GREAT_LIBRARY and auto.BUILDING_GREAT_LIBRARY.City, "C1", "automatic: next to the capital's campus")
+  local given, result = Library({ BUILDING_GREAT_LIBRARY = siteA, BUILDING_STONEHENGE = "C2" })
+  local library, campus = given.BUILDING_GREAT_LIBRARY, given.DISTRICT_CAMPUS
+  T.ok(library ~= nil and campus ~= nil, "the library and a campus for it placed")
+  T.eq(library.City, siteA, "the library in site A")
+  T.eq(campus.City, siteA, "the campus supplied to site A")
+  T.eq(result.Supplied[1] and result.Supplied[1].City, siteA, "supplied to site A")
+  T.eq(Map.GetPlotDistance(library.X, library.Y, campus.X, campus.Y), 1, "next to A's own campus")
+  local stonehenge = given.BUILDING_STONEHENGE
+  T.ok(stonehenge ~= nil, "Stonehenge placed")
+  T.eq(stonehenge.City, "C2", "Stonehenge in the city given")
+  T.ok(Map.GetPlotDistance(stonehenge.X, stonehenge.Y, 17, 5) <= 3, "on that city's tiles")
+  -- A city that does not take part leaves the wonder automatic.
+  local free = Library({ BUILDING_GREAT_LIBRARY = "C3" })
+  T.eq(free.BUILDING_GREAT_LIBRARY and free.BUILDING_GREAT_LIBRARY.City, "C1", "C3 does not take part: automatic")
+end)
+
+test("an automatic wonder goes in the city with the most production that can take it (issue 234)", function()
+  -- The second city (17,5) makes the most production; it has no river for
+  -- the Hanging Gardens, so they go in the next one, the capital.
+  local w = NewWorld()
+  w:City(2).production = 30
+  w:Own(7, 5, 0, w:City(1))
+  w:AddDistrict(1, "DISTRICT_CAMPUS", 7, 5, true)
+  local result = SDP_Multi.Solve(Request({ Districts = { "DISTRICT_THEATER" },
+    Wonders = { "BUILDING_STONEHENGE", "BUILDING_HANGING_GARDENS", "BUILDING_GREAT_LIBRARY" } }))
+  T.ok(result.Ok, tostring(result.Error))
+  T.ok(not result.Stats.Mismatch, "incremental and full evaluation agree")
+  local found = {}
+  for _, p in ipairs(result.Plan) do
+    if found[p.Type] == nil or p.City == "C2" then found[p.Type] = p end
+  end
+  local stonehenge, gardens, library = found.BUILDING_STONEHENGE, found.BUILDING_HANGING_GARDENS, found.BUILDING_GREAT_LIBRARY
+  T.ok(stonehenge ~= nil and gardens ~= nil and library ~= nil, "all three placed")
+  T.eq(stonehenge.City, "C2", "Stonehenge in the city with the most production")
+  T.ok(Map.GetPlotDistance(stonehenge.X, stonehenge.Y, 17, 5) <= 3, "on its tiles")
+  T.eq(gardens.City, "C1", "the Hanging Gardens in the next city: no river in the first")
+  T.eq(library.City, "C2", "the Great Library there too, not next to the capital's campus")
+  local campus = found.DISTRICT_CAMPUS
+  T.ok(campus ~= nil and campus.City == "C2", "a campus supplied to the second city")
+  T.eq(Map.GetPlotDistance(library.X, library.Y, campus.X, campus.Y), 1, "the library next to it")
+  -- Given a city, a wonder stays there whatever the production.
+  local given = SDP_Multi.Solve(Request({ Districts = { "DISTRICT_THEATER" }, Wonders = { "BUILDING_STONEHENGE" },
+    WonderCities = { BUILDING_STONEHENGE = "C1" } }))
+  for _, p in ipairs(given.Plan) do
+    if p.Type == "BUILDING_STONEHENGE" then T.eq(p.City, "C1", "given to the capital") end
+  end
+end)
+
+test("a wonder without a district rule goes to the plot's city, else the nearest (issue 238)", function()
+  FreeWonders(function()
+    local w = NewWorld()
+    w:Own(6, 6, 0, w:City(1))
+    local checked = { owned = 0, nearest = 0, moved = 0 }
+    SDP_Overlay.With(0, function()
+      local s = SDP_Multi.NewSession(Request({ Districts = { "DISTRICT_THEATER" }, Wonders = { "BUILDING_STONEHENGE" } }))
+      local search = s.Search
+      local m = nil
+      for k = 1, search.K do
+        if search.Types[k] == "BUILDING_STONEHENGE" then m = k end
+      end
+      T.ok(m ~= nil, "a wonder slot")
+      for i, c in ipairs(search.Candidates) do
+        local first, list = nil, {}
+        for p, part in ipairs(s.Participants) do
+          if part.Allowed[i] then
+            first = first or p
+            list[#list + 1] = p
+          end
+        end
+        if #list >= 1 then
+          local got = s:OwnerOf(m, i, nil)
+          local plot = Map.GetPlotByIndex(c.Index)
+          local city = plot:GetOwner() == 0 and Cities.GetPlotPurchaseCity(plot) or nil
+          local expected, best = nil, math.huge
+          for _, p in ipairs(list) do
+            local part = s.Participants[p]
+            if city ~= nil and part.CityID == city:GetID() then expected, best = p, -1 end
+            local d = Map.GetPlotDistance(part.X, part.Y, c.X, c.Y)
+            if d < best then expected, best = p, d end
+          end
+          T.eq(got, expected, c.X .. "," .. c.Y)
+          if city ~= nil then checked.owned = checked.owned + 1 elseif #list > 1 then checked.nearest = checked.nearest + 1 end
+          if got ~= first then checked.moved = checked.moved + 1 end
         end
       end
-      if #list >= 1 then
-        local got = s:OwnerOf(m, i, nil)
-        local plot = Map.GetPlotByIndex(c.Index)
-        local city = plot:GetOwner() == 0 and Cities.GetPlotPurchaseCity(plot) or nil
-        local expected, best = nil, math.huge
-        for _, p in ipairs(list) do
-          local part = s.Participants[p]
-          if city ~= nil and part.CityID == city:GetID() then expected, best = p, -1 end
-          local d = Map.GetPlotDistance(part.X, part.Y, c.X, c.Y)
-          if d < best then expected, best = p, d end
-        end
-        T.eq(got, expected, c.X .. "," .. c.Y)
-        if city ~= nil then checked.owned = checked.owned + 1 elseif #list > 1 then checked.nearest = checked.nearest + 1 end
-        if got ~= first then checked.moved = checked.moved + 1 end
-      end
-    end
+    end)
+    T.ok(checked.owned > 0, "plots of a city checked")
+    T.ok(checked.nearest > 0, "unowned plots two cities can take checked")
+    T.ok(checked.moved > 0, "some not given to the first city in the list")
   end)
-  T.ok(checked.owned > 0, "plots of a city checked")
-  T.ok(checked.nearest > 0, "unowned plots two cities can take checked")
-  T.ok(checked.moved > 0, "some not given to the first city in the list")
 end)
 
 -- The swap count the search breaks ties with names the same city as the
 -- plan does, including a wonder next to a district planned in the layout.
 test("swap count follows the wonder's city from the layout's districts (issue 238)", function()
-  -- Two cities four plots apart; city 2 owns the plots between them, which
-  -- the capital can take with a swap. A wonder there next to the capital's
-  -- planned campus is the capital's, taken from city 2.
-  local w = World.New({ rows = MAP, cities = {
-    { id = 1, x = 4, y = 5, population = 6, capital = true, radius = 1 },
-    { id = 2, x = 8, y = 5, population = 4, radius = 1 },
-  } })
-  for _, xy in ipairs({ { 6, 4 }, { 6, 5 }, { 6, 6 } }) do
-    w:Own(xy[1], xy[2], 0, w:City(2))
-  end
-  local checked = { pairs = 0, differs = 0 }
-  SDP_Overlay.With(0, function()
-    local s = SDP_Multi.NewSession(Request({ Districts = { "DISTRICT_CAMPUS" }, Wonders = { "BUILDING_GREAT_LIBRARY" },
-      Only = { [1] = true, [2] = true }, Swap = true }))
-    local search = s.Search
-    local _, touching = search:Touching()
-    local wonders, campuses = {}, {}
-    for m = 1, search.K do
-      if search.Types[m] == "BUILDING_GREAT_LIBRARY" then wonders[#wonders + 1] = m end
-      if search.Types[m] == "DISTRICT_CAMPUS" then campuses[#campuses + 1] = m end
+  FreeWonders(function()
+    -- Two cities four plots apart; city 2 owns the plots between them, which
+    -- the capital can take with a swap. A wonder there next to the capital's
+    -- planned campus is the capital's, taken from city 2.
+    local w = World.New({ rows = MAP, cities = {
+      { id = 1, x = 4, y = 5, population = 6, capital = true, radius = 1 },
+      { id = 2, x = 8, y = 5, population = 4, radius = 1 },
+    } })
+    for _, xy in ipairs({ { 6, 4 }, { 6, 5 }, { 6, 6 } }) do
+      w:Own(xy[1], xy[2], 0, w:City(2))
     end
-    for _, m in ipairs(wonders) do
-      for _, r in ipairs(campuses) do
-        for i = 1, search.N do
-          for j = 1, search.N do
-            if i ~= j and touching[i][j] and search.Legal[m][i] and search.Legal[r][j] then
-              local layout = {}
-              for q = 1, search.K do layout[q] = 0 end
-              layout[m], layout[r] = i, j
-              local expected = 0
-              for _, q in ipairs({ m, r }) do
-                local plot = Map.GetPlotByIndex(search.Candidates[layout[q]].Index)
-                local city = plot:GetOwner() == 0 and Cities.GetPlotPurchaseCity(plot) or nil
-                local part = s.Participants[s:OwnerOf(q, layout[q], layout)]
-                if city ~= nil and part.CityID ~= nil and part.CityID ~= city:GetID() then expected = expected + 1 end
+    local checked = { pairs = 0, differs = 0 }
+    SDP_Overlay.With(0, function()
+      local s = SDP_Multi.NewSession(Request({ Districts = { "DISTRICT_CAMPUS" }, Wonders = { "BUILDING_GREAT_LIBRARY" },
+        Only = { [1] = true, [2] = true }, Swap = true }))
+      local search = s.Search
+      local _, touching = search:Touching()
+      local wonders, campuses = {}, {}
+      for m = 1, search.K do
+        if search.Types[m] == "BUILDING_GREAT_LIBRARY" then wonders[#wonders + 1] = m end
+        if search.Types[m] == "DISTRICT_CAMPUS" then campuses[#campuses + 1] = m end
+      end
+      for _, m in ipairs(wonders) do
+        for _, r in ipairs(campuses) do
+          for i = 1, search.N do
+            for j = 1, search.N do
+              if i ~= j and touching[i][j] and search.Legal[m][i] and search.Legal[r][j] then
+                local layout = {}
+                for q = 1, search.K do layout[q] = 0 end
+                layout[m], layout[r] = i, j
+                local expected = 0
+                for _, q in ipairs({ m, r }) do
+                  local plot = Map.GetPlotByIndex(search.Candidates[layout[q]].Index)
+                  local city = plot:GetOwner() == 0 and Cities.GetPlotPurchaseCity(plot) or nil
+                  local part = s.Participants[s:OwnerOf(q, layout[q], layout)]
+                  if city ~= nil and part.CityID ~= nil and part.CityID ~= city:GetID() then expected = expected + 1 end
+                end
+                T.eq(search:SwapCount(layout), expected, "wonder at " .. i .. ", district at " .. j)
+                checked.pairs = checked.pairs + 1
+                if s:OwnerOf(m, i, layout) ~= s:OwnerOf(m, i, nil) then checked.differs = checked.differs + 1 end
               end
-              T.eq(search:SwapCount(layout), expected, "wonder at " .. i .. ", district at " .. j)
-              checked.pairs = checked.pairs + 1
-              if s:OwnerOf(m, i, layout) ~= s:OwnerOf(m, i, nil) then checked.differs = checked.differs + 1 end
             end
           end
         end
       end
-    end
+    end)
+    T.ok(checked.pairs > 0, "pairs checked")
+    T.ok(checked.differs > 0, "some wonders go to the planned district's city")
   end)
-  T.ok(checked.pairs > 0, "pairs checked")
-  T.ok(checked.differs > 0, "some wonders go to the planned district's city")
 end)
 
 test("repair: a wonder the search left off goes back in, next to its district", function()
