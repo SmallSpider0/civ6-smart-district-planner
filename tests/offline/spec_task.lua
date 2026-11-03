@@ -188,3 +188,24 @@ test("the quota still shrinks when the slice makes the frame long", function()
   T.eq(SDP_Task.Step(), "done", "done")
   T.ok(SDP_Task.Speed() > perSecond * 0.3, "a normal run is kept as the measured speed")
 end)
+
+-- Issue 226: work the estimate did not foresee (the site solver's map scan
+-- and coarse scores) paces the frames and grows the estimate by as much.
+test("extra work paces the frames and grows the estimate", function()
+  World.New({ rows = { "..." } })
+  SDP_Task.Cancel()
+  local job = {
+    Name = "extra", PlayerID = 0, Estimate = 100,
+    Run = function()
+      for _ = 1, 10 do SDP_Task.Extra(5) end
+      for _ = 1, 10 do SDP_Task.Tick(1) end
+      return true
+    end,
+  }
+  local status = SDP_Task.RunAll(job, 10)
+  T.eq(status, "done", "done")
+  T.eq(job.Estimate, 150, "the estimate grew by the extra units")
+  T.eq(job.Units, 60, "all units counted")
+  T.eq(job.Frames, 7, "extra units fill the slices like ticks (50 + 10 units, 10 a frame, then the frame that returns)")
+  SDP_Task.Extra(5) -- outside a task: nothing
+end)
