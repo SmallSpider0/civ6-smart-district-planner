@@ -518,6 +518,39 @@ test("dense packing: most sites first, spaced, linked back, no refined site left
   T.eq(three.Quality.CanContinue, false, "no continue in dense packing")
 end)
 
+-- Issue 226: with 12 new cities the candidates reach 12 * D plots, the whole
+-- map; dense packing scored every one and built its board from all of them
+-- before the first refined site (progress stood still, the game hung in
+-- long frames on a late-game map). It scores the candidates the packings
+-- compare and gives the board the fixed subjects near the refined sites.
+test("issue 226: dense packing scores only the candidates it compares", function()
+  local spec = World.RandomSpec(7, 40, 28)
+  local row = spec.rows[15]
+  spec.rows[15] = row:sub(1, 13) .. "." .. row:sub(15)
+  spec.cities = { { id = 1, x = 13, y = 14, population = 6, capital = true, radius = 1 } }
+  World.New(spec)
+  local coarse, fixed = 0, 0
+  local Coarse, FixedSubjects = SDP_Sites.Coarse, SDP_Overlay.FixedSubjects
+  SDP_Sites.Coarse = function(...)
+    coarse = coarse + 1
+    return Coarse(...)
+  end
+  SDP_Overlay.FixedSubjects = function(...)
+    fixed = fixed + 1
+    return FixedSubjects(...)
+  end
+  local ok, result = pcall(SDP_SiteSolver.Solve, { PlayerID = 0, K = 12, D = 6, Districts = PLAN, Tier = "FAST", Dense = true })
+  SDP_Sites.Coarse, SDP_Overlay.FixedSubjects = Coarse, FixedSubjects
+  T.ok(ok, tostring(result))
+  T.ok(result.Ok, tostring(result.Error))
+  T.ok(#result.Solutions[1].Sites >= 6, "sites placed: " .. #result.Solutions[1].Sites)
+  local stats = result.Stats
+  T.ok(stats.Candidates > 400, "the candidates cover the map: " .. stats.Candidates)
+  T.ok(coarse * 2 < stats.Candidates, "scored " .. coarse .. " of " .. stats.Candidates .. " candidates")
+  T.ok(fixed <= stats.Refined, "board scans " .. fixed .. " for " .. stats.Refined .. " refined sites")
+  T.eq(stats.Scored, coarse, "scored candidates counted")
+end)
+
 test("issue 133: the district count never removes a site; a cramped site is scored with what fits", function()
   -- Our capital at (2, 4); everything else mountains but a two-plot strip at
   -- (9, 4)-(10, 4): a site there has one plot (the other) for a district.

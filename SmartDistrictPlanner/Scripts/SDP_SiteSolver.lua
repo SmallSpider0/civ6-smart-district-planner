@@ -38,6 +38,11 @@ Session.__index = Session
 --   Dense        pack as many sites as fit (issue 87), K up to DENSE_MAX_K
 -- }
 SDP_SiteSolver.MAX_K = 6
+-- Work units of one candidate's coarse score (SDP_Task.Extra: the estimate
+-- does not know how many candidates there are). Measured offline (issue
+-- 226): a coarse score costs about as much as 30 DMT calls there, where a
+-- DMT call is cheaper than in the game; 5 keeps the frames short.
+SDP_SiteSolver.COARSE_UNITS = 5
 SDP_SiteSolver.DENSE_MAX_K = 12
 
 function SDP_SiteSolver.NewSession(request)
@@ -49,22 +54,33 @@ function SDP_SiteSolver.NewSession(request)
   self.K = math.max(1, math.min(self.Dense and SDP_SiteSolver.DENSE_MAX_K or SDP_SiteSolver.MAX_K, request.K or 3))
   self.D = request.D or 5
   self.Stats = { Tier = self.Params.Tier, Candidates = 0, Refined = 0, Nodes = 0, Combinations = 0, Truncated = false,
-    Continues = 0, Calls = 0, Tries = 0, Packings = 0, MostSites = 0 }
+    Continues = 0, Calls = 0, Tries = 0, Packings = 0, MostSites = 0, Scored = 0 }
   local ctx = SDP_Sites.Context(playerID, request, self.K)
   self.Ctx = ctx
   local candidates, centers = SDP_Sites.Candidates(playerID, { K = self.K, D = self.D })
   self.Centers = centers
   self.Stats.Candidates = #candidates
   local sites = {}
-  for _, candidate in ipairs(candidates) do
-    -- Every candidate stays, whatever the district count (issue 133).
-    sites[#sites + 1] = SDP_Sites.Coarse(ctx, candidate, centers)
-    if SDP_Task ~= nil then SDP_Task.Tick(0.2) end
+  if self.Dense then
+    -- Dense packing scores a candidate only when it needs its coarse score
+    -- (Session:CoarseOf, issue 226): with K up to 12 the candidates reach
+    -- K * D plots, on a late-game map thousands, of which the packings
+    -- look at the ones next to the cities and sites placed. Plot order.
+    for _, candidate in ipairs(candidates) do
+      sites[#sites + 1] = { X = candidate.X, Y = candidate.Y, Index = candidate.Index, Candidate = candidate }
+    end
+  else
+    for _, candidate in ipairs(candidates) do
+      -- Every candidate stays, whatever the district count (issue 133).
+      sites[#sites + 1] = SDP_Sites.Coarse(ctx, candidate, centers)
+      if SDP_Task ~= nil then SDP_Task.Extra(SDP_SiteSolver.COARSE_UNITS) end
+    end
+    self.Stats.Scored = #sites
+    table.sort(sites, function(a, b)
+      if a.Coarse ~= b.Coarse then return a.Coarse > b.Coarse end
+      return a.Index < b.Index
+    end)
   end
-  table.sort(sites, function(a, b)
-    if a.Coarse ~= b.Coarse then return a.Coarse > b.Coarse end
-    return a.Index < b.Index
-  end)
   self.Sites = sites
   -- Hops: relays a site needs to link back (1 = within D of an anchor).
   local anchors = {}
@@ -86,6 +102,17 @@ function SDP_SiteSolver.NewSession(request)
   return self
 end
 
+-- A site's coarse score, computed the first time (dense packing, issue 226).
+function Session:CoarseOf(site)
+  if site.Coarse == nil then
+    local scored = SDP_Sites.Coarse(self.Ctx, site.Candidate, self.Centers)
+    for key, value in pairs(scored) do site[key] = value end
+    self.Stats.Scored = self.Stats.Scored + 1
+    if SDP_Task ~= nil then SDP_Task.Extra(SDP_SiteSolver.COARSE_UNITS) end
+  end
+  return site.Coarse
+end
+
 -- The best site by coarse score not refined yet that links back.
 function Session:NextSite()
   for _, site in ipairs(self.Sites) do
@@ -98,9 +125,6 @@ end
 function Session:Refine(count)
   local ctx = self.Ctx
   if self.Refined >= count or self:NextSite() == nil then return end
-  if ctx.Board == nil then
-    SDP_Sites.Board(ctx, self.Sites) -- fixed subjects near every candidate
-  end
   local siteParams = SDP_Tiers.Params(SDP_Tiers.Single, "FAST", self.Params.Site)
   while self.Refined < count do
     local site = self:NextSite()
@@ -340,10 +364,11 @@ function Session:Packings(bad)
     end
   end
   local anyAnchor = #self.Anchors > 0
-  local function Better(i, j, near)
+  -- Among sites equally near: the best coarse score, then the smaller plot index.
+  local function Better(i, j)
     if j == nil then return true end
-    if near[i] ~= near[j] then return near[i] < near[j] end
-    if usable[i].Coarse ~= usable[j].Coarse then return usable[i].Coarse > usable[j].Coarse end
+    local a, b = self:CoarseOf(usable[i]), self:CoarseOf(usable[j])
+    if a ~= b then return a > b end
     return usable[i].Index < usable[j].Index
   end
   local function Pack(first)
@@ -359,17 +384,23 @@ function Session:Packings(bad)
           if dist < near[j] then near[j] = dist end
         end
       end
-      if SDP_Task ~= nil then SDP_Task.Tick(0.002 * #usable) end
+      if SDP_Task ~= nil then SDP_Task.Extra(0.01 * #usable) end
     end
     if first ~= nil then Place(first) end
     while #out < k do
+      -- The nearest sites first (no coarse score needed), then the best of them.
+      local nearest = nil
+      local anywhere = not anyAnchor and #out == 0 -- no city of the player yet: the first site anywhere, then linked
+      for i = 1, #usable do
+        if not placed[i] and near[i] > minRange and (near[i] <= d or anywhere) and (nearest == nil or near[i] < nearest) then
+          nearest = near[i]
+        end
+      end
+      if nearest == nil then break end
       local best = nil
       for i = 1, #usable do
-        -- No city of the player yet: the first site anywhere, then linked.
-        local reach = near[i] <= d or (not anyAnchor and #out == 0)
-        if not placed[i] and near[i] > minRange and reach and Better(i, best, near) then best = i end
+        if not placed[i] and near[i] == nearest and Better(i, best) then best = i end
       end
-      if best == nil then break end
       Place(best)
     end
     return out
@@ -377,7 +408,10 @@ function Session:Packings(bad)
   -- First sites: the best coarse ones that link back at once.
   local firsts = {}
   for i = 1, #usable do
-    if base[i] <= d or not anyAnchor then firsts[#firsts + 1] = i end
+    if base[i] <= d or not anyAnchor then
+      firsts[#firsts + 1] = i
+      self:CoarseOf(usable[i])
+    end
   end
   table.sort(firsts, function(a, b)
     if usable[a].Coarse ~= usable[b].Coarse then return usable[a].Coarse > usable[b].Coarse end
@@ -388,7 +422,7 @@ function Session:Packings(bad)
   local sums = {}
   for _, packing in ipairs(packings) do
     local sum = 0
-    for _, site in ipairs(packing) do sum = sum + site.Coarse end
+    for _, site in ipairs(packing) do sum = sum + self:CoarseOf(site) end
     sums[packing] = sum
   end
   table.sort(packings, function(a, b)
@@ -407,7 +441,7 @@ end
 function Session:RefineSite(site)
   if not site.Refined then
     local ctx = self.Ctx
-    if ctx.Board == nil then SDP_Sites.Board(ctx, self.Sites) end
+    self:CoarseOf(site)
     SDP_Sites.Fine(ctx, site, SDP_Tiers.Params(SDP_Tiers.Single, "FAST", self.Params.Site))
     site.Refined = true
     self.Refined = self.Refined + 1
@@ -444,6 +478,7 @@ function Session:DenseRun()
     for _, other in ipairs(self.Sites) do
       if not other.Refined and not bad[other] and Map.GetPlotDistance(site.X, site.Y, other.X, other.Y) <= 2 then
         near[#near + 1] = other
+        self:CoarseOf(other)
       end
     end
   end
