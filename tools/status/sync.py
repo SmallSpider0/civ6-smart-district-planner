@@ -17,6 +17,8 @@ Work (OUT/work/*.json), from git, gh and the shared night queue:
   - issues: every open issue for the review table (group, labels, who added
     `auto`, branch and PR, who has to answer);
   - night: the shared night queue;
+  - workshop: the Steam Workshop posts on the watch's held list (tools/watch_issues.py),
+    not yet handled, and when the watch reads the Workshop next;
   - releases: GitHub's last releases, each summarised from its notes.
 Hand-written (MANUAL, collections decisions/*, milestones/*, jobs/*): only the
 fields in FIELDS; releases are never written by hand. The page (page.html next
@@ -576,6 +578,57 @@ def night(now):
     return {"window": cfg.get("night") or "00:00-08:00", "items": items}
 
 
+# A Workshop line of the watch's held list (tools/watch_workshop.py poll):
+#   STAMP WORKSHOP COMMENT|TOPIC|REPLY [in "TITLE" ]by NAME (POSTED): TEXT URL
+WORKSHOP_LINE = re.compile(r'^(\S+) WORKSHOP (COMMENT|TOPIC|REPLY) (?:in "(.*?)" )?by (.*?) '
+                           r'\((\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ)\): (.*) (https://\S+)$')
+WORKSHOP_SHOWN = 50  # newest posts kept for the page; the count covers all of them
+
+
+def utc_local(iso):
+    """"YYYY-MM-DDTHH:MM:SSZ" (UTC) as "MM-DD HH:MM" here; the input when it is not that."""
+    try:
+        return hm(time.mktime(time.strptime(iso, "%Y-%m-%dT%H:%M:%SZ")) - time.timezone)
+    except (TypeError, ValueError):
+        return iso or ""
+
+
+def workshop(now, held=None, state=None, st=None):
+    """Steam Workshop posts on the watch's held list (tools/watch_issues.py), newest first:
+    the ones not yet handled (`watch_issues.py --held --clear` empties the list), and when the
+    watch reads the Workshop next. Posts are players' text: private strings in them are masked so
+    they never stop the push."""
+    if held is None or state is None:
+        import watch_issues
+        held = watch_issues.HELD if held is None else held
+        state = watch_issues.STATE if state is None else state
+    pat = private_pattern(settings() if st is None else st)
+    clean = lambda s: pat.sub("…", s or "")
+    posts = []
+    try:
+        with open(held, encoding="utf-8") as fh:
+            lines = fh.read().splitlines()
+    except OSError:
+        lines = []
+    for line in lines:
+        m = WORKSHOP_LINE.match(line)
+        if not m:
+            continue
+        stamp, kind, title, name, posted, text, url = m.groups()
+        if not url.startswith("https://steamcommunity.com/"):
+            url = ""  # the watch builds the links itself; anything else is not followed
+        posts.append({"kind": kind.lower(), "title": clean(title), "name": clean(name), "posted": utc_local(posted),
+                      "at": posted, "held": utc_local(stamp), "text": clean(text), "url": url})
+    posts.sort(key=lambda p: p.pop("at"), reverse=True)
+    try:
+        with open(state, encoding="utf-8") as fh:
+            ws = json.load(fh).get("workshop") or {}
+    except (OSError, ValueError):
+        ws = {}
+    return {"count": len(posts), "items": posts[:WORKSHOP_SHOWN],
+            "next": hm(ws["next"]) if ws.get("next") else "", "late": bool(ws.get("next")) and now - ws["next"] > 1800}
+
+
 def release_summary(body):
     """Short Chinese summary from a release body: the lead of each item under "自 … 以来的变化"."""
     part = re.search(r"^## 自 .*?以来的变化\s*$(.*?)(?=^## |\Z)", body or "", re.M | re.S)
@@ -709,7 +762,7 @@ def bundle(out):
     b = {"generated": time.strftime("%Y-%m-%d %H:%M"), "meta": {"updated": m["meta"].get("page", {}).get("updated")},
          "decisions": docs("decisions"), "milestones": docs("milestones"), "jobs": docs("jobs"),
          "machines": [dict(d, id=k) for k in ("macbook", "macmini") for d in [read("machines", k + ".json")] if d],
-         "work": {k: read("work", k + ".json") for k in ("branches", "milestones", "night", "releases", "issues")}}
+         "work": {k: read("work", k + ".json") for k in ("branches", "milestones", "night", "releases", "issues", "workshop")}}
     text = json.dumps(b, ensure_ascii=False, separators=(",", ":"))
     with open(os.path.join(out, "status.json"), "w", encoding="utf-8") as fh:
         fh.write(text)
@@ -876,7 +929,8 @@ def full(out, now, stamp):
         print("milestones: %d" % len(ms["items"]))
     except Exception as e:
         print("milestones: %s" % e, file=sys.stderr)
-    for key, fn in (("night", night), ("releases", lambda t: releases(t, out)), ("issues", lambda t: issue_talk(t, doc))):
+    for key, fn in (("night", night), ("releases", lambda t: releases(t, out)), ("issues", lambda t: issue_talk(t, doc)),
+                    ("workshop", workshop)):
         try:
             d = fn(now)
             d["synced"] = stamp

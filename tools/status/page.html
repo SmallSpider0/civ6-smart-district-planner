@@ -173,6 +173,12 @@ h4.other { margin-top: 6px; }
     <div id="issues-list"><p class="empty">读取中。</p></div>
   </section>
 
+  <section id="workshop">
+    <h2>创意工坊新评论<span class="count" id="workshop-count"></span></h2>
+    <p class="note">监听每 45 分钟读一次创意工坊的评论区和讨论区，物品主人和贡献者的帖子不算。这里是还没处理的新帖，最新的在前；处理完（归类、开 Issue、回复草稿给你确认）由代理清掉。回复都等你确认后才发。</p>
+    <div id="workshop-list"><p class="empty">读取中。</p></div>
+  </section>
+
   <section id="milestones">
     <h2>里程碑<span class="count" id="milestones-count"></span></h2>
     <div class="stack" id="milestones-list"><p class="empty">读取中。</p></div>
@@ -533,6 +539,24 @@ function renderNight(d) {
       n.result ? `<br><span class="facts">${rich(n.result)}</span>` : ""}</span></li>`).join("")}</ul>`) : "");
 }
 
+// work/workshop: {count, items: [{kind, title, name, posted, held, text, url}] newest first, next, late}
+// from the watch's held list; players' text, so everything goes through esc and links are only the post's own.
+const WS_KIND = { comment: "评论区", topic: "讨论区新帖", reply: "讨论区回复" };
+function renderWorkshop(d) {
+  const items = (d && d.items) || [];
+  count("workshop-count", d ? d.count : 0);
+  if (!d) { $("workshop-list").innerHTML = `<p class="empty">还没有数据。</p>`; return; }
+  const rows = (part) => table(part, [
+    ["发帖时间", (p) => esc(p.posted)],
+    ["谁", (p) => esc(p.name)],
+    ["在哪", (p) => esc(WS_KIND[p.kind] || p.kind) + (p.title ? `<br><span class="small">“${esc(p.title)}”</span>` : "")],
+    ["内容", (p) => `${esc(p.text)}${p.url ? ` <a href="${esc(p.url)}" target="_blank" rel="noopener">原帖</a>` : ""}`],
+  ], "没有待看的新帖。");
+  const more = d.count > items.length ? `<p class="note">另有更早的 ${d.count - items.length} 条没列出，在待看列表里。</p>` : "";
+  const watch = d.late ? `<span class="tag blocked">监听可能停了</span> 本该 ${esc(d.next)} 读一次创意工坊` : d.next ? `下次读取 ${esc(d.next)}` : "监听还没读过创意工坊";
+  $("workshop-list").innerHTML = fold(items, rows, 10) + more + `<p class="stamp">${watch} · ${esc(d.synced || "")}</p>`;
+}
+
 // Releases come only from GitHub (work/releases): their summaries are generated from the notes.
 let m_rel = null;
 function renderReleases() {
@@ -575,6 +599,9 @@ function renderOverview(s) {
   all.filter((i) => i.group === "review" || i.group === "badauto").forEach(() => kinds.push("要不要做"));
   const per = ["要不要做", "定方案", "发版", "规则"].map((k) => [k, kinds.filter((x) => x === k).length]).filter((x) => x[1]);
   line("等你处理", kinds.length ? `<a href="#todo">${kinds.length} 件</a>（${per.map(([k, n]) => `${esc(k)} ${n}`).join("、")}）` : "没有");
+  const ws = w.workshop;
+  if (ws && ws.count) line("创意工坊新评论", `<a href="#workshop">${ws.count} 条</a>`);
+  if (ws && ws.late) line("创意工坊监听", `可能停了（本该 ${esc(ws.next)} 读一次）`);
   const replied = all.filter((i) => i.kind === "replied").length;
   if (replied) line("Issue 上对方回复了还没处理", `<a href="#issues">${replied} 个</a>`);
   const stale = (w.branches && w.branches.stale) || [];
@@ -602,6 +629,7 @@ function render(s) {
   renderOverview(s);
   renderTodo(sorted(s.decisions), w.issues || null);
   renderIssues(w.issues || null, s.decisions || []); stamp("issues", w.issues && w.issues.synced);
+  renderWorkshop(w.workshop || null); stamp("workshop", w.workshop && w.workshop.synced);
   m_notes = sorted(s.milestones); m_auto = w.milestones || null; m_ctx = { w, decisions: s.decisions || [], jobs: s.jobs || [] }; mergeMilestones(); stamp("ms", m_auto && m_auto.synced);
   m_machines = sorted(s.machines); m_machines.forEach((m) => stamp("m-" + m.id, m.synced));
   renderWork(w.branches || null, w.issues || null); renderStale(w.branches || null); stamp("work", w.branches && w.branches.synced);
@@ -619,7 +647,7 @@ async function load() {
     render(JSON.parse(text));
   } catch (e) {
     if (!m_text) {
-      for (const id of ["todo-list", "issues-list", "milestones-list", "night-list", "releases-list"]) $(id).innerHTML = `<p class="empty">读不到数据。</p>`;
+      for (const id of ["todo-list", "issues-list", "workshop-list", "milestones-list", "night-list", "releases-list"]) $(id).innerHTML = `<p class="empty">读不到数据。</p>`;
     }
     $("stamp").textContent = "读取失败（" + (e && e.message) + "），每分钟重试。";
   }
