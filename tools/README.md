@@ -555,7 +555,7 @@ python3 -I tools/preflight_night.py   # 每个文件夹一行 ok / PROBLEM / mis
 
 ```bash
 python3 -I tools/codex_review.py request 125              # 在 PR 下评论 @codex review（并记进 watch_issues 的 --mine）
-python3 -I tools/codex_review.py wait 125                 # 后台跑：审完退出；0 没有意见，1 有没处理的意见（列出），3 没审成：超时（默认 30 分钟）或 Codex 报审查失败（如用量到了上限）
+python3 -I tools/codex_review.py wait 125                 # 单独等一个审查（值守和交 PR 都不用它，用 pr_wait.py）：审完退出；0 没有意见，1 有没处理的意见（列出），3 没审成：超时（默认 30 分钟）或 Codex 报审查失败（如用量到了上限）
 python3 -I tools/codex_review.py findings 125             # 列出 Codex 没解决的审查意见（线程 ID、文件:行、链接、内容）
 python3 -I tools/codex_review.py reply 线程ID "已修，见 abc1234"   # 回复一条并标为已解决
 ```
@@ -570,7 +570,8 @@ python3 -I tools/codex_review.py reply 线程ID "已修，见 abc1234"   # 回�
 python3 -I tools/pr_wait.py 207 208 --codex 209 210     # 后台跑：等 207、208 合并；209、210 先等 Codex 审完，再开自动合并、等合并
 python3 -I tools/pr_wait.py 207 --codex 254 --night 254  # 254 等夜间游戏内测试：审完也不开自动合并
 python3 -I tools/pr_wait.py 211 --every 30              # 每 30 秒查一次（默认 60）；--codex-timeout 秒数改 30 分钟的审查期限
-python3 -I tools/pr_wait.py add 254 --codex --night      # 主会话、子 agent：把 PR 放进等待名单就返回（再 add 一次改选项）
+python3 -I tools/pr_wait.py 207 --codex 209 --hold 209  # 209 先不合并（如等发版完）：只等 Codex 和别的事，审完也不开自动合并
+python3 -I tools/pr_wait.py add 254 --codex --night      # 主会话、子 agent：把 PR 放进等待名单就返回（再 add 一次改选项；也有 --hold）
 python3 -I tools/pr_wait.py --list                       # 值守子会话常驻：每轮读名单，接上新加的 PR
 ```
 
@@ -580,6 +581,7 @@ python3 -I tools/pr_wait.py --list                       # 值守子会话常驻
 - 冲突时先试一次自己合并：每一处冲突都只是两边在同一个地方各加了行（没删改共同的原有行，如 `CHANGELOG.md`、文本 XML）时，在临时的游离工作树里 `git merge origin/main`（diff3 冲突格式），每处留下两边新加的行（`main` 的在前、分支的在后），提交合并、普通推送（不强推），接着等，不退出。以下照旧作为冲突退出：有一处冲突改了或删了原有的行；不是两边都改了同一个文件的冲突（一边删、两边都新建、二进制）；PR 来自 fork；分支在本机有工作树，而那个工作树有未提交的改动或不在 PR 的最新提交上（可能有会话正在改）。本机工作树干净且在 PR 最新提交上时，推送后把它快进到合并提交。同一个提交只试一次；不用 `git stash`（docs/maintaining.md“共用资源”）。
 - `--codex` 后面的 PR 是请 Codex 审过、没开自动合并的。判断审完和 `codex_review.py wait` 一样；审完没意见（或意见都已解决）就 `gh pr merge 编号 --auto --squash`；30 分钟没审完或 Codex 报审查失败也开自动合并，并在 PR 下写一句“没审成”（记进 watch_issues 的 `--mine`）。开自动合并之前又推了新提交的，等新提交的审查。
 - `--night` 后面的 PR 等夜间游戏内测试（#255）：从不替它开自动合并，“开着却没开自动合并”也不算要处理；照样等 CI（同在 `--codex` 里的也等审查），检查失败、冲突、有意见、被关掉时照常退出。没审成时 PR 下那句写明等夜间测试。跑夜间测试的人测完开自动合并，等待接着等到合并。
+- `--hold` 后面的 PR 故意先不合并（如等发版完），只等 Codex 和别的事（#275）：和 `--night` 一样不替它开自动合并，“开着却没开自动合并”、审完没意见都不退出；检查失败、冲突、有意见、被关掉时照常退出。没审成时 PR 下那句写明先不合并。决定合并的人开自动合并。等 Codex 一律用 `pr_wait.py`，不再单独挂 `codex_review.py wait`。
 - 退出时每个 PR 打一行：已合并、要处理什么，或还在等什么。`gh` 和网络出错（如 `unexpected EOF`）只在标准错误打一行，下一轮重试，不退出；GitHub 说没有这个 PR 时退出码 2。
 
 ## watch_issues.py — Issue 与创意工坊监听

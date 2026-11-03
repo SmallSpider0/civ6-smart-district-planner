@@ -274,8 +274,50 @@ class NightTest(unittest.TestCase):
         self.addCleanup(setattr, sys, "argv", sys.argv)
         sys.argv = ["pr_wait.py", "1", "--codex", "254", "--night", "254"]
         self.assertEqual(pr_wait.main(), 0)
-        self.assertEqual(seen, [([1], [254], 60, 1800, {254})])
+        self.assertEqual(seen, [([1], [254], 60, 1800, {254}, set())])
 
+
+class Hold(unittest.TestCase):
+    """#275: some PRs stay open on purpose (say, until a release is done) and only wait for Codex; that took
+    a separate `codex_review.py wait`, whose "no findings" report woke the main session for nothing."""
+
+    def test_clean_review_is_no_exit_and_auto_merge_stays_off(self):
+        views = [pr(rollup=PASSED, auto=None)] * 10 + [pr(rollup=PASSED, auto=AUTO), pr("MERGED", PASSED)]
+        fake = Fake(self, {21: views}, comments={21: [codex_summary("completed", False)]})
+        self.assertEqual(pr_wait.watch([], [21], 60, 1800, hold={21}), 0)
+        self.assertEqual(fake.merges(), [])
+        self.assertEqual(fake.sleeps, 11)
+        self.assertEqual(fake.logged, [(21, "clean")])
+
+    def test_without_codex_auto_merge_off_is_no_exit(self):
+        views = [pr(rollup=PASSED, auto=None)] * 4 + [pr("MERGED", PASSED)]
+        fake = Fake(self, {22: views})
+        self.assertEqual(pr_wait.watch([], [], 60, 1800, hold={22}), 0)
+        self.assertEqual(fake.sleeps, 4)
+        self.assertEqual(fake.merges(), [])
+
+    def test_no_review_in_time_says_held(self):
+        views = [pr(rollup=PASSED, auto=None)] * 40 + [pr("MERGED", PASSED)]
+        fake = Fake(self, {23: views}, comments={23: []})
+        self.assertEqual(pr_wait.watch([], [23], 60, 1800, hold={23}), 0)
+        self.assertEqual(fake.merges(), [])
+        self.assertEqual(len(fake.comments_posted()), 1)
+        self.assertIn("held", fake.comments_posted()[0][4])
+
+    def test_findings_and_failed_ci_still_end_the_wait(self):
+        Fake(self, {24: [pr(auto=None)]}, comments={24: [codex_summary("completed", True)]},
+             threads=["P1: this breaks"])
+        self.assertEqual(pr_wait.watch([], [24], 60, 1800, hold={24}), 1)
+        failed = [check("offline (ubuntu-latest)", conclusion="FAILURE"), check("offline (windows-latest)")]
+        Fake(self, {25: [pr(auto=None), pr(rollup=failed, auto=None)]})
+        self.assertEqual(pr_wait.watch([], [], 60, 1800, hold={25}), 1)
+
+    def test_hold_on_the_command_line(self):
+        seen = []
+        self.addCleanup(setattr, pr_wait, "watch", pr_wait.watch)
+        pr_wait.watch = lambda *a: seen.append(a) or 0
+        self.assertEqual(pr_wait.main(["--codex", "26", "--hold", "26"]), 0)
+        self.assertEqual(seen, [([], [26], 60, 1800, set(), {26})])
 
 class WaitingList(unittest.TestCase):
     """#275: handing a PR to the watch side session took a message, and its reply ("put on the wait") woke
@@ -340,6 +382,15 @@ class WaitingList(unittest.TestCase):
         self.assertEqual(pr_wait.watch_list(60, 1800), 1)
         self.assertEqual(sorted(pr_wait.read_list()), [45])
 
+    def test_hold_from_the_list(self):
+        views = [pr(rollup=PASSED, auto=None)] * 5 + [pr(rollup=PASSED, auto=AUTO), pr("MERGED", PASSED)]
+        fake = Fake(self, {49: views}, comments={49: [codex_summary("completed", False)]})
+        self.assertEqual(pr_wait.main(["add", "49", "--codex", "--hold"]), 0)
+        self.assertTrue(pr_wait.read_list()[49]["hold"])
+        self.assertEqual(pr_wait.watch_list(60, 1800), 0)
+        self.assertEqual(fake.sleeps, 6)  # the clean review ended nothing; the merge did
+        self.assertEqual(fake.merges(), [])
+
     def test_night_and_codex_options_from_the_list(self):
         views = [pr(rollup=PASSED, auto=None)] * 5 + [pr(rollup=PASSED, auto=AUTO), pr("MERGED", PASSED)]
         fake = Fake(self, {46: views}, comments={46: [codex_summary("completed", False)]})
@@ -373,7 +424,7 @@ class WaitingList(unittest.TestCase):
         self.addCleanup(setattr, pr_wait, "watch", pr_wait.watch)
         pr_wait.watch = lambda *a: seen.append(a) or 0
         self.assertEqual(pr_wait.main(["207", "208", "--codex", "209", "--night", "209"]), 0)
-        self.assertEqual(seen, [([207, 208], [209], 60, 1800, {209})])
+        self.assertEqual(seen, [([207, 208], [209], 60, 1800, {209}, set())])
         self.assertEqual(pr_wait.read_list(), {})  # the old way does not touch the list
 
 def run(cwd, *args):

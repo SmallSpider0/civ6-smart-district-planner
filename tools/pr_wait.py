@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """pr_wait - one background wait for a batch of pull requests.
 
-    python3 -I tools/pr_wait.py 207 208 [--codex 209 210] [--night 210] [--every 60] [--codex-timeout 1800]
+    python3 -I tools/pr_wait.py 207 208 [--codex 209 210] [--night 210] [--hold 209] [--every 60] [--codex-timeout 1800]
 
 Exits only when every PR is merged, or when one needs someone: never on an
 intermediate step (a check finishing, a review arriving). Needs action:
@@ -25,6 +25,12 @@ waits for their CI and, when also after --codex, their review, and exits as
 usual on a failed check, a conflict, findings or a close. Whoever runs the
 night test turns on auto-merge; the wait then goes on until the merge.
 
+PRs after --hold are kept open on purpose (say, until a release is done) and
+wait for Codex and the rest only (#275): like --night, the wait never turns on
+their auto-merge, their auto-merge being off is not an exit, and a clean
+review is not one either. Whoever decides to merge turns auto-merge on. This
+replaces a separate `codex_review.py wait`.
+
 A merge conflict where, in every conflicting block, both main and the branch
 only added lines (no line of the common base changed or removed; typically
 CHANGELOG.md or a text XML) is resolved here and the wait goes on: origin/main
@@ -43,7 +49,7 @@ GitHub does not know. Run it in the background: its end is the signal.
 
 The waiting list (#275) lets a session hand a PR over without a message:
 
-    python3 -I tools/pr_wait.py add 275 [--codex] [--night]   # put PR 275 on the list
+    python3 -I tools/pr_wait.py add 275 [--codex] [--night] [--hold]   # put PR 275 on the list
     python3 -I tools/pr_wait.py --list [--every 60]           # the watch side session's standing wait
 
 The list is pr-wait-list.json in the shared folder (the one that holds
@@ -78,6 +84,8 @@ NOT_REVIEWED = ("Codex 没审成（%s），按 docs/maintaining.md“Codex 审�
                 "\n\nCodex was not able to review this PR (%s); auto-merge is on.")
 NOT_REVIEWED_NIGHT = ("Codex 没审成（%s）。这个 PR 等夜间游戏内测试，测完再开自动合并。"
                       "\n\nCodex was not able to review this PR (%s). Auto-merge waits for the night in-game test.")
+NOT_REVIEWED_HOLD = ("Codex 没审成（%s）。这个 PR 先不合并，自动合并留给决定合并的人开。"
+                     "\n\nCodex was not able to review this PR (%s). It is held: auto-merge is left off.")
 
 
 def checks(pr):
@@ -241,9 +249,10 @@ def log_once(number, st, outcome):
         print(cr.log_review(number, outcome), file=sys.stderr, flush=True)
 
 
-def step_codex(number, pr, st, now, timeout, night=False):
+def step_codex(number, pr, st, now, timeout, night=False, hold=False):
     """Advance PR number's Codex state; return a needs-action text or None.
-    night: the PR waits for the night test, so auto-merge is left to whoever runs it."""
+    night: the PR waits for the night test, so auto-merge is left to whoever runs it.
+    hold: the PR is kept open on purpose; auto-merge is left to whoever decides to merge it."""
     head, since = cr.head_since(pr)
     if head != st.head and not st.merge_on:  # a new push before auto-merge: wait for its review
         start = st.first if st.head is None and st.first is not None else now
@@ -269,12 +278,12 @@ def step_codex(number, pr, st, now, timeout, night=False):
         log_once(number, st, "failed" if "失败" in st.verdict else "timeout")
     if st.verdict and st.verdict.startswith("not reviewed") and not st.commented:
         why = st.verdict[len("not reviewed: "):].split(" / ")
-        text = NOT_REVIEWED_NIGHT if night else NOT_REVIEWED
+        text = NOT_REVIEWED_NIGHT if night else NOT_REVIEWED_HOLD if hold else NOT_REVIEWED
         url = cr.gh("pr", "comment", str(number), "--body", text % (why[0], why[-1])).strip()
         st.commented = True
         if url:
             record_mine(url)
-    if night and not pr.get("autoMergeRequest"):
+    if (night or hold) and not pr.get("autoMergeRequest"):
         pass  # held: a new push still waits for its own review
     elif st.verdict and not st.merge_on and not pr.get("autoMergeRequest"):
         try:
@@ -310,11 +319,12 @@ def conflict(number, pr, tried):
     return "action", "merge conflict (%s)" % text
 
 
-def assess(number, pr, codex, now, timeout, tried=None, night=False):
+def assess(number, pr, codex, now, timeout, tried=None, night=False, hold=False):
     """('merged' | 'action' | 'waiting', short text) for one PR; may turn on auto-merge for --codex PRs
     (not for night ones: they wait for the night test), and may merge main into the branch when a
-    conflict only adds lines (tried: PR -> head tried)."""
-    held = "waiting for the night test"
+    conflict only adds lines (tried: PR -> head tried). hold: kept open on purpose, as night."""
+    held = "waiting for the night test" if night else "held, auto-merge left off"
+    night = night or hold
     state = pr.get("state")
     if state == "MERGED":
         return "merged", "merged"
@@ -326,7 +336,7 @@ def assess(number, pr, codex, now, timeout, tried=None, night=False):
     if pr.get("mergeable") == "CONFLICTING" or pr.get("mergeStateStatus") == "DIRTY":
         return conflict(number, pr, {} if tried is None else tried)
     if codex is not None:
-        problem = step_codex(number, pr, codex, now, timeout, night)
+        problem = step_codex(number, pr, codex, now, timeout, night and not hold, hold)
         if problem:
             return "action", problem
         if codex.verdict is None:
@@ -350,11 +360,11 @@ class Unknown(Exception):
     """GitHub does not know this PR number."""
 
 
-def poll(n, codex, now, timeout, tried, night):
+def poll(n, codex, now, timeout, tried, night, hold=False):
     """Read PR n and assess it; None when gh failed (retried next round). Raises Unknown."""
     try:
         pr = cr.ghjson("pr", "view", str(n), "--json", FIELDS)
-        return assess(n, pr, codex, now, timeout, tried, night)
+        return assess(n, pr, codex, now, timeout, tried, night, hold)
     except (RuntimeError, ValueError, KeyError, TypeError) as problem:
         text = str(problem)
         if "Could not resolve to a PullRequest" in text or "no pull requests found" in text:
@@ -370,8 +380,8 @@ def report(order, last):
               if last[n][0] != "merged" else "#%d merged" % n)
 
 
-def watch(numbers, codex_numbers, every, timeout, night=()):
-    order = sorted(set(numbers) | set(codex_numbers) | set(night))
+def watch(numbers, codex_numbers, every, timeout, night=(), hold=()):
+    order = sorted(set(numbers) | set(codex_numbers) | set(night) | set(hold))
     codex = {n: Codex() for n in codex_numbers}
     last = {n: ("waiting", "not read yet") for n in order}
     tried = {}  # PR -> head commit a merge of main was tried on
@@ -381,7 +391,7 @@ def watch(numbers, codex_numbers, every, timeout, night=()):
             if last[n][0] == "merged":
                 continue
             try:
-                seen = poll(n, codex.get(n), now, timeout, tried, n in night)
+                seen = poll(n, codex.get(n), now, timeout, tried, n in night, n in hold)
             except Unknown as problem:
                 print("#%d: %s" % (n, problem))
                 return 2
@@ -400,13 +410,13 @@ def list_path():
 
 
 def read_list():
-    """{PR number: {"codex": bool, "night": bool, "added": epoch seconds}}."""
+    """{PR number: {"codex": bool, "night": bool, "hold": bool, "added": epoch seconds}}."""
     data = sdplock._read(list_path(), {})
     out = {}
     for key, entry in (data if isinstance(data, dict) else {}).items():
         try:
             out[int(key)] = {"codex": bool(entry.get("codex")), "night": bool(entry.get("night")),
-                             "added": float(entry.get("added") or 0)}
+                             "hold": bool(entry.get("hold")), "added": float(entry.get("added") or 0)}
         except (ValueError, TypeError, AttributeError):
             continue
     return out
@@ -421,13 +431,13 @@ def change_list(change):
     return items
 
 
-def add(number, codex=False, night=False):
+def add(number, codex=False, night=False, hold=False):
     def put(items):
-        items[number] = {"codex": codex, "night": night,
+        items[number] = {"codex": codex, "night": night, "hold": hold,
                          "added": items.get(number, {}).get("added") or time.time()}
     change_list(put)
     return "#%d on the waiting list%s (%s)" % (
-        number, "".join(o for o, on in ((" --codex", codex), (" --night", night)) if on), list_path())
+        number, "".join(o for o, on in ((" --codex", codex), (" --night", night), (" --hold", hold)) if on), list_path())
 
 
 def watch_list(every, timeout):
@@ -452,7 +462,7 @@ def watch_list(every, timeout):
             elif not entry["codex"]:
                 codex.pop(n, None)
             try:
-                seen = poll(n, codex.get(n), now, timeout, tried, entry["night"])
+                seen = poll(n, codex.get(n), now, timeout, tried, entry["night"], entry.get("hold", False))
             except Unknown as problem:
                 seen = ("unknown", str(problem))
             if seen:
@@ -480,14 +490,18 @@ def main(argv=None):
         ap.add_argument("number", type=int)
         ap.add_argument("--codex", action="store_true", help="sent to Codex, opened without auto-merge")
         ap.add_argument("--night", action="store_true", help="waits for the night in-game test")
+        ap.add_argument("--hold", action="store_true", help="kept open on purpose: never turn on its auto-merge")
         args = ap.parse_args(argv[1:])
-        print(add(args.number, args.codex, args.night))
+        print(add(args.number, args.codex, args.night, args.hold))
         return 0
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("numbers", type=int, nargs="*", help="PRs to wait for")
     ap.add_argument("--codex", type=int, nargs="+", default=[], help="PRs waiting for a Codex review (also waited for)")
     ap.add_argument("--night", type=int, nargs="+", default=[],
                     help="PRs waiting for the night in-game test: never turn on their auto-merge (also waited for)")
+    ap.add_argument("--hold", type=int, nargs="+", default=[],
+                    help="PRs kept open on purpose, waiting for Codex and the rest only: never turn on their "
+                         "auto-merge, and their auto-merge being off or a clean review is no exit (also waited for)")
     ap.add_argument("--list", action="store_true",
                     help="wait for the PRs on the waiting list (`pr_wait.py add N`), picking up new ones as they come")
     ap.add_argument("--every", type=float, default=60, help="seconds between checks (default 60)")
@@ -495,12 +509,12 @@ def main(argv=None):
                     help="seconds without a finished Codex review before auto-merge goes on anyway (default 1800)")
     args = ap.parse_args(argv)
     if args.list:
-        if args.numbers or args.codex or args.night:
+        if args.numbers or args.codex or args.night or args.hold:
             ap.error("--list reads its PRs from the waiting list: add them with `pr_wait.py add N`")
         return watch_list(args.every, args.codex_timeout)
-    if not args.numbers and not args.codex and not args.night:
+    if not args.numbers and not args.codex and not args.night and not args.hold:
         ap.error("give at least one PR number")
-    return watch(args.numbers, args.codex, args.every, args.codex_timeout, set(args.night))
+    return watch(args.numbers, args.codex, args.every, args.codex_timeout, set(args.night), set(args.hold))
 
 
 if __name__ == "__main__":
