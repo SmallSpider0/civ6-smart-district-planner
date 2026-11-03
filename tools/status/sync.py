@@ -242,9 +242,23 @@ def macbook(now):
         if not pid or subprocess.run(["kill", "-0", str(pid)], capture_output=True).returncode != 0:
             continue
         known.add(pid)
-        running.append({"name": j.get("name"), "session": session_of(j.get("owner"), j.get("tree")),
+        running.append({"name": j.get("name"), "session": session_of(j.get("owner"), j.get("tree"), j.get("session")),
                         "owner": j.get("owner") or "", "slots": workers(" ".join(j.get("cmd") or [])) or 1,
                         "started": hm(j.get("started")), "paused": bool(j.get("paused")) or stopped(pid)})
+    # short runs (tools/remote.py direct) and the processes that wait for a run placed elsewhere
+    for p in sorted(glob.glob(os.path.join(SHARED, "light", "*.json"))):
+        try:
+            j = json.load(open(p, encoding="utf-8"))
+        except Exception:
+            continue
+        pid = j.get("pid")
+        if not pid or subprocess.run(["kill", "-0", str(pid)], capture_output=True).returncode != 0:
+            continue
+        known.update(j.get("pids") or [pid])
+        if j.get("show"):
+            running.append({"name": j.get("name"), "session": session_of(j.get("owner"), j.get("tree"), j.get("session")),
+                            "owner": j.get("owner") or "", "slots": 1, "started": hm(j.get("started")),
+                            "paused": False, "short": True})
     ps = subprocess.run(["ps", "-Ao", "pid=,pgid=,command="], capture_output=True, text=True).stdout
     ext = []
     for g in unregistered(ps, known, 1):
