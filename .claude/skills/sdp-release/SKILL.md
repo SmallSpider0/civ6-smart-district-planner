@@ -32,7 +32,7 @@ Bug-fix PRs merge into `main` as usual in the meantime: `main` reaches no player
    - the panel's tooltips in `SmartDistrictPlanner/Text/*.xml` that name the changed value.
    Method: grep these files for the old numbers and words of each change (e.g. after #142: "8 座", "eight cities", "at most 8"), in both languages. In the PR body, list each CHANGELOG line with the files changed for it, or "nothing to change" and what was searched.
 6. Self-test report: a short block for this round at the top of "自动化测试结果" (tests and counts, what was checked by hand, what was not). Keep only the last two rounds there (git has the rest).
-7. Commit ("Prepare vX.Y.Z"), push, one PR (title in English imperative; `Closes #N`; tests and platform; generated files and commands; ends with the session's PR footer). Auto-merge (squash) and Auto-fix on. Then have the watch side session add N to its `pr_wait.py` and go on to §2 when it reports the merge: a green CI run or an auto-merge wakes nobody (docs/maintaining.md, "子 agent 怎么派" 3, 5).
+7. Commit ("Prepare vX.Y.Z"), push, one PR (title in English imperative; `Closes #N`; tests and platform; generated files and commands; ends with the session's PR footer). Auto-merge (squash) and Auto-fix on. Then `python3 -I tools/pr_wait.py add N` (the watch side session's standing wait picks it up) and go on to §2 when it reports the merge: a green CI run or an auto-merge wakes nobody (docs/maintaining.md, "子 agent 怎么派" 3, 5).
 
 ## 2. After the merge
 

@@ -32,3 +32,4 @@
 | 2026-11-03 | 等夜间游戏内测试的 PR 进同一批的 `pr_wait.py`（`--night`），测过后由跑测试的人开自动合并（#255） | #254 要等夜间测试又要 Codex 审：`--codex` 审完没意见就开自动合并，太早；不带它又因为“没开自动合并”马上退出，只好另挂一个 `codex_review.py wait`，同一批分成两个等待 | sdp-issue §4，sdp-game-test“When”，maintaining.md“PR 与 CI 的内部细则” |
 | 2026-11-03 | 监听在后台直接跑、不重定向输出；退出了却没有输出时先看 `--reported`，不当成无新事（#261） | 值守会话把监听的输出重定向进文件，退出后后台任务的输出是空的，就当成无新事重启了；那一条已记成看过、不会再报，DracoYus 在 #227 的回复漏了 | sdp-watch“Run” |
 | 2026-11-03 | 值守子会话常开防锁屏（`caffeinate -di`），别的会话不另开、不结束它 | 夜间队列曾因屏保锁屏停下；一次游戏测试收尾时停掉了所有 caffeinate（维护者要求） | maintaining.md §4 第 5 条 |
+| 2026-11-04 | 交 PR 用 `pr_wait.py add` 放进等待名单、不发消息；值守常驻 `pr_wait.py --list`，只在要主会话动手时结束一轮报告（#275） | #274 合并的报告被压住约 6 小时：连续的自动叫醒有上限，值守每次回“已挂上”也算一次，一个 PR 从开到合并要叫醒主会话三次，其中这一次不用动手 | maintaining.md §4 第 5 条，sdp-watch“Who runs it”，sdp-issue §4，tools/README.md“pr_wait.py” |

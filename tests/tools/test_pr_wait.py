@@ -277,6 +277,105 @@ class NightTest(unittest.TestCase):
         self.assertEqual(seen, [([1], [254], 60, 1800, {254})])
 
 
+class WaitingList(unittest.TestCase):
+    """#275: handing a PR to the watch side session took a message, and its reply ("put on the wait") woke
+    the main session once more; on 2026-11-04 that held back #274's merge report for about 6 hours. Now
+    a session puts the PR on a shared list and the standing `--list` wait picks it up by itself."""
+
+    def setUp(self):
+        tmp = tempfile.mkdtemp(prefix="pr_wait_list-")
+        self.addCleanup(shutil.rmtree, tmp, True)
+        old = os.environ.get("SDP_SHARED")
+        self.addCleanup(lambda: os.environ.__setitem__("SDP_SHARED", old) if old is not None
+                        else os.environ.pop("SDP_SHARED", None))
+        os.environ["SDP_SHARED"] = tmp
+
+    def test_the_list_sits_next_to_the_codex_log(self):
+        self.assertEqual(os.path.dirname(pr_wait.list_path()), os.path.dirname(cr.log_path()))
+
+    def test_add_writes_the_list_and_returns(self):
+        self.assertEqual(pr_wait.main(["add", "31", "--codex", "--night"]), 0)
+        self.assertEqual(pr_wait.main(["add", "32"]), 0)
+        items = pr_wait.read_list()
+        self.assertEqual(sorted(items), [31, 32])
+        self.assertEqual((items[31]["codex"], items[31]["night"]), (True, True))
+        self.assertEqual((items[32]["codex"], items[32]["night"]), (False, False))
+        pr_wait.main(["add", "31"])  # options change, the time it was added stays
+        again = pr_wait.read_list()
+        self.assertFalse(again[31]["codex"])
+        self.assertEqual(again[31]["added"], items[31]["added"])
+
+    def test_a_pr_added_while_waiting_is_picked_up_and_its_merge_ends_the_wait(self):
+        fake = Fake(self, {41: [pr()], 42: [pr(), pr("MERGED", PASSED)]})
+        pr_wait.add(41)
+        sleep = fake.sleep
+
+        def sleep_and_add(seconds):
+            sleep(seconds)
+            if fake.sleeps == 2:
+                pr_wait.add(42)  # another session hands a PR over while the wait runs
+        pr_wait.time.sleep = sleep_and_add
+        self.assertEqual(pr_wait.watch_list(60, 1800), 0)
+        self.assertEqual(fake.sleeps, 3)  # 42 read after the 2nd sleep, merged on the next check
+        self.assertEqual(sorted(pr_wait.read_list()), [41])  # 42 ended and left the list; 41 still waits
+
+    def test_an_empty_list_keeps_waiting(self):
+        fake = Fake(self, {43: [pr("MERGED", PASSED)]})
+        sleep = fake.sleep
+
+        def sleep_and_add(seconds):
+            sleep(seconds)
+            if fake.sleeps == 5:
+                pr_wait.add(43)
+        pr_wait.time.sleep = sleep_and_add
+        self.assertEqual(pr_wait.watch_list(60, 1800), 0)
+        self.assertEqual(fake.sleeps, 5)
+        self.assertEqual(pr_wait.read_list(), {})
+
+    def test_needs_action_ends_the_wait_and_leaves_the_list(self):
+        failed = [check("offline (ubuntu-latest)", conclusion="FAILURE"), check("offline (windows-latest)")]
+        Fake(self, {44: [pr(), pr(rollup=failed)], 45: [pr()]})
+        pr_wait.add(44)
+        pr_wait.add(45)
+        self.assertEqual(pr_wait.watch_list(60, 1800), 1)
+        self.assertEqual(sorted(pr_wait.read_list()), [45])
+
+    def test_night_and_codex_options_from_the_list(self):
+        views = [pr(rollup=PASSED, auto=None)] * 5 + [pr(rollup=PASSED, auto=AUTO), pr("MERGED", PASSED)]
+        fake = Fake(self, {46: views}, comments={46: [codex_summary("completed", False)]})
+        pr_wait.add(46, codex=True, night=True)
+        self.assertEqual(pr_wait.watch_list(60, 1800), 0)
+        self.assertEqual(fake.merges(), [])  # night: auto-merge waits for the night test
+        self.assertEqual(fake.logged, [(46, "clean")])
+
+    def test_the_codex_clock_starts_when_the_pr_was_added(self):
+        # a restarted standing wait must not give Codex another 30 minutes
+        fake = Fake(self, {47: [pr(rollup=PASSED, auto=None)] * 3 + [pr("MERGED", PASSED)]}, comments={47: []})
+        pr_wait.change_list(lambda items: items.update({47: {"codex": True, "night": False,
+                                                              "added": fake.clock - 1800}}))
+        self.assertEqual(pr_wait.watch_list(60, 1800), 0)
+        self.assertEqual(len(fake.merges()), 1)  # timed out on the first check: auto-merge on at once
+        self.assertEqual(fake.sleeps, 3)
+
+    def test_a_pr_github_does_not_know_leaves_the_list(self):
+        fake = Fake(self, {48: [pr()]})
+        fake.views = {}
+
+        def missing(*args, data=None):
+            raise RuntimeError("GraphQL: Could not resolve to a PullRequest with the number of 48.")
+        cr.gh = missing
+        pr_wait.add(48)
+        self.assertEqual(pr_wait.watch_list(60, 1800), 2)
+        self.assertEqual(pr_wait.read_list(), {})
+
+    def test_the_old_command_line_still_works(self):
+        seen = []
+        self.addCleanup(setattr, pr_wait, "watch", pr_wait.watch)
+        pr_wait.watch = lambda *a: seen.append(a) or 0
+        self.assertEqual(pr_wait.main(["207", "208", "--codex", "209", "--night", "209"]), 0)
+        self.assertEqual(seen, [([207, 208], [209], 60, 1800, {209})])
+        self.assertEqual(pr_wait.read_list(), {})  # the old way does not touch the list
+
 def run(cwd, *args):
     done = subprocess.run(["git"] + list(args), cwd=cwd, capture_output=True, text=True)
     if done.returncode != 0:
