@@ -30,7 +30,7 @@
 ```
 civ6mod/
 ├── AGENTS.md                         # 本文件（代理工作约定）
-├── CLAUDE.md                         # 让 Claude Code 读入 AGENTS.md、CONTRIBUTING.md 和 docs/maintaining.md
+├── CLAUDE.md                         # 让 Claude Code 读入 AGENTS.md 和 docs/maintaining.md
 ├── .claude/skills/                   # 固定流程：Issue 处理、游戏内测试、离线重活、发版、监听（sdp-*/SKILL.md）
 ├── CONTRIBUTING.md                   # 给外部开发者：开工前、环境、检查、代码约定、提交 PR（中英文）
 ├── CHANGELOG.md                      # 各阶段与各版本改了什么（发版时由 release.py 从 changelog.d/ 收集）
@@ -40,11 +40,11 @@ civ6mod/
 ├── civ6-mod-from-scratch-prompt.md   # 需求文档（锁定，勿改）
 ├── .github/                          # CI（validate + 离线测试，Ubuntu 和 Windows）、Issue 与 PR 模板
 ├── docs/
-│   ├── maintaining.md                # 维护手册：流程、谁来做、子 agent、共用资源、PR 与 CI、Codex 审查、测试分工、发版、对内写作规则
+│   ├── maintaining.md                # 维护手册：谁做什么和原则（流程、子 agent、共用资源、PR 与 CI、Codex 审查、测试分工、发版、对内写作规则）
 │   ├── design.md                     # 交付物 3：算法结构 / 目标函数 / DMT 接缝
 │   ├── pitfalls.md                   # Civ6 Modding 的坑：完整说明（AGENTS 第 5 节是要点）
 │   ├── multicity-design.md           # 选城址、多城、奇观、档位、离线基准的设计（第 1–14 节）
-│   ├── notes/                        # 历次实现、实测与修正的记录：NN-主题.md（原第 15–30 节）、issue-<编号>-主题.md；README.md 是索引（主题、是否已被取代）
+│   ├── notes/                        # 历次实现、实测与修正的记录：NN-主题.md（原第 15–30 节）、issue-<编号>-主题.md；README.md 是索引（主题、是否已被取代）；workflow-decisions.md 是工作流的决定和原因
 │   ├── reference-scenes.md           # #53 的参照场景：来源、地图、作者布局与真最优的对照（图由 tests/compare/refmaps.py 画）
 │   ├── install-and-test.md           # 交付物 2：安装与使用（给玩家，package.py 打进压缩包，叫 INSTALL_AND_USE.md）
 │   ├── acceptance.md                 # 验收清单（需求文档第五节）、Windows 冒烟测试重点、开发者排错与自动化测试命令
@@ -77,6 +77,13 @@ civ6mod/
 - Mod 目录与 modinfo 名：`SmartDistrictPlanner`；Mod GUID：`d2b8b724-4174-42cb-943c-8036778c68ba`（已生成，固定不变）。
 - 自有 Lua 文件、全局符号、LuaEvents 统一前缀 `SDP_` / `sdp_`，避免与 DMT（`dmt_`）、AMT 冲突。
 - 本地化键前缀 `LOC_SDP_`。
+
+代码约定（CONTRIBUTING.md 的“代码约定”指向这里）：
+- 新的 `LOC_SDP_*` 键中英文都加，放在相关的键旁边（同一个页签或控件的），不追加到文件末尾：几个 PR 都加在末尾就会互相冲突。
+- 写纯 Lua 5.1；游戏里为 nil 的全局见第 6 节“游戏 Lua 运行时”（`validate.py` 会报）。
+- 结果不能依赖 `pairs()` 的顺序，同分要有固定的次级键，不用 `math.random` 和与时间有关的逻辑（第 4 节“确定性”）。
+- 界面逻辑的测试要经过控件自己的回调（离线替身的 `Control:Click()`、`Toggle()`，取 `State()` 里带出的控件），不要只调内部函数（2026-10-21：一处永远得 nil 的 `a and false or nil` 让勾选无效，直接调内部函数的测试没发现）。
+- 测试用例不写死某个文明的规则（如“学院每个相邻区域 +0.5”），按 `ExcludedAdjacencies` 与玩家特性判断；默认测试对局是罗马，换文明（`game.py newgame --leader LEADER_HOJO` 等）能发现这类问题。
 
 ## 4. 核心技术方案要点（硬约束，详见需求文档第三节）
 
@@ -160,7 +167,7 @@ include("dmt_yieldcalculator");       -- 尾部会执行 DMT_Initialize()，见�
 
 ## 6. 开发环境与工作流
 
-开发在 macOS 和 Windows 两台机器上进行。**开工前读当前平台的环境说明**：macOS 见 [docs/dev-macos.md](docs/dev-macos.md)，Windows 见 [docs/dev-windows.md](docs/dev-windows.md)。外部开发者的约定见 [CONTRIBUTING.md](CONTRIBUTING.md)；分支、提交、测试分工、发版和写作规则见 [docs/maintaining.md](docs/maintaining.md)。
+开发在 macOS 和 Windows 两台机器上进行。**开工前读当前平台的环境说明**：macOS 见 [docs/dev-macos.md](docs/dev-macos.md)，Windows 见 [docs/dev-windows.md](docs/dev-windows.md)。其他规则在哪见第 8 节。
 
 **两个平台共用**
 - 工具：`node`（`cd tools && npm ci` 装 luaparse、fengari）、Python 3.8 以上、`git`；`xmllint` 可选。文档里的命令写作 `python3 -I`，Windows 上换成 `py -3 -I`。
@@ -168,7 +175,7 @@ include("dmt_yieldcalculator");       -- 尾部会执行 DMT_Initialize()，见�
 - **参考源码**：`python3 -I tools/setup_reference.py` 在 `reference/` 下建链接（`dmt`、`amt`、`ep`、`base-ui`、`dlc`；macOS 是符号链接，Windows 是目录联接），已 gitignore。**写任何 UI/引擎调用前先在这些源码中找先例**。`include("MapTacks")` 来自**游戏本体** `Base/Assets/UI/MapTacks.lua`，不是 DMT。
 - **FireTuner**：`AppOptions.txt` 里设 `EnableTuner 1` 后，游戏在 127.0.0.1:4318 监听，同一时间只接受一个客户端（开着官方 FireTuner 时本项目的工具连不上）。[tools/civ6tuner.py](tools/civ6tuner.py) `serve` 常驻收集全部 Lua 输出到 `logs/tuner-lua.log`，`exec -s <状态> <代码>` 在游戏内执行 Lua 并返回输出与错误。`AppOptions.txt` 为 CRLF 换行，编辑时保留 `\r`。**副作用：Tuner 开启时游戏不解锁 Steam 成就。**
 - **改 `AppOptions.txt`、`Mods.sqlite` 时游戏必须关闭，并先问用户。**
-- **并行会话**：每个会话在自己的工作树里（`tools/worktree.py add`）。游戏、Tuner、Mods 文件夹由 `tools/sdplock.py` 的游戏锁管：碰游戏的工具自己拿锁，别的工作树拿着时以退出码 4 停下，用 `sdplock.py wait --take` 在后台等；`game.py quit` 放锁。本机重活经 `sdplock.py heavy`（一次一个，等着的按先来后到排队，worker 上限按本机配置，开游戏时自动暂停）。机器由工具选：`remote.py run` 在第二台机器马上能跑时放那边（所有会话排一个队），不能而本机重活空着时在本机的快照里跑，都不行才在那边排队；直接运行的 `offline_tests.mjs`、`compare.mjs` 自己登记，按记下的耗时短的在本机跑、长的照 `remote.py run` 选机器（[tools/README.md](tools/README.md)“remote.py”）。开始碰游戏或吃 CPU 的事之前先 `python3 -I tools/sdplock.py status`。占屏幕的步骤进共用的夜间队列，由一个会话在机器空闲时跑。和机器有关的数值（worker 数、夜间时段、第二台机器）写在本机配置 `~/.config/sdp/local.json`，不进仓库，见 [tools/README.md](tools/README.md)“sdplock.py”。
+- **并行会话**：每个会话在自己的工作树里（`tools/worktree.py add`）。游戏、Tuner、Mods 文件夹由 `tools/sdplock.py` 的游戏锁管：碰游戏的工具自己拿锁，别的工作树拿着时以退出码 4 停下。吃 CPU 的活由工具选机器（第二台机器、本机重活或排队），代理不自己判断。开始碰游戏或吃 CPU 的事之前先 `python3 -I tools/sdplock.py status`。占屏幕的步骤进共用的夜间队列。和机器有关的数值（worker 数、夜间时段、第二台机器）写在本机配置 `~/.config/sdp/local.json`，不进仓库。命令见 [tools/README.md](tools/README.md)“sdplock.py”“remote.py”，步骤见 sdp-game-test、sdp-offline-runs。
 - **游戏 Lua 运行时（2026-10-19 在主菜单与对局内各状态实测，[tests/test_environment.lua](tests/test_environment.lua) 持续检查）**：
   - 以下为 nil，[tools/luacheck.mjs](tools/luacheck.mjs) 会报错：`_G`、`load`、`require`、`dofile`、`module`、`setfenv`、`getfenv`、`debug`、`utf8`、`bit`、`bit32`、`table.unpack`、`table.getn`。可用 `loadstring`、`unpack`、`include`。
   - 游戏 Lua 为 HavokScript（`_VERSION` = `2013.2.0 r13768`）。游戏本体和 DMT 源码里有它的扩展语法（类型标注 `function f(x:number)`、`hstructure`），我们的代码**不用**，保持纯 Lua 5.1。
@@ -178,14 +185,21 @@ include("dmt_yieldcalculator");       -- 尾部会执行 DMT_Initialize()，见�
 - **测试用 mod 组**：AMT（hook `GetMapPinSubject`）、Empire Planner（会自建/删除地图钉）及改相邻/区域规则的 mod 会干扰测试。在"额外内容"里建一个只开官方内容、DMT 和本 mod 的 mod 组再测。新 mod 在新建的组里**默认禁用**，可在主菜单用 `Modding.EnableMod(handle, true)` 启用、`Modding.DisableMod(handle)` 停用（游戏自己的启用逻辑，见 Base `FrontEnd/Mods.lua`）。开发机不要订阅本模组的创意工坊版（3824473635），否则游戏可能加载创意工坊那份，测的是旧代码（坑 38）。取消订阅后 Steam 不一定马上删掉下载的文件夹（`steamapps/workshop/content/289070/3824473635`），游戏仍会扫到它，要自己移走。`run_tests.py` 开测前检查加载的是哪一份，是创意工坊那份就停下。
   - **mod 列表的名称**：mod 未启用时，`FrontEndActions` 的文本不加载，列表显示 `LOC_SDP_MOD_NAME` 原文；列表和详情（`Modding.GetModText`）读的是 modinfo 内嵌的 `<LocalizedText>`。所以名称、简介、描述在 modinfo 里也写一份，validate.py 检查两份一致。
 
-**每轮改动流程**（命令细节见 [tools/README.md](tools/README.md)）。一个 Issue 一个 PR（docs/maintaining.md“一轮工作的流程”）：每个 PR 跑和它相关的测试文件，整套的 0–3 在发版前统一跑一次。
-0. 离线：`node tools/offline_tests.mjs` 跑 `tests/offline/spec_*.lua`（不开游戏，几分钟；CI 上 Ubuntu 约 3.5 分钟、Windows 约 5 分钟）。改求解算法时再跑 `tests/offline/bench_single.lua` 对比质量与预计耗时；
-1. 校验：`python3 -I tools/validate.py`。检查 XML 格式、modinfo 与磁盘文件一致、双语文本键一致、`LOC_SDP_*` 引用都有定义、UI XML 只用游戏本体出现过的控件和属性（坑 8，需要 `reference/`）、Lua 语法（luaparse 5.3 模式解析，再禁掉 5.1 没有的写法）与禁用全局、确定性（禁 `math.random`/`os.time`）；
-2. 部署：`python3 -I tools/deploy.py`。先校验，再把 `SmartDistrictPlanner/` 同步到游戏的 Mods 目录（增量复制，并删除已不存在的文件）；
-3. 验证：改 Lua/UI XML 后回主菜单重新进入对局；改 modinfo/文本需重启游戏（deploy 会提示是哪种；重启用 `tools/game.py quit/launch/newgame`）；然后 `python3 -I tools/run_tests.py` 跑 `tests/` 下的游戏内测试；
+**每轮改动流程**（命令和选项见 [tools/README.md](tools/README.md)；每个 PR 跑和它相关的测试，整套留到发版前，见 docs/maintaining.md 第 8 节）：
+0. 离线：`node tools/offline_tests.mjs` 跑 `tests/offline/spec_*.lua`（不开游戏）。改求解算法时再跑 `tests/offline/bench_single.lua` 对比质量与预计耗时；
+1. 校验：`python3 -I tools/validate.py`。检查 XML 格式、modinfo 与磁盘文件一致、双语文本键一致、`LOC_SDP_*` 引用都有定义、UI XML 只用游戏本体出现过的控件和属性（坑 8，需要 `reference/`）、Lua 语法与禁用全局、确定性（禁 `math.random`/`os.time`）；
+2. 部署：`python3 -I tools/deploy.py`。先校验，再把 `SmartDistrictPlanner/` 同步到游戏的 Mods 目录；
+3. 验证：改 Lua/UI XML 后回主菜单重新进入对局；改 modinfo/文本需重启游戏（deploy 会提示是哪种）；然后 `python3 -I tools/run_tests.py` 跑 `tests/` 下的游戏内测试；
 4. 排错：保持 `civ6tuner.py serve` 运行，查 `logs/tuner-lua.log`（Windows 上也可查 `Lua.log` 的 `Runtime Error`）；控件不显示且无日志 → 怀疑 XML 非法属性。
 
-**自动化测试分层**：⓪′ 离线对比（`tools/compare.mjs`，见 tools/README.md）：用游戏缓存里导出的真实规则库和原样的 DMT、AMT、EP 代码，在 432 个生成的场景和从真实存档导出的场景（`RS`/`RM`，`tools/snapshot.py`）上比较方案（开发集、留出集、多组权重、奇观、选城址、覆盖范围、真实集，见 tools/README.md），裁判是只加载 DMT 的独立状态，另可用 `--crossscore` 让 AMT、EP 自己的目标函数给方案打分；改算法时只看开发集（`S`/`M`），留出集（`HS`/`HM`）只用来复核；改求解器或合法性规则后跑一遍本 mod（`-p sdp`），看"本 mod 自报的加成 = 裁判的加成"、零违规、漏放的区域都是"no_plot"（裁判判定有位置却没放的记为 "placeable"）；⓪ 离线逻辑测试与基准（`tools/offline_tests.mjs`，fengari 里跑 Lua，DMT 和游戏接口由 `tests/offline/world.lua` 模拟；只证明搜索与记账正确，数值仍以游戏内为准。每次求解后自动查方案不变量（`tests/offline/invariants.lua`，#242），故意造不合法状态的测试用 `SDP_Invariants.OptOut("原因")` 关掉。注意 fengari 的整数是 32 位，游戏里是双精度）；① validate + deploy + 监控 `logs/tuner-lua.log`（全自动）；② `tests/test_*.lua` 经 `run_tests.py` 在指定 Lua 状态里跑断言（全自动；本 mod 面板的 Lua 状态名为 `SDP_Panel`，测试钩子是其中的全局表 `SDP_Panel`；需要改游戏状态的用例用 `@setup`/`@teardown` 在 `GameCore_Tuner` 状态执行 `tests/fixtures/` 脚本；`game.py newgame --ruleset` 可切换三种规则集）；③ computer-use 截图做 UI 验收（仅 macOS，半自动，需用户授权）；另有引擎可建格复核探针 `tests/bench/probe_engine.lua`（新对局的首都）和 `tests/bench/audit_engine.lua`（存档里的每座城，外加需相邻区域的奇观认不认别城的区域；两者都会给玩家全部科技与市政，只在一次性对局或存档里单独跑）；④ 真实鼠标点击 `tools/realclick.py`（仅 macOS：系统鼠标事件，需用户给 SDPClick.app 辅助功能权限，点击期间占用屏幕；Windows 上暂时手动点）；⑤ 发布前在后期存档上做压力测试 `tools/stress.py`（AI 自动打出三张后期存档，逐步计时与核对，结果写进自测报告和交付报告，截图也放进文档）。界面逻辑的测试要经过控件自己的回调（离线替身的 `Control:Click()`、`Toggle()`，取 `State()` 里带出的控件），不要只调内部函数（2026-10-21 勾选框处理函数里一处永远得 nil 的 `a and false or nil` 让城址钉取消勾选无效，测试直接调规划函数没发现）。测试用例不要写死某个文明的规则（如"学院每个相邻区域 +0.5"），按 `ExcludedAdjacencies` 与玩家特性判断；默认测试对局是罗马，换文明（`game.py newgame --leader LEADER_HOJO` 等）能发现这类问题。交付时明确区分"已自动验证"与"需用户确认"的部分，不得声称未经验证的行为已通过。跨平台：mod 无平台相关代码；Windows 上重点看性能与界面布局（缩放、分辨率）。
+**自动化测试分层**（命令和选项见 tools/README.md）：
+- ⓪′ 离线对比 `tools/compare.mjs`：真实规则库和原样的 DMT、AMT、EP 代码，在生成的场景和从真实存档导出的场景上比较方案，裁判是只加载 DMT 的独立状态。改算法时只看开发集（`S`/`M`），留出集（`HS`/`HM`）只用来复核；改求解器或合法性规则后跑本 mod（`-p sdp`），看“本 mod 自报的加成 = 裁判的加成”、零违规、漏放的区域都是 "no_plot"（裁判判定有位置却没放的记为 "placeable"）。
+- ⓪ 离线逻辑测试与基准 `tools/offline_tests.mjs`：fengari 里跑 Lua，DMT 和游戏接口由 `tests/offline/world.lua` 模拟；只证明搜索与记账正确，数值仍以游戏内为准。每次求解后自动查方案不变量（`tests/offline/invariants.lua`，#242），故意造不合法状态的测试用 `SDP_Invariants.OptOut("原因")` 关掉。fengari 的整数是 32 位，游戏里是双精度。
+- ① validate + deploy + 监控 `logs/tuner-lua.log`（全自动）。
+- ② `tests/test_*.lua` 经 `run_tests.py` 在指定 Lua 状态里跑断言（全自动）：面板的 Lua 状态名为 `SDP_Panel`，测试钩子是其中的全局表 `SDP_Panel`；要改游戏状态的用例用 `@setup`/`@teardown` 在 `GameCore_Tuner` 状态执行 `tests/fixtures/` 脚本；`game.py newgame --ruleset` 切换三种规则集。
+- ③ computer-use 截图做 UI 验收（仅 macOS，半自动，需用户授权）；④ 真实鼠标点击 `tools/realclick.py`（仅 macOS，点击期间占用屏幕；Windows 上暂时手动点）；⑤ 发布前在后期存档上做压力测试 `tools/stress.py`。
+- 引擎可建格复核探针 `tests/bench/probe_engine.lua`（新对局的首都）和 `tests/bench/audit_engine.lua`（存档里的每座城，外加需相邻区域的奇观认不认别城的区域）：两者都会给玩家全部科技与市政，只在一次性对局或存档里单独跑。
+- 测试怎么写见第 3 节“代码约定”。交付时明确区分“已自动验证”与“需用户确认”的部分，不得声称未经验证的行为已通过。跨平台：mod 无平台相关代码；Windows 上重点看性能与界面布局（缩放、分辨率）。
 
 ## 7. 验收清单（需求文档第五节）
 
@@ -201,15 +215,27 @@ include("dmt_yieldcalculator");       -- 尾部会执行 DMT_Initialize()，见�
 - [x] 勾 3–4 个区域不卡死（停顿 ≤ ~2 秒；实测 ≤ 0.2 秒）
 - [◐] Windows 实测：合作者 2026-10-20、10-21 两轮实测，意见已处理（见 [docs/multicity-design.md](docs/multicity-design.md) 第 20、22 节）；完整验收清单还没在 Windows 上走过
 
-## 8. 代理行为约定
+## 8. 规则在哪、代理行为约定
+
+每条规则只写在一处，别处写一句指向它；改规则按 [docs/maintaining.md](docs/maintaining.md)“工作流怎么改”。
+
+| 找什么 | 在哪 |
+|---|---|
+| 需求 | [需求文档](civ6-mod-from-scratch-prompt.md)（锁定，勿改） |
+| 不能违反的约束、技术方案、坑的要点、代码约定 | 本文；坑的完整说明在 [docs/pitfalls.md](docs/pitfalls.md) |
+| 谁做什么和原则：流程、分工、派子 agent、共用资源、PR 与 CI、Codex 审查、测试分工、发版、对内的写作规则 | [docs/maintaining.md](docs/maintaining.md) |
+| 每种活的步骤：Issue、游戏内测试、离线重活、发版、监听 | [.claude/skills/sdp-*](.claude/skills/)（`sdp-issue`、`sdp-game-test`、`sdp-offline-runs`、`sdp-release`、`sdp-watch`） |
+| 命令和选项 | [tools/README.md](tools/README.md)、各工具的 `--help` |
+| 提交 PR、写作（游戏名称、已定的英文词） | [CONTRIBUTING.md](CONTRIBUTING.md)“提交 PR”“写作”：CLAUDE.md 不读入它，开 PR、写界面文字和文档前读 |
+| 当前平台的环境 | [docs/dev-macos.md](docs/dev-macos.md)、[docs/dev-windows.md](docs/dev-windows.md) |
+| 规则为什么这样定、出过什么事 | [docs/notes/workflow-decisions.md](docs/notes/workflow-decisions.md) |
+| 流程总览 | [docs/workflow.html](docs/workflow.html)（发版后更新；和规则文档不一致时以规则文档为准） |
 
 - 需求文档第二节 > 第三、四节硬约束 > 本文其他约定 > 自行设计。
 - 不修改需求文档；设计决策写入 `docs/design.md` 或 `docs/multicity-design.md`，一个 Issue 的实现、实测与数字出处写进 `docs/notes/issue-<编号>-<主题>.md`（在 `docs/notes/README.md` 加一行；推翻了旧笔记的做法时改旧笔记那一行的状态），玩家能感觉到的改动在 `changelog.d/<编号>.md` 记一笔（发版时收进 `CHANGELOG.md`，见 CONTRIBUTING.md）。
 - 不把 DMT/AMT/EP/游戏本体的源码或数据复制进仓库，更不能进 `SmartDistrictPlanner/` 发布目录（版权与依赖关系：DMT 作为依赖 mod 由玩家自行订阅）。仓库是公开的。
 - 回复与文档使用中文；代码标识符与注释用英文或中文均可，但单文件内保持一致。
-- 调研和一个 Issue 的开发交给子 agent（维护者点名或改动很大的开发用子会话），几行的小修和协调留在主会话（docs/maintaining.md“谁来做”）。
-- 派子 agent 时按任务选模型和思考强度，任务停在检查点，后续的活交给带交接说明的新子 agent；结束一轮前在后台安排好会叫醒自己的等待（docs/maintaining.md“子 agent 怎么派”）。
-- 改了代码的 PR 合并前请 Codex 审，意见逐条核实后再改或回复（docs/maintaining.md“Codex 审查”）。
+- 分工、派子 agent、Codex 审查见 docs/maintaining.md 第 3、4、7 节。
 
 ## 9. 代码审查要点
 

@@ -70,11 +70,7 @@ python3 -I tools/run_tests.py tests/test_xxx.lua                 # run one test 
 
 ### Code conventions
 
-- Prefix our Lua files, globals and LuaEvents with `SDP_` or `sdp_`, and text keys with `LOC_SDP_`. Add every new key in both languages, next to the keys it belongs with (the same page or control), not at the end of the file: pull requests that all append to the end conflict with each other.
-- Write plain Lua 5.1. In the game `_G`, `load`, `require`, `debug`, `utf8`, `table.unpack` and some others are nil (AGENTS.md section 6 has the list; `validate.py` reports them).
-- No result may depend on the order of `pairs()`. Collect into an array, sort by a stable key, then use `ipairs`. Every tie needs a fixed secondary key. No `math.random` and nothing based on time.
-- Tests of the panel go through the controls' own callbacks, not internal functions.
-- Tests do not hardcode one civilization's rules. Read them from the rules the test game has.
+The code conventions are in [AGENTS.md](AGENTS.md) section 3 (in Chinese; `validate.py` checks most of them). They cover: the `SDP_` / `sdp_` and `LOC_SDP_` prefixes; new text keys in both languages, next to the keys they belong with rather than at the end of the file; plain Lua 5.1 without the globals that are nil in the game; results that never depend on the order of `pairs()`, with a fixed tie-break and nothing random or time-based; tests that go through the controls' own callbacks and read civilization rules from the test game instead of hardcoding them.
 
 ### Submitting a pull request
 
@@ -167,11 +163,7 @@ python3 -I tools/run_tests.py tests/test_xxx.lua                 # 在游戏里�
 
 ### 代码约定
 
-- 自有 Lua 文件、全局符号、LuaEvents 用 `SDP_` 或 `sdp_` 前缀，文本键用 `LOC_SDP_`，新键中英文都加，放在相关的键旁边（同一个页签或控件的），不追加到文件末尾：几个 PR 都加在末尾就会互相冲突。
-- 写纯 Lua 5.1。游戏里 `_G`、`load`、`require`、`debug`、`utf8`、`table.unpack` 等是 nil（清单在 AGENTS.md 第 6 节，`validate.py` 会报）。
-- 结果不能依赖 `pairs()` 的顺序：先收集成数组、按稳定的键排序，再用 `ipairs`。同分要有固定的次级键。不用 `math.random`，不用和时间有关的逻辑。
-- 面板的测试经过控件自己的回调，不直接调内部函数。
-- 测试不写死某个文明的规则，从测试对局的规则里读。
+代码约定在 [AGENTS.md](AGENTS.md) 第 3 节（`validate.py` 会查其中大部分），包括：`SDP_` / `sdp_` 和 `LOC_SDP_` 前缀；新文本键中英文都加，放在相关的键旁边而不是文件末尾；写纯 Lua 5.1，不用游戏里为 nil 的全局；结果不依赖 `pairs()` 的顺序，同分有固定的次级键，不用随机和时间；测试经过控件自己的回调，文明规则从测试对局里读，不写死。
 
 ### 提交 PR
 

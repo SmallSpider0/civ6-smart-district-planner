@@ -89,3 +89,4 @@
 | [codex-review-trial.md](codex-review-trial.md) | Codex 审查试用：每个请审的 PR 一行（`codex_review.py log --table` 写入） | 持续更新 |
 | [planner-comparison.md](planner-comparison.md) | 与其他规划模组的离线对比结果 | 持续更新 |
 | [rules-cleanup.md](rules-cleanup.md) | 记忆和规则文档的清理记录 | 持续更新 |
+| [workflow-decisions.md](workflow-decisions.md) | 工作流的决定和原因：按日期，规则正文只留一句理由（#252） | 持续更新 |
