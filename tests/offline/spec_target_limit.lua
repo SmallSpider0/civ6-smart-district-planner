@@ -114,7 +114,8 @@ test("shared list: an empire-limited district elsewhere and a wonder's district 
   for _, p in ipairs(plan) do
     if p.Type == limited then limitedIn = p.City end
   end
-  T.eq(limitedIn, "C1", "the empire-limited district goes to the first city")
+  -- One city gets it, the one with the better plan (issue 234).
+  T.ok(limitedIn == "C1" or limitedIn == "C2", "the empire-limited district in one city: " .. tostring(limitedIn))
   local _, c2 = Specialty(plan, "C2")
   T.ok(c2:find("DISTRICT_CAMPUS", 1, true) ~= nil, "city 2 gets the required campus: " .. c2)
 end)
