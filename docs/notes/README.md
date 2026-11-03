@@ -63,7 +63,7 @@
 | [issue-153-tooltips.md](issue-153-tooltips.md) | 面板悬停提示改写 | 现行 |
 | [issue-154-wonder-replace.md](issue-154-wonder-replace.md) | 开着“替换本模组之前的钉”时奇观被漏掉 | 现行 |
 | [issue-162-swap-default.md](issue-162-swap-default.md) | “从本方其他城换格”默认打开，同分不换格 | 现行 |
-| [issue-165-tacked-list.md](issue-165-tacked-list.md) | 已有的区域不再当候选 | 现行 |
+| [issue-165-tacked-list.md](issue-165-tacked-list.md) | 已有的区域不再当候选 | 部分已取代：清单状态的函数由 #244 合成 `SDP_City.ListStatus` |
 | [issue-166-wonder-memory.md](issue-166-wonder-memory.md) | 多城页的奇观设置记不住 | 现行 |
 | [issue-177-count-exceeded.md](issue-177-count-exceeded.md) | 多城页“每城数量”被超出：复现记录 | 现行 |
 | [issue-178-reselect-city.md](issue-178-reselect-city.md) | 重新选中同一座城再打开面板不跟随 | 现行 |
@@ -80,6 +80,7 @@
 | [issue-226-dense-sites-stall.md](issue-226-dense-sites-stall.md) | 选城址页打开密铺后进度停在 24% | 现行 |
 | [issue-234-unique-city.md](issue-234-unique-city.md) | 全帝国限建区域、奇观放哪座城（按生产力自动选城） | 现行（design 4.8.1、4.8.2） |
 | [issue-242-invariants.md](issue-242-invariants.md) | 每次离线求解后检查方案不变量 | 现行（design 4.8.5） |
+| [issue-244-one-entry.md](issue-244-one-entry.md) | 区域状态、奇观归城各只留一个入口；合并复制的小函数 | 现行（design 4.8.4，design.md 城市扫描） |
 | [issue-250-one-city-as-multi.md](issue-250-one-city-as-multi.md) | 单城页按“只有一座城的多城请求”求解 | 实验（待维护者定） |
 
 ## 持续更新的记录

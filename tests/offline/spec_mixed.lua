@@ -255,16 +255,12 @@ local function Asked(rng)
   return must, pool, count
 end
 
--- What the One city tab leaves out of its list (SDP_Panel's m_status):
--- built, excluded, at the empire's limit, or tacked for the city already.
+-- What the One city tab leaves out of its list (SDP_Panel's m_status,
+-- SDP_City.ListStatus): built, excluded, at the empire's limit, or tacked
+-- for the city already.
 local function Listed(request, types)
-  local scan = SDP_City.Scan(0, request.CityID, SDP_City.ScanOptions(request))
   local districts = SDP_Rules.PlannableDistricts(0)
-  local status = SDP_City.DistrictStatus(scan, districts)
-  local ignore = SDP_City.ScanOptions(request).ignorePins
-  for districtType, why in pairs(SDP_City.TackedStatus(0, request.CityID, districts, ignore)) do
-    status[districtType] = status[districtType] or why
-  end
+  local status = SDP_City.ListStatus(0, request.CityID, districts, SDP_City.ScanOptions(request).ignorePins)
   local out = {}
   for _, t in ipairs(types or {}) do
     if status[t] == nil then out[#out + 1] = t end

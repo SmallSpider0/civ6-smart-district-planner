@@ -10,15 +10,6 @@
 
 SDP_Solver = {}
 
-local function DefaultWeights(weights)
-  local out = {}
-  for _, yieldType in ipairs(SDP_Rules.YIELDS) do
-    local w = weights and weights[yieldType]
-    out[yieldType] = (w == nil) and 1 or w
-  end
-  return out
-end
-
 -- ===========================================================================
 -- Session: one solve, kept so that "continue" can resume it.
 -- ===========================================================================
@@ -65,7 +56,7 @@ function SDP_Solver.NewSession(request, scan)
   local params = SDP_Tiers.Params(SDP_Tiers.Single, request.Tier, request.Params)
   local playerID = scan.PlayerID
   self.Request, self.Params, self.Scan, self.PlayerID = request, params, scan, playerID
-  self.Weights = DefaultWeights(request.Weights)
+  self.Weights = SDP_Rules.YieldWeights(request.Weights)
 
   -- Districts: drop duplicates and ones the city cannot take, keep request order.
   local plannable, byType = SDP_Rules.PlannableDistricts(playerID), {}
@@ -467,7 +458,7 @@ function SDP_Solver.Heat(request)
   local playerID = request.PlayerID
   local scan = SDP_City.Scan(playerID, request.CityID, SDP_City.ScanOptions(request))
   if scan == nil then return nil end
-  local weights = DefaultWeights(request.Weights)
+  local weights = SDP_Rules.YieldWeights(request.Weights)
   return SDP_Overlay.With(playerID, function()
     SDP_Overlay.HidePins(request.IgnorePins)
     local fixed = SDP_Overlay.FixedSubjects(scan)

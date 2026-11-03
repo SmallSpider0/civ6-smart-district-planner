@@ -8,6 +8,27 @@ SDP_Rules = {}
 -- The yields the objective weighs (requirement constraint 3), display order.
 SDP_Rules.YIELDS = { "YIELD_SCIENCE", "YIELD_CULTURE", "YIELD_FAITH", "YIELD_GOLD", "YIELD_PRODUCTION" }
 
+-- The five yields' weights of a request (`weights` may be nil); a missing
+-- one weighs 1 (constraint 3). For SDP_Solver and SDP_Multi.
+function SDP_Rules.YieldWeights(weights)
+  local out = {}
+  for _, yieldType in ipairs(SDP_Rules.YIELDS) do
+    local w = weights and weights[yieldType]
+    out[yieldType] = (w == nil) and 1 or w
+  end
+  return out
+end
+
+-- Whether a district of `districtType` counts as the `required` one (a
+-- wonder's Buildings.AdjacentDistrict): the same type, or a unique district
+-- replacing it (the Roman bath for the aqueduct). For SDP_Search and
+-- SDP_Multi.
+function SDP_Rules.Serves(districtType, required)
+  if districtType == required then return true end
+  local row = GameInfo.DistrictReplaces[districtType]
+  return row ~= nil and row.ReplacesDistrictType == required
+end
+
 -- "RULESET_STANDARD", "RULESET_EXPANSION_1" or "RULESET_EXPANSION_2".
 function SDP_Rules.Ruleset()
   return GameConfiguration.GetRuleSet()

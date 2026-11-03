@@ -96,7 +96,8 @@ SDP_Panel (UI/SDP_Panel.lua，InGame 上下文，Lua 状态名 SDP_Panel)
   - 已有地图钉（四环内，即所有候选格的邻居范围）全部视为锁定：钉所在格不可用，钉本身作为固定邻居交给阶段 3 的 overlay。
   - "可移除地貌"取自 `GameInfo.Features.Removable`，本机 GS 数据为树林、雨林、沼泽，正好对应约束 5。
 - `SpecialtyCapacity(pop)` = `1 + floor((pop-1)/3)`（坑 18）；扫描结果附带已用名额 `SpecialtyBuilt`。
-- `DistrictStatus(scan, districts)`：`BUILT`（本城已建且每城限一个，面板置灰）、`EXCLUSIVE`（本城已建与它互斥的区域）或 `MAX_PER_PLAYER`（全帝国数量已达上限，如市政广场，已建和已打钉的都算），用来避免 AMT 那样乱放全局唯一区域。
+- `DistrictStatus(scan, districts)`：`BUILT`（本城已建且每城限一个，面板置灰）、`EXCLUSIVE`（本城已建与它互斥的区域）或 `MAX_PER_PLAYER`（全帝国数量已达上限，如市政广场，已建和已打钉的都算，数法只在 `EmpireCounts` 一处，`SDP_Multi` 分配限建区域也读它），用来避免 AMT 那样乱放全局唯一区域。两个求解器都用它跳过区域。
+- `ListStatus(playerID, cityID, districts, ignore)`：面板清单里哪些区域置灰（#165、#244）：就是求解器用的 `DistrictStatus`，再加 `TACKED`（本城已打钉、没建、每城限一个）；正在被替换的钉不算。单城页的清单、多城页的格子都只问它，不另行判断；多城页的共用清单（`cityID` 为空）只看帝国上限。
 
 ## 界面骨架（阶段 1）
 

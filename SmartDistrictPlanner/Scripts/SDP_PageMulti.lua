@@ -124,7 +124,7 @@ local function EditedList()
 end
 
 -- Empire-limited districts the player has built up to the limit (issue 108):
--- shown as built, never asked for.
+-- written as built, with where (greyed out through StatusOf).
 local function Built() return SDP_City.EmpireBuilt(Game.GetLocalPlayer(), Districts()) end
 
 -- What the existing city of a participant Key has (SDP_City.SpecialtyHave;
@@ -156,21 +156,17 @@ local function HaveOf(key)
 end
 
 -- Why each district cannot be planned for participant `key` (a city's own
--- list): the empire limit, what the city has built (complete or not) and
--- the types tacked for it (issue 165), pins being replaced left out. As the
+-- list), as the solver judges it (SDP_City.ListStatus, issue 165, 244):
+-- what the city has built (complete or not), cannot share a city with, has
+-- tacked, and the empire limit, pins being replaced left out. As the
 -- single-city tab's list: these are greyed out, neither required nor
--- candidates. The shared list: the empire limit only.
+-- candidates. The shared list (key "ALL" or nil): the empire limit only.
+-- An empire-limited district built up to its limit reads "built" (issue
+-- 108), wherever it stands.
 local function StatusOf(key, districts)
-  local status = Built()
-  local cityID = CityOf(key)
-  if cityID ~= nil then
-    local playerID = Game.GetLocalPlayer()
-    for districtType, why in pairs(SDP_City.BuiltHereStatus(playerID, cityID, districts)) do
-      status[districtType] = status[districtType] or why
-    end
-    for districtType, why in pairs(SDP_City.TackedStatus(playerID, cityID, districts, ReplacedPins())) do
-      status[districtType] = status[districtType] or why
-    end
+  local status = SDP_City.ListStatus(Game.GetLocalPlayer(), CityOf(key), districts, ReplacedPins())
+  for districtType, why in pairs(Built()) do
+    if status[districtType] ~= nil then status[districtType] = why end
   end
   return status
 end
@@ -190,7 +186,8 @@ local function ListOf(list, key)
   for _, d in ipairs(districts) do
     if d.Specialty then ceiling = ceiling + 1 end
   end
-  return SDP_UI.ListRequest(districts, list.States, list.Count or SDP_UI.DEFAULT_COUNT, Built(), nil, ceiling)
+  return SDP_UI.ListRequest(districts, list.States, list.Count or SDP_UI.DEFAULT_COUNT, StatusOf("ALL", districts), nil,
+    ceiling)
 end
 
 -- The edited list's count. A city's own count starts from what the city
@@ -841,6 +838,10 @@ function P.RefreshLists()
       local where = SDP_Multi.WhereBuilt(playerID, d.Type)
       status = Locale.Lookup("LOC_SDP_MULTI_EMPIRE_LIMIT", d.MaxPerPlayer)
       if where ~= nil then status = status .. " " .. Locale.Lookup("LOC_SDP_MULTI_LIMITED_BUILT", Locale.Lookup(where)) end
+      row.Cell:SetToolTipString(status)
+    elseif d.MaxPerPlayer and d.MaxPerPlayer > 0 and why[d.Type] ~= nil then
+      -- At the limit with a tack of it (greyed out, StatusOf): the limit.
+      status = Locale.Lookup("LOC_SDP_MULTI_EMPIRE_LIMIT", d.MaxPerPlayer)
       row.Cell:SetToolTipString(status)
     elseif d.MaxPerPlayer and d.MaxPerPlayer > 0 then
       -- Where an empire-limited district can go (as SDP_Multi.NewSession,

@@ -656,10 +656,11 @@ function SDP_City.SpecialtyHave(scan)
   return have
 end
 
--- What SDP_City.SpecialtyHave and SDP_City.TackedStatus need of a city,
--- without scanning its plots: its districts (complete or not) and the pins
--- near it, `ignore` ({ [pin ID] = true }, being replaced) left out. Nil
--- when the city does not exist.
+-- What SDP_City.SpecialtyHave and SDP_City.ListStatus need of a city,
+-- without scanning its plots: its districts (complete or not; the city
+-- center left out, as SDP_City.Scan) and the pins near it, `ignore`
+-- ({ [pin ID] = true }, being replaced) left out. Nil when the city does
+-- not exist.
 local function PinScan(playerID, cityID, ignore)
   local city = CityManager.GetCity(playerID, cityID)
   if city == nil then return nil end
@@ -667,7 +668,8 @@ local function PinScan(playerID, cityID, ignore)
   local scan = { PlayerID = playerID, CityID = cityID, X = x, Y = y, Built = {}, Ignored = ignore,
     Pins = SDP_City.PinsInRange(playerID, x, y, SDP_City.RADIUS + 1, ignore) }
   for _, district in city:GetDistricts():Members() do
-    scan.Built[#scan.Built + 1] = { Type = GameInfo.Districts[district:GetType()].DistrictType }
+    local row = GameInfo.Districts[district:GetType()]
+    if not row.CityCenter then scan.Built[#scan.Built + 1] = { Type = row.DistrictType } end
   end
   return scan
 end
@@ -679,28 +681,6 @@ function SDP_City.HaveOf(playerID, cityID, ignore)
   local scan = PinScan(playerID, cityID, ignore)
   if scan == nil then return nil end
   return SDP_City.SpecialtyHave(scan)
-end
-
--- District types a city has a tack of (SDP_City.OwnPins) and has not built,
--- of the ones a city has at most one of (issue 165): { [DistrictType] =
--- "TACKED" }. The tack stays where it is and is scored as a neighbour
--- (requirement 7), so the type is neither a candidate nor planned again;
--- the district lists show it greyed out, as a built one. Pins being
--- replaced (`ignore`) do not count: those types are planned anew. Empty
--- when the city does not exist.
-function SDP_City.TackedStatus(playerID, cityID, districts, ignore)
-  local status = {}
-  local scan = PinScan(playerID, cityID, ignore)
-  if scan == nil then return status end
-  local built = {}
-  for _, district in ipairs(scan.Built) do built[district.Type] = true end
-  local tacked = SDP_City.TackedDistricts(scan)
-  for _, district in ipairs(districts) do
-    if tacked[district.Type] and not built[district.Type] and district.OnePerCity then
-      status[district.Type] = "TACKED"
-    end
-  end
-  return status
 end
 
 -- How many districts that take population a city has (SDP_City.SpecialtyHave)
@@ -723,14 +703,6 @@ function SDP_City.PresentDistricts(scan)
   return present
 end
 
--- Why each plannable district cannot be planned for this city, or nil when
--- it can: { [DistrictType] = "BUILT" | "EXCLUSIVE" | "MAX_PER_PLAYER" }.
--- BUILT: already in this city (shown greyed out). EXCLUSIVE: the city has
--- built one it cannot share a city with (SDP_Rules.Exclusive: a water park
--- next to a built entertainment complex). MAX_PER_PLAYER: the player has reached the
--- district's MaxPerPlayer elsewhere (e.g. one Government Plaza per empire),
--- counting the player's pins of it too: a pinned Government Plaza in another
--- city is where the plan already has it (SDP_Multi counts them the same way).
 -- How many of each district type the player has, complete or not, in any city.
 local function BuiltByPlayer(playerID)
   local count = {}
@@ -741,20 +713,40 @@ local function BuiltByPlayer(playerID)
   return count
 end
 
-function SDP_City.DistrictStatus(scan, districts)
-  local builtHere, builtByPlayer = {}, BuiltByPlayer(scan.PlayerID)
-  for _, built in ipairs(scan.Built) do builtHere[built.Type] = true end
-  for _, pin in ipairs(PlayerConfigurations[scan.PlayerID]:GetMapPins()) do
+-- How many of each district type the player has toward its empire limit
+-- (Districts.MaxPerPlayer): built in any city (complete or not) plus the
+-- player's pins of it. A pin on the district it planned (built since)
+-- counts once; a pin being replaced (`ignore`, { [pin ID] = true }) not at
+-- all. The one count of the empire limit: SDP_City.DistrictStatus and
+-- SDP_Multi's hosts of a limited district both read it.
+function SDP_City.EmpireCounts(playerID, ignore)
+  local count = BuiltByPlayer(playerID)
+  for _, pin in ipairs(PlayerConfigurations[playerID]:GetMapPins()) do
     local key = (pin:GetIconName() or ""):gsub("^ICON_", "")
     local plot = Map.GetPlot(pin:GetHexX(), pin:GetHexY())
     local row = GameInfo.Districts[key]
-    -- A pin on the district it planned (built since) is counted once; a pin
-    -- being replaced (scan.Ignored) not at all.
     if row ~= nil and not (plot ~= nil and plot:GetDistrictType() == row.Index)
-        and not (scan.Ignored and scan.Ignored[pin:GetID()]) then
-      builtByPlayer[key] = (builtByPlayer[key] or 0) + 1
+        and not (ignore and ignore[pin:GetID()]) then
+      count[key] = (count[key] or 0) + 1
     end
   end
+  return count
+end
+
+-- Why each plannable district cannot be planned for this city, or nil when
+-- it can: { [DistrictType] = "BUILT" | "EXCLUSIVE" | "MAX_PER_PLAYER" }.
+-- BUILT: already in this city (shown greyed out). EXCLUSIVE: the city has
+-- built one it cannot share a city with (SDP_Rules.Exclusive: a water park
+-- next to a built entertainment complex). MAX_PER_PLAYER: the player has
+-- reached the district's MaxPerPlayer (SDP_City.EmpireCounts: e.g. one
+-- Government Plaza per empire, a pinned one in another city counting as
+-- where the plan already has it). The solvers (SDP_Solver, SDP_Multi) skip
+-- these; the panel's lists show them through SDP_City.ListStatus.
+-- `scan` needs PlayerID, Built and Ignored (SDP_City.Scan, ScanSite, or
+-- the pin scan of ListStatus).
+function SDP_City.DistrictStatus(scan, districts)
+  local builtHere, builtByPlayer = {}, SDP_City.EmpireCounts(scan.PlayerID, scan.Ignored)
+  for _, built in ipairs(scan.Built) do builtHere[built.Type] = true end
   local status = {}
   for _, district in ipairs(districts) do
     if builtHere[district.Type] and district.OnePerCity then
@@ -769,24 +761,26 @@ function SDP_City.DistrictStatus(scan, districts)
   return status
 end
 
--- What one existing city has built that keeps a district type from being
--- planned there again: { [DistrictType] = "BUILT" | "EXCLUSIVE" }, as
--- SDP_City.DistrictStatus without the empire limit and without scanning the
--- city's plots. The Several cities tab adds it to a city's own list (issue
--- 144: a built district set to required is neither planned nor counted twice).
-function SDP_City.BuiltHereStatus(playerID, cityID, districts)
-  local status = {}
-  local city = CityManager.GetCity(playerID, cityID)
-  if city == nil then return status end
-  local builtHere = {}
-  for _, district in city:GetDistricts():Members() do
-    builtHere[GameInfo.Districts[district:GetType()].DistrictType] = true
-  end
+-- Why each district is greyed out in a list of the panel, or nil when it
+-- can be set (issue 165, 244): SDP_City.DistrictStatus, the very answer the
+-- solvers act on, and TACKED for a type the city has a tack of
+-- (SDP_City.OwnPins), has not built and has at most one of: the tack stays
+-- where it is and is scored as a neighbour (requirement 7), so the type is
+-- neither a candidate nor planned again. Pins being replaced (`ignore`,
+-- { [pin ID] = true }) do not count, toward the empire limit or as tacked.
+-- Read without scanning the city's plots. `cityID` nil (the shared list of
+-- the Several cities tab): the empire limit only. The One city tab's list
+-- and the Several cities tab's grid both read this.
+function SDP_City.ListStatus(playerID, cityID, districts, ignore)
+  local scan = cityID ~= nil and PinScan(playerID, cityID, ignore) or nil
+  local status = SDP_City.DistrictStatus(scan or { PlayerID = playerID, Built = {}, Ignored = ignore }, districts)
+  if scan == nil then return status end
+  local built = {}
+  for _, district in ipairs(scan.Built) do built[district.Type] = true end
+  local tacked = SDP_City.TackedDistricts(scan)
   for _, district in ipairs(districts) do
-    if builtHere[district.Type] and district.OnePerCity then
-      status[district.Type] = "BUILT"
-    elseif SDP_Rules.ExcludedBy(district.Type, builtHere) ~= nil then
-      status[district.Type] = "EXCLUSIVE"
+    if status[district.Type] == nil and tacked[district.Type] and not built[district.Type] and district.OnePerCity then
+      status[district.Type] = "TACKED"
     end
   end
   return status
@@ -794,9 +788,10 @@ end
 
 -- The districts with an empire limit (Districts.MaxPerPlayer, e.g. the
 -- Government Plaza) the player has built up to that limit, complete or not,
--- in any of their cities: { [DistrictType] = "BUILT" } (issue 108). The
--- Several cities tab shows them as built and plans none. Pins do not count:
--- a new plan may move them (the solver counts them, SDP_Multi).
+-- in any of their cities: { [DistrictType] = "BUILT" } (issue 108). Pins
+-- do not count. Only what the Several cities tab writes on such a cell
+-- ("built", and where); whether it is greyed out and asked for is
+-- SDP_City.ListStatus.
 function SDP_City.EmpireBuilt(playerID, districts)
   local builtByPlayer, status = BuiltByPlayer(playerID), {}
   for _, district in ipairs(districts) do

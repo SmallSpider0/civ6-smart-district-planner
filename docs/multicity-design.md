@@ -252,7 +252,7 @@ SDP_Panel（面板，三个页签：单城 / 城址 / 多城；每页有档位�
 
 #28、#234。代码：`SDP_Multi.NewSession` 的分配段（`HostChoices`），`SDP_Multi.SolveNow`。
 
-- 对象：`Districts.MaxPerPlayer > 0` 的区域（市政广场、外交区等）。它们只当必建，不进候选。剩下的名额 = 上限 − 已建 − 任何城的已有钉。
+- 对象：`Districts.MaxPerPlayer > 0` 的区域（市政广场、外交区等）。它们只当必建，不进候选。剩下的名额 = 上限 − 已建 − 任何城的已有钉（`SDP_City.EmpireCounts`，正在被替换的钉不算；各城的 `DistrictStatus` 和面板的置灰用同一个数）。
 - 先分给自定清单里要它的城（请求的 `Plans` 有这座城），再分给用共用清单的城。一类里要它的城不多于剩下的名额时都给。
 - 多于名额时，这一类里的城按离中心城的距离排（同距按参与者顺序），取前 max(名额 + 1, `HOST_TRIES` = 4) 座作候选主人。中心城是请求的 `Center`：面板传打开面板时选中的城，没有就是首都。这次会话给 `UniqueTo` 指定的那座，没有就给最近的。
 - `SolveNow` 再把其余候选主人各解一遍（`TryAgain`），用 `Session:Beats` 比：放下的奇观多的胜，再比放下的对象数，再比总分；同分留先算的（离中心近的）。有两种这样的区域时依次比：第二种在第一种的最佳主人定下后再比，求解次数是 1 + Σ(候选主人数 − 1)。留下的会话记 `Stats.Hosts`。
@@ -292,7 +292,7 @@ SDP_Panel（面板，三个页签：单城 / 城址 / 多城；每页有档位�
 
 #### 4.8.4 奇观记在哪座城
 
-#45、#238（PR #240）。代码：`WonderOwner`（`SDP_Multi.lua` 里的局部函数）、`Session:OwnerOf`，合法性在 `Search:OwnDistrictNext`、`Search:Singles`。
+#45、#238（PR #240）、#244。代码：`SlotCity`、`WonderOwner`（`SDP_Multi.lua` 里的局部函数）、`Session:OwnerOf`，合法性在 `Search:OwnDistrictNext`、`Search:SuppliedNext`、`Search:WondersServed`、`Search:Singles`。
 
 - **合法性**：游戏只认建奇观那座城的区域（坑 42）。`Search.Owners` 记每一格能归哪些参与的城、每个已有区域属于哪些城；要挨某种区域的奇观，只有挨着“能拿这一格的城”的同种区域时才合法。DMT 不区分区域属于哪座城，这一条是本模组加的。
 - **记给哪座城**（结果列表、预览编号、各城小计、换格提示都取自 `Session:OwnerOf`）：
@@ -300,7 +300,8 @@ SDP_Panel（面板，三个页签：单城 / 城址 / 多城；每页有档位�
   2. 否则在能拿这一格的城里找。要挨区域的奇观：挨着为它补的区域时，记给补区域的城；再看它挨着哪些城的同种区域（已有的和方案里的），只有一座就记给它，有几座就只在这几座里接着比；
   3. 格子已归某座参与的城：记给那座；
   4. 最近的城，同距按参与者顺序。
-- 搜索中的 `SlotOwner` 用同一个函数：覆盖范围（`CoverOwner`）不带方案，只看已有区域；换格判断（`Swapped`）带上方案里的区域。
+- 第 2 步“挨着为它补的区域”和合法性里“补的区域放下了，奇观必须挨着它”是同一个判断（`Search:SuppliedNext`）；“挨着哪些城的同种区域”和合法性都用 `Search:OwnDistrictNext`。
+- 搜索和定稿只问 `SlotCity` 一个函数，只差传不传方案：覆盖范围（`CoverOwner`）不带方案，只看已有区域；换格判断（`Swapped`）带上正在试的方案；定稿（`Session:OwnerOf`）带上最终方案。
 
 #### 4.8.5 每次求解后检查的方案不变量
 

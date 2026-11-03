@@ -21,12 +21,11 @@ end
 -- A district type that takes population, one per city, without an empire
 -- limit, that the capital has neither built nor tacked; first by type.
 local function FreeType(city)
-  local status = SDP_City.BuiltHereStatus(pid, city:GetID(), SDP_Rules.PlannableDistricts(pid))
-  local tacked = SDP_City.TackedStatus(pid, city:GetID(), SDP_Rules.PlannableDistricts(pid))
+  local status = SDP_City.ListStatus(pid, city:GetID(), SDP_Rules.PlannableDistricts(pid))
   local types = {}
   for _, d in ipairs(SDP_Rules.PlannableDistricts(pid)) do
     if d.Specialty and d.OnePerCity and not (d.MaxPerPlayer and d.MaxPerPlayer > 0)
-        and status[d.Type] == nil and tacked[d.Type] == nil then
+        and status[d.Type] == nil then
       types[#types + 1] = d.Type
     end
   end
