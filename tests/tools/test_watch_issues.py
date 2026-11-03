@@ -2,10 +2,12 @@
 
     python3 -I -m unittest discover -s tests/tools -v
 """
+import io
 import os
 import sys
 import tempfile
 import unittest
+from contextlib import redirect_stdout
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "tools"))
 import watch_issues as wi  # noqa: E402
@@ -50,8 +52,9 @@ class Where(unittest.TestCase):
 class Poll(unittest.TestCase):
     def setUp(self):
         self.dir = tempfile.mkdtemp()
-        self.saved = (wi.HELD, wi.OTHERS, wi.gh)
+        self.saved = (wi.HELD, wi.OTHERS, wi.REPORTED, wi.gh)
         wi.HELD, wi.OTHERS = os.path.join(self.dir, "held.log"), os.path.join(self.dir, "others.log")
+        wi.REPORTED = os.path.join(self.dir, "reported.log")
         self.issues = [issue(7, "DracoYus"), issue(8, "DracoYus"), issue(9, "someone"), issue(10, "DracoYus", pr=True)]
         self.comments = [comment(1, 7, "DracoYus"), comment(2, 8, "DracoYus"), comment(3, 7, "someone"),
                          comment(4, 10, "DracoYus"), comment(5, 7, "DracoYus")]
@@ -76,7 +79,7 @@ class Poll(unittest.TestCase):
         wi.gh = fake
 
     def tearDown(self):
-        wi.HELD, wi.OTHERS, wi.gh = self.saved
+        wi.HELD, wi.OTHERS, wi.REPORTED, wi.gh = self.saved
 
     def read(self, path):
         if not os.path.exists(path):
@@ -154,6 +157,33 @@ class Poll(unittest.TestCase):
         self.assertNotIn("SmallSpider", self.read(wi.HELD) + self.read(wi.OTHERS))
         self.assertIn("comment-20", state["seen"])
         self.assertIn("issue-12", state["seen"])
+
+    def test_reported_lines_are_kept_in_a_file(self):
+        """#261: the watch's stdout went to a file the side session never read; the reply was lost."""
+        state = {"since": SINCE, "seen": [], "mine": ["5"], "users": ["DracoYus"]}
+        out = wi.poll(state)
+        kept = self.read(wi.REPORTED).splitlines()
+        self.assertEqual([line.split(" ", 1)[1] for line in kept], out)
+        self.assertNotIn("#8", self.read(wi.REPORTED))  # held, not reported
+        state["seen"], state["since"] = [], SINCE
+        wi.poll(state)  # appended, never overwritten
+        self.assertEqual(len(self.read(wi.REPORTED).splitlines()), 2 * len(out))
+
+    def test_reported_option_prints_the_last_lines(self):
+        with open(wi.REPORTED, "w", encoding="utf-8") as f:
+            f.write("".join("t%d NEW COMMENT %d\n" % (i, i) for i in range(30)))
+        saved = sys.argv
+        self.addCleanup(setattr, sys, "argv", saved)
+        for argv, first, count in ((["--reported"], 10, 20), (["--reported", "3"], 27, 3)):
+            sys.argv = ["watch_issues.py"] + argv
+            with redirect_stdout(io.StringIO()) as out:
+                self.assertEqual(wi.main(), 0)
+            lines = out.getvalue().splitlines()
+            self.assertEqual((lines[0], len(lines)), ("t%d NEW COMMENT %d" % (first, first), count))
+        os.remove(wi.REPORTED)
+        with redirect_stdout(io.StringIO()) as out:
+            wi.main()
+        self.assertEqual(out.getvalue().strip(), "nothing reported")
 
     def test_held_prints_and_clears(self):
         with open(wi.HELD, "w", encoding="utf-8") as f:
