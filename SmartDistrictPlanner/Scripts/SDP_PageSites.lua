@@ -18,7 +18,6 @@ local m_utilityIM = InstanceManager:new("DistrictCell", "Root", Controls.SitesUt
 local m_weightIM = InstanceManager:new("WeightColumn", "Root", Controls.SitesWeightStack)
 local m_weightIM2 = InstanceManager:new("WeightColumn", "Root", Controls.SitesWeightStack2)
 local m_solutionIM = InstanceManager:new("SolutionRow", "Root", Controls.SitesSolutionStack)
-local m_resultIM = InstanceManager:new("ResultRow", "Root", Controls.SitesResultStack)
 local m_siteRowIM = InstanceManager:new("SiteRow", "Root", Controls.SitesResultStack)
 
 -- The site weights (design 3.3, issue 88) and the distance cost, in two
@@ -62,8 +61,7 @@ local DEFAULT_K, DEFAULT_D = 3, 5
 local m_k, m_d = DEFAULT_K, DEFAULT_D
 local MIN_D, MAX_D = 4, 15
 -- Dense packing (issue 87, decided 2026-10-26): its own distance, kept in
--- the save; switching it off brings the usual one back. Its sites are
--- ticked one by one (none by default) and only the ticked ones get a tack.
+-- the save; switching it off brings the usual one back.
 -- The number of new cities is one for both modes (issue 191): switching
 -- dense packing on keeps it (it had its own, 12 by default, and a plan that
 -- far ahead was mostly out of date before the settlers got there). Dense
@@ -71,7 +69,10 @@ local MIN_D, MAX_D = 4, 15
 -- at most MAX_K, and comes back when it is switched on again.
 local m_dense = false
 local m_dd = DEFAULT_D
-local m_ticked = {} -- [site number in the solution] = true
+-- Every site of a result has a tick box and only the ticked ones get a tack:
+-- none ticked by default with dense packing on (issue 87), all with it off
+-- (issue 241). m_flipped holds the sites the player set the other way.
+local m_flipped = {} -- [site number in the solution] = true
 local function MaxK() return m_dense and SDP_SiteSolver.DENSE_MAX_K or SDP_SiteSolver.MAX_K end
 local function K() return math.min(m_k, MaxK()) end
 local function D() return m_dense and m_dd or m_d end
@@ -165,10 +166,27 @@ function P.Restore()
   if kept ~= nil then m_preset = m_keeper.Match(kept.Preset) or kept.Preset end
 end
 
+local function Ticked(s)
+  local flipped = m_flipped[s] == true
+  if m_result ~= nil and m_result.Dense then return flipped end
+  return not flipped
+end
+-- The ticked sites of the selected solution, [site number] = true.
+local function TickedSet()
+  local set = {}
+  local solution = m_result and m_result.Ok and (m_result.Solutions[m_solution] or m_result.Solutions[1])
+  if solution then
+    for s = 1, #solution.Sites do
+      if Ticked(s) then set[s] = true end
+    end
+  end
+  return set
+end
+
 local function ClearResult()
   local job = SDP_Task.Current()
   if job ~= nil and job.Page == P.Name then SDP_Task.Cancel() end
-  m_ticked = {}
+  m_flipped = {}
   if m_result ~= nil then
     m_result = nil
     SDP_Preview.Clear()
@@ -560,14 +578,13 @@ function P.SelectSolution(n)
     return
   end
   m_solution = n
-  m_ticked = {}
+  m_flipped = {}
   m_lookNext = true
   P.Render()
 end
 
 function P.Render()
   m_solutionIM:ResetInstances()
-  m_resultIM:ResetInstances()
   m_siteRowIM:ResetInstances()
   m_view.Solutions, m_view.Results = {}, {}
   Controls.SitesQuality:SetText("")
@@ -583,14 +600,14 @@ function P.Render()
     local solution = result.Solutions[m_solution] or result.Solutions[1]
     Controls.SitesSummary:SetText(Locale.Lookup("LOC_SDP_SITES_SUMMARY", SDP_UI.Number(math.floor(solution.Value * 10 + 0.5) / 10),
       result.Stats.Candidates, result.Stats.Refined))
+    local ticked = 0
+    for _ in pairs(TickedSet()) do ticked = ticked + 1 end
     if result.Dense then
-      local ticked = 0
-      for _ in pairs(m_ticked) do ticked = ticked + 1 end
       Controls.SitesSummary:SetText(Locale.Lookup("LOC_SDP_SITES_SUMMARY_DENSE", #solution.Sites,
         SDP_UI.Number(math.floor(solution.Value * 10 + 0.5) / 10), ticked))
-      Controls.SitesAllButton:SetText(Locale.Lookup(ticked == #solution.Sites and "LOC_SDP_SITES_TICK_NONE"
-        or "LOC_SDP_SITES_TICK_ALL"))
     end
+    Controls.SitesAllButton:SetText(Locale.Lookup(ticked == #solution.Sites and "LOC_SDP_SITES_TICK_NONE"
+      or "LOC_SDP_SITES_TICK_ALL"))
     Controls.SitesQuality:SetText(SDP_UI.Join({ SDP_UI.QualityText(result), Locale.Lookup("LOC_SDP_SITES_MODEL_NOTE") }))
     for n, s in ipairs(result.Solutions) do
       local inst = m_solutionIM:GetInstance()
@@ -607,16 +624,14 @@ function P.Render()
     for s, site in ipairs(solution.Sites) do
       local name = Locale.Lookup("LOC_SDP_SITE_N", numbers[s]) .. "  " .. SDP_UI.Where(site.X, site.Y) .. "  "
         .. SDP_UI.Number(math.floor(site.Value * 10 + 0.5) / 10)
-      local inst = result.Dense and m_siteRowIM:GetInstance() or m_resultIM:GetInstance()
+      local inst = m_siteRowIM:GetInstance()
       local row = SDP_UI.ResultRow(inst, "ICON_DISTRICT_CITY_CENTER", name,
         SiteDetail(site, result), SiteToolTip(site, result), site.X, site.Y)
       m_view.Results[#m_view.Results + 1] = row
-      if result.Dense then
-        -- Ticked for its tack (issue 87): none by default.
-        inst.Check:SetCheck(m_ticked[s] == true)
-        inst.Check:RegisterCheckHandler(function() P.SetTicked(s, inst.Check:IsChecked()) end)
-        row.Check = inst.Check
-      end
+      -- Ticked for its tack (issues 87, 241).
+      inst.Check:SetCheck(Ticked(s))
+      inst.Check:RegisterCheckHandler(function() P.SetTicked(s, inst.Check:IsChecked()) end)
+      row.Check = inst.Check
       -- A click on a site also sets where "next site" goes on from.
       inst.Root:RegisterCallback(Mouse.eLClick, function() P.LookAtSite(s) end)
     end
@@ -645,9 +660,9 @@ function P.UpdateButtons()
   Controls.SitesContinueButton:SetDisabled(running or not ok or not m_result.Quality.CanContinue or m_result.Placed == true)
   Controls.SitesContinueButton:SetHide(running)
   Controls.SitesCancelButton:SetHide(not running)
-  local none = m_dense and ok and next(m_ticked) == nil
+  local none = ok and next(TickedSet()) == nil
   Controls.SitesPlaceButton:SetDisabled(running or not ok or m_result.Placed == true or none)
-  Controls.SitesAllButton:SetHide(not (ok and m_result.Dense))
+  Controls.SitesAllButton:SetHide(not ok)
   Controls.SitesAllButton:SetDisabled(running or not ok or m_result.Placed == true)
   Controls.SitesUndoButton:SetDisabled(running or not SDP_Pins.CanUndo())
 end
@@ -659,7 +674,7 @@ function P.Solve()
   if SDP_Task.IsRunning() then return false end
   local request = P.Request()
   local params = SDP_Tiers.Params(SDP_Tiers.Sites, m_tier)
-  m_result, m_solution, m_ticked = nil, 1, {}
+  m_result, m_solution, m_flipped = nil, 1, {}
   m_lookNext = true
   P.SetFold(true) -- the results get the room (issue 71)
   SDP_Preview.Clear()
@@ -679,7 +694,10 @@ function P.Continue()
     return session:Result()
   end, SDP_SiteSolver.EstimateUnits(#session.Ctx.Plan + #session.Ctx.Pool, session.K, session.Params, true,
     session.Ctx.Pick > 0 and (#session.Ctx.Plan + session.Ctx.Pick) or nil),
-    function(result) m_result = result end, P)
+    function(result)
+      -- Its solutions may differ: the tick boxes start over (issue 241).
+      m_result, m_flipped = result, {}
+    end, P)
 end
 
 -- A city-center map tack on every site of the selected solution, named with
@@ -691,7 +709,7 @@ function P.Place()
   local numbers = SiteNumbers(solution)
   local entries = {}
   for s, site in ipairs(solution.Sites) do
-    if not m_result.Dense or m_ticked[s] then
+    if Ticked(s) then
       entries[#entries + 1] = { Type = "DISTRICT_CITY_CENTER", X = site.X, Y = site.Y, Name = tostring(numbers[s]) }
     end
   end
@@ -703,23 +721,24 @@ function P.Place()
   return placed
 end
 
--- Dense packing (issue 87): tick a site for its tack, or every site.
+-- Tick a site for its tack, or every site (issues 87, 241).
 function P.SetTicked(s, on)
-  if m_result == nil or not m_result.Ok or not m_result.Dense then return end
-  m_ticked[s] = on and true or nil
+  if m_result == nil or not m_result.Ok then return end
+  if (on == true) == Ticked(s) then return end
+  m_flipped[s] = not m_flipped[s] or nil
   P.Render()
 end
 
 function P.TickAll()
   local solution = m_result and m_result.Ok and m_result.Solutions[m_solution]
-  if solution == nil or not m_result.Dense then return end
+  if solution == nil then return end
   local all = true
   for s = 1, #solution.Sites do
-    if not m_ticked[s] then all = false end
+    if not Ticked(s) then all = false end
   end
-  m_ticked = {}
-  if not all then
-    for s = 1, #solution.Sites do m_ticked[s] = true end
+  m_flipped = {}
+  for s = 1, #solution.Sites do
+    if Ticked(s) == all then m_flipped[s] = true end
   end
   P.Render()
 end
@@ -734,7 +753,7 @@ end
 function P.State()
   return {
     Result = m_result, Solution = m_solution, Site = m_site, K = K(), D = D(), Tier = m_tier, Weights = m_weights, View = m_view,
-    Dense = m_dense, Ticked = m_ticked, AllText = Controls.SitesAllButton:GetText(),
+    Dense = m_dense, Ticked = TickedSet(), AllText = Controls.SitesAllButton:GetText(),
     DistrictCount = List().Count, States = States(), Preset = m_preset, Fold = m_fold, FoldText = Controls.SitesFoldText:GetText(),
     EstimateText = Controls.SitesEstimate:GetText(), PlaceDisabled = Controls.SitesPlaceButton:IsDisabled(),
   }

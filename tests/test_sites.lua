@@ -369,3 +369,37 @@ test("issue 191: dense packing keeps the panel's number of new cities", function
   T.eq(sites.State().K, 3, "off: 3")
   SDP_Panel.SelectTab("SINGLE")
 end)
+
+-- Issue 241: with dense packing off every site is ticked by default; an
+-- unticked one gets no tack, and undo takes the others away.
+test("issue 241: dense packing off, an unticked site gets no tack", function()
+  if Players[pid]:GetCities():GetCapitalCity() == nil then T.skip("no capital") end
+  local sites = SDP_Panel.Sites
+  SDP_Panel.SelectTab("SITES")
+  sites.SetDense(false)
+  sites.SetCount(2)
+  sites.SetTier("FAST")
+  T.ok(sites.Solve(), "started")
+  SDP_Panel.RunTask(5000)
+  local result = sites.State().Result
+  if result and not result.Ok and result.Error == "NO_SITE" then T.skip("no room yet") end
+  T.ok(result and result.Ok, "result: " .. tostring(result and result.Error))
+  local rows = sites.State().View.Results
+  if #rows < 2 then T.skip("one site only") end
+  for _, row in ipairs(rows) do T.eq(row.Check:IsChecked(), true, "ticked by default") end
+  T.eq(Controls.SitesAllButton:IsHidden(), false, "Select all shown")
+  sites.SetTicked(1, false)
+  T.eq(sites.State().View.Results[1].Check:IsChecked(), false, "the first unticked")
+  local before = SDP_Pins.CanUndo(pid)
+  local placed = sites.Place()
+  T.eq(placed, #rows - 1, "tacks for the ticked sites only")
+  local skipped = sites.State().Result.Solutions[sites.State().Solution].Sites[1]
+  local batch = SDP_Pins.LastBatch(pid)
+  T.eq(#batch.Pins, #rows - 1, "in one batch")
+  for _, p in ipairs(batch.Pins) do
+    T.ok(p.X ~= skipped.X or p.Y ~= skipped.Y, "none at the unticked site")
+  end
+  sites.Undo()
+  T.eq(SDP_Pins.CanUndo(pid), before, "undone")
+  SDP_Panel.SelectTab("SINGLE")
+end)

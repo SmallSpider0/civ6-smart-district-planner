@@ -383,7 +383,7 @@
       <Text>Dense packing: new cities close together</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SITES_DENSE_TOOLTIP" Language="en_US">
-      <Text>When on, new cities go as close to your cities and to each other as allowed: denser, with less land each; tick the sites you want in the results, then place their tacks.</Text>
+      <Text>When on, new cities go as close to your cities and to each other as allowed: denser, with less land each; no site in the results is ticked at first, tick the ones you want.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SITES_SUMMARY_DENSE" Language="en_US">
       <Text>{1_Count} new cities fit, score {2_Value}; {3_Ticked} ticked, Place site tacks places only those</Text>

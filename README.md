@@ -25,7 +25,7 @@ It needs [Detailed Map Tacks](https://steamcommunity.com/sharedfiles/filedetails
 The panel has three tabs:
 
 - **One city**: set the districts you must have to Must, leave the rest in the Pool, and say how many districts the city should end up with. **Solve** gives three plans with different districts; click one to preview it on the map, then **Place tacks**. **Undo tacks** works too, also after loading a save.
-- **City sites**: chooses spots for new cities on the explored map. Each site is scored on district potential, tiles, resources and Housing; hover a score for the yields behind it. **Dense packing** puts new cities as close together as allowed; tick the sites you want.
+- **City sites**: chooses spots for new cities on the explored map. Each site is scored on district potential, tiles, resources and Housing; hover a score for the yields behind it. **Dense packing** puts new cities as close together as allowed. Each site has a tick box, and only the ticked sites get a tack.
 - **Several cities**: plans the city selected on the map with the nearest cities and site tacks (4 by default); **All cities** selects every city and site tack, and above 8 they are planned in groups of up to 4 neighbouring cities, taken in turns. Districts share adjacency across cities, and a district limited to one per empire, like the Government Plaza, goes to the city where it does the most. Each city can have its own district list; **Apply a template** fills one for Science, Production or another yield from your civilization's rules.
 
 Also:
@@ -132,7 +132,7 @@ The development documents are in Chinese; issues and pull requests in English ar
 面板有三个页签：
 
 - **单城**：把想要的区域点成“必建”，其余留作“候选”，说这座城一共要几个区域。点“求解”得到三套组合不同的方案，点一套在地图上预览，满意就“打钉”；可以“撤销”，读档后也能撤销。
-- **选城址**：在已探索的地图上给新城选位置。每个城址按区域潜力、地块、资源、住房打分，悬停看每项背后是多少产出；打开“密铺”让新城尽量挨着放，再勾选要哪几座。
+- **选城址**：在已探索的地图上给新城选位置。每个城址按区域潜力、地块、资源、住房打分，悬停看每项背后是多少产出；打开“密铺”让新城尽量挨着放。每个城址有勾选框，只给勾选的打钉。
 - **多城**：以地图上选中的城为中心，和离它最近的城市、城址钉（默认 4 座）一起规划；“全部城市”把全部城市和城址钉都选上，超过 8 座时按位置分成每组至多 4 座相邻的城轮流规划。区域可以跨城互相给加成，市政广场这类全帝国只有一个的区域会放到最合适的那座城。每座城可以有自己的区域清单；“套用模板”按你文明的规则，为科技、生产力等产出一键生成区域清单。
 
 还能做什么：

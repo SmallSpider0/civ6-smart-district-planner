@@ -1826,3 +1826,52 @@ test("issue 87: dense packing through its switch, tick boxes and Select all", fu
   T.eq(c.SitesAllButton:IsHidden(), true, "dense off: no Select all")
   SDP_Panel.SelectTab("SINGLE")
 end)
+
+test("issue 241: dense packing off, every site ticked by default and an unticked one gets no tack", function()
+  SDP_Panel.Open()
+  SDP_Panel.SelectTab("SITES")
+  local c = UI_Mock.Controls
+  local sites = SDP_Panel.Sites
+  T.eq(sites.State().Dense, false, "dense packing off")
+  sites.SetCount(3)
+  sites.SetTier("FAST")
+  T.ok(sites.Solve(), "started")
+  SDP_Panel.RunTask(500)
+  local result = sites.State().Result
+  T.ok(result and result.Ok, "result: " .. tostring(result and result.Error))
+  local rows = sites.State().View.Results
+  T.ok(#rows >= 2, "sites listed: " .. #rows)
+  for _, row in ipairs(rows) do T.eq(row.Check and row.Check:IsChecked(), true, "ticked by default") end
+  T.eq(c.SitesAllButton:IsHidden(), false, "Select all shown")
+  T.eq(sites.State().AllText, "LOC_SDP_SITES_TICK_NONE", "all ticked: Clear all")
+  T.eq(sites.State().PlaceDisabled, false, "tacks for them")
+  -- Untick the first site through its own box: the others get tacks.
+  rows[1].Check:Toggle()
+  T.eq(sites.State().Ticked[1], nil, "the first unticked")
+  T.eq(sites.State().View.Results[1].Check:IsChecked(), false, "its box stays unticked")
+  T.eq(sites.State().AllText, "LOC_SDP_SITES_TICK_ALL", "not all ticked: Select all")
+  local solution = sites.State().Result.Solutions[sites.State().Solution]
+  local pins = #w:Pins()
+  c.SitesPlaceButton:Click()
+  T.eq(#w:Pins(), pins + #rows - 1, "a tack for every ticked site")
+  local skipped = solution.Sites[1]
+  for n = pins + 1, #w:Pins() do
+    local pin = w:Pins()[n]
+    T.ok(pin:GetHexX() ~= skipped.X or pin:GetHexY() ~= skipped.Y, "none at the unticked site")
+  end
+  c.SitesUndoButton:Click()
+  T.eq(#w:Pins(), pins, "undone")
+  -- Select all ticks it again; again clears them all, and with none ticked
+  -- there is nothing to place.
+  c.SitesAllButton:Click()
+  for _, row in ipairs(sites.State().View.Results) do T.eq(row.Check:IsChecked(), true, "all ticked again") end
+  c.SitesAllButton:Click()
+  T.eq(next(sites.State().Ticked), nil, "Clear all")
+  T.eq(sites.State().PlaceDisabled, true, "nothing ticked: no tacks")
+  -- Another solution starts with every site ticked again.
+  if #sites.State().Result.Solutions >= 2 then
+    sites.SelectSolution(2)
+    for _, row in ipairs(sites.State().View.Results) do T.eq(row.Check:IsChecked(), true, "solution 2: ticked") end
+  end
+  SDP_Panel.SelectTab("SINGLE")
+end)
