@@ -109,8 +109,9 @@ SDP_Search.Better = Better
 --               Requires counts only a district of a city that could own the
 --               wonder's plot, placed (a slot of such a group) or fixed
 --               (issue 45: the game takes only the wonder's own city's)
---   Swapped     function(search, m, i) -> true when slot m on candidate i
---               takes a plot from another of the player's cities (issue 54)
+--   Swapped     function(search, m, i, layout) -> true when slot m on
+--               candidate i, in `layout`, takes a plot from another of the
+--               player's cities (issue 54)
 --               or nil (off): the plan shown prefers, at the same value,
 --               the plots that need no swap (Untangle, issue 162)
 -- }
@@ -2288,7 +2289,7 @@ function Search:SwapCount(layout)
   local count = 0
   for m = 1, self.K do
     local i = layout[m]
-    if i ~= 0 and swapped(self, m, i) then count = count + 1 end
+    if i ~= 0 and swapped(self, m, i, layout) then count = count + 1 end
   end
   return count
 end
@@ -2314,7 +2315,7 @@ function Search:Untangle(layout, gain)
   while changed do
     changed = false
     for m = 1, k do
-      if cur[m] ~= 0 and swapped(self, m, cur[m]) then
+      if cur[m] ~= 0 and swapped(self, m, cur[m], cur) then
         local bestTrial, bestGain, bestSwaps = nil, nil, nil
         local function Try()
           local trialGain, isLegal = self:Evaluate(cur)
@@ -2334,7 +2335,7 @@ function Search:Untangle(layout, gain)
         local keep = cur[m]
         -- To a free plot it needs no swap for.
         for i = 1, n do
-          if legal[m][i] and not inUse[i] and not swapped(self, m, i) then
+          if legal[m][i] and not inUse[i] and not swapped(self, m, i, cur) then
             cur[m] = i
             Try()
           end
@@ -2356,7 +2357,7 @@ function Search:Untangle(layout, gain)
           if q ~= m and other ~= 0 and touching[keep][other] then
             for i = 1, n do
               local freeI = not inUse[i] or inUse[i] == q
-              if i ~= keep and legal[m][i] and freeI and not swapped(self, m, i) then
+              if i ~= keep and legal[m][i] and freeI and not swapped(self, m, i, cur) then
                 for _, j in ipairs(adjacent[i]) do
                   local freeJ = not inUse[j] or inUse[j] == m or inUse[j] == q
                   if legal[q][j] and freeJ and not (j == other) then

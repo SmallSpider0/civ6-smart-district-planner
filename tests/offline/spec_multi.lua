@@ -500,6 +500,58 @@ test("a wonder without a district rule goes to the plot's city, else the nearest
   T.ok(checked.moved > 0, "some not given to the first city in the list")
 end)
 
+-- The swap count the search breaks ties with names the same city as the
+-- plan does, including a wonder next to a district planned in the layout.
+test("swap count follows the wonder's city from the layout's districts (issue 238)", function()
+  -- Two cities four plots apart; city 2 owns the plots between them, which
+  -- the capital can take with a swap. A wonder there next to the capital's
+  -- planned campus is the capital's, taken from city 2.
+  local w = World.New({ rows = MAP, cities = {
+    { id = 1, x = 4, y = 5, population = 6, capital = true, radius = 1 },
+    { id = 2, x = 8, y = 5, population = 4, radius = 1 },
+  } })
+  for _, xy in ipairs({ { 6, 4 }, { 6, 5 }, { 6, 6 } }) do
+    w:Own(xy[1], xy[2], 0, w:City(2))
+  end
+  local checked = { pairs = 0, differs = 0 }
+  SDP_Overlay.With(0, function()
+    local s = SDP_Multi.NewSession(Request({ Districts = { "DISTRICT_CAMPUS" }, Wonders = { "BUILDING_GREAT_LIBRARY" },
+      Only = { [1] = true, [2] = true }, Swap = true }))
+    local search = s.Search
+    local _, touching = search:Touching()
+    local wonders, campuses = {}, {}
+    for m = 1, search.K do
+      if search.Types[m] == "BUILDING_GREAT_LIBRARY" then wonders[#wonders + 1] = m end
+      if search.Types[m] == "DISTRICT_CAMPUS" then campuses[#campuses + 1] = m end
+    end
+    for _, m in ipairs(wonders) do
+      for _, r in ipairs(campuses) do
+        for i = 1, search.N do
+          for j = 1, search.N do
+            if i ~= j and touching[i][j] and search.Legal[m][i] and search.Legal[r][j] then
+              local layout = {}
+              for q = 1, search.K do layout[q] = 0 end
+              layout[m], layout[r] = i, j
+              local expected = 0
+              for _, q in ipairs({ m, r }) do
+                local plot = Map.GetPlotByIndex(search.Candidates[layout[q]].Index)
+                local city = plot:GetOwner() == 0 and Cities.GetPlotPurchaseCity(plot) or nil
+                local part = s.Participants[s:OwnerOf(q, layout[q], layout)]
+                if city ~= nil and part.CityID ~= nil and part.CityID ~= city:GetID() then expected = expected + 1 end
+              end
+              T.eq(search:SwapCount(layout), expected, "wonder at " .. i .. ", district at " .. j)
+              checked.pairs = checked.pairs + 1
+              if s:OwnerOf(m, i, layout) ~= s:OwnerOf(m, i, nil) then checked.differs = checked.differs + 1 end
+            end
+          end
+        end
+      end
+    end
+  end)
+  T.ok(checked.pairs > 0, "pairs checked")
+  T.ok(checked.differs > 0, "some wonders go to the planned district's city")
+end)
+
 test("repair: a wonder the search left off goes back in, next to its district", function()
   NewWorld()
   local result = SDP_Overlay.With(0, function()
