@@ -401,9 +401,9 @@ def build(files=None, version=None, date=None, lang="zh"):
     texts["MULTI_LEAD"] = ""
     if M.get("sdp:STANDARD") and M.get("sdp:CITY_BY_CITY"):
         texts["MULTI_LEAD"] = L(
-            "测试场景里，用单城页签一座一座规划平均只拿到已知最好方案的 %s，几座城一起规划是 %s（附录 B.3）。",
-            "In the test scenarios, planning the cities one at a time on the One city tab reaches on average only %s of the "
-            "best known plan, and planning them together %s (appendix B.3).") % (
+            "在测试地图上，用单城页签一座一座规划，平均只拿到目前找到的最好摆法的 %s；几座城一起规划是 %s（附录 B.3）。",
+            "On the test maps, planning the cities one at a time on the One city tab reaches on average only %s of the "
+            "best plan found so far, and planning them together %s (appendix B.3).") % (
                 pct(M["sdp:CITY_BY_CITY"]["quality"]), pct(M["sdp:STANDARD"]["quality"], 1))
     hom = robust_best.get("heldout/multi", {})
     texts["MULTI_ROBUST_TEXT"] = (L(
