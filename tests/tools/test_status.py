@@ -205,6 +205,36 @@ class Workshop(unittest.TestCase):
         d = sync.workshop(0, held=os.path.join(self.tmp.name, "none"), state=os.path.join(self.tmp.name, "none"), st={})
         self.assertEqual(d, {"count": 0, "items": [], "next": "", "late": False})
 
+    def write_stats(self, stats, failed=None):
+        ws = {"next": 1000.0, "stats": stats}
+        if failed:
+            ws["failed"] = failed
+        with open(self.state, "w", encoding="utf-8") as fh:
+            json.dump({"since": "x", "workshop": ws}, fh)
+
+    def test_item_numbers_and_their_change_in_a_day(self):
+        import watch_workshop as ww
+        day = 86400
+        old = {"subscribers": 100, "visitors": 900, "favorites": 9, "collections": 3, "stars": 3, "ratings": 10}
+        new = dict(old, subscribers=130, ratings=12, stars=4, collections=None)
+        st = ww.record(ww.record(None, old, 1793800000), new, 1793800000 + day)
+        self.write_stats(st)
+        s = self.read()["stats"]
+        self.assertEqual(s["values"], new)
+        self.assertEqual(s["change"], {"subscribers": 30, "visitors": 0, "favorites": 0, "stars": 1, "ratings": 2})
+        self.assertEqual((s["at"], s["base"], s["failed"]), (sync.hm(1793800000 + day), sync.hm(1793800000), ""))
+
+    def test_a_failed_read_shows_the_last_numbers_and_when(self):
+        import watch_workshop as ww
+        st = ww.record(None, dict.fromkeys(ww.STATS, 5), 1793800000)
+        self.write_stats(st, failed=1793803000)
+        s = self.read()["stats"]
+        self.assertEqual((s["values"]["ratings"], s["at"], s["failed"]), (5, sync.hm(1793800000), sync.hm(1793803000)))
+        self.assertEqual((s["change"], s["base"]), ({}, ""))
+        self.write_stats(None, failed=1793803000)  # never read: no numbers yet
+        s = self.read()["stats"]
+        self.assertEqual((s["values"]["subscribers"], s["at"], s["failed"]), (None, "", sync.hm(1793803000)))
+
 
 class Private(unittest.TestCase):
     def test_generic_patterns(self):

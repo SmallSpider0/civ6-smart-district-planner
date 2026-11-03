@@ -131,6 +131,7 @@ ul.jobs, ol.jobs { list-style: none; padding: 0; margin: 0; display: grid; gap: 
 .recent { margin-top: 10px; font-size: 0.82rem; }
 h3.sub { font-size: 1rem; margin: 18px 0 2px; }
 .work td .small { display: block; color: var(--muted); font-size: 0.8rem; }
+#workshop td .small { color: var(--muted); font-size: 0.8rem; }
 table.issues th { white-space: nowrap; }
 table.issues td:first-child { min-width: 12em; }
 .tag.pass { color: var(--good); background: color-mix(in srgb, var(--good) 14%, transparent); }
@@ -175,7 +176,8 @@ h4.other { margin-top: 6px; }
 
   <section id="workshop">
     <h2>创意工坊新评论<span class="count" id="workshop-count"></span></h2>
-    <p class="note">监听每 45 分钟读一次创意工坊的评论区和讨论区，物品主人和贡献者的帖子不算。这里是还没处理的新帖，最新的在前；处理完（归类、开 Issue、回复草稿给你确认）由代理清掉。回复都等你确认后才发。</p>
+    <p class="note">监听每 45 分钟读一次创意工坊的评论区和讨论区，物品主人和贡献者的帖子不算。这里是还没处理的新帖，最新的在前；处理完（归类、开 Issue、回复草稿给你确认）由代理清掉。回复都等你确认后才发。上面的物品数据是监听读评论时顺带从物品页读的，变化和约 24 小时前的读数比。</p>
+    <div id="workshop-stats"></div>
     <div id="workshop-list"><p class="empty">读取中。</p></div>
   </section>
 
@@ -545,6 +547,7 @@ const WS_KIND = { comment: "评论区", topic: "讨论区新帖", reply: "讨论
 function renderWorkshop(d) {
   const items = (d && d.items) || [];
   count("workshop-count", d ? d.count : 0);
+  renderWorkshopStats(d && d.stats);
   if (!d) { $("workshop-list").innerHTML = `<p class="empty">还没有数据。</p>`; return; }
   const rows = (part) => table(part, [
     ["发帖时间", (p) => esc(p.posted)],
@@ -555,6 +558,24 @@ function renderWorkshop(d) {
   const more = d.count > items.length ? `<p class="note">另有更早的 ${d.count - items.length} 条没列出，在待看列表里。</p>` : "";
   const watch = d.late ? `<span class="tag blocked">监听可能停了</span> 本该 ${esc(d.next)} 读一次创意工坊` : d.next ? `下次读取 ${esc(d.next)}` : "监听还没读过创意工坊";
   $("workshop-list").innerHTML = fold(items, rows, 10) + more + `<p class="stamp">${watch} · ${esc(d.synced || "")}</p>`;
+}
+
+// work/workshop.stats: {values: {subscribers, visitors, favorites, collections, stars, ratings},
+//   at, change: {key: number}, base, failed} (tools/watch_workshop.py); a value or a change may be missing.
+const WS_STATS = [["subscribers", "当前订阅"], ["visitors", "独立访客"], ["favorites", "当前收藏"], ["collections", "所在合集"]];
+function renderWorkshopStats(s) {
+  if (!s) { $("workshop-stats").innerHTML = ""; return; }
+  const v = s.values || {}, ch = s.change || {};
+  const num = (n) => n == null ? "—" : Number(n).toLocaleString("zh-CN");
+  const diff = (k, unit = "") => !(k in ch) ? "" : ch[k] === 0 ? "持平" : (ch[k] > 0 ? "+" : "−") + num(Math.abs(ch[k])) + unit;
+  const rows = WS_STATS.map(([k, name]) => ({ name, now: num(v[k]), diff: diff(k) }));
+  const stars = v.stars == null ? "评分不足" : "★".repeat(v.stars) + "☆".repeat(Math.max(0, 5 - v.stars)) + ` ${v.stars} 星`;
+  rows.push({ name: "评分", now: `${stars} · ${num(v.ratings)} 人评分`,
+              diff: [diff("stars", " 星"), diff("ratings", " 人")].filter((x) => x).join(" · ") });
+  const fail = s.failed ? `<span class="tag blocked">${esc(s.failed)} 读取失败</span> 上面是上次读到的值 · ` : "";
+  $("workshop-stats").innerHTML = table(rows, [["物品数据", (r) => esc(r.name)], ["现在", (r) => esc(r.now)],
+    [s.base ? `比 ${esc(s.base)}` : "24 小时变化", (r) => esc(r.diff) || `<span class="small">${s.base ? "—" : "还不满一天"}</span>`]], "")
+    + `<p class="stamp">${fail}读取于 ${esc(s.at || "—")}</p>`;
 }
 
 // Releases come only from GitHub (work/releases): their summaries are generated from the notes.
