@@ -60,6 +60,7 @@ DIR = os.path.join(main_checkout(), "logs", "watch")
 STATE = os.path.join(DIR, "state.json")
 OTHERS = os.path.join(DIR, "others.log")
 HELD = os.path.join(DIR, "held.log")
+REPORTED = os.path.join(DIR, "reported.log")  # every reported line, also when stdout is lost (#261)
 LABEL = os.environ.get("SDP_WATCH_LABEL", "auto")
 ITEM = os.environ.get("SDP_WORKSHOP_ITEM", watch_workshop.ITEM)
 WORKSHOP_RETRY = 600
@@ -149,7 +150,7 @@ def poll(state):
     """New items from the watched accounts since the last poll: list of lines to report."""
     who, own, since, stamp = users(state), me(state), state["since"], now()
     seen, mine, out, labels, checked = set(state["seen"]), set(state["mine"]), [], labelled(), {}
-    files = {"others": OTHERS, "held": HELD}
+    files = {"others": OTHERS, "held": HELD, "report": REPORTED}
 
     def watched(number):
         if number not in checked:  # who put the label on: read once per poll, only for issues with new items
@@ -160,7 +161,8 @@ def poll(state):
         place = where(login, login != own and login in who and watched(number), who, own)
         if place == "report":
             out.append(line)
-        elif place != "seen":
+        if place != "seen":  # reported lines too, before the state marks them seen
+            os.makedirs(os.path.dirname(files[place]), exist_ok=True)
             with open(files[place], "a", encoding="utf-8") as f:
                 f.write(stamp + " " + line + "\n")
 
@@ -222,6 +224,15 @@ def held(clear):
         open(HELD, "w", encoding="utf-8").close()
 
 
+def reported(count):
+    """Print the last count lines the watch reported (from reported.log)."""
+    lines = []
+    if os.path.exists(REPORTED):
+        with open(REPORTED, encoding="utf-8") as f:
+            lines = f.read().splitlines()
+    print("\n".join(lines[-count:]) if lines and count > 0 else "nothing reported")
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--once", action="store_true")
@@ -231,11 +242,15 @@ def main():
     ap.add_argument("--reset", action="store_true")
     ap.add_argument("--held", action="store_true")
     ap.add_argument("--clear", action="store_true")
+    ap.add_argument("--reported", type=int, nargs="?", const=20, metavar="N")
     ap.add_argument("--workshop-every", type=float, default=2700)
     args = ap.parse_args()
     os.makedirs(DIR, exist_ok=True)
     if args.held:
         held(args.clear)
+        return 0
+    if args.reported is not None:
+        reported(args.reported)
         return 0
     if args.reset:
         save({"since": now(), "seen": [], "mine": [], "workshop": watch_workshop.fresh()})
