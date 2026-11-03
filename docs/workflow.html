@@ -390,7 +390,7 @@ footer { margin-top: 64px; border-top: 1px solid var(--line); padding-top: 16px;
   </div>
   <div class="cards">
     <div class="card"><h4>游戏锁</h4><p>游戏、调试连接、Mods 文件夹只有一套。碰游戏的工具（部署、测试、点击、截图）自己拿锁；别的工作树正拿着，就以退出码 4 停下，可以在后台等锁。退出游戏时放锁。</p><p class="refs"><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/tools/sdplock.py">tools/sdplock.py</a></p></div>
-    <div class="card"><h4>本机重活</h4><p>有第二台机器时，超过约一分钟的计算都排到它上面；本机只跑不到一分钟的小任务，或第二台机器格子全满又不能等的。本机上一次只跑一个，等着的按开始等的先后排队，槽空出来只给排头；worker 上限按本机配置（白天、夜里可以不同），游戏锁被拿走时自动暂停。不经这两个工具直接启动的计算不进排队，别的会话看不到它；子 agent 也照此办理。</p><p class="refs"><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/tools/README.md">tools/README.md「sdplock.py」</a></p></div>
+    <div class="card"><h4>本机重活</h4><p>放哪台机器由工具选，代理不用判断：重活交给 <code>remote.py run</code>，第二台机器马上能跑就放那边，不能而本机空着就在本机的工作树快照里跑，都不行才在第二台机器排队。直接运行的离线测试和对比自己登记，按记下的耗时，短的在本机跑，长的照同样的规则选机器。本机上一次只跑一个重活，等着的按开始等的先后排队，槽空出来只给排头；worker 上限按本机配置（白天、夜里可以不同），游戏锁被拿走时自动暂停。</p><p class="refs"><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/tools/README.md">tools/README.md「remote.py」「sdplock.py」</a></p></div>
     <div class="card"><h4>第二台机器</h4><p>可选，用 ssh 连接，不用装游戏。所有会话共用一个队列，按排队先后分格子；排在前面的任务放不下时，后面放得下的先跑，每个排队任务最多被越过 3 次，独占任务不被越过。任务在工作树的快照里跑，结果取回本机；用完的快照和没人再用的工作树副本一周后自动清掉。</p><p class="refs"><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/tools/remote.py">tools/remote.py</a><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/tools/sdpsched.py">tools/sdpsched.py</a></p></div>
     <div class="card"><h4>夜间队列</h4><p>机器有人用时，占屏幕的步骤（真实点击、截图、压力测试、发版前的三种规则集）由各会话排进共用队列，在本机配置的夜间时段（工作日白天不开游戏）统一跑：队列不空时，值守子会话挂一个在时段开始后几分钟到点的一次性定时提醒，到点转告主会话，主会话派一个子 agent 按顺序跑；游戏内测试也可以排进去。周末可按本机配置算作夜间。</p><p class="refs"><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/.claude/skills/sdp-game-test/SKILL.md">sdp-game-test</a></p></div>
   </div>
@@ -430,7 +430,7 @@ footer { margin-top: 64px; border-top: 1px solid var(--line); padding-top: 16px;
     <table>
       <thead><tr><th>层</th><th>做什么</th><th>在哪跑</th><th>什么时候</th><th>工具</th></tr></thead>
       <tbody>
-        <tr><td class="step">离线逻辑</td><td>在模拟的游戏接口里跑 Lua，证明搜索与记账正确</td><td>CI、本机或第二台机器</td><td>每个 PR</td><td><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/tools/offline_tests.mjs"><code>offline_tests.mjs</code></a></td></tr>
+        <tr><td class="step">离线逻辑</td><td>在模拟的游戏接口里跑 Lua，证明搜索与记账正确；每次求解后查方案不变量（#242）</td><td>CI、本机或第二台机器</td><td>每个 PR</td><td><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/tools/offline_tests.mjs"><code>offline_tests.mjs</code></a></td></tr>
         <tr><td class="step">校验</td><td>XML、modinfo、双语文本键、Lua 语法、禁用随机数、界面控件在游戏里有先例</td><td>CI</td><td>每个 PR</td><td><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/tools/validate.py"><code>validate.py</code></a></td></tr>
         <tr><td class="step">游戏内</td><td>经调试连接在真实游戏里跑断言；发版前三种规则集，界面或文字改了再跑英文界面</td><td>有游戏的机器（游戏在后台）</td><td>改了模组代码（相关的文件）；发版前整套</td><td><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/tools/run_tests.py"><code>run_tests.py</code></a></td></tr>
         <tr><td class="step">离线对比</td><td>用真实规则库和固定场景集，对照已存的结果和可证明的真最优，检查质量和零违规</td><td>第二台机器（没有就本机）</td><td>改了求解器或合法性</td><td><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/tools/compare.mjs"><code>compare.mjs</code></a></td></tr>
@@ -573,7 +573,7 @@ footer { margin-top: 64px; border-top: 1px solid var(--line); padding-top: 16px;
     ["里程碑", 2, "bug 确认时、功能方案定了时挂上对应版本，没有就新建；版本号按改动大小定；不做的关掉，以后再说的打 later；发版时移走没做完的、关掉里程碑", "—", null],
     ["并行开发", 2, "每个 Issue 一个子 agent，各自的 git 工作树和分支；维护者点名的大改动开子会话", "—", "tools/worktree.py"],
     ["锁与排队", 1, "游戏锁、本机重活暂停与恢复、第二台机器的格子队列与回填", "—", "tools/sdplock.py"],
-    ["离线测试与校验", 1, "fengari 里跑 Lua；校验 XML、文本、语法、确定性；超过一分钟的放第二台机器", "—", "tools/validate.py"],
+    ["离线测试与校验", 1, "fengari 里跑 Lua；校验 XML、文本、语法、确定性；直接运行时自己登记、按记下的耗时选机器", "—", "tools/validate.py"],
     ["游戏内测试", 1, "经调试连接在游戏里执行断言；开局、换规则集、关弹窗都由脚本完成；游戏留在后台", "（macOS 上启动器的“开始”按钮由代理用电脑操控点击）", "tools/run_tests.py"],
     ["真实点击、截图", 1, "系统鼠标事件逐个点控件；截图按面板位置裁剪", "第一次授予辅助功能和录屏权限；无人值守时屏幕不能锁，笔记本要开盖接电", "tools/realclick.py"],
     ["压力测试", 1, "读三张后期存档，逐步计时，在游戏里实际建出来核对", "—", "tools/stress.py"],

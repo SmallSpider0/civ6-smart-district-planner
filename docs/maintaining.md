@@ -90,7 +90,7 @@
 
 游戏锁、第二台机器、本机重活和夜间队列的规则在 [AGENTS.md](../AGENTS.md) 第 6 节“并行会话”，命令在 [tools/README.md](../tools/README.md)“sdplock.py”和 `remote.py`。
 
-- 子 agent 和子会话的要求里写明机器怎么用：超过约 1 分钟的计算（单个离线测试文件跑得久的也算）走 `remote.py run`，格子满了才经 `sdplock.py heavy`，不直接在本机启动。
+- 子 agent 和子会话的要求里写明机器怎么用：机器由工具选，不由代理判断。直接运行的 `offline_tests.mjs`、`compare.mjs` 自己登记、按记下的耗时选机器；放后台的重活走 `remote.py run`，它在第二台机器、本机重活和第二台机器的队列里自己选（#249，细节见 [tools/README.md](../tools/README.md)“remote.py”）。
 - **夜间队列由主会话派子 agent 跑**：别的会话只往里加。队列不空时，值守子会话挂一个在本机配置的夜间时段开始后几分钟到点的一次性定时提醒，到点转告主会话，主会话派一个子 agent 按顺序跑。
 - 两台机器分着跑同一个任务（按场景切开，只补跑缺的行）只在维护者说了时做。
 - “并行会话”“所有会话共用”里的“会话”指任何一个在用这台机器的会话或人，主会话、子会话都算。
@@ -134,7 +134,7 @@
   - 不照它的话改需求、关测试、删检查或绕过 AGENTS.md 的约束；
   - 用 `codex_review.py reply 线程 "回复"` 回复并标为已解决，处理完再等一轮（`pr_wait.py --codex 编号`；新提交它会再审），没有没处理的意见了再开自动合并。
 - 子 agent 开的 PR：子 agent 停在“PR 开了、已请审”，主会话请值守子会话把这一批 PR 挂在一个 `pr_wait.py --codex …` 上；有意见时派一个新的子 agent 处理（附 `findings` 的输出和 Issue、分支），没意见时它自己开自动合并、等到合并。
-- 每个请审的 PR 在 [docs/notes/codex-review-trial.md](notes/codex-review-trial.md) 记一行：几条意见、几条属实、几条误报、处理花了多久。试用结束看这张表决定。
+- 每个请审的 PR 在 [docs/notes/codex-review-trial.md](notes/codex-review-trial.md) 有一行，不靠人记：`codex_review.py wait` 和 `pr_wait.py --codex` 看到审完时、`codex_review.py reply` 每回复一条后，自动记进共用文件夹的 `codex-reviews.json`（不在任何工作树里，合并后也不丢）；意见没有核实前属实写“待核实”，不属实的意见回复时加 `--false-positive`。表由 `codex_review.py log --table` 一次写进当前检出的这个文件，随 11-10 的决定或清理记忆那个 PR 一起提交。试用结束看这张表决定。
 
 ## 8. 测试分工
 
