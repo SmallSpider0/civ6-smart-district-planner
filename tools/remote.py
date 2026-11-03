@@ -85,8 +85,20 @@ def ssh(command, check=True, capture=True, input_text=None):
     return done.stdout if capture else ""
 
 
-def rsync(args):
-    subprocess.run(["rsync", "-a", "-e", "ssh"] + args, check=True)
+def rsync(args, cwd=None, input=None):
+    subprocess.run(["rsync", "-a", "-e", "ssh"] + args, cwd=cwd, input=input, check=True)
+
+
+def tree_files(root):
+    """The worktree's files as git sees them (tracked and new, not ignored), split into those on disk and
+    the tracked ones deleted but not committed (#269: rsync --files-from fails on a missing file)."""
+    def listed(*flags):
+        out = subprocess.run(["git", "ls-files", "-z"] + list(flags), cwd=root, capture_output=True,
+                             check=True).stdout
+        return [f for f in out.split(b"\0") if f]
+    deleted = set(listed("--deleted"))
+    present = [f for f in listed("--cached", "--others", "--exclude-standard") if f not in deleted]
+    return present, sorted(deleted)
 
 
 def env_path():
@@ -112,9 +124,10 @@ def sched(args, check=True, capture=True):
 def sync(_args):
     h = host()
     ssh("mkdir -p %s/ref %s/reference %s/logs/remote" % (BASE, TREE, TREE))
-    files = subprocess.run(["git", "ls-files", "-z", "--cached", "--others", "--exclude-standard"], cwd=ROOT, capture_output=True, check=True).stdout
-    subprocess.run(["rsync", "-a", "--from0", "--files-from=-", "-e", "ssh", "./", "%s:%s/" % (h, TREE)],
-                   cwd=ROOT, input=files, check=True)
+    present, deleted = tree_files(ROOT)
+    rsync(["--from0", "--files-from=-", "./", "%s:%s/" % (h, TREE)], cwd=ROOT, input=b"\0".join(present))
+    if deleted:  # gone here: remove the earlier copy there too
+        ssh("cd %s && xargs -0 rm -f --" % TREE, input_text="\0".join(f.decode("utf-8") for f in deleted))
     for rel in ("tools/node_modules", "tests/compare/.cache"):
         src = os.path.join(ROOT, rel)
         if os.path.exists(src):

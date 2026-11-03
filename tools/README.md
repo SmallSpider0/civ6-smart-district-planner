@@ -501,7 +501,7 @@ python3 -I tools/refresh_results.py tests/compare/results/land.jsonl   # 重跑�
 
 ```bash
 export SDP_REMOTE=build-box                   # ~/.ssh/config 里能免密登录的主机名（或写进本机配置的 remote）
-python3 -I tools/remote.py sync               # 把这个工作树（含未提交的文件）、node_modules、规则缓存和参考源码拷过去（run 自己也先做这一步）
+python3 -I tools/remote.py sync               # 把这个工作树（含未提交的文件；删了没提交的文件那边也删，#269）、node_modules、规则缓存和参考源码拷过去（run 自己也先做这一步）
 python3 -I tools/remote.py run devcheck --slots 6 -- python3 -I tools/refresh_results.py --check   # 自动选机器
 python3 -I tools/remote.py run devcheck --remote-only -- ...   # 只在第二台机器上跑，那边满了也在那边排队
 python3 -I tools/remote.py status             # 放在本机的任务，和第二台机器上所有会话的任务：谁的、几格、排队 / 在跑 / 退出码、日志最后一行；还剩几格
