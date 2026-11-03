@@ -44,7 +44,7 @@ civ6mod/
 │   ├── design.md                     # 交付物 3：算法结构 / 目标函数 / DMT 接缝
 │   ├── pitfalls.md                   # Civ6 Modding 的坑：完整说明（AGENTS 第 5 节是要点）
 │   ├── multicity-design.md           # 选城址、多城、奇观、档位、离线基准的设计（第 1–14 节）
-│   ├── notes/                        # 历次实现、实测与修正的记录：NN-主题.md（原第 15–30 节）、issue-<编号>-主题.md
+│   ├── notes/                        # 历次实现、实测与修正的记录：NN-主题.md（原第 15–30 节）、issue-<编号>-主题.md；README.md 是索引（主题、是否已被取代）
 │   ├── reference-scenes.md           # #53 的参照场景：来源、地图、作者布局与真最优的对照（图由 tests/compare/refmaps.py 画）
 │   ├── install-and-test.md           # 交付物 2：安装与使用（给玩家，package.py 打进压缩包，叫 INSTALL_AND_USE.md）
 │   ├── acceptance.md                 # 验收清单（需求文档第五节）、Windows 冒烟测试重点、开发者排错与自动化测试命令
@@ -204,7 +204,7 @@ include("dmt_yieldcalculator");       -- 尾部会执行 DMT_Initialize()，见�
 ## 8. 代理行为约定
 
 - 需求文档第二节 > 第三、四节硬约束 > 本文其他约定 > 自行设计。
-- 不修改需求文档；设计决策写入 `docs/design.md` 或 `docs/multicity-design.md`，一个 Issue 的实现、实测与数字出处写进 `docs/notes/issue-<编号>-<主题>.md`，玩家能感觉到的改动在 `changelog.d/<编号>.md` 记一笔（发版时收进 `CHANGELOG.md`，见 CONTRIBUTING.md）。
+- 不修改需求文档；设计决策写入 `docs/design.md` 或 `docs/multicity-design.md`，一个 Issue 的实现、实测与数字出处写进 `docs/notes/issue-<编号>-<主题>.md`（在 `docs/notes/README.md` 加一行；推翻了旧笔记的做法时改旧笔记那一行的状态），玩家能感觉到的改动在 `changelog.d/<编号>.md` 记一笔（发版时收进 `CHANGELOG.md`，见 CONTRIBUTING.md）。
 - 不把 DMT/AMT/EP/游戏本体的源码或数据复制进仓库，更不能进 `SmartDistrictPlanner/` 发布目录（版权与依赖关系：DMT 作为依赖 mod 由玩家自行订阅）。仓库是公开的。
 - 回复与文档使用中文；代码标识符与注释用英文或中文均可，但单文件内保持一致。
 - 调研和一个 Issue 的开发交给子 agent（维护者点名或改动很大的开发用子会话），几行的小修和协调留在主会话（docs/maintaining.md“谁来做”）。
