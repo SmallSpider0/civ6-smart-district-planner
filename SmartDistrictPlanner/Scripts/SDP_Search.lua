@@ -109,8 +109,9 @@ SDP_Search.Better = Better
 --               Requires counts only a district of a city that could own the
 --               wonder's plot, placed (a slot of such a group) or fixed
 --               (issue 45: the game takes only the wonder's own city's)
---   Swapped     function(search, m, i) -> true when slot m on candidate i
---               takes a plot from another of the player's cities (issue 54)
+--   Swapped     function(search, m, i, layout) -> true when slot m on
+--               candidate i, in `layout`, takes a plot from another of the
+--               player's cities (issue 54)
 --               or nil (off): the plan shown prefers, at the same value,
 --               the plots that need no swap (Untangle, issue 162)
 -- }
@@ -163,16 +164,21 @@ end
 -- Whether a district of type `required` next to candidate i belongs to a
 -- city that could own i (spec.Owners): a fixed one, or (with `layout`) a
 -- placed slot of such a city's group. Without Owners any city's counts.
-function Search:OwnDistrictNext(required, i, layout)
+-- With `group`, only that city's district counts (issue 238).
+function Search:OwnDistrictNext(required, i, layout, group)
   local owners = self.Owners
   if owners == nil then return true end
   local cities = owners.Wonder[i]
-  if cities == nil then return false end
+  if cities == nil or (group ~= nil and not cities[group]) then return false end
   for _, index in ipairs(self.Board:Neighbours(self.Candidates[i].Index)) do
     local f = index and owners.Fixed[index]
     if f ~= nil and Serves(f.Type, required) then
-      for g in pairs(f.Groups) do
-        if cities[g] then return true end
+      if group ~= nil then
+        if f.Groups[group] then return true end
+      else
+        for g in pairs(f.Groups) do
+          if cities[g] then return true end
+        end
       end
     end
   end
@@ -181,7 +187,7 @@ function Search:OwnDistrictNext(required, i, layout)
     for m = 1, self.K do
       local j = layout[m]
       if j ~= 0 and is[i][j] and self.Kinds[m] == "DISTRICT" and cities[self.Groups[m]]
-          and Serves(self.Types[m], required) then
+          and (group == nil or self.Groups[m] == group) and Serves(self.Types[m], required) then
         return true
       end
     end
@@ -2283,7 +2289,7 @@ function Search:SwapCount(layout)
   local count = 0
   for m = 1, self.K do
     local i = layout[m]
-    if i ~= 0 and swapped(self, m, i) then count = count + 1 end
+    if i ~= 0 and swapped(self, m, i, layout) then count = count + 1 end
   end
   return count
 end
@@ -2309,7 +2315,7 @@ function Search:Untangle(layout, gain)
   while changed do
     changed = false
     for m = 1, k do
-      if cur[m] ~= 0 and swapped(self, m, cur[m]) then
+      if cur[m] ~= 0 and swapped(self, m, cur[m], cur) then
         local bestTrial, bestGain, bestSwaps = nil, nil, nil
         local function Try()
           local trialGain, isLegal = self:Evaluate(cur)
@@ -2329,7 +2335,7 @@ function Search:Untangle(layout, gain)
         local keep = cur[m]
         -- To a free plot it needs no swap for.
         for i = 1, n do
-          if legal[m][i] and not inUse[i] and not swapped(self, m, i) then
+          if legal[m][i] and not inUse[i] and not swapped(self, m, i, cur) then
             cur[m] = i
             Try()
           end
@@ -2351,7 +2357,7 @@ function Search:Untangle(layout, gain)
           if q ~= m and other ~= 0 and touching[keep][other] then
             for i = 1, n do
               local freeI = not inUse[i] or inUse[i] == q
-              if i ~= keep and legal[m][i] and freeI and not swapped(self, m, i) then
+              if i ~= keep and legal[m][i] and freeI and not swapped(self, m, i, cur) then
                 for _, j in ipairs(adjacent[i]) do
                   local freeJ = not inUse[j] or inUse[j] == m or inUse[j] == q
                   if legal[q][j] and freeJ and not (j == other) then

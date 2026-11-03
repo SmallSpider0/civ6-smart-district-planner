@@ -320,6 +320,54 @@ Session.__index = Session
 --   Apart                false: no keeping partner districts apart (see SDP_Solver)
 -- }
 -- The overlay must be installed.
+-- The participant that builds a wonder of slot m on candidate i (issue 238),
+-- among the cities that can take the plot (Allowed; with search.Owners,
+-- those Owners.Wonder lists): for a wonder that must be next to a district,
+-- the cities whose such district it touches (OwnDistrictNext: fixed ones,
+-- and with `layout` the planned ones), the one supplied for it first when
+-- it touches; then the city owning the plot; then the nearest city; ties
+-- go to the first in the participants' order. Nil when no city can take i.
+local function WonderOwner(participants, playerID, search, m, i, layout)
+  local cities = search.Owners and search.Owners.Wonder[i] or nil
+  local pool = {}
+  for p, part in ipairs(participants) do
+    if part.Allowed[i] and (cities == nil or cities[p]) then pool[#pool + 1] = p end
+  end
+  if #pool <= 1 then return pool[1] end
+  local spec = search.SlotSpecs[search.SlotIndex[m]]
+  if spec.Requires ~= nil and search.Owners ~= nil then
+    local r = search.RequiresM and search.RequiresM[m] or nil
+    if layout ~= nil and r ~= nil and layout[r] ~= 0 then
+      local _, is = search:Touching()
+      if is[i][layout[r]] then
+        for _, p in ipairs(pool) do
+          if p == search.Groups[r] then return p end
+        end
+      end
+    end
+    local touching = {}
+    for _, p in ipairs(pool) do
+      if search:OwnDistrictNext(spec.Requires, i, layout, p) then touching[#touching + 1] = p end
+    end
+    if #touching == 1 then return touching[1] end
+    if #touching > 1 then pool = touching end
+  end
+  local c = search.Candidates[i]
+  local plot = Map.GetPlotByIndex(c.Index)
+  local owner = plot:GetOwner() == playerID and Cities.GetPlotPurchaseCity(plot) or nil
+  if owner ~= nil then
+    for _, p in ipairs(pool) do
+      if participants[p].CityID == owner:GetID() then return p end
+    end
+  end
+  local best, bestDistance = nil, math.huge
+  for _, p in ipairs(pool) do
+    local d = Map.GetPlotDistance(participants[p].X, participants[p].Y, c.X, c.Y)
+    if d < bestDistance then best, bestDistance = p, d end
+  end
+  return best
+end
+
 function SDP_Multi.NewSession(request)
   local self = setmetatable({}, Session)
   SDP_Overlay.HidePins(request.IgnorePins)
@@ -844,17 +892,12 @@ function SDP_Multi.NewSession(request)
     return best
   end
   -- The city a slot's placement is planned for is not counted as covered by
-  -- it (issue 91): its group's, or for a wonder the city whose tile it is
-  -- (as Session:OwnerOf).
-  local function SlotOwner(search, m, i)
+  -- it (issue 91): its group's, or for a wonder the city that builds it
+  -- (as Session:OwnerOf; with `layout` counting its planned districts too).
+  local function SlotOwner(search, m, i, layout)
     local spec = slots[search.SlotIndex[m]]
     local p = spec.Group
-    if spec.Wonder then
-      p = nil
-      for q, part in ipairs(participants) do
-        if p == nil and part.Allowed[i] then p = q end
-      end
-    end
+    if spec.Wonder then p = WonderOwner(participants, playerID, search, m, i, layout) end
     return p ~= nil and participants[p] or nil
   end
   local function CoverOwner(search, m, i)
@@ -863,9 +906,10 @@ function SDP_Multi.NewSession(request)
   end
   -- Slot m on candidate i takes the plot from another of the player's
   -- cities (as Session:PlanFor's Swap); ties take the plots that need no
-  -- swap (issue 162). Only with the swap switch on.
+  -- swap (issue 162). Only with the swap switch on. A wonder's city counts
+  -- the districts planned in `layout` (issue 238), as PlanFor does.
   local plotCity = {} -- [candidate] = the ID of the player's city owning it, or false
-  local function Swapped(search, m, i)
+  local function Swapped(search, m, i, layout)
     local owner = plotCity[i]
     if owner == nil then
       local plot = Map.GetPlotByIndex(candidates[i].Index)
@@ -874,7 +918,7 @@ function SDP_Multi.NewSession(request)
       plotCity[i] = owner
     end
     if owner == false then return false end
-    local part = SlotOwner(search, m, i)
+    local part = SlotOwner(search, m, i, layout)
     return part ~= nil and part.CityID ~= nil and part.CityID ~= owner
   end
   self.Search = SDP_Search.New({
@@ -1388,13 +1432,11 @@ function Session:Continue()
 end
 
 -- The participant a placed slot belongs to: its city, or for a wonder the
--- first city whose plots hold it.
-function Session:OwnerOf(m, i)
+-- city that builds it (WonderOwner, with the layout's districts).
+function Session:OwnerOf(m, i, layout)
   local spec = self.SlotSpecs[self.Search.SlotIndex[m]]
   if spec.Wonder then
-    for p, part in ipairs(self.Participants) do
-      if part.Allowed[i] then return p end
-    end
+    return WonderOwner(self.Participants, self.PlayerID, self.Search, m, i, layout) or spec.Group
   end
   return spec.Group
 end
@@ -1469,7 +1511,7 @@ function Session:PlanFor(layout)
   for n, m in ipairs(slotsPlaced) do
     local i = layout[m]
     local item, c = final.Placements[n], search.Candidates[i]
-    local p = self:OwnerOf(m, i)
+    local p = self:OwnerOf(m, i, layout)
     local spec = self.SlotSpecs[search.SlotIndex[m]]
     local a = appeal[m] or {}
     -- A plot another of the player's cities owns is swapped from it (issue 54).
@@ -1526,7 +1568,7 @@ function Session:PlanFor(layout)
   search:Breakdown(out, layout, slotsPlaced, final, base)
   -- Each city's subtotal: the sum of its districts' parts (issue 126).
   for n, item in ipairs(out.Plan) do
-    local city = out.Cities[self:OwnerOf(slotsPlaced[n], layout[slotsPlaced[n]])]
+    local city = out.Cities[self:OwnerOf(slotsPlaced[n], layout[slotsPlaced[n]], layout)]
     local sum = city.Parts or {}
     for _, key in ipairs(SDP_Search.PART_KEYS) do
       if item.Parts[key] ~= nil then sum[key] = (sum[key] or 0) + item.Parts[key] end
