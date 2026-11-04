@@ -13,6 +13,7 @@ include("SDP_Task")
 include("SDP_Board")
 include("SDP_Land")
 include("SDP_Appeal")
+include("SDP_Improve")
 include("SDP_Coverage")
 include("SDP_Search")
 include("SDP_Remind")
@@ -89,6 +90,8 @@ local m_allowFeatureRemoval = true
 local m_swap = true           -- plots swapped from another of our cities are candidates (issue 54; on by default, issue 162)
 local m_replace = false       -- plan over this mod's earlier pins for the city and replace them
 local m_remind = true         -- reminder pins on the woods and rainforest the plan relies on (feedback item 5)
+local m_improve = true        -- plan the improvements the districts take adjacency from (issue 227)
+local m_worked = false        -- tack the improvements of the worked plots too (issue 227)
 local m_wonders = {}          -- [BuildingType] = true: wonders to place too (then solved by SDP_Multi, one city)
 local m_heat = nil            -- the district whose good places the map shows
 local m_heatSpots = nil       -- SDP_Solver.Heat of m_heat (tests)
@@ -118,6 +121,8 @@ local SINGLE_SWITCHES = {
   { Key = "SWAP", Default = true, Get = function() return m_swap end, Put = function(v) m_swap = v end },
   { Key = "REPLACE", Default = false, Get = function() return m_replace end, Put = function(v) m_replace = v end },
   { Key = "REMIND", Default = true, Get = function() return m_remind end, Put = function(v) m_remind = v end },
+  { Key = "IMPROVE", Default = true, Get = function() return m_improve end, Put = function(v) m_improve = v end },
+  { Key = "WORKED", Default = false, Get = function() return m_worked end, Put = function(v) m_worked = v end },
 }
 
 -- ===========================================================================
@@ -1200,6 +1205,87 @@ function SDP_UI.SupportEntry(p, name)
   return { Type = s.Type, X = s.X, Y = s.Y, Name = name }
 end
 
+-- The improvements planned with the districts (issue 227) ------------------
+-- Plain-text tile yields, food included.
+local function TileYieldText(yields)
+  local parts = {}
+  for _, yieldType in ipairs(SDP_Land.TILE_YIELDS) do
+    local amount = yields and yields[yieldType]
+    if amount ~= nil and amount ~= 0 then
+      parts[#parts + 1] = Locale.Lookup("LOC_SDP_YIELD_SHORT_" .. yieldType) .. Signed(amount)
+    end
+  end
+  if #parts == 0 then return Locale.Lookup("LOC_SDP_NO_YIELDS") end
+  return table.concat(parts, " ")
+end
+
+-- One improvement tack in a tooltip: what, where, its yields once built,
+-- and whether the feature goes first or the tile is not owned yet.
+function SDP_UI.ImprovementLine(e)
+  local text = Locale.Lookup("LOC_SDP_RESULT_IMPROVEMENT_LINE", TypeName(e.Type), Where(e.X, e.Y), TileYieldText(e.Yields))
+  local notes = {}
+  if e.Clear then notes[#notes + 1] = Locale.Lookup("LOC_SDP_RESULT_IMPROVEMENT_CLEAR") end
+  if e.Unowned then notes[#notes + 1] = Locale.Lookup("LOC_SDP_RESULT_UNOWNED") end
+  if #notes == 0 then return text end
+  return text .. " " .. table.concat(notes, " ")
+end
+
+local function ImprovementsTip(list)
+  local lines = {}
+  for _, e in ipairs(list) do lines[#lines + 1] = SDP_UI.ImprovementLine(e) end
+  return Locale.Lookup("LOC_SDP_RESULT_IMPROVEMENTS_TOOLTIP", table.concat(lines, "[NEWLINE]"))
+end
+
+-- The improvements planned next to a district: a result row after the
+-- district's (`indent` before its name), with what they add to its adjacency.
+function SDP_UI.ImprovementRow(p, add, indent)
+  local list = p.Improvements
+  if list == nil or #list == 0 then return end
+  local names = {}
+  for _, e in ipairs(list) do names[#names + 1] = TypeName(e.Type) .. " " .. Where(e.X, e.Y) end
+  local detail
+  if p.ImprovementYields ~= nil then
+    detail = Locale.Lookup("LOC_SDP_RESULT_IMPROVEMENTS_FOR", TypeName(p.Type), YieldText(p.ImprovementYields))
+  else
+    detail = Locale.Lookup("LOC_SDP_RESULT_IMPROVEMENTS_TILES", TypeName(p.Type))
+  end
+  add("ICON_" .. list[1].Type, (indent or "") .. Locale.Lookup("LOC_SDP_RESULT_IMPROVEMENTS", Join(names)), detail,
+    ImprovementsTip(list), list[1].X, list[1].Y)
+end
+
+-- The improvements of one city's worked tiles (issue 227 question 11): one
+-- row with how many of each, every tile on hover. `city`: the city's label
+-- (several cities) or nil.
+function SDP_UI.WorkedRow(list, add, city)
+  if list == nil or #list == 0 then return end
+  local counts, order = {}, {}
+  for _, e in ipairs(list) do
+    if counts[e.Type] == nil then
+      counts[e.Type] = 0
+      order[#order + 1] = e.Type
+    end
+    counts[e.Type] = counts[e.Type] + 1
+  end
+  table.sort(order)
+  local parts = {}
+  for _, t in ipairs(order) do parts[#parts + 1] = Locale.Lookup("LOC_SDP_RESULT_WORKED_COUNT", TypeName(t), counts[t]) end
+  local detail = city ~= nil and Locale.Lookup("LOC_SDP_RESULT_WORKED_CITY", city) or Locale.Lookup("LOC_SDP_RESULT_WORKED_DETAIL")
+  add("ICON_" .. order[1], Locale.Lookup("LOC_SDP_RESULT_WORKED", Join(parts)), detail, ImprovementsTip(list))
+end
+
+-- Preview icons of both kinds of improvement tacks.
+function SDP_UI.ImprovementIcons(plan, worked, icons)
+  for _, p in ipairs(plan or {}) do
+    for _, e in ipairs(p.Improvements or {}) do icons[#icons + 1] = { X = e.X, Y = e.Y, Icon = "ICON_" .. e.Type, Text = "" } end
+  end
+  for _, e in ipairs(worked or {}) do icons[#icons + 1] = { X = e.X, Y = e.Y, Icon = "ICON_" .. e.Type, Text = "" } end
+end
+
+-- Tack entries of a list of improvements, named `name` (the city's number).
+function SDP_UI.ImprovementEntries(list, name, entries)
+  for _, e in ipairs(list or {}) do entries[#entries + 1] = { Type = e.Type, X = e.X, Y = e.Y, Name = name } end
+end
+
 -- Result rows for partner districts a plan leaves in one city
 -- (Together; partner districts are always kept apart otherwise, issue 152):
 -- `city` names the city (several cities) or is nil.
@@ -1287,6 +1373,7 @@ function SDP_UI.CityResult(result, cityID)
     end
     s.Picked = s.Picked or (city and city.Picked) or {}
     if s.Together == nil and city ~= nil then s.Together = city.Together end
+    if s.Worked == nil and city ~= nil then s.Worked = city.Worked end
     local unplaced = {}
     for _, u in ipairs(s.Unplaced or result.Unplaced or {}) do unplaced[#unplaced + 1] = u end
     if pick ~= nil and pick > #s.Picked then
@@ -1333,7 +1420,10 @@ function SDP_UI.CityRows(s, parts, add, cityID)
     toolTip = SDP_UI.PartsTip(p, parts, toolTip)
     add("ICON_" .. p.Type, TypeName(p.Type) .. "  " .. Where(p.X, p.Y), detail, toolTip, p.X, p.Y)
     SDP_UI.SupportRow(p, add, "  ")
+    SDP_UI.ImprovementRow(p, add, "  ")
   end
+  -- The improvements of the worked tiles (issue 227).
+  SDP_UI.WorkedRow(s.Worked, add)
   -- Woods and rainforest the plan relies on (feedback item 5).
   for _, r in ipairs(s.Remind or {}) do
     add(SDP_Pins.REMIND_ICON, Locale.Lookup("LOC_SDP_RESULT_REMIND", TypeName(r.Feature), Where(r.X, r.Y)),
@@ -1359,6 +1449,7 @@ function SDP_UI.CityIcons(s)
     icons[#icons + 1] = { X = p.X, Y = p.Y, Icon = "ICON_" .. p.Type, Text = PinText(p.Yields) }
   end
   SDP_UI.SupportIcons(s.Plan, icons)
+  SDP_UI.ImprovementIcons(s.Plan, s.Worked, icons)
   for _, r in ipairs(s.Remind or {}) do
     icons[#icons + 1] = { X = r.X, Y = r.Y, Icon = SDP_Pins.REMIND_ICON, Text = "" }
   end
@@ -1374,7 +1465,9 @@ function SDP_UI.CityTacks(s, number, remind)
   for _, p in ipairs(s.Plan) do
     entries[#entries + 1] = { Type = p.Type, X = p.X, Y = p.Y, Name = name }
     entries[#entries + 1] = SDP_UI.SupportEntry(p, name)
+    SDP_UI.ImprovementEntries(p.Improvements, name, entries)
   end
+  SDP_UI.ImprovementEntries(s.Worked, name, entries)
   if remind then
     for _, e in ipairs(SDP_UI.RemindEntries(s.Remind, function() return number end)) do entries[#entries + 1] = e end
   end
@@ -1798,6 +1891,26 @@ local function SetReplace(on)
   end
 end
 
+-- Improvements with the districts (issue 227): the plan changes.
+local function SetImprove(on)
+  Controls.ImproveCheck:SetCheck(on)
+  if m_improve ~= on then
+    m_improve = on
+    ClearResult()
+    Remember()
+    UpdateEstimate()
+  end
+end
+
+local function SetWorked(on)
+  Controls.WorkedCheck:SetCheck(on)
+  if m_worked ~= on then
+    m_worked = on
+    ClearResult()
+    Remember()
+  end
+end
+
 -- Reminder pins only change what "place" puts on the map.
 local function SetRemind(on)
   Controls.RemindCheck:SetCheck(on)
@@ -1866,6 +1979,8 @@ SetPreset = function(name)
   Controls.SwapCheck:SetCheck(m_swap)
   Controls.ReplaceCheck:SetCheck(m_replace)
   Controls.RemindCheck:SetCheck(m_remind)
+  Controls.ImproveCheck:SetCheck(m_improve)
+  Controls.WorkedCheck:SetCheck(m_worked)
   Remember()
   UpdateHave() -- a preset may turn replace off: the city's tacks count again (issue 144)
   UpdateEstimate()
@@ -2005,6 +2120,8 @@ Refresh = function()
   Controls.SwapCheck:SetCheck(m_swap)
   Controls.ReplaceCheck:SetCheck(m_replace)
   Controls.RemindCheck:SetCheck(m_remind)
+  Controls.ImproveCheck:SetCheck(m_improve)
+  Controls.WorkedCheck:SetCheck(m_worked)
   UpdateReplaceLabel()
   PopulateWonders()
   m_heat = nil
@@ -2112,6 +2229,7 @@ Request = function()
     Distance = m_weights.DISTANCE, Coverage = m_weights.COVERAGE, Remind = m_remind, Apart = true,
     AllowFeatureRemoval = m_allowFeatureRemoval, Land = m_weights.LAND > 0, Tier = m_tier, Swap = m_swap,
     IgnorePins = m_replace and OwnPins() or nil, Wonders = wonders, Off = SDP_UI.OffSet(m_states),
+    Improvements = m_improve, WorkedImprovements = m_worked,
   }
 end
 
@@ -2126,6 +2244,7 @@ local function WonderRequest(request)
     Only = { [request.CityID] = true }, Weights = request.Weights, Land = request.Land, Apart = request.Apart,
     AllowFeatureRemoval = request.AllowFeatureRemoval, IgnorePins = request.IgnorePins, Swap = request.Swap,
     Plans = { [key] = request.Districts }, Off = request.Off,
+    Improvements = request.Improvements, WorkedImprovements = request.WorkedImprovements,
   }
 end
 
@@ -2400,6 +2519,8 @@ SDP_Panel = {
     UpdateEstimate()
   end,
   SetRemind = SetRemind,
+  SetImprove = SetImprove,
+  SetWorked = SetWorked,
   SelectSolution = function(n)
     if m_result ~= nil and m_result.Ok and m_result.Solutions and m_result.Solutions[n] then
       m_solution = n
@@ -2442,7 +2563,7 @@ SDP_Panel = {
       SolutionCells = m_solutionCells, WeightCells = m_weightCells,
       Count = List().Count, Target = List().Target, Have = List().Have, Solution = m_solution, Remind = m_remind,
       Weights = m_weights, AllowFeatureRemoval = m_allowFeatureRemoval, Land = m_weights.LAND > 0, Tier = m_tier, Replace = m_replace,
-      Swap = m_swap,
+      Swap = m_swap, Improve = m_improve, Worked = m_worked,
       Wonders = SelectedWonders(), HeatDistrict = m_heat,
       Running = SDP_Task.IsRunning(), QualityText = Controls.Quality:GetText(), EstimateText = Controls.Estimate:GetText(),
       PlaceDisabled = Controls.PlaceButton:IsDisabled(), UndoDisabled = Controls.UndoButton:IsDisabled(),
@@ -2475,6 +2596,12 @@ Controls.SwapCheck:RegisterCheckHandler(function()
 end)
 Controls.RemindCheck:RegisterCheckHandler(function()
   SetRemind(Controls.RemindCheck:IsChecked())
+end)
+Controls.ImproveCheck:RegisterCheckHandler(function()
+  SetImprove(Controls.ImproveCheck:IsChecked())
+end)
+Controls.WorkedCheck:RegisterCheckHandler(function()
+  SetWorked(Controls.WorkedCheck:IsChecked())
 end)
 Controls.CountLess:RegisterCallback(Mouse.eLClick, function() SetCount(List().Target - 1) end)
 Controls.CountMore:RegisterCallback(Mouse.eLClick, function() SetCount(List().Target + 1) end)

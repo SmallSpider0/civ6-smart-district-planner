@@ -54,6 +54,7 @@
         <LoadOrder>14000</LoadOrder>
       </Properties>
       <File>Scripts/SDP_Appeal.lua</File>
+      <File>Scripts/SDP_Improve.lua</File>
       <File>Scripts/SDP_Board.lua</File>
       <File>Scripts/SDP_City.lua</File>
       <File>Scripts/SDP_Coverage.lua</File>
@@ -87,6 +88,7 @@
   <Files>
     <File>Config/SDP_Input.xml</File>
     <File>Scripts/SDP_Appeal.lua</File>
+    <File>Scripts/SDP_Improve.lua</File>
     <File>Scripts/SDP_Board.lua</File>
     <File>Scripts/SDP_City.lua</File>
     <File>Scripts/SDP_Coverage.lua</File>

@@ -127,6 +127,15 @@
             <CheckBox ID="SwapCheck" Anchor="L,C" Style="MainCheckBox"/>
             <Label Anchor="L,C" Offset="26,0" Style="BodyTextDark14" String="LOC_SDP_SWAP_SHORT"/>
           </Container>
+          <!-- Improvements with the districts, and for the worked tiles (issue 227) -->
+          <Container Anchor="L,C" Offset="244,0" Size="116,26" ToolTip="LOC_SDP_IMPROVE_TOOLTIP">
+            <CheckBox ID="ImproveCheck" Anchor="L,C" Style="MainCheckBox"/>
+            <Label Anchor="L,C" Offset="26,0" Style="BodyTextDark14" String="LOC_SDP_IMPROVE_SHORT"/>
+          </Container>
+          <Container Anchor="L,C" Offset="364,0" Size="116,26" ToolTip="LOC_SDP_WORKED_TOOLTIP">
+            <CheckBox ID="WorkedCheck" Anchor="L,C" Style="MainCheckBox"/>
+            <Label Anchor="L,C" Offset="26,0" Style="BodyTextDark14" String="LOC_SDP_WORKED_SHORT"/>
+          </Container>
         </Container>
         </Stack>
         </ScrollPanel>
@@ -343,6 +352,15 @@
           <Container Anchor="L,C" Size="236,26" ToolTip="LOC_SDP_SWAP_TOOLTIP">
             <CheckBox ID="MultiSwapCheck" Anchor="L,C" Style="MainCheckBox"/>
             <Label Anchor="L,C" Offset="26,0" Style="BodyTextDark14" String="LOC_SDP_SWAP_SHORT"/>
+          </Container>
+          <!-- Improvements with the districts, and for the worked tiles (issue 227) -->
+          <Container Anchor="L,C" Offset="244,0" Size="116,26" ToolTip="LOC_SDP_IMPROVE_TOOLTIP">
+            <CheckBox ID="MultiImproveCheck" Anchor="L,C" Style="MainCheckBox"/>
+            <Label Anchor="L,C" Offset="26,0" Style="BodyTextDark14" String="LOC_SDP_IMPROVE_SHORT"/>
+          </Container>
+          <Container Anchor="L,C" Offset="364,0" Size="116,26" ToolTip="LOC_SDP_WORKED_TOOLTIP">
+            <CheckBox ID="MultiWorkedCheck" Anchor="L,C" Style="MainCheckBox"/>
+            <Label Anchor="L,C" Offset="26,0" Style="BodyTextDark14" String="LOC_SDP_WORKED_SHORT"/>
           </Container>
         </Container>
         </Stack>

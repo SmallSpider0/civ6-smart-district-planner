@@ -66,6 +66,8 @@ local m_tier = SDP_Tiers.DEFAULT
 local m_swap = true -- plots swapped from another of our cities are candidates (issue 54; on by default, issue 162)
 local m_replace = false -- plan over this mod's earlier pins for the cities and replace them
 local m_remind = true
+local m_improve = true -- plan the improvements the districts take adjacency from (issue 227)
+local m_worked = false -- tack the improvements of the worked plots too (issue 227)
 local m_result = nil
 local m_solution = 1
 local m_view = { Cities = {}, Districts = {}, Wonders = {}, Solutions = {}, Results = {}, Plans = {}, Templates = {} } -- for tests
@@ -77,6 +79,8 @@ local SWITCHES = {
   { Key = "SWAP", Default = true, Get = function() return m_swap end, Put = function(v) m_swap = v end },
   { Key = "REPLACE", Default = false, Get = function() return m_replace end, Put = function(v) m_replace = v end },
   { Key = "REMIND", Default = true, Get = function() return m_remind end, Put = function(v) m_remind = v end },
+  { Key = "IMPROVE", Default = true, Get = function() return m_improve end, Put = function(v) m_improve = v end },
+  { Key = "WORKED", Default = false, Get = function() return m_worked end, Put = function(v) m_worked = v end },
 }
 local m_fold = false -- the settings folded into one line (issue 71)
 local m_keeper = SDP_UI.Keeper({ Tab = "MULTI", Columns = COLUMNS, Weights = m_weights, Switches = SWITCHES,
@@ -287,6 +291,7 @@ function P.Request()
     Off = SDP_UI.OffSet(m_shared.States), Offs = offs,
     Existing = existing, Weights = weights, Land = m_weights.LAND > 0, Coverage = m_weights.COVERAGE, Distance = m_weights.DISTANCE,
     Remind = m_remind, Apart = true, IgnorePins = m_replace and P.OwnPins() or nil, Swap = m_swap,
+    Improvements = m_improve, WorkedImprovements = m_worked,
   }
 end
 
@@ -318,6 +323,26 @@ function P.SetReplace(on)
       ShowWonders()
       UpdateEstimate()
     end
+  end
+end
+
+-- Improvements with the districts (issue 227): the plan changes.
+function P.SetImprove(on)
+  Controls.MultiImproveCheck:SetCheck(on)
+  if m_improve ~= on then
+    m_improve = on
+    ClearResult()
+    Remember()
+    UpdateEstimate()
+  end
+end
+
+function P.SetWorked(on)
+  Controls.MultiWorkedCheck:SetCheck(on)
+  if m_worked ~= on then
+    m_worked = on
+    ClearResult()
+    Remember()
   end
 end
 
@@ -668,6 +693,8 @@ function P.SetPreset(name)
   Controls.MultiSwapCheck:SetCheck(m_swap)
   Controls.MultiReplaceCheck:SetCheck(m_replace)
   Controls.MultiRemindCheck:SetCheck(m_remind)
+  Controls.MultiImproveCheck:SetCheck(m_improve)
+  Controls.MultiWorkedCheck:SetCheck(m_worked)
   Remember()
   ShowHave()
   UpdateEstimate()
@@ -939,6 +966,8 @@ function P.Refresh()
   Controls.MultiSwapCheck:SetCheck(m_swap)
   Controls.MultiReplaceCheck:SetCheck(m_replace)
   Controls.MultiRemindCheck:SetCheck(m_remind)
+  Controls.MultiImproveCheck:SetCheck(m_improve)
+  Controls.MultiWorkedCheck:SetCheck(m_worked)
   UpdateFold()
   P.Render()
 end
@@ -978,6 +1007,8 @@ function P.Preview(n)
     icons[#icons + 1] = { X = p.X, Y = p.Y, Icon = "ICON_" .. p.Type, Text = text }
   end
   SDP_UI.SupportIcons(solution.Plan, icons)
+  for _, city in ipairs(solution.Cities or {}) do SDP_UI.ImprovementIcons(nil, city.Worked, icons) end
+  SDP_UI.ImprovementIcons(solution.Plan, nil, icons)
   for _, r in ipairs(solution.Remind or {}) do
     icons[#icons + 1] = { X = r.X, Y = r.Y, Icon = SDP_Pins.REMIND_ICON, Text = "" }
   end
@@ -1101,8 +1132,11 @@ function P.Render()
           tip = SDP_UI.PartsTip(p, summaryParts, tip)
           AddRow("ICON_" .. p.Type, "  " .. SDP_UI.TypeName(p.Type) .. "  " .. SDP_UI.Where(p.X, p.Y), detail, tip, p.X, p.Y)
           SDP_UI.SupportRow(p, AddRow, "    ")
+          SDP_UI.ImprovementRow(p, AddRow, "    ")
         end
       end
+      -- The improvements of the city's worked tiles (issue 227).
+      SDP_UI.WorkedRow(city.Worked, AddRow, P.CityLabel(city))
     end
     for _, r in ipairs(solution.Remind or {}) do
       AddRow(SDP_Pins.REMIND_ICON, Locale.Lookup("LOC_SDP_RESULT_REMIND", SDP_UI.TypeName(r.Feature), SDP_UI.Where(r.X, r.Y)),
@@ -1175,6 +1209,10 @@ function P.Place()
     local name = city and tostring(city.Number or "") or ""
     entries[#entries + 1] = { Type = p.Type, X = p.X, Y = p.Y, Name = name }
     entries[#entries + 1] = SDP_UI.SupportEntry(p, name)
+    SDP_UI.ImprovementEntries(p.Improvements, name, entries)
+  end
+  for _, city in ipairs(solution.Cities or {}) do
+    SDP_UI.ImprovementEntries(city.Worked, tostring(city.Number or ""), entries)
   end
   if m_remind then
     for _, e in ipairs(SDP_UI.RemindEntries(solution.Remind, function(r)
@@ -1211,7 +1249,7 @@ end
 function P.State()
   return {
     Result = m_result, Solution = m_solution, Tier = m_tier, Land = m_weights.LAND > 0, Replace = m_replace, Remind = m_remind,
-    Swap = m_swap, Weights = m_weights, Preset = m_preset, Fold = m_fold,
+    Swap = m_swap, Weights = m_weights, Preset = m_preset, Fold = m_fold, Improve = m_improve, Worked = m_worked,
     FoldText = Controls.MultiFoldText:GetText(), ResultHeight = Controls.MultiResultScroll:GetSizeY(),
     View = m_view, EstimateText = Controls.MultiEstimate:GetText(), QualityText = Controls.MultiQuality:GetText(),
     PlaceDisabled = Controls.MultiPlaceButton:IsDisabled(), ContinueDisabled = Controls.MultiContinueButton:IsDisabled(),
@@ -1227,6 +1265,8 @@ Controls.MultiPlanShared:RegisterCallback(Mouse.eLClick, function() P.UseShared(
 Controls.MultiSwapCheck:RegisterCheckHandler(function() P.SetSwap(Controls.MultiSwapCheck:IsChecked()) end)
 Controls.MultiReplaceCheck:RegisterCheckHandler(function() P.SetReplace(Controls.MultiReplaceCheck:IsChecked()) end)
 Controls.MultiRemindCheck:RegisterCheckHandler(function() P.SetRemind(Controls.MultiRemindCheck:IsChecked()) end)
+Controls.MultiImproveCheck:RegisterCheckHandler(function() P.SetImprove(Controls.MultiImproveCheck:IsChecked()) end)
+Controls.MultiWorkedCheck:RegisterCheckHandler(function() P.SetWorked(Controls.MultiWorkedCheck:IsChecked()) end)
 Controls.MultiCountLess:RegisterCallback(Mouse.eLClick, function() P.SetCount(ListOf(EditedList()).Target - 1) end)
 Controls.MultiCountMore:RegisterCallback(Mouse.eLClick, function() P.SetCount(ListOf(EditedList()).Target + 1) end)
 Controls.MultiSolveButton:RegisterCallback(Mouse.eLClick, function() P.Solve() end)

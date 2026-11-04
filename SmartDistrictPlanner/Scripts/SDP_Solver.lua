@@ -45,10 +45,68 @@ Session.__index = Session
 --   IgnorePins           this mod's earlier pins being replaced ({ ID, X, Y },
 --                        SDP_Pins.Own): planned as if they were gone; scan
 --                        with SDP_City.ScanOptions(request)
+--   Improvements         plan the improvements the districts take adjacency or
+--                        yields from (issue 227, SDP_Improve; default off,
+--                        the panel's switch is on by default)
+--   WorkedImprovements   also tack the improvement the land part assumes on
+--                        each worked plot without one (issue 227; only with
+--                        the land part on and its weight above 0)
 --   Apart                false: pick partner districts (SDP_Rules.Apart, the
 --                        harbor and the commercial hub) into one city like any
 --                        others; default: not, unless the count needs it
 -- }
+-- The improvement model of a request (issue 227, SDP_Improve) or nil: with
+-- Improvements on, or WorkedImprovements with the land part on. `scans`:
+-- the cities taking part (their pins, the unowned plots they can come to
+-- own, whether features may be cleared). Shared with SDP_Multi.
+function SDP_Solver.ImproveModel(request, playerID, scans, fixed, weights, lands, plotWeights, landOn)
+  local worked = request.WorkedImprovements and landOn and SDP_Land.Scale(request.Weights) > 0
+  if SDP_Improve == nil or not (request.Improvements or worked) then return nil end
+  local ownable, taken = {}, {}
+  for _, scan in ipairs(scans) do
+    for index in pairs(scan.Reach.Reached) do ownable[index] = true end
+    for _, pin in ipairs(scan.Pins) do taken[pin.Index] = true end
+  end
+  for _, subject in ipairs(fixed) do taken[Map.GetPlotIndex(subject.X, subject.Y)] = true end
+  local model = SDP_Improve.New({ PlayerID = playerID, Weights = weights,
+    PlotWeights = landOn and plotWeights or nil, Lands = lands,
+    AllowRemoval = request.AllowFeatureRemoval ~= false, Ownable = ownable, Taken = taken, Fixed = fixed })
+  model.WorkedOn = worked
+  return model
+end
+
+-- The improvements of a plan (issue 227): for each placed district the
+-- improvements planned next to it (the first district in `placed` they
+-- touch gets them) and what they add to its adjacency, and the subjects to
+-- put on the layer for the final evaluation.
+--   placed  { { Type, Kind, Index } } in plan order
+--   plan    SDP_Search:ImprovePlan's plan (or nil)
+-- Returns byPlaced = { [n] = { entries } }, extra = { subjects }.
+function SDP_Solver.ImproveEntries(model, placed, plan)
+  local byPlaced, extra = {}, {}
+  if model == nil or plan == nil then return byPlaced, extra end
+  local placedAt, at = {}, {}
+  for n, p in ipairs(placed) do
+    placedAt[p.Index] = p
+    at[p.Index] = n
+  end
+  for _, item in ipairs(plan) do
+    extra[#extra + 1] = model:Subject(item.Type, item.Index)
+    local owner = nil
+    for n, p in ipairs(placed) do
+      if owner == nil and p.Kind ~= "WONDER" and Map.GetPlotDistance(Map.GetPlotByIndex(p.Index):GetX(), Map.GetPlotByIndex(p.Index):GetY(),
+          Map.GetPlotByIndex(item.Index):GetX(), Map.GetPlotByIndex(item.Index):GetY()) == 1 then
+        owner = n
+      end
+    end
+    if owner ~= nil then
+      byPlaced[owner] = byPlaced[owner] or {}
+      table.insert(byPlaced[owner], model:Entry(item, placedAt))
+    end
+  end
+  return byPlaced, extra
+end
+
 -- The overlay must be installed.
 function SDP_Solver.NewSession(request, scan)
   local self = setmetatable({}, Session)
@@ -130,8 +188,8 @@ function SDP_Solver.NewSession(request, scan)
   -- housing target (issue 55).
   local population = math.max(scan.Population, SDP_Land.RequiredPopulation(scan.SpecialtyBuilt + requiredSpecialty + pick))
   local lands = {}
+  local plotWeights = SDP_Land.PlotWeights(SDP_Land.Scale(request.Weights))
   if request.Land then
-    local plotWeights = SDP_Land.PlotWeights(SDP_Land.Scale(request.Weights))
     -- A plot no city owns yet that another of the player's cities is nearer
     -- to is that city's to work (issue 54, as on the multi-city tab).
     local others = {}
@@ -182,6 +240,10 @@ function SDP_Solver.NewSession(request, scan)
   local workable = {}
   for _, index in ipairs(SDP_Land.Workable(scan)) do workable[index] = true end
 
+  -- Improvements planned with the districts (issue 227).
+  self.Improve = SDP_Solver.ImproveModel(request, playerID, { scan }, self.Fixed, self.Weights, lands, plotWeights,
+    request.Land == true)
+
   -- Coverage part (design 19.7): off (no model at all) unless a weight is given.
   if (request.Coverage or 0) > 0 then
     self.Coverage = SDP_Coverage.New({ PlayerID = playerID, Weight = request.Coverage,
@@ -199,6 +261,7 @@ function SDP_Solver.NewSession(request, scan)
     -- The city being planned is not counted as covered (issue 91).
     CoverOwner = function() return "C" .. tostring(scan.CityID) end,
     Alternatives = params.Solutions or 3, Apart = apart, Exclusive = SDP_Rules.Exclusive(),
+    Improve = request.Improvements and self.Improve or nil,
     -- A candidate swapped from another of the player's cities (issue 54);
     -- ties take the plots that need no swap (issue 162).
     Swapped = function(search, m, i) return search.Candidates[i].Swap ~= nil end,
@@ -260,8 +323,19 @@ function Session:PlanFor(layout)
       slotsPlaced[#slotsPlaced + 1] = m
     end
   end
-  local final = SDP_Overlay.Evaluate(subjects, self.Fixed, self.Weights)
+  -- The improvements planned with the districts (issue 227): on the layer
+  -- for the final evaluation, as in the search.
+  local placed = {}
+  for n, m in ipairs(slotsPlaced) do placed[n] = { Type = search.Types[m], Kind = "DISTRICT", Index = search.Candidates[layout[m]].Index } end
+  local improvePlan, forced = search:ImprovePlan(layout)
+  local byPlaced, extra = SDP_Solver.ImproveEntries(self.Improve, placed, improvePlan)
+  local final = SDP_Overlay.Evaluate(subjects, self.Fixed, self.Weights, extra)
   self.ExtraCalls = self.ExtraCalls + 2 * #subjects + #self.Fixed
+  local without = nil
+  if #extra > 0 then
+    without = SDP_Overlay.Evaluate(subjects, self.Fixed, self.Weights)
+    self.ExtraCalls = self.ExtraCalls + 2 * #subjects + #self.Fixed
+  end
   local out = { Plan = {}, Neighbours = {}, Picked = {}, Legal = final.Legal }
   local appeal = {}
   if search.AppealModel ~= nil then out.AppealDelta = search:AppealDelta(layout, appeal) end
@@ -276,6 +350,8 @@ function Session:PlanFor(layout)
       Appeal = a.Appeal, Housing = a.Housing, Tiles = a.Tiles, TilesCounted = a.TilesCounted,
       TilesReason = a.TilesReason,
       Reach = self.Coverage and self.Coverage:Reach(search.Types[m], c.X, c.Y, "C" .. tostring(self.Scan.CityID)) or nil,
+      Improvements = byPlaced[n],
+      ImprovementYields = without and SDP_Solver.YieldDifference(item.Yields, without.Placements[n].Yields) or nil,
     }
     if search.Optional[m] then out.Picked[#out.Picked + 1] = search.Types[m] end
   end
@@ -310,7 +386,42 @@ function Session:PlanFor(layout)
     for n, p in ipairs(out.Plan) do plan[n] = { Type = p.Type, Kind = "DISTRICT", X = p.X, Y = p.Y } end
     out.Remind = SDP_Remind.Find(self.PlayerID, plan)
   end
+  -- The improvements of the worked plots (issue 227 question 3).
+  if self.Improve ~= nil and self.Improve.WorkedOn and self.Land ~= nil then
+    local boost = nil
+    if search.AppealModel ~= nil then
+      local _, boosts = search.AppealModel:Score(layout)
+      boost = boosts and boosts[1] or nil
+      search.AppealModel:ClearBoosts()
+    end
+    out.Worked = SDP_Solver.WorkedImprovements(self.Improve, self.Land, placed, improvePlan, forced, boost)
+  end
   return out
+end
+
+-- The difference of two DMT yield tables, { [yield] = a - b } without zeros
+-- (nil when they are the same).
+function SDP_Solver.YieldDifference(a, b)
+  local out, any = {}, false
+  for _, yieldType in ipairs(SDP_Rules.YIELDS) do
+    local d = ((a or {})[yieldType] or 0) - ((b or {})[yieldType] or 0)
+    if math.abs(d) > 1e-9 then
+      out[yieldType], any = d, true
+    end
+  end
+  return any and out or nil
+end
+
+-- The improvement tacks for one city's worked plots (SDP_Improve
+-- Model:Worked) with `placed` built on and `plan`'s improvements.
+function SDP_Solver.WorkedImprovements(model, land, placed, plan, forced, boost)
+  local taken, placedAt, assigned = {}, {}, {}
+  for n, p in ipairs(placed) do
+    taken[n] = p.Index
+    placedAt[p.Index] = p
+  end
+  for _, item in ipairs(plan or {}) do assigned[item.Index] = true end
+  return model:Worked(land, taken, boost, forced, assigned, placedAt)
 end
 
 -- The plan for the best layout, with DMT's yields and tooltips, and up to
@@ -384,7 +495,7 @@ function Session:Result()
     local best = result.Solutions[1]
     for _, key in ipairs({ "Plan", "Unplaced", "Neighbours", "Total", "Adjacency", "LandDelta", "CostDelta", "CoverageDelta",
       "Covered", "CoveredBy", "AppealDelta", "ImprovementHousing", "Gain", "Remind", "Picked", "Together", "Rest",
-      "YieldAdjacency", "YieldWeighted" }) do
+      "YieldAdjacency", "YieldWeighted", "Worked" }) do
       result[key] = best[key]
     end
     -- The board's incremental value must match the full evaluation.

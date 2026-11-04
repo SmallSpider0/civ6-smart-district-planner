@@ -71,6 +71,8 @@ local function RowApplies(row, player, traits, excluded)
   return true
 end
 
+SDP_Rules.RowApplies = RowApplies
+
 local function Add(yields, yieldType, amount)
   yields[yieldType] = (yields[yieldType] or 0) + amount
 end
