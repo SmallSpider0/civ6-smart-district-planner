@@ -244,7 +244,8 @@ function runFile(path, filter, verbose) {
   return counts;
 }
 
-function main(argv) {
+// The options, or null when they are not understood.
+function parseArgs(argv) {
   let filter = null;
   let verbose = false;
   const files = [];
@@ -252,11 +253,13 @@ function main(argv) {
     const a = argv[i];
     if (a === "-k") filter = argv[++i];
     else if (a === "-v") verbose = true;
-    else if (a.startsWith("-")) {
-      console.error("usage: offline_tests.mjs [-k SUBSTRING] [-v] [FILE...]");
-      return 2;
-    } else files.push(resolve(a));
+    else if (a.startsWith("-")) return null;
+    else files.push(resolve(a));
   }
+  return { filter, verbose, files };
+}
+
+function main({ filter, verbose, files }) {
   if (files.length === 0) {
     for (const f of readdirSync(OFFLINE).sort()) {
       if (/^spec_.*\.lua$/.test(f)) files.push(join(OFFLINE, f));
@@ -271,5 +274,11 @@ function main(argv) {
   return total.FAIL || total.ERROR ? 1 : 0;
 }
 
+const args = parseArgs(process.argv.slice(2));
+if (!args) {
+  // a usage error (--help too) prints here at once, not on the second machine (#286)
+  console.error("usage: offline_tests.mjs [-k SUBSTRING] [-v] [FILE...]");
+  process.exit(2);
+}
 placeRun(import.meta.url); // started by hand: registered and placed by tools/remote.py direct
-process.exit(main(process.argv.slice(2)));
+process.exit(main(args));

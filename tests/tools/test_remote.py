@@ -233,6 +233,16 @@ class LocalJobs(unittest.TestCase):
         with open(os.path.join(self.root, "logs", "remote", "j.jsonl")) as fh:
             self.assertEqual(fh.read(), "row\n")
 
+    def test_a_direct_run_that_wrote_nothing_still_returns_its_exit_code(self):
+        # #286: compare.mjs --help ends with exit 2 and writes no results; the fetch-back skips the file
+        self.place("j", code=2)
+        args = argparse.Namespace(name="j", fetch=["tests/compare/results/latest.jsonl"], every=0)
+        with self.assertRaises(OSError):  # remote.py wait --fetch: a file asked for by hand must be there
+            remote.wait(args)
+        args.missing_ok = True
+        self.assertEqual(remote.wait(args), 2)
+        self.assertFalse(os.path.exists(os.path.join(self.root, "tests", "compare", "results", "latest.jsonl")))
+
     def test_state_running_then_lost(self):
         self.place("j")
         self.assertEqual(remote.state("j"), (None, "[3/3] done"))
@@ -414,6 +424,27 @@ class Direct(unittest.TestCase):
         remote.direct(argparse.Namespace(command=["node", "tools/offline_tests.mjs", "tests/offline/bench_x.lua"]))
         self.assertEqual(calls, ["here"])
 
+    def test_a_run_there_that_wrote_nothing_skips_the_fetch(self):
+        # #286: the run ended (exit 2, usage) without writing --out; rsync of the missing file used to
+        # raise and hide the run's log and exit code
+        patch(self, remote, ROOT=self.tmp, host=lambda: "second", run=lambda args: 0,
+              state=lambda name: (2, "usage: ..."))
+        sent = []
+
+        def fake_ssh(command, check=True, **_kw):
+            sent.append(command)
+            if command.startswith("test -d"):
+                return "yes\n"
+            if "test -e" in command:
+                return "logs/remote/b.jsonl\n"  # written; a.jsonl was not
+            return "usage: compare.mjs ...\n"
+        fetched = []
+        patch(self, remote, ssh=fake_ssh, outputs=lambda cmd: ["logs/remote/a.jsonl", "logs/remote/b.jsonl"],
+              rsync=lambda args, **kw: fetched.append(args[0]))
+        code = remote.run_remote_and_wait("j", ["node", "tools/compare.mjs", "--out", "logs/remote/a.jsonl"])
+        self.assertEqual(code, 2)
+        self.assertEqual(fetched, ["second:%s/snap/j/logs/remote/b.jsonl" % remote.BASE])
+
     def test_outputs_and_eligibility(self):
         self.assertEqual(remote.outputs(["node", "tools/compare.mjs", "--out", "logs/remote/a.jsonl"]),
                          [os.path.join("logs", "remote", "a.jsonl")])
@@ -430,7 +461,7 @@ class PlaceMjs(unittest.TestCase):
     """tools/place.mjs hands a run by hand to remote.py direct, except in CI (no local config) and for the
     runs the tools start (SDP_PLACED)."""
 
-    def run_node(self, **env):
+    def run_node(self, script="offline_tests.mjs", args=("-v",), **env):
         tmp = isolate(self)
         log = os.path.join(tmp, "argv")
         fake = os.path.join(tmp, "fake-python")
@@ -442,7 +473,7 @@ class PlaceMjs(unittest.TestCase):
             with open(os.path.join(tmp, "local.json"), "w") as fh:
                 json.dump({}, fh)
             environ["SDP_LOCAL_CONFIG"] = os.path.join(tmp, "local.json")
-        done = subprocess.run(["node", "tools/offline_tests.mjs", "--bad-flag"], cwd=os.path.dirname(TOOLS),
+        done = subprocess.run(["node", "tools/" + script] + list(args), cwd=os.path.dirname(TOOLS),
                               env=environ, capture_output=True, text=True, timeout=60)
         argv = None
         if os.path.exists(log):
@@ -453,12 +484,23 @@ class PlaceMjs(unittest.TestCase):
     def test_with_local_config_it_goes_through_remote_py_direct(self):
         code, argv = self.run_node(SDP_LOCAL_CONFIG="write")
         self.assertEqual(code, 7)
-        self.assertEqual(argv[1:], ["direct", "--", "node", os.path.join("tools", "offline_tests.mjs"), "--bad-flag"])
+        self.assertEqual(argv[1:], ["direct", "--", "node", os.path.join("tools", "offline_tests.mjs"), "-v"])
         self.assertTrue(argv[0].endswith("remote.py"))
+        code, argv = self.run_node("compare.mjs", ("-s", "^S"), SDP_LOCAL_CONFIG="write")
+        self.assertEqual((code, argv[1:]), (7, ["direct", "--", "node", os.path.join("tools", "compare.mjs"),
+                                                "-s", "^S"]))
 
     def test_without_local_config_or_when_placed_it_runs_as_asked(self):
-        self.assertEqual(self.run_node(), (2, None))  # usage error from offline_tests.mjs itself
-        self.assertEqual(self.run_node(SDP_LOCAL_CONFIG="write", SDP_PLACED="1"), (2, None))
+        bad = ("--bad-flag",)
+        self.assertEqual(self.run_node(args=bad), (2, None))  # usage error from offline_tests.mjs itself
+        self.assertEqual(self.run_node(args=bad, SDP_LOCAL_CONFIG="write", SDP_PLACED="1"), (2, None))
+
+    def test_a_usage_error_prints_here_and_is_not_placed(self):
+        # #286: `node tools/compare.mjs --help` went to the second machine as a long run, then fetching
+        # its (never written) results failed with rsync exit 23
+        for script in ("compare.mjs", "offline_tests.mjs"):
+            for args in (("--help",), ("-h",), ("-v", "--bad-flag")):
+                self.assertEqual(self.run_node(script, args, SDP_LOCAL_CONFIG="write"), (2, None), (script, args))
 
 
 if __name__ == "__main__":
