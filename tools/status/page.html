@@ -83,6 +83,10 @@ details.more { margin-top: 6px; }
 details.more > summary { cursor: pointer; color: var(--muted); font-size: 0.88rem; width: fit-content; }
 details.more > summary:hover { color: var(--fg); }
 ul.finished li.empty { border: 1px dashed var(--line); border-radius: 8px; padding: 10px 14px; color: var(--faint); }
+/* Long commands, paths and log names wrap inside their box instead of widening the page on a phone (#280). */
+ul.finished li > span:last-child, ul.issues li > span:last-child, ul.opts li > :last-child, .kv dd, .item p, .item h3,
+.overview li, .jl .desc, .jl .facts, .empty, .note, .stamp { min-width: 0; overflow-wrap: anywhere; }
+code { overflow-wrap: anywhere; }
 ul.issues { list-style: none; padding: 0; margin: 10px 0 0; display: grid; gap: 4px; font-size: 0.92rem; }
 ul.issues li { display: flex; gap: 8px; align-items: baseline; min-width: 0; }
 ul.issues .n { font-family: var(--font-mono); font-size: 0.82rem; color: var(--faint); min-width: 3.2em; }
@@ -274,14 +278,12 @@ function renderTodo(decisions, issues) {
   $("todo-list").innerHTML = cards.length ? cards.join("") : `<p class="empty">暂时没有要你处理的事。</p>`;
 }
 
-// work/milestones is synced from GitHub (milestones, their issues, states, progress);
-// milestones/<id> docs only add goal / eta / next / blocker, matched by the milestone
-// number in `ms` or in a /milestone/N link, else by name. Unmatched docs (work with no
-// GitHub milestone) show as written.
-let m_auto = null, m_notes = [], m_ctx = { w: {}, decisions: [] };
-// "下一步" of a GitHub milestone is generated from the same data as the overview (issues and
-// their branches, the release branch and its PR, the night queue, releases, open decisions),
-// so it changes with every sync; hand-written `next` is used only for work with no milestone.
+// work/milestones is synced from GitHub (milestones, their issues, states, progress) and is all
+// this section shows: the goal is the milestone's own description on GitHub, nothing is written
+// by hand (#280).
+let m_auto = null, m_ctx = { w: {}, decisions: [] };
+// "下一步" is generated from the same data as the overview (issues and their branches, the
+// release branch and its PR, the night queue, releases, open decisions), so it changes with every sync.
 function autoNext(a) {
   const w = m_ctx.w || {}, steps = [];
   const pr = (b) => b.pr ? `<a href="${esc(b.pr.url)}" target="_blank" rel="noopener">PR #${esc(b.pr.n)}</a> ` : "";
@@ -308,28 +310,19 @@ function autoNext(a) {
   });
   return steps.join("；");
 }
-function msNumber(d) {
-  if (Number.isInteger(d.ms)) return d.ms;
-  const m = /\/milestone\/(\d+)/.exec(d.link || "");
-  return m ? Number(m[1]) : null;
-}
 function mergeMilestones() {
-  if (!m_auto) { renderMilestones(m_notes); return; }
-  const used = new Set();
+  if (!m_auto) { renderMilestones([]); return; }
   const merged = m_auto.items.map((a, i) => {
-    // An older note may carry the title in ms ("v1.6.1"): match it by name too, so it closes with its milestone.
-    const note = m_notes.find((d) => msNumber(d) === a.number || d.name === a.title || d.ms === a.title) || {};
-    used.add(note.id);
     const started = a.issues.some((x) => x.state === "doing" || x.state === "done");
     return {
       id: "gh" + a.number, order: i, name: a.title, link: a.url, auto: true,
       state: a.open ? (started ? "active" : "planned") : "done", doneAt: a.closedAt,
-      goal: note.goal || a.description, eta: note.eta, next: autoNext(a), nextHtml: true, blocker: note.blocker,
+      goal: a.description, next: autoNext(a),
       progress: a.progress, counts: `${a.done} / ${a.total}`,
       issues: a.issues.map((x) => ({ n: x.n, state: x.state, title: x.title, stage: x.stage, pr: x.pr })),
     };
   });
-  renderMilestones(merged.concat(m_notes.filter((d) => !used.has(d.id))), m_auto.synced);
+  renderMilestones(merged, m_auto.synced);
 }
 let m_finished = [];
 function renderMilestones(all, synced) {
@@ -350,9 +343,7 @@ function renderMilestones(all, synced) {
       <div class="bar" role="img" aria-label="完成约 ${pct}%"><i style="width:${pct}%"></i></div>
       <dl class="kv">
         <dt>完成</dt><dd>${m.counts ? `${esc(m.counts)} 个 Issue（${pct}%）` : `约 ${pct}%`}</dd>
-        ${m.eta ? `<dt>预计</dt><dd>${rich(m.eta)}</dd>` : ""}
-        ${m.next ? `<dt>下一步</dt><dd>${m.nextHtml ? m.next : rich(m.next)}</dd>` : ""}
-        ${m.blocker ? `<dt>卡在</dt><dd>${rich(m.blocker)}</dd>` : ""}
+        ${m.next ? `<dt>下一步</dt><dd>${m.next}</dd>` : ""}
       </dl>
       ${issues ? `<details class="more"><summary>${(m.issues || []).length} 个 Issue</summary><ul class="issues">${issues}</ul></details>` : ""}
     </article>`;
@@ -651,7 +642,7 @@ function render(s) {
   renderTodo(sorted(s.decisions), w.issues || null);
   renderIssues(w.issues || null, s.decisions || []); stamp("issues", w.issues && w.issues.synced);
   renderWorkshop(w.workshop || null); stamp("workshop", w.workshop && w.workshop.synced);
-  m_notes = sorted(s.milestones); m_auto = w.milestones || null; m_ctx = { w, decisions: s.decisions || [], jobs: s.jobs || [] }; mergeMilestones(); stamp("ms", m_auto && m_auto.synced);
+  m_auto = w.milestones || null; m_ctx = { w, decisions: s.decisions || [], jobs: s.jobs || [] }; mergeMilestones(); stamp("ms", m_auto && m_auto.synced);
   m_machines = sorted(s.machines); m_machines.forEach((m) => stamp("m-" + m.id, m.synced));
   renderWork(w.branches || null, w.issues || null); renderStale(w.branches || null); stamp("work", w.branches && w.branches.synced);
   renderJobs(sorted(s.jobs));

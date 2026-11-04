@@ -21,8 +21,8 @@ Work (OUT/work/*.json), from git, gh and the shared night queue:
     not yet handled, when the watch reads the Workshop next, and the item's numbers
     (subscribers, visitors, favorites, collections, rating) with their change in a day;
   - releases: GitHub's last releases, each summarised from its notes.
-Hand-written (MANUAL, collections decisions/*, milestones/*, jobs/*): only the
-fields in FIELDS; releases are never written by hand. The page (page.html next
+Hand-written (MANUAL, collections decisions/* and jobs/*): only the fields in
+FIELDS; releases and milestones are never written by hand. The page (page.html next
 to this script) builds its overview from all of it; nothing there is written
 by hand.
 
@@ -78,15 +78,13 @@ OUT = os.path.join(SHARED, "status", "out")
 MANUAL = os.path.join(SHARED, "status", "manual.json")
 PAGE = os.path.join(HERE, "page.html")
 PUSH_EVERY = 600  # push at least this often so the page's time stays fresh
-COLLECTIONS = ("meta", "decisions", "milestones", "jobs")
+COLLECTIONS = ("meta", "decisions", "jobs")
 # The fields the page reads per hand-written collection. A write with any other field is refused:
 # a field the page does not read shows nothing (2026-10-27 a decision written with state/note stayed
 # open; 2026-10-28 the v1.5.4 and v1.6.0 notes written with what/next blanked the releases' content).
 FIELDS = {
     "decisions": {"title", "recommendation", "options", "detail", "link", "milestone", "order", "status",
                   "doneAt", "kind", "collaborator"},
-    "milestones": {"ms", "name", "link", "goal", "eta", "blocker", "next", "order", "state", "doneAt",
-                   "issues", "progress"},
     "jobs": {"what", "where", "started", "eta", "state", "run", "branch", "agent", "order", "doneAt",
              "session", "slots", "owner", "link"},
 }
@@ -742,18 +740,15 @@ def edit_manual(op, path, data=None):
     coll, _, doc = path.partition("/")
     if coll == "releases":  # 2026-10-28: releases are generated from GitHub, never written by hand
         sys.exit("releases come from the GitHub releases' notes; edit the release on GitHub instead")
+    if coll == "milestones":  # 2026-11-04 (#280): the page shows only GitHub's milestones and the generated next step
+        sys.exit("milestones come from GitHub: write the goal in the milestone's description on GitHub;"
+                 " the next step is generated")
     if coll not in COLLECTIONS[1:] or not doc or "/" in doc:  # meta holds only the stamp below
         sys.exit("path must be one of %s/<id> (the overview is generated, not written)" % "|".join(COLLECTIONS[1:]))
     if data is not None:
         unknown = sorted(set(data) - FIELDS[coll])
         if unknown:
             sys.exit("%s: the page does not read %s; fields are %s" % (coll, unknown, sorted(FIELDS[coll])))
-        # 2026-10-29: a note written with "ms": "v1.6.1" matched no milestone and stayed on the page
-        # after the milestone closed; ms is GitHub's milestone number.
-        if coll == "milestones" and "ms" in data and data["ms"] is not None and \
-                (isinstance(data["ms"], bool) or not isinstance(data["ms"], int)):
-            sys.exit("milestones: ms is the GitHub milestone's number (as in /milestone/15), not %r;"
-                     " the title goes in name" % (data["ms"],))
         missing = sorted(REQUIRED.get(coll, set()) - set(data)) if op == "set" else \
             sorted(k for k in REQUIRED.get(coll, set()) if k in data and not data[k])
         if missing:
@@ -791,7 +786,7 @@ def bundle(out):
     m = load_manual()
     docs = lambda c: [dict(v, id=k) for k, v in sorted(m[c].items())]
     b = {"generated": time.strftime("%Y-%m-%d %H:%M"), "meta": {"updated": m["meta"].get("page", {}).get("updated")},
-         "decisions": docs("decisions"), "milestones": docs("milestones"), "jobs": docs("jobs"),
+         "decisions": docs("decisions"), "jobs": docs("jobs"),
          "machines": [dict(d, id=k) for k in ("macbook", "macmini") for d in [read("machines", k + ".json")] if d],
          "work": {k: read("work", k + ".json") for k in ("branches", "milestones", "night", "releases", "issues", "workshop")}}
     text = json.dumps(b, ensure_ascii=False, separators=(",", ":"))
