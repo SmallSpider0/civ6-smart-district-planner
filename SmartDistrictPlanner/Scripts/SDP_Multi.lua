@@ -1191,6 +1191,7 @@ local function BuildSearch(self, request, params, candidates, slots, lands, pool
     Swapped = request.Swap == true and Swapped or nil,
     Pools = pools, Costs = SDP_City.DistanceCosts(playerID, candidates, request.Distance, centers), Apart = apart,
     Exclusive = SDP_Rules.Exclusive(), Reach = reach, Owners = owners,
+    Improve = request.Improvements and self.Improve ~= nil and self.Improve:Active() and self.Improve or nil,
     Appeal = { Fixed = fixed, Weights = request.Weights, Workable = workable, Cities = housingCities,
       FixedGroup = HousingGroup },
   })
@@ -1274,6 +1275,11 @@ function SDP_Multi.NewSession(request)
   local candidates = CandidatePlots(self)
   local fixed = FixedNeighbours(self)
   local lands = PopulationAndLand(self, request, byType, fixed)
+  -- Improvements planned with the districts (issue 227).
+  local scans = {}
+  for p, part in ipairs(self.Participants) do scans[p] = part.Scan end
+  self.Improve = SDP_Solver.ImproveModel(request, playerID, scans, fixed, self.Weights, lands,
+    SDP_Land.PlotWeights(SDP_Land.Scale(request.Weights)), request.Land ~= false)
   CoveragePart(self, request, options)
   local slots, slotCity, pools = DistrictSlots(self)
   local wonderSlot = WonderSlots(self, request, options, plannable, fixed, candidates, slots, slotCity, unplaced)
@@ -1838,8 +1844,24 @@ function Session:PlanFor(layout)
       extra[#extra + 1] = search:SupportSubject(search.SupportOf[m].Type, index)
     end
   end
+  -- The improvements planned with the districts (issue 227): on the layer
+  -- for the final evaluation, as in the search.
+  local placed = {}
+  for n, m in ipairs(slotsPlaced) do
+    placed[n] = { Type = search.Types[m], Kind = search.Kinds[m], Index = search.Candidates[layout[m]].Index }
+  end
+  local improvePlan, forced = search:ImprovePlan(layout)
+  local byPlaced, improveExtra = SDP_Solver.ImproveEntries(self.Improve, placed, improvePlan)
+  local withoutExtra = {}
+  for _, subject in ipairs(extra) do withoutExtra[#withoutExtra + 1] = subject end
+  for _, subject in ipairs(improveExtra) do extra[#extra + 1] = subject end
   local final = SDP_Overlay.Evaluate(subjects, self.Fixed, self.Weights, extra)
   self.ExtraCalls = self.ExtraCalls + 2 * #subjects + #self.Fixed
+  local without = nil
+  if #improveExtra > 0 then
+    without = SDP_Overlay.Evaluate(subjects, self.Fixed, self.Weights, withoutExtra)
+    self.ExtraCalls = self.ExtraCalls + 2 * #subjects + #self.Fixed
+  end
   local appeal = {}
   if search.AppealModel ~= nil then out.AppealDelta = search:AppealDelta(layout, appeal) end
   for n, m in ipairs(slotsPlaced) do
@@ -1862,6 +1884,8 @@ function Session:PlanFor(layout)
       Reach = self.Coverage and self.Coverage:Reach(search.Types[m], c.X, c.Y, self.Participants[p].Key) or nil,
       Picked = search.Optional[m], Auto = (not spec.Wonder) and self.Participants[p].Auto[search.Types[m]] or nil,
       ForWonder = spec.ForWonder,
+      Improvements = byPlaced[n],
+      ImprovementYields = without and SDP_Solver.YieldDifference(item.Yields, without.Placements[n].Yields) or nil,
     }
     if supportAt[m] ~= nil then
       local support = Map.GetPlotByIndex(supportAt[m])
@@ -1919,6 +1943,26 @@ function Session:PlanFor(layout)
     local plan = {}
     for n, item in ipairs(out.Plan) do plan[n] = { Type = item.Type, Kind = item.Kind, X = item.X, Y = item.Y } end
     out.Remind = SDP_Remind.Find(self.PlayerID, plan)
+  end
+  -- The improvements of each city's worked plots (issue 227 question 3).
+  if self.Improve ~= nil and self.Improve.WorkedOn then
+    local boosts = nil
+    if search.AppealModel ~= nil then
+      local _, b = search.AppealModel:Score(layout, nil, improvePlan)
+      boosts = b
+    end
+    for p, part in ipairs(self.Participants) do
+      if part.Land ~= nil then
+        out.Cities[p].Worked = SDP_Solver.WorkedImprovements(self.Improve, part.Land, placed, improvePlan, forced,
+          boosts and boosts[p] or nil)
+      end
+    end
+    if search.AppealModel ~= nil then search.AppealModel:ClearBoosts() end
+    local lists = {}
+    for p in ipairs(self.Participants) do
+      if out.Cities[p].Worked ~= nil then lists[#lists + 1] = out.Cities[p].Worked end
+    end
+    SDP_Solver.KeepAppeal(search.AppealModel, layout, improvePlan, lists)
   end
   return out
 end

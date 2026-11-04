@@ -425,10 +425,28 @@ end
 -- extra } } (nil when none; never with the land part off), which
 -- SDP_Land.ScoreTaken counts. `detail` (optional, reports): filled with
 -- { [slot] = { Appeal, Housing, Tiles = { [yield] = n }, TilesCounted,
--- TilesReason = "POOL" | "LAND" when not counted } }.
-function SDP_Appeal:Score(layout, detail)
+-- TilesReason = "POOL" | "LAND" when not counted } }. `improvements`
+-- (optional, issue 227): the improvements planned with the layout
+-- ({ { Index, Type, Clear } }, SDP_Improve Model:Assign), counted as built:
+-- their own Appeal (a Mine's -1) and the feature they clear around them,
+-- and their plots improved.
+function SDP_Appeal:Score(layout, detail, improvements)
   local rules, candidates, at = self.Rules, self.Candidates, self.At
   local placedAt = {}
+  local planned = self.PlanAt
+  if planned == nil then
+    planned = {}
+    self.PlanAt = planned
+  end
+  for _, item in ipairs(improvements or {}) do
+    local row = GameInfo.Improvements[item.Type]
+    local effect = row ~= nil and (rules.Improvement[row.Index] or 0) or 0
+    local feature = item.Clear and Map.GetPlotByIndex(item.Index):GetFeatureType() or -1
+    if feature ~= -1 then effect = effect - (rules.Feature[feature] or 0) end
+    at[item.Index] = effect
+    planned[item.Index] = true
+    placedAt[#placedAt + 1] = item.Index
+  end
   if layout ~= nil then
     for m = 1, self.K do
       local i = layout[m]
@@ -477,9 +495,9 @@ function SDP_Appeal:Score(layout, detail)
         if rows ~= nil and (counted or detail ~= nil) then
           tiles = detail and {} or nil
           for _, q in ipairs(Neighbours(self.Cache, index)) do
-            if at[q] == nil and not self.FixedAt[q] then
+            if (at[q] == nil or planned[q]) and not self.FixedAt[q] then
               local yields = {}
-              TileYields(rows, self:AppealAt(q), self:IsImproved(q), yields)
+              TileYields(rows, self:AppealAt(q), planned[q] or self:IsImproved(q), yields)
               local extra = 0
               for _, yieldType in ipairs(SDP_Land.TILE_YIELDS) do
                 local amount = yields[yieldType]
@@ -520,6 +538,7 @@ function SDP_Appeal:Score(layout, detail)
   for _, index in ipairs(placedAt) do
     at[index] = nil
     self.OwnAt[index] = nil
+    planned[index] = nil
   end
   return value, boosts
 end

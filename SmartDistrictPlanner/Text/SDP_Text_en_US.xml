@@ -250,6 +250,36 @@
     <Replace Tag="LOC_SDP_RESULT_SUPPORT_TOOLTIP" Language="en_US">
       <Text>{1_Wonder} must be next to a {2_Improvement}. The tack marks where to build one; its yields are not counted in the plan.</Text>
     </Replace>
+    <Replace Tag="LOC_SDP_RESULT_IMPROVEMENTS" Language="en_US">
+      <Text>Improvements {1_List}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_IMPROVEMENTS_FOR" Language="en_US">
+      <Text>{1_District} adjacency {2_Yields}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_IMPROVEMENTS_TILES" Language="en_US">
+      <Text>{1_District} raises their yields</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_IMPROVEMENTS_TOOLTIP" Language="en_US">
+      <Text>Each tile's yields once built:[NEWLINE]{1_Lines}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_IMPROVEMENT_LINE" Language="en_US">
+      <Text>{1_Improvement} {2_Where}: {3_Yields}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_IMPROVEMENT_CLEAR" Language="en_US">
+      <Text>(remove the feature first)</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_WORKED" Language="en_US">
+      <Text>Improvements: {1_Counts}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_WORKED_COUNT" Language="en_US">
+      <Text>{1_Improvement} {2_Count}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_WORKED_DETAIL" Language="en_US">
+      <Text>the tiles the city will work</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_WORKED_CITY" Language="en_US">
+      <Text>the tiles {1_City} will work</Text>
+    </Replace>
     <Replace Tag="LOC_SDP_REASON_NO_FREE_PLOT" Language="en_US">
       <Text>no free tile left for it</Text>
     </Replace>
@@ -661,6 +691,18 @@
     </Replace>
     <Replace Tag="LOC_SDP_REMIND_TOOLTIP" Language="en_US">
       <Text>When on, a reminder tack goes on each Woods or Rainforest tile the plan's adjacency depends on, so you remember not to remove it.</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_IMPROVE_SHORT" Language="en_US">
+      <Text>Improvements</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_IMPROVE_TOOLTIP" Language="en_US">
+      <Text>When on, the plan adds the improvements next to its districts that give them adjacency (such as Mines and Quarries next to an Industrial Zone); districts go where those can be built, and the improvements are tacked with them.</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_WORKED_SHORT" Language="en_US">
+      <Text>Worked tiles</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_WORKED_TOOLTIP" Language="en_US">
+      <Text>When on, the tiles the city will work that have no improvement also get an improvement tack (the one the tile value assumes). The districts stay where they are; there are just more tacks on the map. Not used when the Tiles weight is 0.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_REMIND_PIN" Language="en_US">
       <Text>Don't chop: {1_Losses}</Text>

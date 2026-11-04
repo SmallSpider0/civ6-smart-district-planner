@@ -150,6 +150,22 @@ local function Flooded(plot)
   return TerrainManager.GetCoastalLowlandType(plot) ~= -1 and TerrainManager.IsFlooded(plot) == true
 end
 
+-- Whether an improvement may be planned on `plot` (issues 51, 227), whatever
+-- the improvement: revealed, not in `taken` ({ [plot index] = true }: a
+-- fixed subject or a pin), no city, district, wonder, natural wonder or
+-- improvement, not coastal lowland the sea has flooded, and the player's or
+-- an unowned plot in `ownable` ({ [plot index] = true }: a participating
+-- city can come to own it, SDP_City scan Reach.Reached). Improvements cannot
+-- be built outside the player's territory (CanBuildOutsideTerritory 0).
+function SDP_Wonders.FreeForImprovement(playerID, plot, ownable, taken)
+  local index = plot:GetIndex()
+  local owner = plot:GetOwner()
+  return PlayersVisibility[playerID]:IsRevealed(index) and not taken[index] and not plot:IsCity()
+    and plot:GetDistrictType() == -1 and plot:GetWonderType() == -1 and not plot:IsNaturalWonder()
+    and plot:GetImprovementType() == -1 and (owner == playerID or (owner == -1 and ownable[index] == true))
+    and not Flooded(plot)
+end
+
 -- Where the improvement a wonder needs can go for each candidate plot.
 --   improvementType  Buildings.AdjacentImprovement
 --   candidates       the search's candidates { Index, X, Y }, sorted
@@ -172,16 +188,12 @@ function SDP_Wonders.Support(playerID, improvementType, candidates, allowed, own
       pinned[Map.GetPlotIndex(subject.X, subject.Y)] = true
     end
   end
-  local visibility = PlayersVisibility[playerID]
   local fitsAt = {}
   local function Free(plot)
     local index = plot:GetIndex()
     local cached = fitsAt[index]
     if cached ~= nil then return cached end
-    local owner = plot:GetOwner()
-    local ok = visibility:IsRevealed(index) and not taken[index] and not plot:IsCity() and plot:GetDistrictType() == -1
-      and plot:GetWonderType() == -1 and not plot:IsNaturalWonder() and plot:GetImprovementType() == -1
-      and (owner == playerID or (owner == -1 and ownable[index] == true)) and not Flooded(plot)
+    local ok = SDP_Wonders.FreeForImprovement(playerID, plot, ownable, taken)
       and SDP_Wonders.ImprovementFits(playerID, row, plot)
     fitsAt[index] = ok
     return ok

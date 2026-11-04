@@ -11,7 +11,7 @@ local scn, w = CmpRun.Setup(id)
 if scn.spec == nil then error(id .. " is not a scene file") end
 include("MapTacks")
 for _, name in ipairs({ "SDP_Rules", "SDP_City", "SDP_Overlay", "SDP_Tiers", "SDP_Task", "SDP_Board", "SDP_Land",
-  "SDP_Appeal", "SDP_Coverage", "SDP_Search", "SDP_Solver", "SDP_Wonders", "SDP_Multi", "SDP_Sites", "SDP_SiteSolver" }) do
+  "SDP_Appeal", "SDP_Improve", "SDP_Coverage", "SDP_Search", "SDP_Solver", "SDP_Wonders", "SDP_Multi", "SDP_Sites", "SDP_SiteSolver" }) do
   include(name)
 end
 w.Events.LoadGameViewStateDone()

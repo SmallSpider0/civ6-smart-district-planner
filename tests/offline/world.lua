@@ -527,6 +527,109 @@ function World.New(spec)
     spec.traits = spec.traits or {}
     spec.traits[#spec.traits + 1] = "TRAIT_TEST_NEIGHBOUR"
   end
+  -- Improvements and districts (issue 227), on request with
+  -- spec.improvementRules: spec.improveAdjacency adds a quarry (on stone,
+  -- +1 production) and the industrial zone's rows "+1 production per two
+  -- adjacent mines" and "+1 per adjacent quarry"; a farm gets +1 food per
+  -- adjacent campus (Improvement_Adjacencies). The trait TRAIT_TEST_IMPROVE
+  -- (the player has it when spec.traits lists it) gives a campus +1 science
+  -- per adjacent farm (EFFECT_IMPROVEMENT_ADJACENCY, which the DMT here
+  -- applies) and a farm next to a holy site +2 food (EFFECT_ADJUST_PLOT_YIELD
+  -- with plot requirements); TRAIT_TEST_OTHER, which no player has, gives a
+  -- theater +1 culture per adjacent mine.
+  local improveModifiers = {}
+  local function HasTrait(t)
+    for _, have in ipairs(spec.traits or {}) do
+      if have == t then return true end
+    end
+    return false
+  end
+  if spec.improveAdjacency then
+    local function Rows(tbl)
+      local list = {}
+      if tbl ~= nil then for row in tbl() do list[#list + 1] = row end end
+      return list
+    end
+    local function Add(name, key, extra)
+      local list = Rows(gi[name])
+      for _, row in ipairs(extra) do list[#list + 1] = row end
+      gi[name] = Table(list, key)
+    end
+    -- IMPROVEMENT_TEST_WELL stands for the oil well: the only improvement
+    -- iron takes here, and Buildable false as the oil well is in the game's
+    -- database, so the land part's improvement rules leave it out.
+    Add("Improvements", "ImprovementType", {
+      { ImprovementType = "IMPROVEMENT_QUARRY", Name = "LOC_IMPROVEMENT_QUARRY_NAME", Appeal = -1, Buildable = true,
+        Domain = "DOMAIN_LAND" },
+      { ImprovementType = "IMPROVEMENT_TEST_WELL", Name = "LOC_IMPROVEMENT_TEST_WELL_NAME", Buildable = false,
+        Domain = "DOMAIN_LAND" },
+    })
+    Add("Improvement_YieldChanges", nil, {
+      { ImprovementType = "IMPROVEMENT_QUARRY", YieldType = "YIELD_PRODUCTION", YieldChange = 1 },
+      { ImprovementType = "IMPROVEMENT_TEST_WELL", YieldType = "YIELD_PRODUCTION", YieldChange = 2 },
+    })
+    Add("Improvement_ValidResources", nil, {
+      { ImprovementType = "IMPROVEMENT_QUARRY", ResourceType = "RESOURCE_STONE" },
+      { ImprovementType = "IMPROVEMENT_TEST_WELL", ResourceType = "RESOURCE_IRON" },
+    })
+    local mine = { ID = "Mine_Production", YieldType = "YIELD_PRODUCTION", YieldChange = 1, TilesRequired = 2,
+      Description = "LOC_Mine_Production", AdjacentImprovement = "IMPROVEMENT_MINE" }
+    local quarry = { ID = "Quarry_Production", YieldType = "YIELD_PRODUCTION", YieldChange = 1, TilesRequired = 1,
+      Description = "LOC_Quarry_Production", AdjacentImprovement = "IMPROVEMENT_QUARRY" }
+    local farm = { ID = "Farm_Campus_Food", YieldType = "YIELD_FOOD", YieldChange = 1, TilesRequired = 1,
+      Description = "LOC_Farm_Campus_Food", AdjacentDistrict = "DISTRICT_CAMPUS" }
+    Add("Adjacency_YieldChanges", "ID", { mine, quarry, farm })
+    Add("District_Adjacencies", nil, {
+      { DistrictType = "DISTRICT_INDUSTRIAL_ZONE", YieldChangeId = "Mine_Production" },
+      { DistrictType = "DISTRICT_INDUSTRIAL_ZONE", YieldChangeId = "Quarry_Production" },
+    })
+    Add("Improvement_Adjacencies", nil, {
+      { ImprovementType = "IMPROVEMENT_FARM", YieldChangeId = "Farm_Campus_Food" },
+    })
+    improveModifiers = {
+      { ModifierId = "TEST_CAMPUS_FARM_SCIENCE", TraitType = "TRAIT_TEST_IMPROVE", DistrictType = "DISTRICT_CAMPUS",
+        ImprovementType = "IMPROVEMENT_FARM", YieldType = "YIELD_SCIENCE", Amount = 1, TilesRequired = 1 },
+      { ModifierId = "TEST_THEATER_MINE_CULTURE", TraitType = "TRAIT_TEST_OTHER", DistrictType = "DISTRICT_THEATER",
+        ImprovementType = "IMPROVEMENT_MINE", YieldType = "YIELD_CULTURE", Amount = 1, TilesRequired = 1 },
+    }
+    local traitRows, modifiers, arguments = {}, {}, {}
+    for _, m in ipairs(improveModifiers) do
+      traitRows[#traitRows + 1] = { TraitType = m.TraitType, ModifierId = m.ModifierId }
+      modifiers[#modifiers + 1] = { ModifierId = m.ModifierId, ModifierType = "MODIFIER_PLAYER_ADJUST_IMPROVEMENT_ADJACENCY_TEST" }
+      for _, name in ipairs({ "DistrictType", "ImprovementType", "YieldType", "Amount", "TilesRequired" }) do
+        arguments[#arguments + 1] = { ModifierId = m.ModifierId, Name = name, Value = tostring(m[name]) }
+      end
+    end
+    traitRows[#traitRows + 1] = { TraitType = "TRAIT_TEST_IMPROVE", ModifierId = "TEST_FARM_HOLY_FOOD" }
+    modifiers[#modifiers + 1] = { ModifierId = "TEST_FARM_HOLY_FOOD", ModifierType = "MODIFIER_PLAYER_ADJUST_PLOT_YIELD_TEST",
+      SubjectRequirementSetId = "TEST_FARM_NEXT_HOLY" }
+    arguments[#arguments + 1] = { ModifierId = "TEST_FARM_HOLY_FOOD", Name = "YieldType", Value = "YIELD_FOOD" }
+    arguments[#arguments + 1] = { ModifierId = "TEST_FARM_HOLY_FOOD", Name = "Amount", Value = "2" }
+    Add("TraitModifiers", nil, traitRows)
+    Add("Modifiers", "ModifierId", modifiers)
+    Add("ModifierArguments", nil, arguments)
+    Add("DynamicModifiers", "ModifierType", {
+      { ModifierType = "MODIFIER_PLAYER_ADJUST_IMPROVEMENT_ADJACENCY_TEST", CollectionType = "COLLECTION_OWNER",
+        EffectType = "EFFECT_IMPROVEMENT_ADJACENCY" },
+      { ModifierType = "MODIFIER_PLAYER_ADJUST_PLOT_YIELD_TEST", CollectionType = "COLLECTION_PLAYER_PLOT_YIELDS",
+        EffectType = "EFFECT_ADJUST_PLOT_YIELD" },
+    })
+    Add("RequirementSets", "RequirementSetId", {
+      { RequirementSetId = "TEST_FARM_NEXT_HOLY", RequirementSetType = "REQUIREMENTSET_TEST_ALL" },
+    })
+    Add("RequirementSetRequirements", nil, {
+      { RequirementSetId = "TEST_FARM_NEXT_HOLY", RequirementId = "TEST_REQUIRES_PLOT_HAS_FARM" },
+      { RequirementSetId = "TEST_FARM_NEXT_HOLY", RequirementId = "TEST_REQUIRES_NEXT_TO_HOLY_SITE" },
+    })
+    Add("Requirements", "RequirementId", {
+      { RequirementId = "TEST_REQUIRES_PLOT_HAS_FARM", RequirementType = "REQUIREMENT_PLOT_IMPROVEMENT_TYPE_MATCHES" },
+      { RequirementId = "TEST_REQUIRES_NEXT_TO_HOLY_SITE", RequirementType = "REQUIREMENT_PLOT_ADJACENT_DISTRICT_TYPE_MATCHES" },
+    })
+    Add("RequirementArguments", nil, {
+      { RequirementId = "TEST_REQUIRES_PLOT_HAS_FARM", Name = "ImprovementType", Value = "IMPROVEMENT_FARM" },
+      { RequirementId = "TEST_REQUIRES_NEXT_TO_HOLY_SITE", Name = "DistrictType", Value = "DISTRICT_HOLY_SITE" },
+    })
+  end
   local rows = spec.rows
   local height, width = #rows, #rows[1]
   w.Width, w.Height = width, height
@@ -848,6 +951,26 @@ function World.New(spec)
     elseif plot.feature ~= nil and f.district == nil and f.wonder == nil then f.feature = plot.feature.FeatureType
     end
     if plot.resource ~= nil and f.district == nil and f.wonder == nil then f.resource = plot.resource end
+    -- An improvement tack keeps the resource only when it is built on it,
+    -- and the feature only then or when it is built on the feature (DMT's
+    -- GetRealizedPlotFeatures, issue 227).
+    if subject ~= nil and subject.Type == "IMPROVEMENT" and f.district == nil and f.wonder == nil
+        and gi.Improvement_ValidResources ~= nil then
+      local keepResource = false
+      if f.resource ~= nil then
+        for row in gi.Improvement_ValidResources() do
+          if row.ImprovementType == subject.Key and row.ResourceType == f.resource.ResourceType then keepResource = true end
+        end
+      end
+      if not keepResource then f.resource = nil end
+      if f.feature ~= nil and not keepResource then
+        local keepFeature = false
+        for row in gi.Improvement_ValidFeatures() do
+          if row.ImprovementType == subject.Key and row.FeatureType == f.feature then keepFeature = true end
+        end
+        if not keepFeature then f.feature = nil end
+      end
+    end
     return f
   end
 
@@ -1003,7 +1126,8 @@ function World.New(spec)
                 or (row.OtherDistrictAdjacent and f.district ~= nil)
                 or (row.AdjacentDistrict and f.district == row.AdjacentDistrict)
                 or (row.AdjacentWonder and f.wonder ~= nil)
-                or (row.AdjacentNaturalWonder and f.naturalWonder ~= nil) then
+                or (row.AdjacentNaturalWonder and f.naturalWonder ~= nil)
+                or (row.AdjacentImprovement and f.improvement == row.AdjacentImprovement) then
               count = count + 1
             end
           end
@@ -1012,6 +1136,21 @@ function World.New(spec)
         if amount ~= 0 then
           yields[row.YieldType] = (yields[row.YieldType] or 0) + amount
           tips[#tips + 1] = row.ID .. " " .. amount
+        end
+      end
+    end
+    -- The players' improvement adjacency modifiers (EFFECT_IMPROVEMENT_ADJACENCY,
+    -- spec.improveAdjacency): Amount per TilesRequired adjacent improvements.
+    for _, m in ipairs(improveModifiers) do
+      if m.DistrictType == subject.Key and HasTrait(m.TraitType) then
+        local count = 0
+        for _, f in ipairs(around) do
+          if f.improvement == m.ImprovementType then count = count + 1 end
+        end
+        local amount = math.floor(count / m.TilesRequired) * m.Amount
+        if amount ~= 0 then
+          yields[m.YieldType] = (yields[m.YieldType] or 0) + amount
+          tips[#tips + 1] = m.ModifierId .. " " .. amount
         end
       end
     end

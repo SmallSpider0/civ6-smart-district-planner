@@ -111,6 +111,11 @@ SDP_Search.Better = Better
 --               Requires counts only a district of a city that could own the
 --               wonder's plot, placed (a slot of such a group) or fixed
 --               (issue 45: the game takes only the wonder's own city's)
+--   Improve     SDP_Improve model or nil (off): every layout gets the
+--               improvements its districts take adjacency or yields from
+--               (issue 227), on the board as silent slots (DMT sees them,
+--               they have no score of their own) and in the land part with
+--               the values they give those plots
 --   Swapped     function(search, m, i, layout) -> true when slot m on
 --               candidate i, in `layout`, takes a plot from another of the
 --               player's cities (issue 54)
@@ -133,6 +138,8 @@ function SDP_Search.New(spec)
   self.ReachSpec = spec.Reach
   self.Owners = spec.Owners
   self.Swapped = spec.Swapped
+  self.Improve = spec.Improve
+  self.ImproveOn = {} -- plots of the board's improvement slots, sorted
   self.CoverLists = {} -- scratch for CoverageCount
   self.SlotSpecs = spec.Slots
   self.Moving, self.Taken, self.Mark = {}, {}, {} -- scratch tables for Evaluate
@@ -282,6 +289,44 @@ function Search:SupportPlots(layout)
   return out, ok
 end
 
+-- The board slot of the improvement on plot `index` (issue 227), and the
+-- ones Singles uses: negative, apart from the slots and the wonders'
+-- improvements.
+local function ImproveSlot(index) return -1000000 - index end
+local function ImproveSingle(k) return -500000 - k end
+
+-- The improvements for the districts of `layout` (issue 227): the model's
+-- Assign over the placed slots, the improvements wonders need (`supports`,
+-- SupportPlots; computed here when nil) kept free. Returns the plan
+-- ({ { Index, Type, Clear } } by plot index) and the land values it
+-- changes, or nil when improvements are off.
+function Search:ImprovePlan(layout, supports)
+  local improve = self.Improve
+  if improve == nil then return nil, nil end
+  if supports == nil and self.SupportList ~= nil then supports = self:SupportPlots(layout) end
+  local placed, blocked = {}, nil
+  for m = 1, self.K do
+    if layout[m] ~= 0 then
+      placed[#placed + 1] = { Type = self.Types[m], Kind = self.Kinds[m], Index = self.Candidates[layout[m]].Index }
+    end
+  end
+  if supports ~= nil then
+    for _, m in ipairs(self.SupportList or {}) do
+      if supports[m] ~= nil then
+        blocked = blocked or {}
+        blocked[supports[m]] = true
+      end
+    end
+  end
+  return improve:Assign(placed, blocked)
+end
+
+-- The land values the improvements of `layout` change (nil: none).
+function Search:ImproveForced(layout)
+  local _, forced = self:ImprovePlan(layout)
+  return forced
+end
+
 -- Every slot alone on every allowed candidate. Slots without any legal plot
 -- are dropped; returns the list of their indices into spec.Slots. Afterwards
 -- K, Types, Kinds, Groups, Single, Legal and SlotIndex (into spec.Slots)
@@ -311,7 +356,16 @@ function Search:Singles()
             supported = false
           end
         end
+        -- The improvements a district alone takes adjacency from (issue 227).
+        local improvements = nil
+        if self.Improve ~= nil and (slot.Type or "DISTRICT") == "DISTRICT" and self.Improve:IsTarget(slot.Key) then
+          improvements = self.Improve:Assign({ { Type = slot.Key, Kind = "DISTRICT", Index = c.Index } }, nil)
+          for k, item in ipairs(improvements) do
+            board:Put(ImproveSingle(k), self.Improve:Subject(item.Type, item.Index), true)
+          end
+        end
         local gain, isLegal = board:Total()
+        for k = 1, improvements and #improvements or 0 do board:Put(ImproveSingle(k), nil) end
         if not supported then isLegal = false end
         -- Next to another city's district only: not legal alone (issue 45).
         if isLegal and slot.Requires ~= nil and not self:OwnDistrictNext(slot.Requires, i, nil, slot.City) then
@@ -613,6 +667,18 @@ function Search:Evaluate(layout)
       if board:PlotOf(slot) ~= supports[m] then board:Put(slot, nil) end
     end
   end
+  -- The improvements of the districts (issue 227) likewise.
+  local plan, forced = nil, nil
+  if self.Improve ~= nil then
+    plan, forced = self:ImprovePlan(layout, supports)
+    local want = {}
+    for _, item in ipairs(plan) do want[item.Index] = self.Improve:Subject(item.Type, item.Index) end
+    for _, index in ipairs(self.ImproveOn) do
+      local slot = ImproveSlot(index)
+      local entry = board.slots[slot]
+      if entry ~= nil and entry.Subject ~= want[index] then board:Put(slot, nil) end
+    end
+  end
   local moving, count = self.Moving, 0
   for m = 1, k do
     local i = layout[m]
@@ -634,6 +700,15 @@ function Search:Evaluate(layout)
       end
     end
   end
+  if plan ~= nil then
+    local on = {}
+    for _, item in ipairs(plan) do
+      local slot = ImproveSlot(item.Index)
+      if board.slots[slot] == nil then board:Put(slot, self.Improve:Subject(item.Type, item.Index), true) end
+      on[#on + 1] = item.Index
+    end
+    self.ImproveOn = on
+  end
   local gain, legal = board:Total()
   if not supported then legal = false end
   self.Stats.Evaluations = self.Stats.Evaluations + 1
@@ -643,7 +718,7 @@ function Search:Evaluate(layout)
   local appeal, boosts = self.AppealModel, nil
   if appeal ~= nil then
     local value
-    value, boosts = appeal:Score(layout)
+    value, boosts = appeal:Score(layout, nil, plan)
     gain = gain + value - appeal.Base
   end
   if #self.Lands > 0 then
@@ -655,7 +730,7 @@ function Search:Evaluate(layout)
       end
     end
     for l, land in ipairs(self.Lands) do
-      gain = gain + SDP_Land.ScoreTaken(land, taken, placed, self.Mark, boosts and boosts[l]) - land.Base
+      gain = gain + SDP_Land.ScoreTaken(land, taken, placed, self.Mark, boosts and boosts[l], forced) - land.Base
     end
   end
   if boosts ~= nil then appeal:ClearBoosts() end
@@ -731,16 +806,18 @@ end
 function Search:AppealParts(layout, detail)
   local appeal = self.AppealModel
   if appeal == nil then return 0, 0 end
-  local value, boosts = appeal:Score(layout, detail)
+  local value, boosts = appeal:Score(layout, detail, (self:ImprovePlan(layout)))
   local tiles = 0
   if boosts ~= nil then
     local taken = {}
     for m = 1, self.K do
       if layout[m] ~= 0 then taken[#taken + 1] = self.Candidates[layout[m]].Index end
     end
+    local forced = self:ImproveForced(layout)
     for l, land in ipairs(self.Lands) do
       if boosts[l] ~= nil then
-        tiles = tiles + SDP_Land.ScoreTaken(land, taken, #taken, {}, boosts[l]) - SDP_Land.ScoreTaken(land, taken, #taken, {})
+        tiles = tiles + SDP_Land.ScoreTaken(land, taken, #taken, {}, boosts[l], forced)
+          - SDP_Land.ScoreTaken(land, taken, #taken, {}, nil, forced)
       end
     end
     appeal:ClearBoosts()
@@ -770,7 +847,8 @@ function Search:LandDelta(layout)
     if layout[m] ~= 0 then taken[#taken + 1] = self.Candidates[layout[m]].Index end
   end
   local delta = 0
-  for _, land in ipairs(self.Lands) do delta = delta + SDP_Land.ScoreTaken(land, taken, #taken, {}) - land.Base end
+  local forced = #self.Lands > 0 and self:ImproveForced(layout) or nil
+  for _, land in ipairs(self.Lands) do delta = delta + SDP_Land.ScoreTaken(land, taken, #taken, {}, nil, forced) - land.Base end
   if self.AppealModel ~= nil and #self.Lands > 0 then
     local _, tiles = self:AppealParts(layout)
     delta = delta + tiles

@@ -104,14 +104,16 @@ end
 --   Yields = { [yield] = n }, Bonus = { { Yield, Change, Tech, Civic } } } },
 --   FeatureYields, ResourceYields = { [type] = { [yield] = n } } }.
 -- Only improvements every player can build (Buildable, no TraitType, not
--- needing a river or adjacent resources) that give yields.
+-- needing a river or adjacent resources) that give yields. OwnImprovement =
+-- { [resource type] = true } for every resource with an improvement of its
+-- own, any improvement (the oil well is not Buildable in the database).
 local m_rules, m_rulesFor = nil, nil
 -- Rule columns that are yes/no: some are numbers in the game's database
 -- (Improvements.RequiresRiver is 0 or 1, and `not 0` is false in Lua).
 local function Flag(v) return v == true or (type(v) == "number" and v ~= 0) end
 local function ImprovementRules()
   if m_rules ~= nil and m_rulesFor == GameInfo then return m_rules end
-  local rules = { Improvements = {}, FeatureYields = {}, ResourceYields = {} }
+  local rules = { Improvements = {}, FeatureYields = {}, ResourceYields = {}, OwnImprovement = {} }
   local function Rows(name) return GameInfo[name] ~= nil and GameInfo[name]() or function() return nil end end
   local byType = {}
   for row in Rows("Improvements") do
@@ -148,6 +150,7 @@ local function ImprovementRules()
   for row in Rows("Improvement_ValidResources") do
     local entry = byType[row.ImprovementType]
     if entry ~= nil then entry.Resources[row.ResourceType] = Flag(row.MustRemoveFeature) end
+    rules.OwnImprovement[row.ResourceType] = true
   end
   local names = {}
   for name in pairs(byType) do names[#names + 1] = name end
@@ -240,17 +243,24 @@ function SDP_Land.Context(playerID, weights, allowRemoval, options)
     return resources:IsResourceVisible(row.Hash)
   end
   -- Weighted gain of each improvement, bonuses of what the player has.
-  ctx.Gain = {}
+  -- Yields: the same unweighted (issue 227, shown with an improvement tack).
+  ctx.Gain, ctx.Yields = {}, {}
   for _, entry in ipairs(ctx.Rules.Improvements) do
     local gain = Weighted(entry.Yields, ctx.W)
+    local yields = {}
+    for yieldType, n in pairs(entry.Yields) do yields[yieldType] = n end
     for _, b in ipairs(entry.Bonus) do
       local tech = b.Tech and GameInfo.Technologies[b.Tech] or nil
       local civic = b.Civic and GameInfo.Civics[b.Civic] or nil
       local has = (b.Tech == nil or (tech ~= nil and techs ~= nil and techs:HasTech(tech.Index)))
         and (b.Civic == nil or (civic ~= nil and culture ~= nil and culture:HasCivic(civic.Index)))
-      if has then gain = gain + (ctx.W[b.Yield] or 0) * b.Change end
+      if has then
+        gain = gain + (ctx.W[b.Yield] or 0) * b.Change
+        yields[b.Yield] = (yields[b.Yield] or 0) + b.Change
+      end
     end
     ctx.Gain[entry] = gain
+    ctx.Yields[entry] = yields
   end
   return ctx
 end
@@ -302,14 +312,9 @@ local function BestImprovement(ctx, sea, terrain, feature, resource)
   return best
 end
 
--- A plot's value, its one-time value (what removing its feature and
--- harvesting its resource would give, weighted, per turn), its value
--- left unimproved with its feature kept (issue 91: a preserve's grove and
--- sanctuary give yields only to unimproved plots, so a plot next to one is
--- worth the better of its improved value and this plus those yields) and
--- the part of the one-time value its best use forgoes (what it keeps: its
--- value is already lowered by it; issue 88). `ctx` from SDP_Land.Context.
-function SDP_Land.PlotValues(plot, ctx)
+-- What PlotValues and ImprovementOptions start from: the plot's yields now,
+-- its feature and resource and what removing or harvesting them gives.
+local function Parts(plot, ctx)
   local w, rules = ctx.W, ctx.Rules
   local now = 0
   for _, yieldType in ipairs(SDP_Land.TILE_YIELDS) do
@@ -341,6 +346,22 @@ function SDP_Land.PlotValues(plot, ctx)
       resourceOnce = Weighted(ctx.OneTime.Resources[resource], ctx.OnceW) * scale
     end
   end
+  return { W = w, Rules = rules, Now = now, Feature = feature, FeatureOnce = featureOnce, Removable = removable,
+    Resource = resource, ResourceOnce = resourceOnce, Harvestable = harvestable, ResourceRow = resourceRow }
+end
+
+-- A plot's value, its one-time value (what removing its feature and
+-- harvesting its resource would give, weighted, per turn), its value
+-- left unimproved with its feature kept (issue 91: a preserve's grove and
+-- sanctuary give yields only to unimproved plots, so a plot next to one is
+-- worth the better of its improved value and this plus those yields) and
+-- the part of the one-time value its best use forgoes (what it keeps: its
+-- value is already lowered by it; issue 88). `ctx` from SDP_Land.Context.
+function SDP_Land.PlotValues(plot, ctx)
+  local q = Parts(plot, ctx)
+  local w, rules, now = q.W, q.Rules, q.Now
+  local feature, featureOnce, removable = q.Feature, q.FeatureOnce, q.Removable
+  local resource, resourceOnce, harvestable, resourceRow = q.Resource, q.ResourceOnce, q.Harvestable, q.ResourceRow
   local improved = plot:GetImprovementType() ~= -1
   if improved or Unimprovable(plot, resourceRow) then
     -- The game's yields include the improvement (removing or harvesting
@@ -367,6 +388,82 @@ function SDP_Land.PlotValues(plot, ctx)
   return best, featureOnce + resourceOnce, bare, forgone
 end
 
+-- Every way to improve a plot (issue 227), as PlotValues weighs them:
+-- { Entry (of the rules), Clear (its feature removed first), Harvest (its
+-- resource harvested first), Value (the plot's value with it) }, in the
+-- order PlotValues tries them (feature kept before removed, resource kept
+-- before harvested, then the rules' order). Empty for an improved plot and
+-- one no improvement can go on.
+function SDP_Land.ImprovementOptions(plot, ctx)
+  local q = Parts(plot, ctx)
+  local out = {}
+  if plot:GetImprovementType() ~= -1 or Unimprovable(plot, q.ResourceRow) then return out end
+  local w, rules = q.W, q.Rules
+  local sea = plot:IsWater()
+  local terrain = GameInfo.Terrains[plot:GetTerrainType()].TerrainType
+  local featureYield = q.Feature ~= nil and Weighted(rules.FeatureYields[q.Feature] or {}, w) or 0
+  local resourceYield = q.Resource ~= nil and Weighted(rules.ResourceYields[q.Resource] or {}, w) or 0
+  for _, removeFeature in ipairs(q.Removable and { false, true } or { false }) do
+    for _, harvest in ipairs(q.Harvestable and { false, true } or { false }) do
+      local value, kept = q.Now, 0
+      local f, r = q.Feature, q.Resource
+      if removeFeature then value, f = value - featureYield, nil else kept = kept + q.FeatureOnce end
+      if harvest then value, r = value - resourceYield, nil else kept = kept + q.ResourceOnce end
+      value = value - kept
+      for _, entry in ipairs(SDP_Land.ValidImprovements(ctx, sea, terrain, f, r)) do
+        out[#out + 1] = { Entry = entry, Clear = removeFeature and q.Feature ~= nil, Harvest = harvest and q.Resource ~= nil,
+          Value = value + ctx.Gain[entry] }
+      end
+    end
+  end
+  return out
+end
+
+-- What an improvement gives over a whole game (issue 227: ties between
+-- improvements go to the one that gives more later): its yields with every
+-- bonus of a technology or civic, weighted by `w`.
+function SDP_Land.LifetimeGain(entry, w)
+  local gain = Weighted(entry.Yields, w)
+  for _, b in ipairs(entry.Bonus) do gain = gain + (w[b.Yield] or 0) * b.Change end
+  return gain
+end
+
+-- The resource of a plot that takes only improvements of its own (type),
+-- or nil: one the player sees with an Improvement_ValidResources row, also
+-- when no improvement of the rules is one of them (the oil well is not
+-- Buildable). Tacks that keep the resource take only those (issue 227).
+function SDP_Land.OwnResource(plot, ctx)
+  local q = Parts(plot, ctx)
+  if q.Resource ~= nil and q.Rules.OwnImprovement[q.Resource] then return q.Resource end
+  return nil
+end
+
+-- The improvement PlotValues assumes on a plot (issue 227): the option of
+-- ImprovementOptions with the highest value, ties to the one that gives
+-- more over a whole game, then to keeping the feature, then the type name.
+-- nil when none; none either when leaving it unimproved is worth as much.
+-- `keepResource`: only the options that keep the resource (a resource with
+-- improvements of its own takes only those, also one the rules leave out
+-- such as the oil well: then none; issue 227 tacks).
+function SDP_Land.AssumedImprovement(plot, ctx, keepResource)
+  local own = keepResource and SDP_Land.OwnResource(plot, ctx) or nil
+  local best = nil
+  for _, o in ipairs(SDP_Land.ImprovementOptions(plot, ctx)) do
+    local fits = not (keepResource and o.Harvest) and (own == nil or o.Entry.Resources[own] ~= nil)
+    local better = fits and (best == nil or o.Value > best.Value + 1e-9)
+    if not better and best ~= nil and fits and math.abs(o.Value - best.Value) <= 1e-9 then
+      local a, b = SDP_Land.LifetimeGain(o.Entry, ctx.W), SDP_Land.LifetimeGain(best.Entry, ctx.W)
+      if a ~= b then better = a > b
+      elseif o.Clear ~= best.Clear then better = not o.Clear
+      elseif o.Harvest ~= best.Harvest then better = not o.Harvest
+      else better = o.Entry.Type < best.Entry.Type end
+    end
+    if better then best = o end
+  end
+  if best ~= nil and ctx.Gain[best.Entry] <= 0 then return nil end
+  return best
+end
+
 -- Land model of one city. plots: { Index, Tile, Once, Bare, Forgone } for
 -- every plot it can work (Bare: its value left unimproved, PlotValues; nil:
 -- the same as Tile; Forgone optional, see PlotValues). Returns { Plots (best
@@ -387,6 +484,7 @@ function SDP_Land.Model(plots, population)
   local cut = next and next.Tile or 0
   for rank, p in ipairs(sorted) do
     model.ByIndex[p.Index] = p
+    p.Rank = rank
     model.Loss[p.Index] = rank <= model.P and (p.Tile - cut) or 0
   end
   local once = 0
@@ -403,10 +501,14 @@ end
 -- yields on the unimproved plots around it, SDP_Appeal): such a plot is
 -- worth the better of its value and its unimproved value plus the extra
 -- (issue 91), and is worked when that is among the best P.
-function SDP_Land.ScoreTaken(model, taken, count, mark, boost)
+-- `forced` (optional): { [plot index] = tile value } (issue 227: a plot the
+-- plan puts a given improvement on, or a built improvement a planned
+-- district gives more): such a plot is worth that, whatever `boost` says.
+-- Plots of other models in either table are left alone.
+function SDP_Land.ScoreTaken(model, taken, count, mark, boost, forced)
   for t = 1, count do mark[taken[t]] = true end
   local worked, used = 0, 0
-  if boost == nil then
+  if boost == nil and forced == nil then
     for _, p in ipairs(model.Plots) do
       if used >= model.P then break end
       if not mark[p.Index] then
@@ -415,11 +517,16 @@ function SDP_Land.ScoreTaken(model, taken, count, mark, boost)
       end
     end
   else
-    -- The boosted plots (few) best first, merged into the walk over the rest.
+    -- The raised plots (few) best first, merged into the walk over the rest.
     local raised = {}
-    for index, extra in pairs(boost) do
+    for index, extra in pairs(boost or {}) do
       local p = model.ByIndex[index]
-      if p ~= nil and not mark[index] then raised[#raised + 1] = { Index = index, Tile = math.max(p.Tile, p.Bare + extra) } end
+      if p ~= nil and not mark[index] and (forced == nil or forced[index] == nil) then
+        raised[#raised + 1] = { Index = index, Tile = math.max(p.Tile, p.Bare + extra) }
+      end
+    end
+    for index, value in pairs(forced or {}) do
+      if model.ByIndex[index] ~= nil and not mark[index] then raised[#raised + 1] = { Index = index, Tile = value } end
     end
     table.sort(raised, function(a, b)
       if a.Tile ~= b.Tile then return a.Tile > b.Tile end
@@ -428,7 +535,7 @@ function SDP_Land.ScoreTaken(model, taken, count, mark, boost)
     local r = 1
     for _, p in ipairs(model.Plots) do
       if used >= model.P then break end
-      if not mark[p.Index] and boost[p.Index] == nil then
+      if not mark[p.Index] and (boost == nil or boost[p.Index] == nil) and (forced == nil or forced[p.Index] == nil) then
         while used < model.P and raised[r] ~= nil
             and (raised[r].Tile > p.Tile or (raised[r].Tile == p.Tile and raised[r].Index < p.Index)) do
           worked, used, r = worked + raised[r].Tile, used + 1, r + 1
@@ -445,6 +552,32 @@ function SDP_Land.ScoreTaken(model, taken, count, mark, boost)
   end
   for t = 1, count do mark[taken[t]] = nil end
   return worked
+end
+
+-- The plots ScoreTaken works, as { [plot index] = true } (same arguments;
+-- issue 227: the worked plots that get an improvement tack).
+function SDP_Land.WorkedPlots(model, taken, count, boost, forced)
+  local mark = {}
+  for t = 1, count do mark[taken[t]] = true end
+  local list = {}
+  for _, p in ipairs(model.Plots) do
+    if not mark[p.Index] then
+      local tile = p.Tile
+      if forced ~= nil and forced[p.Index] ~= nil then
+        tile = forced[p.Index]
+      elseif boost ~= nil and boost[p.Index] ~= nil then
+        tile = math.max(p.Tile, p.Bare + boost[p.Index])
+      end
+      list[#list + 1] = { Index = p.Index, Tile = tile }
+    end
+  end
+  table.sort(list, function(a, b)
+    if a.Tile ~= b.Tile then return a.Tile > b.Tile end
+    return a.Index < b.Index
+  end)
+  local out = {}
+  for k = 1, math.min(model.P, #list) do out[list[k].Index] = true end
+  return out
 end
 
 -- The worked plots of ScoreTaken (no boost) split for display (issue 88):

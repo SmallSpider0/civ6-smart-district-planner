@@ -78,6 +78,7 @@
 | [issue-198-clean-runs.md](issue-198-clean-runs.md) | 第二台机器上的实验目录自动清理 | 现行 |
 | [issue-199-solve-on-screen.md](issue-199-solve-on-screen.md) | 勾了奇观后“求解”按钮落到屏幕下面 | 现行 |
 | [issue-226-dense-sites-stall.md](issue-226-dense-sites-stall.md) | 选城址页打开密铺后进度停在 24% | 现行 |
+| [issue-227-improvement-tacks.md](issue-227-improvement-tacks.md) | 规划区域时一起规划给区域相邻加成、产出的改良设施，可选给耕作的格打改良钉 | 现行 |
 | [issue-234-unique-city.md](issue-234-unique-city.md) | 全帝国限建区域、奇观放哪座城（按生产力自动选城） | 现行（design 4.8.1、4.8.2） |
 | [issue-242-invariants.md](issue-242-invariants.md) | 每次离线求解后检查方案不变量 | 现行（design 4.8.5） |
 | [issue-244-one-entry.md](issue-244-one-entry.md) | 区域状态、奇观归城各只留一个入口；合并复制的小函数 | 现行（design 4.8.4，design.md 城市扫描） |

@@ -39,7 +39,7 @@ for _, c in Players[0]:GetCities():Members() do
 end
 include("MapTacks")
 for _, name in ipairs({ "SDP_Rules", "SDP_City", "SDP_Overlay", "SDP_Tiers", "SDP_Task", "SDP_Board", "SDP_Land",
-  "SDP_Appeal", "SDP_Coverage", "SDP_Search", "SDP_Solver", "SDP_Wonders", "SDP_Multi" }) do include(name) end
+  "SDP_Appeal", "SDP_Improve", "SDP_Coverage", "SDP_Search", "SDP_Solver", "SDP_Wonders", "SDP_Multi" }) do include(name) end
 w.Events.LoadGameViewStateDone()
 local Wt = { YIELD_SCIENCE = 1, YIELD_CULTURE = 1, YIELD_FAITH = 1, YIELD_GOLD = 1, YIELD_PRODUCTION = 1 }
 local two = { "DISTRICT_COMMERCIAL_HUB", "DISTRICT_HANSA" }

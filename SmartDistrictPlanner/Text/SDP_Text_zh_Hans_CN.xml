@@ -250,6 +250,36 @@
     <Replace Tag="LOC_SDP_RESULT_SUPPORT_TOOLTIP" Language="zh_Hans_CN">
       <Text>{1_Wonder}必须与{2_Improvement}相邻。这个钉标出建它的位置，它的产出不计入方案。</Text>
     </Replace>
+    <Replace Tag="LOC_SDP_RESULT_IMPROVEMENTS" Language="zh_Hans_CN">
+      <Text>改良设施 {1_List}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_IMPROVEMENTS_FOR" Language="zh_Hans_CN">
+      <Text>{1_District}相邻加成 {2_Yields}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_IMPROVEMENTS_TILES" Language="zh_Hans_CN">
+      <Text>{1_District}让这些改良多产出</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_IMPROVEMENTS_TOOLTIP" Language="zh_Hans_CN">
+      <Text>建好后每格的产出：[NEWLINE]{1_Lines}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_IMPROVEMENT_LINE" Language="zh_Hans_CN">
+      <Text>{1_Improvement} {2_Where}：{3_Yields}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_IMPROVEMENT_CLEAR" Language="zh_Hans_CN">
+      <Text>（砍伐后）</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_WORKED" Language="zh_Hans_CN">
+      <Text>改良设施：{1_Counts}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_WORKED_COUNT" Language="zh_Hans_CN">
+      <Text>{1_Improvement} {2_Count}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_WORKED_DETAIL" Language="zh_Hans_CN">
+      <Text>城市要耕作的地块</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_WORKED_CITY" Language="zh_Hans_CN">
+      <Text>{1_City}要耕作的地块</Text>
+    </Replace>
     <Replace Tag="LOC_SDP_REASON_NO_FREE_PLOT" Language="zh_Hans_CN">
       <Text>没有剩余的空位</Text>
     </Replace>
@@ -661,6 +691,18 @@
     </Replace>
     <Replace Tag="LOC_SDP_REMIND_TOOLTIP" Language="zh_Hans_CN">
       <Text>打开后，在方案靠它拿相邻加成的森林、雨林上打一个提醒钉，提醒你以后别砍。</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_IMPROVE_SHORT" Language="zh_Hans_CN">
+      <Text>规划改良</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_IMPROVE_TOOLTIP" Language="zh_Hans_CN">
+      <Text>打开后，方案会在区域旁边规划能给它们相邻加成的改良设施（例如工业区旁的矿山、采石场），区域会挑能建这些改良的位置，打钉时一起打改良钉。</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_WORKED_SHORT" Language="zh_Hans_CN">
+      <Text>耕作格改良</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_WORKED_TOOLTIP" Language="zh_Hans_CN">
+      <Text>打开后，城市要耕作的地块里还没有改良的，也打上改良钉（按地块价值选的那种）。区域的位置不变，只是地图上多一些钉；“地块”权重为 0 时不打。</Text>
     </Replace>
     <Replace Tag="LOC_SDP_REMIND_PIN" Language="zh_Hans_CN">
       <Text>勿砍：{1_Losses}</Text>
