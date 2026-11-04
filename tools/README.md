@@ -615,8 +615,8 @@ python3 -I tools/worktree.py prune --remote            # 删掉其中能删的�
 
 维护者看进度的网页（`status/page.html`）只读一个文件 `status.json`，每分钟刷新一次。`status/sync.py` 生成它，`status/watch.py` 是后台唯一的循环。页面的内容几乎都是自动生成的：
 
-- **自动**：两台机器的格子、在跑和排队的任务（调度工具自己的记录，没走排队工具的 `compare.mjs`、离线测试、游戏内测试也算上）；除 `main` 以外有工作树或开着 PR 的分支（提交里的 Issue、PR 的检查和自动合并、夜间队列里排给它的项）和多出来的分支（`worktree.py stale`）；GitHub 的里程碑和其中每个 Issue 的状态；开着的 Issue 谁开的、谁打的 `auto`、谁该回复（账号名只显示成“我们 / 合作者 / 玩家”）；夜间队列；创意工坊还没处理的新帖（`watch_issues.py` 待看列表里的 `WORKSHOP` 行，最新的 50 条，帖子里像私人信息的字样换成“…”，只留 Steam 自己的链接；监听过了预定时间半小时还没读创意工坊时标出来，`--held --clear` 后消失）；最近的发版，每版的摘要取自发布说明里“自 … 以来的变化”那一节。顶上的概览和每个里程碑的“下一步”由页面从这些数据算出来。
-- **手写**：只有三类，经 `set|update|delete` 写进共用目录下的 `status/manual.json`：`decisions/*`（要维护者决定的事）、`jobs/*`（调度记录说不清的任务说明，如调研）、`milestones/*`（只补 `goal`、`eta`、`blocker`）。字段只能用页面读的那些（`sync.py` 的 `FIELDS`），`set` 必须带 `REQUIRED` 里的字段，其他字段直接拒绝。**发版记录不手写**：`releases/*` 一律拒绝，摘要不好就改 GitHub 上的发布说明。
+- **自动**：两台机器的格子、在跑和排队的任务（调度工具自己的记录，没走排队工具的 `compare.mjs`、离线测试、游戏内测试也算上）；除 `main` 以外有工作树或开着 PR 的分支（提交里的 Issue、PR 的检查和自动合并、夜间队列里排给它的项）和多出来的分支（`worktree.py stale`）；GitHub 的里程碑（名称、进度、目标取自里程碑在 GitHub 上的说明）和其中每个 Issue 的状态；开着的 Issue 谁开的、谁打的 `auto`、谁该回复（账号名只显示成“我们 / 合作者 / 玩家”）；夜间队列；创意工坊还没处理的新帖（`watch_issues.py` 待看列表里的 `WORKSHOP` 行，最新的 50 条，帖子里像私人信息的字样换成“…”，只留 Steam 自己的链接；监听过了预定时间半小时还没读创意工坊时标出来，`--held --clear` 后消失）；最近的发版，每版的摘要取自发布说明里“自 … 以来的变化”那一节。顶上的概览和每个里程碑的“下一步”由页面从这些数据算出来。
+- **手写**：只有两类，经 `set|update|delete` 写进共用目录下的 `status/manual.json`：`decisions/*`（要维护者决定的事）、`jobs/*`（调度记录说不清的任务说明，如调研）。字段只能用页面读的那些（`sync.py` 的 `FIELDS`），`set` 必须带 `REQUIRED` 里的字段，其他字段直接拒绝。**发版记录和里程碑不手写**：`releases/*` 一律拒绝，摘要不好就改 GitHub 上的发布说明；`milestones/*` 也拒绝（#280），里程碑的目标写在 GitHub 里程碑的说明里，“下一步”自动算。
 
 ```bash
 python3 -I tools/status/sync.py                       # 全量：机器、git、GitHub、夜间队列，写进共用目录的 status/out/（--out DIR 写到别处）
@@ -632,7 +632,7 @@ python3 -I tools/status/watch.py --service            # 交给服务管理常驻
 
 - `watch.py` 要一直跑，交给系统的服务管理常驻（macOS 用 launchd 的用户代理，Linux 用 systemd 的用户服务），不放在 Claude Code 会话的后台：应用一重启，会话里的后台任务就被关掉，页面停在最后一次推送（2026-11-02 起本机改成 launchd）。它出问题退出后由服务管理隔几分钟重启，输出写进日志文件。
 - 不认识的词和选项一律打印用法、以退出码 2 退出，什么都不建（以前第一个词被当成输出目录，`sync.py list` 在仓库里建出了 `list/`）。输出目录只能用 `--out DIR` 指定。
-- 手写的部分在事情发生的同一步写：要决定的事提出或定了、调研这类任务开始或结束、里程碑的目标变了。回答进度问题前先看一遍页面。
+- 手写的部分在事情发生的同一步写：要决定的事提出或定了、调研这类任务开始或结束。回答进度问题前先看一遍页面。
 
 - **推送**：`ssh <push_host> status.json` 或 `ssh <push_host> index.html`，文件从标准输入传过去；服务器上那把钥匙只该能写这两个文件。内容（不算时间戳）变了或满 10 分钟才推 `status.json`，`page.html` 变了才推 `index.html`。没配 `push_host` 时只打包、检查，不推送，CI 和合作者也能跑。
 - **私人信息检查**：推送前在 `status.json` 里找本机和服务器路径（`/Users/`、`/home/`、`/private/`、`/var/`、`/etc/`）、`.ssh`、IP、邮箱，以及本机配置里的 `private_words`、`push_host`、`page_host`。找到任何一个就不推，退出码 4。仓库是公开的，账号名、主机名、地址、页面路径都只写在本机配置里。

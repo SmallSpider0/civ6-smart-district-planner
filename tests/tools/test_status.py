@@ -82,13 +82,13 @@ class FieldCheck(TempShared):
             sync.edit_manual("set", "decisions/x", {"title": "t", "state": "open"})
         self.assertFalse(os.path.exists(sync.MANUAL))
 
-    def test_milestone_number_only(self):
-        # 2026-10-29: "ms": "v1.6.1" matched no milestone, so the note outlived it on the page.
-        for bad in ("v1.6.1", "15", 1.5, True):
-            with self.assertRaises(SystemExit):
-                sync.edit_manual("set", "milestones/x", {"ms": bad, "goal": "g"})
-        sync.edit_manual("set", "milestones/x", {"ms": 15, "goal": "g"})
-        self.assertEqual(self.manual()["milestones"]["x"]["ms"], 15)
+    def test_milestones_refused(self):
+        # #280: milestones show only GitHub's data and the generated next step; nothing is written by hand.
+        for op, data in (("set", {"ms": 15, "goal": "g"}), ("update", {"eta": "soon"}), ("delete", None)):
+            with self.assertRaises(SystemExit) as cm:
+                sync.edit_manual(op, "milestones/x", data)
+            self.assertIn("GitHub", str(cm.exception.code))
+        self.assertFalse(os.path.exists(sync.MANUAL))
 
     def test_releases_refused(self):
         for op, data in (("set", {"summary": "s"}), ("update", {"summary": "s"}), ("delete", None)):
@@ -105,8 +105,6 @@ class FieldCheck(TempShared):
             sync.edit_manual("set", "decisions/x", {"status": "open"})
         with self.assertRaises(SystemExit):
             sync.edit_manual("set", "jobs/x", {"where": "here"})
-        sync.edit_manual("set", "milestones/x", {"goal": "g"})  # milestones need nothing
-        self.assertEqual(self.manual()["milestones"]["x"], {"goal": "g"})
 
     def test_update_merges_and_null_deletes(self):
         sync.edit_manual("set", "decisions/x", {"title": "t", "status": "open", "recommendation": "A"})
@@ -149,6 +147,17 @@ class Bundle(TempShared):
         self.assertIn("workshop", b["work"])
         self.assertEqual(b["jobs"], [])
         self.assertTrue(b["meta"]["updated"])
+
+    def test_old_milestone_notes_left_out(self):
+        # #280: notes written before hand-written milestones were dropped stay in manual.json until
+        # cleared, but never reach the page.
+        out = self.fake_out()
+        os.makedirs(os.path.dirname(sync.MANUAL), exist_ok=True)
+        with open(sync.MANUAL, "w", encoding="utf-8") as fh:
+            json.dump({"milestones": {"old": {"name": "v0.9", "eta": "soon"}}}, fh)
+        b = json.loads(sync.bundle(out))
+        self.assertNotIn("milestones", b)
+        self.assertNotIn("v0.9", json.dumps(b))
 
 
 class Workshop(unittest.TestCase):
