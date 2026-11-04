@@ -1,0 +1,15 @@
+Changes since v1.7.1:
+- Several cities tab: a district the empire can have only one of, such as the Government Plaza, is greyed out and can no longer be ticked when another city already has a map tack for it. Before, it could be ticked, though the plan never placed a second one.
+- One city tab: with ‘Replace this mod’s earlier tacks’ ticked, the tack about to be replaced no longer greys out its district.
+- One city tab: when the districts picked from the pool fall short of the number asked for, the result shows a line ‘Pool short’ with how many fewer were picked. Before, with a wonder ticked this line showed as a district called ‘POOL’ with no reason, and without a wonder nothing was said.
+- One city tab, several plans: each plan lists the districts it could not place. Before, without a wonder every plan showed the first plan’s list, so a later plan could list a district it had placed.
+- One city tab with a wonder ticked: a plan button’s tooltip lists the districts picked from the pool, not only ‘N districts’. A district added by itself (such as an Aqueduct) that fits nowhere is named as added, on the Several cities tab too.
+- Tested in the game with Civ6 Plus: Harmony in Diversity: district slots, which districts can share a city, valid tiles and adjacency bonuses follow its rules. Reach does not count the regional effects it adds to buildings, only the Industrial Zone’s.
+
+自 v1.7.1 以来的变化：
+- 多城页：市政广场这类全帝国只能有一个的区域，别的城已经给它打了钉时，格子置灰、不能再勾。
+- 单城页勾了“替换本模组之前打的钉”时，要被替换的钉不再让那个区域置灰。
+- 单城页：从候选里挑的区域不够要的个数时，结果里有一行“候选不够”，写少挑了几个；之前勾了奇观时显示成一个叫“POOL”的区域，不勾奇观时什么都不说。
+- 单城页有几个方案时，每个方案列出它自己没放下的区域；之前不勾奇观时都列第一个方案的。
+- 单城页勾了奇观时，方案按钮的悬停提示也列出挑了哪些区域；自动加入的区域（如水渠）放不下时写明是自动加入的，多城页也一样。
+- 已在游戏里实测可以和“和而不同”同开；“覆盖”不计入它给建筑新加的范围效果。
