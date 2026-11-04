@@ -207,6 +207,7 @@ def workshop(state, every, clock=time.time, get=watch_workshop.fetch):
         ws["next"] = clock() + every
     except RuntimeError as problem:
         ws["next"] = clock() + min(every, WORKSHOP_RETRY)
+        ws["failed"] = int(clock())  # the status page shows the last numbers read and this time
         print("%s workshop: %s" % (now(), problem), file=sys.stderr, flush=True)
 
 

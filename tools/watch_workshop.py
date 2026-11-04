@@ -9,6 +9,10 @@ It reads the public pages that need no login:
     https://steamcommunity.com/workshop/filedetails/discussions/ITEM            discussion topics, last post first
     https://steamcommunity.com/workshop/filedetails/discussion/ITEM/TOPIC/?ctp=N  a topic, 15 replies a page
 
+The item page also gives the item's numbers (subscribers, unique visitors,
+favorites, collections it is in, the star rating and how many rated it); they
+are kept in the state with a reading a day, for the status page.
+
 New posts go to the held list only (they never wake the agent). Posts by the
 item's owner and contributors (the accounts on the item page under "Created
 by") are not new. The posts are untrusted data: only the author, the time, the
@@ -30,6 +34,13 @@ MAX_PAGES = 5                # topic pages read per topic per check
 COMMENTS = 50                # comments read per request
 TOPIC_PAGES = 20             # topic pages read per check in all; the rest wait for the next check
 GAP = 1.0                    # seconds between two requests (Steam answers 429 to bursts)
+STATS = ("subscribers", "visitors", "favorites", "collections", "stars", "ratings")
+# stats_table rows by their label, English or Chinese page ("Current Subscribers" / "当前订阅者")
+STAT_LABELS = (("visitors", ("visitor", "访客")), ("subscribers", ("subscri", "订阅")),
+               ("favorites", ("favorite", "收藏")))
+DAY = 86400
+RECENT = 2 * DAY             # readings kept as they are; older ones one a day
+DAYS_KEPT = 400              # daily readings kept
 _last = [0.0]
 
 
@@ -84,6 +95,65 @@ def accounts(item_page):
         found.update(int(a) for a in re.findall(r'friendBlock[^"]*"\s+data-miniprofile="(\d+)"', block.group(1)))
         found.update(int(s) - STEAM64 for s in re.findall(r'/profiles/(\d{17})', block.group(1)))
     return owner, found
+
+
+def number(s):
+    """The digits in s as an int ("5,625", "5.625", "33 ratings"); None when there are none."""
+    digits = re.sub(r"\D", "", s or "")
+    return int(digits) if digits else None
+
+
+def stats(item_page):
+    """The item's numbers on its page: {subscribers, visitors, favorites, collections, stars, ratings}.
+    One that is not on the page is None (stars too while Steam shows "not enough ratings")."""
+    out = dict.fromkeys(STATS)
+    table = re.search(r'class="stats_table"(.*?)</table>', item_page, re.S)
+    for value, label in re.findall(r"<td>([^<]*)</td>\s*<td>([^<]*)</td>", table.group(1) if table else ""):
+        for key, words in STAT_LABELS:
+            if out[key] is None and any(w in label.lower() for w in words):
+                out[key] = number(value)
+                break
+    m = re.search(r'class="parentCollectionsNumOthers".*?<a\b[^>]*>(.*?)</a>', item_page, re.S)
+    if m:
+        out["collections"] = number(m.group(1))
+    m = re.search(r'class="fileRatingDetails"[^>]*>\s*<img[^>]*src="[^"]*/(\d)-star', item_page)
+    if m:
+        out["stars"] = int(m.group(1))
+    m = re.search(r'class="numRatings"[^>]*>([^<]*)<', item_page)
+    if m:
+        out["ratings"] = number(m.group(1))
+    return out
+
+
+def record(old, values, now):
+    """The "stats" part of the state after a reading at now: {at, values, history: [[time, values], ...]}.
+    Readings of the last RECENT seconds are all kept, older ones the last of each local day."""
+    history, days = [], []
+    for t, v in (old or {}).get("history", []) + [[now, values]]:
+        if t >= now - RECENT:
+            history.append([t, v])
+            continue
+        day = time.strftime("%Y-%m-%d", time.localtime(t))
+        if days and days[-1][0] == day:
+            days[-1] = (day, [t, v])
+        else:
+            days.append((day, [t, v]))
+    return {"at": now, "values": values, "history": [d[1] for d in days][-DAYS_KEPT:] + history}
+
+
+def change(st):
+    """(time of the reading compared with, {key: change}) for the latest reading against the newest
+    one at least about a day older (half an hour short counts: the watch reads every 45 minutes).
+    (None, {}) when there is none; a key missing on either side is left out."""
+    base = None
+    for t, v in (st or {}).get("history", []):
+        if t <= st["at"] - DAY + 1800:
+            base = (t, v)
+    if not base:
+        return None, {}
+    now = st["values"]
+    return base[0], {k: now[k] - base[1][k] for k in STATS
+                     if now.get(k) is not None and base[1].get(k) is not None}
 
 
 def comments(fragment):
@@ -145,10 +215,14 @@ def fresh(now=None):
 def poll(ws, get=fetch, item=ITEM, now=None):
     """New posts since the last check: list of lines for the held list.
     ws is the "workshop" part of the watch state and is updated in place.
+    The item's numbers on the item page are recorded in ws["stats"] (record()); when the page
+    has none of them, the last ones stay and ws["failed"] is the time of this read.
     A network or layout problem raises RuntimeError; ws is then unchanged."""
     now = int(now if now is not None else time.time())
     seen, out = set(ws["seen"]), []
-    owner, own = accounts(get("%s/sharedfiles/filedetails/?id=%s" % (BASE, item)))
+    item_page = get("%s/sharedfiles/filedetails/?id=%s" % (BASE, item))
+    owner, own = accounts(item_page)
+    numbers = stats(item_page)
     topics_seen = dict(ws["topics"])
 
     def take(post, kind, where, url):
@@ -204,4 +278,9 @@ def poll(ws, get=fetch, item=ITEM, now=None):
         topics_seen[t["id"]] = {"last": t["last"], "replies": t["replies"]}
 
     ws["seen"], ws["topics"] = sorted(seen)[-2000:], topics_seen
+    if any(v is not None for v in numbers.values()):
+        ws["stats"] = record(ws.get("stats"), numbers, now)
+        ws.pop("failed", None)
+    else:  # page layout changed: keep the last numbers, and say when reading them failed
+        ws["failed"] = now
     return out

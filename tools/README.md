@@ -599,6 +599,7 @@ python3 -I tools/watch_issues.py --workshop-every 1800  # 创意工坊多久读�
 - 维护者和代理共用的 GitHub 账号（`gh api user` 读一次存进状态，可用 `$SDP_WATCH_SELF` 指定）发的 Issue 和评论只记为已看，不打出来、不进待看列表：决定在 Claude Code 里做，不在 Issue 上。所以代理发评论后不用再 `--mine`。`--mine` 在监听轮询的同时写入也不会丢：监听保存前把磁盘上的记录并进来。
 - 怎么处理打出来的和待看的，见 [sdp-watch](../.claude/skills/sdp-watch/SKILL.md)。状态在主检出的 `logs/watch/`（`state.json`、`held.log`、`others.log`），所有工作树共用。报出的每一条也追加进那里的 `reported.log`（在记成已看之前写），监听的输出被重定向或丢了也能用 `--reported` 找回（#261）。
 - 创意工坊（`watch_workshop.py`，由 `watch_issues.py` 调用）：读物品 `$SDP_WORKSHOP_ITEM`（默认 3824473635，设成空就不读）的公开页面，不登录：物品页（取物品主人和“创建者”里的贡献者）、评论区（`comment/PublishedFile_Public/render/<主人>/<物品>/`，JSON）、讨论区列表和各帖子页（`?ctp=N`，每页 15 条回复）。只读最后一次发帖晚于上次的帖子，每次最多读 20 个帖子页，两次请求隔 1 秒（连着请求时 Steam 回 429）。
+- 物品页顺带给出物品数据（不多发请求）：当前订阅、独立访客、当前收藏（`stats_table` 三行，英文、中文页面都认）、所在合集数（“See all N collections”）、评分（星级图片 `N-star` 和“N ratings”）。存在状态的 `workshop.stats`：最近两天的读数都留，更早的每天留最后一次，最多 400 天；页面上缺的项记为空。一项都读不到或读失败时不改旧值，记下 `workshop.failed`（读失败的时间）给状态页。
 - 创意工坊的新评论、新帖、新回复只写进 `held.log`（`WORKSHOP COMMENT|TOPIC|REPLY`，作者、时间、去掉标记的正文、链接），不让监听退出，不叫醒任何人。物品主人和贡献者的帖子不记。第一次读从那时开始，以前的帖子不列出。
 - 读失败（网络、Steam 回错、页面改了样子）在标准错误打一行，10 分钟后再读，不影响 GitHub 那边。
 - 测试：`tests/tools/test_watch_issues.py`、`tests/tools/test_watch_workshop.py`，用 `tests/tools/workshop/` 里存下的页面样例（结构照 2026-11-03 的真页面删减，文字是编的），不联网。
@@ -621,7 +622,7 @@ python3 -I tools/worktree.py prune --remote            # 删掉其中能删的�
 
 维护者看进度的网页（`status/page.html`）只读一个文件 `status.json`，每分钟刷新一次。`status/sync.py` 生成它，`status/watch.py` 是后台唯一的循环。页面的内容几乎都是自动生成的：
 
-- **自动**：两台机器的格子、在跑和排队的任务（调度工具自己的记录，没走排队工具的 `compare.mjs`、离线测试、游戏内测试也算上）；除 `main` 以外有工作树或开着 PR 的分支（提交里的 Issue、PR 的检查和自动合并、夜间队列里排给它的项）和多出来的分支（`worktree.py stale`）；GitHub 的里程碑和其中每个 Issue 的状态；开着的 Issue 谁开的、谁打的 `auto`、谁该回复（账号名只显示成“我们 / 合作者 / 玩家”）；夜间队列；创意工坊还没处理的新帖（`watch_issues.py` 待看列表里的 `WORKSHOP` 行，最新的 50 条，帖子里像私人信息的字样换成“…”，只留 Steam 自己的链接；监听过了预定时间半小时还没读创意工坊时标出来，`--held --clear` 后消失）；最近的发版，每版的摘要取自发布说明里“自 … 以来的变化”那一节。顶上的概览和每个里程碑的“下一步”由页面从这些数据算出来。
+- **自动**：两台机器的格子、在跑和排队的任务（调度工具自己的记录，没走排队工具的 `compare.mjs`、离线测试、游戏内测试也算上）；除 `main` 以外有工作树或开着 PR 的分支（提交里的 Issue、PR 的检查和自动合并、夜间队列里排给它的项）和多出来的分支（`worktree.py stale`）；GitHub 的里程碑和其中每个 Issue 的状态；开着的 Issue 谁开的、谁打的 `auto`、谁该回复（账号名只显示成“我们 / 合作者 / 玩家”）；夜间队列；创意工坊还没处理的新帖（`watch_issues.py` 待看列表里的 `WORKSHOP` 行，最新的 50 条，帖子里像私人信息的字样换成“…”，只留 Steam 自己的链接；监听过了预定时间半小时还没读创意工坊时标出来，`--held --clear` 后消失），和物品数据：订阅、独立访客、收藏、所在合集、评分，各写和约 24 小时前的读数比的变化，读失败时显示上次的值、读取时间和失败时间）；最近的发版，每版的摘要取自发布说明里“自 … 以来的变化”那一节。顶上的概览和每个里程碑的“下一步”由页面从这些数据算出来。
 - **手写**：只有三类，经 `set|update|delete` 写进共用目录下的 `status/manual.json`：`decisions/*`（要维护者决定的事）、`jobs/*`（调度记录说不清的任务说明，如调研）、`milestones/*`（只补 `goal`、`eta`、`blocker`）。字段只能用页面读的那些（`sync.py` 的 `FIELDS`），`set` 必须带 `REQUIRED` 里的字段，其他字段直接拒绝。**发版记录不手写**：`releases/*` 一律拒绝，摘要不好就改 GitHub 上的发布说明。
 
 ```bash
