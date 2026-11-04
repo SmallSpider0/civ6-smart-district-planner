@@ -8,6 +8,26 @@
 -- (game.py newgame --capital --reveal).
 local test, T = ...
 
+-- The tacks PlacePins makes for solution s: its districts, their camps and
+-- improvements (issue 227), the worked plots' improvements and, with
+-- reminders on, the reminder pins. One per plot: SDP_Pins skips a plot that
+-- already has a tack (a lumber mill's tack stands on the woods a reminder is
+-- about, and keeps them).
+local function Tacks(s, remind)
+  local seen, n = {}, 0
+  local function Add(e)
+    if e ~= nil and not seen[e.X .. "," .. e.Y] then seen[e.X .. "," .. e.Y] = true; n = n + 1 end
+  end
+  for _, p in ipairs(s.Plan) do
+    Add(p)
+    Add(p.Support)
+    for _, e in ipairs(p.Improvements or {}) do Add(e) end
+  end
+  for _, e in ipairs(s.Worked or {}) do Add(e) end
+  if remind then for _, r in ipairs(s.Remind or {}) do Add(r) end end
+  return n
+end
+
 local pid = Game.GetLocalPlayer()
 
 local function Capital()
@@ -103,7 +123,12 @@ test("the panel: count above the required districts runs as a task, shows three 
   for _ in pairs(PlayerConfigurations[pid]:GetMapPins()) do before = before + 1 end
   local placed = SDP_Panel.PlacePins()
   local third = result.Solutions[3]
-  T.eq(placed, #third.Plan + #(third.Remind or {}), "districts and reminders")
+  T.eq(placed, Tacks(third, true), "districts, their improvements and reminders")
+  local pinned = {}
+  for _, pin in pairs(PlayerConfigurations[pid]:GetMapPins()) do pinned[pin:GetHexX() .. "," .. pin:GetHexY()] = true end
+  for _, p in ipairs(third.Plan) do
+    for _, e in ipairs(p.Improvements or {}) do T.ok(pinned[e.X .. "," .. e.Y], e.Type .. " tacked") end
+  end
   T.eq(SDP_Panel.UndoPins(), placed, "undo")
   local after = 0
   for _ in pairs(PlayerConfigurations[pid]:GetMapPins()) do after = after + 1 end
