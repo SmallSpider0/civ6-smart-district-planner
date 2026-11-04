@@ -428,6 +428,16 @@ function SDP_Land.LifetimeGain(entry, w)
   return gain
 end
 
+-- The resource of a plot that takes only improvements of its own (type),
+-- or nil: one the player sees with an Improvement_ValidResources row, also
+-- when no improvement of the rules is one of them (the oil well is not
+-- Buildable). Tacks that keep the resource take only those (issue 227).
+function SDP_Land.OwnResource(plot, ctx)
+  local q = Parts(plot, ctx)
+  if q.Resource ~= nil and q.Rules.OwnImprovement[q.Resource] then return q.Resource end
+  return nil
+end
+
 -- The improvement PlotValues assumes on a plot (issue 227): the option of
 -- ImprovementOptions with the highest value, ties to the one that gives
 -- more over a whole game, then to keeping the feature, then the type name.
@@ -436,11 +446,7 @@ end
 -- improvements of its own takes only those, also one the rules leave out
 -- such as the oil well: then none; issue 227 tacks).
 function SDP_Land.AssumedImprovement(plot, ctx, keepResource)
-  local own = nil
-  if keepResource then
-    local q = Parts(plot, ctx)
-    if q.Resource ~= nil and q.Rules.OwnImprovement[q.Resource] then own = q.Resource end
-  end
+  local own = keepResource and SDP_Land.OwnResource(plot, ctx) or nil
   local best = nil
   for _, o in ipairs(SDP_Land.ImprovementOptions(plot, ctx)) do
     local fits = not (keepResource and o.Harvest) and (own == nil or o.Entry.Resources[own] ~= nil)

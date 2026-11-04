@@ -327,8 +327,11 @@ function Model:Options(index)
   local plot = Map.GetPlotByIndex(index)
   if SDP_Wonders.FreeForImprovement(self.PlayerID, plot, self.Ownable, self.Taken) then
     local byType, types = {}, {}
+    -- The resource is kept: one with improvements of its own takes only
+    -- those, also when the rules hold none of them (the oil well).
+    local own = SDP_Land.OwnResource(plot, self.Ctx)
     for _, o in ipairs(SDP_Land.ImprovementOptions(plot, self.Ctx)) do
-      if not o.Harvest then
+      if not o.Harvest and (own == nil or o.Entry.Resources[own] ~= nil) then
         local t = o.Entry.Type
         local best = byType[t]
         if best == nil then types[#types + 1] = t end

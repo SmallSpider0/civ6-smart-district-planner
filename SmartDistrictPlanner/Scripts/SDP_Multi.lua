@@ -1958,6 +1958,11 @@ function Session:PlanFor(layout)
       end
     end
     if search.AppealModel ~= nil then search.AppealModel:ClearBoosts() end
+    local lists = {}
+    for p in ipairs(self.Participants) do
+      if out.Cities[p].Worked ~= nil then lists[#lists + 1] = out.Cities[p].Worked end
+    end
+    SDP_Solver.KeepAppeal(search.AppealModel, layout, improvePlan, lists)
   end
   return out
 end

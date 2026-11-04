@@ -395,6 +395,7 @@ function Session:PlanFor(layout)
       search.AppealModel:ClearBoosts()
     end
     out.Worked = SDP_Solver.WorkedImprovements(self.Improve, self.Land, placed, improvePlan, forced, boost)
+    SDP_Solver.KeepAppeal(search.AppealModel, layout, improvePlan, { out.Worked })
   end
   return out
 end
@@ -422,6 +423,62 @@ function SDP_Solver.WorkedImprovements(model, land, placed, plan, forced, boost)
   end
   for _, item in ipairs(plan or {}) do assigned[item.Index] = true end
   return model:Worked(land, taken, boost, forced, assigned, placedAt)
+end
+
+-- Drop the worked tiles' tacks that would change the appeal part the plan
+-- was scored with (Codex on #284): a mine's -1 next to a planned or built
+-- neighborhood can take its housing down a band, and a preserve's yields on
+-- the plots around it follow their appeal. `lists`: the Worked lists (one
+-- per city), filtered in place. Tried in list order, then plot order; a tack
+-- stays when the appeal part's value and the preserve's extras on every
+-- other plot are the same with it and the tacks kept before it as with
+-- `plan` alone (the extra on its own plot does not count: the land part
+-- already took the plot as improved). Nothing to do without an appeal model.
+function SDP_Solver.KeepAppeal(appealModel, layout, plan, lists)
+  if appealModel == nil then return end
+  local function Copy(boosts)
+    local out = {}
+    for l, b in pairs(boosts or {}) do
+      local c = {}
+      for q, v in pairs(b) do c[q] = v end
+      out[l] = c
+    end
+    return out
+  end
+  local value, b = appealModel:Score(layout, nil, plan)
+  local base = Copy(b)
+  appealModel:ClearBoosts()
+  local trial, skip = {}, {}
+  for _, item in ipairs(plan or {}) do trial[#trial + 1] = item end
+  local function Same(boosts)
+    for _, pair in ipairs({ { base, boosts }, { boosts, base } }) do
+      for l, b1 in pairs(pair[1]) do
+        local b2 = pair[2][l] or {}
+        for q, v in pairs(b1) do
+          if not skip[q] and math.abs(v - (b2[q] or 0)) > 1e-9 then return false end
+        end
+      end
+    end
+    return true
+  end
+  for _, list in ipairs(lists) do
+    local kept = {}
+    for _, e in ipairs(list or {}) do
+      trial[#trial + 1] = e
+      skip[e.Index] = true
+      local v, boosts = appealModel:Score(layout, nil, trial)
+      local same = math.abs(v - value) <= 1e-9 and Same(boosts or {})
+      appealModel:ClearBoosts()
+      if same then
+        kept[#kept + 1] = e
+      else
+        trial[#trial] = nil
+        skip[e.Index] = nil
+      end
+    end
+    for n = #list, 1, -1 do list[n] = nil end
+    for n, e in ipairs(kept) do list[n] = e end
+  end
 end
 
 -- The plan for the best layout, with DMT's yields and tooltips, and up to

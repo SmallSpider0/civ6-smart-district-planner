@@ -406,6 +406,68 @@ test("worked tiles: the hills get mines (they gain the most over the game); a re
   end
 end)
 
+test("district improvements: a resource takes only its own, also one the rules leave out (Codex on #284)", function()
+  -- A farm the trait's campus takes adjacency from, then iron under it:
+  -- iron's only improvement (IMPROVEMENT_TEST_WELL, Buildable false as the
+  -- oil well) is not in the land part's rules, and no farm may go there.
+  NewWorld({ traits = { "TRAIT_TEST_IMPROVE" } })
+  local r = Solve({ Improvements = true, Districts = { CAMPUS } })
+  local farm = (Find(r.Plan, CAMPUS).Improvements or {})[1]
+  T.ok(farm ~= nil and farm.Type == FARM, "a farm next to the campus to put iron under")
+  NewWorld({ traits = { "TRAIT_TEST_IMPROVE" }, resources = { { farm.X, farm.Y, "RESOURCE_IRON" } },
+    techs = { "TECH_BRONZE_WORKING" } })
+  T.ok(Players[0]:GetResources():IsResourceVisible(GameInfo.Resources["RESOURCE_IRON"].Hash), "the iron is seen")
+  local scan = SDP_City.Scan(0, 1)
+  local model = SDP_Improve.New({ PlayerID = 0, Weights = ONES, Ownable = scan.Reach.Reached, Taken = {}, Fixed = {} })
+  T.eq(#model:Options(Map.GetPlotIndex(farm.X, farm.Y)), 0, "no improvement on the iron")
+  r = Solve({ Improvements = true, Districts = { CAMPUS } })
+  local campus = Find(r.Plan, CAMPUS)
+  T.ok(#(campus.Improvements or {}) > 0, "farms elsewhere")
+  for _, e in ipairs(campus.Improvements or {}) do
+    T.ok(not (e.X == farm.X and e.Y == farm.Y), "no farm on the iron: " .. Key(e))
+  end
+end)
+
+test("worked tiles: no tack that changes a planned district's appeal (Codex on #284)", function()
+  -- Appeal 2 on (6,4), next to both hills: a neighborhood there gets the
+  -- housing of appeal 2; a mine on a worked hill next to it would take that
+  -- below the band, so neither hill gets a worked tile's tack.
+  NewWorld({ appeal = { { 6, 4, 2 } } })
+  local HOOD = "DISTRICT_NEIGHBORHOOD"
+  local r = Solve({ Improvements = true, Land = true, WorkedImprovements = true, Districts = { HOOD } })
+  local hood = Find(r.Plan, HOOD)
+  T.eq(Key(hood), HOOD .. "@6,4", "the neighborhood on the appealing plot")
+  local rules = SDP_Appeal.Rules()
+  local appeal = hood.Appeal
+  for _, e in ipairs(r.Worked or {}) do
+    if Next(e, hood) then
+      appeal = appeal + (GameInfo.Improvements[e.Type].Appeal or 0)
+      local feature = Map.GetPlot(e.X, e.Y):GetFeatureType()
+      if e.Clear and feature ~= -1 then appeal = appeal - (GameInfo.Features[feature].Appeal or 0) end
+    end
+  end
+  T.eq(SDP_Appeal.Housing(rules, HOOD, appeal), hood.Housing, "the housing it reported with every tack built")
+  T.ok(r.Worked ~= nil and #r.Worked > 0, "the other worked tiles keep theirs")
+  -- The same on the multi-city page.
+  local m = SDP_Multi.Solve({ PlayerID = 0, Tier = "FAST", Weights = ONES, Plans = { C1 = { HOOD } }, Only = { [1] = true },
+    Improvements = true, Land = true, WorkedImprovements = true })
+  T.ok(m.Ok, tostring(m.Error))
+  local mhood = Find(m.Plan, HOOD)
+  T.eq(Key(mhood), HOOD .. "@6,4", "multi: the neighborhood on the appealing plot")
+  local worked = m.Cities[1].Worked or {}
+  T.ok(#worked > 0, "multi: some tacks")
+  for _, e in ipairs(worked) do
+    T.ok(not (Next(e, mhood) and (GameInfo.Improvements[e.Type].Appeal or 0) ~= 0), "multi: none next to it changes its appeal: " .. Key(e))
+  end
+  -- Without the neighborhood the hills get their mines (the filter is the appeal).
+  r = Solve({ Improvements = true, Land = true, WorkedImprovements = true, Districts = { THEATER } })
+  local mines = 0
+  for _, e in ipairs(r.Worked or {}) do
+    if e.Type == MINE then mines = mines + 1 end
+  end
+  T.eq(mines, 2, "mines on both hills")
+end)
+
 test("several cities: each city's industrial zone with its mines; worked tiles per city", function()
   World.New({
     rows = {
