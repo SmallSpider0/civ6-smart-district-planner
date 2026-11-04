@@ -389,6 +389,21 @@ test("worked tiles: the hills get mines (they gain the most over the game); a re
   for _, e in ipairs(r.Worked or {}) do
     if not Map.GetPlot(e.X, e.Y):IsHills() then T.eq(e.Type, FARM, "farms on the grassland: " .. Key(e)) end
   end
+  -- Iron the player sees on grassland: only its own improvement (one the
+  -- land part's rules leave out, as the oil well), never a farm (M12 of the
+  -- compare: a farm tacked on oil).
+  local grass = {}
+  for _, e in ipairs(r.Worked or {}) do
+    if not Map.GetPlot(e.X, e.Y):IsHills() then grass[#grass + 1] = e end
+  end
+  T.ok(#grass > 0, "a farm on the grassland to put iron under")
+  local iron = grass[1]
+  NewWorld({ resources = { { 5, 3, "RESOURCE_WHEAT" }, { iron.X, iron.Y, "RESOURCE_IRON" } }, techs = { "TECH_BRONZE_WORKING" } })
+  T.ok(Players[0]:GetResources():IsResourceVisible(GameInfo.Resources["RESOURCE_IRON"].Hash), "the iron is seen")
+  r = Solve({ Improvements = false, Land = true, WorkedImprovements = true, Districts = { THEATER } })
+  for _, e in ipairs(r.Worked or {}) do
+    T.ok(not (e.X == iron.X and e.Y == iron.Y), "no tack on the iron: " .. Key(e))
+  end
 end)
 
 test("several cities: each city's industrial zone with its mines; worked tiles per city", function()

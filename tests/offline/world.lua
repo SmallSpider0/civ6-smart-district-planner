@@ -555,15 +555,22 @@ function World.New(spec)
       for _, row in ipairs(extra) do list[#list + 1] = row end
       gi[name] = Table(list, key)
     end
+    -- IMPROVEMENT_TEST_WELL stands for the oil well: the only improvement
+    -- iron takes here, and Buildable false as the oil well is in the game's
+    -- database, so the land part's improvement rules leave it out.
     Add("Improvements", "ImprovementType", {
       { ImprovementType = "IMPROVEMENT_QUARRY", Name = "LOC_IMPROVEMENT_QUARRY_NAME", Appeal = -1, Buildable = true,
+        Domain = "DOMAIN_LAND" },
+      { ImprovementType = "IMPROVEMENT_TEST_WELL", Name = "LOC_IMPROVEMENT_TEST_WELL_NAME", Buildable = false,
         Domain = "DOMAIN_LAND" },
     })
     Add("Improvement_YieldChanges", nil, {
       { ImprovementType = "IMPROVEMENT_QUARRY", YieldType = "YIELD_PRODUCTION", YieldChange = 1 },
+      { ImprovementType = "IMPROVEMENT_TEST_WELL", YieldType = "YIELD_PRODUCTION", YieldChange = 2 },
     })
     Add("Improvement_ValidResources", nil, {
       { ImprovementType = "IMPROVEMENT_QUARRY", ResourceType = "RESOURCE_STONE" },
+      { ImprovementType = "IMPROVEMENT_TEST_WELL", ResourceType = "RESOURCE_IRON" },
     })
     local mine = { ID = "Mine_Production", YieldType = "YIELD_PRODUCTION", YieldChange = 1, TilesRequired = 2,
       Description = "LOC_Mine_Production", AdjacentImprovement = "IMPROVEMENT_MINE" }

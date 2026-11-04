@@ -104,14 +104,16 @@ end
 --   Yields = { [yield] = n }, Bonus = { { Yield, Change, Tech, Civic } } } },
 --   FeatureYields, ResourceYields = { [type] = { [yield] = n } } }.
 -- Only improvements every player can build (Buildable, no TraitType, not
--- needing a river or adjacent resources) that give yields.
+-- needing a river or adjacent resources) that give yields. OwnImprovement =
+-- { [resource type] = true } for every resource with an improvement of its
+-- own, any improvement (the oil well is not Buildable in the database).
 local m_rules, m_rulesFor = nil, nil
 -- Rule columns that are yes/no: some are numbers in the game's database
 -- (Improvements.RequiresRiver is 0 or 1, and `not 0` is false in Lua).
 local function Flag(v) return v == true or (type(v) == "number" and v ~= 0) end
 local function ImprovementRules()
   if m_rules ~= nil and m_rulesFor == GameInfo then return m_rules end
-  local rules = { Improvements = {}, FeatureYields = {}, ResourceYields = {} }
+  local rules = { Improvements = {}, FeatureYields = {}, ResourceYields = {}, OwnImprovement = {} }
   local function Rows(name) return GameInfo[name] ~= nil and GameInfo[name]() or function() return nil end end
   local byType = {}
   for row in Rows("Improvements") do
@@ -148,6 +150,7 @@ local function ImprovementRules()
   for row in Rows("Improvement_ValidResources") do
     local entry = byType[row.ImprovementType]
     if entry ~= nil then entry.Resources[row.ResourceType] = Flag(row.MustRemoveFeature) end
+    rules.OwnImprovement[row.ResourceType] = true
   end
   local names = {}
   for name in pairs(byType) do names[#names + 1] = name end
@@ -430,12 +433,19 @@ end
 -- more over a whole game, then to keeping the feature, then the type name.
 -- nil when none; none either when leaving it unimproved is worth as much.
 -- `keepResource`: only the options that keep the resource (a resource with
--- improvements of its own takes only those; issue 227 tacks).
+-- improvements of its own takes only those, also one the rules leave out
+-- such as the oil well: then none; issue 227 tacks).
 function SDP_Land.AssumedImprovement(plot, ctx, keepResource)
+  local own = nil
+  if keepResource then
+    local q = Parts(plot, ctx)
+    if q.Resource ~= nil and q.Rules.OwnImprovement[q.Resource] then own = q.Resource end
+  end
   local best = nil
   for _, o in ipairs(SDP_Land.ImprovementOptions(plot, ctx)) do
-    local better = not (keepResource and o.Harvest) and (best == nil or o.Value > best.Value + 1e-9)
-    if not better and best ~= nil and not (keepResource and o.Harvest) and math.abs(o.Value - best.Value) <= 1e-9 then
+    local fits = not (keepResource and o.Harvest) and (own == nil or o.Entry.Resources[own] ~= nil)
+    local better = fits and (best == nil or o.Value > best.Value + 1e-9)
+    if not better and best ~= nil and fits and math.abs(o.Value - best.Value) <= 1e-9 then
       local a, b = SDP_Land.LifetimeGain(o.Entry, ctx.W), SDP_Land.LifetimeGain(best.Entry, ctx.W)
       if a ~= b then better = a > b
       elseif o.Clear ~= best.Clear then better = not o.Clear
