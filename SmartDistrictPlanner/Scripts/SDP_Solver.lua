@@ -390,7 +390,7 @@ function Session:PlanFor(layout)
   if self.Improve ~= nil and self.Improve.WorkedOn and self.Land ~= nil then
     local boost = nil
     if search.AppealModel ~= nil then
-      local _, boosts = search.AppealModel:Score(layout)
+      local _, boosts = search.AppealModel:Score(layout, nil, improvePlan)
       boost = boosts and boosts[1] or nil
       search.AppealModel:ClearBoosts()
     end

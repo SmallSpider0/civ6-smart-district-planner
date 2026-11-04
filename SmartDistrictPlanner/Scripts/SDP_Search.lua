@@ -718,7 +718,7 @@ function Search:Evaluate(layout)
   local appeal, boosts = self.AppealModel, nil
   if appeal ~= nil then
     local value
-    value, boosts = appeal:Score(layout)
+    value, boosts = appeal:Score(layout, nil, plan)
     gain = gain + value - appeal.Base
   end
   if #self.Lands > 0 then
@@ -806,7 +806,7 @@ end
 function Search:AppealParts(layout, detail)
   local appeal = self.AppealModel
   if appeal == nil then return 0, 0 end
-  local value, boosts = appeal:Score(layout, detail)
+  local value, boosts = appeal:Score(layout, detail, (self:ImprovePlan(layout)))
   local tiles = 0
   if boosts ~= nil then
     local taken = {}

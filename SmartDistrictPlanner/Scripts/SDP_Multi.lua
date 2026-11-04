@@ -1948,7 +1948,7 @@ function Session:PlanFor(layout)
   if self.Improve ~= nil and self.Improve.WorkedOn then
     local boosts = nil
     if search.AppealModel ~= nil then
-      local _, b = search.AppealModel:Score(layout)
+      local _, b = search.AppealModel:Score(layout, nil, improvePlan)
       boosts = b
     end
     for p, part in ipairs(self.Participants) do

@@ -222,6 +222,32 @@ test("Assign by groups and kept choices: the same as choosing afresh for every l
   T.ok(layouts > 100 and nonEmpty > 20, "enough layouts with improvements: " .. nonEmpty .. " of " .. layouts)
 end)
 
+test("a planned mine counts against a neighborhood's appeal as if built", function()
+  local w = NewWorld()
+  w:Plot(6, 3).feature = GameInfo.Features.FEATURE_FOREST
+  local scan = SDP_City.Scan(0, 1)
+  local model = SDP_Appeal.New({ PlayerID = 0, Types = { "DISTRICT_NEIGHBORHOOD" }, Kinds = { "DISTRICT" },
+    Candidates = scan.Candidates, Fixed = {}, Weights = {}, Lands = {}, Workable = {} })
+  local at = nil
+  for i, c in ipairs(scan.Candidates) do
+    if c.X == 6 and c.Y == 4 then at = i end
+  end
+  T.ok(model ~= nil and at ~= nil, "a model and the plot next to both hills")
+  local function Appeal(improvements)
+    local detail = {}
+    model:Score({ at }, detail, improvements)
+    return detail[1].Appeal
+  end
+  local alone = Appeal(nil)
+  local mineAppeal = GameInfo.Improvements[MINE].Appeal
+  T.ok(mineAppeal ~= nil and mineAppeal < 0, "the rules: a mine lowers appeal")
+  T.eq(Appeal({ { Index = Map.GetPlotIndex(5, 3), Type = MINE } }), alone + mineAppeal, "a mine next door")
+  local woods = GameInfo.Features.FEATURE_FOREST.Appeal or 0
+  T.eq(Appeal({ { Index = Map.GetPlotIndex(5, 3), Type = MINE }, { Index = Map.GetPlotIndex(6, 3), Type = MINE, Clear = true } }),
+    alone + 2 * mineAppeal - woods, "two mines, one clearing woods")
+  T.eq(Appeal(nil), alone, "nothing left behind")
+end)
+
 test("tiles the city can come to own get a tack marked; tiles out of reach none", function()
   local w = NewWorld({ cities = { { id = 1, x = 4, y = 4, population = 7, capital = true, radius = 1 } } })
   w:Own(5, 3, 0, w:City(1))
