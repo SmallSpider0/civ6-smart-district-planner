@@ -370,13 +370,22 @@ test("worked tiles: tacks only with their switch and the land part; the plan sta
   T.eq(Solve(with).Worked, nil, "land weight 0: none")
 end)
 
-test("worked tiles: the hills get mines (they gain the most over the game)", function()
+test("worked tiles: the hills get mines (they gain the most over the game); a resource only its own", function()
   NewWorld()
   local r = Solve({ Improvements = false, Land = true, WorkedImprovements = true, Districts = { THEATER } })
   local byPlot = {}
   for _, e in ipairs(r.Worked or {}) do byPlot[e.X .. "," .. e.Y] = e.Type end
   T.eq(byPlot["5,3"], MINE, "a mine on the first hill")
   T.eq(byPlot["6,3"], MINE, "a mine on the second")
+  -- Wheat on a hill: its farm (harvesting it for a mine is the land part's
+  -- guess, not a tack).
+  NewWorld({ resources = { { 5, 3, "RESOURCE_WHEAT" } } })
+  r = Solve({ Improvements = false, Land = true, WorkedImprovements = true, Districts = { THEATER } })
+  byPlot = {}
+  for _, e in ipairs(r.Worked or {}) do byPlot[e.X .. "," .. e.Y] = e end
+  T.ok(byPlot["5,3"] ~= nil, "the wheat hill is worked")
+  T.eq(byPlot["5,3"].Type, FARM, "wheat: its farm")
+  T.eq(byPlot["5,3"].Harvest, nil, "not harvested")
   for _, e in ipairs(r.Worked or {}) do
     if not Map.GetPlot(e.X, e.Y):IsHills() then T.eq(e.Type, FARM, "farms on the grassland: " .. Key(e)) end
   end

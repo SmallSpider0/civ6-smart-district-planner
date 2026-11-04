@@ -774,7 +774,7 @@ function Model:Worked(land, taken, boost, forced, assigned, placedAt)
     local p = land.ByIndex[q]
     local bare = boost ~= nil and boost[q] ~= nil and p ~= nil and p.Bare + boost[q] >= p.Tile
     if not assigned[q] and not bare and SDP_Wonders.FreeForImprovement(self.PlayerID, plot, self.Ownable, self.Taken) then
-      local o = SDP_Land.AssumedImprovement(plot, self.Ctx)
+      local o = SDP_Land.AssumedImprovement(plot, self.Ctx, true)
       if o ~= nil then
         local around = self:Around(q, placedAt)
         local changes = o.Clear and self:FeatureMatters(q, around)

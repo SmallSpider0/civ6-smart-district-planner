@@ -429,11 +429,13 @@ end
 -- ImprovementOptions with the highest value, ties to the one that gives
 -- more over a whole game, then to keeping the feature, then the type name.
 -- nil when none; none either when leaving it unimproved is worth as much.
-function SDP_Land.AssumedImprovement(plot, ctx)
+-- `keepResource`: only the options that keep the resource (a resource with
+-- improvements of its own takes only those; issue 227 tacks).
+function SDP_Land.AssumedImprovement(plot, ctx, keepResource)
   local best = nil
   for _, o in ipairs(SDP_Land.ImprovementOptions(plot, ctx)) do
-    local better = best == nil or o.Value > best.Value + 1e-9
-    if not better and math.abs(o.Value - best.Value) <= 1e-9 then
+    local better = not (keepResource and o.Harvest) and (best == nil or o.Value > best.Value + 1e-9)
+    if not better and best ~= nil and not (keepResource and o.Harvest) and math.abs(o.Value - best.Value) <= 1e-9 then
       local a, b = SDP_Land.LifetimeGain(o.Entry, ctx.W), SDP_Land.LifetimeGain(best.Entry, ctx.W)
       if a ~= b then better = a > b
       elseif o.Clear ~= best.Clear then better = not o.Clear
