@@ -353,11 +353,14 @@ def work(now):
         if m and m.group(1) != "main":
             branches[m.group(1)] = {"branch": m.group(1), "worktree": True}
     prs = json.loads(run(["gh", "pr", "list", "--state", "open", "--json",
-                          "number,title,url,headRefName,isDraft,autoMergeRequest,statusCheckRollup"]))
+                          "number,title,url,headRefName,isDraft,autoMergeRequest,statusCheckRollup,"
+                          "closingIssuesReferences"]))
     for pr in prs:
         b = branches.setdefault(pr["headRefName"], {"branch": pr["headRefName"], "worktree": False})
         b["pr"] = {"n": pr["number"], "url": pr["url"], "title": pr["title"], "draft": pr["isDraft"],
                    "automerge": pr.get("autoMergeRequest") is not None, "checks": checks_state(pr.get("statusCheckRollup"))}
+        # The issues the PR closes ("Closes #N" in its body), not kept in b["pr"]: that goes onto the page.
+        b["closes"] = [r["number"] for r in pr.get("closingIssuesReferences") or [] if r.get("number")]
     try:
         queue = json.load(open(os.path.join(SHARED, "night-queue.json"), encoding="utf-8"))
     except Exception:
@@ -406,6 +409,9 @@ def work(now):
             for n in re.findall(r"#(\d+)", line):
                 if int(n) not in nums and (int(n) in titles or not titles):
                     nums.append(int(n))
+        for n in b.get("closes", []):  # a PR whose title and commits name its issue without "#"
+            if n not in nums and (n in titles or not titles):
+                nums.append(n)
         last = log[0].split("\t", 1) if log else None
         night = [{"id": q["id"], "what": q.get("what", "")} for q in queue
                  if q.get("branch") == name and q.get("state") not in ("done", "failed")]
