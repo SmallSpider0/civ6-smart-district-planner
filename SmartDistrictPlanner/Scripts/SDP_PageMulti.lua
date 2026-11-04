@@ -61,8 +61,6 @@ for _, column in ipairs(SDP_UI.WEIGHT_COLUMNS) do COLUMNS[#COLUMNS + 1] = column
 COLUMNS[#COLUMNS + 1] = SDP_UI.COVERAGE_COLUMN
 local m_weights = {}
 for _, column in ipairs(COLUMNS) do m_weights[column.Key] = column.Default or 1 end
-local m_weightViews = {}
-local m_tier = SDP_Tiers.DEFAULT
 local m_swap = true -- plots swapped from another of our cities are candidates (issue 54; on by default, issue 162)
 local m_replace = false -- plan over this mod's earlier pins for the cities and replace them
 local m_remind = true
@@ -72,32 +70,11 @@ local m_result = nil
 local m_solution = 1
 local m_view = { Cities = {}, Districts = {}, Wonders = {}, Solutions = {}, Results = {}, Plans = {}, Templates = {} } -- for tests
 local m_lookNext = false -- move the camera to the cities when the next result shows (issue 67)
-local m_preset = SDP_Settings.PRESET_ORDER[1] -- the weights and switches started from (issue 49)
+local m_kit -- SDP_PageKit: weights, tier, preset, fold, switches (made at the end)
 
--- The weights, these switches and the tier, kept in the save (issue 57).
-local SWITCHES = {
-  { Key = "SWAP", Default = true, Get = function() return m_swap end, Put = function(v) m_swap = v end },
-  { Key = "REPLACE", Default = false, Get = function() return m_replace end, Put = function(v) m_replace = v end },
-  { Key = "REMIND", Default = true, Get = function() return m_remind end, Put = function(v) m_remind = v end },
-  { Key = "IMPROVE", Default = true, Get = function() return m_improve end, Put = function(v) m_improve = v end },
-  { Key = "WORKED", Default = false, Get = function() return m_worked end, Put = function(v) m_worked = v end },
-}
-local m_fold = false -- the settings folded into one line (issue 71)
-local m_keeper = SDP_UI.Keeper({ Tab = "MULTI", Columns = COLUMNS, Weights = m_weights, Switches = SWITCHES,
-  Extra = { { Key = "FOLD", Default = false, Get = function() return m_fold end, Put = function(v) m_fold = v end },
-    SDP_UI.WonderSetting(m_wonders) },
-  Tiers = SDP_Tiers.Multi, GetTier = function() return m_tier end, PutTier = function(tier) m_tier = tier end })
 local UpdateFold, FitPage -- defined below
--- Values equal to another preset make it the current one (issue 89).
-local function Remember()
-  m_preset = m_keeper.Match(m_preset) or m_preset
-  m_keeper.Remember(m_preset)
-  UpdateFold()
-end
-function P.Restore()
-  local kept = m_keeper.Restore()
-  if kept ~= nil then m_preset = m_keeper.Match(kept.Preset) or kept.Preset end
-end
+local function Remember() m_kit.Remember() end
+function P.Restore() m_kit.Restore() end
 
 -- How a participant is called: its number (the name its pins get, see
 -- SDP_City.CityNumbers) and the city's name, or "Site n" for a planned city.
@@ -107,8 +84,7 @@ function P.CityLabel(city)
 end
 
 local function ClearResult()
-  local job = SDP_Task.Current()
-  if job ~= nil and job.Page == P.Name then SDP_Task.Cancel() end
+  m_kit.CancelTask()
   if m_result ~= nil then
     m_result = nil
     SDP_Preview.Clear()
@@ -285,7 +261,7 @@ function P.Request()
     end
   end
   return {
-    PlayerID = playerID, Tier = m_tier, Districts = shared.Must, Pool = shared.Pool, Count = shared.Target, Auto = shared.Auto, Target = true,
+    PlayerID = playerID, Tier = m_kit.Tier, Districts = shared.Must, Pool = shared.Pool, Count = shared.Target, Auto = shared.Auto, Target = true,
     Plans = plans, Pools = pools, Counts = counts, Autos = autos, Wonders = wonders, Sites = sites,
     WonderCities = wonderCities, Center = group.Center and group.Center.Key or nil,
     Off = SDP_UI.OffSet(m_shared.States), Offs = offs,
@@ -308,50 +284,15 @@ local function UpdateReplaceLabel()
   Controls.MultiReplaceLabel:SetText(Locale.Lookup("LOC_SDP_REPLACE_OWN_SHORT", #P.OwnPins()))
 end
 
-function P.SetReplace(on)
-  Controls.MultiReplaceCheck:SetCheck(on)
-  if m_replace ~= on then
-    m_replace = on
-    ClearResult()
-    Remember()
-    -- A city's own count starts from what it has, replaced pins left out;
-    -- a wonder whose pin is replaced can be chosen again (issue 154), and
-    -- whether there is something to plan follows it, result or not.
-    if m_planFor ~= "ALL" then
-      P.RefreshLists()
-    else
-      ShowWonders()
-      UpdateEstimate()
-    end
-  end
-end
-
--- Improvements with the districts (issue 227): the plan changes.
-function P.SetImprove(on)
-  Controls.MultiImproveCheck:SetCheck(on)
-  if m_improve ~= on then
-    m_improve = on
-    ClearResult()
-    Remember()
+-- With replace on, a city's own count starts from what it has, replaced
+-- pins left out; a wonder whose pin is replaced can be chosen again (issue
+-- 154), and whether there is something to plan follows it, result or not.
+local function ReplaceChanged()
+  if m_planFor ~= "ALL" then
+    P.RefreshLists()
+  else
+    ShowWonders()
     UpdateEstimate()
-  end
-end
-
-function P.SetWorked(on)
-  Controls.MultiWorkedCheck:SetCheck(on)
-  if m_worked ~= on then
-    m_worked = on
-    ClearResult()
-    Remember()
-  end
-end
-
-function P.SetRemind(on)
-  Controls.MultiRemindCheck:SetCheck(on)
-  if m_remind ~= on then
-    m_remind = on
-    ClearResult()
-    Remember()
   end
 end
 
@@ -393,7 +334,7 @@ UpdateEstimate = function()
     Controls.MultiEstimate:SetText("")
     return
   end
-  Controls.MultiEstimate:SetText(SDP_UI.EstimateText(Estimate(request, SDP_Tiers.Params(SDP_Tiers.Multi, m_tier))))
+  Controls.MultiEstimate:SetText(SDP_UI.EstimateText(Estimate(request, SDP_Tiers.Params(SDP_Tiers.Multi, m_kit.Tier))))
 end
 
 -- The first change to a city's list starts it as a copy of the shared one.
@@ -555,45 +496,6 @@ function P.DefaultCities()
   ChangeCities(function() m_existing, m_sites = {}, {} end)
 end
 
-function P.SetTier(tier)
-  if SDP_Tiers.Multi[tier] == nil then return end
-  if m_tier ~= tier then
-    m_tier = tier
-    ClearResult()
-    Remember()
-  end
-  Controls.MultiTierPull:GetButton():SetText(Locale.Lookup("LOC_SDP_TIER_" .. tier))
-  UpdateEstimate()
-end
-
-function P.SetSwap(on)
-  Controls.MultiSwapCheck:SetCheck(on)
-  if m_swap ~= on then
-    m_swap = on
-    ClearResult()
-    Remember()
-  end
-end
-
--- Tests: the land part on (weight 1 unless it is set) or off (0).
-function P.SetLand(on)
-  if on then
-    if m_weights.LAND == 0 then P.SetWeight("LAND", 1) end
-  else
-    P.SetWeight("LAND", 0)
-  end
-end
-
-function P.SetWeight(key, value)
-  value = math.max(0, math.min(SDP_UI.MAX_WEIGHT, value))
-  if m_weights[key] ~= value then
-    m_weights[key] = value
-    ClearResult()
-    Remember()
-  end
-  if m_weightViews[key] then m_weightViews[key]() end
-end
-
 -- ===========================================================================
 -- Lists
 -- ===========================================================================
@@ -670,44 +572,17 @@ function P.ShowSupply()
   m_view.Supply = lines
 end
 
--- The fold line (issue 71): the preset, then what is not as usual.
-UpdateFold = function()
+-- The fold line's parts (issue 71): what is not as usual.
+local function FoldParts()
   local parts = {}
   if m_weights.LAND == 0 then parts[#parts + 1] = Locale.Lookup("LOC_SDP_FOLD_LAND_OFF") end
   if not m_swap then parts[#parts + 1] = Locale.Lookup("LOC_SDP_FOLD_NO_SWAP") end
   if m_replace then parts[#parts + 1] = Locale.Lookup("LOC_SDP_FOLD_REPLACE") end
   local wonders = #WonderTypes()
   if wonders > 0 then parts[#parts + 1] = Locale.Lookup("LOC_SDP_FOLD_WONDERS", wonders) end
-  local shown = m_keeper.Match(m_preset)
-  SDP_UI.ShowFold(Controls.MultiFoldButton, Controls.MultiFoldText, Controls.MultiFoldAction, Controls.MultiSettingsScroll,
-    m_fold, SDP_UI.FoldSummary(shown, parts))
-  SDP_UI.ShowPreset(Controls.MultiPresetPull, shown, function(name) P.SetPreset(name) end, { Tips = true })
+  return parts
 end
-
--- A preset (issue 49), as on the single-city tab.
-function P.SetPreset(name)
-  if not m_keeper.Use(name) then return end
-  m_preset = name
-  ClearResult()
-  for _, view in pairs(m_weightViews) do view() end
-  Controls.MultiSwapCheck:SetCheck(m_swap)
-  Controls.MultiReplaceCheck:SetCheck(m_replace)
-  Controls.MultiRemindCheck:SetCheck(m_remind)
-  Controls.MultiImproveCheck:SetCheck(m_improve)
-  Controls.MultiWorkedCheck:SetCheck(m_worked)
-  Remember()
-  ShowHave()
-  UpdateEstimate()
-end
-
-function P.SetFold(on)
-  if m_fold ~= on then
-    m_fold = on
-    Remember()
-  end
-  UpdateFold()
-  FitPage()
-end
+UpdateFold = function() m_kit.UpdateFold() end
 
 -- One city chip: the selected look while it takes part; dimmed when the
 -- list is full and it cannot be switched on.
@@ -960,14 +835,9 @@ end
 function P.Refresh()
   P.Restore()
   P.RefreshLists()
-  m_weightViews = SDP_UI.BuildWeights(m_weightIM, Controls.MultiWeightStack, COLUMNS, m_weights, nil,
-    P.SetWeight, COLUMN_WIDTH)
-  SDP_UI.PopulateTierPull(Controls.MultiTierPull, m_tier, P.SetTier)
-  Controls.MultiSwapCheck:SetCheck(m_swap)
-  Controls.MultiReplaceCheck:SetCheck(m_replace)
-  Controls.MultiRemindCheck:SetCheck(m_remind)
-  Controls.MultiImproveCheck:SetCheck(m_improve)
-  Controls.MultiWorkedCheck:SetCheck(m_worked)
+  m_kit.BuildWeights()
+  m_kit.ShowTiers()
+  m_kit.ShowSwitches()
   UpdateFold()
   P.Render()
 end
@@ -1163,14 +1033,9 @@ function P.OnError(message)
 end
 
 function P.UpdateButtons()
-  local running = SDP_Task.IsRunning()
   local ok = m_result ~= nil and m_result.Ok
-  Controls.MultiSolveButton:SetDisabled(running or P.Request() == nil)
-  Controls.MultiContinueButton:SetDisabled(running or not ok or not m_result.Quality.CanContinue or m_result.Placed == true)
-  Controls.MultiContinueButton:SetHide(running)
-  Controls.MultiCancelButton:SetHide(not running)
-  Controls.MultiPlaceButton:SetDisabled(running or not ok or m_result.Placed == true)
-  Controls.MultiUndoButton:SetDisabled(running or not SDP_Pins.CanUndo())
+  m_kit.ShowButtons({ Solve = P.Request() ~= nil, Continue = ok and m_result.Quality.CanContinue and m_result.Placed ~= true,
+    Place = ok and m_result.Placed ~= true })
 end
 
 -- ===========================================================================
@@ -1180,10 +1045,10 @@ function P.Solve()
   if SDP_Task.IsRunning() then return false end
   local request = P.Request()
   if request == nil then return false end
-  local params = SDP_Tiers.Params(SDP_Tiers.Multi, m_tier)
+  local params = SDP_Tiers.Params(SDP_Tiers.Multi, m_kit.Tier)
   m_result, m_solution = nil, 1
   m_lookNext = true
-  P.SetFold(true) -- the results get the room (issue 71)
+  m_kit.SetFold(true) -- the results get the room (issue 71)
   SDP_Preview.Clear()
   return SDP_UI.StartTask(function() return SDP_Multi.SolveNow(request) end, Estimate(request, params),
     function(result) m_result, m_solution = result, 1 end, P)
@@ -1200,7 +1065,7 @@ function P.Continue()
 end
 
 function P.Place()
-  if SDP_Task.IsRunning() or m_result == nil or not m_result.Ok or m_result.Placed then return 0 end
+  if not SDP_PageKit.CanPlace(m_result) then return 0 end
   local solution = m_result.Solutions[m_solution]
   local byKey = CityByKey(solution)
   local entries = {}
@@ -1221,10 +1086,7 @@ function P.Place()
     end)) do entries[#entries + 1] = e end
   end
   -- The plan was made as if this mod's earlier pins were gone: remove them.
-  local placed = SDP_Pins.Place(Game.GetLocalPlayer(), entries,
-    { Replace = m_result.Session and m_result.Session.Request.IgnorePins })
-  m_result.Placed = true
-  SDP_Preview.Clear()
+  local placed = SDP_PageKit.Place(m_result, entries, m_result.Session and m_result.Session.Request.IgnorePins)
   UpdateReplaceLabel()
   ShowHave()
   SDP_UI.UpdateAllButtons()
@@ -1232,24 +1094,63 @@ function P.Place()
 end
 
 function P.Undo()
-  local last = SDP_Pins.LastBatch()
-  local removed = SDP_Pins.UndoLast()
-  if last ~= nil and last.Replaced and #last.Replaced > 0 then
-    ClearResult() -- the replaced pins are back: plan again
-  elseif m_result ~= nil and m_result.Ok then
-    m_result.Placed = false
-  end
+  local removed = SDP_PageKit.Undo(m_result, ClearResult) -- the replaced pins are back: plan again
   UpdateReplaceLabel()
   ShowHave()
   SDP_UI.UpdateAllButtons()
   return removed
 end
 
+-- ===========================================================================
+-- The settings every tab has (SDP_PageKit)
+-- ===========================================================================
+-- The weights, these switches and the tier, kept in the save (issue 57).
+local SWITCHES = {
+  { Key = "SWAP", Default = true, Check = Controls.MultiSwapCheck, Get = function() return m_swap end,
+    Put = function(v) m_swap = v end },
+  { Key = "REPLACE", Default = false, Check = Controls.MultiReplaceCheck, Get = function() return m_replace end,
+    Put = function(v) m_replace = v end, OnChange = function() ReplaceChanged() end },
+  { Key = "REMIND", Default = true, Check = Controls.MultiRemindCheck, Get = function() return m_remind end,
+    Put = function(v) m_remind = v end },
+  -- Improvements with the districts (issue 227): the plan changes.
+  { Key = "IMPROVE", Default = true, Check = Controls.MultiImproveCheck, Get = function() return m_improve end,
+    Put = function(v) m_improve = v end, OnChange = function() UpdateEstimate() end },
+  { Key = "WORKED", Default = false, Check = Controls.MultiWorkedCheck, Get = function() return m_worked end,
+    Put = function(v) m_worked = v end },
+}
+m_kit = SDP_PageKit.New({
+  Page = P, Tab = "MULTI", Columns = COLUMNS, Weights = m_weights, Switches = SWITCHES,
+  Extra = { SDP_UI.WonderSetting(m_wonders) }, Tiers = SDP_Tiers.Multi,
+  WeightRows = { { IM = m_weightIM, Stack = Controls.MultiWeightStack, Columns = COLUMNS } }, WeightWidth = COLUMN_WIDTH,
+  TierPull = Controls.MultiTierPull, PresetPull = Controls.MultiPresetPull, PresetTips = { Tips = true },
+  Fold = { Button = Controls.MultiFoldButton, Text = Controls.MultiFoldText, Action = Controls.MultiFoldAction,
+    Scroll = Controls.MultiSettingsScroll },
+  Buttons = { Solve = Controls.MultiSolveButton, Continue = Controls.MultiContinueButton, Cancel = Controls.MultiCancelButton,
+    Place = Controls.MultiPlaceButton, Undo = Controls.MultiUndoButton },
+  FoldParts = FoldParts, ClearResult = function() ClearResult() end, FitPage = function() FitPage() end,
+  Changed = function() UpdateEstimate() end,
+  AfterPreset = function()
+    ShowHave()
+    UpdateEstimate()
+  end,
+})
+P.SetWeight = m_kit.SetWeight
+P.SetLand = m_kit.SetLand
+P.SetTier = m_kit.SetTier
+P.SetPreset = m_kit.SetPreset
+P.SetFold = m_kit.SetFold
+P.SetSwap = function(on) m_kit.SetSwitch("SWAP", on) end
+P.SetReplace = function(on) m_kit.SetSwitch("REPLACE", on) end
+P.SetRemind = function(on) m_kit.SetSwitch("REMIND", on) end
+P.SetImprove = function(on) m_kit.SetSwitch("IMPROVE", on) end
+P.SetWorked = function(on) m_kit.SetSwitch("WORKED", on) end
+
 -- Tests drive the tab through these.
 function P.State()
   return {
-    Result = m_result, Solution = m_solution, Tier = m_tier, Land = m_weights.LAND > 0, Replace = m_replace, Remind = m_remind,
-    Swap = m_swap, Weights = m_weights, Preset = m_preset, Fold = m_fold, Improve = m_improve, Worked = m_worked,
+    Result = m_result, Solution = m_solution, Tier = m_kit.Tier, Land = m_weights.LAND > 0, Replace = m_replace,
+    Remind = m_remind, Swap = m_swap, Weights = m_weights, Preset = m_kit.Preset, Fold = m_kit.Fold, Improve = m_improve,
+    Worked = m_worked, WeightCells = m_kit.Cells,
     FoldText = Controls.MultiFoldText:GetText(), ResultHeight = Controls.MultiResultScroll:GetSizeY(),
     View = m_view, EstimateText = Controls.MultiEstimate:GetText(), QualityText = Controls.MultiQuality:GetText(),
     PlaceDisabled = Controls.MultiPlaceButton:IsDisabled(), ContinueDisabled = Controls.MultiContinueButton:IsDisabled(),
@@ -1262,16 +1163,6 @@ Controls.MultiCityAll:RegisterCallback(Mouse.eLClick, function() P.AllCities() e
 Controls.MultiCityClear:RegisterCallback(Mouse.eLClick, function() P.ClearCities() end)
 Controls.MultiCityDefault:RegisterCallback(Mouse.eLClick, function() P.DefaultCities() end)
 Controls.MultiPlanShared:RegisterCallback(Mouse.eLClick, function() P.UseShared() end)
-Controls.MultiSwapCheck:RegisterCheckHandler(function() P.SetSwap(Controls.MultiSwapCheck:IsChecked()) end)
-Controls.MultiReplaceCheck:RegisterCheckHandler(function() P.SetReplace(Controls.MultiReplaceCheck:IsChecked()) end)
-Controls.MultiRemindCheck:RegisterCheckHandler(function() P.SetRemind(Controls.MultiRemindCheck:IsChecked()) end)
-Controls.MultiImproveCheck:RegisterCheckHandler(function() P.SetImprove(Controls.MultiImproveCheck:IsChecked()) end)
-Controls.MultiWorkedCheck:RegisterCheckHandler(function() P.SetWorked(Controls.MultiWorkedCheck:IsChecked()) end)
 Controls.MultiCountLess:RegisterCallback(Mouse.eLClick, function() P.SetCount(ListOf(EditedList()).Target - 1) end)
 Controls.MultiCountMore:RegisterCallback(Mouse.eLClick, function() P.SetCount(ListOf(EditedList()).Target + 1) end)
-Controls.MultiSolveButton:RegisterCallback(Mouse.eLClick, function() P.Solve() end)
-Controls.MultiContinueButton:RegisterCallback(Mouse.eLClick, function() P.Continue() end)
-Controls.MultiCancelButton:RegisterCallback(Mouse.eLClick, function() SDP_Task.Cancel() end)
-Controls.MultiPlaceButton:RegisterCallback(Mouse.eLClick, function() P.Place() end)
-Controls.MultiUndoButton:RegisterCallback(Mouse.eLClick, function() P.Undo() end)
-Controls.MultiFoldButton:RegisterCallback(Mouse.eLClick, function() P.SetFold(not m_fold) end)
+

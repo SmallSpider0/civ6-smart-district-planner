@@ -61,8 +61,10 @@
       <File>Scripts/SDP_Land.lua</File>
       <File>Scripts/SDP_Multi.lua</File>
       <File>Scripts/SDP_Overlay.lua</File>
+      <File>Scripts/SDP_PageKit.lua</File>
       <File>Scripts/SDP_PageMulti.lua</File>
       <File>Scripts/SDP_PageSites.lua</File>
+      <File>Scripts/SDP_PageSingle.lua</File>
       <File>Scripts/SDP_Pins.lua</File>
       <File>Scripts/SDP_Preview.lua</File>
       <File>Scripts/SDP_Settings.lua</File>
@@ -95,8 +97,10 @@
     <File>Scripts/SDP_Land.lua</File>
     <File>Scripts/SDP_Multi.lua</File>
     <File>Scripts/SDP_Overlay.lua</File>
+    <File>Scripts/SDP_PageKit.lua</File>
     <File>Scripts/SDP_PageMulti.lua</File>
     <File>Scripts/SDP_PageSites.lua</File>
+    <File>Scripts/SDP_PageSingle.lua</File>
     <File>Scripts/SDP_Pins.lua</File>
     <File>Scripts/SDP_Preview.lua</File>
     <File>Scripts/SDP_Settings.lua</File>
