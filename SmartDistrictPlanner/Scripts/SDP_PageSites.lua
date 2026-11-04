@@ -81,11 +81,9 @@ local function D() return m_dense and m_dd or m_d end
 -- rest at SDP_Sites.DefaultState), and how many that take population.
 local m_states = {}
 local m_count = SDP_Sites.DEFAULT_COUNT
-local m_preset = "BALANCED"
 local m_weights = { DISTANCE = SDP_Sites.DEFAULT_DISTANCE }
 for key, value in pairs(SDP_Sites.PRESETS.BALANCED) do m_weights[key] = value end
-local m_views = {}
-local m_tier = SDP_Tiers.DEFAULT
+local m_kit -- SDP_PageKit: weights, tier, preset, fold (made at the end)
 local m_result = nil
 local m_solution = 1
 local m_view = { Districts = {}, Solutions = {}, Results = {} }
@@ -114,57 +112,14 @@ end
 local ALL_COLUMNS = {}
 for _, column in ipairs(COLUMNS_A) do ALL_COLUMNS[#ALL_COLUMNS + 1] = column end
 for _, column in ipairs(COLUMNS_B) do ALL_COLUMNS[#ALL_COLUMNS + 1] = column end
-local m_fold = false -- the preset and weights folded into one line (issue 71)
-local m_keeper = SDP_UI.Keeper({ Tab = "SITES", Columns = ALL_COLUMNS, Weights = m_weights, Tiers = SDP_Tiers.Sites,
-  Extra = { { Key = "FOLD", Default = false, Get = function() return m_fold end, Put = function(v) m_fold = v end },
-    { Key = "K", Kind = "number", Min = 1, Max = SDP_SiteSolver.DENSE_MAX_K, Default = DEFAULT_K,
-      Get = function() return m_k end, Put = function(v) m_k = math.floor(v) end },
-    { Key = "D", Kind = "number", Min = MIN_D, Max = MAX_D, Default = DEFAULT_D,
-      Get = function() return m_d end, Put = function(v) m_d = math.floor(v) end },
-    { Key = "COUNT", Kind = "number", Min = 0, Max = SDP_Sites.MAX_COUNT, Default = SDP_Sites.DEFAULT_COUNT,
-      Get = function() return m_count end, Put = function(v) m_count = math.floor(v) end },
-    { Key = "DISTRICTS", Kind = "list", Pattern = "^[%w_]+:[MPO]$", Default = "", Get = KeptStates, Put = PutStates },
-    { Key = "DENSE", Default = false, Get = function() return m_dense end, Put = function(v) m_dense = v end },
-    { Key = "DD", Kind = "number", Min = MIN_D, Max = MAX_D, Default = DEFAULT_D,
-      Get = function() return m_dd end, Put = function(v) m_dd = math.floor(v) end } },
-  GetTier = function() return m_tier end, PutTier = function(tier) m_tier = tier end,
-  Presets = SDP_Sites.PRESETS, Order = SDP_Sites.PRESET_ORDER })
-
--- The fold line (issue 71) and the pulldown: the preset the weights equal,
--- "Custom" when none (issue 89).
-local function UpdateFold()
-  local shown = m_keeper.Match(m_preset)
-  SDP_UI.ShowFold(Controls.SitesFoldButton, Controls.SitesFoldText, Controls.SitesFoldAction, Controls.SitesSettingsScroll,
-    m_fold, SDP_UI.FoldSummary(shown, {}))
-  SDP_UI.ShowPreset(Controls.SitesPresetPull, shown, function(name) P.SetPreset(name) end,
-    { Order = SDP_Sites.PRESET_ORDER, Tips = "LOC_SDP_SITES_PRESET_", CustomTip = "LOC_SDP_SITES_PRESET_CUSTOM_TOOLTIP",
-      TipArgs = SDP_Sites.PresetTipArgs })
-end
 
 function P.FitPage()
   SDP_UI.FitResults(Controls.SitesBody, Controls.SitesPage, Controls.SitesResultScroll,
     Controls.SitesSettingsScroll, Controls.SitesSettingsStack)
 end
 
--- Weights equal to another preset make it the current one (issue 89).
-local function Remember()
-  m_preset = m_keeper.Match(m_preset) or m_preset
-  m_keeper.Remember(m_preset)
-  UpdateFold()
-end
-
-function P.SetFold(on)
-  if m_fold ~= on then
-    m_fold = on
-    Remember()
-  end
-  UpdateFold()
-  P.FitPage()
-end
-function P.Restore()
-  local kept = m_keeper.Restore()
-  if kept ~= nil then m_preset = m_keeper.Match(kept.Preset) or kept.Preset end
-end
+local function Remember() m_kit.Remember() end
+function P.Restore() m_kit.Restore() end
 
 local function Ticked(s)
   local flipped = m_flipped[s] == true
@@ -184,8 +139,7 @@ local function TickedSet()
 end
 
 local function ClearResult()
-  local job = SDP_Task.Current()
-  if job ~= nil and job.Page == P.Name then SDP_Task.Cancel() end
+  m_kit.CancelTask()
   m_flipped = {}
   if m_result ~= nil then
     m_result = nil
@@ -232,7 +186,7 @@ function P.Request()
   local weights = {}
   for key, value in pairs(m_weights) do weights[key] = value end
   local list = List()
-  return { PlayerID = Game.GetLocalPlayer(), Tier = m_tier, K = K(), D = D(), Districts = list.Must, Pool = list.Pool,
+  return { PlayerID = Game.GetLocalPlayer(), Tier = m_kit.Tier, K = K(), D = D(), Districts = list.Must, Pool = list.Pool,
     Pick = list.Pick, Weights = weights, Distance = m_weights.DISTANCE, Dense = m_dense }
 end
 
@@ -246,7 +200,7 @@ local function Estimate(request, params, continue)
 end
 
 local function UpdateEstimate()
-  local params = SDP_Tiers.Params(SDP_Tiers.Sites, m_tier)
+  local params = SDP_Tiers.Params(SDP_Tiers.Sites, m_kit.Tier)
   Controls.SitesEstimate:SetText(SDP_UI.EstimateText(Estimate(P.Request(), params, false)))
 end
 
@@ -311,26 +265,6 @@ function P.SetDistance(d)
   ShowSteppers()
 end
 
-function P.SetWeight(key, value)
-  value = math.max(0, math.min(SDP_UI.MAX_WEIGHT, value))
-  if m_weights[key] ~= value then
-    m_weights[key] = value
-    ClearResult()
-    Remember()
-  end
-  if m_views[key] then m_views[key]() end
-end
-
--- A preset: every weight, the distance too (issue 89), as on the other tabs;
--- the number of new cities, the distance between them and the tier stay.
-function P.SetPreset(name)
-  if not m_keeper.Use(name) then return end
-  m_preset = name
-  ClearResult()
-  for _, view in pairs(m_views) do view() end
-  Remember()
-end
-
 local ShowCells -- defined below
 
 -- Set a district's state (MUST, POOL, OFF); its default is not kept.
@@ -355,17 +289,6 @@ function P.SetSelected(districtType, on)
   end
 end
 
-function P.SetTier(tier)
-  if SDP_Tiers.Sites[tier] == nil then return end
-  if m_tier ~= tier then
-    m_tier = tier
-    ClearResult()
-    Remember()
-  end
-  Controls.SitesTierPull:GetButton():SetText(Locale.Lookup("LOC_SDP_TIER_" .. tier))
-  UpdateEstimate()
-end
-
 -- The two district grids (SDP_UI.BuildCells, as on the other tabs).
 ShowCells = function()
   local states = States()
@@ -384,20 +307,12 @@ end
 function P.Refresh()
   P.Restore()
   ShowSteppers()
-  local a, cellsA = SDP_UI.BuildWeights(m_weightIM, Controls.SitesWeightStack, COLUMNS_A, m_weights, nil, P.SetWeight,
-    WEIGHT_WIDTH)
-  local b, cellsB = SDP_UI.BuildWeights(m_weightIM2, Controls.SitesWeightStack2, COLUMNS_B, m_weights, nil, P.SetWeight,
-    WEIGHT_WIDTH)
-  m_views = {}
-  for key, view in pairs(a) do m_views[key] = view end
-  for key, view in pairs(b) do m_views[key] = view end
-  m_view.WeightCells = {} -- the weight columns' controls, for tests
-  for _, cell in ipairs(cellsA) do m_view.WeightCells[#m_view.WeightCells + 1] = cell end
-  for _, cell in ipairs(cellsB) do m_view.WeightCells[#m_view.WeightCells + 1] = cell end
+  m_kit.BuildWeights()
+  m_view.WeightCells = m_kit.Cells -- the weight columns' controls, for tests
   ShowCells()
-  SDP_UI.PopulateTierPull(Controls.SitesTierPull, m_tier, P.SetTier)
+  m_kit.ShowTiers()
   UpdateEstimate()
-  UpdateFold()
+  m_kit.UpdateFold()
   P.Render()
 end
 
@@ -656,15 +571,11 @@ end
 function P.UpdateButtons()
   local running = SDP_Task.IsRunning()
   local ok = m_result ~= nil and m_result.Ok
-  Controls.SitesSolveButton:SetDisabled(running)
-  Controls.SitesContinueButton:SetDisabled(running or not ok or not m_result.Quality.CanContinue or m_result.Placed == true)
-  Controls.SitesContinueButton:SetHide(running)
-  Controls.SitesCancelButton:SetHide(not running)
   local none = ok and next(TickedSet()) == nil
-  Controls.SitesPlaceButton:SetDisabled(running or not ok or m_result.Placed == true or none)
+  m_kit.ShowButtons({ Solve = true, Continue = ok and m_result.Quality.CanContinue and m_result.Placed ~= true,
+    Place = ok and m_result.Placed ~= true and not none })
   Controls.SitesAllButton:SetHide(not ok)
   Controls.SitesAllButton:SetDisabled(running or not ok or m_result.Placed == true)
-  Controls.SitesUndoButton:SetDisabled(running or not SDP_Pins.CanUndo())
 end
 
 -- ===========================================================================
@@ -673,10 +584,10 @@ end
 function P.Solve()
   if SDP_Task.IsRunning() then return false end
   local request = P.Request()
-  local params = SDP_Tiers.Params(SDP_Tiers.Sites, m_tier)
+  local params = SDP_Tiers.Params(SDP_Tiers.Sites, m_kit.Tier)
   m_result, m_solution, m_flipped = nil, 1, {}
   m_lookNext = true
-  P.SetFold(true) -- the results get the room (issue 71)
+  m_kit.SetFold(true) -- the results get the room (issue 71)
   SDP_Preview.Clear()
   return SDP_UI.StartTask(function() return SDP_SiteSolver.SolveNow(request) end, Estimate(request, params, false),
     function(result)
@@ -704,7 +615,7 @@ end
 -- the site's number: step 2 (the several-cities tab) plans them, and the
 -- district pins it places around a site carry the same number.
 function P.Place()
-  if SDP_Task.IsRunning() or m_result == nil or not m_result.Ok or m_result.Placed then return 0 end
+  if not SDP_PageKit.CanPlace(m_result) then return 0 end
   local solution = m_result.Solutions[m_solution]
   local numbers = SiteNumbers(solution)
   local entries = {}
@@ -714,9 +625,7 @@ function P.Place()
     end
   end
   if #entries == 0 then return 0 end
-  local placed = SDP_Pins.Place(Game.GetLocalPlayer(), entries)
-  m_result.Placed = true
-  SDP_Preview.Clear()
+  local placed = SDP_PageKit.Place(m_result, entries, nil)
   SDP_UI.UpdateAllButtons()
   return placed
 end
@@ -744,17 +653,16 @@ function P.TickAll()
 end
 
 function P.Undo()
-  local removed = SDP_Pins.UndoLast()
-  if m_result ~= nil and m_result.Ok then m_result.Placed = false end
+  local removed = SDP_PageKit.Undo(m_result, nil)
   SDP_UI.UpdateAllButtons()
   return removed
 end
 
 function P.State()
   return {
-    Result = m_result, Solution = m_solution, Site = m_site, K = K(), D = D(), Tier = m_tier, Weights = m_weights, View = m_view,
+    Result = m_result, Solution = m_solution, Site = m_site, K = K(), D = D(), Tier = m_kit.Tier, Weights = m_weights, View = m_view,
     Dense = m_dense, Ticked = TickedSet(), AllText = Controls.SitesAllButton:GetText(),
-    DistrictCount = List().Count, States = States(), Preset = m_preset, Fold = m_fold, FoldText = Controls.SitesFoldText:GetText(),
+    DistrictCount = List().Count, States = States(), Preset = m_kit.Preset, Fold = m_kit.Fold, FoldText = Controls.SitesFoldText:GetText(),
     EstimateText = Controls.SitesEstimate:GetText(), PlaceDisabled = Controls.SitesPlaceButton:IsDisabled(),
   }
 end
@@ -767,9 +675,43 @@ Controls.SitesDenseCheck:RegisterCheckHandler(function() P.SetDense(Controls.Sit
 Controls.SitesAllButton:RegisterCallback(Mouse.eLClick, function() P.TickAll() end)
 Controls.SitesPlanLess:RegisterCallback(Mouse.eLClick, function() P.SetDistrictCount(List().Count - 1) end)
 Controls.SitesPlanMore:RegisterCallback(Mouse.eLClick, function() P.SetDistrictCount(List().Count + 1) end)
-Controls.SitesSolveButton:RegisterCallback(Mouse.eLClick, function() P.Solve() end)
-Controls.SitesContinueButton:RegisterCallback(Mouse.eLClick, function() P.Continue() end)
-Controls.SitesCancelButton:RegisterCallback(Mouse.eLClick, function() SDP_Task.Cancel() end)
-Controls.SitesPlaceButton:RegisterCallback(Mouse.eLClick, function() P.Place() end)
-Controls.SitesUndoButton:RegisterCallback(Mouse.eLClick, function() P.Undo() end)
-Controls.SitesFoldButton:RegisterCallback(Mouse.eLClick, function() P.SetFold(not m_fold) end)
+
+-- ===========================================================================
+-- The settings every tab has (SDP_PageKit)
+-- ===========================================================================
+-- The preset, the weights and the tier, kept in the save (issue 57); the
+-- number of new cities and the distance too (issue 84); the district states
+-- and the district count (issue 90); dense packing and its distance (issue 87).
+m_kit = SDP_PageKit.New({
+  Page = P, Tab = "SITES", Columns = ALL_COLUMNS, Weights = m_weights, Tiers = SDP_Tiers.Sites,
+  Presets = SDP_Sites.PRESETS, Order = SDP_Sites.PRESET_ORDER, Preset = "BALANCED",
+  Extra = {
+    { Key = "K", Kind = "number", Min = 1, Max = SDP_SiteSolver.DENSE_MAX_K, Default = DEFAULT_K,
+      Get = function() return m_k end, Put = function(v) m_k = math.floor(v) end },
+    { Key = "D", Kind = "number", Min = MIN_D, Max = MAX_D, Default = DEFAULT_D,
+      Get = function() return m_d end, Put = function(v) m_d = math.floor(v) end },
+    { Key = "COUNT", Kind = "number", Min = 0, Max = SDP_Sites.MAX_COUNT, Default = SDP_Sites.DEFAULT_COUNT,
+      Get = function() return m_count end, Put = function(v) m_count = math.floor(v) end },
+    { Key = "DISTRICTS", Kind = "list", Pattern = "^[%w_]+:[MPO]$", Default = "", Get = KeptStates, Put = PutStates },
+    { Key = "DENSE", Default = false, Get = function() return m_dense end, Put = function(v) m_dense = v end },
+    { Key = "DD", Kind = "number", Min = MIN_D, Max = MAX_D, Default = DEFAULT_D,
+      Get = function() return m_dd end, Put = function(v) m_dd = math.floor(v) end } },
+  WeightRows = { { IM = m_weightIM, Stack = Controls.SitesWeightStack, Columns = COLUMNS_A },
+    { IM = m_weightIM2, Stack = Controls.SitesWeightStack2, Columns = COLUMNS_B } }, WeightWidth = WEIGHT_WIDTH,
+  TierPull = Controls.SitesTierPull, PresetPull = Controls.SitesPresetPull,
+  PresetTips = { Order = SDP_Sites.PRESET_ORDER, Tips = "LOC_SDP_SITES_PRESET_", CustomTip = "LOC_SDP_SITES_PRESET_CUSTOM_TOOLTIP",
+    TipArgs = SDP_Sites.PresetTipArgs },
+  Fold = { Button = Controls.SitesFoldButton, Text = Controls.SitesFoldText, Action = Controls.SitesFoldAction,
+    Scroll = Controls.SitesSettingsScroll },
+  Buttons = { Solve = Controls.SitesSolveButton, Continue = Controls.SitesContinueButton, Cancel = Controls.SitesCancelButton,
+    Place = Controls.SitesPlaceButton, Undo = Controls.SitesUndoButton },
+  ClearResult = function() ClearResult() end, FitPage = function() P.FitPage() end,
+  Changed = function() UpdateEstimate() end,
+})
+-- A preset sets every weight, the distance cost too (issue 89), as on the
+-- other tabs; the number of new cities, the distance between them and the
+-- tier stay.
+P.SetWeight = m_kit.SetWeight
+P.SetTier = m_kit.SetTier
+P.SetPreset = m_kit.SetPreset
+P.SetFold = m_kit.SetFold

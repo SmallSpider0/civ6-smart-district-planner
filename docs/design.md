@@ -6,7 +6,9 @@
 
 ```
 SDP_Panel (UI/SDP_Panel.lua，InGame 上下文，Lua 状态名 SDP_Panel)
- ├─ 启动栏按钮注入、弹窗队列、面板控件、测试钩子
+ ├─ 启动栏按钮注入、弹窗队列、窗口与页签、分帧计算、各页签共用的显示函数（SDP_UI）、测试钩子
+ ├─ 三个页签：SDP_PageSingle（单城）、SDP_PageSites（选城址）、SDP_PageMulti（多城）
+ │   └─ SDP_PageKit  三个页签共用的权重、档位、预设、折叠行、存进存档的开关、求解 / 继续 / 打钉 / 撤销按钮（#251）
  ├─ SDP_Solver   单城求解（SDP_Search：穷举 / 模型集束搜索 → 精评 → 局部搜索 → 扰动重建；候选池时先挑组合）
  ├─ SDP_Multi    多城联合（同一个 SDP_Search；可选的地块部分 SDP_Land、覆盖项 SDP_Coverage；
  │                依赖魅力的区域另有住房与魅力项 SDP_Appeal）

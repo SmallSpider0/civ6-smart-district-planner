@@ -70,7 +70,7 @@
 --   variant ..._ASMULTI (anywhere)   single: solved as SDP_Multi with only
 --                                    this city, the request the single-city
 --                                    tab sends when wonders are ticked
---                                    (SDP_Panel's WonderRequest), also
+--                                    (SDP_PageSingle's WonderRequest), also
 --                                    without wonders (issue 250)
 -- Every run records stats.sdpUnits, the SDP_Tiers work units the solver
 -- ticked (SDP_Task.Tick), and stats.sdpEstimate, the panel's estimate of
@@ -348,7 +348,7 @@ function CmpAdapters.sdpSolve(request, variant, stats, o)
     stats.method = "sites"
   elseif scn.kind == "single" and (#(request.wonders or {}) > 0 or asMulti) then
     -- Wonders with the districts: the single-city tab solves this city as
-    -- SDP_Multi with only this city (SDP_Panel's WonderRequest). "_ASMULTI"
+    -- SDP_Multi with only this city (SDP_PageSingle's WonderRequest). "_ASMULTI"
     -- also sends the city's own list as Plans, as WonderRequest does.
     local id = request.target:GetID()
     local r = SDP_Multi.Solve({ PlayerID = 0, Tier = variant, Districts = request.districts, Wonders = request.wonders,

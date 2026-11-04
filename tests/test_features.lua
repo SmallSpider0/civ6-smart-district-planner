@@ -8,6 +8,26 @@
 -- (game.py newgame --capital --reveal).
 local test, T = ...
 
+-- The tacks PlacePins makes for solution s: its districts, their camps and
+-- improvements (issue 227), the worked plots' improvements and, with
+-- reminders on, the reminder pins. One per plot: SDP_Pins skips a plot that
+-- already has a tack (a lumber mill's tack stands on the woods a reminder is
+-- about, and keeps them).
+local function Tacks(s, remind)
+  local seen, n = {}, 0
+  local function Add(e)
+    if e ~= nil and not seen[e.X .. "," .. e.Y] then seen[e.X .. "," .. e.Y] = true; n = n + 1 end
+  end
+  for _, p in ipairs(s.Plan) do
+    Add(p)
+    Add(p.Support)
+    for _, e in ipairs(p.Improvements or {}) do Add(e) end
+  end
+  for _, e in ipairs(s.Worked or {}) do Add(e) end
+  if remind then for _, r in ipairs(s.Remind or {}) do Add(r) end end
+  return n
+end
+
 local pid = Game.GetLocalPlayer()
 
 local function Capital()
@@ -111,7 +131,7 @@ test("single-city tab: a wonder planned with the districts and pinned with its i
       T.ok(listed, "the wonder is neither planned nor listed as unplaced")
       return
     end
-    T.eq(SDP_Panel.PlacePins(), #result.Plan, "pins")
+    T.eq(SDP_Panel.PlacePins(), Tacks(result, SDP_Panel.State().Remind), "pins")
     local p = planned[wonder]
     local stored = GetMapPinSubject(pid, p.X, p.Y)
     T.ok(stored ~= nil and stored.Key == wonder, "DMT knows the wonder pin")
@@ -225,7 +245,7 @@ test("replace plans a wonder again when its only pin is one being replaced (issu
     end
     local before, layout = Items(first.Plan)
     if before[wonder] == nil then T.skip(wonder .. " has no legal plot near this capital") end
-    T.eq(SDP_Panel.PlacePins(), #first.Plan, "placed")
+    T.eq(SDP_Panel.PlacePins(), Tacks(first, SDP_Panel.State().Remind), "placed")
     T.same(SDP_Panel.State().Wonders, {}, "its pin is there: not planned again without replace")
 
     SDP_Panel.SetReplace(true)
@@ -242,7 +262,7 @@ test("replace plans a wonder again when its only pin is one being replaced (issu
     end
     local t, wd = before[theater], before[wonder]
     if t ~= nil and Map.GetPlotDistance(t.X, t.Y, wd.X, wd.Y) == 1 then print("the theater stands next to " .. wonder) end
-    T.eq(SDP_Panel.PlacePins(), #again.Plan, "placed over the earlier pins")
+    T.eq(SDP_Panel.PlacePins(), Tacks(again, SDP_Panel.State().Remind), "placed over the earlier pins")
     local subject = GetMapPinSubject(pid, after[wonder].X, after[wonder].Y)
     T.ok(subject ~= nil and subject.Key == wonder, "the wonder pin is there after replacing")
   end)

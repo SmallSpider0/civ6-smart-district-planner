@@ -9,6 +9,26 @@
 -- Needs a capital: game.py newgame --capital.
 local test, T = ...
 
+-- The tacks PlacePins makes for solution s: its districts, their camps and
+-- improvements (issue 227), the worked plots' improvements and, with
+-- reminders on, the reminder pins. One per plot: SDP_Pins skips a plot that
+-- already has a tack (a lumber mill's tack stands on the woods a reminder is
+-- about, and keeps them).
+local function Tacks(s, remind)
+  local seen, n = {}, 0
+  local function Add(e)
+    if e ~= nil and not seen[e.X .. "," .. e.Y] then seen[e.X .. "," .. e.Y] = true; n = n + 1 end
+  end
+  for _, p in ipairs(s.Plan) do
+    Add(p)
+    Add(p.Support)
+    for _, e in ipairs(p.Improvements or {}) do Add(e) end
+  end
+  for _, e in ipairs(s.Worked or {}) do Add(e) end
+  if remind then for _, r in ipairs(s.Remind or {}) do Add(r) end end
+  return n
+end
+
 local pid = Game.GetLocalPlayer()
 local cfg = PlayerConfigurations[pid]
 local TEMPLE = "BUILDING_TEMPLE_ARTEMIS"
@@ -102,7 +122,7 @@ test("single-city tab: the camp's row, and its tack placed and undone with the t
     T.ok(row ~= nil, "a result row for the camp")
     T.ok(row.Name:find(Locale.Lookup(GameInfo.Improvements[improvement].Name), 1, true) ~= nil, "named with the game's name")
     local placed = SDP_Panel.PlacePins()
-    T.eq(placed, #result.Plan + 1, "the plan's tacks and the camp's")
+    T.eq(placed, Tacks(result, SDP_Panel.State().Remind), "the plan's tacks and the camp's")
     local number = tostring(SDP_City.CityNumbers(pid)[city:GetID()])
     local pin = PinAt(s.X, s.Y)
     T.ok(pin ~= nil, "the camp's tack")

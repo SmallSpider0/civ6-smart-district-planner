@@ -5,6 +5,26 @@
 -- Needs a city: run tests/fixtures/found_capital.lua first on a fresh game.
 local test, T = ...
 
+-- The tacks PlacePins makes for solution s: its districts, their camps and
+-- improvements (issue 227), the worked plots' improvements and, with
+-- reminders on, the reminder pins. One per plot: SDP_Pins skips a plot that
+-- already has a tack (a lumber mill's tack stands on the woods a reminder is
+-- about, and keeps them).
+local function Tacks(s, remind)
+  local seen, n = {}, 0
+  local function Add(e)
+    if e ~= nil and not seen[e.X .. "," .. e.Y] then seen[e.X .. "," .. e.Y] = true; n = n + 1 end
+  end
+  for _, p in ipairs(s.Plan) do
+    Add(p)
+    Add(p.Support)
+    for _, e in ipairs(p.Improvements or {}) do Add(e) end
+  end
+  for _, e in ipairs(s.Worked or {}) do Add(e) end
+  if remind then for _, r in ipairs(s.Remind or {}) do Add(r) end end
+  return n
+end
+
 local pid = Game.GetLocalPlayer()
 local cfg = PlayerConfigurations[pid]
 
@@ -48,7 +68,7 @@ end
 test("placed tacks carry district icons and DMT shows the planned values", function()
   local ok, err = pcall(function()
     local result = SolveFromPanel({ Resolve("DISTRICT_CAMPUS"), Resolve("DISTRICT_HOLY_SITE"), Resolve("DISTRICT_THEATER") })
-    T.eq(SDP_Panel.PlacePins(), #result.Plan, "pins placed")
+    T.eq(SDP_Panel.PlacePins(), Tacks(result, SDP_Panel.State().Remind), "pins placed")
     T.eq(SDP_Panel.State().PlaceDisabled, true, "place still enabled after placing")
     T.eq(SDP_Panel.State().UndoDisabled, false, "undo disabled after placing")
     for _, p in ipairs(result.Plan) do
