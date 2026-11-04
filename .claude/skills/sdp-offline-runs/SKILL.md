@@ -34,7 +34,7 @@ python3 -I tools/remote.py wait NAME --fetch logs/remote/NAME.jsonl     # in the
 
 - Slots default to the command's `-j` (all slots without one); ask for what the job needs, not the whole machine. Names are unique across sessions: prefix them with your topic.
 - Runs whose seconds get reported: `--exclusive` (waits for an empty machine and keeps it), and say which machine.
-- `wait` ends when the job ends: that notification is when to carry on. Results there equal this machine's except timing fields.
+- `wait` ends when the job ends: that notification is when to carry on. Put one wait in the background per job, not several short ones; a job of a few minutes is waited for in the foreground (docs/maintaining.md §4 item 2). Results there equal this machine's except timing fields.
 
 ## Afterwards
 

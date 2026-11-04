@@ -18,7 +18,8 @@ Work (OUT/work/*.json), from git, gh and the shared night queue:
     `auto`, branch and PR, who has to answer);
   - night: the shared night queue;
   - workshop: the Steam Workshop posts on the watch's held list (tools/watch_issues.py),
-    not yet handled, and when the watch reads the Workshop next;
+    not yet handled, when the watch reads the Workshop next, and the item's numbers
+    (subscribers, visitors, favorites, collections, rating) with their change in a day;
   - releases: GitHub's last releases, each summarised from its notes.
 Hand-written (MANUAL, collections decisions/* and jobs/*): only the fields in
 FIELDS; releases and milestones are never written by hand. The page (page.html next
@@ -637,8 +638,24 @@ def workshop(now, held=None, state=None, st=None):
             ws = json.load(fh).get("workshop") or {}
     except (OSError, ValueError):
         ws = {}
-    return {"count": len(posts), "items": posts[:WORKSHOP_SHOWN],
-            "next": hm(ws["next"]) if ws.get("next") else "", "late": bool(ws.get("next")) and now - ws["next"] > 1800}
+    out = {"count": len(posts), "items": posts[:WORKSHOP_SHOWN],
+           "next": hm(ws["next"]) if ws.get("next") else "", "late": bool(ws.get("next")) and now - ws["next"] > 1800}
+    if ws.get("stats") or ws.get("failed"):
+        out["stats"] = workshop_stats(ws)
+    return out
+
+
+def workshop_stats(ws):
+    """The item's numbers as the watch last read them (tools/watch_workshop.py record), with the
+    change against a reading about a day before: {values, at, change, base, failed}. failed is
+    the time of a later read that failed ("" when the last read worked)."""
+    import watch_workshop
+    st = ws.get("stats") or {}
+    base, diff = watch_workshop.change(st) if st.get("values") else (None, {})
+    failed = ws.get("failed") or 0
+    return {"values": {k: (st.get("values") or {}).get(k) for k in watch_workshop.STATS},
+            "at": hm(st["at"]) if st.get("at") else "", "change": diff, "base": hm(base) if base else "",
+            "failed": hm(failed) if failed and failed > st.get("at", 0) else ""}
 
 
 def release_summary(body):

@@ -28,7 +28,7 @@
 | `sdplock.py` | 并行会话共用资源：游戏锁、本机重活（一次一个、限 worker、开游戏时暂停）、夜间队列、一条命令看本机和第二台机器 | 0 成功；4 被别人占着 |
 | `sdpsched.py` | 第二台机器上所有会话共用的任务队列（`remote.py` 拷过去调用，本机不直接用） | 任务的退出码 |
 | `preflight_night.py` | 仅 macOS 有用：碰一遍夜里要用的文件夹，让隐私弹窗在人还在时出现 | 0 都能访问；1 有文件夹出问题 |
-| `pr_wait.py` | 一批 PR 一个后台等待：全部合并或有一个要人处理时才退出；只是两边各加了行的冲突自己并入 `main` 接着等；`--codex` 的 PR 审完没意见或没审成时开自动合并 | 0 全部合并；1 有要处理的；2 没有这个 PR |
+| `pr_wait.py` | 一批 PR 一个后台等待：全部合并或有一个要人处理时才退出（`--list` 读等待名单，有一个合并就退出，`add N` 往名单里加）；只是两边各加了行的冲突自己并入 `main` 接着等；`--codex` 的 PR 审完没意见或没审成时开自动合并 | 0 全部合并；1 有要处理的；2 没有这个 PR |
 | `watch_issues.py`、`watch_workshop.py` | Issue 监听：新 Issue 和评论（只有带 `auto` 标签的叫醒代理），外加创意工坊的评论区和讨论区（只记进待看列表） | 0 有新的或 `--once`；2 `--mine` 的地址不对 |
 | `worktree.py` | 新建能直接用的工作树（接好依赖和参考源码的链接）、列出与清理已合并的 | 0 成功 |
 | `status/sync.py`、`status/watch.py` | 维护者的状态页：从调度记录、git、GitHub、夜间队列和几条手写说明生成数据并推送；后台循环 | 见下文 |
@@ -555,7 +555,7 @@ python3 -I tools/preflight_night.py   # 每个文件夹一行 ok / PROBLEM / mis
 
 ```bash
 python3 -I tools/codex_review.py request 125              # 在 PR 下评论 @codex review（并记进 watch_issues 的 --mine）
-python3 -I tools/codex_review.py wait 125                 # 后台跑：审完退出；0 没有意见，1 有没处理的意见（列出），3 没审成：超时（默认 30 分钟）或 Codex 报审查失败（如用量到了上限）
+python3 -I tools/codex_review.py wait 125                 # 单独等一个审查（值守和交 PR 都不用它，用 pr_wait.py）：审完退出；0 没有意见，1 有没处理的意见（列出），3 没审成：超时（默认 30 分钟）或 Codex 报审查失败（如用量到了上限）
 python3 -I tools/codex_review.py findings 125             # 列出 Codex 没解决的审查意见（线程 ID、文件:行、链接、内容）
 python3 -I tools/codex_review.py reply 线程ID "已修，见 abc1234"   # 回复一条并标为已解决
 ```
@@ -570,12 +570,18 @@ python3 -I tools/codex_review.py reply 线程ID "已修，见 abc1234"   # 回�
 python3 -I tools/pr_wait.py 207 208 --codex 209 210     # 后台跑：等 207、208 合并；209、210 先等 Codex 审完，再开自动合并、等合并
 python3 -I tools/pr_wait.py 207 --codex 254 --night 254  # 254 等夜间游戏内测试：审完也不开自动合并
 python3 -I tools/pr_wait.py 211 --every 30              # 每 30 秒查一次（默认 60）；--codex-timeout 秒数改 30 分钟的审查期限
+python3 -I tools/pr_wait.py 207 --codex 209 --hold 209  # 209 先不合并（如等发版完）：只等 Codex 和别的事，审完也不开自动合并
+python3 -I tools/pr_wait.py add 254 --codex --night      # 主会话、子 agent：把 PR 放进等待名单就返回（再 add 一次改选项；也有 --hold）
+python3 -I tools/pr_wait.py --list                       # 值守子会话常驻：每轮读名单，接上新加的 PR
 ```
+
+- 等待名单（#275）是共用文件夹里的 `pr-wait-list.json`（和 `codex-reviews.json` 同一处）。`add` 只写名单、马上返回；`--list` 每轮检查前读名单，`add` 进来的 PR 不用重挂就接着等，名单空着也一直等。它在有一个 PR 合并或要人处理时退出（退出码 0、1；GitHub 说没有这个 PR 时 2），打印的行和上面一样，并把这几个 PR 从名单里去掉；要处理的改好后再 `add` 一次。`--codex` 的审查期限从 PR 加进名单时算，重挂不重新计时。读改写名单时拿共用文件夹的互斥锁，写临时文件再整体替换，两个进程不会互相覆盖。直接在命令行列编号的用法照旧，不读也不改名单。
 
 - 只在两种时候退出：列出的 PR 全部合并（退出码 0），或有一个要人处理（退出码 1）。要处理的是：最新提交上有检查失败（失败、取消、超时等，同一项检查重跑过的按最后一次）、自己合并不了的冲突（见下一条）、Codex 有没解决的意见（`codex_review.py findings 编号` 列出）、PR 被关掉没合并、PR 开着却没开自动合并也没有在跑的 CI 或在等的审查（没人会合并它）。中间步骤（一项检查跑完、Codex 审完没意见、开了自动合并）都不退出，所以一批 PR 只挂这一个等待（挂在值守子会话上），它退出时才转告主会话（docs/maintaining.md“子 agent 怎么派”第 5 条）。
 - 冲突时先试一次自己合并：每一处冲突都只是两边在同一个地方各加了行（没删改共同的原有行，如 `CHANGELOG.md`、文本 XML）时，在临时的游离工作树里 `git merge origin/main`（diff3 冲突格式），每处留下两边新加的行（`main` 的在前、分支的在后），提交合并、普通推送（不强推），接着等，不退出。以下照旧作为冲突退出：有一处冲突改了或删了原有的行；不是两边都改了同一个文件的冲突（一边删、两边都新建、二进制）；PR 来自 fork；分支在本机有工作树，而那个工作树有未提交的改动或不在 PR 的最新提交上（可能有会话正在改）。本机工作树干净且在 PR 最新提交上时，推送后把它快进到合并提交。同一个提交只试一次；不用 `git stash`（docs/maintaining.md“共用资源”）。
 - `--codex` 后面的 PR 是请 Codex 审过、没开自动合并的。判断审完和 `codex_review.py wait` 一样；审完没意见（或意见都已解决）就 `gh pr merge 编号 --auto --squash`；30 分钟没审完或 Codex 报审查失败也开自动合并，并在 PR 下写一句“没审成”（记进 watch_issues 的 `--mine`）。开自动合并之前又推了新提交的，等新提交的审查。
 - `--night` 后面的 PR 等夜间游戏内测试（#255）：从不替它开自动合并，“开着却没开自动合并”也不算要处理；照样等 CI（同在 `--codex` 里的也等审查），检查失败、冲突、有意见、被关掉时照常退出。没审成时 PR 下那句写明等夜间测试。跑夜间测试的人测完开自动合并，等待接着等到合并。
+- `--hold` 后面的 PR 故意先不合并（如等发版完），只等 Codex 和别的事（#275）：和 `--night` 一样不替它开自动合并，“开着却没开自动合并”、审完没意见都不退出；检查失败、冲突、有意见、被关掉时照常退出。没审成时 PR 下那句写明先不合并。决定合并的人开自动合并。等 Codex 一律用 `pr_wait.py`，不再单独挂 `codex_review.py wait`。
 - 退出时每个 PR 打一行：已合并、要处理什么，或还在等什么。`gh` 和网络出错（如 `unexpected EOF`）只在标准错误打一行，下一轮重试，不退出；GitHub 说没有这个 PR 时退出码 2。
 
 ## watch_issues.py — Issue 与创意工坊监听
@@ -593,6 +599,7 @@ python3 -I tools/watch_issues.py --workshop-every 1800  # 创意工坊多久读�
 - 维护者和代理共用的 GitHub 账号（`gh api user` 读一次存进状态，可用 `$SDP_WATCH_SELF` 指定）发的 Issue 和评论只记为已看，不打出来、不进待看列表：决定在 Claude Code 里做，不在 Issue 上。所以代理发评论后不用再 `--mine`。`--mine` 在监听轮询的同时写入也不会丢：监听保存前把磁盘上的记录并进来。
 - 怎么处理打出来的和待看的，见 [sdp-watch](../.claude/skills/sdp-watch/SKILL.md)。状态在主检出的 `logs/watch/`（`state.json`、`held.log`、`others.log`），所有工作树共用。报出的每一条也追加进那里的 `reported.log`（在记成已看之前写），监听的输出被重定向或丢了也能用 `--reported` 找回（#261）。
 - 创意工坊（`watch_workshop.py`，由 `watch_issues.py` 调用）：读物品 `$SDP_WORKSHOP_ITEM`（默认 3824473635，设成空就不读）的公开页面，不登录：物品页（取物品主人和“创建者”里的贡献者）、评论区（`comment/PublishedFile_Public/render/<主人>/<物品>/`，JSON）、讨论区列表和各帖子页（`?ctp=N`，每页 15 条回复）。只读最后一次发帖晚于上次的帖子，每次最多读 20 个帖子页，两次请求隔 1 秒（连着请求时 Steam 回 429）。
+- 物品页顺带给出物品数据（不多发请求）：当前订阅、独立访客、当前收藏（`stats_table` 三行，英文、中文页面都认）、所在合集数（“See all N collections”）、评分（星级图片 `N-star` 和“N ratings”）。存在状态的 `workshop.stats`：最近两天的读数都留，更早的每天留最后一次，最多 400 天；页面上缺的项记为空。一项都读不到或读失败时不改旧值，记下 `workshop.failed`（读失败的时间）给状态页。
 - 创意工坊的新评论、新帖、新回复只写进 `held.log`（`WORKSHOP COMMENT|TOPIC|REPLY`，作者、时间、去掉标记的正文、链接），不让监听退出，不叫醒任何人。物品主人和贡献者的帖子不记。第一次读从那时开始，以前的帖子不列出。
 - 读失败（网络、Steam 回错、页面改了样子）在标准错误打一行，10 分钟后再读，不影响 GitHub 那边。
 - 测试：`tests/tools/test_watch_issues.py`、`tests/tools/test_watch_workshop.py`，用 `tests/tools/workshop/` 里存下的页面样例（结构照 2026-11-03 的真页面删减，文字是编的），不联网。
@@ -615,7 +622,7 @@ python3 -I tools/worktree.py prune --remote            # 删掉其中能删的�
 
 维护者看进度的网页（`status/page.html`）只读一个文件 `status.json`，每分钟刷新一次。`status/sync.py` 生成它，`status/watch.py` 是后台唯一的循环。页面的内容几乎都是自动生成的：
 
-- **自动**：两台机器的格子、在跑和排队的任务（调度工具自己的记录，没走排队工具的 `compare.mjs`、离线测试、游戏内测试也算上）；除 `main` 以外有工作树或开着 PR 的分支（提交里的 Issue、PR 的检查和自动合并、夜间队列里排给它的项）和多出来的分支（`worktree.py stale`）；GitHub 的里程碑（名称、进度、目标取自里程碑在 GitHub 上的说明）和其中每个 Issue 的状态；开着的 Issue 谁开的、谁打的 `auto`、谁该回复（账号名只显示成“我们 / 合作者 / 玩家”）；夜间队列；创意工坊还没处理的新帖（`watch_issues.py` 待看列表里的 `WORKSHOP` 行，最新的 50 条，帖子里像私人信息的字样换成“…”，只留 Steam 自己的链接；监听过了预定时间半小时还没读创意工坊时标出来，`--held --clear` 后消失）；最近的发版，每版的摘要取自发布说明里“自 … 以来的变化”那一节。顶上的概览和每个里程碑的“下一步”由页面从这些数据算出来。
+- **自动**：两台机器的格子、在跑和排队的任务（调度工具自己的记录，没走排队工具的 `compare.mjs`、离线测试、游戏内测试也算上）；除 `main` 以外有工作树或开着 PR 的分支（提交里的 Issue、PR 的检查和自动合并、夜间队列里排给它的项）和多出来的分支（`worktree.py stale`）；GitHub 的里程碑（名称、进度、目标取自里程碑在 GitHub 上的说明）和其中每个 Issue 的状态；开着的 Issue 谁开的、谁打的 `auto`、谁该回复（账号名只显示成“我们 / 合作者 / 玩家”）；夜间队列；创意工坊还没处理的新帖（`watch_issues.py` 待看列表里的 `WORKSHOP` 行，最新的 50 条，帖子里像私人信息的字样换成“…”，只留 Steam 自己的链接；监听过了预定时间半小时还没读创意工坊时标出来，`--held --clear` 后消失），和物品数据：订阅、独立访客、收藏、所在合集、评分，各写和约 24 小时前的读数比的变化，读失败时显示上次的值、读取时间和失败时间）；最近的发版，每版的摘要取自发布说明里“自 … 以来的变化”那一节。顶上的概览和每个里程碑的“下一步”由页面从这些数据算出来。
 - **手写**：只有两类，经 `set|update|delete` 写进共用目录下的 `status/manual.json`：`decisions/*`（要维护者决定的事）、`jobs/*`（调度记录说不清的任务说明，如调研）。字段只能用页面读的那些（`sync.py` 的 `FIELDS`），`set` 必须带 `REQUIRED` 里的字段，其他字段直接拒绝。**发版记录和里程碑不手写**：`releases/*` 一律拒绝，摘要不好就改 GitHub 上的发布说明；`milestones/*` 也拒绝（#280），里程碑的目标写在 GitHub 里程碑的说明里，“下一步”自动算。
 
 ```bash

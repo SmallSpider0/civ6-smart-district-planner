@@ -7,6 +7,7 @@ with made-up text; nothing here goes to the network.
 """
 import json
 import os
+import re
 import sys
 import tempfile
 import unittest
@@ -44,6 +45,76 @@ class Site:
         if "/discussion/" in url:
             return self.pages["topic"]
         return self.pages["item"]
+
+
+NUMBERS = {"subscribers": 1234, "visitors": 4321, "favorites": 98, "collections": 41, "stars": 4, "ratings": 27}
+
+
+class Stats(unittest.TestCase):
+    """The item's numbers on the item page and their change in a day."""
+
+    def test_all_numbers(self):
+        self.assertEqual(ww.stats(page("item.html")), NUMBERS)
+
+    def test_the_chinese_page(self):
+        zh = (page("item.html").replace("Unique Visitors", "不重复访客数").replace("Current Subscribers", "当前订阅者")
+              .replace("Current Favorites", "当前收藏人数").replace("27 ratings", "27 个评价")
+              .replace("41 collections", "41 个合集"))
+        self.assertEqual(ww.stats(zh), NUMBERS)
+
+    def test_missing_numbers_are_none(self):
+        item = page("item.html")
+        no_table = re.sub(r'<table class="stats_table">.*?</table>', "", item, flags=re.S)
+        got = ww.stats(no_table)
+        self.assertEqual((got["subscribers"], got["visitors"], got["favorites"]), (None, None, None))
+        self.assertEqual(got["collections"], 41)
+        got = ww.stats(item.replace("4-star_large", "not-yet_large").replace("27 ratings", "Not enough ratings"))
+        self.assertEqual((got["stars"], got["ratings"], got["subscribers"]), (None, None, 1234))
+        self.assertEqual(ww.stats("<html></html>"), dict.fromkeys(ww.STATS))
+
+    def test_change_in_a_day(self):
+        hour, st = 3600, None
+        for h in range(0, 30):
+            st = ww.record(st, dict(NUMBERS, subscribers=1000 + 10 * h, stars=None if h == 29 else 4), 1793800000 + h * hour)
+        base, diff = ww.change(st)
+        self.assertEqual(base, 1793800000 + 5 * hour)  # 24 h before the reading at hour 29
+        self.assertEqual(diff["subscribers"], 240)
+        self.assertEqual(diff["favorites"], 0)
+        self.assertNotIn("stars", diff)  # missing now: no change shown
+
+    def test_no_change_within_the_first_day(self):
+        st = ww.record(None, NUMBERS, 1793800000)
+        st = ww.record(st, NUMBERS, 1793800000 + 20 * 3600)
+        self.assertEqual(ww.change(st), (None, {}))
+        self.assertEqual(ww.change(None), (None, {}))
+
+    def test_old_readings_one_a_day(self):
+        st = None
+        for h in range(0, 24 * 10, 6):
+            st = ww.record(st, NUMBERS, 1793800000 + h * 3600)
+        times = [t for t, _ in st["history"]]
+        self.assertEqual(times, sorted(times))
+        recent = [t for t in times if t >= st["at"] - ww.RECENT]
+        self.assertEqual(len(recent), 9)  # every 6 hours over the last two days
+        self.assertLessEqual(len(times) - len(recent), 9)
+
+    def test_a_read_records_the_numbers(self):
+        ws, site = ww.fresh(1793100000), Site()
+        ww.poll(ws, get=site.get, now=1793800000)
+        self.assertEqual(ws["stats"]["values"], NUMBERS)
+        self.assertEqual(ws["stats"]["at"], 1793800000)
+        self.assertEqual(len([u for u in site.asked if "filedetails/?id=" in u]), 1)  # no extra request
+
+    def test_a_page_without_numbers_keeps_the_last_ones(self):
+        ws, site = ww.fresh(1793100000), Site()
+        ww.poll(ws, get=site.get, now=1793800000)
+        site.pages["item"] = re.sub(r'<div class="workshopItemDetailsHeader">.*?</div>\n</div>', "",
+                                    page("item.html"), flags=re.S).replace("stats_table", "x").replace(
+                                    "parentCollectionsNumOthers", "x")
+        ww.poll(ws, get=site.get, now=1793900000)
+        self.assertEqual((ws["stats"]["at"], ws["failed"]), (1793800000, 1793900000))
+        ww.poll(ws, get=Site().get, now=1794000000)
+        self.assertNotIn("failed", ws)
 
 
 class Parse(unittest.TestCase):
@@ -183,6 +254,8 @@ class Watch(unittest.TestCase):
         self.site.down = True
         self.run_once(state)
         self.assertEqual(state["workshop"]["next"], 1793800000 + wi.WORKSHOP_RETRY)
+        self.assertEqual(state["workshop"]["failed"], 1793800000)
+        self.assertNotIn("stats", state["workshop"])
         self.assertEqual(self.held(), "")
 
     def test_a_first_run_starts_from_now(self):
