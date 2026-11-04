@@ -109,4 +109,4 @@
 
 - **第 1 类改良也守资源自己的改良**（`SDP_Improve.lua` `Model:Options`）：属实。第 2 类在 `b44c9d6` 修过（`SDP_Land.AssumedImprovement`），第 1 类的候选只排除了收获，石油这类自己的改良不在规则里的资源（油井 `Buildable` 为假）会按地形给出农场，玛雅天文台旁的石油可能被打农场。两处共用新的 `SDP_Land.OwnResource`。测试：`spec_improve` “district improvements: a resource takes only its own”（假世界的铁只能建 `IMPROVEMENT_TEST_WELL`，旧代码在铁上给出农场）。
 - **耕作格改良不改变方案的魅力部分**（`SDP_Solver.KeepAppeal`，单城和多城的 `PlanFor` 都调）：属实。第 2 类只排除了改变区域相邻加成的改良，矿山的 −1 魅力会让旁边社区掉一档住房，保护区周边格的产出也跟着魅力变，而魅力分在生成第 2 类之前就算完了。现在按列表顺序逐个试，加上它（和之前留下的）后魅力部分的值、保护区给其他格的产出都不变才留下；它自己那格的保护区产出不比（地块部分已经按建了改良算）。测试：`spec_improve` “worked tiles: no tack that changes a planned district's appeal”（魅力 2 的格上的社区，两座丘陵都挨着它；单城页和多城页）。
-- 离线对比（开发集 `FAST_IMP`、`STANDARD_IMPW_LAND`）：见下一条。
+- 离线对比（开发集 84 个场景，`FAST_IMP`、`STANDARD_IMPW_LAND`，`logs/remote/i227-codex.jsonl`，本机快照里跑，工具选的）：两个变体区域位置 84/84 与修之前（`i227-imp2`、`i227-impw3`）相同，提升都不变，自报 = 裁判 168/168，违规只有同样的 6 个 `no_plot`。第 1 类改良钉 120 个不变（开发集里没有挨着石油的、吃改良的区域）；耕作格改良钉 1095 → 1093：`S24` 少了 (10,9)、(11,8) 两座矿山（魅力）。
