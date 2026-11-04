@@ -250,7 +250,7 @@ SDP_Panel（面板，三个页签：单城 / 城址 / 多城；每页有档位�
 
 #### 4.8.1 全帝国限建区域放哪座城
 
-#28、#234。代码：`SDP_Multi.NewSession` 的分配段（`HostChoices`），`SDP_Multi.SolveNow`。
+#28、#234。代码：`SDP_Multi.NewSession` 的步骤 `ShareEmpireLimits`（`HostChoices`），`SDP_Multi.SolveNow`。
 
 - 对象：`Districts.MaxPerPlayer > 0` 的区域（市政广场、外交区等）。它们只当必建，不进候选。剩下的名额 = 上限 − 已建 − 任何城的已有钉（`SDP_City.EmpireCounts`，正在被替换的钉不算；各城的 `DistrictStatus` 和面板的置灰用同一个数）。
 - 先分给自定清单里要它的城（请求的 `Plans` 有这座城），再分给用共用清单的城。一类里要它的城不多于剩下的名额时都给。
@@ -261,7 +261,7 @@ SDP_Panel（面板，三个页签：单城 / 城址 / 多城；每页有档位�
 
 #### 4.8.2 奇观放哪座城：指定或按生产力自动选
 
-#234。代码：`NewSession` 的 `WonderCity`、`AutoWonder`、`AutoRetry`，`SDP_Multi.Production`，`Prepared`，`SolveNow`。
+#234。代码：`NewSession` 的步骤 `WonderCities`（`WonderCity`、`AutoWonder`）、`NoLegalPlot`（`AutoRetry`），`SDP_Multi.Production`，`Prepared`，`SolveNow`。
 
 - **指定**：请求的 `WonderCities[奇观] = 参与者 Key`，来自多城页奇观标签的下拉框（选项“自动”和每座参与的城，只在本次会话里记）。指定的城不参与时当“自动”。
 - **自动**（`SDP_Multi.WONDER_BY_PRODUCTION = true`，默认；参与的城多于一座时）：参与的城按 `SDP_Multi.Production` 从高到低排，同分按参与者顺序。现有城取城市面板上的每回合生产力；城址钉取市中心格加上它能耕作的格里生产力最高的 `PlanPopulation` 格。奇观给排名第 `AutoSkip[奇观] + 1` 的城；在这座城里放哪一格仍按方案总分。
@@ -274,7 +274,7 @@ SDP_Panel（面板，三个页签：单城 / 城址 / 多城；每页有档位�
 
 #### 4.8.3 为奇观补区域
 
-#66、#177、#180、#182、#234。代码：`NewSession` 的补区域段（`Supplied`、`Elsewhere`、`NoRoom`），`Search:WondersServed`，`Session:OtherHosts`，`Session:Repair`，`SolveNow`。
+#66、#177、#180、#182、#234。代码：`NewSession` 的步骤 `SupplyForWonders`（`Supplied`、`Elsewhere`、`NoRoom`），`Search:WondersServed`，`Session:OtherHosts`，`Session:Repair`，`SolveNow`。
 
 - **哪些奇观**：`Buildings.AdjacentDistrict` 不为空、还没建也没打钉的（`SDP_Wonders.List`）。玩家有替换这种区域的特色区域时补特色区域（罗马补浴场）；要挨市中心的不补。
 - **不用补**：奇观定了城（指定或自动，默认设置下多座城时都定了）时，看那座城有没有这种区域；没定城时看任一参与的城。“有”指已建、为它打了钉，或在它的计划里（必建、自动加入）。从候选里挑的不算，因为补区域在求解之前。

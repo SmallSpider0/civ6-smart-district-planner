@@ -415,21 +415,22 @@ local function SlotCity(participants, playerID, search, m, i, layout)
   return spec.Group
 end
 
-function SDP_Multi.NewSession(request)
-  local self = setmetatable({}, Session)
-  SDP_Overlay.HidePins(request.IgnorePins)
-  local playerID = request.PlayerID
-  local params = SDP_Tiers.Params(SDP_Tiers.Multi, request.Tier, request.Params)
-  self.Request, self.Params, self.PlayerID = request, params, playerID
-  self.Weights = SDP_Rules.YieldWeights(request.Weights)
-  local land = request.Land ~= false
-  local options = SDP_City.ScanOptions(request)
+-- NewSession, step by step (issue 245). Each step reads what the steps
+-- before it left on the session and on the participants; the order of the
+-- steps is the order of the original single function, so the scans, DMT
+-- calls and lists come out the same.
 
-  local participants, existing, siteList = SDP_Multi.Participants(playerID,
-    { Existing = request.Existing, Only = request.Only, Sites = request.Sites })
-  self.Participants, self.Existing, self.SiteList = participants, existing, siteList
-
-  -- Plans, scans.
+-- Step 1, cities and their lists: scans every participant and turns the
+-- request's lists into its plan.
+-- In: self.Participants, self.PlayerID; request; scan options.
+-- Out: on each participant Scan, Present, ForWonder, Plan, Auto, and for a
+-- site PlanPopulation, with Target an existing city's Have; self.Auto.
+-- Returns plannable (SDP_Rules.PlannableDistricts), byType (its rows by
+-- type), empireCount (SDP_City.EmpireCounts), asked (per participant:
+-- Count, Limited, Seen, Kept, Status, PinnedHere) and unplaced (the
+-- districts left out so far, appended to by the later steps).
+local function PlanCities(self, request, options)
+  local participants, playerID = self.Participants, self.PlayerID
   local plannable, byType = SDP_Rules.PlannableDistricts(playerID), {}
   for _, d in ipairs(plannable) do byType[d.Type] = d end
   local unplaced = {}
@@ -510,7 +511,10 @@ function SDP_Multi.NewSession(request)
       asked[p].Count = count - part.Have
     end
   end
+  return plannable, byType, empireCount, asked, unplaced
+end
 
+-- Step 2, empire-limited districts:
   -- A district with an empire limit (government plaza, diplomatic quarter)
   -- asked by more cities than the limit leaves (issue 234): the cities that
   -- ask for it in a list of their own (Plans) get it first, then those with
@@ -521,6 +525,14 @@ function SDP_Multi.NewSession(request)
   -- other one and keeps the best plan (self.HostChoices = { { Type, Keys } },
   -- Keys nearest first). The cities left without it drop it and take a
   -- candidate in its place, so every city still gets its count (issue 28).
+-- In: self.Participants, self.PlayerID; request (Center, Plans, UniqueTo);
+-- byType, empireCount from step 1.
+-- Out: each participant's Plan without the limited districts it does not
+-- host (those appended to unplaced, dropped from asked[p].Kept);
+-- self.HostChoices. Returns left: [district type] = how many more the
+-- empire may have (step 4 counts on from it).
+local function ShareEmpireLimits(self, request, byType, empireCount, asked, unplaced)
+  local participants, playerID = self.Participants, self.PlayerID
   local centerX, centerY = nil, nil
   for _, part in ipairs(participants) do
     if part.Key == request.Center then centerX, centerY = part.X, part.Y end
@@ -599,23 +611,11 @@ function SDP_Multi.NewSession(request)
     end
     part.Plan = plan
   end
+  return left
+end
 
-  -- Districts the chosen wonders need next to them (issue 66, plan A): when
-  -- no participating city has one (built, pinned for it or in its plan),
-  -- the first city in the list that can take it plans it as required, so it
-  -- counts among the city's districts that take population. Not where the
-  -- player set it to "not wanted" (Off, Offs), where the city has or plans
-  -- a district it cannot share a city with (a water park), where it has no
-  -- valid tile, or past an empire limit; two wonders needing one district
-  -- get one. A district that takes population needs room: the city's
-  -- required ones (and, with Target, what it has) below its count (issue
-  -- 177); required districts are never dropped for it. self.Supplied lists
-  -- them { City, Type, Wonder }; Elsewhere[wonder] the city where an
-  -- empire-limited district stands already; NoRoom[wonder] true when only
-  -- the count kept it out.
-  self.Supplied, self.Elsewhere, self.NoRoom = {}, {}, {}
-  -- Whether participant p has or plans a district of a base type.
-  local function Has(p, base)
+-- Whether participant p has or plans a district of a base type.
+local function Has(participants, p, base)
     for districtType in pairs(participants[p].Present) do
       if SDP_Rules.BaseDistrict(districtType) == base then return true end
     end
@@ -623,7 +623,15 @@ function SDP_Multi.NewSession(request)
       if SDP_Rules.BaseDistrict(districtType) == base then return true end
     end
     return false
-  end
+end
+
+-- Step 3, the city of each wonder (issue 234).
+-- In: self.Participants, self.PlayerID; request (WonderCities, Wonders,
+-- AutoSkip).
+-- Out: self.WonderCity, self.AutoWonder, and with automatic wonders
+-- self.Production.
+local function WonderCities(self, request)
+  local participants, playerID = self.Participants, self.PlayerID
   -- Wonders given one city (issue 234): [wonder type] = participant; a
   -- city that does not take part leaves the wonder free.
   self.WonderCity = {}
@@ -662,6 +670,30 @@ function SDP_Multi.NewSession(request)
       end
     end
   end
+end
+
+-- Step 4, districts supplied for the wonders:
+  -- Districts the chosen wonders need next to them (issue 66, plan A): when
+  -- no participating city has one (built, pinned for it or in its plan),
+  -- the first city in the list that can take it plans it as required, so it
+  -- counts among the city's districts that take population. Not where the
+  -- player set it to "not wanted" (Off, Offs), where the city has or plans
+  -- a district it cannot share a city with (a water park), where it has no
+  -- valid tile, or past an empire limit; two wonders needing one district
+  -- get one. A district that takes population needs room: the city's
+  -- required ones (and, with Target, what it has) below its count (issue
+  -- 177); required districts are never dropped for it. self.Supplied lists
+  -- them { City, Type, Wonder }; Elsewhere[wonder] the city where an
+  -- empire-limited district stands already; NoRoom[wonder] true when only
+  -- the count kept it out.
+-- In: self.Participants, self.PlayerID, self.WonderCity; request (Wonders,
+-- SupplyTo, Off, Offs); scan options; plannable, byType, empireCount,
+-- asked from step 1; left from step 2 (counted down here).
+-- Out: the supplied districts added to Plan, ForWonder, asked[p].Seen and
+-- Kept; self.Supplied, self.Elsewhere, self.NoRoom.
+local function SupplyForWonders(self, request, options, plannable, byType, empireCount, asked, left)
+  local participants, playerID = self.Participants, self.PlayerID
+  self.Supplied, self.Elsewhere, self.NoRoom = {}, {}, {}
   if request.Wonders and #request.Wonders > 0 then
     local wonderRows = {}
     for _, w in ipairs(SDP_Wonders.List(playerID, options.ignorePins)) do wonderRows[w.Type] = w end
@@ -695,7 +727,7 @@ function SDP_Multi.NewSession(request)
       -- A wonder given one city (issue 234) needs that city's district.
       local only = self.WonderCity[wonderType]
       local function Missing()
-        if only ~= nil then return not Has(only, base) end
+        if only ~= nil then return not Has(participants, only, base) end
         return not have[base]
       end
       if base ~= nil and Missing() then
@@ -747,7 +779,14 @@ function SDP_Multi.NewSession(request)
       end
     end
   end
+end
 
+-- Step 5, candidate districts (feedback item 11): districts that take
+-- population, not required, plannable here, without an empire limit.
+-- In: self.Participants; request (Pools, Pool); byType, asked.
+-- Out: each participant's Pick (how many to pick) and Pool.
+local function CandidateDistricts(self, request, byType, asked)
+  local participants = self.Participants
   for p, part in ipairs(participants) do
     local count, seen, kept, status, pinnedHere =
       asked[p].Count, asked[p].Seen, asked[p].Kept, asked[p].Status, asked[p].PinnedHere
@@ -777,9 +816,14 @@ function SDP_Multi.NewSession(request)
     part.Pick = math.max(0, math.min(count - requiredSpecialty, fit))
     part.Pool = part.Pick > 0 and pool or {}
   end
-  self.Unplaced = unplaced
+end
 
-  -- One candidate list for everybody.
+-- Step 6, candidate plots: one candidate list for everybody.
+-- In: each participant's Scan.Candidates.
+-- Out: self.Candidates (sorted by plot index), each participant's Allowed
+-- ([candidate] = true). Returns the candidates.
+local function CandidatePlots(self)
+  local participants = self.Participants
   local candidates, at = {}, {}
   for _, part in ipairs(participants) do
     for _, c in ipairs(part.Scan.Candidates) do
@@ -802,8 +846,16 @@ function SDP_Multi.NewSession(request)
     part.Allowed = allowed
   end
   self.Candidates = candidates
+  return candidates
+end
 
-  -- Fixed subjects of every participant, once each.
+-- Step 7, fixed neighbours: the fixed subjects of every participant, once
+-- each.
+-- In: each participant's Scan; self.Weights, self.PlayerID.
+-- Out: self.Fixed (sorted by plot index), self.Base, self.Board,
+-- self.ExtraCalls. Returns the fixed subjects.
+local function FixedNeighbours(self)
+  local participants, playerID = self.Participants, self.PlayerID
   local fixed, seenPlot = {}, {}
   for _, part in ipairs(participants) do
     for _, subject in ipairs(SDP_Overlay.FixedSubjects(part.Scan)) do
@@ -821,9 +873,19 @@ function SDP_Multi.NewSession(request)
   for f, item in ipairs(self.Base.Fixed) do bases[f] = item.Score end
   self.Board = SDP_Board.New(playerID, fixed, self.Weights, bases)
   self.ExtraCalls = #fixed
+  return fixed
+end
 
-  -- The population each city's plan needs: its land part's worked plots
-  -- and its housing target (issue 55).
+-- Step 8, population and land: the population each city's plan needs (its
+-- land part's worked plots and its housing target, issue 55), then the
+-- land part per city.
+-- In: self.Participants, self.PlayerID; request (Land, Weights); byType;
+-- the fixed subjects.
+-- Out: each participant's Population, and with the land part its Land.
+-- Returns lands (each city's Land; empty without the land part).
+local function PopulationAndLand(self, request, byType, fixed)
+  local participants, playerID = self.Participants, self.PlayerID
+  local land = request.Land ~= false
   for _, part in ipairs(participants) do
     local specialty = part.Scan.SpecialtyBuilt + part.Pick
     for _, districtType in ipairs(part.Plan) do
@@ -859,9 +921,15 @@ function SDP_Multi.NewSession(request)
       lands[#lands + 1] = part.Land
     end
   end
+  return lands
+end
 
-  -- Coverage part (design 19): the player's cities and the new ones; off
-  -- (no model at all) unless a weight is given.
+-- Step 9, coverage part (design 19): the player's cities and the new ones;
+-- off (no model at all) unless a weight is given.
+-- In: self.Participants, self.PlayerID; request (Coverage, Only); scan options.
+-- Out: self.Coverage.
+local function CoveragePart(self, request, options)
+  local participants, playerID = self.Participants, self.PlayerID
   if (request.Coverage or 0) > 0 then
     local sites = {}
     if request.Only then
@@ -875,9 +943,15 @@ function SDP_Multi.NewSession(request)
     self.Coverage = SDP_Coverage.New({ PlayerID = playerID, Weight = request.Coverage, Sites = sites,
       IgnorePins = options.ignorePins })
   end
+end
 
-  -- Slots: every city's plan (an empire limit already shared out above),
-  -- then its candidates.
+-- Step 10, district slots: every city's plan (an empire limit already
+-- shared out above), then its candidates.
+-- In: each participant's Plan, ForWonder, Allowed, Pool, Pick.
+-- Returns slots, slotCity ([slot] = participant) and pools ([participant]
+-- = how many to pick; nil when no city picks).
+local function DistrictSlots(self)
+  local participants = self.Participants
   local slots, slotCity = {}, {}
   for p, part in ipairs(participants) do
     for _, districtType in ipairs(part.Plan) do
@@ -897,10 +971,21 @@ function SDP_Multi.NewSession(request)
       pools[p] = part.Pick
     end
   end
+  return slots, slotCity, pools
+end
 
+-- Step 11, wonder slots:
   -- Wonders: one slot each, anywhere in the participating cities, placed
   -- after the districts (design 4.4). Built or pinned ones are left out
   -- (a pin being replaced does not count, issue 154).
+-- In: self.Participants, self.PlayerID, self.WonderCity, self.Elsewhere,
+-- self.NoRoom; request (Wonders); scan options; plannable; the fixed
+-- subjects and candidates; slots, slotCity from step 10.
+-- Out: the wonders' slots appended to slots (slotCity nil), the wonders
+-- left out appended to unplaced; self.WonderGroup; an unavailable wonder
+-- off self.AutoWonder. Returns wonderSlot ([wonder type] = its slot).
+local function WonderSlots(self, request, options, plannable, fixed, candidates, slots, slotCity, unplaced)
+  local participants, playerID = self.Participants, self.PlayerID
   local wonderGroup = #participants + 1
   self.WonderGroup = wonderGroup
   local wonderSlot = {} -- [wonder type] = its slot
@@ -943,7 +1028,7 @@ function SDP_Multi.NewSession(request)
         elseif w.Status ~= nil then
           unplaced[#unplaced + 1] = { City = "WONDERS", Type = wonderType, Reason = w.Status }
         elseif w.AdjacentDistrict ~= nil and not (self.WonderCity[wonderType] == nil and present[w.AdjacentDistrict])
-            and not (self.WonderCity[wonderType] ~= nil and Has(self.WonderCity[wonderType], w.AdjacentDistrict)) then
+            and not (self.WonderCity[wonderType] ~= nil and Has(participants, self.WonderCity[wonderType], w.AdjacentDistrict)) then
           -- Other names the district the player would set to Must: their own
           -- unique district where it replaces the one the wonder needs (Rome: the Bath).
           local own = w.AdjacentDistrict
@@ -987,7 +1072,69 @@ function SDP_Multi.NewSession(request)
       end
     end
   end
+  return wonderSlot
+end
 
+-- Whose districts a wonder may count (issue 45): a wonder's plot goes to
+-- a city that can take it, a fixed district belongs to the cities whose
+-- territory or reach holds its plot. Returns { Wonder, Fixed } for
+-- SDP_Search's Owners.
+local function SearchOwners(participants, fixed)
+  local owners = { Wonder = {}, Fixed = {} }
+  for p, part in ipairs(participants) do
+    for i in pairs(part.Allowed) do
+      owners.Wonder[i] = owners.Wonder[i] or {}
+      owners.Wonder[i][p] = true
+    end
+  end
+  for _, subject in ipairs(fixed) do
+    if subject.Type == "DISTRICT" then
+      local index = Map.GetPlotIndex(subject.X, subject.Y)
+      local groups = {}
+      for p, part in ipairs(participants) do
+        if part.Scan.Reach.Through[index] then groups[p] = true end
+      end
+      owners.Fixed[index] = { Type = subject.Key, Groups = groups }
+    end
+  end
+  return owners
+end
+
+-- Each city's housing (issue 55); a fixed district's housing goes to the
+-- participant that owns its plot, an unowned one's to the nearest.
+-- Returns the cities for SDP_Search's Appeal.Cities and the function for
+-- its FixedGroup.
+local function HousingCities(participants, playerID)
+  local housingCities = {}
+  for p, part in ipairs(participants) do
+    -- A city-center pin is a city of 1 (issue 91: SDP_Land.HousingValue).
+    housingCities[p] = { Housing = SDP_Land.ScanHousing(part.Scan), Target = part.Population,
+      Population = part.Kind == "CITY" and part.Scan.Population or 1 }
+  end
+  local function HousingGroup(index)
+    local plot = Map.GetPlotByIndex(index)
+    local owner = plot:GetOwner() == playerID and Cities.GetPlotPurchaseCity(plot) or nil
+    local best, bestDistance = nil, math.huge
+    for p, part in ipairs(participants) do
+      if owner ~= nil then
+        if part.CityID == owner:GetID() then return p end
+      else
+        local d = Map.GetPlotDistance(part.X, part.Y, plot:GetX(), plot:GetY())
+        if d <= SDP_City.RADIUS and d < bestDistance then best, bestDistance = p, d end
+      end
+    end
+    return best
+  end
+  return housingCities, HousingGroup
+end
+
+-- Step 12, the search.
+-- In: the session (Participants, PlayerID, Board, Weights, Coverage);
+-- request (Swap, Distance, Apart, Weights); params; the candidates, slots,
+-- lands, pools and fixed subjects from the steps before.
+-- Out: self.Search.
+local function BuildSearch(self, request, params, candidates, slots, lands, pools, fixed)
+  local participants, playerID = self.Participants, self.PlayerID
   local centers = {}
   for _, part in ipairs(participants) do
     if part.Kind == "SITE" then centers[#centers + 1] = { X = part.X, Y = part.Y } end
@@ -1009,48 +1156,8 @@ function SDP_Multi.NewSession(request)
   -- cities' planned districts in the way (issue 35; SDP_City.Reach).
   local reach = {}
   for p, part in ipairs(participants) do reach[p] = part.Scan.Reach end
-  -- Whose districts a wonder may count (issue 45): a wonder's plot goes to
-  -- a city that can take it, a fixed district belongs to the cities whose
-  -- territory or reach holds its plot.
-  local owners = { Wonder = {}, Fixed = {} }
-  for p, part in ipairs(participants) do
-    for i in pairs(part.Allowed) do
-      owners.Wonder[i] = owners.Wonder[i] or {}
-      owners.Wonder[i][p] = true
-    end
-  end
-  for _, subject in ipairs(fixed) do
-    if subject.Type == "DISTRICT" then
-      local index = Map.GetPlotIndex(subject.X, subject.Y)
-      local groups = {}
-      for p, part in ipairs(participants) do
-        if part.Scan.Reach.Through[index] then groups[p] = true end
-      end
-      owners.Fixed[index] = { Type = subject.Key, Groups = groups }
-    end
-  end
-  -- Each city's housing (issue 55); a fixed district's housing goes to the
-  -- participant that owns its plot, an unowned one's to the nearest.
-  local housingCities = {}
-  for p, part in ipairs(participants) do
-    -- A city-center pin is a city of 1 (issue 91: SDP_Land.HousingValue).
-    housingCities[p] = { Housing = SDP_Land.ScanHousing(part.Scan), Target = part.Population,
-      Population = part.Kind == "CITY" and part.Scan.Population or 1 }
-  end
-  local function HousingGroup(index)
-    local plot = Map.GetPlotByIndex(index)
-    local owner = plot:GetOwner() == playerID and Cities.GetPlotPurchaseCity(plot) or nil
-    local best, bestDistance = nil, math.huge
-    for p, part in ipairs(participants) do
-      if owner ~= nil then
-        if part.CityID == owner:GetID() then return p end
-      else
-        local d = Map.GetPlotDistance(part.X, part.Y, plot:GetX(), plot:GetY())
-        if d <= SDP_City.RADIUS and d < bestDistance then best, bestDistance = p, d end
-      end
-    end
-    return best
-  end
+  local owners = SearchOwners(participants, fixed)
+  local housingCities, HousingGroup = HousingCities(participants, playerID)
   -- The city a slot's placement is planned for is not counted as covered by
   -- it (issue 91): SlotCity, as Session:OwnerOf; with `layout` counting its
   -- planned districts too.
@@ -1087,6 +1194,16 @@ function SDP_Multi.NewSession(request)
     Appeal = { Fixed = fixed, Weights = request.Weights, Workable = workable, Cities = housingCities,
       FixedGroup = HousingGroup },
   })
+end
+
+-- Step 13, slots with no legal plot: the required ones go to unplaced
+-- (NO_LEGAL_PLOT), and an automatic wonder with no slot or no plot in the
+-- city picked for it is tried in the next city (issue 234).
+-- In: self.Search, self.Participants, self.AutoWonder; request (Wonders);
+-- slots, slotCity, wonderSlot.
+-- Out: self.AutoRetry; unplaced appended to.
+local function NoLegalPlot(self, request, slots, slotCity, wonderSlot, unplaced)
+  local participants = self.Participants
   local singles = self.Search:Singles()
   local noPlot = {}
   for _, s in ipairs(singles) do noPlot[s] = true end
@@ -1107,9 +1224,17 @@ function SDP_Multi.NewSession(request)
         ForWonder = slots[s].ForWonder }
     end
   end
-  self.SlotSpecs = slots
-  -- Blocks: the search's required slots of each participant, then the
-  -- wonders (a city's candidates are in Search.PoolSlots).
+end
+
+-- Step 14, blocks and groups: the search's required slots of each
+-- participant, then the wonders (a city's candidates are in
+-- Search.PoolSlots); with many cities, the groups planned one after
+-- another (issue 142).
+-- In: self.Search, self.Participants, self.WonderGroup; params.
+-- Out: self.Blocks, self.Stats, self.Starts, self.NextStartIndex, and with
+-- groups self.GroupList.
+local function BlocksAndGroups(self, params)
+  local participants, wonderGroup = self.Participants, self.WonderGroup
   local blocks = {}
   for p = 1, wonderGroup do blocks[p] = {} end
   for m = 1, self.Search.K do
@@ -1125,6 +1250,37 @@ function SDP_Multi.NewSession(request)
     self.GroupList = SDP_Multi.Groups(participants, params.GroupSize or SDP_Multi.GROUP_SIZE)
     self.Stats.Groups = #self.GroupList
   end
+end
+
+function SDP_Multi.NewSession(request)
+  local self = setmetatable({}, Session)
+  SDP_Overlay.HidePins(request.IgnorePins)
+  local playerID = request.PlayerID
+  local params = SDP_Tiers.Params(SDP_Tiers.Multi, request.Tier, request.Params)
+  self.Request, self.Params, self.PlayerID = request, params, playerID
+  self.Weights = SDP_Rules.YieldWeights(request.Weights)
+  local options = SDP_City.ScanOptions(request)
+
+  local participants, existing, siteList = SDP_Multi.Participants(playerID,
+    { Existing = request.Existing, Only = request.Only, Sites = request.Sites })
+  self.Participants, self.Existing, self.SiteList = participants, existing, siteList
+
+  local plannable, byType, empireCount, asked, unplaced = PlanCities(self, request, options)
+  local left = ShareEmpireLimits(self, request, byType, empireCount, asked, unplaced)
+  WonderCities(self, request)
+  SupplyForWonders(self, request, options, plannable, byType, empireCount, asked, left)
+  CandidateDistricts(self, request, byType, asked)
+  self.Unplaced = unplaced
+  local candidates = CandidatePlots(self)
+  local fixed = FixedNeighbours(self)
+  local lands = PopulationAndLand(self, request, byType, fixed)
+  CoveragePart(self, request, options)
+  local slots, slotCity, pools = DistrictSlots(self)
+  local wonderSlot = WonderSlots(self, request, options, plannable, fixed, candidates, slots, slotCity, unplaced)
+  BuildSearch(self, request, params, candidates, slots, lands, pools, fixed)
+  NoLegalPlot(self, request, slots, slotCity, wonderSlot, unplaced)
+  self.SlotSpecs = slots
+  BlocksAndGroups(self, params)
   return self
 end
 
