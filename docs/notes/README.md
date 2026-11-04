@@ -82,6 +82,7 @@
 | [issue-242-invariants.md](issue-242-invariants.md) | 每次离线求解后检查方案不变量 | 现行（design 4.8.5） |
 | [issue-244-one-entry.md](issue-244-one-entry.md) | 区域状态、奇观归城各只留一个入口；合并复制的小函数 | 现行（design 4.8.4，design.md 城市扫描） |
 | [issue-250-one-city-as-multi.md](issue-250-one-city-as-multi.md) | 单城页按“只有一座城的多城请求”求解 | 实验（待维护者定） |
+| [issue-245-split-session.md](issue-245-split-session.md) | `SDP_Multi.NewSession` 拆成有名字的步骤（纯重构） | 现行 |
 
 ## 持续更新的记录
 
