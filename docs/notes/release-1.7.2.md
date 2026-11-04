@@ -17,7 +17,13 @@
 
 ## 测试结果（白天跑的，不开游戏）
 
-（下面在离线结果出来后填写）
+| 测试 | 结果 |
+|---|---|
+| `python3 -I tools/validate.py` | 0 错误、0 警告（191 个文件） |
+| `node tools/offline_tests.mjs`（整套，放到第二台机器） | 340 通过，0 失败；介绍页的离线项数 336 → 340 已改 |
+| `python3 -I -m unittest discover -s tests/tools` | 241 项 OK |
+| `python3 -I tools/refresh_results.py --check`（第二台机器，`remote.py run rel172-check`，日志 `logs/remote/rel172-check.log`） | 开发集 268 行：方案全部不变，提升变高 0、变低 0，新违规 0。#244、#250、#282 都不改求解器看到的东西，和预期一致；存下的结果不用刷新 |
+| `workshop.py check` | 0 错误 |
 
 ## 夜间队列
 
