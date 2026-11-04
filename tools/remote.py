@@ -411,10 +411,15 @@ def status(args):
     return 0
 
 
-def fetch_paths(paths, job=None):
+def fetch_paths(paths, job=None, missing_ok=False):
+    """Copy the files back. missing_ok: skip, with a line, those the job did not write (a run that stopped on
+    a usage error writes nothing, #286); otherwise a missing file is an error."""
     rec = local_record(job)
     if rec:  # placed on this machine: copy from its snapshot
         for rel in paths:
+            if missing_ok and not os.path.exists(os.path.join(rec["snap"], rel)):
+                print("not written, not fetched:", rel)
+                continue
             dest = os.path.join(ROOT, rel)
             os.makedirs(os.path.dirname(dest), exist_ok=True)
             shutil.copy2(os.path.join(rec["snap"], rel), dest)
@@ -424,6 +429,13 @@ def fetch_paths(paths, job=None):
     where = "%s/snap/%s" % (BASE, job) if job else TREE
     if job and ssh("test -d %s && echo yes" % where, check=False).strip() != "yes":
         where = TREE  # a job started before snapshots
+    if missing_ok and paths:
+        found = set(ssh("cd %s && for f in %s; do test -e \"$f\" && echo \"$f\"; done" % (
+            where, " ".join(shlex.quote(p) for p in paths)), check=False).splitlines())
+        for rel in paths:
+            if rel not in found:
+                print("not written, not fetched:", rel)
+        paths = [rel for rel in paths if rel in found]
     for rel in paths:
         dest = os.path.join(ROOT, rel)
         os.makedirs(os.path.dirname(dest), exist_ok=True)
@@ -450,7 +462,7 @@ def wait(args):
             print("%s %s" % (time.strftime("%H:%M"), last[:120]), flush=True)
         time.sleep(args.every)
     if args.fetch:
-        fetch_paths(args.fetch, args.name)
+        fetch_paths(args.fetch, args.name, missing_ok=getattr(args, "missing_ok", False))
     print("%s %s ended with exit %d: %s" % (time.strftime("%H:%M"), args.name, code, last[:160]))
     return code
 
@@ -604,7 +616,8 @@ def run_remote_and_wait(name, cmd):
                            command=sdplock.fit_workers(cmd, slots)))
     print("remote.py: %s runs on %s; waiting (remote.py status %s)" % (name, host(), name), file=sys.stderr,
           flush=True)
-    code = wait(argparse.Namespace(name=name, fetch=outputs(cmd), every=15))
+    # a run that wrote no results (a usage error, a crash) still shows its log and exit code
+    code = wait(argparse.Namespace(name=name, fetch=outputs(cmd), every=15, missing_ok=True))
     sys.stdout.write(ssh("cat ~/%s/%s.log" % (BASE, name), check=False))
     return code
 
