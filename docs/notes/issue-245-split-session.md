@@ -41,7 +41,7 @@ python3 -I tools/remote.py run i245-after -- node tools/compare.mjs -s '^([SM]\d
 
   比较时只去掉耗时字段（`planSeconds`、`judgeSeconds`、`stats.seconds`）和 `env`（`env.code` 是代码的哈希，两边本来就不同：`e675929f3189` 对 `186ccb43c3d6`），DMT 调用次数、工作单位、未放下的区域和原因都比。
 
-  结果：488 次运行（开发集 `S`、`M` 352 次；奇观和覆盖范围 `W`、`WA`、`V` 136 次；共 128 个场景、3301 个放置），0 处不同。第二台机器各 4 格，各约 52 分钟。结果文件只在本机 `logs/remote/i245-*.jsonl`（两个工作树各一份），不入库。
+  结果：488 次运行（开发集 `S`、`M` 352 次；奇观和覆盖范围 `W`、`WA`、`V` 136 次；共 128 个场景、3301 个放置），0 处不同。第二台机器各 4 格，各约 52 分钟。结果文件不入库（改动后的在本机本工作树的 `logs/remote/i245-after.jsonl`；改动前的随临时工作树删掉了，第二台机器上 `~/sdp-runs/snap/i245-base/` 还有）。
 - `node tools/offline_tests.mjs`：340 项全过（含每次求解后的不变量检查；`remote.py run i245-offline`）。
 - `python3 -I tools/validate.py`：0 错误。
 - 游戏内测试没跑：只搬动代码，方案、未放下的区域和统计在离线对比里逐字不变；`NewSession` 不碰界面。
