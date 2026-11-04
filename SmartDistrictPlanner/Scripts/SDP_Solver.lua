@@ -261,7 +261,7 @@ function SDP_Solver.NewSession(request, scan)
     -- The city being planned is not counted as covered (issue 91).
     CoverOwner = function() return "C" .. tostring(scan.CityID) end,
     Alternatives = params.Solutions or 3, Apart = apart, Exclusive = SDP_Rules.Exclusive(),
-    Improve = request.Improvements and self.Improve or nil,
+    Improve = request.Improvements and self.Improve ~= nil and self.Improve:Active() and self.Improve or nil,
     -- A candidate swapped from another of the player's cities (issue 54);
     -- ties take the plots that need no swap (issue 162).
     Swapped = function(search, m, i) return search.Candidates[i].Swap ~= nil end,

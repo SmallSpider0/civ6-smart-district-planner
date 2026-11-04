@@ -182,6 +182,46 @@ test("a feature a district next to it takes adjacency from is not cleared", func
   T.eq(#plan, 0, "a holy site next to the woods: they stay, and one mine is not enough")
 end)
 
+test("Assign by groups and kept choices: the same as choosing afresh for every layout", function()
+  NewWorld({ rows = {
+    "~~~~~~~~~~~~",
+    "~...h..h...~",
+    "~..hh.h....~",
+    "~....hh..h.~",
+    "~.h....h...~",
+    "~..h.hh....~",
+    "~...h...h..~",
+    "~~~~~~~~~~~~",
+  }, resources = { { 3, 4, "RESOURCE_STONE" }, { 7, 2, "RESOURCE_STONE" } } })
+  local scan = SDP_City.Scan(0, 1)
+  local function Model()
+    return SDP_Improve.New({ PlayerID = 0, Weights = ONES, Ownable = scan.Reach.Reached, Taken = {}, Fixed = {} })
+  end
+  local shared = Model()
+  local plots = {}
+  for _, c in ipairs(scan.Candidates) do plots[#plots + 1] = c.Index end
+  local function Text(plan)
+    local parts = {}
+    for _, item in ipairs(plan) do parts[#parts + 1] = item.Type .. "@" .. item.Index .. (item.Clear and "c" or "") end
+    return table.concat(parts, " ")
+  end
+  local layouts, nonEmpty = 0, 0
+  for a = 1, #plots, 2 do
+    for b = 1, #plots, 3 do
+      local c = (a + b) % #plots + 1
+      if a ~= b and c ~= a and c ~= b then
+        local placed = { { Type = IZ, Kind = "DISTRICT", Index = plots[a] }, { Type = IZ, Kind = "DISTRICT", Index = plots[b] },
+          { Type = CAMPUS, Kind = "DISTRICT", Index = plots[c] } }
+        local got = Text(shared:Assign(placed, nil))
+        T.eq(got, Text(Model():Assign(placed, nil)), "layout " .. plots[a] .. "," .. plots[b])
+        layouts = layouts + 1
+        if got ~= "" then nonEmpty = nonEmpty + 1 end
+      end
+    end
+  end
+  T.ok(layouts > 100 and nonEmpty > 20, "enough layouts with improvements: " .. nonEmpty .. " of " .. layouts)
+end)
+
 test("tiles the city can come to own get a tack marked; tiles out of reach none", function()
   local w = NewWorld({ cities = { { id = 1, x = 4, y = 4, population = 7, capital = true, radius = 1 } } })
   w:Own(5, 3, 0, w:City(1))

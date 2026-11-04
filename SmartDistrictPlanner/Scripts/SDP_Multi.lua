@@ -1191,7 +1191,7 @@ local function BuildSearch(self, request, params, candidates, slots, lands, pool
     Swapped = request.Swap == true and Swapped or nil,
     Pools = pools, Costs = SDP_City.DistanceCosts(playerID, candidates, request.Distance, centers), Apart = apart,
     Exclusive = SDP_Rules.Exclusive(), Reach = reach, Owners = owners,
-    Improve = request.Improvements and self.Improve or nil,
+    Improve = request.Improvements and self.Improve ~= nil and self.Improve:Active() and self.Improve or nil,
     Appeal = { Fixed = fixed, Weights = request.Weights, Workable = workable, Cities = housingCities,
       FixedGroup = HousingGroup },
   })

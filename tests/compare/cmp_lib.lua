@@ -1090,9 +1090,12 @@ function CmpRun.Judge(id, planJson)
   -- plan (the city grows into it first). They are not districts: no tile
   -- loss, no adjacency of their own, not counted as placed.
   local function IsImprovement(p) return gi.Districts[p.type] == nil and not IsWonder(p.type) and gi.Improvements[p.type] ~= nil end
-  local function ImprovementFits(row, plot)
+  -- `clear`: the planner clears the feature first (issue 227), so a
+  -- removable one does not count.
+  local function ImprovementFits(row, plot, clear)
     if plot:IsWater() ~= (row.Domain == "DOMAIN_SEA") then return false end
     local feature = plot:GetFeatureType() ~= -1 and gi.Features[plot:GetFeatureType()] or nil
+    if feature ~= nil and clear and Truthy(feature.Removable) then feature = nil end
     local resource = plot:GetResourceType() ~= -1 and gi.Resources[plot:GetResourceType()] or nil
     if resource ~= nil and not Players[0]:GetResources():IsResourceVisible(resource.Hash) then resource = nil end
     if resource ~= nil then
@@ -1137,7 +1140,7 @@ function CmpRun.Judge(id, planJson)
         end
         if owner ~= -1 and owner ~= 0 then Violation("foreign_tile", p)
         elseif owner == -1 and not near then Violation("improvement_out_of_reach", p) end
-        if not ImprovementFits(gi.Improvements[p.type], plot) then Violation("improvement_illegal", p) end
+        if not ImprovementFits(gi.Improvements[p.type], plot, p.clear) then Violation("improvement_illegal", p) end
         if plot.lowland ~= -1 and (plot.flooded or plot.submerged) then Violation("flooded", p) end
       end
     end

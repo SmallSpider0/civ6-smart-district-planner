@@ -81,7 +81,7 @@ CmpAdapters = CmpAdapters or {}
 local function LoadSDP()
   include("MapTacks")
   for _, name in ipairs({ "SDP_Rules", "SDP_City", "SDP_Overlay", "SDP_Tiers", "SDP_Task", "SDP_Board", "SDP_Land", "SDP_Appeal",
-    "SDP_Coverage", "SDP_Search", "SDP_Solver", "SDP_Wonders", "SDP_Multi", "SDP_Sites", "SDP_SiteSolver" }) do
+    "SDP_Improve", "SDP_Coverage", "SDP_Search", "SDP_Solver", "SDP_Wonders", "SDP_Multi", "SDP_Sites", "SDP_SiteSolver" }) do
     include(name)
   end
 end
@@ -257,6 +257,13 @@ function CmpAdapters.sdp(request, variant, w)
   end
   local swap = variant:match("_SWAP$") ~= nil
   variant = variant:gsub("_SWAP$", "")
+  -- "..._IMP": the improvements districts take adjacency or yields from
+  -- planned and tacked with them (issue 227; the panel's default, the
+  -- solver's is off); "..._IMPW": and the worked tiles' improvement tacks.
+  local improve, worked = false, false
+  if variant:match("_IMPW$") then improve, worked = true, true
+  elseif variant:match("_IMP$") then improve = true end
+  variant = variant:gsub("_IMPW?$", "")
   local groupParams = nil
   local gsize = tonumber(variant:match("_G(%d+)") or "")
   local gpasses = tonumber(variant:match("_P(%d)") or "")
@@ -285,7 +292,7 @@ function CmpAdapters.sdp(request, variant, w)
   local out = CmpAdapters.sdpSolve(request, variant, stats, {
     asMulti = asMulti, oracle = oracle, check = check, longrun = longrun, land = land, lambda = lambda,
     swap = swap, coverage = coverage, distance = distance, dense = dense, count = count, grid = grid,
-    growth = growth, group = group, sharedList = sharedList, groupParams = groupParams })
+    growth = growth, group = group, sharedList = sharedList, groupParams = groupParams, improve = improve, worked = worked })
   SDP_Task.Tick = tick
   stats.sdpUnits = units
   return out
@@ -295,11 +302,21 @@ function CmpAdapters.sdpSolve(request, variant, stats, o)
   local asMulti, oracle, check, longrun, land, lambda = o.asMulti, o.oracle, o.check, o.longrun, o.land, o.lambda
   local swap, coverage, distance, dense, count, grid = o.swap, o.coverage, o.distance, o.dense, o.count, o.grid
   local growth, group, sharedList, groupParams = o.growth, o.group, o.sharedList, o.groupParams
+  local improve, worked = o.improve == true, o.worked == true
   local scn = request.scenario
   local out = { placements = {}, stats = stats, notes = {} }
+  -- Improvement tacks (issue 227) go to the judge like the Camp of issue 51;
+  -- `clear`: the tack's feature is cleared first.
+  local function TakeImprovements(list, cityID)
+    for _, e in ipairs(list or {}) do
+      out.placements[#out.placements + 1] = { city = cityID, type = e.Type, x = e.X, y = e.Y, kind = "IMPROVEMENT",
+        clear = e.Clear or nil }
+    end
+  end
   local function Take(plan, cityID)
     for _, p in ipairs(plan or {}) do
       out.placements[#out.placements + 1] = { city = cityID, type = p.Type, x = p.X, y = p.Y }
+      TakeImprovements(p.Improvements, cityID)
     end
   end
   if scn.kind == "sites" then
@@ -336,7 +353,8 @@ function CmpAdapters.sdpSolve(request, variant, stats, o)
     local id = request.target:GetID()
     local r = SDP_Multi.Solve({ PlayerID = 0, Tier = variant, Districts = request.districts, Wonders = request.wonders,
       Plans = asMulti and { ["C" .. id] = request.districts } or nil, Pool = request.pool, Count = request.count,
-      Only = { [id] = true }, Weights = request.weights, Land = land, Swap = swap, Coverage = coverage, Distance = distance })
+      Only = { [id] = true }, Weights = request.weights, Land = land, Swap = swap, Coverage = coverage, Distance = distance,
+      Improvements = improve, WorkedImprovements = worked })
     -- As in the single-city branch, no estimate when picking from a pool.
     if request.pool == nil then
       stats.sdpEstimate = SDP_Multi.EstimateUnits(1, #request.districts, #(request.wonders or {}),
@@ -350,7 +368,9 @@ function CmpAdapters.sdpSolve(request, variant, stats, o)
         out.placements[#out.placements + 1] = { city = id, type = p.Support.Type, x = p.Support.X, y = p.Support.Y,
           kind = "IMPROVEMENT" }
       end
+      TakeImprovements(p.Improvements, id)
     end
+    for _, c in ipairs(r.Cities or {}) do TakeImprovements(c.Worked, id) end
     if oracle and r.Ok then
       Oracle(r, out, function() return id end, check, request.weights, land, lambda)
       stats.method = "oracle"
@@ -363,13 +383,15 @@ function CmpAdapters.sdpSolve(request, variant, stats, o)
   elseif scn.kind == "single" then
     local r = SDP_Solver.Solve({ PlayerID = 0, CityID = request.target:GetID(), Districts = request.districts,
       Pool = request.pool, Count = request.count,
-      Land = land, Tier = variant, Weights = request.weights, Swap = swap, Coverage = coverage, Distance = distance })
+      Land = land, Tier = variant, Weights = request.weights, Swap = swap, Coverage = coverage, Distance = distance,
+      Improvements = improve, WorkedImprovements = worked })
     if not r.Ok then out.notes[#out.notes + 1] = tostring(r.Error) end
     if r.Ok and r.Session and r.Session.Scan and request.pool == nil then
       stats.sdpEstimate = SDP_Solver.EstimateUnits(#r.Session.Scan.Candidates, #request.districts,
         SDP_Tiers.Params(SDP_Tiers.Single, variant), 0, 0)
     end
     Take(r.Plan, request.target:GetID())
+    TakeImprovements(r.Worked, request.target:GetID())
     if longrun and r.Ok then
       local id = request.target:GetID()
       LongRun(r, out, function() return id end, request, SDP_Solver.Continue)
@@ -414,7 +436,8 @@ function CmpAdapters.sdpSolve(request, variant, stats, o)
         end
       end
       local r = SDP_Multi.Solve({ PlayerID = 0, Tier = variant, Districts = plans and {} or request.districts, Plans = plans,
-        Existing = existing, Land = land, Weights = request.weights, Distance = distance })
+        Existing = existing, Land = land, Weights = request.weights, Distance = distance,
+        Improvements = improve, WorkedImprovements = worked })
       if not r.Ok then out.notes[#out.notes + 1] = tostring(r.Error) end
       local byKey = {}
       for _, c in ipairs(r.Cities or {}) do byKey[c.Key] = c.CityID end
@@ -422,7 +445,13 @@ function CmpAdapters.sdpSolve(request, variant, stats, o)
         if p.Kind == nil or p.Kind == "DISTRICT" then
           out.placements[#out.placements + 1] = { city = byKey[p.City], type = p.Type, x = p.X, y = p.Y }
           Pin(p.Type, p.X, p.Y)
+          TakeImprovements(p.Improvements, byKey[p.City])
+          for _, e in ipairs(p.Improvements or {}) do Pin(e.Type, e.X, e.Y) end
         end
+      end
+      for _, c in ipairs(r.Cities or {}) do
+        TakeImprovements(c.Worked, c.CityID)
+        for _, e in ipairs(c.Worked or {}) do Pin(e.Type, e.X, e.Y) end
       end
       for _, u in ipairs(r.Unplaced or {}) do out.notes[#out.notes + 1] = "unplaced " .. tostring(u.Type) .. " " .. tostring(u.Reason) end
     end
@@ -440,7 +469,7 @@ function CmpAdapters.sdpSolve(request, variant, stats, o)
     local only = #request.cities == 1 and existing or nil
     local r = SDP_Multi.Solve({ PlayerID = 0, Tier = variant, Districts = plans and {} or request.districts, Plans = plans,
       Existing = existing, Only = only, Land = land, Weights = request.weights, Coverage = coverage, Swap = swap,
-      Distance = distance, Params = groupParams })
+      Distance = distance, Params = groupParams, Improvements = improve, WorkedImprovements = worked })
     if r.Stats then stats.sdpGroups, stats.sdpTruncated = r.Stats.Groups, r.Stats.Truncated end
     if not r.Ok then out.notes[#out.notes + 1] = tostring(r.Error) end
     local byKey = {}
@@ -459,8 +488,10 @@ function CmpAdapters.sdpSolve(request, variant, stats, o)
     for _, p in ipairs(r.Plan or {}) do
       if p.Kind == nil or p.Kind == "DISTRICT" then
         out.placements[#out.placements + 1] = { city = byKey[p.City], type = p.Type, x = p.X, y = p.Y }
+        TakeImprovements(p.Improvements, byKey[p.City])
       end
     end
+    for _, c in ipairs(r.Cities or {}) do TakeImprovements(c.Worked, c.CityID) end
     stats.sdpGain, stats.sdpAppeal, stats.sdpLand, stats.sdpCost = r.Adjacency, r.AppealDelta, r.LandDelta, r.CostDelta
     if land then stats.sdpObjective = r.Gain end
     stats.sdpQuality = r.Quality -- design 7.4: Exhaustive, Bound, Gap, Converged, Truncated

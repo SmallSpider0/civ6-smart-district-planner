@@ -278,14 +278,18 @@ function SDP_Improve.New(spec)
   -- District types an improvement can matter to.
   self.Target = {}
   for district in pairs(self.Rules.Gives) do self.Target[district] = true end
+  -- What districts give improvements counts only in the land part.
   self.AnyTake = false
-  for _, rows in pairs(self.Rules.Takes) do
-    for _, row in ipairs(rows) do
-      if row.District ~= nil then self.Target[row.District] = true end
-      if row.Any then self.AnyTake = true end
+  if self.LandOn then
+    for _, rows in pairs(self.Rules.Takes) do
+      for _, row in ipairs(rows) do
+        if row.District ~= nil then self.Target[row.District] = true end
+        if row.Any then self.AnyTake = true end
+      end
     end
   end
-  self.options, self.neighbours, self.subjects = {}, {}, {}
+  self.options, self.neighbours, self.subjects, self.rings = {}, {}, {}, {}
+  self.assigned, self.assignedCount = {}, 0 -- Assign's groups by their surroundings
   return self
 end
 
@@ -296,7 +300,7 @@ end
 
 -- Whether a district of `districtType` can get an improvement next to it.
 function Model:IsTarget(districtType)
-  return self.Target[districtType] == true or (self.AnyTake and self.LandOn)
+  return self.Target[districtType] == true or self.AnyTake
 end
 
 function Model:Neighbours(index)
@@ -413,12 +417,124 @@ end
 -- (nil when none): a planned improvement's plot with that improvement and
 -- what the districts give it; a built improvement next to a planned
 -- district plus what that district gives it.
+--
+-- Districts more than two plots apart share no plot and no neighbour of
+-- one, so their improvements are chosen apart: the targets fall into groups
+-- (within two plots of each other, transitively), and each group's choice
+-- depends only on what is placed or blocked within two plots of its
+-- districts. The search tries many layouts that differ in one group, so
+-- each group's choice is kept by that key (the choice is the same whatever
+-- else is placed: same input, same output).
 function Model:Assign(placed, blocked)
-  local placedAt, targets = {}, {}
+  local placedAt, targets, at = {}, {}, {}
   for _, p in ipairs(placed) do
     placedAt[p.Index] = p
-    if p.Kind ~= "WONDER" and self:IsTarget(p.Type) then targets[#targets + 1] = p end
+    if p.Kind ~= "WONDER" and self:IsTarget(p.Type) then
+      targets[#targets + 1] = p
+      at[p.Index] = #targets
+    end
   end
+  if #targets == 0 then return {}, nil end
+  -- Groups: union of targets within two plots.
+  local parent = {}
+  for t = 1, #targets do parent[t] = t end
+  local function Root(t)
+    while parent[t] ~= t do t = parent[t] end
+    return t
+  end
+  for t, p in ipairs(targets) do
+    for _, n in ipairs(self:Ring2(p.Index)) do
+      local u = at[n]
+      if u ~= nil then
+        local a, b = Root(t), Root(u)
+        if a ~= b then
+          if a < b then parent[b] = a else parent[a] = b end
+        end
+      end
+    end
+  end
+  local groups, order = {}, {}
+  for t = 1, #targets do
+    local r = Root(t)
+    if groups[r] == nil then
+      groups[r] = {}
+      order[#order + 1] = r
+    end
+    table.insert(groups[r], targets[t])
+  end
+  local cache = self.assigned
+  local plan, forced = {}, nil
+  for _, r in ipairs(order) do
+    local group = groups[r]
+    -- The key: the group's surroundings, plots in index order.
+    -- (In slot order: the same surroundings in another order only miss the
+    -- cache; AssignGroup does not depend on the order.)
+    local parts, mark = {}, {}
+    for _, p in ipairs(group) do
+      mark[p.Index] = true
+      parts[#parts + 1] = p.Index .. p.Type
+    end
+    for _, p in ipairs(group) do
+      for _, n in ipairs(self:Ring2(p.Index)) do
+        if not mark[n] then
+          mark[n] = true
+          local q = placedAt[n]
+          if q ~= nil then
+            parts[#parts + 1] = n .. (q.Kind == "WONDER" and "w" or q.Type)
+          elseif blocked and blocked[n] then
+            parts[#parts + 1] = n .. "b"
+          end
+        end
+      end
+    end
+    local key = table.concat(parts, ",")
+    local hit = cache[key]
+    if hit == nil then
+      local groupPlan, groupForced = self:AssignGroup(group, placedAt, blocked)
+      hit = { Plan = groupPlan, Forced = groupForced }
+      if self.assignedCount >= 20000 then
+        cache = {}
+        self.assigned, self.assignedCount = cache, 0
+      end
+      cache[key] = hit
+      self.assignedCount = self.assignedCount + 1
+    end
+    for _, item in ipairs(hit.Plan) do plan[#plan + 1] = item end
+    if hit.Forced ~= nil then
+      forced = forced or {}
+      for index, value in pairs(hit.Forced) do forced[index] = value end
+    end
+  end
+  if #order > 1 then table.sort(plan, function(a, b) return a.Index < b.Index end) end
+  return plan, forced
+end
+
+-- Plots within two of plot `index` (itself left out).
+function Model:Ring2(index)
+  local list = self.rings[index]
+  if list == nil then
+    list = {}
+    local mark = { [index] = true }
+    for _, n in ipairs(self:Neighbours(index)) do
+      if not mark[n] then
+        mark[n] = true
+        list[#list + 1] = n
+      end
+      for _, m in ipairs(self:Neighbours(n)) do
+        if not mark[m] then
+          mark[m] = true
+          list[#list + 1] = m
+        end
+      end
+    end
+    self.rings[index] = list
+  end
+  return list
+end
+
+-- Assign for one group of target districts (`targets`), with everything
+-- placed (`placedAt`) and blocked around them.
+function Model:AssignGroup(targets, placedAt, blocked)
   local forced = nil
   local w = self.Weights
   -- Candidate plots next to the target districts, and built improvements a
@@ -508,18 +624,35 @@ function Model:Assign(placed, blocked)
     end
   end
   table.sort(districts, function(a, b) return a.Index < b.Index end)
+  -- Each district's counts: the improvements there already (ExistingNext)
+  -- and the chosen plots next to it of each type it takes, so a set's value
+  -- is a sum over these (the pruning below tries many sets).
+  local terms = {}
+  for _, d in ipairs(districts) do
+    for _, g in ipairs(self.Rules.Gives[d.Type]) do
+      local weight = (w[g.Yield] or 0) * g.Amount
+      if weight ~= 0 then
+        local plots = {}
+        for _, n in ipairs(self:Neighbours(d.Index)) do
+          if choice[n] ~= nil and choice[n].Type == g.Improvement then plots[#plots + 1] = n end
+        end
+        if #plots > 0 then
+          terms[#terms + 1] = { Base = self:ExistingNext(d.Index, g.Improvement), Plots = plots, Tiles = g.Tiles,
+            Weight = weight }
+        end
+      end
+    end
+  end
   local active = {}
   for _, q in ipairs(chosen) do active[q] = true end
   local function Value()
     local total = 0
-    for _, d in ipairs(districts) do
-      for _, g in ipairs(self.Rules.Gives[d.Type]) do
-        local count = self:ExistingNext(d.Index, g.Improvement)
-        for _, n in ipairs(self:Neighbours(d.Index)) do
-          if active[n] and choice[n].Type == g.Improvement then count = count + 1 end
-        end
-        total = total + (w[g.Yield] or 0) * g.Amount * math.floor(count / g.Tiles)
+    for _, t in ipairs(terms) do
+      local count = t.Base
+      for _, n in ipairs(t.Plots) do
+        if active[n] then count = count + 1 end
       end
+      total = total + t.Weight * math.floor(count / t.Tiles)
     end
     for _, q in ipairs(chosen) do
       if active[q] then total = total + choice[q].Land end
