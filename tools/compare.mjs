@@ -454,7 +454,6 @@ if (!isMainThread) {
     parentPort.postMessage(runTask(task));
   });
 } else {
-  placeRun(import.meta.url); // started by hand: registered and placed by tools/remote.py direct
   const argv = process.argv.slice(2);
   let filter = null;
   let planners = ["sdp", "amt", "ep", "dwp"];
@@ -508,6 +507,8 @@ if (!isMainThread) {
       process.exit(2);
     }
   }
+  // After the arguments are checked: a usage error (--help too) prints here at once, not on the second machine (#286)
+  placeRun(import.meta.url); // started by hand: registered and placed by tools/remote.py direct
   RULESET = ruleset;
   if (!existsSync(GAMEINFO)) {
     console.error("missing " + display(GAMEINFO) + ": run python3 -I tests/compare/export_gameinfo.py");
