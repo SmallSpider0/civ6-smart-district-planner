@@ -396,5 +396,34 @@ class Arguments(unittest.TestCase):
                 watch.main(["--out", d, "--service"])
             self.assertEqual(out.getvalue().count("trouble: Mac mini"), 2)
 
+
+class Work(TempShared):
+    """work() finds an issue's branch; here by the issue its PR closes, with no "#N" in title or commits."""
+
+    def fake_run(self, cmd, timeout=60):
+        if cmd[:3] == ["git", "worktree", "list"]:
+            return "worktree /repo\nHEAD abc\nbranch refs/heads/main\n"
+        if cmd[:3] == ["gh", "pr", "list"]:
+            return json.dumps([{"number": 284, "title": "Improve the reminder tacks", "url": "u",
+                                "headRefName": "mac/improvement-tacks", "isDraft": False,
+                                "autoMergeRequest": None, "statusCheckRollup": [],
+                                "closingIssuesReferences": [{"number": 227}]}])
+        if cmd[:3] == ["gh", "issue", "list"]:
+            return json.dumps([{"number": 227, "title": "Tacks"}, {"number": 9, "title": "Other"}])
+        if cmd[:2] == ["git", "log"]:
+            return "1700000000\tImprove the reminder tacks (issue 227)\n"
+        if cmd[:2] == ["git", "fetch"]:
+            return ""
+        if "stale" in cmd:
+            return "[]"
+        raise AssertionError(cmd)
+
+    def test_issue_found_by_the_pr_it_closes(self):
+        with mock.patch.object(sync, "run", self.fake_run), mock.patch.object(sync, "SHARED", self.tmp.name):
+            items = sync.work(0)["items"]
+        self.assertEqual([(it["branch"], [i["n"] for i in it["issues"]]) for it in items],
+                         [("mac/improvement-tacks", [227])])
+
+
 if __name__ == "__main__":
     unittest.main()
