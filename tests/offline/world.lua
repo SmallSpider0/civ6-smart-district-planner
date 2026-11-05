@@ -471,6 +471,22 @@ function World.New(spec)
       Cost = 180, PrereqTech = "TECH_IRRIGATION", AdjacentImprovement = "IMPROVEMENT_CAMP" }
     gi.Buildings = Table(rows, "BuildingType")
   end
+  -- A wonder each player may build once, as the national wonders some mods
+  -- add (issue 294), on request: added last, so the other rows keep their
+  -- indices.
+  if spec.nationalWonder then
+    local rows = {}
+    for row in gi.Buildings() do rows[#rows + 1] = row end
+    rows[#rows + 1] = { BuildingType = "BUILDING_TEST_NATIONAL", Name = "LOC_BUILDING_TEST_NATIONAL_NAME", IsWonder = true,
+      Cost = 200, PrereqTech = "TECH_MASONRY", MaxPlayerInstances = 1, MaxWorldInstances = -1 }
+    gi.Buildings = Table(rows, "BuildingType")
+  end
+  -- Instance limits as the game's defaults: a wonder once in the world, the
+  -- rest without a limit.
+  for row in gi.Buildings() do
+    if row.MaxWorldInstances == nil then row.MaxWorldInstances = row.IsWonder and 1 or -1 end
+    if row.MaxPlayerInstances == nil then row.MaxPlayerInstances = -1 end
+  end
   -- Housing from buildings as in Gathering Storm (issue 188), on request:
   -- the granary (+2, a city-center building of the first era), the
   -- lighthouse (+1, and +2 more when the city center is next to the coast,
@@ -1322,6 +1338,14 @@ function World.New(spec)
       CITY_POPULATION_COAST = 3, CITY_POPULATION_NO_WATER = 2 },
     DirectionTypes = { NUM_DIRECTION_TYPES = 6 },
     Players = playerObjects,
+    PlayerManager = {
+      GetAliveIDs = function()
+        local ids = {}
+        for id in pairs(playerObjects) do ids[#ids + 1] = id end
+        table.sort(ids)
+        return ids
+      end,
+    },
     PlayerConfigurations = configs,
     PlayersVisibility = {
       [0] = { IsRevealed = function(_, i) return byIndex[i] ~= nil and byIndex[i].revealed end },

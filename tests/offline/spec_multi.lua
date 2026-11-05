@@ -444,6 +444,34 @@ test("wonder list: built and pinned wonders are marked, no generic icon", functi
   T.eq(status.DISTRICT_WONDER, nil, "no generic wonder icon")
 end)
 
+test("wonder list: a world wonder built anywhere is built, a national one only in our cities (issue 294)", function()
+  local w = World.New({
+    rows = MAP, nationalWonder = true,
+    cities = {
+      { id = 1, x = 4, y = 5, population = 6, capital = true, radius = 1 },
+      { id = 1, owner = 1, x = 17, y = 5, population = 3, radius = 1 },
+    },
+    -- In the other player's land, a national wonder seen and the pyramids
+    -- seen while still being built. Stonehenge, complete in the other
+    -- player's city where we never looked, is not on the map: in the UI
+    -- state an unrevealed plot reads no wonder (2026-11-06).
+    wonders = { { 16, 5, "BUILDING_PYRAMIDS" }, { 18, 5, "BUILDING_TEST_NATIONAL" } },
+  })
+  w:AddBuilding(1, "BUILDING_STONEHENGE", 1)
+  w:AddBuilding(1, "BUILDING_TEST_NATIONAL", 1)
+  local function Status()
+    local status = {}
+    for _, entry in ipairs(SDP_Wonders.List(0)) do status[entry.Type] = entry.Status or "free" end
+    return status
+  end
+  local status = Status()
+  T.eq(status.BUILDING_STONEHENGE, "BUILT", "a world wonder built where we never looked")
+  T.eq(status.BUILDING_PYRAMIDS, "free", "a world wonder still being built elsewhere")
+  T.eq(status.BUILDING_TEST_NATIONAL, "free", "a national wonder seen in another civ's land")
+  w:AddBuilding(1, "BUILDING_TEST_NATIONAL")
+  T.eq(Status().BUILDING_TEST_NATIONAL, "BUILT", "a national wonder in our own city")
+end)
+
 test("wonder list: by era, then production cost, then type (issue 7)", function()
   NewWorld()
   local list = SDP_Wonders.List(0)

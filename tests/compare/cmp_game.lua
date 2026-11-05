@@ -975,6 +975,11 @@ function CmpGame.New(spec)
         for _, p in ipairs(playerList) do if not p.minor then list[#list + 1] = p.id end end
         return list
       end,
+      GetAliveIDs = function()
+        local list = {}
+        for _, p in ipairs(playerList) do list[#list + 1] = p.id end
+        return list
+      end,
       IsValid = function(id) return players[id] ~= nil end,
     },
     Game = {

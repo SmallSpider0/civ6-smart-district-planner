@@ -4,24 +4,43 @@
 
 SDP_Wonders = {}
 
--- Wonders already built that the player can know of: in the player's own
--- cities, or seen on a revealed plot. Returns { [BuildingType] = true }.
+-- Wonders the player cannot plan any more: { [BuildingType] = true }.
+-- Those in the player's own cities (fixed neighbours, not planned again),
+-- and those built as many times in the world as the rule allows
+-- (Buildings.MaxWorldInstances), wherever they are, seen or not: the game
+-- takes such a wonder off every build menu (issue 294). They are counted in
+-- every player's cities, not on the map: in the UI state an unrevealed plot
+-- reads no wonder, while other players' cities and their buildings read the
+-- same as in the game core, met or not (2026-11-06). A wonder with no world
+-- limit, as the national wonders some mods add (one per player), is only
+-- built for this player in their own cities. Under construction does not
+-- count (HasBuilding is false until it is complete).
 function SDP_Wonders.Built(playerID)
-  local built = {}
-  for _, city in Players[playerID]:GetCities():Members() do
-    local buildings = city:GetBuildings()
-    if buildings ~= nil then
-      for row in GameInfo.Buildings() do
-        if row.IsWonder and buildings:HasBuilding(row.Index) then built[row.BuildingType] = true end
+  local wonders = {}
+  for row in GameInfo.Buildings() do
+    if row.IsWonder then wonders[#wonders + 1] = row end
+  end
+  local built, inWorld = {}, {}
+  local function Count(id)
+    local player = Players[id]
+    if player == nil then return end
+    for _, city in player:GetCities():Members() do
+      local buildings = city:GetBuildings()
+      if buildings ~= nil then
+        for _, row in ipairs(wonders) do
+          if buildings:HasBuilding(row.Index) then
+            inWorld[row.BuildingType] = (inWorld[row.BuildingType] or 0) + 1
+            if id == playerID then built[row.BuildingType] = true end
+          end
+        end
       end
     end
   end
-  local visibility = PlayersVisibility[playerID]
-  for index = 0, Map.GetPlotCount() - 1 do
-    local plot = Map.GetPlotByIndex(index)
-    if plot ~= nil and plot:GetWonderType() ~= -1 and visibility:IsRevealed(index) then
-      built[GameInfo.Buildings[plot:GetWonderType()].BuildingType] = true
-    end
+  local ids = PlayerManager ~= nil and PlayerManager.GetAliveIDs ~= nil and PlayerManager.GetAliveIDs() or { playerID }
+  for _, id in ipairs(ids) do Count(id) end
+  for _, row in ipairs(wonders) do
+    local limit = row.MaxWorldInstances or -1
+    if limit >= 0 and (inWorld[row.BuildingType] or 0) >= limit then built[row.BuildingType] = true end
   end
   return built
 end
