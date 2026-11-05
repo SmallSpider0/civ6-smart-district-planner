@@ -45,7 +45,7 @@ merge. `git stash` is never used (docs/maintaining.md, "共用资源").
 
 Network and gh errors are retried, never an exit. At the end it prints one
 line per PR. Exit 0: all merged; 1: something needs action; 2: a PR number
-GitHub does not know. Run it in the background: its end is the signal.
+GitHub does not know; 3 (--list only): the night queue is due. Run it in the background: its end is the signal.
 
 The waiting list (#275) lets a session hand a PR over without a message:
 
@@ -62,6 +62,15 @@ the same lines as above, and takes the PRs that ended (merged, needs action,
 unknown to GitHub) off the list; a PR fixed after it needed action goes back
 on with `add`. Writes to the list take the shared folder's mutex and replace
 the file whole, so two processes never mix their writes.
+
+`--list` also starts the night queue (sdplock.py queue): once per night, from
+NIGHT_DELAY minutes after the night window of the local config opens (its
+"night" start, read as sdplock reads it; weekend_is_night does not count)
+until it closes, when the queue has queued items, it ends with exit code 3
+and one line in Chinese naming them. The night it fired is kept in
+night-queue-due.json in the shared folder, so a restarted wait does not fire
+again that night; an empty queue does not fire (items added later that
+night still do, once). Nobody has to remember to set a reminder (2026-11-06).
 """
 import argparse
 import datetime
@@ -374,9 +383,18 @@ def poll(n, codex, now, timeout, tried, night, hold=False):
         return None
 
 
+def say(text):
+    """print() that never fails: a stdout on a legacy code page (Windows cp1252 in a pipe) gets '?' for what it cannot show."""
+    try:
+        print(text)
+    except UnicodeEncodeError:
+        enc = getattr(sys.stdout, "encoding", None) or "ascii"
+        print(str(text).encode(enc, "replace").decode(enc))
+
+
 def report(order, last):
     for n in order:
-        print("#%d %s: %s" % (n, "needs action" if last[n][0] == "action" else last[n][0], last[n][1])
+        say("#%d %s: %s" % (n, "needs action" if last[n][0] == "action" else last[n][0], last[n][1])
               if last[n][0] != "merged" else "#%d merged" % n)
 
 
@@ -393,7 +411,7 @@ def watch(numbers, codex_numbers, every, timeout, night=(), hold=()):
             try:
                 seen = poll(n, codex.get(n), now, timeout, tried, n in night, n in hold)
             except Unknown as problem:
-                print("#%d: %s" % (n, problem))
+                say("#%d: %s" % (n, problem))
                 return 2
             if seen:
                 last[n] = seen
@@ -440,8 +458,60 @@ def add(number, codex=False, night=False, hold=False):
         number, "".join(o for o, on in ((" --codex", codex), (" --night", night), (" --hold", hold)) if on), list_path())
 
 
+# -- the night queue's start (2026-11-06) -------------------------------------
+NIGHT_DELAY = 5  # minutes after the night window opens
+
+
+def due_path():
+    return os.path.join(sdplock.shared_dir(), "night-queue-due.json")
+
+
+def night_key(t, cfg=None):
+    """The local date the current night window started on, once NIGHT_DELAY minutes have passed
+    since it opened and while it lasts; else None. Only the window's start and end count."""
+    cfg = sdplock.local_config() if cfg is None else cfg
+    window = cfg.get("night")
+    if not isinstance(window, str) or "-" not in window:
+        return None
+    try:
+        start, end = (sdplock._minutes(x) for x in window.split("-", 1))
+    except ValueError:
+        return None
+    length = (end - start) % 1440
+    lt = sdplock.localtime(t)
+    m = lt.tm_hour * 60 + lt.tm_min
+    since = (m - start) % 1440
+    if not length or not NIGHT_DELAY <= since < length:
+        return None
+    day = datetime.date(lt.tm_year, lt.tm_mon, lt.tm_mday)
+    if m < start:  # the window opened before midnight
+        day -= datetime.timedelta(days=1)
+    return day.isoformat()
+
+
+def night_due(t, cfg=None):
+    """The line to print when the night queue is due now and has not fired this night (it is then
+    recorded as fired), else None."""
+    key = night_key(t, cfg)
+    if key is None:
+        return None
+    if (sdplock._read(due_path(), {}) or {}).get("fired") == key:
+        return None
+    items = sdplock.queue_items()
+    if not items:
+        return None
+    with sdplock._mutex("night-due"):
+        if (sdplock._read(due_path(), {}) or {}).get("fired") == key:
+            return None
+        sdplock._write(due_path(), {"fired": key})
+    names = "；".join("#%s %s" % (i.get("id"), i.get("what") or "") for i in items)
+    return "夜间队列到点（%s 夜，%d 项）：%s。请主会话派一个子 agent 按 sdp-game-test 跑。" % (
+        key, len(items), names)
+
+
 def watch_list(every, timeout):
-    """The standing wait: read the list each round; end when a PR is merged or needs action."""
+    """The standing wait: read the list each round; end when a PR is merged or needs action,
+    or when the night queue is due (exit 3)."""
     codex, last, tried = {}, {}, {}
     while True:
         now = time.time()
@@ -469,16 +539,21 @@ def watch_list(every, timeout):
                 last[n] = seen
             if last[n][0] in ("merged", "action", "unknown"):
                 ended.append(n)
+        due = night_due(now)
+        if due:
+            say(due)
         if ended:
             order = sorted(last)
             for n in order:
                 if last[n][0] == "unknown":
-                    print("#%d: %s" % (n, last[n][1]))
+                    say("#%d: %s" % (n, last[n][1]))
             report([n for n in order if last[n][0] != "unknown"], last)
             done = set(ended)
             change_list(lambda items: [items.pop(n, None) for n in done])
             kinds = [last[n][0] for n in ended]
             return 2 if "unknown" in kinds else 1 if "action" in kinds else 0
+        if due:
+            return 3
         time.sleep(every)
 
 
@@ -492,7 +567,7 @@ def main(argv=None):
         ap.add_argument("--night", action="store_true", help="waits for the night in-game test")
         ap.add_argument("--hold", action="store_true", help="kept open on purpose: never turn on its auto-merge")
         args = ap.parse_args(argv[1:])
-        print(add(args.number, args.codex, args.night, args.hold))
+        say(add(args.number, args.codex, args.night, args.hold))
         return 0
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("numbers", type=int, nargs="*", help="PRs to wait for")
@@ -503,7 +578,8 @@ def main(argv=None):
                     help="PRs kept open on purpose, waiting for Codex and the rest only: never turn on their "
                          "auto-merge, and their auto-merge being off or a clean review is no exit (also waited for)")
     ap.add_argument("--list", action="store_true",
-                    help="wait for the PRs on the waiting list (`pr_wait.py add N`), picking up new ones as they come")
+                    help="wait for the PRs on the waiting list (`pr_wait.py add N`), picking up new ones as they come; "
+                         "also ends (exit 3) once a night when the night queue is due")
     ap.add_argument("--every", type=float, default=60, help="seconds between checks (default 60)")
     ap.add_argument("--codex-timeout", type=int, default=1800,
                     help="seconds without a finished Codex review before auto-merge goes on anyway (default 1800)")
