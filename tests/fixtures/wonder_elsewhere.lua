@@ -3,7 +3,8 @@
 -- major after the local player gets a city where the local player has not
 -- looked, when it has none yet, and a finished wonder next to it. The wonder
 -- is the first one by type that the world allows once and nobody has built.
--- Undo with wonder_elsewhere_teardown.lua (the city stays: use a new game).
+-- Undo with wonder_elsewhere_teardown.lua, which removes this wonder only
+-- (the city stays: use a new game).
 local me = Game.GetLocalPlayer()
 local other = nil
 for id = 0, 63 do
@@ -69,6 +70,8 @@ if spot:GetOwner() == -1 then
   WorldBuilder.CityManager():SetPlotOwner(spot:GetX(), spot:GetY(), other:GetID(), city:GetID())
 end
 city:GetBuildQueue():CreateIncompleteBuilding(row.Index, spot:GetIndex(), 100)
+-- The teardown removes only this wonder (by this property), never others.
+Game:SetProperty("SDP_TEST_WONDER_ELSEWHERE", spot:GetIndex())
 print("player " .. other:GetID() .. " built " .. row.BuildingType .. " at " .. spot:GetX() .. "," .. spot:GetY()
   .. ": complete " .. tostring(spot:IsWonderComplete()) .. ", in the city " .. tostring(city:GetBuildings():HasBuilding(row.Index))
   .. ", revealed to the local player " .. tostring(visibility:IsRevealed(spot:GetIndex())))
