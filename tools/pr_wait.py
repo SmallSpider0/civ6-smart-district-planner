@@ -383,9 +383,18 @@ def poll(n, codex, now, timeout, tried, night, hold=False):
         return None
 
 
+def say(text):
+    """print() that never fails: a stdout on a legacy code page (Windows cp1252 in a pipe) gets '?' for what it cannot show."""
+    try:
+        print(text)
+    except UnicodeEncodeError:
+        enc = getattr(sys.stdout, "encoding", None) or "ascii"
+        print(str(text).encode(enc, "replace").decode(enc))
+
+
 def report(order, last):
     for n in order:
-        print("#%d %s: %s" % (n, "needs action" if last[n][0] == "action" else last[n][0], last[n][1])
+        say("#%d %s: %s" % (n, "needs action" if last[n][0] == "action" else last[n][0], last[n][1])
               if last[n][0] != "merged" else "#%d merged" % n)
 
 
@@ -402,7 +411,7 @@ def watch(numbers, codex_numbers, every, timeout, night=(), hold=()):
             try:
                 seen = poll(n, codex.get(n), now, timeout, tried, n in night, n in hold)
             except Unknown as problem:
-                print("#%d: %s" % (n, problem))
+                say("#%d: %s" % (n, problem))
                 return 2
             if seen:
                 last[n] = seen
@@ -532,12 +541,12 @@ def watch_list(every, timeout):
                 ended.append(n)
         due = night_due(now)
         if due:
-            print(due)
+            say(due)
         if ended:
             order = sorted(last)
             for n in order:
                 if last[n][0] == "unknown":
-                    print("#%d: %s" % (n, last[n][1]))
+                    say("#%d: %s" % (n, last[n][1]))
             report([n for n in order if last[n][0] != "unknown"], last)
             done = set(ended)
             change_list(lambda items: [items.pop(n, None) for n in done])
@@ -558,7 +567,7 @@ def main(argv=None):
         ap.add_argument("--night", action="store_true", help="waits for the night in-game test")
         ap.add_argument("--hold", action="store_true", help="kept open on purpose: never turn on its auto-merge")
         args = ap.parse_args(argv[1:])
-        print(add(args.number, args.codex, args.night, args.hold))
+        say(add(args.number, args.codex, args.night, args.hold))
         return 0
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("numbers", type=int, nargs="*", help="PRs to wait for")

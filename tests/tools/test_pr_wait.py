@@ -607,6 +607,15 @@ class NightQueue(unittest.TestCase):
         # 23:58: two checks before midnight, then 00:00, 00:01 ... until the delay has passed
         self.assertEqual(self.run_list(self.at(6, "23:58"), sleeps_before_stop=50), 3)
 
+    def test_fires_on_a_stdout_that_cannot_show_chinese(self):
+        self.queue("真实点击测试 #300")
+        raw = io.BytesIO()
+        out = io.TextIOWrapper(raw, encoding="cp1252", errors="strict")
+        with contextlib.redirect_stdout(out):
+            self.assertEqual(self.run_list(self.at(7, "00:06")), 3)
+            out.flush()
+        self.assertIn(b"#1", raw.getvalue())
+
     def test_not_before_the_window(self):
         self.queue()
         self.assertIsNone(self.run_list(self.at(6, "23:50")))
