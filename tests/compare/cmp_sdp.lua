@@ -35,6 +35,12 @@
 --   variant <TIER>_HWATER            sites: housing scores the water housing
 --                                    only, no building (issue 297 experiment);
 --                                    before _GRID
+--   variant <TIER>_HBLD<nn>          sites: every building's housing times
+--                                    nn / 100 (_HBLD000 is _HWATER; issue 297)
+--   variant <TIER>_HLIGHT            sites: _HWATER, and a coast plot (sea or
+--                                    lake) yields the lighthouse's +1 food
+--                                    once the player has its technology
+--                                    (issue 297); before _GRID
 --   variant <TIER>_HOUSE<n>          sites: housing weight n (else as the
 --                                    balanced preset; issue 297); before _GRID
 --   variant ..._DIST<nnn> (last)     the distance cost weight nnn / 100 (single
@@ -240,6 +246,11 @@ function CmpAdapters.sdp(request, variant, w)
   -- "_HWATER", "_HOUSE<n>" (sites, issue 297): water housing only; housing weight n.
   local hwater = variant:match("_HWATER") ~= nil
   variant = variant:gsub("_HWATER", "")
+  local hbuild = tonumber(variant:match("_HBLD(%d%d%d)") or "")
+  variant = variant:gsub("_HBLD%d%d%d", "")
+  local hlight = variant:match("_HLIGHT") ~= nil
+  variant = variant:gsub("_HLIGHT", "")
+  if hlight then hwater = true end
   local hweight = tonumber(variant:match("_HOUSE(%d+)") or "")
   variant = variant:gsub("_HOUSE%d+", "")
   -- "<TIER>_GROWTH" (sites): the sites tab's Growth first preset.
@@ -286,6 +297,30 @@ function CmpAdapters.sdp(request, variant, w)
   variant = variant:gsub("_GROUP%d+S?$", "")
   LoadSDP()
   if knew ~= nil then SDP_Sites.KIND_NEW = knew end
+  if hbuild ~= nil then
+    -- Every building's housing times hbuild / 100.
+    local function Scaled(parts)
+      local out = {}
+      for i, part in ipairs(parts) do out[i] = { Building = part.Building, Housing = part.Housing * hbuild / 100 } end
+      return out
+    end
+    local center, building = SDP_Land.CenterHousingParts, SDP_Land.BuildingHousingParts
+    SDP_Land.CenterHousingParts = function(...) return Scaled(center(...)) end
+    SDP_Land.BuildingHousingParts = function(...) return Scaled(building(...)) end
+  end
+  if hlight and SDP_Land.BuildingResearched(0, "BUILDING_LIGHTHOUSE") then
+    -- The lighthouse's food on coast plots (LIGHTHOUSE_COAST_FOOD), as if
+    -- every site built a harbor and its lighthouse.
+    local values = SDP_Land.PlotValues
+    SDP_Land.PlotValues = function(plot, ctx)
+      local best, once, bare, forgone = values(plot, ctx)
+      if plot:IsWater() and GameInfo.Terrains[plot:GetTerrainType()].TerrainType == "TERRAIN_COAST" then
+        local food = ctx.W.YIELD_FOOD or 1
+        best, bare = best + food, bare + food
+      end
+      return best, once, bare, forgone
+    end
+  end
   if hwater then
     -- No building's housing: the center's (both sides of the difference)
     -- nor the coast districts'.
