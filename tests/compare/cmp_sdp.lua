@@ -32,6 +32,11 @@
 --   variant <TIER>_KNEW<n>           sites: the first plot of a new strategic
 --                                    kind counts n times (SDP_Sites.KIND_NEW,
 --                                    issue 86: 2, 3 and 4 measured); before _DIST
+--   variant <TIER>_HWATER            sites: housing scores the water housing
+--                                    only, no building (issue 297 experiment);
+--                                    before _GRID
+--   variant <TIER>_HOUSE<n>          sites: housing weight n (else as the
+--                                    balanced preset; issue 297); before _GRID
 --   variant ..._DIST<nnn> (last)     the distance cost weight nnn / 100 (single
 --                                    and multi; the panel's default is
 --                                    _DIST050 since issue 91; sites too,
@@ -232,6 +237,11 @@ function CmpAdapters.sdp(request, variant, w)
   -- "<TIER>_KNEW<n>" (sites, issue 86): the new strategic kind's factor.
   local knew = tonumber(variant:match("_KNEW(%d)$") or "")
   variant = variant:gsub("_KNEW%d$", "")
+  -- "_HWATER", "_HOUSE<n>" (sites, issue 297): water housing only; housing weight n.
+  local hwater = variant:match("_HWATER") ~= nil
+  variant = variant:gsub("_HWATER", "")
+  local hweight = tonumber(variant:match("_HOUSE(%d+)") or "")
+  variant = variant:gsub("_HOUSE%d+", "")
   -- "<TIER>_GROWTH" (sites): the sites tab's Growth first preset.
   local growth = variant:match("_GROWTH$") ~= nil
   variant = variant:gsub("_GROWTH$", "")
@@ -276,6 +286,17 @@ function CmpAdapters.sdp(request, variant, w)
   variant = variant:gsub("_GROUP%d+S?$", "")
   LoadSDP()
   if knew ~= nil then SDP_Sites.KIND_NEW = knew end
+  if hwater then
+    -- No building's housing: the center's (both sides of the difference)
+    -- nor the coast districts'.
+    local context = SDP_Sites.Context
+    SDP_Sites.Context = function(...)
+      local ctx = context(...)
+      ctx.Housing.CenterParts, ctx.Housing.CenterLater, ctx.Housing.Center = {}, {}, 0
+      ctx.CoastDistricts = {}
+      return ctx
+    end
+  end
   if land then ScaleLand(lambda) end
   w.Events.LoadGameViewStateDone()
   local stats = {}
@@ -292,9 +313,18 @@ function CmpAdapters.sdp(request, variant, w)
   local out = CmpAdapters.sdpSolve(request, variant, stats, {
     asMulti = asMulti, oracle = oracle, check = check, longrun = longrun, land = land, lambda = lambda,
     swap = swap, coverage = coverage, distance = distance, dense = dense, count = count, grid = grid,
-    growth = growth, group = group, sharedList = sharedList, groupParams = groupParams, improve = improve, worked = worked })
+    growth = growth, hweight = hweight, group = group, sharedList = sharedList, groupParams = groupParams, improve = improve, worked = worked })
   SDP_Task.Tick = tick
   stats.sdpUnits = units
+  return out
+end
+
+-- The balanced preset with housing weight n (issue 297), or nil.
+local function HouseWeights(n)
+  if n == nil then return nil end
+  local out = {}
+  for key, value in pairs(SDP_Sites.PRESETS.BALANCED) do out[key] = value end
+  out.HOUSING = n
   return out
 end
 
@@ -326,7 +356,7 @@ function CmpAdapters.sdpSolve(request, variant, stats, o)
     local r = SDP_SiteSolver.Solve({ PlayerID = 0, Tier = variant, D = request.sites.distance,
       K = count or (dense and SDP_SiteSolver.DENSE_MAX_K) or request.sites.count, Dense = dense,
       Districts = districts.Districts, Pool = districts.Pool, Pick = districts.Pick,
-      Weights = growth and SDP_Sites.PRESETS.GROWTH or nil, Distance = distance })
+      Weights = growth and SDP_Sites.PRESETS.GROWTH or HouseWeights(o.hweight), Distance = distance })
     if dense and r.Ok then stats.sdpPackings, stats.sdpMostSites = r.Stats.Packings, r.Stats.MostSites end
     if grid ~= nil then stats.sdpPool = districts.Pool end
     if not r.Ok then out.notes[#out.notes + 1] = tostring(r.Error) end
@@ -345,6 +375,15 @@ function CmpAdapters.sdpSolve(request, variant, stats, o)
       end
     end
     stats.sdpSiteDistricts = siteDistricts
+    -- Each site's water and housing, and how far from the player's cities
+    -- (issue 297), "x,y:WATER:housing:distance".
+    local siteInfo = {}
+    for _, site in ipairs(byIndex) do
+      local info = site.Info or {}
+      siteInfo[#siteInfo + 1] = site.X .. "," .. site.Y .. ":" .. tostring(info.WaterKind) .. ":"
+        .. tostring(info.Housing) .. ":" .. tostring(info.OwnDistance)
+    end
+    stats.sdpSiteInfo = siteInfo
     stats.method = "sites"
   elseif scn.kind == "single" and (#(request.wonders or {}) > 0 or asMulti) then
     -- Wonders with the districts: the single-city tab solves this city as
