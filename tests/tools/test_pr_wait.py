@@ -2,6 +2,9 @@
 
     python3 -I -m unittest discover -s tests/tools -v
 """
+import calendar
+import contextlib
+import io
 import json
 import os
 import shutil
@@ -17,6 +20,7 @@ import pr_wait  # noqa: E402
 HEAD = "a" * 40
 WHEN = "2026-11-02T15:00:00Z"
 AUTO = {"mergeMethod": "SQUASH"}
+ROOT = pr_wait.ROOT
 
 
 def check(name, status="COMPLETED", conclusion="SUCCESS", started="2026-11-02T15:01:00Z"):
@@ -319,6 +323,12 @@ class Hold(unittest.TestCase):
         self.assertEqual(pr_wait.main(["--codex", "26", "--hold", "26"]), 0)
         self.assertEqual(seen, [([], [26], 60, 1800, set(), {26})])
 
+def set_env(test, name, value):
+    old = os.environ.get(name)
+    test.addCleanup(lambda: os.environ.__setitem__(name, old) if old is not None else os.environ.pop(name, None))
+    os.environ[name] = value
+
+
 class WaitingList(unittest.TestCase):
     """#275: handing a PR to the watch side session took a message, and its reply ("put on the wait") woke
     the main session once more; on 2026-11-04 that held back #274's merge report for about 6 hours. Now
@@ -331,6 +341,7 @@ class WaitingList(unittest.TestCase):
         self.addCleanup(lambda: os.environ.__setitem__("SDP_SHARED", old) if old is not None
                         else os.environ.pop("SDP_SHARED", None))
         os.environ["SDP_SHARED"] = tmp
+        set_env(self, "SDP_LOCAL_CONFIG", os.path.join(tmp, "no-local.json"))  # no night window here
 
     def test_the_list_sits_next_to_the_codex_log(self):
         self.assertEqual(os.path.dirname(pr_wait.list_path()), os.path.dirname(cr.log_path()))
@@ -533,3 +544,106 @@ class ResolveAdded(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class NightQueue(unittest.TestCase):
+    """2026-11-06: four items were queued by day by different agents; nobody told the watch side session,
+    so no reminder was set and nothing started when the night window opened. The standing `--list` wait
+    now ends once per night a few minutes after the window opens when the queue has items."""
+
+    def setUp(self):
+        tmp = tempfile.mkdtemp(prefix="pr_wait_night-")
+        self.addCleanup(shutil.rmtree, tmp, True)
+        set_env(self, "SDP_SHARED", tmp)
+        cfg = os.path.join(tmp, "local.json")
+        with open(cfg, "w", encoding="utf-8") as fh:
+            json.dump({"night": "00:00-08:00", "weekend_is_night": True}, fh)
+        set_env(self, "SDP_LOCAL_CONFIG", cfg)
+        self.addCleanup(setattr, pr_wait.sdplock, "localtime", pr_wait.sdplock.localtime)
+        pr_wait.sdplock.localtime = lambda t: __import__("time").gmtime(t)  # the fake clock reads as UTC here
+
+    def at(self, day, hhmm):
+        """Epoch seconds of 2026-11-<day> hh:mm UTC (local here, see setUp)."""
+        h, m = hhmm.split(":")
+        return float(calendar.timegm((2026, 11, day, int(h), int(m), 0)))
+
+    def queue(self, what="真实点击测试 #300"):
+        pr_wait.sdplock.queue_add(ROOT, what, "PR #300 等它")
+
+    def run_list(self, start, sleeps_before_stop=3):
+        """Run watch_list from clock start with an empty PR list; its exit code, or None if it kept waiting."""
+        fake = Fake(self, {})
+        fake.clock = start
+        sleep = fake.sleep
+
+        def sleep_or_stop(seconds):
+            sleep(seconds)
+            if fake.sleeps >= sleeps_before_stop:
+                raise StopIteration
+        pr_wait.time.sleep = sleep_or_stop
+        try:
+            return pr_wait.watch_list(60, 1800)
+        except StopIteration:
+            return None
+
+    def test_fires_once_when_items_are_queued_and_the_window_has_opened(self):
+        self.queue("真实点击测试 #300")
+        self.queue("英文界面截图")
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            self.assertEqual(self.run_list(self.at(7, "00:06")), 3)
+        line = out.getvalue().strip()
+        self.assertIn("夜间队列到点", line)
+        self.assertIn("2 项", line)
+        self.assertIn("#1 真实点击测试 #300", line)
+        self.assertIn("#2 英文界面截图", line)
+
+    def test_fires_when_the_window_opened_a_few_minutes_into_the_wait(self):
+        self.queue()
+        # 23:58: two checks before midnight, then 00:00, 00:01 ... until the delay has passed
+        self.assertEqual(self.run_list(self.at(6, "23:58"), sleeps_before_stop=50), 3)
+
+    def test_not_before_the_window(self):
+        self.queue()
+        self.assertIsNone(self.run_list(self.at(6, "23:50")))
+        self.assertIsNone(pr_wait.night_due(self.at(7, "00:02")))  # opened, but not a few minutes ago yet
+        self.assertIsNone(pr_wait.night_due(self.at(7, "08:00")))  # closed again
+        self.assertIsNone(pr_wait.night_due(self.at(7, "14:00")))
+
+    def test_not_twice_the_same_night(self):
+        self.queue()
+        with contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(self.run_list(self.at(7, "00:06")), 3)
+        self.assertIsNone(self.run_list(self.at(7, "00:08")))  # the wait started again
+        self.assertIsNone(pr_wait.night_due(self.at(7, "03:00")))
+        self.assertIsNotNone(pr_wait.night_due(self.at(8, "00:06")))  # the next night fires again
+
+    def test_not_with_an_empty_queue(self):
+        self.assertIsNone(self.run_list(self.at(7, "00:06")))
+        item = pr_wait.sdplock.queue_add(ROOT, "跑过了", "x")
+        pr_wait.sdplock.queue_done(item["id"])
+        self.assertIsNone(pr_wait.night_due(self.at(7, "00:10")))  # only done items
+        self.queue()
+        self.assertIsNotNone(pr_wait.night_due(self.at(7, "02:00")))  # added later that night: still once
+
+    def test_the_window_comes_from_the_config_and_may_cross_midnight(self):
+        with open(os.environ["SDP_LOCAL_CONFIG"], "w", encoding="utf-8") as fh:
+            json.dump({"night": "22:30-06:00"}, fh)
+        self.assertIsNone(pr_wait.night_key(self.at(6, "22:06")))  # not open yet
+        self.assertEqual(pr_wait.night_key(self.at(6, "22:40")), "2026-11-06")
+        self.assertEqual(pr_wait.night_key(self.at(7, "01:00")), "2026-11-06")  # same night after midnight
+        self.assertIsNone(pr_wait.night_key(self.at(7, "06:00")))
+        with open(os.environ["SDP_LOCAL_CONFIG"], "w", encoding="utf-8") as fh:
+            json.dump({"weekend_is_night": True}, fh)
+        self.assertIsNone(pr_wait.night_key(self.at(7, "00:06")))  # no window: never (weekends do not count)
+
+    @unittest.skipUnless(hasattr(__import__("time"), "tzset"), "time.tzset is Unix only")
+    def test_the_window_is_in_local_time(self):
+        import time
+        pr_wait.sdplock.localtime = time.localtime
+        self.addCleanup(time.tzset)  # runs after TZ is restored
+        set_env(self, "TZ", "Asia/Shanghai")
+        time.tzset()
+        # 16:06 UTC on 11-06 is 00:06 on 11-07 in Shanghai
+        self.assertEqual(pr_wait.night_key(self.at(6, "16:06")), "2026-11-07")
+        self.assertIsNone(pr_wait.night_key(self.at(7, "00:06")))  # 08:06 there: closed
