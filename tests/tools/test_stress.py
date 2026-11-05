@@ -31,10 +31,13 @@ class SaveTests(unittest.TestCase):
         """Each listed file exists and its filter picks at least one test of it: a renamed case would
         otherwise only show as "ran nothing" in the release run."""
         import run_tests
-        for path, name_filter in stress.SAVE_TESTS:
+        for path, name_filter, setup in stress.SAVE_TESTS:
             with open(os.path.join(ROOT, path), encoding="utf-8") as fh:
                 names = run_tests.test_names(fh.read())
             self.assertTrue([n for n in names if not name_filter or name_filter in n], path)
+            if setup:
+                with open(stress.STEPS, encoding="utf-8") as fh:
+                    self.assertIn("function S.%s(" % setup.split(".")[1].split("(")[0], fh.read(), setup)
         self.assertTrue(set(stress.SAVE_TESTS_ON) <= set(stress.SCENARIOS))
 
 

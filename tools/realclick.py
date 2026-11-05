@@ -94,6 +94,20 @@ def window():
     return [int(v) for v in text.split()]
 
 
+def front(settle=0.0):
+    """Bring the game forward. The game's process is listed oddly (pid -1), so the click tool cannot do it
+    itself; `open -b` can (as game.py does). `settle`: seconds to wait after it came forward, the first
+    time: on 2026-11-06 a suite started with the game in the background lost one click early on (the
+    multi-city tab), and every later check of that tab failed with it; started in front, all passed."""
+    if game.front_app() != game.CIV6_BUNDLE:
+        subprocess.run(["open", "-b", game.CIV6_BUNDLE], capture_output=True)
+        for _ in range(30):
+            if game.front_app() == game.CIV6_BUNDLE:
+                break
+            time.sleep(0.1)
+        time.sleep(settle)
+
+
 def click_control(expr):
     """Click the center of the control `expr` (a Lua expression)."""
     lines = lua("""
@@ -111,14 +125,7 @@ print('AT', x + c:GetSizeX() / 2, y + c:GetSizeY() / 2, w, h, tostring(c:IsHidde
     scale = ww / uw
     title = wh - uh * scale  # the window's title bar
     x, y = cx * scale, title + cy * scale
-    # The game's process is listed oddly (pid -1), so the click tool cannot
-    # bring it forward itself; `open -b` can (as game.py does).
-    if game.front_app() != game.CIV6_BUNDLE:
-        subprocess.run(["open", "-b", game.CIV6_BUNDLE], capture_output=True)
-        for _ in range(30):
-            if game.front_app() == game.CIV6_BUNDLE:
-                break
-            time.sleep(0.1)
+    front()
     ok, text = run_click("%.1f" % x, "%.1f" % y)
     if not ok:
         raise RuntimeError(text)
@@ -183,6 +190,7 @@ def suite(args):
 
 def run_suite(_args):
     s = Suite()
+    front(settle=3.0)
     # A queued popup (historic moment, boost) covers the panel and takes the clicks.
     game.close_popups()
     lua("""

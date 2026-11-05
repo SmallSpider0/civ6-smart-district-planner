@@ -59,9 +59,12 @@ SCENARIOS = {
 
 # In-game test cases that need a save with many cities and pins (#302): a new game, as in run_tests.py's
 # full run, has one city, so they always skipped there. `run` runs them on these scenarios after its steps:
-# (test file, -k name filter or None). A skip here counts as a problem: the save is the one meant for them.
-SAVE_TESTS = [("tests/test_allcities.lua", None), ("tests/test_tacked.lua", None),
-              ("tests/test_features.lua", "on a save with several cities")]
+# (test file, -k name filter or None, setup step or None). A skip here counts as a problem: the save is the
+# one meant for them. They run after the steps' pins are undone, on the save as it was; a setup step (from
+# tests/bench/stress.lua) adds what its test needs and is undone after it: the save has fewer cities than
+# test_allcities needs, so city pins make up the rest.
+SAVE_TESTS = [("tests/test_allcities.lua", None, "SDP_Stress.GroupSites()"), ("tests/test_tacked.lua", None, None),
+              ("tests/test_features.lua", "on a save with several cities", None)]
 SAVE_TESTS_ON = ("pangaea-gs",)
 
 # Saves for measurements, not part of the release run (`all`). mid-gs
@@ -253,7 +256,7 @@ def cmd_run(args):
     r.step("multi 4 cities, crowded", 'SDP_Stress.Multi(4, 3, "STANDARD")')
     r.step("panel", "SDP_Stress.Panel()")
     r.step("undo", "SDP_Stress.UndoAll()")
-    save_tests = run_save_tests() if args.name in SAVE_TESTS_ON and not args.no_save_tests else None
+    save_tests = run_save_tests(r) if args.name in SAVE_TESTS_ON and not args.no_save_tests else None
     os.makedirs(RESULTS, exist_ok=True)
     out = os.path.join(RESULTS, args.name + ".json")
     record = {"Scenario": args.name, "Settings": SCENARIOS.get(args.name), "Census": census,
@@ -291,10 +294,13 @@ def save_test_result(path, name_filter, code, output):
     return entry
 
 
-def run_save_tests():
-    """SAVE_TESTS on the loaded save, through run_tests.py (same worktree: its game lock is ours)."""
+def run_save_tests(runner):
+    """SAVE_TESTS on the loaded save, through run_tests.py (same worktree: its game lock is ours); each
+    setup step is recorded with the other steps and undone after its test."""
     results = []
-    for path, name_filter in SAVE_TESTS:
+    for path, name_filter, setup in SAVE_TESTS:
+        if setup:
+            runner.step("setup " + os.path.basename(path), setup)
         cmd = [sys.executable, "-I", os.path.join(ROOT, "tools", "run_tests.py"), os.path.join(ROOT, path)]
         cmd += ["-k", name_filter] if name_filter else []
         done = subprocess.run(cmd, capture_output=True, text=True)
@@ -304,6 +310,8 @@ def run_save_tests():
               flush=True)
         if entry["Problem"]:
             sys.stdout.write(done.stdout[-3000:])
+        if setup:
+            runner.step("undo setup " + os.path.basename(path), "SDP_Stress.UndoAll()")
     return results
 
 
