@@ -55,6 +55,17 @@ jobs:
       - name: Tool tests (game lock, local jobs, the remote queue)
         if: steps.scope.outputs.code == 'true'
         run: python -I -m unittest discover -s tests/tools -v
+      # The whole offline suite on Ubuntu only: fengari is plain JavaScript and
+      # gives the same results on both (issue 302). Windows runs a few quick
+      # files, enough for the runner's own paths there: files named with
+      # backslashes, include() from tests/compare, the mod's XML read from
+      # the repository root.
       - name: Offline tests
-        if: steps.scope.outputs.code == 'true'
+        if: steps.scope.outputs.code == 'true' && runner.os != 'Windows'
         run: node tools/offline_tests.mjs
+      - name: Offline tests (a few quick files)
+        if: steps.scope.outputs.code == 'true' && runner.os == 'Windows'
+        run: |
+          node tools/offline_tests.mjs tests\offline\spec_land.lua tests\offline\spec_tabs.lua tests/offline/spec_overlay.lua
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node tools/offline_tests.mjs -k "issue 153" tests/offline/spec_panel.lua
