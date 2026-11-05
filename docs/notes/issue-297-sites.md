@@ -157,3 +157,13 @@ python3 -I tools/remote.py run i297-coast --slots 6 -- sh -c "node tools/compare
 ### 6.4 第二轮建议（写在 #297）
 
 推荐 B：照顾合作者说的海边城市（只沿海 21 个、挨着海 35 个，A 是 7、14），去掉“只沿海、摆了港口比河边还高”；裁判的地块、区域潜力都比现在好，只是不如 A。问合作者选 A 还是 B。实现时 B 只需在 `WaterPart` 和 `Context` 里把建筑住房乘 0.5（一个常量），悬停的“建好后另加”照旧写建筑的全额。
+
+## 7. 决定：保持现状（2026-11-05）
+
+[合作者回复](https://github.com/SmallSpider0/civ6-smart-district-planner/issues/297#issuecomment-6657006253)：A、B 都先不做，港口给的住房按科技解锁算，研究灯塔的科技前只沿海的城址 3.3，研究后 13.3。
+
+这正是 #188（v1.7.0）以来的做法，计分不改：
+
+- `SDP_Land.BuildingResearched` 从 `Buildings.PrereqTech`、`PrereqCivic` 读每个给住房的建筑的前置科技、市政，`SplitResearched` 把没研究的放进悬停的“建好后另加”，不计分。港口的灯塔、码头（`WaterPart`）和市中心的粮仓（`Context` 的 `Housing.Center`）都走这一条；粮仓在城址和“没水”基线两边一起算或一起不算，仍然抵消。港口区域本身的前置不另查：规则库里灯塔的前置就是港口的前置（天文导航），没研究时灯塔不算，结果相同。
+- 离线测试 `tests/offline/spec_site_housing.lua` 已经覆盖同一张图上有无天文导航、电力、灌溉时城址住房的三种情况（11 / 7 / 10、粮仓），本次重跑全部通过。
+- 本 Issue 不改代码，不加更新记录。实验用的对比变体 `_HWATER`、`_HOUSE<n>`、`_HBLD050`、`_HLIGHT`（`tests/compare/cmp_sdp.lua`）和统计探针 `tests/compare/probe297.lua` 留在仓库里，合作者以后给了不符合直觉的例子时可以直接复跑第 4、6 节的命令。
