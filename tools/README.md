@@ -312,6 +312,7 @@ python3 -I tools/run_tests.py --rulesets all       # 原版、迭起兴衰、风
 -- @state dmt_yieldcalculator      -- 在哪个 Lua 状态执行（默认 InGame）
 -- @timeout 30                     -- 整个文件的超时秒数（默认 30）
 -- @max_seconds 2.5                -- 可选：整个文件的墙钟时间超过即判失败（性能验收用）
+-- @max_seconds_each 2.5           -- 可选：文件里每个 test 单独执行一次、单独计时，超过即判失败（名字要写成字符串字面量）
 local test, T = ...
 
 test("名称", function()
@@ -324,7 +325,7 @@ end)
 - `T.dump(v)` 把值序列化为按键排序的文本，`T.same` 用它比较，适合检查"同输入同输出"。
 - 文件内容经 `loadstring` 以文件名作 chunk 名加载，错误信息带 `tests/xxx.lua:行号`，并去掉 harness 自身的调用栈帧。
 - 失败或 `-v` 时显示该文件的 `print()` 输出。
-- 计时为单文件墙钟时间（含约 0.02 秒 Tuner 往返）。游戏内 `os.clock` 等计时器只有秒级，不能在 Lua 里测耗时。
+- 计时为单文件墙钟时间（含约 0.02 秒 Tuner 往返；`@max_seconds_each` 时为每个 test 的）。游戏内 `os.clock` 等计时器只有秒级，不能在 Lua 里测耗时。
 - 已验证：通过/失败/跳过/语法错误/加载期错误、72 KB 的测试文件、内容含 `]]`、测试名含 `|` 和中文、状态名写错（只记该文件出错，其余继续）。
 
 ## realclick.py — 真实鼠标点击（仅 macOS）
@@ -342,6 +343,7 @@ python3 -I tools/realclick.py at 'Controls.SolveButton'   # 点 SDP_Panel 状态
 - 坐标来自游戏：控件的 `GetScreenOffset` 与尺寸（UI 单位 1920 × 1080）按窗口大小换算，不靠截图估计。
 - 每次点击前检查游戏在最前（不在时 `open -b com.aspyr.civ6.steam`）、点在游戏窗口内、该点最上层的窗口属于游戏，任一不满足就不点。套件开始前先关掉排队的弹窗；结束后把前台还给原来的应用。
 - 点击期间游戏会到前台，会占用屏幕和鼠标，跑之前告诉用户。
+- 套件每类控件只真点一下（坑 31 要证明的是鼠标点得到）：每个页签的区域格子从初始样子和点后的样子各点一下，开关、勾选框不再点回去，状态改回原样用 Lua；格子状态循环一圈由 `tests/test_ui.lua`、`tests/offline/spec_panel.lua` 经控件回调测（#302）。
 - 两次点击至少隔 1 秒：同一个格子连点两下间隔不到约 0.6 秒时，游戏把第二下当成双击，状态不变（2026-10-23，`civ6tuner.py serve` 常驻后两次点击之间的核对只要几毫秒，才暴露出来；之前直连 Tuner 时每次连接本身就慢）。窗口要整个在屏幕上，点击期间不要挪动。
 
 ## stress.py — 后期存档压力测试（发布前）
@@ -349,7 +351,7 @@ python3 -I tools/realclick.py at 'Controls.SolveButton'   # 点 SDP_Panel 状态
 ```bash
 python3 -I tools/stress.py prepare pangaea-gs     # 主菜单开局（在对局里先退回主菜单），AI 自动打 N 回合，存为 SDP_stress_pangaea-gs
 python3 -I tools/stress.py load pangaea-gs        # 回主菜单读这个存档
-python3 -I tools/stress.py run pangaea-gs         # tests/bench/stress.lua 的各步，逐步计时，结果写 tests/stress/results/
+python3 -I tools/stress.py run pangaea-gs         # tests/bench/stress.lua 的各步，逐步计时，结果写 tests/stress/results/；pangaea-gs 上再跑要多城存档的游戏内测试（SAVE_TESTS，跳过也算问题；--no-save-tests 不跑）
 python3 -I tools/stress.py check pangaea-gs       # 按玩家的建造流程建出"魅力"一步的方案，比较魅力与住房（每套方案前重新读档，免得各城方案互相影响；--same-game 不重读）
 python3 -I tools/refresh_stress_md.py             # 把汇总表写进 docs/self-test-report.md（报告第 5.10 节由 report/build.py 生成）
 python3 -I tools/stress.py summary                # 汇总表
@@ -490,11 +492,13 @@ python3 -I tools/release.py workshop 1.4.1   # SteamCMD 上传、下载回来比
 ## refresh_results.py — 重跑与核对对比结果
 
 ```bash
-python3 -I tools/refresh_results.py --check            # 开发集（full_rejudged.jsonl，约 270 次运行）重跑后逐行比对，不改文件
+python3 -I tools/refresh_results.py --check            # 开发集（full_rejudged.jsonl，约 270 次运行）重跑后逐行比对，不改结果，写核对戳 check_stamp.json
+python3 -I tools/refresh_results.py --check --if-changed   # 发版时：上次核对戳之后求解相关的文件都没变就跳过，否则照跑
 python3 -I tools/refresh_results.py tests/compare/results/land.jsonl   # 重跑本模组的行、换回原处、重新裁判和交叉评分
 ```
 
 - `--check` 报告方案变了几行、提升变高和变低各几行、新出现的违规（“范围内没有合法位置”不算）；有变低或新违规时退出码 1。改了求解器后、发版前跑它，不要整组重跑开发集的权重组合和真最优。
+- 核对戳（#302）：开发集的 `--check` 跑完后写 `tests/compare/results/check_stamp.json`：求解相关文件的摘要（`SOLVED_BY`：`SmartDistrictPlanner/Scripts/` 里除 `SDP_Page*.lua`、`SDP_Preview.lua` 以外的脚本，`tools/compare.mjs`，`tests/compare/cmp_*.lua` 和 `scenes/`，`full_rejudged.jsonl`；换行统一后算，Windows 上相同）和这次的结果。随跑核对的 PR 一起提交；在第二台机器上跑时用 `remote.py wait NAME --fetch tests/compare/results/check_stamp.json` 取回。`--if-changed` 比对摘要，相同就跳过并报上次核对的提交、日期和结果：改求解器的 PR 已经核对过、之后又没再改。几个改求解器的 PR 各自核对过时，合起来的文件和哪一次都不同，照跑，就测到它们的相互影响。
 - 重跑整份结果很慢，有第二台机器时用 `remote.py` 放到那边跑。
 
 ## remote.py — 离线重活放哪台机器跑

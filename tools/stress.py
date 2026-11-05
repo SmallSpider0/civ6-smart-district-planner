@@ -2,7 +2,8 @@
 
     python3 -I tools/stress.py prepare NAME [options]   # new game, AI plays N turns, save as SDP_stress_NAME
     python3 -I tools/stress.py load NAME                # back to the main menu if needed, load the save
-    python3 -I tools/stress.py run NAME                 # the steps of tests/bench/stress.lua, timed
+    python3 -I tools/stress.py run NAME                 # the steps of tests/bench/stress.lua, timed; on pangaea-gs
+                                                        # also the in-game tests that need a late save (SAVE_TESTS)
     python3 -I tools/stress.py check NAME               # the game builds the appeal plans: appeal and housing as predicted? (loads the save before each plan)
     python3 -I tools/stress.py all                      # load and run every scenario in SCENARIOS
     python3 -I tools/stress.py summary                  # the results as a table
@@ -30,6 +31,8 @@ is spread over frames, so the time is how long the player waits, not a stall.
 import argparse
 import json
 import os
+import re
+import subprocess
 import sys
 import time
 
@@ -53,6 +56,13 @@ SCENARIOS = {
     "islands-rf": dict(ruleset="RULESET_EXPANSION_1", script="Island_Plates.lua", size="MAPSIZE_STANDARD",
                        era="ERA_CLASSICAL", leader="LEADER_PERICLES", seed=59, turns=170),
 }
+
+# In-game test cases that need a save with many cities and pins (#302): a new game, as in run_tests.py's
+# full run, has one city, so they always skipped there. `run` runs them on these scenarios after its steps:
+# (test file, -k name filter or None). A skip here counts as a problem: the save is the one meant for them.
+SAVE_TESTS = [("tests/test_allcities.lua", None), ("tests/test_tacked.lua", None),
+              ("tests/test_features.lua", "on a save with several cities")]
+SAVE_TESTS_ON = ("pangaea-gs",)
 
 # Saves for measurements, not part of the release run (`all`). mid-gs
 # (issue 124): a mid-game with room for new cities. Standard speed, so turn
@@ -243,18 +253,58 @@ def cmd_run(args):
     r.step("multi 4 cities, crowded", 'SDP_Stress.Multi(4, 3, "STANDARD")')
     r.step("panel", "SDP_Stress.Panel()")
     r.step("undo", "SDP_Stress.UndoAll()")
+    save_tests = run_save_tests() if args.name in SAVE_TESTS_ON and not args.no_save_tests else None
     os.makedirs(RESULTS, exist_ok=True)
     out = os.path.join(RESULTS, args.name + ".json")
+    record = {"Scenario": args.name, "Settings": SCENARIOS.get(args.name), "Census": census,
+              "Steps": r.records, "When": time.strftime("%Y-%m-%d %H:%M")}
+    if save_tests is not None:
+        record["SaveTests"] = save_tests
     with open(out, "w", encoding="utf-8") as fh:
-        json.dump({"Scenario": args.name, "Settings": SCENARIOS.get(args.name), "Census": census,
-                   "Steps": r.records, "When": time.strftime("%Y-%m-%d %H:%M")}, fh, ensure_ascii=False, indent=1)
+        json.dump(record, fh, ensure_ascii=False, indent=1)
     # No site within reach is an answer (a late-game map is full), not a failure.
     failures = [rec for rec in r.records if rec["Data"] and ((rec["Data"].get("Ok") is False
                                                               and rec["Data"].get("Error") != "NO_SITE")
                                                              or rec["Data"].get("Mismatch")
                                                             or rec["Data"].get("EngineBad") or rec["Data"].get("Deterministic") is False)]
-    print("wrote %s; %d step(s) with a problem" % (out, len(failures)))
-    return 0 if not failures else 1
+    bad_tests = [t for t in save_tests or [] if t["Problem"]]
+    print("wrote %s; %d step(s) with a problem%s" % (out, len(failures), "; %d save test file(s) with a problem"
+                                                     % len(bad_tests) if save_tests is not None else ""))
+    return 0 if not failures and not bad_tests else 1
+
+
+SUMMARY = re.compile(r"^run_tests: (\d+) passed, (\d+) failed, (\d+) skipped, (\d+) errors$", re.M)
+
+
+def save_test_result(path, name_filter, code, output):
+    """What one run_tests.py run of a save test printed, as recorded: a problem when it failed, did not end
+    with its summary, ran nothing or skipped a case (the loaded save is the one these cases need)."""
+    m = SUMMARY.findall(output)
+    entry = {"File": path, "Filter": name_filter, "Exit": code}
+    if not m:
+        entry["Problem"] = "no summary (exit %d)" % code
+        return entry
+    passed, failed, skipped, errors = (int(x) for x in m[-1])
+    entry.update(Passed=passed, Failed=failed, Skipped=skipped, Errors=errors)
+    entry["Problem"] = ("failed" if failed or errors or code else "skipped a case" if skipped
+                        else "ran nothing" if not passed else None)
+    return entry
+
+
+def run_save_tests():
+    """SAVE_TESTS on the loaded save, through run_tests.py (same worktree: its game lock is ours)."""
+    results = []
+    for path, name_filter in SAVE_TESTS:
+        cmd = [sys.executable, "-I", os.path.join(ROOT, "tools", "run_tests.py"), os.path.join(ROOT, path)]
+        cmd += ["-k", name_filter] if name_filter else []
+        done = subprocess.run(cmd, capture_output=True, text=True)
+        entry = save_test_result(path, name_filter, done.returncode, done.stdout)
+        results.append(entry)
+        print("  save test %-28s %s" % (os.path.basename(path), entry["Problem"] or "%d passed" % entry["Passed"]),
+              flush=True)
+        if entry["Problem"]:
+            sys.stdout.write(done.stdout[-3000:])
+    return results
 
 
 # Districts are built the way the player builds them: ordered on the plot
@@ -433,11 +483,13 @@ def main(argv=None):
     rp = sub.add_parser("run")
     rp.add_argument("name")
     rp.add_argument("--cities", type=int, default=6, help="cities solved one by one (most populous first)")
+    rp.add_argument("--no-save-tests", action="store_true", help="skip the in-game tests that need this save")
     cp = sub.add_parser("check")
     cp.add_argument("name")
     cp.add_argument("--same-game", action="store_true", help="build every plan in one game, without loading the save again")
     ap_all = sub.add_parser("all")
     ap_all.add_argument("--cities", type=int, default=6)
+    ap_all.add_argument("--no-save-tests", action="store_true")
     sub.add_parser("summary")
     args = ap.parse_args(argv)
     if args.cmd != "summary":
