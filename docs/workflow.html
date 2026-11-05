@@ -362,7 +362,6 @@ footer { margin-top: 64px; border-top: 1px solid var(--line); padding-top: 16px;
   <ul>
     <li>PR：<code>pr_wait.py add 编号 [--codex] [--night] [--hold]</code> 放进值守子会话常驻的那一个等待的名单，不发消息；有一个合并或要人处理时它才退出。等夜间游戏内测试的 PR 带 <code>--night</code>，先不合并的带 <code>--hold</code>：等待不替它们开自动合并，跑完测试的人（或决定合并的人）开了以后接着等到合并；</li>
     <li>第二台机器上的任务：<code>remote.py wait 名字</code>；</li>
-    <li>夜里另加一个约一小时后的定时兜底，一夜最多一个。</li>
   </ul>
   <p>主会话自己不挂这些，交给值守子会话（下文）。最后一句话写明什么会叫醒自己。macOS 上夜里无人值守的运行还会被隐私弹窗卡住，开跑前先碰一遍要用的文件夹（<a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/docs/dev-macos.md">docs/dev-macos.md</a>“隐私弹窗”）。</p>
   <h3>主会话：只分派，上下文小，随时可清空</h3>
