@@ -214,6 +214,33 @@ function S.PlaceSites()
   Emit({ Step = "PlaceSites", Placed = placed })
 end
 
+-- For tests/test_allcities.lua (tools/stress.py SAVE_TESTS): city-center pins
+-- until the player's cities and city pins are more than
+-- SDP_Multi.GROUP_ABOVE, so "All cities" plans in groups. A dense site
+-- search packs as many as fit; undone with UndoAll after the test.
+function S.GroupSites()
+  local n = #SDP_City.Sites(pid)
+  for _ in Players[pid]:GetCities():Members() do n = n + 1 end
+  local need = SDP_Multi.GROUP_ABOVE + 1 - n
+  local placed, found = 0, 0
+  if need > 0 then
+    local districts = { Own("DISTRICT_CAMPUS") }
+    local r = SDP_SiteSolver.Solve({ PlayerID = pid, Tier = "FAST", K = need, D = 5, Districts = districts,
+      PlanCount = 1, Dense = true })
+    local sites = (r.Ok and r.Solutions[1] and r.Solutions[1].Sites) or {}
+    found = #sites
+    local _, count = SDP_City.CityNumbers(pid)
+    local entries = {}
+    for i, site in ipairs(sites) do
+      entries[i] = { Type = "DISTRICT_CITY_CENTER", X = site.X, Y = site.Y, Name = tostring(count + i) }
+    end
+    placed = SDP_Pins.Place(pid, entries)
+    if placed > 0 then S.Batches = S.Batches + 1 end
+  end
+  Emit({ Step = "GroupSites", Ok = need <= placed, Need = math.max(need, 0), Found = found, Placed = placed,
+    Total = n + placed, Above = SDP_Multi.GROUP_ABOVE })
+end
+
 -- Several cities: the new sites plus the `cities` most populous cities, a
 -- campus each and `count` districts per city picked from a common pool.
 function S.Multi(cities, count, tier)

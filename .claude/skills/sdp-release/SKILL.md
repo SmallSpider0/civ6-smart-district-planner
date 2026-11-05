@@ -19,7 +19,7 @@ Bug-fix PRs merge into `main` as usual in the meantime: `main` reaches no player
    - `python3 -I tools/validate.py`, `node tools/offline_tests.mjs`;
    - `python3 -I tools/run_tests.py --rulesets all`, plus Gathering Storm in English when the UI or text changed;
    - `python3 -I tools/realclick.py suite` when the UI changed;
-   - `python3 -I tools/refresh_results.py --check` when the solver or legality changed; explain any lower gain or new violation;
+   - `python3 -I tools/refresh_results.py --check --if-changed` (on the second machine; fetch `tests/compare/results/check_stamp.json` back and commit it): it skips the run when no solver, legality or comparison file changed since the last stamped check, which the solver PRs run (#302: an 85-minute rerun of what a PR had just checked); explain any lower gain or new violation;
    - numbers in the report page whose source changed (the records in docs/notes/ name them; tooltips carry no measured numbers since #153);
    - stress test: load/run/check on the three saves, `tools/refresh_stress_md.py`. Skipped when the release changes only the interface: `git diff vLAST..HEAD -- SmartDistrictPlanner/Scripts` touches nothing but `SDP_Page*.lua` and `SDP_Preview.lua`, and the panel's changes do not alter what is sent to the solver. Say in the self-test report that it was skipped and why.
 3. Screenshots when the UI changed: `shots.py` (zh and en, new round number in the name), point README, the report templates (`report/template.html`, `template_en.html`: image names, alt text and captions) and `workshop/src/*.html` at them, `tools/workshop.py render`, look at `workshop/images/`. Open `workshop/preview.jpg` too: the cover must be the one the Workshop item uses now (a new cover needs the item's owner).

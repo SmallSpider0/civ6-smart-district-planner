@@ -6,6 +6,9 @@ A test file (tests/test_*.lua) is a chunk that receives `test` and `T`:
     -- @state dmt_yieldcalculator     Lua state to run in (default InGame)
     -- @timeout 30                    seconds for the whole file (default 30)
     -- @max_seconds 2.5               fail when the file takes longer (wall time)
+    -- @max_seconds_each 2.5          run each test("...") of the file on its own
+                                      (names written as string literals) and
+                                      fail one that takes longer
     -- @setup GameCore_Tuner tests/fixtures/build_campus.lua
     -- @teardown GameCore_Tuner tests/fixtures/destroy_campus.lua
                                       run a Lua file in a state before / after
@@ -69,6 +72,7 @@ local __src = [{eq}[
 {body}
 ]{eq}]
 local __filter = {filter}
+local __exact = {exact}
 local __chunk, __err = loadstring(__src, {chunkname})
 local S = "\31"
 if not __chunk then print("SDP_TEST" .. S .. "ERROR" .. S .. "(load)" .. S .. tostring(__err)) return end
@@ -116,7 +120,7 @@ end
 local __ok, __e = pcall(__chunk, test, T)
 if not __ok then print("SDP_TEST" .. S .. "ERROR" .. S .. "(file)" .. S .. tostring(__e)) return end
 for _, t in ipairs(__tests) do
-  if __filter == nil or string.find(t.name, __filter, 1, true) then
+  if __filter == nil or (__exact and t.name == __filter) or (not __exact and string.find(t.name, __filter, 1, true)) then
     local ok, err = pcall(t.fn)
     if ok then
       print("SDP_TEST" .. S .. "PASS" .. S .. t.name)
@@ -135,7 +139,10 @@ def lua_string(text):
 
 
 def display_path(path):
-    rel = os.path.relpath(path, ROOT)
+    try:
+        rel = os.path.relpath(path, ROOT)
+    except ValueError:  # another drive on Windows
+        return path
     return path if rel.startswith("..") else rel.replace(os.sep, "/")
 
 
@@ -147,12 +154,13 @@ def clean_detail(detail):
     return "\n".join(lines)
 
 
-def build(path, body, name_filter):
+def build(path, body, name_filter, exact=False):
     level = 0
     while ("]" + "=" * level + "]") in body:
         level += 1
     return HARNESS.format(eq="=" * level, body=body, chunkname=lua_string("@" + display_path(path)),
-                          filter=lua_string(name_filter) if name_filter else "nil")
+                          filter=lua_string(name_filter) if name_filter else "nil",
+                          exact="true" if exact else "false")
 
 
 # Header keys that may appear more than once: a list, in file order.
@@ -257,26 +265,49 @@ def run_file(path, name_filter, verbose):
             return counts, None
         if len(opts["setup"]) > 1:
             settle()  # the UI states see the last step a few frames later
-    started = time.monotonic()
-    resp = civ6tuner.request({"op": "exec", "state": state, "code": build(path, body, name_filter),
-                              "timeout": float(opts.get("timeout", 30))})
-    if "teardown" in opts:
-        problem = run_fixtures(opts["teardown"], "teardown")
+    if "max_seconds_each" in opts:  # one exec per test: each is timed on its own
+        print("%s  [%s]" % (rel, state))
+        limit = float(opts["max_seconds_each"])
+        runs = [(n, True, "  " + n, limit) for n in test_names(body) if not name_filter or name_filter in n]
+    else:
+        limit = float(opts["max_seconds"]) if "max_seconds" in opts else None
+        runs = [(name_filter, False, "%s  [%s]" % (rel, state), limit)]
+    problem = None
+    for one_filter, exact, label, limit in runs:
+        problem = run_chunk(path, body, state, opts, (one_filter, exact), verbose, counts, label, limit)
         if problem:
-            print("  ERROR  %s" % problem)
+            break
+    if "teardown" in opts:
+        error = run_fixtures(opts["teardown"], "teardown")
+        if error:
+            print("  ERROR  %s" % error)
             counts["ERROR"] += 1
-    # Wall time of the whole file, tuner round trip included (~0.02 s). The
+    return counts, problem
+
+
+def test_names(body):
+    """The names of the file's tests, in order, as written: test("name", ...)."""
+    return re.findall(r'^\s*test\(\s*"((?:[^"\\]|\\.)*)"', body, re.M)
+
+
+def run_chunk(path, body, state, opts, name_filter, verbose, counts, label, limit):
+    """One exec of the file (its tests matching name_filter: (text, exact)); adds to counts. Returns an exit
+    kind when the game is gone or stuck, else None."""
+    started = time.monotonic()
+    resp = civ6tuner.request({"op": "exec", "state": state, "code": build(path, body, *name_filter),
+                              "timeout": float(opts.get("timeout", 30))})
+    # Wall time of the exec, tuner round trip included (~0.02 s). The
     # game's own timers (os.clock, Automation.GetTime) tick in whole seconds.
     elapsed = time.monotonic() - started
-    print("%s  [%s]  %.2fs" % (rel, state, elapsed))
-    if "max_seconds" in opts and elapsed > float(opts["max_seconds"]) and resp.get("ok"):
+    print("%s  %.2fs" % (label, elapsed))
+    if limit is not None and elapsed > limit and resp.get("ok"):
         counts["FAIL"] += 1
-        print("  FAIL   (time limit)\n         took %.2fs, limit %ss" % (elapsed, opts["max_seconds"]))
+        print("  FAIL   (time limit)\n         took %.2fs, limit %ss" % (elapsed, limit))
     if resp.get("kind") in ("connection", "timeout"):
         print("  ERROR  %s: %s" % (resp["kind"], resp.get("error")))
         counts["ERROR"] += 1
         state_missing = "Lua state" in (resp.get("error") or "")
-        return counts, None if state_missing else resp["kind"]
+        return None if state_missing else resp["kind"]
     logs = []
     for item in resp.get("output") or []:
         if not item.startswith(PREFIX):
@@ -295,7 +326,7 @@ def run_file(path, name_filter, verbose):
         print("  output:")
         for item in logs:
             print("    | " + item.replace("\n", "\n    | "))
-    return counts, None
+    return None
 
 
 RULESETS = ["RULESET_STANDARD", "RULESET_EXPANSION_1", "RULESET_EXPANSION_2"]
