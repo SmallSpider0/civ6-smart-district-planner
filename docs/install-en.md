@@ -2,11 +2,26 @@
 
 Smart District Planner finds the district layout with the highest adjacency bonus for your cities in Civilization VI and places it as map tacks with district icons; it also chooses sites for new cities and plans several cities together. The adjacency and placement rules of your civilization, leader, pantheon and beliefs are counted with no setup.
 
-The Chinese guide ([install-and-test.md](install-and-test.md) in the repository, `INSTALL_AND_USE.md` in the download) has more detail. What the planner does, how close its plans come to the true optimum and its speed are on the [overview page](https://smallspider0.github.io/civ6-smart-district-planner/en/); what other district planners plan is in the README's [similar mods](../README.md#similar-mods).
+The Chinese guide ([install-and-test.md](install-and-test.md) in the repository, `INSTALL_AND_USE.md` in the download) has more detail. What the planner does, how close its plans come to the true optimum and its speed are on the [overview page](https://smallspider0.github.io/civ6-smart-district-planner/en/).
 
-## One planner per game
+## Using it with other mods
 
-Do not enable Smart District Planner together with Auto Map Tacks Planner, Empire Planner or another mod that plans map tacks. They each simulate, create and delete map tacks, so two planners in one game spoil each other's plans.
+Checked on 2026-11-05.
+
+Most mods that add civilizations, districts or wonders, or change adjacency bonuses, work with it: plans follow their rules. Interface mods (CQUI, Better Report Screen, More Lenses and others) usually don't conflict either. Tested in the game: Civ6 Plus: Harmony in Diversity v2.2; district slots, which districts can share a city, valid tiles and adjacency bonuses follow its changed rules.
+
+Good to know:
+
+- **Modular Adjacency Bonuses (and mods built on it)**: the adjacency bonuses it adds are not counted in plans, now or later, so the built districts yield more than the panel shows. That mod works out these bonuses only after a district is built, at the next turn, while this mod takes every bonus from Detailed Map Tacks (the same numbers the map tacks show), which can't see them.
+- **A few special leader and wonder bonuses in Harmony in Diversity** (such as Wu Zetian's "+2 for districts next to a wonder"): not counted either, now or later. Detailed Map Tacks doesn't read these bonuses, and this mod doesn't add a calculation of its own, so the panel and the map tacks always show the same numbers.
+- **Reach with Harmony in Diversity**: it computes the regional effects of buildings itself, so Reach still uses the ranges in the game's rules: with it, only the Industrial Zone (its power plants) counts, not the regional effects it adds to buildings in the Campus, Commercial Hub, Theater Square, Entertainment Complex and other districts.
+- **Workable 4th Ring**: this mod plans only within three rings of a city; place 4th-ring districts yourself.
+
+Don't use together:
+
+- **Auto Map Tacks Planner, Empire Planner, District & Wonder Planner**: like this mod, they simulate, create and delete map tacks, so two planners in one game take each other's tacks as neighbors or delete them. Use one per game. What each planner plans is in the README's [similar mods](../README.md#similar-mods).
+
+If a mod not listed here gives wrong numbers, please open an [issue](https://github.com/SmallSpider0/civ6-smart-district-planner/issues) or leave a comment on the Workshop page.
 
 ## Requirements
 
@@ -108,7 +123,6 @@ Only revealed tiles are considered; a tile whose 3 rings are mostly unrevealed i
 - Improvement tacks only count adjacency and yields between districts and improvements; adjacency between improvements (Farm next to Farm) is not counted, and unique and city-state improvements are not planned.
 - Unrevealed tiles are left out: DMT cannot read their terrain.
 - Multiplayer has not been tested; the tacks use the game's default visibility.
-- Tested in the game with Civ6 Plus: Harmony in Diversity: district slots, which districts can share a city, valid tiles and adjacency bonuses follow its changed rules. It computes the regional effects of buildings itself, so **Reach** still uses the ranges in the game's rules: with it, only the Industrial Zone (its power plants) counts, not the regional effects it adds to buildings in the Campus, Commercial Hub, Theater Square, Entertainment Complex and other districts.
 - Appeal starts from the game's current values (civilization, governor, policy and wonder modifiers included) plus what the plan's districts, wonders and removed features or improvements change; improvements built later outside the plan are not in the model. A Preserve's yields on nearby tiles assume those tiles stay unimproved; a Preserve that is only a tack counts its Housing only.
 
 The overview page lists a few more, with measurements: [known limitations](https://smallspider0.github.io/civ6-smart-district-planner/en/#limits).
