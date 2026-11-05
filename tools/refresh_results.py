@@ -101,6 +101,12 @@ def write_stamp(found, root=None, path=None):
     return stamp
 
 
+def stamp_exit(stamp):
+    """The exit code a skipped check keeps: that of the stamped check (1 when it found lower gains or new
+    violations), so a retried release check does not pass a regression it skipped."""
+    return 1 if stamp.get("lower") or stamp.get("new_violations") else 0
+
+
 def unchanged_since_check(root=None, path=None):
     """The stamp of the last check when nothing SOLVED_BY covers changed since it, else None."""
     stamp = read_stamp(path)
@@ -241,7 +247,7 @@ def main():
                       "at %s (%s): %s rows, %s lower, %s new violations"
                       % (stamp.get("commit"), stamp.get("date"), stamp.get("rows"), stamp.get("lower"),
                          stamp.get("new_violations")))
-                return 0
+                return stamp_exit(stamp)
             print("refresh_results: files the plans depend on changed since the last stamped check: running it",
                   flush=True)
         files = args.files or [DEV_SET]

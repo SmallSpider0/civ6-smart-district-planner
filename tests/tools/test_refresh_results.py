@@ -112,6 +112,16 @@ class Stamp(unittest.TestCase):
         code, calls, _ = self.run_main(["--check", "--if-changed"])
         self.assertEqual(len(calls), 1, "a changed file: runs")
 
+    def test_a_skipped_check_keeps_the_stamped_failure(self):
+        """A check that found lower gains stamps them; skipping it on a retry exits 1 too (Codex, PR 303)."""
+        self.patch_dev(os.path.join(self.root, "tests", "compare", "results", "full_rejudged.jsonl"))
+        rr.write_stamp({"rows": 270, "lower": 1, "new_violations": 0})
+        code, calls, out = self.run_main(["--check", "--if-changed"])
+        self.assertEqual((code, calls), (1, []))
+        self.assertIn("skipped", out)
+        rr.write_stamp({"rows": 270, "lower": 0, "new_violations": 2})
+        self.assertEqual(self.run_main(["--check", "--if-changed"])[0], 1)
+
     def patch_dev(self, dev):
         self.addCleanup(setattr, rr, "DEV_SET", rr.DEV_SET)
         rr.DEV_SET = dev
