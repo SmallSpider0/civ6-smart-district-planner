@@ -139,7 +139,10 @@ def lua_string(text):
 
 
 def display_path(path):
-    rel = os.path.relpath(path, ROOT)
+    try:
+        rel = os.path.relpath(path, ROOT)
+    except ValueError:  # another drive on Windows
+        return path
     return path if rel.startswith("..") else rel.replace(os.sep, "/")
 
 
