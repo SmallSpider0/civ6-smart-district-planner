@@ -1,0 +1,9 @@
+Changes since v1.7.3:
+- English interface: in the One city and Several cities settings, ‘Improvements’ no longer runs into the ‘Worked tiles’ checkbox on its right; each switch takes the width of its own text.
+- The switch ‘Allow chop’ is now called ‘Remove features’. When it is off, districts that keep the tile’s feature when built (such as Vietnam’s unique district, or districts that mods let keep Woods) can again go on Woods, Rainforest and Marsh instead of being left out. With the switch off, plans for such civilizations change.
+- Wonder planning no longer decides which wonders are built by what you have seen on the map: a world wonder another civilization has finished where you could not see it is no longer planned for you, and a wonder that a mod lets every player build once is still planned for you when you have seen it in someone else’s land. Plans change when you tick such wonders.
+
+自 v1.7.3 以来的变化：
+- 英文界面：设置里的“Improvements”不再紧贴右边“Worked tiles”的勾选框。
+- 开关“允许砍伐”改名为“允许移除地貌”。关掉时，建上去不会移除地貌的区域（如越南的特色区域、模组里保留树林的区域）照常可以放在森林、雨林、沼泽上，不再被排除，这类文明的方案会变。
+- 规划奇观时判断“已建成”不再看地图上见没见过：别的文明在你没看到的地方建成的世界奇观不再给你规划；模组加的每个玩家各能建一座的奇观，在别人领土里见过也照样给你规划。勾了这类奇观时方案会变。
