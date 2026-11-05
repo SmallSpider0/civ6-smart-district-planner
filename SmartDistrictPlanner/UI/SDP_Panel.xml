@@ -107,17 +107,18 @@
         </Container>
         <Stack ID="WeightStack" Anchor="C,T" StackGrowth="Right" StackPadding="0"/>
 
-        <!-- Switches in one row; the full meaning is in each tooltip -->
+        <!-- Switches in one row; the full meaning is in each tooltip. The first
+             is wider for its English label, "Remove features" (issue 293). -->
         <Container Size="480,26">
-          <Container Anchor="L,C" Size="116,26" ToolTip="LOC_SDP_ALLOW_FEATURE_REMOVAL">
+          <Container Anchor="L,C" Size="136,26" ToolTip="LOC_SDP_ALLOW_FEATURE_REMOVAL">
             <CheckBox ID="FeatureCheck" Anchor="L,C" Style="MainCheckBox"/>
             <Label Anchor="L,C" Offset="26,0" Style="BodyTextDark14" String="LOC_SDP_FEATURE_SHORT"/>
           </Container>
-          <Container Anchor="L,C" Offset="120,0" Size="120,26" ToolTip="LOC_SDP_REPLACE_OWN_TOOLTIP">
+          <Container Anchor="L,C" Offset="140,0" Size="120,26" ToolTip="LOC_SDP_REPLACE_OWN_TOOLTIP">
             <CheckBox ID="ReplaceCheck" Anchor="L,C" Style="MainCheckBox"/>
             <Label ID="ReplaceLabel" Anchor="L,C" Offset="26,0" Style="BodyTextDark14"/>
           </Container>
-          <Container Anchor="L,C" Offset="244,0" Size="116,26" ToolTip="LOC_SDP_REMIND_TOOLTIP">
+          <Container Anchor="L,C" Offset="264,0" Size="116,26" ToolTip="LOC_SDP_REMIND_TOOLTIP">
             <CheckBox ID="RemindCheck" Anchor="L,C" Style="MainCheckBox"/>
             <Label Anchor="L,C" Offset="26,0" Style="BodyTextDark14" String="LOC_SDP_REMIND_SHORT"/>
           </Container>

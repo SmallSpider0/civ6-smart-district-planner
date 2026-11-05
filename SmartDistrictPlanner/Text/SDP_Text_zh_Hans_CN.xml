@@ -55,7 +55,7 @@
       <Text>产出权重（0–3）</Text>
     </Replace>
     <Replace Tag="LOC_SDP_ALLOW_FEATURE_REMOVAL" Language="zh_Hans_CN">
-      <Text>关掉后，方案不会为了放区域砍掉森林、雨林、沼泽。</Text>
+      <Text>关掉后，区域只放在建上去不会移除地貌的格上，方案不会为了放区域移除森林、雨林、沼泽等地貌。</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SOLVE" Language="zh_Hans_CN">
       <Text>求解</Text>
@@ -684,7 +684,7 @@
       <Text>自动</Text>
     </Replace>
     <Replace Tag="LOC_SDP_FEATURE_SHORT" Language="zh_Hans_CN">
-      <Text>允许砍伐</Text>
+      <Text>允许移除地貌</Text>
     </Replace>
     <Replace Tag="LOC_SDP_REMIND_SHORT" Language="zh_Hans_CN">
       <Text>提醒钉</Text>
@@ -923,7 +923,7 @@
       <Text>不计占地</Text>
     </Replace>
     <Replace Tag="LOC_SDP_FOLD_NO_REMOVAL" Language="zh_Hans_CN">
-      <Text>不砍伐</Text>
+      <Text>不移除地貌</Text>
     </Replace>
     <Replace Tag="LOC_SDP_FOLD_NO_SWAP" Language="zh_Hans_CN">
       <Text>不换格</Text>

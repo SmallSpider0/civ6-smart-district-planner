@@ -829,11 +829,11 @@ local function CandidatePlots(self)
     for _, c in ipairs(part.Scan.Candidates) do
       if at[c.Index] == nil then
         at[c.Index] = true
-        -- Unowned and RemoveTech are the same whichever scan lists the plot
+        -- Unowned, RemoveTech and KeepFeature are the same whichever scan lists the plot
         -- (a plot one city owns is a candidate of another only by swapping,
         -- worked out with the plan).
         candidates[#candidates + 1] = { Index = c.Index, X = c.X, Y = c.Y, Unowned = c.Unowned, RemoveTech = c.RemoveTech,
-          ClearFirst = c.ClearFirst }
+          ClearFirst = c.ClearFirst, KeepFeature = c.KeepFeature }
       end
     end
   end

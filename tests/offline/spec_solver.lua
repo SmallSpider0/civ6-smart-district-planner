@@ -199,6 +199,56 @@ test("feature removal off keeps woods, rainforest and marsh", function()
   end
 end)
 
+-- Issue 293: with feature removal off, a plot keeps its removable feature,
+-- but a district that keeps the feature when built (DMT says so, from the
+-- rules and the player's modifiers: here spec.keepFeatures) may still go
+-- there. Judged by DMT's answer, not by a civilization's rule.
+test("feature removal off still lets a district that keeps the feature go there (issue 293)", function()
+  local keeps = { DISTRICT_CAMPUS = { FEATURE_FOREST = true, FEATURE_JUNGLE = true, FEATURE_MARSH = true } }
+  local function Removable(index)
+    local feature = Map.GetPlotByIndex(index):GetFeatureType()
+    return feature ~= -1 and GameInfo.Features[feature].Removable and GameInfo.Features[feature].FeatureType or nil
+  end
+  NewWorld({ keepFeatures = keeps, techs = {} })
+  local open, strict = SDP_City.Scan(0, 1), SDP_City.Scan(0, 1, { allowFeatureRemoval = false })
+  local kept, keptAt = 0, {}
+  for _, c in ipairs(strict.Candidates) do
+    local feature = Removable(c.Index)
+    if feature ~= nil then
+      kept = kept + 1
+      keptAt[c.Index] = true
+      T.eq(c.KeepFeature, feature, "the feature to keep at " .. c.Index)
+      T.eq(c.ClearFirst, nil, "nothing to clear first at " .. c.Index)
+      T.eq(c.RemoveTech, nil, "no technology to clear it at " .. c.Index)
+    else
+      T.eq(c.KeepFeature, nil, "no feature to keep at " .. c.Index)
+    end
+  end
+  for _, c in ipairs(open.Candidates) do
+    if Removable(c.Index) ~= nil then T.ok(keptAt[c.Index], "plot " .. c.Index .. " stays a candidate") end
+  end
+  T.ok(kept > 0, "plots with a removable feature stay candidates")
+  local result = SDP_Solver.Solve({ PlayerID = 0, CityID = 1, Weights = ONES, Districts = SIX,
+    AllowFeatureRemoval = false, Land = true })
+  T.ok(#result.Plan > 1, "a plan")
+  for _, p in ipairs(result.Plan) do
+    local feature = Removable(p.Index)
+    T.ok(feature == nil or not WillDistrictRemoveFeature(p.Type, feature),
+      p.Type .. " removes " .. tostring(feature) .. " at " .. p.Index)
+  end
+  -- The campus alone keeps every feature here: the switch changes nothing for it.
+  local campusOpen = SDP_Solver.Solve({ PlayerID = 0, CityID = 1, Weights = ONES, Districts = { "DISTRICT_CAMPUS" } })
+  local campusStrict = SDP_Solver.Solve({ PlayerID = 0, CityID = 1, Weights = ONES, Districts = { "DISTRICT_CAMPUS" },
+    AllowFeatureRemoval = false })
+  T.eq(campusStrict.Plan[1].Index, campusOpen.Plan[1].Index, "the same campus plot")
+  T.eq(campusStrict.Gain, campusOpen.Gain, "the same gain")
+  -- Without such a rule nothing with a removable feature is a candidate.
+  NewWorld()
+  for _, c in ipairs(SDP_City.Scan(0, 1, { allowFeatureRemoval = false }).Candidates) do
+    T.ok(Removable(c.Index) == nil, "removable feature at " .. c.Index)
+  end
+end)
+
 test("locked pins are never built over and count as neighbours", function()
   local w = NewWorld()
   w:AddPin(4, 4, "ICON_DISTRICT_GOVERNMENT", "plaza")

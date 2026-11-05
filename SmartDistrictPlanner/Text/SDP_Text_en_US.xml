@@ -55,7 +55,7 @@
       <Text>Yield weights (0-3)</Text>
     </Replace>
     <Replace Tag="LOC_SDP_ALLOW_FEATURE_REMOVAL" Language="en_US">
-      <Text>When off, the plan never removes Woods, Rainforest or Marsh to place a district.</Text>
+      <Text>When off, the plan puts a district only where building it keeps the tile's feature, so it never removes Woods, Rainforest, Marsh or other features to make room.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SOLVE" Language="en_US">
       <Text>Solve</Text>
@@ -684,7 +684,7 @@
       <Text>Auto</Text>
     </Replace>
     <Replace Tag="LOC_SDP_FEATURE_SHORT" Language="en_US">
-      <Text>Allow chop</Text>
+      <Text>Remove features</Text>
     </Replace>
     <Replace Tag="LOC_SDP_REMIND_SHORT" Language="en_US">
       <Text>Reminders</Text>
@@ -923,7 +923,7 @@
       <Text>no land loss</Text>
     </Replace>
     <Replace Tag="LOC_SDP_FOLD_NO_REMOVAL" Language="en_US">
-      <Text>no chopping</Text>
+      <Text>features kept</Text>
     </Replace>
     <Replace Tag="LOC_SDP_FOLD_NO_SWAP" Language="en_US">
       <Text>no tile swaps</Text>

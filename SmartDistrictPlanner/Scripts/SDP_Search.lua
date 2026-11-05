@@ -65,7 +65,9 @@ SDP_Search.Better = Better
 
 -- spec = {
 --   PlayerID, Board (SDP_Board with the fixed subjects), Weights, Params
---   Candidates  { Index, X, Y } sorted by plot index
+--   Candidates  { Index, X, Y, KeepFeature } sorted by plot index; a slot goes on a
+--               candidate with KeepFeature only when it keeps that feature
+--               (SDP_City.RemovesFeature, issue 293)
 --   Slots       { Key, Type ("DISTRICT" | "WONDER"), Group, Allowed = { [position] = true } or nil (all),
 --                 Requires = district type a wonder must be next to (GameInfo.Buildings.AdjacentDistrict),
 --                 RequiresSlot = the index in Slots of the district supplied for this wonder: with
@@ -341,7 +343,11 @@ function Search:Singles()
   for s, slot in ipairs(self.SlotSpecs) do
     local gains, ok, row, any = {}, {}, {}, false
     for i = 1, n do
-      if slot.Allowed == nil or slot.Allowed[i] then
+      -- A plot whose feature the player keeps (feature removal off, issue
+      -- 293) takes only what is built without removing it.
+      local keep = self.Candidates[i].KeepFeature
+      if (slot.Allowed == nil or slot.Allowed[i])
+          and (keep == nil or not SDP_City.RemovesFeature(slot.Type or "DISTRICT", slot.Key, keep)) then
         local c = self.Candidates[i]
         row[i] = { Key = slot.Key, Type = slot.Type or "DISTRICT", X = c.X, Y = c.Y }
         board:Put(1, row[i])

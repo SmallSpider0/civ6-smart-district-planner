@@ -77,16 +77,44 @@ test("an existing pin locks its plot and is listed", function()
   T.same(after.Candidates, before.Candidates, "candidates after deleting the pin")
 end)
 
-test("turning feature removal off excludes woods, rainforest and marsh", function()
+-- A plot with a removable feature stays a candidate only when a district the
+-- player can plan keeps that feature when built (DMT's
+-- WillDistrictRemoveFeature, from the rules and the player's modifiers:
+-- Vietnam's specialty districts, issue 293), marked KeepFeature.
+test("turning feature removal off excludes woods, rainforest and marsh unless a district keeps them", function()
   local city = capital()
   local allowed = SDP_City.Scan(pid, city:GetID())
   local strict = SDP_City.Scan(pid, city:GetID(), { allowFeatureRemoval = false })
+  local districts = SDP_Rules.PlannableDistricts(pid)
+  local function KeptBySome(featureType)
+    for _, d in ipairs(districts) do
+      if not WillDistrictRemoveFeature(d.Type, featureType) then return true end
+    end
+    return false
+  end
   for _, c in ipairs(strict.Candidates) do
     local feature = Map.GetPlotByIndex(c.Index):GetFeatureType()
-    T.ok(feature == -1 or not GameInfo.Features[feature].Removable, "removable feature kept at " .. c.Index)
+    local row = feature ~= -1 and GameInfo.Features[feature] or nil
+    if row ~= nil and row.Removable then
+      T.ok(KeptBySome(row.FeatureType), "removable feature kept at " .. c.Index)
+      T.eq(c.KeepFeature, row.FeatureType, "marked at " .. c.Index)
+    else
+      T.eq(c.KeepFeature, nil, "nothing to keep at " .. c.Index)
+    end
+  end
+  local inStrict = {}
+  for _, c in ipairs(strict.Candidates) do inStrict[c.Index] = true end
+  for _, c in ipairs(allowed.Candidates) do
+    local feature = Map.GetPlotByIndex(c.Index):GetFeatureType()
+    local row = feature ~= -1 and GameInfo.Features[feature] or nil
+    if row ~= nil and row.Removable and KeptBySome(row.FeatureType) then
+      T.ok(inStrict[c.Index], "plot " .. c.Index .. " with a kept " .. row.FeatureType .. " stays a candidate")
+    end
   end
   for index, reason in pairs(strict.Excluded) do
     if reason == SDP_City.EXCLUDED.FEATURE then
+      local row = GameInfo.Features[Map.GetPlotByIndex(index):GetFeatureType()]
+      T.ok(row ~= nil and not KeptBySome(row.FeatureType), "FEATURE plot " .. index .. " has a feature no district keeps")
       -- Unless it also holds a resource no district may cover (woods on
       -- a luxury): the feature check comes first, so strict calls it FEATURE.
       T.ok(allowed.Excluded[index] == nil or allowed.Excluded[index] == SDP_City.EXCLUDED.RESOURCE,
