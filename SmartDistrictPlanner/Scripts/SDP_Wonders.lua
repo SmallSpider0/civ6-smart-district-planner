@@ -4,8 +4,14 @@
 
 SDP_Wonders = {}
 
--- Wonders already built that the player can know of: in the player's own
--- cities, or seen on a revealed plot. Returns { [BuildingType] = true }.
+-- Wonders the player cannot plan any more: { [BuildingType] = true }.
+-- Those in the player's own cities (fixed neighbours, not planned again),
+-- and those built as many times in the world as the rule allows
+-- (Buildings.MaxWorldInstances), wherever they are, seen or not: the game
+-- takes such a wonder off every build menu (issue 294). A wonder with no
+-- world limit, as the national wonders some mods add (one per player), is
+-- only built for this player in their own cities. Under construction does
+-- not count.
 function SDP_Wonders.Built(playerID)
   local built = {}
   for _, city in Players[playerID]:GetCities():Members() do
@@ -16,12 +22,16 @@ function SDP_Wonders.Built(playerID)
       end
     end
   end
-  local visibility = PlayersVisibility[playerID]
+  local inWorld = {}
   for index = 0, Map.GetPlotCount() - 1 do
     local plot = Map.GetPlotByIndex(index)
-    if plot ~= nil and plot:GetWonderType() ~= -1 and visibility:IsRevealed(index) then
-      built[GameInfo.Buildings[plot:GetWonderType()].BuildingType] = true
-    end
+    local wonder = plot ~= nil and plot:GetWonderType() or -1
+    if wonder ~= -1 and plot:IsWonderComplete() then inWorld[wonder] = (inWorld[wonder] or 0) + 1 end
+  end
+  for wonder, count in pairs(inWorld) do
+    local row = GameInfo.Buildings[wonder]
+    local limit = row ~= nil and row.MaxWorldInstances or -1
+    if limit ~= nil and limit >= 0 and count >= limit then built[row.BuildingType] = true end
   end
   return built
 end
