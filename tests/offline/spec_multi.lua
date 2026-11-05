@@ -425,11 +425,14 @@ test("wonder list: a world wonder built anywhere is built, a national one only i
       { id = 1, x = 4, y = 5, population = 6, capital = true, radius = 1 },
       { id = 1, owner = 1, x = 17, y = 5, population = 3, radius = 1 },
     },
-    -- In the other player's land: Stonehenge never seen, the pyramids seen
-    -- but still being built, a national wonder seen.
-    wonders = { { 17, 4, "BUILDING_STONEHENGE" }, { 16, 5, "BUILDING_PYRAMIDS", false }, { 18, 5, "BUILDING_TEST_NATIONAL" } },
-    unrevealed = { "17,4" },
+    -- In the other player's land, a national wonder seen and the pyramids
+    -- seen while still being built. Stonehenge, complete in the other
+    -- player's city where we never looked, is not on the map: in the UI
+    -- state an unrevealed plot reads no wonder (2026-11-06).
+    wonders = { { 16, 5, "BUILDING_PYRAMIDS" }, { 18, 5, "BUILDING_TEST_NATIONAL" } },
   })
+  w:AddBuilding(1, "BUILDING_STONEHENGE", 1)
+  w:AddBuilding(1, "BUILDING_TEST_NATIONAL", 1)
   local function Status()
     local status = {}
     for _, entry in ipairs(SDP_Wonders.List(0)) do status[entry.Type] = entry.Status or "free" end

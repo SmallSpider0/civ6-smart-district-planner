@@ -690,7 +690,6 @@ function World.New(spec)
   function Plot:IsCity() return self.isCity == true end
   function Plot:GetDistrictType() return self.district end
   function Plot:GetWonderType() return self.wonder end
-  function Plot:IsWonderComplete() return self.wonder ~= -1 and self.wonderComplete ~= false end
   function Plot:IsNaturalWonder() return self.feature ~= nil and self.feature.NaturalWonder == true end
   function Plot:GetOwner() return self.owner end
   function Plot:IsOwned() return self.owner ~= -1 end
@@ -866,7 +865,6 @@ function World.New(spec)
   end
   for _, b in ipairs(spec.wonders or {}) do
     GetPlot(b[1], b[2]).wonder = gi.Buildings[b[3]].Index
-    GetPlot(b[1], b[2]).wonderComplete = b[4] ~= false
   end
   function w:City(id, owner) return cities[(owner or 0) .. ":" .. id] end
   function w:AddBuilding(cityID, buildingType, owner)
@@ -1340,6 +1338,14 @@ function World.New(spec)
       CITY_POPULATION_COAST = 3, CITY_POPULATION_NO_WATER = 2 },
     DirectionTypes = { NUM_DIRECTION_TYPES = 6 },
     Players = playerObjects,
+    PlayerManager = {
+      GetAliveIDs = function()
+        local ids = {}
+        for id in pairs(playerObjects) do ids[#ids + 1] = id end
+        table.sort(ids)
+        return ids
+      end,
+    },
     PlayerConfigurations = configs,
     PlayersVisibility = {
       [0] = { IsRevealed = function(_, i) return byIndex[i] ~= nil and byIndex[i].revealed end },

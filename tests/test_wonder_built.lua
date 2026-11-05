@@ -28,16 +28,28 @@ local function Menu(row)
   return "CanProduce listed " .. tostring(listed) .. ", startable " .. tostring(startable) .. ", results " .. table.concat(reasons, "; ")
 end
 
-test("a world wonder another civ completed is not planned", function()
-  local plot = nil
-  for index = 0, Map.GetPlotCount() - 1 do
-    local p = Map.GetPlotByIndex(index)
-    local owner = p:GetOwner()
-    if plot == nil and p:GetWonderType() ~= -1 and p:IsWonderComplete() and owner ~= -1 and owner ~= pid then plot = p end
+-- Wonders complete in other players' cities, by building row. In this UI
+-- state the setup's plot is unrevealed and reads no wonder, so the cities
+-- are the way to find it (as SDP_Wonders.Built does).
+local function BuiltElsewhere()
+  local out = {}
+  for _, id in ipairs(PlayerManager.GetAliveIDs()) do
+    if id ~= pid then
+      for _, city in Players[id]:GetCities():Members() do
+        local buildings = city:GetBuildings()
+        for row in GameInfo.Buildings() do
+          if row.IsWonder and buildings:HasBuilding(row.Index) then out[#out + 1] = row end
+        end
+      end
+    end
   end
-  if plot == nil then error("setup built no wonder for another civ") end
-  local row = GameInfo.Buildings[plot:GetWonderType()]
-  print(row.BuildingType .. " revealed " .. tostring(PlayersVisibility[pid]:IsRevealed(plot:GetIndex())) .. "; " .. Menu(row))
+  return out
+end
+
+test("a world wonder another civ completed is not planned", function()
+  local row = BuiltElsewhere()[1]
+  if row == nil then error("setup built no wonder for another civ") end
+  print(row.BuildingType .. "; " .. Menu(row))
   T.eq(row.MaxWorldInstances, 1, "a world wonder")
   T.eq(Status(row.BuildingType), "BUILT", row.BuildingType)
 end)
@@ -45,6 +57,7 @@ end)
 test("a wonder nobody built is planned before its technology", function()
   local techs = Players[pid]:GetTechs()
   local built = {}
+  for _, row in ipairs(BuiltElsewhere()) do built[row.Index] = true end
   for index = 0, Map.GetPlotCount() - 1 do
     local p = Map.GetPlotByIndex(index)
     if p:GetWonderType() ~= -1 then built[p:GetWonderType()] = true end

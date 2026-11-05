@@ -4,11 +4,14 @@ local me = Game.GetLocalPlayer()
 for index = 0, Map.GetPlotCount() - 1 do
   local plot = Map.GetPlotByIndex(index)
   local owner = plot:GetOwner()
-  if plot:GetWonderType() ~= -1 and owner ~= -1 and owner ~= me then
+  local wonder = plot:GetWonderType()
+  if wonder ~= -1 and owner ~= -1 and owner ~= me then
     local city = Cities.GetPlotPurchaseCity(plot)
     if city ~= nil then
-      city:GetBuildings():RemoveBuilding(plot:GetWonderType())
-      print("removed " .. GameInfo.Buildings[plot:GetWonderType()].BuildingType .. " at " .. plot:GetX() .. "," .. plot:GetY())
+      -- Read the type before removing it: the plot forgets it.
+      local name = GameInfo.Buildings[wonder].BuildingType
+      city:GetBuildings():RemoveBuilding(wonder)
+      print("removed " .. name .. " at " .. plot:GetX() .. "," .. plot:GetY())
     end
   end
 end
