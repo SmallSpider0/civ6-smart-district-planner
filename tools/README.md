@@ -80,7 +80,11 @@ node tools/luacheck.mjs [--json] FILE...
 ```bash
 node tools/offline_tests.mjs                                   # 跑 tests/offline/spec_*.lua
 node tools/offline_tests.mjs -v -k k6 tests/offline/bench_single.lua   # 单城基准（只跑名字含 k6 的组）
+node tools/offline_tests.mjs -t tests/offline/spec_multi.lua   # 末尾列出最慢的 20 项
 ```
+
+- 每项测试 1 秒以上时在它那行后面写秒数（`(12.3s)`），`-t` 另在末尾按耗时列出最慢的 20 项。测试慢了先看这个，再缩小场景（地图、城数、区域数、快速档），用例和它查的东西都保留（#302）。
+- CI 在 Ubuntu 上跑整套；Windows 上只跑 `validate.py`、`tests/tools` 和几个快的文件（`spec_land`、`spec_tabs`、`spec_overlay`、`spec_panel` 里读面板 XML 的那项），覆盖本工具在 Windows 上的路径处理（`.github/workflows/checks.yml`）。
 
 - Lua 跑在 [fengari](https://github.com/fengari-lua/fengari)（JavaScript 写的 Lua 5.3 虚拟机，`tools/node_modules`，`npm install` 安装）里，不需要游戏。每个文件一个新状态，提供 `unpack`、`loadstring`、`include`（按名字找 `SmartDistrictPlanner/Scripts|UI/` 或 `tests/offline/`），游戏自己的文件（`MapTacks`、`dmt_yieldcalculator` 等）由假世界提供。
 - `tests/offline/world.lua` 是一个小的假游戏：六边形地图（文字描述或按种子随机生成）、城市、区域、地图钉、`GameInfo` 的相关表，以及**简化的 DMT**（`CanPlacePin`、`GetBonusYields`、钉子数据）。规则照游戏数据缩减，只用来测求解器的搜索和记账；游戏里的真实数值一律来自真正的 DMT，所以离线通过之后仍要在游戏里跑 `tests/test_*.lua`。
