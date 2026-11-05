@@ -561,6 +561,10 @@ class NightQueue(unittest.TestCase):
         set_env(self, "SDP_LOCAL_CONFIG", cfg)
         self.addCleanup(setattr, pr_wait.sdplock, "localtime", pr_wait.sdplock.localtime)
         pr_wait.sdplock.localtime = lambda t: __import__("time").gmtime(t)  # the fake clock reads as UTC here
+        # queue_add asks git who is queuing; git waits through time.sleep, which these tests replace
+        # (and sleep_or_stop raises there), so give the identity without running git
+        self.addCleanup(setattr, pr_wait.sdplock, "identity", pr_wait.sdplock.identity)
+        pr_wait.sdplock.identity = lambda root: {"tree": root, "branch": "test", "commit": "0", "owner": "test"}
 
     def at(self, day, hhmm):
         """Epoch seconds of 2026-11-<day> hh:mm UTC (local here, see setUp)."""
