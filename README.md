@@ -44,7 +44,7 @@ Also:
 
 How close its plans come to the best, its speed and known limitations: see the [overview](https://smallspider0.github.io/civ6-smart-district-planner/en/).
 
-Use one planner per game: do not enable it together with Auto Map Tacks Planner, Empire Planner or another district planner, since they disturb each other.
+Use one planner per game; how it works with other mods: [Using it with other mods](#using-it-with-other-mods).
 
 ### Install
 
@@ -58,6 +58,25 @@ Without the Workshop, download the zip from the [releases page](https://github.c
 Keep only one copy: with one in Mods and one from the Workshop, the game loads only one of them, not necessarily the newer one or the one you enabled. When you switch to the Workshop, delete that folder from Mods.
 
 How to use each tab, known limitations and troubleshooting: [install and use](docs/install-en.md). Report problems on [Issues](https://github.com/SmallSpider0/civ6-smart-district-planner/issues), in English or Chinese. Each [release](https://github.com/SmallSpider0/civ6-smart-district-planner/releases) lists its changes in English and Chinese; the [CHANGELOG](CHANGELOG.md) is in Chinese.
+
+### Using it with other mods
+
+Checked on 2026-11-05.
+
+Most mods that add civilizations, districts or wonders, or change adjacency bonuses, work with it: plans follow their rules. Interface mods (CQUI, Better Report Screen, More Lenses and others) usually don't conflict either. Tested in the game: Civ6 Plus: Harmony in Diversity v2.2.
+
+Good to know:
+
+- **Modular Adjacency Bonuses (and mods built on it)**: the adjacency bonuses it adds are not counted in plans, now or later, so the built districts yield more than the panel shows. That mod works out these bonuses only after a district is built, at the next turn, while this mod takes every bonus from Detailed Map Tacks (the same numbers the map tacks show), which can't see them.
+- **A few special leader and wonder bonuses in Harmony in Diversity** (such as Wu Zetian's "+2 for districts next to a wonder"): not counted either, now or later. Detailed Map Tacks doesn't read these bonuses, and this mod doesn't add a calculation of its own, so the panel and the map tacks always show the same numbers.
+- **Reach with Harmony in Diversity**: it computes the regional effects of buildings itself; Reach still uses the ranges in the game's rules, so the regional effects it adds to buildings are not counted.
+- **Workable 4th Ring**: this mod plans only within three rings of a city; place 4th-ring districts yourself.
+
+Don't use together:
+
+- **Auto Map Tacks Planner, Empire Planner, District & Wonder Planner**: planners change or delete each other's map tacks. Use one per game.
+
+If a mod not listed here gives wrong numbers, please open an [issue](https://github.com/SmallSpider0/civ6-smart-district-planner/issues) or leave a comment on the Workshop page.
 
 ### Similar mods
 
@@ -152,7 +171,7 @@ The development documents are in Chinese; issues and pull requests in English ar
 
 方案离最优多远、速度和已知限制，见[介绍页](https://smallspider0.github.io/civ6-smart-district-planner/)。
 
-一局只开一个规划器：不要和 Auto Map Tacks Planner、Empire Planner 等区域规划模组同时启用，它们会互相干扰。
+一局只开一个规划器；和其他模组一起用的情况见[和其他模组一起用](#和其他模组一起用)。
 
 ### 安装
 
@@ -166,6 +185,25 @@ The development documents are in Chinese; issues and pull requests in English ar
 只留一份：Mods 里和创意工坊各有一份时，游戏只加载其中一份，不一定是新的，也不一定是你启用的那份。改用创意工坊版时，把 Mods 里的这个文件夹删掉。
 
 各页签的用法、已知限制和排错见[安装与使用](docs/install-and-test.md)。问题请在 [Issues](https://github.com/SmallSpider0/civ6-smart-district-planner/issues) 反馈，更新内容见 [CHANGELOG](CHANGELOG.md)。
+
+### 和其他模组一起用
+
+2026-11-05 核对。
+
+大多数加新文明、新区域、新奇观、改相邻加成的模组都能一起用，规划会跟着它们的规则走。界面模组（CQUI、Better Report Screen、More Lenses 等）一般也不冲突。已在游戏里实测过：和而不同（Civ6 Plus: Harmony in Diversity）v2.2。
+
+一起用时要知道的：
+
+- **模块化相邻加成（及依赖它的模组）**：它加的相邻加成不会算进方案，以后也不会，实际建成后会比面板显示的多。原因：这些加成要等区域建成、到下一回合才由那个模组算出来，而本模组的加成都取自 Detailed Map Tacks（和地图钉上显示的是同一份数），它看不到这些加成。
+- **和而不同里少数领袖、奇观的特殊加成**（如武则天“区域挨着奇观 +2”）：同样不会算进方案，以后也不会。原因：Detailed Map Tacks 不认这类加成，本模组也不另算，面板和地图钉上的数才总是一样。
+- **和而不同的“覆盖”**：它把建筑的范围效果改由自己计算，“覆盖”一项仍按游戏规则里的范围算，不计它给建筑新加的范围效果。
+- **Workable 4th Ring**：本模组只规划城市三环内的格，第 4 环的区域要自己放。
+
+不要一起开：
+
+- **Auto Map Tacks Planner、Empire Planner、District & Wonder Planner**：几个规划模组会互相改掉或删掉对方的地图钉。一局只开一个。
+
+列表里没有的模组，发现算得不对，欢迎在 GitHub 提 [Issue](https://github.com/SmallSpider0/civ6-smart-district-planner/issues) 或在创意工坊留言。
 
 ### 同类模组
 
