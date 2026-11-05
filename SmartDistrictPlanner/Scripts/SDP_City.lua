@@ -259,8 +259,8 @@ end
 -- The technology the player still needs before a district can clear the
 -- plot's feature (Features.RemoveTech) or harvest its bonus resource
 -- (Resource_Harvests.PrereqTech; issue 52); the game refuses the district
--- until then. Nil when none.
-local function MissingRemoveTech(plot, playerID)
+-- until then. Nil when none. keepFeature: the feature stays (KeepFeature).
+local function MissingRemoveTech(plot, playerID, keepFeature)
   local player = Players[playerID]
   local techs = player ~= nil and player.GetTechs ~= nil and player:GetTechs() or nil
   local function Missing(name)
@@ -269,7 +269,7 @@ local function MissingRemoveTech(plot, playerID)
     return tech.TechnologyType
   end
   local feature = plot:GetFeatureType()
-  if feature ~= -1 then
+  if feature ~= -1 and not keepFeature then
     local row = GameInfo.Features[feature]
     local missing = row ~= nil and row.Removable and Missing(row.RemoveTech) or nil
     if missing ~= nil then return missing end
@@ -289,15 +289,58 @@ end
 
 -- Whether building on `plot` removes a feature or a bonus resource the
 -- player should clear or harvest first for its one-time yields (issue 52).
-local function ClearsFirst(plot, playerID)
+-- keepFeature: the feature stays (KeepFeature).
+local function ClearsFirst(plot, playerID, keepFeature)
   local feature = plot:GetFeatureType()
-  if feature ~= -1 and GameInfo.Features[feature].Removable then return true end
+  if feature ~= -1 and not keepFeature and GameInfo.Features[feature].Removable then return true end
   local resource = plot:GetResourceType()
   local row = resource ~= -1 and GameInfo.Resources[resource] or nil
   return row ~= nil and Harvestable(row.ResourceType) and Players[playerID]:GetResources():IsResourceVisible(row.Hash)
 end
 
+-- Whether building a district or wonder (kind "DISTRICT" or "WONDER", key its
+-- type) on a plot with `featureType` removes that feature: DMT's own rule
+-- (WillDistrictRemoveFeature, WillWonderRemoveFeature), which reads the rules
+-- (District_RequiredFeatures, Features_XP2, Building_ValidFeatures, ...) and
+-- the player's modifiers (the cache SDP_Overlay.RefreshModifiers builds:
+-- Vietnam's specialty districts, mods that let districts keep woods; issue
+-- 293). Without DMT, or when DMT fails, it is removed.
+function SDP_City.RemovesFeature(kind, key, featureType)
+  local rule = kind == "WONDER" and WillWonderRemoveFeature or WillDistrictRemoveFeature
+  if rule == nil then return true end
+  local ok, removes = pcall(rule, key, featureType)
+  return not ok or removes ~= false
+end
+
+-- With feature removal switched off: { [feature index] = true } for the
+-- removable features some district the player can plan keeps when built on
+-- them (SDP_City.RemovesFeature). Such plots stay candidates, marked
+-- KeepFeature, and only what keeps the feature goes there (SDP_Search).
+local function KeptFeatures(playerID)
+  local kept, districts = {}, SDP_Rules.PlannableDistricts(playerID)
+  for row in GameInfo.Features() do
+    if row.Removable then
+      for _, d in ipairs(districts) do
+        if not SDP_City.RemovesFeature("DISTRICT", d.Type, row.FeatureType) then
+          kept[row.Index] = true
+          break
+        end
+      end
+    end
+  end
+  return kept
+end
+
+-- The removable feature a candidate must keep (its FeatureType; feature
+-- removal switched off and some district keeps it, KeptFeatures), or nil.
+local function KeepFeature(plot, allowFeatureRemoval)
+  local feature = plot:GetFeatureType()
+  if allowFeatureRemoval == true or feature == -1 or not GameInfo.Features[feature].Removable then return nil end
+  return GameInfo.Features[feature].FeatureType
+end
+
 -- Why `plot` cannot take a new district for this city, or nil.
+-- allowFeatureRemoval: true, or (switched off) the set of KeptFeatures.
 local function ExclusionReason(plot, playerID, cityID, pinned, siteRings, allowFeatureRemoval, reach)
   local E = SDP_City.EXCLUDED
   -- DMT reads no terrain for unrevealed plots and CanPlacePin then fails.
@@ -317,7 +360,8 @@ local function ExclusionReason(plot, playerID, cityID, pinned, siteRings, allowF
   if owner == -1 and siteRings[plot:GetIndex()] then return E.SITE_RING end
   if owner == -1 and not reach.Reached[plot:GetIndex()] then return E.UNREACHABLE end
   local feature = plot:GetFeatureType()
-  if not allowFeatureRemoval and feature ~= -1 and GameInfo.Features[feature].Removable then
+  if allowFeatureRemoval ~= true and feature ~= -1 and GameInfo.Features[feature].Removable
+      and not allowFeatureRemoval[feature] then
     return E.FEATURE
   end
   local resource = plot:GetResourceType()
@@ -346,7 +390,9 @@ end
 -- player's cities owns that this city can swap over are candidates too
 -- (issue 54; the player's switch). options.allowFeatureRemoval (default true): when false,
 -- plots with a feature a district would clear (GameInfo.Features.Removable:
--- woods, rainforest, marsh) are excluded (requirement constraint 5).
+-- woods, rainforest, marsh) are excluded (requirement constraint 5), except
+-- where a district the player can plan keeps the feature (issue 293): those
+-- stay candidates with KeepFeature set.
 -- options.ignorePins: { [pin ID] = true } pins treated as absent.
 -- Returns nil when the city does not exist, else:
 --   PlayerID, CityID, Name, X, Y, Population, SpecialtyCapacity, SpecialtyBuilt
@@ -354,7 +400,9 @@ end
 --               (true when the city does not own the plot yet), Swap (the
 --               ID of the player's city it is swapped from), ClearFirst
 --               (a removable feature or a bonus resource to clear or harvest
---               before building, issue 52), RemoveTech
+--               before building, issue 52), KeepFeature (feature removal
+--               off: the FeatureType only a district or wonder that keeps
+--               it may go on, issue 293), RemoveTech
 --               (the technology still needed to clear its feature, or nil) }
 --   Excluded    { [plot index] = SDP_City.EXCLUDED reason } for the other plots in range
 --   Reach       { Start, Through, Reached, Swap } (see ReachSets)
@@ -378,11 +426,12 @@ function SDP_City.Scan(playerID, cityID, options)
 
   local pinned = {}
   for _, pin in ipairs(scan.Pins) do pinned[pin.Index] = true end
+  local kept = allowFeatureRemoval or KeptFeatures(playerID)
   local siteRings = SiteRings(playerID, nil, options and options.ignorePins)
   scan.Reach = ReachSets(playerID, cityID, cx, cy, siteRings, options and options.allowSwap)
   for _, entry in ipairs(SDP_City.PlotsInRange(cx, cy, SDP_City.RADIUS)) do
     local plot = Map.GetPlotByIndex(entry.Index)
-    local reason = ExclusionReason(plot, playerID, cityID, pinned, siteRings, allowFeatureRemoval, scan.Reach)
+    local reason = ExclusionReason(plot, playerID, cityID, pinned, siteRings, kept, scan.Reach)
     if reason then
       scan.Excluded[entry.Index] = reason
     else
@@ -392,8 +441,9 @@ function SDP_City.Scan(playerID, cityID, options)
       -- plan, none changes what is legal.
       entry.Swap = scan.Reach.Swap[entry.Index]
       entry.Unowned = (entry.Swap == nil and not scan.Reach.Start[entry.Index]) or nil
-      entry.RemoveTech = MissingRemoveTech(plot, playerID)
-      entry.ClearFirst = ClearsFirst(plot, playerID) or nil
+      entry.KeepFeature = KeepFeature(plot, allowFeatureRemoval)
+      entry.RemoveTech = MissingRemoveTech(plot, playerID, entry.KeepFeature)
+      entry.ClearFirst = ClearsFirst(plot, playerID, entry.KeepFeature) or nil
       scan.Candidates[#scan.Candidates + 1] = entry
     end
   end
@@ -434,17 +484,19 @@ function SDP_City.ScanSite(playerID, x, y, options)
   scan.SpecialtyCapacity = SDP_City.SpecialtyCapacity(scan.Population)
   local pinned = {}
   for _, pin in ipairs(scan.Pins) do pinned[pin.Index] = true end
+  local kept = allowFeatureRemoval or KeptFeatures(playerID)
   local siteRings = SiteRings(playerID, Map.GetPlotIndex(x, y), options.ignorePins)
   scan.Reach = ReachSets(playerID, nil, x, y, siteRings)
   for _, entry in ipairs(SDP_City.PlotsInRange(x, y, SDP_City.RADIUS)) do
     local plot = Map.GetPlotByIndex(entry.Index)
-    local reason = ExclusionReason(plot, playerID, nil, pinned, siteRings, allowFeatureRemoval, scan.Reach)
+    local reason = ExclusionReason(plot, playerID, nil, pinned, siteRings, kept, scan.Reach)
     if reason then
       scan.Excluded[entry.Index] = reason
     else
       entry.Unowned = not scan.Reach.Start[entry.Index] or nil
-      entry.RemoveTech = MissingRemoveTech(plot, playerID)
-      entry.ClearFirst = ClearsFirst(plot, playerID) or nil
+      entry.KeepFeature = KeepFeature(plot, allowFeatureRemoval)
+      entry.RemoveTech = MissingRemoveTech(plot, playerID, entry.KeepFeature)
+      entry.ClearFirst = ClearsFirst(plot, playerID, entry.KeepFeature) or nil
       scan.Candidates[#scan.Candidates + 1] = entry
     end
   end

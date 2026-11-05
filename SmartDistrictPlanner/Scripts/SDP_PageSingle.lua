@@ -392,6 +392,9 @@ end
 
 UpdateReplaceLabel = function()
   Controls.ReplaceLabel:SetText(Locale.Lookup("LOC_SDP_REPLACE_OWN_SHORT", #OwnPins()))
+  -- The label's width follows the count: lay the switches out again (issue 293)
+  Controls.ReplaceStack:CalculateSize()
+  Controls.SwitchStack:CalculateSize()
   UpdateHave()
   PopulateWonders() -- a wonder's pin may have come, gone or be replaced (issue 154)
 end

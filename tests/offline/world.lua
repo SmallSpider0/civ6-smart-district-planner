@@ -1420,6 +1420,17 @@ function World.New(spec)
     GetRealizedPlotFeatures = function(pid, plot) return Realized(pid, plot) end,
     AdjacencyBonusTypes = { ADJACENCY_FEATURE = "feature", ADJACENCY_DISTRICT = "district", ADJACENCY_TERRAIN = "terrain" },
     UpdatePinYields = function() w.Calls.ClearCache = w.Calls.ClearCache + 1 end,
+    -- DMT's answer whether building removes a plot's feature (issue 293):
+    -- removed unless spec.keepFeatures = { [district or wonder type] =
+    -- { [FeatureType] = true } } says it is kept. That table stands for what
+    -- DMT reads from the rules and the player's modifiers (District_
+    -- RequiredFeatures, EFFECT_ADJUST_VALID_FEATURES_DISTRICTS, ...).
+    WillDistrictRemoveFeature = function(key, featureType)
+      return not ((spec.keepFeatures or {})[key] or {})[featureType]
+    end,
+    WillWonderRemoveFeature = function(key, featureType)
+      return not ((spec.keepFeatures or {})[key] or {})[featureType]
+    end,
     CanPlacePin = CanPlace,
     GetBonusYields = BonusYields,
     OnMapPinAdded = Noop, OnMapPinRemoved = Noop, OnBuildingAdded = Noop, OnDistrictAdded = Noop,

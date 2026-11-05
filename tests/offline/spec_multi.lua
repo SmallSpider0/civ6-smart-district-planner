@@ -166,6 +166,32 @@ test("a planned city's first ring is left to it (issue 26)", function()
   end
 end)
 
+-- Issue 293: feature removal off. Only what keeps a plot's removable feature
+-- (DMT's answer; here spec.keepFeatures stands for the player's modifiers)
+-- goes there, in every city.
+test("feature removal off: only districts that keep the feature go on it, in every city (issue 293)", function()
+  World.New({
+    rows = MAP, rivers = { "6,4", "7,4", "7,5", "12,7", "13,7" },
+    cities = {
+      { id = 1, x = 4, y = 5, population = 6, capital = true, radius = 1 },
+      { id = 2, x = 17, y = 5, population = 3, radius = 1 },
+    },
+    pins = { { 9, 6, "ICON_DISTRICT_CITY_CENTER", "A" } },
+    keepFeatures = { DISTRICT_CAMPUS = { FEATURE_FOREST = true, FEATURE_JUNGLE = true, FEATURE_MARSH = true } },
+  })
+  local result = SDP_Multi.Solve(Request({ AllowFeatureRemoval = false }))
+  T.ok(result.Ok, tostring(result.Error))
+  for _, p in ipairs(result.Plan) do
+    local feature = Map.GetPlotByIndex(p.Index):GetFeatureType()
+    local row = feature ~= -1 and GameInfo.Features[feature] or nil
+    if row ~= nil and row.Removable then
+      T.ok(not WillDistrictRemoveFeature(p.Type, row.FeatureType), p.Type .. " removes " .. row.FeatureType)
+      T.eq(p.ClearFirst, nil, "nothing to clear for " .. p.Type)
+    end
+  end
+  T.ok(#result.Plan > 0, "a plan")
+end)
+
 test("an empire-limited district every city asks for goes to one; the others fill their count (issue 28)", function()
   NewWorld()
   local result
