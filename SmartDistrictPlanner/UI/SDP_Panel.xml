@@ -107,21 +107,26 @@
         </Container>
         <Stack ID="WeightStack" Anchor="C,T" StackGrowth="Right" StackPadding="0"/>
 
-        <!-- Switches in one row; the full meaning is in each tooltip. The first
-             is wider for its English label, "Remove features" (issue 293). -->
+        <!-- Switches in one row; the full meaning is in each tooltip. Stacks
+             size each switch to its label, so a longer label (English "Remove
+             features", or a larger count on Replace) pushes the next switch
+             along instead of running into it (issues 290, 293). The Lua calls
+             CalculateSize on SwitchStack after the Replace label changes. -->
         <Container Size="480,26">
-          <Container Anchor="L,C" Size="136,26" ToolTip="LOC_SDP_ALLOW_FEATURE_REMOVAL">
-            <CheckBox ID="FeatureCheck" Anchor="L,C" Style="MainCheckBox"/>
-            <Label Anchor="L,C" Offset="26,0" Style="BodyTextDark14" String="LOC_SDP_FEATURE_SHORT"/>
-          </Container>
-          <Container Anchor="L,C" Offset="140,0" Size="120,26" ToolTip="LOC_SDP_REPLACE_OWN_TOOLTIP">
-            <CheckBox ID="ReplaceCheck" Anchor="L,C" Style="MainCheckBox"/>
-            <Label ID="ReplaceLabel" Anchor="L,C" Offset="26,0" Style="BodyTextDark14"/>
-          </Container>
-          <Container Anchor="L,C" Offset="264,0" Size="116,26" ToolTip="LOC_SDP_REMIND_TOOLTIP">
-            <CheckBox ID="RemindCheck" Anchor="L,C" Style="MainCheckBox"/>
-            <Label Anchor="L,C" Offset="26,0" Style="BodyTextDark14" String="LOC_SDP_REMIND_SHORT"/>
-          </Container>
+          <Stack ID="SwitchStack" Anchor="L,C" StackGrowth="Right" StackPadding="12">
+            <Stack Anchor="L,C" StackGrowth="Right" StackPadding="9">
+              <CheckBox ID="FeatureCheck" Anchor="L,C" Style="MainCheckBox" ToolTip="LOC_SDP_ALLOW_FEATURE_REMOVAL"/>
+              <Label Anchor="L,C" Style="BodyTextDark14" String="LOC_SDP_FEATURE_SHORT" ToolTip="LOC_SDP_ALLOW_FEATURE_REMOVAL"/>
+            </Stack>
+            <Stack ID="ReplaceStack" Anchor="L,C" StackGrowth="Right" StackPadding="9">
+              <CheckBox ID="ReplaceCheck" Anchor="L,C" Style="MainCheckBox" ToolTip="LOC_SDP_REPLACE_OWN_TOOLTIP"/>
+              <Label ID="ReplaceLabel" Anchor="L,C" Style="BodyTextDark14" ToolTip="LOC_SDP_REPLACE_OWN_TOOLTIP"/>
+            </Stack>
+            <Stack Anchor="L,C" StackGrowth="Right" StackPadding="9">
+              <CheckBox ID="RemindCheck" Anchor="L,C" Style="MainCheckBox" ToolTip="LOC_SDP_REMIND_TOOLTIP"/>
+              <Label Anchor="L,C" Style="BodyTextDark14" String="LOC_SDP_REMIND_SHORT" ToolTip="LOC_SDP_REMIND_TOOLTIP"/>
+            </Stack>
+          </Stack>
         </Container>
         <Container Size="480,26">
           <Container Anchor="L,C" Size="236,26" ToolTip="LOC_SDP_SWAP_TOOLTIP">
