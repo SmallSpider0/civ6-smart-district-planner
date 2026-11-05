@@ -34,6 +34,7 @@ Also:
 - Tiles you can swap from your other cities are used too (on by default, can be turned off), which gives more adjacency; such a district needs a Swap in Manage Citizens, and the result marks it.
 - Lean toward a yield with the Science, Culture or Religion preset, or set each weight yourself.
 - Districts stay off tiles that would make good farms or mines unless the bonus is worth it.
+- Improvements that give districts adjacency (such as Mines and Quarries next to an Industrial Zone, and those your civilization's abilities count) are planned with the districts and tacked with them; districts go where those can be built (on by default). With "Worked tiles" on, the tiles the city will work also get improvement tacks.
 - Neighborhoods go where Appeal gives the most Housing. An Aqueduct is added when a city lacks fresh water, a Dam when it has enough Floodplains.
 - When a plan relies on nearby Woods or Rainforest, a "Don't chop" tack on those tiles says what chopping would cost.
 - **Good places**: pick a district and the map colors every tile it can go on by its bonus.
@@ -64,7 +65,7 @@ How to use each tab, known limitations and troubleshooting: [install and use](do
 |---|---|---|---|---|
 | Districts | ✓ | ✓ | ✓ up to 3 kinds at a time (plus Aqueduct and Government Plaza) | ✓ |
 | Wonders | ✓ | ✓ | ✓ up to 5 | ✓ |
-| Improvements | ✓ unique improvements included | ✓ | ◐ only the one a wonder needs | ◐ only the one a wonder needs (the Camp for the Temple of Artemis) |
+| Improvements | ✓ unique improvements included | ✓ | ◐ only the one a wonder needs | ◐ those that give districts adjacency, the Camp a wonder needs, optionally the tiles the city will work; no unique improvements |
 | New city sites | — future cities from your City Center tacks | ✓ 0–6 | — future cities from your City Center tacks | ✓ 1–6, up to 12 with dense packing |
 | Cities planned together | ✓ up to 4 | ✓ every existing city and the new sites, in one go | ✓ all cities, with a tick | ✓ every city and site tack, in groups taken in turns above 8 |
 | Places map tacks | ✓ | ✓ | ✓ | ✓ |
@@ -141,6 +142,7 @@ The development documents are in Chinese; issues and pull requests in English ar
 - 本方其他城能换过来的格也会用上（默认打开，可关），相邻加成更高；这些区域要在“市民管理”里点“切换”把格换过来，结果里会标出来。
 - 偏向某种产出：选“科技”“文化”“宗教”预设，或自己调各项权重。
 - 不乱占好地：区域尽量不压能修出好改良的格。
+- 能给区域相邻加成的改良设施（如工业区旁的矿山、采石场，以及文明特性认的改良）和区域一起规划、一起打钉，区域会挑能建这些改良的位置（默认打开）；打开“耕作格改良”时，城市要耕作的地块也打改良钉。
 - 社区放在魅力高的地方，多给住房；缺淡水时自动加水渠，泛滥平原多时自动加堤坝。
 - 方案靠旁边的森林、雨林拿加成时，在那些格上打“勿砍”提醒钉，写明砍掉会少多少。
 - “好位置”：选一个区域，地图上给它能放的格按加成高低上色。
@@ -171,7 +173,7 @@ The development documents are in Chinese; issues and pull requests in English ar
 |---|---|---|---|---|
 | 区域 | ✓ | ✓ | ✓ 一次最多 3 种（另加水渠、市政广场） | ✓ |
 | 奇观 | ✓ | ✓ | ✓ 最多 5 座 | ✓ |
-| 改良设施 | ✓ 含特色改良设施 | ✓ | ◐ 只规划奇观需要的那一种 | ◐ 只规划奇观需要的那一种（阿耳忒弥斯神庙旁的营地） |
+| 改良设施 | ✓ 含特色改良设施 | ✓ | ◐ 只规划奇观需要的那一种 | ◐ 给区域相邻加成的改良、奇观需要的营地，可选城市要耕作的地块；不含特色改良设施 |
 | 选新城址 | — 未来的城用你打的城市中心钉 | ✓ 0–6 处 | — 未来的城用你打的城市中心钉 | ✓ 1–6 处，密铺最多 12 处 |
 | 几座城一起规划 | ✓ 最多 4 座 | ✓ 全部现有城市和新城址一次规划 | ✓ 可勾选全部城市 | ✓ 全部城市和城址钉，超过 8 座时分组轮流规划 |
 | 打地图钉 | ✓ | ✓ | ✓ | ✓ |

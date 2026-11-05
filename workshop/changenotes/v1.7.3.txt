@@ -1,0 +1,7 @@
+Changes since v1.7.2:
+- The plan now includes the improvements that give its districts adjacency, such as Mines and Quarries next to an Industrial Zone, and those your civilization's abilities count, and tacks them with the districts. Districts go where those improvements can be built, so plans change: with the new ‘Improvements’ switch on (the default), a district may move to make room for them. Yields that districts give improvements (such as Farms next to an Aqueduct) count in Tiles.
+- New switch ‘Worked tiles’ (off by default): the tiles the city will work that have no improvement also get an improvement tack. The districts stay where they are.
+
+自 v1.7.2 以来的变化：
+- 规划时一起放能给区域相邻加成的改良设施并打钉（如工业区旁的矿山、采石场，以及文明特性认的改良）。区域会挑能建这些改良的位置，所以方案会变：新开关“规划改良”默认打开，区域可能为了给改良腾地方换位置。区域给改良的产出（如水渠旁的农场）算进“地块”。
+- 新开关“耕作格改良”（默认关）：城市要耕作、还没有改良的地块也打改良钉，区域位置不变。
