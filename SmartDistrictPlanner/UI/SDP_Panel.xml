@@ -128,15 +128,19 @@
             <CheckBox ID="SwapCheck" Anchor="L,C" Style="MainCheckBox"/>
             <Label Anchor="L,C" Offset="26,0" Style="BodyTextDark14" String="LOC_SDP_SWAP_SHORT"/>
           </Container>
-          <!-- Improvements with the districts, and for the worked tiles (issue 227) -->
-          <Container Anchor="L,C" Offset="244,0" Size="116,26" ToolTip="LOC_SDP_IMPROVE_TOOLTIP">
-            <CheckBox ID="ImproveCheck" Anchor="L,C" Style="MainCheckBox"/>
-            <Label Anchor="L,C" Offset="26,0" Style="BodyTextDark14" String="LOC_SDP_IMPROVE_SHORT"/>
-          </Container>
-          <Container Anchor="L,C" Offset="364,0" Size="116,26" ToolTip="LOC_SDP_WORKED_TOOLTIP">
-            <CheckBox ID="WorkedCheck" Anchor="L,C" Style="MainCheckBox"/>
-            <Label Anchor="L,C" Offset="26,0" Style="BodyTextDark14" String="LOC_SDP_WORKED_SHORT"/>
-          </Container>
+          <!-- Improvements with the districts, and for the worked tiles (issue 227).
+               Stacks size each switch to its label, so a longer label pushes
+               the next switch along instead of running into it (issue 290). -->
+          <Stack Anchor="L,C" Offset="244,0" StackGrowth="Right" StackPadding="12">
+            <Stack Anchor="L,C" StackGrowth="Right" StackPadding="9">
+              <CheckBox ID="ImproveCheck" Anchor="L,C" Style="MainCheckBox" ToolTip="LOC_SDP_IMPROVE_TOOLTIP"/>
+              <Label Anchor="L,C" Style="BodyTextDark14" String="LOC_SDP_IMPROVE_SHORT" ToolTip="LOC_SDP_IMPROVE_TOOLTIP"/>
+            </Stack>
+            <Stack Anchor="L,C" StackGrowth="Right" StackPadding="9">
+              <CheckBox ID="WorkedCheck" Anchor="L,C" Style="MainCheckBox" ToolTip="LOC_SDP_WORKED_TOOLTIP"/>
+              <Label Anchor="L,C" Style="BodyTextDark14" String="LOC_SDP_WORKED_SHORT" ToolTip="LOC_SDP_WORKED_TOOLTIP"/>
+            </Stack>
+          </Stack>
         </Container>
         </Stack>
         </ScrollPanel>
@@ -354,15 +358,19 @@
             <CheckBox ID="MultiSwapCheck" Anchor="L,C" Style="MainCheckBox"/>
             <Label Anchor="L,C" Offset="26,0" Style="BodyTextDark14" String="LOC_SDP_SWAP_SHORT"/>
           </Container>
-          <!-- Improvements with the districts, and for the worked tiles (issue 227) -->
-          <Container Anchor="L,C" Offset="244,0" Size="116,26" ToolTip="LOC_SDP_IMPROVE_TOOLTIP">
-            <CheckBox ID="MultiImproveCheck" Anchor="L,C" Style="MainCheckBox"/>
-            <Label Anchor="L,C" Offset="26,0" Style="BodyTextDark14" String="LOC_SDP_IMPROVE_SHORT"/>
-          </Container>
-          <Container Anchor="L,C" Offset="364,0" Size="116,26" ToolTip="LOC_SDP_WORKED_TOOLTIP">
-            <CheckBox ID="MultiWorkedCheck" Anchor="L,C" Style="MainCheckBox"/>
-            <Label Anchor="L,C" Offset="26,0" Style="BodyTextDark14" String="LOC_SDP_WORKED_SHORT"/>
-          </Container>
+          <!-- Improvements with the districts, and for the worked tiles (issue 227).
+               Stacks size each switch to its label, so a longer label pushes
+               the next switch along instead of running into it (issue 290). -->
+          <Stack Anchor="L,C" Offset="244,0" StackGrowth="Right" StackPadding="12">
+            <Stack Anchor="L,C" StackGrowth="Right" StackPadding="9">
+              <CheckBox ID="MultiImproveCheck" Anchor="L,C" Style="MainCheckBox" ToolTip="LOC_SDP_IMPROVE_TOOLTIP"/>
+              <Label Anchor="L,C" Style="BodyTextDark14" String="LOC_SDP_IMPROVE_SHORT" ToolTip="LOC_SDP_IMPROVE_TOOLTIP"/>
+            </Stack>
+            <Stack Anchor="L,C" StackGrowth="Right" StackPadding="9">
+              <CheckBox ID="MultiWorkedCheck" Anchor="L,C" Style="MainCheckBox" ToolTip="LOC_SDP_WORKED_TOOLTIP"/>
+              <Label Anchor="L,C" Style="BodyTextDark14" String="LOC_SDP_WORKED_SHORT" ToolTip="LOC_SDP_WORKED_TOOLTIP"/>
+            </Stack>
+          </Stack>
         </Container>
         </Stack>
         </ScrollPanel>
