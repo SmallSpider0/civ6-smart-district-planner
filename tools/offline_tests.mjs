@@ -23,7 +23,10 @@
 // measure cost: in the game a DMT call costs far more than a search step, and
 // counts do not depend on this VM's speed.
 //
-// Usage: node tools/offline_tests.mjs [-k SUBSTRING] [-v] [FILE...]
+// Each test's seconds follow its line when it takes 1 s or more; -t also lists
+// the slowest tests of the run at the end.
+//
+// Usage: node tools/offline_tests.mjs [-k SUBSTRING] [-v] [-t] [FILE...]
 // Exit codes: 0 all passed, 1 failures, 2 bad usage.
 
 import { createRequire } from "node:module";
@@ -99,6 +102,7 @@ function sdp_run_tests(filter)
   local S = "\31"
   for _, t in ipairs(__tests) do
     if filter == nil or string.find(t.name, filter, 1, true) then
+      sdp_emit("SDP_BEGIN")
       if SDP_Invariants then SDP_Invariants.BeginTest() end
       local ok, err = xpcall(t.fn, function(e)
         if type(e) == "table" then return e end
@@ -136,8 +140,13 @@ function newState(output) {
   lualib.luaL_openlibs(L);
   const loaded = new Set();
 
+  // A test's result carries its seconds: from its SDP_BEGIN to the result.
+  let begun = performance.now();
   lua.lua_pushjsfunction(L, (L) => {
-    output.push(to_jsstring(lauxlib.luaL_checkstring(L, 1)));
+    const item = to_jsstring(lauxlib.luaL_checkstring(L, 1));
+    if (item === "SDP_BEGIN") begun = performance.now();
+    else if (item.startsWith("SDP_TEST" + SEP)) output.push(item + SEP + (performance.now() - begun) / 1000);
+    else output.push(item);
     return 0;
   });
   lua.lua_setglobal(L, to_luastring("sdp_emit"));
@@ -204,7 +213,12 @@ function newState(output) {
   return L;
 }
 
-function runFile(path, filter, verbose) {
+// The seconds after a test's line: only for the slow ones, so the report stays short.
+function took(seconds) {
+  return seconds >= 1 ? `  (${seconds.toFixed(1)}s)` : "";
+}
+
+function runFile(path, filter, verbose, timed) {
   const counts = { PASS: 0, FAIL: 0, SKIP: 0, ERROR: 0 };
   const output = [];
   const started = performance.now();
@@ -229,10 +243,14 @@ function runFile(path, filter, verbose) {
       logs.push(item);
       continue;
     }
-    const [, status, name, detail] = item.split(SEP);
+    const parts = item.split(SEP);
+    const [, status, name] = parts;
+    const secs = Number(parts[parts.length - 1]);
+    const detail = parts.length > 4 ? parts.slice(3, -1).join(SEP) : "";
     counts[status] = (counts[status] || 0) + 1;
-    if (status === "PASS") lines.push("  PASS   " + name);
-    else lines.push(`  ${status.padEnd(6)} ${name}\n         ${(detail || "").replace(/\n/g, "\n         ")}`);
+    timed.push({ seconds: secs, name: `${display(path)}: ${name}` });
+    if (status === "PASS") lines.push("  PASS   " + name + took(secs));
+    else lines.push(`  ${status.padEnd(6)} ${name}${took(secs)}\n         ${detail.replace(/\n/g, "\n         ")}`);
   }
   const seconds = (performance.now() - started) / 1000;
   console.log(`${display(path)}  ${seconds.toFixed(2)}s`);
@@ -248,27 +266,35 @@ function runFile(path, filter, verbose) {
 function parseArgs(argv) {
   let filter = null;
   let verbose = false;
+  let slowest = false;
   const files = [];
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === "-k") filter = argv[++i];
     else if (a === "-v") verbose = true;
+    else if (a === "-t") slowest = true;
     else if (a.startsWith("-")) return null;
     else files.push(resolve(a));
   }
-  return { filter, verbose, files };
+  return { filter, verbose, slowest, files };
 }
 
-function main({ filter, verbose, files }) {
+function main({ filter, verbose, slowest, files }) {
   if (files.length === 0) {
     for (const f of readdirSync(OFFLINE).sort()) {
       if (/^spec_.*\.lua$/.test(f)) files.push(join(OFFLINE, f));
     }
   }
   const total = { PASS: 0, FAIL: 0, SKIP: 0, ERROR: 0 };
+  const timed = [];
   for (const f of files) {
-    const c = runFile(f, filter, verbose);
+    const c = runFile(f, filter, verbose, timed);
     for (const k of Object.keys(total)) total[k] += c[k] || 0;
+  }
+  if (slowest) {
+    timed.sort((a, b) => b.seconds - a.seconds || (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
+    console.log("\nslowest tests:");
+    for (const t of timed.slice(0, 20)) console.log(`  ${t.seconds.toFixed(2).padStart(8)}s  ${t.name}`);
   }
   console.log(`\n${total.PASS} passed, ${total.FAIL} failed, ${total.SKIP} skipped, ${total.ERROR} errors`);
   return total.FAIL || total.ERROR ? 1 : 0;
@@ -277,7 +303,7 @@ function main({ filter, verbose, files }) {
 const args = parseArgs(process.argv.slice(2));
 if (!args) {
   // a usage error (--help too) prints here at once, not on the second machine (#286)
-  console.error("usage: offline_tests.mjs [-k SUBSTRING] [-v] [FILE...]");
+  console.error("usage: offline_tests.mjs [-k SUBSTRING] [-v] [-t] [FILE...]");
   process.exit(2);
 }
 placeRun(import.meta.url); // started by hand: registered and placed by tools/remote.py direct
