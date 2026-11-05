@@ -14,9 +14,13 @@ units, scaled to the window), so no screenshot coordinates are guessed.
     python3 -I tools/realclick.py suite      # the click checks below, in a game with a capital
     python3 -I tools/realclick.py at CODE    # click the control a Lua expression gives (SDP_Panel state)
 
-The suite opens the panel and goes through what only a real click shows:
-district cells round their states on both tabs (the 2026-10-21 bug: the
-selected look took the mouse), the city chips and the clear all / default
+The suite opens the panel and goes through what only a real click shows: that
+the mouse reaches each kind of control (AGENTS pitfall 31, the 2026-10-21 bug:
+the selected look took the mouse). One click per kind of control is enough
+(#302): a district cell on each tab is clicked twice, from its starting look
+and from the look the click gave it; the full round of states goes through the
+controls' own callbacks in tests/test_ui.lua and tests/offline/spec_panel.lua.
+Then the city chips and the clear all / default
 buttons on the multi-city tab, the harbor / commercial hub switch, tabs, solve (the
 camera goes to the city), a result row (the camera goes to its plot), a solution
 row, place and undo, the close button. Each check reads the state back.
@@ -90,6 +94,20 @@ def window():
     return [int(v) for v in text.split()]
 
 
+def front(settle=0.0):
+    """Bring the game forward. The game's process is listed oddly (pid -1), so the click tool cannot do it
+    itself; `open -b` can (as game.py does). `settle`: seconds to wait after it came forward, the first
+    time: on 2026-11-06 a suite started with the game in the background lost one click early on (the
+    multi-city tab), and every later check of that tab failed with it; started in front, all passed."""
+    if game.front_app() != game.CIV6_BUNDLE:
+        subprocess.run(["open", "-b", game.CIV6_BUNDLE], capture_output=True)
+        for _ in range(30):
+            if game.front_app() == game.CIV6_BUNDLE:
+                break
+            time.sleep(0.1)
+        time.sleep(settle)
+
+
 def click_control(expr):
     """Click the center of the control `expr` (a Lua expression)."""
     lines = lua("""
@@ -107,14 +125,7 @@ print('AT', x + c:GetSizeX() / 2, y + c:GetSizeY() / 2, w, h, tostring(c:IsHidde
     scale = ww / uw
     title = wh - uh * scale  # the window's title bar
     x, y = cx * scale, title + cy * scale
-    # The game's process is listed oddly (pid -1), so the click tool cannot
-    # bring it forward itself; `open -b` can (as game.py does).
-    if game.front_app() != game.CIV6_BUNDLE:
-        subprocess.run(["open", "-b", game.CIV6_BUNDLE], capture_output=True)
-        for _ in range(30):
-            if game.front_app() == game.CIV6_BUNDLE:
-                break
-            time.sleep(0.1)
+    front()
     ok, text = run_click("%.1f" % x, "%.1f" % y)
     if not ok:
         raise RuntimeError(text)
@@ -158,6 +169,16 @@ def own(base):
                  "if SDP_Rules.BaseDistrict(d.Type) == '%s' then return d.Type end end end)()" % base)
 
 
+def cell_clicks(s, tab, district, states, set_state):
+    """Click a district cell once per look in `states` but the last, check each state, then put the first
+    state back without a click (the round of states is the controls' callbacks' to test, not the mouse's)."""
+    s.check("%s %s starts" % (tab.lower(), district), cell_state(tab, district), states[0])
+    for want in states[1:]:
+        click_control(cell(tab, district))
+        s.check("%s %s after a click" % (tab.lower(), district), cell_state(tab, district), want)
+    lua("%s('%s', '%s')" % (set_state, district, states[0]))
+
+
 def suite(args):
     back_to = game.front_app()
     try:
@@ -169,6 +190,7 @@ def suite(args):
 
 def run_suite(_args):
     s = Suite()
+    front(settle=3.0)
     # A queued popup (historic moment, boost) covers the panel and takes the clicks.
     game.close_popups()
     lua("""
@@ -179,26 +201,18 @@ SDP_Panel.SelectCity(cap:GetID())
 for _, d in ipairs(SDP_Rules.PlannableDistricts(Game.GetLocalPlayer())) do SDP_Panel.SetState(d.Type, SDP_UI.DefaultState(d)) end
 """)
     campus = own("DISTRICT_CAMPUS")
-    # A candidate and an automatic district the capital can still plan.
+    # A candidate district the capital can still plan.
     pick = ("(function() for _, r in ipairs(SDP_Panel.State().DistrictRows) do "
             "if r.State == '%s' and r.Status == nil and r.Type ~= '%s' then return r.Type end end end)()")
-    theater, aqueduct = value(pick % ("POOL", campus)), value(pick % ("AUTO", ""))
-    print("cells: %s (candidate), %s (automatic)" % (theater, aqueduct))
-    # District cells, single-city tab: round the states.
-    for district, states in ((theater, ["POOL", "MUST", "OFF", "POOL"]), (aqueduct, ["AUTO", "MUST", "OFF", "AUTO"])):
-        s.check("single %s starts" % district, cell_state("SINGLE", district), states[0])
-        for want in states[1:]:
-            click_control(cell("SINGLE", district))
-            s.check("single %s after a click" % district, cell_state("SINGLE", district), want)
+    theater = value(pick % ("POOL", campus))
+    print("cell: %s (candidate)" % theater)
+    # A district cell, single-city tab: a click from its first look and one from the next (pitfall 31).
+    cell_clicks(s, "SINGLE", theater, ["POOL", "MUST", "OFF"], "SDP_Panel.SetState")
     # Tabs by click.
     click_control("Controls.MultiTab")
     s.check("multi tab by click", value("SDP_Panel.Tab()"), "MULTI")
     lua("SDP_Panel.Multi.Refresh()")
-    for district, states in ((theater, ["POOL", "MUST", "OFF", "POOL"]), (aqueduct, ["AUTO", "MUST", "OFF", "AUTO"])):
-        s.check("multi %s starts" % district, cell_state("MULTI", district), states[0])
-        for want in states[1:]:
-            click_control(cell("MULTI", district))
-            s.check("multi %s after a click" % district, cell_state("MULTI", district), want)
+    cell_clicks(s, "MULTI", theater, ["POOL", "MUST", "OFF"], "SDP_Panel.Multi.SetState")
     # A city-center pin's check box: off and on again.
     lua("""
 local pid = Game.GetLocalPlayer()
@@ -220,8 +234,6 @@ SDP_Panel.Multi.Refresh()
     s.check("site pin listed, on", value(site + ".Included"), "true")
     click_control(site + ".Chip")
     s.check("site chip off by click", value(site + ".Included"), "false")
-    click_control(site + ".Chip")
-    s.check("site chip on again by click", value(site + ".Included"), "true")
     # The two buttons over the chips (issue 63).
     click_control("Controls.MultiCityClear")
     s.check("clear all by click", value("#SDP_Panel.Multi.Participants()"), "0")
@@ -235,8 +247,7 @@ SDP_Panel.Multi.Refresh()
     s.check("multi swap switch on by default", value("SDP_Panel.Multi.State().Swap"), "true")
     click_control("Controls.MultiSwapCheck")
     s.check("multi swap switch off by click", value("SDP_Panel.Multi.State().Swap"), "false")
-    click_control("Controls.MultiSwapCheck")
-    s.check("multi swap switch on again", value("SDP_Panel.Multi.State().Swap"), "true")
+    lua("SDP_Panel.Multi.SetSwap(true)")
     # A wonder's city pulldown (issue 234): open it, pick the first city
     # taking part, then automatic again.
     lua("SDP_Panel.Multi.SetWonder('BUILDING_STONEHENGE', true)")
@@ -262,8 +273,7 @@ SDP_Panel.Multi.Refresh()
     s.check("single swap switch on by default", value("SDP_Panel.State().Swap"), "true")
     click_control("Controls.SwapCheck")
     s.check("single swap switch off by click", value("SDP_Panel.State().Swap"), "false")
-    click_control("Controls.SwapCheck")
-    s.check("single swap switch on again", value("SDP_Panel.State().Swap"), "true")
+    lua("SDP_Panel.SetSwap(true)")
     # The coverage column, the last of the weight row (issue 61): its arrows,
     # 0.5 a click (issue 53).
     s.check("single coverage column last", value("SDP_Panel.State().WeightCells[9].Key"), "COVERAGE")
@@ -271,12 +281,8 @@ SDP_Panel.Multi.Refresh()
     s.check("single coverage up by click", value("SDP_Panel.State().Weights.COVERAGE == 0.5"), "true")
     click_control("SDP_Panel.State().WeightCells[9].Less")
     s.check("single coverage down by click", value("SDP_Panel.State().Weights.COVERAGE == 0"), "true")
-    # The Tiles column (issue 53), in place of the land switch.
+    # The Tiles column (issue 53), in place of the land switch: its arrows are the coverage column's kind.
     s.check("single tiles column", value("SDP_Panel.State().WeightCells[6].Key"), "LAND")
-    click_control("SDP_Panel.State().WeightCells[6].Less")
-    s.check("single tiles down by click", value("SDP_Panel.State().Weights.LAND == 0.5"), "true")
-    click_control("SDP_Panel.State().WeightCells[6].More")
-    s.check("single tiles up by click", value("SDP_Panel.State().Weights.LAND == 1"), "true")
     lua("SDP_Panel.SetState('%s', 'MUST'); SDP_Panel.SetCount(3)" % campus)
     # Camera moves (issue 67): the panel records the last one (the game's UI table is read-only).
     lua("SDP_UI.LastLook = nil")
@@ -312,15 +318,10 @@ SDP_Panel.Multi.Refresh()
     # peeking, go through its sites.
     click_control("Controls.SitesTab")
     s.check("sites tab by click", value("SDP_Panel.Tab()"), "SITES")
-    # The district grid and count (issue 90): a candidate and an other
-    # district round their states, the count's arrows.
+    # The district grid and count (issue 90): a candidate's cell, the count's arrows.
     candidate = value("(function() for _, r in ipairs(SDP_Panel.Sites.State().View.Districts) do "
                       "if r.State == 'POOL' and r.Status == nil then return r.Type end end end)()")
-    for district, states in ((candidate, ["POOL", "MUST", "OFF", "POOL"]), (aqueduct, ["OFF", "MUST", "OFF"])):
-        s.check("sites %s starts" % district, cell_state("SITES", district), states[0])
-        for want in states[1:]:
-            click_control(cell("SITES", district))
-            s.check("sites %s after a click" % district, cell_state("SITES", district), want)
+    cell_clicks(s, "SITES", candidate, ["POOL", "MUST", "OFF"], "SDP_Panel.Sites.SetState")
     s.check("sites district count", value("SDP_Panel.Sites.State().DistrictCount"), "3")
     click_control("Controls.SitesPlanMore")
     s.check("sites district count up by click", value("SDP_Panel.Sites.State().DistrictCount"), "4")
@@ -351,8 +352,6 @@ SDP_Panel.Multi.Refresh()
         s.check("sites: ticked by default", value("tostring(%s:IsChecked())" % box), "true")
         click_control(box)
         s.check("sites: unticked by click", value("tostring(SDP_Panel.Sites.State().Ticked[1] == true)"), "false")
-        click_control(box)
-        s.check("sites: ticked again by click", value("tostring(SDP_Panel.Sites.State().Ticked[1] == true)"), "true")
     else:
         s.check("sites: a plan with two sites", value("SDP_Panel.Sites.State().Result.Ok and #%s.Sites" % sol), "2")
     lua("SDP_Panel.Sites.SetSelected('%s', false); SDP_Panel.Sites.SetDistrictCount(3); "

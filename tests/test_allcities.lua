@@ -4,7 +4,8 @@
 -- city-center pin takes part; more than SDP_Multi.GROUP_ABOVE are planned in
 -- groups of nearby cities, each searched with the others' districts in
 -- place. Needs a game with more than GROUP_ABOVE cities and pins: a late save
--- (tools/stress.py load pangaea-gs). Changes nothing on the map.
+-- (tools/stress.py run pangaea-gs adds city pins to make up the number,
+-- SDP_Stress.GroupSites). Changes nothing on the map.
 local test, T = ...
 
 local pid = Game.GetLocalPlayer()

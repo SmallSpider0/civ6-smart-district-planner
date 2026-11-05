@@ -49,7 +49,7 @@ One game, one Tuner connection and one Mods folder for all worktrees: the tools 
 - English: `game.py quit` → `shots.py lang en` → launch → newgame → tests and English screenshots → `game.py quit` → `shots.py lang restore` (must print "identical").
 - Real clicks (macOS, UI changes): `python3 -I tools/realclick.py suite`. It brings the game forward per click and takes the mouse for a few minutes; say so first. "no Civilization VI window on screen": `open -b com.aspyr.civ6.steam`, retry.
 - Screenshots: `shots.py stage single|sites|multi|settings`, then `shots.py capture v<round>-panel-<tab>` (and `-en-` for English). Look at every picture before using it. Without the screen recording grant for SDPClick: `shots.py region` and computer-use zoom, then `shots.py save`.
-- Stress test (before a release): for each of `pangaea-gs continents-gs islands-rf`: `stress.py load N`, `stress.py run N`; then `stress.py check N` each; `tools/refresh_stress_md.py` writes the tables into the self-test report.
+- Stress test (before a release): for each of `pangaea-gs continents-gs islands-rf`: `stress.py load N`, `stress.py run N`; then `stress.py check N` each; `tools/refresh_stress_md.py` writes the tables into the self-test report. On `pangaea-gs`, `run` also runs the in-game cases that need a save with many cities (`stress.SAVE_TESTS`; a skip there counts as a problem); in the full run they skip, so count them from the stress run.
 - Popups (natural wonders, historic moments) hold the game's event queue: `game.py popups --close`.
 
 ## After

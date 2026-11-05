@@ -365,7 +365,17 @@ class Direct(unittest.TestCase):
     def setUp(self):
         self.tmp = isolate(self)
 
+    def specs(self, *names):
+        root = os.path.join(self.tmp, "tree")
+        os.makedirs(os.path.join(root, "tests", "offline"), exist_ok=True)
+        for n in names:
+            with open(os.path.join(root, "tests", "offline", n + ".lua"), "w") as fh:
+                fh.write("-- " + n)
+        patch(self, remote, ROOT=root)
+        return root
+
     def test_estimate(self):
+        self.specs("spec_slow", "spec_quick")
         remote.record_duration("spec_slow", 300)
         remote.record_duration("spec_quick", 2)
         node = ["node", "tools/offline_tests.mjs"]
@@ -378,6 +388,16 @@ class Direct(unittest.TestCase):
         self.assertGreater(remote.estimate(node)[1], remote.LONG)  # the whole suite
         self.assertIsNone(remote.estimate(node + ["-k", "x", "tests/offline/spec_new.lua"])[0])
         self.assertGreater(remote.estimate(["node", "tools/compare.mjs", "-s", "^S"])[1], remote.LONG)
+
+    def test_times_of_deleted_files_are_dropped(self):
+        """#302: spec_zz_dbg, spec_tmp294 and other files no longer in the repository stayed in the shared
+        durations.json."""
+        root = self.specs("spec_kept", "spec_gone")
+        remote.record_duration("spec_gone", 5)
+        remote.record_duration("spec_kept", 2)
+        os.remove(os.path.join(root, "tests", "offline", "spec_gone.lua"))
+        remote.record_duration("spec_kept", 3)
+        self.assertEqual(remote.durations(), {"spec_kept": 3})
         self.assertLess(remote.estimate(["node", "tools/compare.mjs", "--probe", "p.lua"])[1], remote.LONG)
 
     def test_short_run_is_registered_here_and_timed(self):

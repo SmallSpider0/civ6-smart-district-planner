@@ -11,6 +11,14 @@ weight profiles) and reports, against the stored rows, plans that changed,
 gains that went down and violations other than "no legal tile" that are new.
 Exit 1 when a gain went down or a violation is new.
 
+A --check of the development set that ran to the end writes CHECK_STAMP
+(tests/compare/results/check_stamp.json): a digest of the files the plans
+depend on (SOLVED_BY: the solver and legality scripts, the comparison harness,
+its scenes and the stored rows) and what the check found. Commit it with the
+PR that ran the check. --check --if-changed (the release step) skips the run
+when those files are still the same as at the last recorded check (#302): a
+solver PR has run it already, and nothing it depends on changed since.
+
 For each file: the rows of planner sdp are grouped by variant and rerun with
 tools/compare.mjs on exactly their scenarios; the new rows replace the old
 ones in place (other planners' rows stay as they are); then every row is
@@ -22,14 +30,89 @@ logs/refresh/. Heavy: run it on the second machine when there is one
 """
 import argparse
 import collections
+import fnmatch
+import hashlib
 import json
 import os
 import re
 import subprocess
 import sys
+import time
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 WORK = os.path.join(ROOT, "logs", "refresh")
+DEV_SET = os.path.join(ROOT, "tests", "compare", "results", "full_rejudged.jsonl")
+CHECK_STAMP = os.path.join(ROOT, "tests", "compare", "results", "check_stamp.json")
+# The files the development set's plans and their judging depend on (repository paths, fnmatch patterns;
+# `*` also crosses `/`). The interface-only scripts are left out, as for the stress test (sdp-release §1).
+SOLVED_BY = ["SmartDistrictPlanner/Scripts/*.lua", "tools/compare.mjs", "tests/compare/cmp_*.lua",
+             "tests/compare/scenes/*", "tests/compare/results/full_rejudged.jsonl"]
+NOT_SOLVED_BY = ["SmartDistrictPlanner/Scripts/SDP_Page*.lua", "SmartDistrictPlanner/Scripts/SDP_Preview.lua"]
+
+
+def solved_by(paths):
+    """The repository paths among `paths` that the plans depend on, sorted."""
+    def hit(path, patterns):
+        return any(fnmatch.fnmatch(path, p) for p in patterns)
+    return sorted(p for p in paths if hit(p, SOLVED_BY) and not hit(p, NOT_SOLVED_BY))
+
+
+def present(root=None):
+    """Repository paths of the files under SOLVED_BY's folders, read from the disk: the second machine's
+    copy of the worktree has no git (tools/remote.py sync copies the tracked and new files)."""
+    root, out = root or ROOT, []
+    for top in ("SmartDistrictPlanner/Scripts", "tests/compare", "tools"):  # SOLVED_BY's folders
+        for here, dirs, names in os.walk(os.path.join(root, *top.split("/"))):
+            dirs[:] = sorted(d for d in dirs if not d.startswith(".") and d != "node_modules")
+            out += [os.path.relpath(os.path.join(here, n), root).replace(os.sep, "/") for n in names]
+    return out
+
+
+def digest(root=None):
+    """(sha256 over SOLVED_BY's files as they are on disk, number of files). Line ends are made the same
+    first, so a checkout with CRLF gives the same digest."""
+    root = root or ROOT
+    h, files = hashlib.sha256(), solved_by(present(root))
+    for path in files:
+        with open(os.path.join(root, *path.split("/")), "rb") as fh:
+            data = fh.read().replace(b"\r\n", b"\n")
+        h.update(path.encode("utf-8") + b"\0" + hashlib.sha256(data).hexdigest().encode() + b"\n")
+    return h.hexdigest(), len(files)
+
+
+def read_stamp(path=None):
+    try:
+        with open(path or CHECK_STAMP, encoding="utf-8") as fh:
+            data = json.load(fh)
+        return data if isinstance(data, dict) else None
+    except (OSError, ValueError):
+        return None
+
+
+def write_stamp(found, root=None, path=None):
+    head = subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=root or ROOT, capture_output=True,
+                          text=True).stdout.strip()
+    value, files = digest(root)
+    stamp = {"digest": value, "files": files, "commit": head, "date": time.strftime("%Y-%m-%d %H:%M")}
+    stamp.update(found)
+    with open(path or CHECK_STAMP, "w", encoding="utf-8") as fh:
+        json.dump(stamp, fh, indent=1, sort_keys=True)
+        fh.write("\n")
+    return stamp
+
+
+def stamp_exit(stamp):
+    """The exit code a skipped check keeps: that of the stamped check (1 when it found lower gains or new
+    violations), so a retried release check does not pass a regression it skipped."""
+    return 1 if stamp.get("lower") or stamp.get("new_violations") else 0
+
+
+def unchanged_since_check(root=None, path=None):
+    """The stamp of the last check when nothing SOLVED_BY covers changed since it, else None."""
+    stamp = read_stamp(path)
+    if not stamp or stamp.get("digest") != digest(root)[0]:
+        return None
+    return stamp
 
 
 def compare(args, jobs):
@@ -89,7 +172,7 @@ def check(path, new):
         print("  LOWER %s %s: %s -> %s" % (k[0], k[2], g0, g1))
     for k, v in fresh:
         print("  NEW VIOLATION %s %s: %s" % (k[0], k[2], "; ".join(v)))
-    return 1 if down or fresh else 0
+    return {"rows": len(new), "changed": changed, "higher": up, "lower": len(down), "new_violations": len(fresh)}
 
 
 def rerun(path, jobs):
@@ -148,15 +231,34 @@ def main():
     ap.add_argument("files", nargs="*")
     ap.add_argument("-j", "--jobs", type=int, default=int(os.environ.get("SDP_JOBS") or 4),
                     help="compare.mjs workers (default $SDP_JOBS, set by remote.py and sdplock.py heavy, else 4)")
-    ap.add_argument("--check", action="store_true", help="rerun and compare with the stored rows; change nothing")
+    ap.add_argument("--check", action="store_true",
+                    help="rerun and compare with the stored rows; change nothing but the check stamp")
+    ap.add_argument("--if-changed", action="store_true",
+                    help="with --check: skip it when nothing the plans depend on changed since the stamped check")
     args = ap.parse_args()
+    if args.if_changed and (not args.check or args.files):
+        ap.error("--if-changed goes with --check of the development set (no files)")
     os.makedirs(WORK, exist_ok=True)
     if args.check:
-        files = args.files or [os.path.join(ROOT, "tests", "compare", "results", "full_rejudged.jsonl")]
+        if args.if_changed:
+            stamp = unchanged_since_check()
+            if stamp:
+                print("refresh_results: skipped: no solver, legality or comparison file changed since the check "
+                      "at %s (%s): %s rows, %s lower, %s new violations"
+                      % (stamp.get("commit"), stamp.get("date"), stamp.get("rows"), stamp.get("lower"),
+                         stamp.get("new_violations")))
+                return stamp_exit(stamp)
+            print("refresh_results: files the plans depend on changed since the last stamped check: running it",
+                  flush=True)
+        files = args.files or [DEV_SET]
         worst = 0
         for path in files:
             _, new = rerun(os.path.abspath(path), args.jobs)
-            worst = max(worst, check(os.path.abspath(path), new))
+            found = check(os.path.abspath(path), new)
+            worst = max(worst, 1 if found["lower"] or found["new_violations"] else 0)
+            if not args.files and found["rows"]:
+                write_stamp(found)
+                print("refresh_results: wrote %s (commit it with the PR)" % os.path.relpath(CHECK_STAMP, ROOT))
         return worst
     if not args.files:
         ap.error("give the result files to refresh")

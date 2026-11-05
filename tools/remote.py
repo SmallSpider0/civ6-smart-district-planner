@@ -481,9 +481,15 @@ def durations():
     return data if isinstance(data, dict) else {}
 
 
+def test_file_exists(key):
+    return os.path.isfile(os.path.join(ROOT, "tests", "offline", key + ".lua"))
+
+
 def record_duration(key, seconds):
+    """Also drops the times of test files this worktree no longer has (#302: deleted and scratch specs
+    stayed in the shared file); a file only another branch has is timed again when that branch runs it."""
     with sdplock._mutex("durations"):
-        data = durations()
+        data = {k: v for k, v in durations().items() if test_file_exists(k)}
         data[key] = round(seconds, 1)
         sdplock._write(durations_path(), data)
 
