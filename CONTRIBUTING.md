@@ -47,12 +47,12 @@ Set `EnableTuner 1` in `AppOptions.txt` (close the game first) so the tools can 
 
 ```
 python3 -I tools/validate.py                         # XML, modinfo, text keys, Lua syntax, banned globals
-node tools/offline_tests.mjs                         # all offline specs, a few minutes
+node tools/offline_tests.mjs                         # all offline specs (-t: the slowest tests)
 node tools/offline_tests.mjs tests/offline/spec_xxx.lua   # one spec file
 python3 -I -m unittest discover -s tests/tools       # tests of the Python tools
 ```
 
-`validate.py` also checks that the UI XML only uses controls and attributes the game itself uses. That check needs `reference/` and is skipped without it. CI runs these checks on Ubuntu and Windows for every pull request.
+`validate.py` also checks that the UI XML only uses controls and attributes the game itself uses. That check needs `reference/` and is skipped without it. CI runs these checks for every pull request: all of them on Ubuntu; on Windows `validate.py`, the tool tests and a few quick offline specs (the specs give the same results on both).
 
 ### In-game tests
 
@@ -140,12 +140,12 @@ python3 -I tools/setup_reference.py   # 在 reference/ 下链接游戏界面代�
 
 ```
 python3 -I tools/validate.py                         # XML、modinfo、文本键、Lua 语法、禁用全局
-node tools/offline_tests.mjs                         # 全部离线测试，几分钟
+node tools/offline_tests.mjs                         # 全部离线测试（-t 列出最慢的几项）
 node tools/offline_tests.mjs tests/offline/spec_xxx.lua   # 一个测试文件
 python3 -I -m unittest discover -s tests/tools       # Python 工具的测试
 ```
 
-`validate.py` 还检查界面 XML 只用游戏本体用过的控件和属性，这一项要 `reference/`，没有时跳过。每个 PR 的 CI 在 Ubuntu 和 Windows 上跑这些检查。
+`validate.py` 还检查界面 XML 只用游戏本体用过的控件和属性，这一项要 `reference/`，没有时跳过。每个 PR 的 CI 跑这些检查：Ubuntu 上全跑；Windows 上跑 `validate.py`、工具的测试和几个快的离线测试文件（离线测试在两边结果一样）。
 
 ### 游戏内测试
 

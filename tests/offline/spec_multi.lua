@@ -120,6 +120,18 @@ local function FreeWonders(fn)
   if not ok then error(err, 0) end
 end
 
+-- Run fn with the government plaza in the shared list given to the nearest
+-- host only: SolveNow otherwise solves again in each of up to four hosts
+-- (issue 234), which multiplies the time of every test that asks for SIX.
+-- The empire limit itself still holds; the host comparison has its own
+-- tests below.
+local function OneHost(fn)
+  SDP_Multi.HOSTS_AGAIN = false
+  local ok, err = pcall(fn)
+  SDP_Multi.HOSTS_AGAIN = true
+  if not ok then error(err, 0) end
+end
+
 test("a planned city's first ring is left to it (issue 26)", function()
   local w = World.New({
     rows = MAP,
@@ -182,11 +194,14 @@ end)
 
 test("an empire-limited district every city asks for goes to one; the others fill their count (issue 28)", function()
   NewWorld()
-  local result = SDP_Multi.Solve(Request({
-    Districts = { "DISTRICT_GOVERNMENT", "DISTRICT_CAMPUS" },
-    Pool = { "DISTRICT_HOLY_SITE", "DISTRICT_THEATER", "DISTRICT_COMMERCIAL_HUB", "DISTRICT_INDUSTRIAL_ZONE" },
-    Count = 3,
-  }))
+  local result
+  OneHost(function()
+    result = SDP_Multi.Solve(Request({
+      Districts = { "DISTRICT_GOVERNMENT", "DISTRICT_CAMPUS" },
+      Pool = { "DISTRICT_HOLY_SITE", "DISTRICT_THEATER", "DISTRICT_COMMERCIAL_HUB", "DISTRICT_INDUSTRIAL_ZONE" },
+      Count = 3,
+    }))
+  end)
   T.ok(result.Ok, tostring(result.Error))
   local perCity, plazas = {}, {}
   for _, p in ipairs(result.Plan) do
@@ -285,9 +300,12 @@ test("an empire-limited district in a city's own list stays there (issue 234)", 
   T.eq(both.Stats.Hosts.Tried, 2, "only those two tried")
 end)
 
+-- FAST here and below; the STANDARD tier's search is checked in the issue 35
+-- test (the longest search of this file: one is enough).
 test("a multi-city plan: legal plots, one per plot, empire limit, never worse than city by city", function()
   NewWorld()
-  local result = SDP_Multi.Solve(Request({ Tier = "STANDARD" }))
+  local result
+  OneHost(function() result = SDP_Multi.Solve(Request()) end)
   T.ok(result.Ok, tostring(result.Error))
   T.ok(not result.Stats.Mismatch, "incremental and full evaluation agree")
   local used, plazas = {}, 0
@@ -309,16 +327,22 @@ end)
 test("existing cities skip what they have built", function()
   local w = NewWorld()
   w:AddDistrict(1, "DISTRICT_CAMPUS", 5, 6)
-  local result = SDP_Multi.Solve(Request())
+  local result
+  OneHost(function() result = SDP_Multi.Solve(Request()) end)
+  T.ok(result.Ok, tostring(result.Error))
   for _, p in ipairs(result.Plan) do
     T.ok(not (p.City == "C1" and p.Type == "DISTRICT_CAMPUS"), "a second campus for the capital")
   end
 end)
 
+-- (With the host comparison: the issue 234 test below.)
 test("same request, same plan", function()
   NewWorld()
-  local a = SDP_Multi.Solve(Request())
-  local b = SDP_Multi.Solve(Request())
+  local a, b
+  OneHost(function()
+    a = SDP_Multi.Solve(Request())
+    b = SDP_Multi.Solve(Request())
+  end)
   T.same(b.Plan, a.Plan, "plan")
   T.same(b.Stats, a.Stats, "stats")
 end)
@@ -784,7 +808,8 @@ end)
 
 test("several distinct solutions, best first", function()
   NewWorld()
-  local result = SDP_Multi.Solve(Request({ Tier = "STANDARD" }))
+  local result
+  OneHost(function() result = SDP_Multi.Solve(Request()) end)
   T.ok(#result.Solutions >= 2, "at least two solutions on this map")
   T.ok(#result.Solutions <= 3, "at most three")
   T.same(result.Plan, result.Solutions[1].Plan, "the top-level plan is the best solution")
@@ -854,9 +879,14 @@ end
 
 test("every city's districts stay joined to its territory (issue 35)", function()
   NewWorld()
+  -- STANDARD with four districts a city: its search (kicks, more starts) is
+  -- what matters here, and six made it the slowest test of the suite.
+  local four = { "DISTRICT_CAMPUS", "DISTRICT_HOLY_SITE", "DISTRICT_THEATER", "DISTRICT_GOVERNMENT" }
   for _, tier in ipairs({ "FAST", "STANDARD" }) do
-    local result = SDP_Multi.Solve(Request({ Tier = tier }))
+    local result
+    OneHost(function() result = SDP_Multi.Solve(Request({ Tier = tier, Districts = tier == "STANDARD" and four or nil })) end)
     T.ok(result.Ok, tostring(result.Error))
+    T.ok(not result.Stats.Mismatch, tier .. ": incremental and full evaluation agree")
     Joined(result)
   end
   -- Sites close together, more districts each: cities compete for the same plots.
