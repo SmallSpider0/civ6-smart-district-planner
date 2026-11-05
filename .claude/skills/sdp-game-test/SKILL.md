@@ -5,7 +5,7 @@ description: Run Civilization VI for the Smart District Planner (civ6mod) — in
 
 # In-game work
 
-Steps are in docs/dev-macos.md (or dev-windows.md) and tools/README.md; this is the order and what goes wrong. Ask first before changing `Mods.sqlite`, or `AppOptions.txt` beyond the display language (`tools/shots.py lang` backs it up and restores it byte for byte). If a personal skill or note for this machine exists (when to take the screen, who runs the night queue, where to report), it comes first.
+Steps are in docs/dev-macos.md (or dev-windows.md) and tools/README.md; this is the order and what goes wrong. Ask first before changing `Mods.sqlite`, or `AppOptions.txt` beyond the display language (`tools/shots.py lang` backs it up and restores it byte for byte). If a personal skill or note for this machine exists, it supplies this machine's values (when the screen is free, who runs the night queue, where to report) and the repository's rules win where they differ.
 
 ## When
 
