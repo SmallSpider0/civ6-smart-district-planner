@@ -78,7 +78,7 @@
  "Steps": [
   {
    "Label": "load steps",
-   "Seconds": 0.068,
+   "Seconds": 0.065,
    "Data": {
     "Step": "Loaded"
    }
@@ -168,7 +168,7 @@
   },
   {
    "Label": "single 迈锡尼 FAST pool",
-   "Seconds": 0.072,
+   "Seconds": 0.055,
    "Data": {
     "Adjacency": 6,
     "Asked": 2,
@@ -198,7 +198,7 @@
   },
   {
    "Label": "single 迈锡尼 STANDARD pool",
-   "Seconds": 0.126,
+   "Seconds": 0.105,
    "Data": {
     "Adjacency": 6,
     "Asked": 2,
@@ -229,7 +229,7 @@
   },
   {
    "Label": "single 迈锡尼 must",
-   "Seconds": 0.085,
+   "Seconds": 0.072,
    "Data": {
     "Adjacency": 12,
     "Asked": 6,
@@ -255,7 +255,7 @@
   },
   {
    "Label": "single 斯巴达 FAST pool",
-   "Seconds": 0.04,
+   "Seconds": 0.035,
    "Data": {
     "Adjacency": 9,
     "Asked": 2,
@@ -285,7 +285,7 @@
   },
   {
    "Label": "single 斯巴达 STANDARD pool",
-   "Seconds": 0.076,
+   "Seconds": 0.075,
    "Data": {
     "Adjacency": 9,
     "Asked": 2,
@@ -316,7 +316,7 @@
   },
   {
    "Label": "single 斯巴达 must",
-   "Seconds": 0.1,
+   "Seconds": 0.088,
    "Data": {
     "Adjacency": 15,
     "Asked": 6,
@@ -342,7 +342,7 @@
   },
   {
    "Label": "single 法����斯 FAST pool",
-   "Seconds": 0.082,
+   "Seconds": 0.065,
    "Data": {
     "Adjacency": 5,
     "Asked": 2,
@@ -372,7 +372,7 @@
   },
   {
    "Label": "single 法����斯 STANDARD pool",
-   "Seconds": 0.151,
+   "Seconds": 0.161,
    "Data": {
     "Adjacency": 5,
     "Asked": 2,
@@ -403,7 +403,7 @@
   },
   {
    "Label": "single 法����斯 must",
-   "Seconds": 0.092,
+   "Seconds": 0.086,
    "Data": {
     "Adjacency": 14,
     "Asked": 6,
@@ -430,7 +430,7 @@
   },
   {
    "Label": "single 雅典 FAST pool",
-   "Seconds": 0.035,
+   "Seconds": 0.046,
    "Data": {
     "Adjacency": 4,
     "Asked": 2,
@@ -460,7 +460,7 @@
   },
   {
    "Label": "single 雅典 STANDARD pool",
-   "Seconds": 0.094,
+   "Seconds": 0.075,
    "Data": {
     "Adjacency": 4,
     "Asked": 2,
@@ -491,7 +491,7 @@
   },
   {
    "Label": "single 雅典 must",
-   "Seconds": 0.063,
+   "Seconds": 0.061,
    "Data": {
     "Adjacency": 7,
     "Asked": 6,
@@ -517,7 +517,7 @@
   },
   {
    "Label": "single 迈锡尼 appeal",
-   "Seconds": 0.019,
+   "Seconds": 0.02,
    "Data": {
     "Adjacency": 3,
     "Appeal": 1.158296333,
@@ -598,7 +598,7 @@
   },
   {
    "Label": "single 斯巴达 appeal",
-   "Seconds": 0.033,
+   "Seconds": 0.027,
    "Data": {
     "Adjacency": 6,
     "Appeal": 1.275935533,
@@ -679,7 +679,7 @@
   },
   {
    "Label": "single 法����斯 appeal",
-   "Seconds": 0.038,
+   "Seconds": 0.035,
    "Data": {
     "Adjacency": 5,
     "Appeal": 0.9347587719,
@@ -731,7 +731,7 @@
   },
   {
    "Label": "single 法����斯 harbor",
-   "Seconds": 0.029,
+   "Seconds": 0.035,
    "Data": {
     "Adjacency": 7,
     "Asked": 2,
@@ -760,7 +760,7 @@
   },
   {
    "Label": "single 迈锡尼 fine",
-   "Seconds": 0.056,
+   "Seconds": 0.058,
    "Data": {
     "Adjacency": 6,
     "Asked": 2,
@@ -790,7 +790,7 @@
   },
   {
    "Label": "sites 3 within 5",
-   "Seconds": 0.369,
+   "Seconds": 0.392,
    "Data": {
     "Calls": 5340,
     "D": 5,
@@ -804,7 +804,7 @@
   },
   {
    "Label": "place sites",
-   "Seconds": 0.037,
+   "Seconds": 0.029,
    "Data": {
     "Placed": 3,
     "Step": "PlaceSites"
@@ -812,7 +812,7 @@
   },
   {
    "Label": "multi 4 cities standard",
-   "Seconds": 1.608,
+   "Seconds": 1.753,
    "Data": {
     "Adjacency": 43,
     "Calls": 3912,
@@ -835,7 +835,7 @@
   },
   {
    "Label": "place multi",
-   "Seconds": 0.043,
+   "Seconds": 0.054,
    "Data": {
     "Placed": 21,
     "Step": "PlaceMulti"
@@ -843,12 +843,12 @@
   },
   {
    "Label": "settle after place multi",
-   "Seconds": 0.319,
+   "Seconds": 0.325,
    "Data": null
   },
   {
    "Label": "multi 8 cities standard",
-   "Seconds": 0.188,
+   "Seconds": 0.2,
    "Data": {
     "Adjacency": 31,
     "Calls": 1292,
@@ -871,7 +871,7 @@
   },
   {
    "Label": "multi 4 cities fine",
-   "Seconds": 0.301,
+   "Seconds": 0.33,
    "Data": {
     "Adjacency": 31,
     "Calls": 1292,
@@ -894,7 +894,7 @@
   },
   {
    "Label": "heavy pins",
-   "Seconds": 0.151,
+   "Seconds": 0.158,
    "Data": {
     "Placed": 46,
     "Step": "HeavyPins"
@@ -902,12 +902,12 @@
   },
   {
    "Label": "settle after heavy pins",
-   "Seconds": 2.904,
+   "Seconds": 3.001,
    "Data": null
   },
   {
    "Label": "single 迈锡尼 pool, crowded",
-   "Seconds": 0.04,
+   "Seconds": 0.038,
    "Data": {
     "Adjacency": 3,
     "Appeal": 0,
@@ -936,7 +936,7 @@
   },
   {
    "Label": "multi 4 cities, crowded",
-   "Seconds": 0.133,
+   "Seconds": 0.14,
    "Data": {
     "Adjacency": 17,
     "Appeal": 0,
@@ -960,7 +960,7 @@
   },
   {
    "Label": "panel",
-   "Seconds": 0.059,
+   "Seconds": 0.062,
    "Data": {
     "Ok": true,
     "Step": "Panel"
@@ -968,14 +968,14 @@
   },
   {
    "Label": "undo",
-   "Seconds": 0.106,
+   "Seconds": 0.12,
    "Data": {
     "Removed": 70,
     "Step": "UndoAll"
    }
   }
  ],
- "When": "2026-11-06 02:52",
+ "When": "2026-11-07 07:03",
  "AppealCheck": [
   {
    "City": 131073,
