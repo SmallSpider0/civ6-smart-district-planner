@@ -2173,7 +2173,8 @@ function SDP_Multi.SolveNow(request)
     local skip = {}
     for k, v in pairs(tried.Request.AutoSkip or {}) do skip[k] = v end
     for _, wonderType in ipairs(missing) do
-      skip[wonderType] = solves < SDP_Multi.AUTO_AGAIN and (skip[wonderType] or 0) + 1 or #tried.Participants
+      -- Past the ranking (math.huge): no longer automatic.
+      skip[wonderType] = solves < SDP_Multi.AUTO_AGAIN and (skip[wonderType] or 0) + 1 or math.huge
     end
     again.AutoSkip = skip
     local _
