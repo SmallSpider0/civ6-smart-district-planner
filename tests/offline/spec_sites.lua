@@ -470,8 +470,9 @@ test("dense packing: most sites first, spaced, linked back, no refined site left
     end
     if n > 1 then
       local prev = result.Solutions[n - 1]
-      T.ok(#solution.Sites < #prev.Sites or (#solution.Sites == #prev.Sites and solution.Value <= prev.Value + 1e-9),
-        "most sites, then best value first")
+      T.ok(#solution.Sites < #prev.Sites or (#solution.Sites == #prev.Sites and (solution.Spread > prev.Spread
+        or (solution.Spread == prev.Spread and solution.Value <= prev.Value + 1e-9))),
+        "most sites, then the densest, then best value first")
     end
   end
   -- Linked back: each site within D of our city, our pin or a site linked before.
@@ -516,6 +517,71 @@ test("dense packing: most sites first, spaced, linked back, no refined site left
   local three = SDP_SiteSolver.Solve({ PlayerID = 0, K = 3, D = 6, Districts = PLAN, Tier = "FAST", Dense = true })
   T.ok(three.Ok and #three.Solutions[1].Sites <= 3, "K = 3: at most three")
   T.eq(three.Quality.CanContinue, false, "no continue in dense packing")
+end)
+
+-- Issue 297: the length of the links joining every site to our cities and
+-- pins, each to the nearest one joined before it (a minimum spanning tree;
+-- computed here apart from the solver).
+local function Spread(sites)
+  local anchors = {}
+  for _, c in ipairs(SDP_Sites.Centers(0)) do
+    if c.Own then anchors[#anchors + 1] = c end
+  end
+  local joined, dist, total = {}, {}, 0
+  for i, s in ipairs(sites) do
+    dist[i] = math.huge
+    for _, a in ipairs(anchors) do dist[i] = math.min(dist[i], Map.GetPlotDistance(s.X, s.Y, a.X, a.Y)) end
+  end
+  for _ = 1, #sites do
+    local best = nil
+    for i = 1, #sites do
+      if not joined[i] and (best == nil or dist[i] < dist[best]) then best = i end
+    end
+    joined[best] = true
+    total = total + dist[best]
+    for i = 1, #sites do
+      if not joined[i] then
+        dist[i] = math.min(dist[i], Map.GetPlotDistance(sites[best].X, sites[best].Y, sites[i].X, sites[i].Y))
+      end
+    end
+  end
+  return total
+end
+
+-- Issue 297: with room for every site, dense packing returned looser plans
+-- than it could (moves took any higher value, so sites drifted out to share
+-- fewer plots: 16 here where 12 fit). Now as many sites, then the densest.
+test("issue 297: dense packing with room to spare puts every site as near as the spacing allows", function()
+  local spec = World.RandomSpec(1, 30, 24)
+  local row = spec.rows[13]
+  spec.rows[13] = row:sub(1, 14) .. "." .. row:sub(16)
+  spec.cities = { { id = 1, x = 14, y = 12, population = 6, capital = true, radius = 1 } }
+  World.New(spec)
+  local K = 3
+  local result = SDP_SiteSolver.Solve({ PlayerID = 0, K = K, D = 6, Districts = PLAN, Tier = "FAST", Dense = true })
+  T.ok(result.Ok, tostring(result.Error))
+  local step = SDP_Sites.MinRange() + 1
+  local best = result.Solutions[1]
+  T.eq(Spread(best.Sites), K * step, "every site " .. step .. " plots from the nearest city or site")
+  for n, solution in ipairs(result.Solutions) do
+    T.eq(#solution.Sites, K, "plan " .. n .. ": all sites fit")
+    T.eq(solution.Spread, Spread(solution.Sites), "plan " .. n .. ": the spread reported")
+  end
+  for _, site in ipairs(best.Sites) do
+    local near = math.huge
+    for _, other in ipairs(best.Sites) do
+      if other ~= site then near = math.min(near, Map.GetPlotDistance(site.X, site.Y, other.X, other.Y)) end
+    end
+    near = math.min(near, site.OwnDistance)
+    T.eq(near, step, "site " .. site.X .. "," .. site.Y .. " packed")
+  end
+  -- The normal search does not compare density.
+  local normal = SDP_SiteSolver.Solve({ PlayerID = 0, K = 2, D = 6, Districts = PLAN, Tier = "FAST" })
+  T.ok(normal.Ok, tostring(normal.Error))
+  for n, solution in ipairs(normal.Solutions) do
+    T.eq(solution.Spread, nil, "no spread in the normal search")
+    if n > 1 then T.ok(solution.Value <= normal.Solutions[n - 1].Value + 1e-9, "best value first") end
+  end
 end)
 
 -- Issue 226: with 12 new cities the candidates reach 12 * D plots, the whole

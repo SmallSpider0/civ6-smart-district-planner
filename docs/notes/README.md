@@ -47,7 +47,7 @@
 | [issue-75-site-preview.md](issue-75-site-preview.md) | 选城址：一套方案里逐个看各城址 | 现行 |
 | [issue-76-open-tab.md](issue-76-open-tab.md) | 选中另一座城时打开规划器切到单城页 | 现行 |
 | [issue-84-site-distance.md](issue-84-site-distance.md) | 选城址“最远距离”默认值（改为 5） | 调研（结论已实现） |
-| [issue-87-dense.md](issue-87-dense.md) | 选城址的密铺 | 部分已取代：密铺不再单独记新城数量、默认 12，改为和平时共用一个数（#191） |
+| [issue-87-dense.md](issue-87-dense.md) | 选城址的密铺 | 部分已取代：密铺不再单独记新城数量、默认 12，改为和平时共用一个数（#191）；城数一样先比挤不挤、挪位不许变松（#297） |
 | [issue-88-sites-score.md](issue-88-sites-score.md) | 选城址计分：各项折成每回合点数 | 现行 |
 | [issue-89-custom-preset.md](issue-89-custom-preset.md) | 改过预设后显示“自定义” | 调研（结论已实现） |
 | [issue-90-sites-districts.md](issue-90-sites-districts.md) | 选城址页的区域：必建 / 候选 / 不建和区域数量 | 现行 |
@@ -85,6 +85,7 @@
 | [issue-250-one-city-as-multi.md](issue-250-one-city-as-multi.md) | 单城页按“只有一座城的多城请求”求解 | 实验（待维护者定） |
 | [issue-277-hebutong.md](issue-277-hebutong.md) | 与“和而不同”的兼容性：读源码、离线和游戏内实测；“覆盖”不计它的范围效果（DracoYus 定：不适配，安装说明和创意工坊简介各写一句） | 现行 |
 | [issue-297-sites.md](issue-297-sites.md) | 选城址的实际步骤、共用地格和住房怎么算；住房只算水源、建筑折半的离线实验，海边城址的分项 | 已定：保持按科技解锁计港口住房（#188 的做法），计分不改 |
+| [issue-297-dense-spread.md](issue-297-dense-spread.md) | 密铺：城数一样时先比挤不挤（最小生成树的连线长度），挪位不许变松 | 现行 |
 | [release-1.7.2.md](release-1.7.2.md) | v1.7.2 发版准备的交接：测试结果、夜间队列、对外文档逐条核对 | 现行（发版后不再更新） |
 | [issue-294-wonder-built.md](issue-294-wonder-built.md) | 奇观“已建成”按全世界数量上限和本方城市判断，不看地图上见没见过 | 现行 |
 | [issue-245-split-session.md](issue-245-split-session.md) | `SDP_Multi.NewSession` 拆成有名字的步骤（纯重构） | 现行 |

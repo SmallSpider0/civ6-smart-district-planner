@@ -419,6 +419,32 @@ function CmpAdapters.sdpSolve(request, variant, stats, o)
         .. tostring(info.Housing) .. ":" .. tostring(info.OwnDistance)
     end
     stats.sdpSiteInfo = siteInfo
+    -- How spread out the sites are (issue 297): the length of the links
+    -- joining each site to the player's cities and pins or to another site,
+    -- shortest first (a minimum spanning tree), computed here so that runs
+    -- of solvers without SDP_SiteSolver.Spread report it too.
+    if r.Ok and #byIndex > 0 then
+      local anchors = (r.Session and r.Session.Anchors) or {}
+      local joined, dist, total = {}, {}, 0
+      for i, s in ipairs(byIndex) do
+        dist[i] = math.huge
+        for _, a in ipairs(anchors) do dist[i] = math.min(dist[i], Map.GetPlotDistance(s.X, s.Y, a.X, a.Y)) end
+      end
+      for _ = 1, #byIndex do
+        local best = nil
+        for i = 1, #byIndex do
+          if not joined[i] and (best == nil or dist[i] < dist[best]) then best = i end
+        end
+        joined[best] = true
+        if dist[best] < math.huge then total = total + dist[best] end
+        for i = 1, #byIndex do
+          if not joined[i] then
+            dist[i] = math.min(dist[i], Map.GetPlotDistance(byIndex[best].X, byIndex[best].Y, byIndex[i].X, byIndex[i].Y))
+          end
+        end
+      end
+      stats.sdpSpread = total
+    end
     stats.method = "sites"
   elseif scn.kind == "single" and (#(request.wonders or {}) > 0 or asMulti) then
     -- Wonders with the districts: the single-city tab solves this city as

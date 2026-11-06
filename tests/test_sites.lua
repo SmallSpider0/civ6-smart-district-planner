@@ -365,6 +365,15 @@ test("issue 191: dense packing keeps the panel's number of new cities", function
     end
     print(("dense 3: site %d,%d  %.1f"):format(best[a].X, best[a].Y, best[a].Value))
   end
+  -- Issue 297: plans with as many sites come densest first.
+  local solutions = result.Solutions
+  T.ok(solutions[1].Spread ~= nil, "spread reported")
+  for n = 2, #solutions do
+    if #solutions[n].Sites == #solutions[n - 1].Sites then
+      T.ok(solutions[n].Spread >= solutions[n - 1].Spread, "densest first")
+    end
+  end
+  print(("dense 3: spread %d"):format(solutions[1].Spread))
   sites.SetDense(false)
   T.eq(sites.State().K, 3, "off: 3")
   SDP_Panel.SelectTab("SINGLE")
