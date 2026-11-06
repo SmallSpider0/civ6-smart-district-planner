@@ -1157,6 +1157,67 @@ test("issue 199: ticked wonders never push the solve button off a low screen", f
   SDP_Panel.Close()
 end)
 
+-- Issue 314: with more districts (the Diplomatic Quarter, the Preserve) the
+-- district grid took a row more and pushed the tacks' buttons off the
+-- shortest page. A stand-in for the layout: a fixed part (the city, the
+-- solve row, the tacks' buttons), the settings, the district grid of `rows`
+-- rows as its scroll panel shows it, and the result list. However many
+-- rows, the page holds it; the settings give way first, then the grid.
+test("issue 314: any number of district rows keeps the buttons on the shortest page", function()
+  local c = UI_Mock.Controls
+  local rows = 4
+  local function Shown(panel, stack)
+    if panel:IsHidden() or stack:IsHidden() then return 0 end
+    return rawget(panel, "_sizeY") or stack:GetSizeY()
+  end
+  local tabs = {
+    { Tab = "SINGLE", Body = c.Body, Settings = c.SettingsScroll, SettingsStack = c.SettingsStack, Grid = c.DistrictScroll,
+      Area = c.DistrictArea, Results = c.ResultScroll, Fold = c.FoldButton, SetFold = SDP_Panel.SetFold },
+    { Tab = "SITES", Body = c.SitesBody, Settings = c.SitesSettingsScroll, SettingsStack = c.SitesSettingsStack,
+      Grid = c.SitesDistrictScroll, Area = c.SitesDistrictArea, Results = c.SitesResultScroll, Fold = c.SitesFoldButton,
+      SetFold = SDP_Panel.Sites.SetFold },
+    { Tab = "MULTI", Body = c.MultiBody, Settings = c.MultiSettingsScroll, SettingsStack = c.MultiSettingsStack,
+      Grid = c.MultiDistrictScroll, Area = c.MultiDistrictArea, Results = c.MultiResultScroll, Fold = c.MultiFoldButton,
+      SetFold = SDP_Panel.Multi.SetFold },
+  }
+  SDP_Panel.Open()
+  SDP_Panel.SelectCity(1)
+  for _, t in ipairs(tabs) do
+    function t.SettingsStack:GetSizeY() return 150 end
+    function t.Area:GetSizeY() return 24 + 30 * rows - 4 + 20 + 26 end
+    function t.Body:GetSizeY()
+      return 300 + Shown(t.Settings, t.SettingsStack) + Shown(t.Grid, t.Area) + t.Results:GetSizeY()
+    end
+    SDP_Panel.SelectTab(t.Tab)
+    t.SetFold(false)
+    for _, screen in ipairs({ 500, 1440 }) do
+      UI_Mock.Screen = screen
+      SDP_Panel.FitWindow()
+      local page = c.SinglePage:GetSizeY()
+      for _, n in ipairs({ 1, 4, 5, 8, 20 }) do
+        rows = n
+        -- Fold and unfold through the line, as the player does: the page fits again.
+        t.Fold:Click()
+        t.Fold:Click()
+        local label = string.format("%s, screen %d, %d rows", t.Tab, screen, n)
+        T.eq(t.Settings:IsHidden(), false, label .. ": unfolded")
+        T.ok(t.Body:GetSizeY() <= page, label .. ": the body " .. t.Body:GetSizeY() .. " fits the page " .. page)
+        T.ok(t.Grid:GetSizeY() >= math.min(t.Area:GetSizeY(), SDP_UI.DISTRICT_MIN), label .. ": the grid keeps two rows")
+        if t.Grid:GetSizeY() < t.Area:GetSizeY() then
+          T.eq(t.Settings:GetSizeY(), SDP_UI.SETTINGS_MIN, label .. ": the settings gave way first")
+          T.eq(t.Results:GetSizeY(), SDP_UI.RESULT_MIN, label .. ": the result list at one row")
+        end
+        if screen == 1440 then T.eq(t.Grid:GetSizeY(), t.Area:GetSizeY(), label .. ": a tall screen shows the grid in full") end
+      end
+    end
+    t.SettingsStack.GetSizeY, t.Area.GetSizeY, t.Body.GetSizeY = nil, nil, nil
+  end
+  UI_Mock.Screen = nil
+  SDP_Panel.SelectTab("SINGLE")
+  SDP_Panel.FitWindow()
+  SDP_Panel.Close()
+end)
+
 test("issue 71: peek hides the window and keeps the preview; the button or Esc bring it back", function()
   SDP_Panel.Open()
   SDP_Panel.SelectTab("SINGLE")

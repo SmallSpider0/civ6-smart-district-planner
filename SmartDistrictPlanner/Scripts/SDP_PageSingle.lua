@@ -57,7 +57,8 @@ local m_lookNext = false      -- move the camera to the city when the next resul
 local m_kit                   -- SDP_PageKit: weights, tier, preset, fold, switches (made at the end)
 
 local function FitPage()
-  SDP_UI.FitResults(Controls.Body, Controls.SinglePage, Controls.ResultScroll, Controls.SettingsScroll, Controls.SettingsStack)
+  SDP_UI.FitResults(Controls.Body, Controls.SinglePage, Controls.ResultScroll, Controls.SettingsScroll, Controls.SettingsStack,
+    Controls.DistrictScroll, Controls.DistrictArea)
 end
 P.FitPage = FitPage
 function P.Restore() m_kit.Restore() end
@@ -229,6 +230,7 @@ local function ShowCells()
     end)
   ShowCount()
   UpdateSpecialtyNote()
+  FitPage() -- the grid's rows and the note take room (issue 314)
 end
 
 -- Set a district's state (MUST, POOL, OFF, AUTO).
