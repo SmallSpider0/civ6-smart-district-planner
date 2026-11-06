@@ -17,11 +17,13 @@
 --   4. The N best combinations that differ: each has a site at least two
 --      plots from every site of every better one.
 -- Dense packing (request.Dense, issue 87): as many sites as fit first (up
--- to DENSE_MAX_K), then the value. Greedy packings place each next site as
--- close as the spacing allows to the player's cities and the sites placed
--- so far, from several first sites; the sites of the packings with the most
--- sites are refined, then each of those packings is improved by moving one
--- site at a time to a nearby refined site while the value rises.
+-- to DENSE_MAX_K), then the densest (issue 297: the smallest Spread), then
+-- the value. Greedy packings place each next site as close as the spacing
+-- allows to the player's cities and the sites placed so far, from several
+-- first sites; the sites of the packings with the most sites are refined,
+-- then each of those packings is improved by moving one site at a time to
+-- a nearby refined site while the combination gets denser, or as dense and
+-- worth more.
 -- Same input, same result (constraint 6). The overlay must be installed.
 
 SDP_SiteSolver = {}
@@ -253,8 +255,45 @@ function Session:Connected(chosen)
   return true
 end
 
+-- How spread out `sites` are (issue 297): the total length of the links
+-- that join every site to the player's cities and city-center pins
+-- (`anchors`, joined already), each site linked once to the nearest city,
+-- pin or site joined before it, shortest link first (a minimum spanning
+-- tree, so its length does not depend on the order of `sites`). Plot
+-- distance, as the spacing and D. Two new sites far from the cities count
+-- the link that reaches them, not only the one between them. Without
+-- anchors the first site costs nothing.
+function SDP_SiteSolver.Spread(sites, anchors)
+  local n, joined, dist, total = #sites, {}, {}, 0
+  for i, s in ipairs(sites) do
+    dist[i] = math.huge
+    for _, a in ipairs(anchors or {}) do
+      local d = Map.GetPlotDistance(s.X, s.Y, a.X, a.Y)
+      if d < dist[i] then dist[i] = d end
+    end
+  end
+  for _ = 1, n do
+    local best = nil
+    for i = 1, n do
+      if not joined[i] and (best == nil or dist[i] < dist[best]) then best = i end
+    end
+    joined[best] = true
+    if dist[best] < math.huge then total = total + dist[best] end
+    local b = sites[best]
+    for i = 1, n do
+      if not joined[i] then
+        local d = Map.GetPlotDistance(b.X, b.Y, sites[i].X, sites[i].Y)
+        if d < dist[i] then dist[i] = d end
+      end
+    end
+  end
+  return total
+end
+
 local function Earlier(a, b)
   if #a.Chosen ~= #b.Chosen then return #a.Chosen > #b.Chosen end -- dense: more sites first
+  -- Dense (issue 297): then the densest. Entries of the normal search have no Spread.
+  if a.Spread ~= nil and b.Spread ~= nil and a.Spread ~= b.Spread then return a.Spread < b.Spread end
   if a.Value ~= b.Value then return a.Value > b.Value end
   for i = 1, #a.Chosen do
     if a.Chosen[i] ~= b.Chosen[i] then return a.Chosen[i] < b.Chosen[i] end
@@ -348,8 +387,8 @@ end
 -- the next site is the one nearest to the cities and the sites placed so
 -- far that keeps the spacing and links back (within D), best coarse score
 -- and smaller plot index on a tie. Returns the packings, most sites first,
--- then the larger sum of coarse scores; each a list of sites in the order
--- placed.
+-- then the densest (Spread, issue 297), then the larger sum of coarse
+-- scores; each a list of sites in the order placed.
 function Session:Packings(bad)
   local minRange, d, k = SDP_Sites.MinRange(), self.D, self.K
   local usable, base = {}, {}
@@ -419,14 +458,16 @@ function Session:Packings(bad)
   end)
   local packings = { Pack(nil) }
   for n = 1, math.min(#firsts, self.Params.DenseStarts or 12) do packings[#packings + 1] = Pack(firsts[n]) end
-  local sums = {}
+  local sums, spreads = {}, {}
   for _, packing in ipairs(packings) do
     local sum = 0
     for _, site in ipairs(packing) do sum = sum + self:CoarseOf(site) end
     sums[packing] = sum
+    spreads[packing] = SDP_SiteSolver.Spread(packing, self.Anchors)
   end
   table.sort(packings, function(a, b)
     if #a ~= #b then return #a > #b end
+    if spreads[a] ~= spreads[b] then return spreads[a] < spreads[b] end
     if sums[a] ~= sums[b] then return sums[a] > sums[b] end
     for i = 1, #a do
       if a[i].Index ~= b[i].Index then return a[i].Index < b[i].Index end
@@ -512,9 +553,19 @@ function Session:DenseRun()
     self.Stats.Combinations = self.Stats.Combinations + 1
     if SDP_Task ~= nil then SDP_Task.Tick(1) end
     local value, details, resources, conflict = self:Value(chosen)
-    local entry = { Value = value, Chosen = { unpack(chosen) }, Details = details, Resources = resources, Conflict = conflict }
+    local sites = {}
+    for n, s in ipairs(chosen) do sites[n] = pool[s] end
+    local entry = { Value = value, Chosen = { unpack(chosen) }, Details = details, Resources = resources, Conflict = conflict,
+      Spread = SDP_SiteSolver.Spread(sites, self.Anchors) }
     seen[key] = entry
     return entry
+  end
+  -- A move or an addition is taken when it ranks earlier (issue 297): as
+  -- many sites, denser; or as dense and worth more. Never looser.
+  local function Better(entry, cur)
+    if #entry.Chosen ~= #cur.Chosen then return #entry.Chosen > #cur.Chosen end
+    if entry.Spread ~= cur.Spread then return entry.Spread < cur.Spread end
+    return entry.Value > cur.Value + 1e-9
   end
   local function Spaced(site, chosen, skip)
     for n, s in ipairs(chosen) do
@@ -533,24 +584,39 @@ function Session:DenseRun()
       starts = starts + 1
       local cur = Entry(chosen)
       -- A refined site that still fits (spaced, linked back) is added:
-      -- more sites come first.
+      -- more sites come first. The nearest to the cities, pins and chosen
+      -- sites first (issue 297: the densest), then the best fine score.
       local function Grow()
-        for t, site in ipairs(pool) do
-          if #cur.Chosen >= self.K then return end
-          local inside = false
-          for _, s in ipairs(cur.Chosen) do
-            if s == t then inside = true end
+        while #cur.Chosen < self.K do
+          local best, bestNear = nil, nil
+          for t, site in ipairs(pool) do
+            local inside = false
+            for _, s in ipairs(cur.Chosen) do
+              if s == t then inside = true end
+            end
+            if not inside and Spaced(site, cur.Chosen, 0) then
+              local near = math.huge
+              for _, a in ipairs(self.Anchors) do near = math.min(near, Map.GetPlotDistance(site.X, site.Y, a.X, a.Y)) end
+              for _, s in ipairs(cur.Chosen) do
+                near = math.min(near, Map.GetPlotDistance(site.X, site.Y, pool[s].X, pool[s].Y))
+              end
+              if bestNear == nil or near < bestNear then
+                local next = { unpack(cur.Chosen) }
+                next[#next + 1] = t
+                if self:Connected(next) then best, bestNear = t, near end
+              end
+            end
           end
-          if not inside and Spaced(site, cur.Chosen, 0) then
-            local next = { unpack(cur.Chosen) }
-            next[#next + 1] = t
-            if self:Connected(next) then cur = Entry(next) end
-          end
+          if best == nil then return end
+          local next = { unpack(cur.Chosen) }
+          next[#next + 1] = best
+          cur = Entry(next)
         end
       end
       Grow()
       -- Move one site at a time to a refined site within 3 plots; take a
-      -- move when the value rises; stop when no move helps.
+      -- move when the combination gets denser, or stays as dense and its
+      -- value rises (issue 297); stop when no move helps.
       local moved = true
       while moved and evals < cap do
         moved = false
@@ -567,7 +633,7 @@ function Session:DenseRun()
               next[n] = t
               if self:Connected(next) then
                 local entry = Entry(next)
-                if entry.Value > cur.Value + 1e-9 then
+                if Better(entry, cur) then
                   cur, moved = entry, true
                   Grow()
                   break
@@ -741,6 +807,7 @@ end
 --                OwnDistance (to the nearest city or city-center pin of the player),
 --                SiteDistance (to the nearest other site of the solution; nil for one site) }
 --              Value = the sum of the sites' values - Conflict.
+--              Spread (dense packing only): SDP_SiteSolver.Spread of the sites (issue 297).
 --   Weights, Items, Points  the weights the score used and each part's points
 --              per unit with and without its weight (SDP_Sites.ItemWeights),
 --              for the tooltips' per-turn values (issue 88)
@@ -755,7 +822,7 @@ function Session:Result()
     Points = ctx.Points }
   for _, entry in ipairs(self:Distinct(self.Params.Solutions or 3)) do
     result.Solutions[#result.Solutions + 1] = { Value = entry.Value, Resources = entry.Resources, Conflict = entry.Conflict,
-      Sites = SolutionSites(self, ctx, entry) }
+      Spread = entry.Spread, Sites = SolutionSites(self, ctx, entry) }
   end
   if #result.Solutions == 0 then result.Ok, result.Error = false, "NO_SITE" end
   local best = result.Solutions[1]
