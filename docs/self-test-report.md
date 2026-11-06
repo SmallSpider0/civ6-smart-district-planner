@@ -2,7 +2,7 @@
 
 每次发版前更新：这里只留最近两轮的结果，更早的在 git 历史和 [CHANGELOG](../CHANGELOG.md) 里。发版步骤见 `.claude/skills/sdp-release/SKILL.md`。
 
-环境：macOS 版《文明6》（Aspyr，原生 arm64），维护者的 Steam 账号（缺 16 个 DLC，见 [dev-macos.md](dev-macos.md)），测试模组组只启用官方内容、DMT 和本模组。
+环境：macOS 版《文明6》（Aspyr，原生 arm64），维护者的 Steam 账号（2026-11-07 起是典藏版，只缺尤里乌斯·凯撒领袖包和猫咪侦察兵；之前缺 16 个 DLC，见 [dev-macos.md](dev-macos.md)“Steam 账号与 DLC”），测试模组组只启用官方内容、DMT 和本模组。
 测试对局：图拉真（罗马），地图与游戏种子 20261019，经 `tools/game.py newgame --capital --reveal` 快速开局并揭示首都周围 12 格。
 
 "自动验证"指 `tools/run_tests.py` 在游戏内执行断言通过；"截图核对"指截取游戏画面后人工比对；"需你确认"指本机工具做不到、尚未验证的部分。
