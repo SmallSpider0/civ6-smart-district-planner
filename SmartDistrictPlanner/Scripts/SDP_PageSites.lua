@@ -115,7 +115,7 @@ for _, column in ipairs(COLUMNS_B) do ALL_COLUMNS[#ALL_COLUMNS + 1] = column end
 
 function P.FitPage()
   SDP_UI.FitResults(Controls.SitesBody, Controls.SitesPage, Controls.SitesResultScroll,
-    Controls.SitesSettingsScroll, Controls.SitesSettingsStack)
+    Controls.SitesSettingsScroll, Controls.SitesSettingsStack, Controls.SitesDistrictScroll, Controls.SitesDistrictArea)
 end
 
 local function Remember() m_kit.Remember() end
@@ -302,6 +302,7 @@ ShowCells = function()
     m_view.Districts[#m_view.Districts + 1] = { Type = row.Type, State = row.State, Status = row.Status, Group = row.Group,
       Cell = row.Cell, Click = row.Click }
   end
+  P.FitPage() -- the grid's rows take room (issue 314)
 end
 
 function P.Refresh()
