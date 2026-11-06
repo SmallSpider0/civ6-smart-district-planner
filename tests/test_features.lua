@@ -174,20 +174,28 @@ test("a wonder that must touch a district is not lost when the districts cluster
 end)
 
 test("the good-places map: legal plots best first, the best not beaten by any one placement", function()
+  -- The map ranks by adjacency alone; the solver also charges the distance
+  -- weight for far plots it has to buy (issue 319), so compare with it at 0.
+  local distance = SDP_Panel.State().Weights.DISTANCE
   Finally(function()
-    local campus = Resolve("DISTRICT_CAMPUS")
-    Reset({ campus })
-    SDP_Panel.SetLand(false)
-    SDP_Panel.ShowHeat(campus)
-    local spots = SDP_Panel.Heat()
-    T.ok(spots ~= nil and #spots > 0, "spots")
-    for i = 2, #spots do T.ok(spots[i - 1].Gain >= spots[i].Gain, "best first") end
-    T.ok(SDP_Preview.IsShown(), "drawn on the map")
-    local solo = SDP_Panel.Solve()
-    T.ok(solo and solo.Ok, "solve")
-    T.near(solo.Adjacency, spots[1].Gain, 1e-9, "the solver's single campus is the best spot")
-    T.ok(not SDP_Preview.IsShown() or SDP_Panel.State().HeatDistrict == nil, "solving takes the map down")
+    local ok, err = pcall(function()
+      local campus = Resolve("DISTRICT_CAMPUS")
+      Reset({ campus })
+      SDP_Panel.SetLand(false)
+      SDP_Panel.SetWeight("DISTANCE", 0)
+      SDP_Panel.ShowHeat(campus)
+      local spots = SDP_Panel.Heat()
+      T.ok(spots ~= nil and #spots > 0, "spots")
+      for i = 2, #spots do T.ok(spots[i - 1].Gain >= spots[i].Gain, "best first") end
+      T.ok(SDP_Preview.IsShown(), "drawn on the map")
+      local solo = SDP_Panel.Solve()
+      T.ok(solo and solo.Ok, "solve")
+      T.near(solo.Adjacency, spots[1].Gain, 1e-9, "the solver's single campus is the best spot")
+      T.ok(not SDP_Preview.IsShown() or SDP_Panel.State().HeatDistrict == nil, "solving takes the map down")
+    end)
+    SDP_Panel.SetWeight("DISTANCE", distance)
     SDP_Panel.SetLand(true)
+    if not ok then error(err, 0) end
   end)
 end)
 
