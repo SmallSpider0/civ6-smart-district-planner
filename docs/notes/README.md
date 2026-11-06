@@ -88,6 +88,7 @@
 | [issue-297-dense-spread.md](issue-297-dense-spread.md) | 密铺：城数一样时先比挤不挤（最小生成树的连线长度），挪位不许变松 | 现行 |
 | [release-1.7.2.md](release-1.7.2.md) | v1.7.2 发版准备的交接：测试结果、夜间队列、对外文档逐条核对 | 现行（发版后不再更新） |
 | [issue-294-wonder-built.md](issue-294-wonder-built.md) | 奇观“已建成”按全世界数量上限和本方城市判断，不看地图上见没见过 | 现行 |
+| [issue-307-wonders-hang.md](issue-307-wonders-hang.md) | 勾很多奇观时求解卡死：数摆法先做匹配、回溯有上限并分帧，自动奇观最多再整体求解 2 次；改前改后的帧和总时长 | 现行 |
 | [issue-245-split-session.md](issue-245-split-session.md) | `SDP_Multi.NewSession` 拆成有名字的步骤（纯重构） | 现行 |
 
 ## 持续更新的记录

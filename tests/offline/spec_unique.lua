@@ -264,22 +264,23 @@ test("several cities tab: each wonder has a city pulldown, and the request sends
   multi.SetWonder(STONEHENGE, false)
 end)
 
-test("an automatic wonder left out in two cities is tried in the third (issue 234)", function()
-  -- Sessions stand in for the solver: the wonder's tiles in the first two
-  -- cities of the production ranking are taken by the plan's districts
-  -- (left out, no better plan), the third places it; past the ranking it
-  -- is no longer automatic.
+-- Sessions stand in for the solver: the wonder's tiles in the first cities
+-- of the production ranking are taken by the plan's districts (left out, no
+-- better plan), the third places it; past the ranking it is no longer
+-- automatic and is placed where the plan is best. Returns the solves' skips
+-- ("any" past the ranking) and the result.
+local function AutoAgain(again)
   local W = "BUILDING_STONEHENGE"
   local solved = {}
-  local real = SDP_Multi.NewSession
+  local real, realAgain = SDP_Multi.NewSession, SDP_Multi.AUTO_AGAIN
   local function Fake(request)
     local skip = request.AutoSkip and request.AutoSkip[W] or 0
     local s = { Request = request, HostChoices = {}, ExtraCalls = 0, Stats = {}, Skip = skip,
       Board = { Calls = 0, Clear = function() end }, AutoWonder = {} }
     if skip < 3 then s.AutoWonder[W] = skip + 1 end
-    s.Placed = skip == 2
-    s.Gain = ({ 10, 9, 8 })[skip + 1] or 0
-    function s:Run() solved[#solved + 1] = self.Skip end
+    s.Placed = skip == 2 or skip > 3
+    s.Gain = ({ 10, 9, 8 })[skip + 1] or 7
+    function s:Run() solved[#solved + 1] = self.Skip > 3 and "any" or tostring(self.Skip) end
     function s:AutoUnplaced()
       if self.AutoWonder[W] ~= nil and not self.Placed then return { W } end
       return {}
@@ -292,11 +293,27 @@ test("an automatic wonder left out in two cities is tried in the third (issue 23
     function s:Result() return { Ok = true, Skip = self.Skip, Placed = self.Placed } end
     return s
   end
-  SDP_Multi.NewSession = Fake
+  SDP_Multi.NewSession, SDP_Multi.AUTO_AGAIN = Fake, again
   local ok, result = pcall(SDP_Multi.SolveNow, { PlayerID = 0, Wonders = { W } })
-  SDP_Multi.NewSession = real
+  SDP_Multi.NewSession, SDP_Multi.AUTO_AGAIN = real, realAgain
   T.ok(ok, tostring(result))
-  T.eq(table.concat(solved, ","), "0,1,2", "the third city tried after the second did no better")
+  return table.concat(solved, ","), result
+end
+
+test("an automatic wonder left out in two cities is tried in the third (issue 234)", function()
+  local solved, result = AutoAgain(3)
+  T.eq(solved, "0,1,2", "the third city tried after the second did no better")
   T.eq(result.Skip, 2, "the plan with the wonder kept")
   T.ok(result.Placed, "the wonder placed")
+end)
+
+test("an automatic wonder left out is solved again at most twice (issue 307)", function()
+  -- Each solve again is a whole solve: with many wonders in one city the
+  -- ranking went down every city. The second time the wonder may go in any
+  -- city.
+  T.eq(SDP_Multi.AUTO_AGAIN, 2, "the default")
+  local solved, result = AutoAgain(SDP_Multi.AUTO_AGAIN)
+  T.eq(solved, "0,1,any", "the next city, then any city")
+  T.ok(result.Placed, "the wonder placed")
+  T.ok(result.Skip > 3, "where the plan is best")
 end)

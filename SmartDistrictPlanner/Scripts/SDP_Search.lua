@@ -1049,12 +1049,56 @@ local function UsedBy(layout, active)
   return used
 end
 
+-- Whether the slots of `order` can all stand at once, each on its own free
+-- legal plot (not in `used`): a maximum matching (augmenting paths, slots
+-- and plots in order). Each step looks at every plot once, as a node of the
+-- walks below, and counts as one for the frames.
+function Search:AllFit(order, used)
+  local legal, n, plotOf, steps = self.Legal, self.N, {}, 0
+  local function Augment(m, seen)
+    steps = steps + 1
+    if steps % SDP_Tiers.NODES_PER_UNIT == 0 then Tick(1) end
+    for i = 1, n do
+      if legal[m][i] and not used[i] and not seen[i] then
+        seen[i] = true
+        if plotOf[i] == nil or Augment(plotOf[i], seen) then
+          plotOf[i] = m
+          return true
+        end
+      end
+    end
+    return false
+  end
+  for _, m in ipairs(order) do
+    if not Augment(m, {}) then return false end
+  end
+  return true
+end
+
 -- Number of ways to put the active slots on distinct free legal plots,
--- counting stops just above `limit`.
+-- counting stops just above `limit`. Slots that cannot all stand at once
+-- count 0 at once (AllFit). A walk is also cut short, counting as above the
+-- limit, after COUNT_NODES x (limit + 1) x (slots + 1) partial layouts: a
+-- walk with few complete layouts can still go through a huge number of
+-- partial ones that lead nowhere (issue 307: many wonders in one city, a
+-- few of them wanting the same few plots), and above the limit the caller
+-- searches with the model instead of trying every layout. A walk with no
+-- dead ends visits at most (slots + 1) partial layouts per complete one, so
+-- that stays exact. The walk counts its nodes for the frames (SDP_Task).
+SDP_Search.COUNT_NODES = 4
+
 function Search:CountLayouts(order, used, limit)
   local legal, n, count = self.Legal, self.N, 0
+  if not self:AllFit(order, used) then return 0 end
+  local nodes, cap = 0, SDP_Search.COUNT_NODES * (limit + 1) * (#order + 1)
   local function Walk(d)
     if count > limit then return end
+    nodes = nodes + 1
+    if nodes % SDP_Tiers.NODES_PER_UNIT == 0 then Tick(1) end
+    if nodes > cap then
+      count = limit + 1
+      return
+    end
     if d > #order then
       count = count + 1
       return
@@ -1065,10 +1109,12 @@ function Search:CountLayouts(order, used, limit)
         used[i] = true
         Walk(d + 1)
         used[i] = nil
+        if count > limit then return end
       end
     end
   end
   Walk(1)
+  self.Stats.CountNodes = (self.Stats.CountNodes or 0) + nodes
   return count
 end
 
@@ -1082,7 +1128,12 @@ function Search:Exhaustive(order, base)
   local layout = Copy(base)
   local legal, n, stopped = self.Legal, self.N, false
   local bestLayout, bestGain = nil, nil
+  local nodes = 0
   local function Walk(d)
+    -- The partial layouts count for the frames too (issue 307): the same
+    -- walk as CountLayouts', which kept it small.
+    nodes = nodes + 1
+    if nodes % SDP_Tiers.NODES_PER_UNIT == 0 then Tick(1) end
     if d > #order then
       local gain, isLegal = self:Evaluate(layout)
       self:Consider(gain, isLegal, layout)

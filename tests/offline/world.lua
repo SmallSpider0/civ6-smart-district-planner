@@ -481,6 +481,19 @@ function World.New(spec)
       Cost = 200, PrereqTech = "TECH_MASONRY", MaxPlayerInstances = 1, MaxWorldInstances = -1 }
     gi.Buildings = Table(rows, "BuildingType")
   end
+  -- Many more wonders (issue 307: a player ticking 19 or all of them), on
+  -- request: spec.manyWonders of them, added last, so the other rows keep
+  -- their indices. Every third one flat land only, every third a river.
+  if spec.manyWonders then
+    local rows = {}
+    for row in gi.Buildings() do rows[#rows + 1] = row end
+    for k = 1, spec.manyWonders do
+      local key = string.format("BUILDING_TEST_WONDER_%02d", k)
+      rows[#rows + 1] = { BuildingType = key, Name = "LOC_" .. key .. "_NAME", IsWonder = true, Cost = 200 + k,
+        PrereqTech = "TECH_MASONRY", FlatOnly = k % 3 == 1 or nil, RequiresRiver = k % 3 == 2 or nil }
+    end
+    gi.Buildings = Table(rows, "BuildingType")
+  end
   -- Instance limits as the game's defaults: a wonder once in the world, the
   -- rest without a limit.
   for row in gi.Buildings() do

@@ -2130,6 +2130,7 @@ end
 -- Stats.Again on the kept session: { Moved = whether the second plan was
 -- kept, Calls = the DMT calls of the one dropped }.
 SDP_Multi.SUPPLY_AGAIN = true -- false: one solve, as before issue 182 (offline comparison)
+SDP_Multi.AUTO_AGAIN = 2 -- solves at most for automatic wonders left out (issue 307)
 SDP_Multi.HOSTS_AGAIN = true -- false: the nearest host only (offline comparison)
 
 function SDP_Multi.SolveNow(request)
@@ -2158,18 +2159,23 @@ function SDP_Multi.SolveNow(request)
   -- An automatic wonder the plan leaves out although it has a valid tile
   -- in its city (the city's districts took the room): the next city,
   -- solved again, kept when it is better (Session:Beats). The ranking
-  -- moves on from the last solve, kept or not, until it places the wonders
-  -- or no city is left (past the last one a wonder is not automatic, so
-  -- at most cities x wonders solves; issue 234).
-  local tried = session
-  while true do
+  -- moves on from the last solve, kept or not (issue 234). At most
+  -- AUTO_AGAIN more solves (issue 307: each is a whole solve, and with many
+  -- wonders in one city the ranking went down every city): in the last one
+  -- the wonders still left out go in any city, by the plan's value alone.
+  local tried, solves = session, 0
+  while solves < SDP_Multi.AUTO_AGAIN do
     local missing = tried:AutoUnplaced()
     if #missing == 0 then break end
+    solves = solves + 1
     local again = {}
     for k, v in pairs(tried.Request) do again[k] = v end
     local skip = {}
     for k, v in pairs(tried.Request.AutoSkip or {}) do skip[k] = v end
-    for _, wonderType in ipairs(missing) do skip[wonderType] = (skip[wonderType] or 0) + 1 end
+    for _, wonderType in ipairs(missing) do
+      -- Past the ranking (math.huge): no longer automatic.
+      skip[wonderType] = solves < SDP_Multi.AUTO_AGAIN and (skip[wonderType] or 0) + 1 or math.huge
+    end
     again.AutoSkip = skip
     local _
     session, _, _, tried = TryAgain(session, again)
