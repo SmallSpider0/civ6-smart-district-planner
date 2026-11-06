@@ -513,7 +513,7 @@ FitPage = function()
     Controls.MultiCityStack:CalculateSize()
     Controls.MultiCityScroll:CalculateSize()
     return SDP_UI.FitResults(Controls.MultiBody, Controls.MultiPage, Controls.MultiResultScroll,
-      Controls.MultiSettingsScroll, Controls.MultiSettingsStack)
+      Controls.MultiSettingsScroll, Controls.MultiSettingsStack, Controls.MultiDistrictScroll, Controls.MultiDistrictArea)
   end
   local height = Apply()
   while height < RESULT_ROWS and shown > 2 do

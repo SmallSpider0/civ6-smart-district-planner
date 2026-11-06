@@ -331,28 +331,37 @@ end
 
 -- The result list takes what the page has left (M1): the window's height
 -- above or below the drawn 920 goes there, never below RESULT_MIN (a row).
--- The settings (`settings`, a scroll panel around `settingsStack`) are as
--- high as they are drawn; when the page is too short for them with the
--- result list at one row, they scroll, down to SETTINGS_MIN, so the solve
--- button below them stays on the page (issue 199: many wonders ticked, or a
--- low screen).
+-- The settings (`settings`, a scroll panel around `settingsStack`) and the
+-- district grid (`districts` around `districtStack`) are as high as they are
+-- drawn; when the page is too short for them with the result list at one
+-- row, they scroll so the solve button and the tacks' buttons below stay on
+-- the page: the settings first, down to SETTINGS_MIN (issue 199: many
+-- wonders ticked, or a low screen), then the district grid, down to
+-- DISTRICT_MIN, however many districts the rules give (issue 314: the
+-- Diplomatic Quarter and the Preserve add a row).
 SDP_UI.RESULT_MIN = 40
 SDP_UI.SETTINGS_MIN = 56
-function SDP_UI.FitResults(body, page, scroll, settings, settingsStack)
-  local full = nil
-  if settings ~= nil and not settings:IsHidden() then
-    settingsStack:CalculateSize()
-    full = settingsStack:GetSizeY()
-    settings:SetSizeY(full)
-    settings:CalculateSize()
+SDP_UI.DISTRICT_MIN = 60
+function SDP_UI.FitResults(body, page, scroll, settings, settingsStack, districts, districtStack)
+  local parts = {}
+  local function Add(panel, stack, least)
+    if panel == nil or panel:IsHidden() then return end
+    stack:CalculateSize()
+    local full = stack:GetSizeY()
+    panel:SetSizeY(full)
+    panel:CalculateSize()
+    parts[#parts + 1] = { Panel = panel, Full = full, Least = least }
   end
+  Add(settings, settingsStack, SDP_UI.SETTINGS_MIN)
+  Add(districts, districtStack, SDP_UI.DISTRICT_MIN)
   scroll:SetSizeY(SDP_UI.RESULT_MIN)
   scroll:CalculateSize()
   body:CalculateSize()
   local spare = page:GetSizeY() - body:GetSizeY()
-  if spare < 0 and full ~= nil then
-    settings:SetSizeY(math.max(math.min(full, SDP_UI.SETTINGS_MIN), full + spare))
-    settings:CalculateSize()
+  for _, part in ipairs(parts) do
+    if spare >= 0 then break end
+    part.Panel:SetSizeY(math.max(math.min(part.Full, part.Least), part.Full + spare))
+    part.Panel:CalculateSize()
     body:CalculateSize()
     spare = page:GetSizeY() - body:GetSizeY()
   end

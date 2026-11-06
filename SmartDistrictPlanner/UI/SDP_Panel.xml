@@ -64,12 +64,20 @@
           <Label Anchor="L,C" Style="BodyTextDark16" String="LOC_SDP_GROUP_SPECIALTY" ToolTip="LOC_SDP_STATES_TOOLTIP"/>
           <Label Anchor="R,C" Style="BodyTextDark14" String="LOC_SDP_STATES_LEGEND"/>
         </Container>
+        <!-- Scrolls when the page is too short for it (issue 314): the
+             buttons below stay on the page however many districts the
+             rules give (SDP_UI.FitResults). -->
+        <ScrollPanel ID="DistrictScroll" Size="480,100" Vertical="1" AutoScrollBar="1">
+          <ScrollBar Anchor="R,C" AnchorSide="O,I" Offset="4,0" Style="Slider_Blue"/>
+        <Stack ID="DistrictArea" StackGrowth="Bottom" StackPadding="4">
         <Stack ID="DistrictStack" StackGrowth="Right" WrapWidth="480" WrapGrowth="Bottom" StackPadding="4"/>
         <Container Size="480,20">
           <Label Anchor="L,C" Style="BodyTextDark16" String="LOC_SDP_GROUP_OTHER" ToolTip="LOC_SDP_STATES_OTHER_TOOLTIP"/>
           <Label Anchor="R,C" Style="BodyTextDark14" String="LOC_SDP_STATES_LEGEND_OTHER"/>
         </Container>
         <Stack ID="UtilityStack" StackGrowth="Right" WrapWidth="480" WrapGrowth="Bottom" StackPadding="4"/>
+        </Stack>
+        </ScrollPanel>
 
         <!-- The settings below fold into this line (issue 71): what they are
              set to, and a click shows or hides them. -->
@@ -241,12 +249,20 @@
           <Label Anchor="L,C" Style="BodyTextDark16" String="LOC_SDP_GROUP_SPECIALTY" ToolTip="LOC_SDP_STATES_TOOLTIP"/>
           <Label Anchor="R,C" Style="BodyTextDark14" String="LOC_SDP_STATES_LEGEND"/>
         </Container>
+        <!-- Scrolls when the page is too short for it (issue 314): the
+             buttons below stay on the page however many districts the
+             rules give (SDP_UI.FitResults). -->
+        <ScrollPanel ID="SitesDistrictScroll" Size="480,100" Vertical="1" AutoScrollBar="1">
+          <ScrollBar Anchor="R,C" AnchorSide="O,I" Offset="4,0" Style="Slider_Blue"/>
+        <Stack ID="SitesDistrictArea" StackGrowth="Bottom" StackPadding="4">
         <Stack ID="SitesDistrictStack" StackGrowth="Right" WrapWidth="480" WrapGrowth="Bottom" StackPadding="4"/>
         <Container Size="480,20">
           <Label Anchor="L,C" Style="BodyTextDark16" String="LOC_SDP_GROUP_OTHER" ToolTip="LOC_SDP_STATES_OTHER_TOOLTIP"/>
           <Label Anchor="R,C" Style="BodyTextDark14" String="LOC_SDP_SITES_STATES_LEGEND_OTHER"/>
         </Container>
         <Stack ID="SitesUtilityStack" StackGrowth="Right" WrapWidth="480" WrapGrowth="Bottom" StackPadding="4"/>
+        </Stack>
+        </ScrollPanel>
         <Container Size="480,42">
           <Stack Anchor="L,C" StackGrowth="Right" StackPadding="6">
             <Label Anchor="L,C" Style="BodyTextDark16" String="LOC_SDP_TIER_SHORT"/>
@@ -314,12 +330,20 @@
             <Button ID="MultiCountMore" Anchor="R,C" Offset="4,0" Style="ArrowButtonRight"/>
           </Container>
         </Container>
+        <!-- Scrolls when the page is too short for it (issue 314): the
+             buttons below stay on the page however many districts the
+             rules give (SDP_UI.FitResults). -->
+        <ScrollPanel ID="MultiDistrictScroll" Size="480,100" Vertical="1" AutoScrollBar="1">
+          <ScrollBar Anchor="R,C" AnchorSide="O,I" Offset="4,0" Style="Slider_Blue"/>
+        <Stack ID="MultiDistrictArea" StackGrowth="Bottom" StackPadding="4">
         <Stack ID="MultiDistrictStack" StackGrowth="Right" WrapWidth="480" WrapGrowth="Bottom" StackPadding="4"/>
         <Container Size="480,20">
           <Label Anchor="L,C" Style="BodyTextDark16" String="LOC_SDP_GROUP_OTHER" ToolTip="LOC_SDP_STATES_OTHER_TOOLTIP"/>
           <Label Anchor="R,C" Style="BodyTextDark14" String="LOC_SDP_STATES_LEGEND_OTHER"/>
         </Container>
         <Stack ID="MultiUtilityStack" StackGrowth="Right" WrapWidth="480" WrapGrowth="Bottom" StackPadding="4"/>
+        </Stack>
+        </ScrollPanel>
         <GridButton ID="MultiFoldButton" Size="480,26" Style="ButtonControl">
           <Label ID="MultiFoldText" Anchor="L,C" Offset="10,0" Style="FontNormal14" TruncateWidth="390" TruncatedTooltip="1"/>
           <Label ID="MultiFoldAction" Anchor="R,C" Offset="10,0" Style="FontNormal14"/>

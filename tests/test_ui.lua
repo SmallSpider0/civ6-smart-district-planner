@@ -178,15 +178,69 @@ test("issue 199: ticked wonders keep the solve button on the page", function()
       T.ok(body <= page, label .. ": the body " .. body .. " fits the page " .. page)
       T.ok(solveBottom <= pageTop + page, label .. ": the solve button ends at " .. solveBottom .. ", the page at " .. (pageTop + page))
       T.ok(solveBottom <= screen, label .. ": the solve button ends at " .. solveBottom .. " on a " .. screen .. " screen")
+      for _, button in ipairs({ Controls.PlaceButton, Controls.UndoButton }) do
+        local _, top = button:GetScreenOffset()
+        T.ok(top + button:GetSizeY() <= pageTop + page, label .. ": the tacks' buttons end at " .. (top + button:GetSizeY())
+          .. ", the page at " .. (pageTop + page))
+      end
     end
     SDP_Panel.FitWindow()
     Check("this screen")
     Controls.SinglePage:SetSizeY(SDP_UI.WINDOW_MIN - SDP_UI.PAGE_INSET)
-    SDP_UI.FitResults(Controls.Body, Controls.SinglePage, Controls.ResultScroll, Controls.SettingsScroll, Controls.SettingsStack)
+    -- The page fits itself again, as when the player folds and unfolds the settings.
+    SDP_Panel.SetFold(true)
+    SDP_Panel.SetFold(false)
     T.ok(Controls.SettingsScroll:GetSizeY() < Controls.SettingsStack:GetSizeY(), "the shortest page: the settings scroll")
     Check("the shortest page")
   end)
   for _, w in ipairs(SDP_Wonders.List(pid, nil)) do SDP_Panel.SetWonder(w.Type, false) end
+  SDP_Panel.FitWindow()
+  SDP_Panel.Close()
+  if not ok then error(err, 0) end
+end)
+
+-- Issue 314: the Diplomatic Quarter and the Preserve gave the district grid
+-- a row more and pushed the tacks' buttons off the shortest page. Whatever
+-- the rules give, the grid scrolls: on the shortest page, and on pages up to
+-- three grid rows shorter still (a ruleset or mod with more districts), the
+-- solve and the tacks' buttons end on the page on every tab.
+test("issue 314: the buttons stay on the shortest page however many district rows", function()
+  Reset()
+  SDP_Panel.Open()
+  local tabs = {
+    { Tab = "SINGLE", Page = Controls.SinglePage, Body = Controls.Body, Grid = Controls.DistrictScroll,
+      Area = Controls.DistrictArea, Fold = SDP_Panel.SetFold,
+      Buttons = { Controls.SolveButton, Controls.PlaceButton, Controls.UndoButton } },
+    { Tab = "SITES", Page = Controls.SitesPage, Body = Controls.SitesBody, Grid = Controls.SitesDistrictScroll,
+      Area = Controls.SitesDistrictArea, Fold = SDP_Panel.Sites.SetFold,
+      Buttons = { Controls.SitesSolveButton, Controls.SitesPlaceButton, Controls.SitesUndoButton } },
+    { Tab = "MULTI", Page = Controls.MultiPage, Body = Controls.MultiBody, Grid = Controls.MultiDistrictScroll,
+      Area = Controls.MultiDistrictArea, Fold = SDP_Panel.Multi.SetFold,
+      Buttons = { Controls.MultiSolveButton, Controls.MultiPlaceButton, Controls.MultiUndoButton } },
+  }
+  local ok, err = pcall(function()
+    for _, t in ipairs(tabs) do
+      SDP_Panel.SelectTab(t.Tab)
+      for _, extra in ipairs({ 0, 30, 60, 90 }) do
+        t.Page:SetSizeY(SDP_UI.WINDOW_MIN - SDP_UI.PAGE_INSET - extra)
+        -- The page fits itself again, as when the player folds and unfolds the settings.
+        t.Fold(true)
+        t.Fold(false)
+        local page, body = t.Page:GetSizeY(), t.Body:GetSizeY()
+        local _, pageTop = t.Page:GetScreenOffset()
+        local label = string.format("%s, page %d", t.Tab, page)
+        print(string.format("issue 314 %s: body %d, grid %d of %d", label, body, t.Grid:GetSizeY(), t.Area:GetSizeY()))
+        T.ok(body <= page, label .. ": the body " .. body .. " fits the page")
+        for _, button in ipairs(t.Buttons) do
+          local _, top = button:GetScreenOffset()
+          T.ok(top + button:GetSizeY() <= pageTop + page, label .. ": a button ends at " .. (top + button:GetSizeY())
+            .. ", the page at " .. (pageTop + page))
+        end
+        T.ok(t.Grid:GetSizeY() >= math.min(t.Area:GetSizeY(), SDP_UI.DISTRICT_MIN), label .. ": the grid keeps two rows")
+      end
+    end
+  end)
+  SDP_Panel.SelectTab("SINGLE")
   SDP_Panel.FitWindow()
   SDP_Panel.Close()
   if not ok then error(err, 0) end
