@@ -323,6 +323,117 @@ class Hold(unittest.TestCase):
         self.assertEqual(pr_wait.main(["--codex", "26", "--hold", "26"]), 0)
         self.assertEqual(seen, [([], [26], 60, 1800, set(), {26})])
 
+def clean(auto=AUTO, head=HEAD):
+    view = pr(rollup=PASSED, auto=auto, head=head)
+    view["mergeStateStatus"] = "CLEAN"
+    return view
+
+
+class StalledAutoMerge(unittest.TestCase):
+    """#323 (2026-11-06): auto-merge on, both checks passed at 23:45, CLEAN, and GitHub did not merge it
+    until a manual `gh pr merge 323 --squash` at 00:35. pr_wait now runs that plain merge itself once the
+    PR has sat so for STALL_MINUTES."""
+
+    def run_wait(self, fake, *numbers, **kw):
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
+            code = pr_wait.watch(list(numbers), [], 60, 1800, kw.get("night", set()), kw.get("hold", set()))
+        return code, out.getvalue()
+
+    def test_stalled_past_the_threshold_is_merged_and_reported_as_merged(self):
+        fake = Fake(self, {323: [clean()]})
+        code, out = self.run_wait(fake, 323)
+        self.assertEqual(code, 0)
+        self.assertEqual(fake.merges(), [("pr", "merge", "323", "--squash")])  # plain: no --admin, no --auto
+        self.assertEqual(fake.sleeps, pr_wait.STALL_MINUTES)  # first seen, then STALL_MINUTES checks a minute apart
+        self.assertIn("#323 merged (merged by pr_wait", out)
+
+    def test_not_before_the_threshold(self):
+        views = [clean()] * pr_wait.STALL_MINUTES + [pr("MERGED", PASSED)]  # GitHub merges just in time
+        fake = Fake(self, {324: views})
+        code, out = self.run_wait(fake, 324)
+        self.assertEqual(code, 0)
+        self.assertEqual(fake.merges(), [])
+        self.assertEqual(out.strip(), "#324 merged")
+
+    def test_the_clock_restarts_on_a_new_head(self):
+        views = [clean()] * 6 + [clean(head="b" * 40)] * 6 + [pr("MERGED", PASSED)]
+        fake = Fake(self, {325: views})
+        self.assertEqual(self.run_wait(fake, 325)[0], 0)
+        self.assertEqual(fake.merges(), [])
+
+    def test_the_clock_restarts_when_the_pr_leaves_clean(self):
+        blocked = clean()
+        blocked["mergeStateStatus"] = "BLOCKED"
+        views = [clean()] * 6 + [blocked] + [clean()] * 6 + [pr("MERGED", PASSED)]
+        fake = Fake(self, {326: views})
+        self.assertEqual(self.run_wait(fake, 326)[0], 0)
+        self.assertEqual(fake.merges(), [])
+
+    def test_hold_is_never_merged_here(self):
+        views = [clean()] * (pr_wait.STALL_MINUTES * 3) + [pr("MERGED", PASSED)]
+        fake = Fake(self, {327: views})
+        self.assertEqual(self.run_wait(fake, 327, hold={327})[0], 0)
+        self.assertEqual(fake.merges(), [])
+
+    def test_auto_merge_off_is_never_merged_here(self):
+        # night PR waiting for its test: CLEAN, checks passed, auto-merge off
+        views = [clean(auto=None)] * (pr_wait.STALL_MINUTES * 3) + [pr("MERGED", PASSED)]
+        fake = Fake(self, {328: views})
+        self.assertEqual(self.run_wait(fake, 328, night={328})[0], 0)
+        self.assertEqual(fake.merges(), [])
+
+    def test_a_night_pr_whose_auto_merge_was_turned_on_is_merged_when_stalled(self):
+        fake = Fake(self, {329: [clean()]})
+        self.assertEqual(self.run_wait(fake, 329, night={329})[0], 0)
+        self.assertEqual(fake.merges(), [("pr", "merge", "329", "--squash")])
+
+    def test_a_failed_merge_needs_action_with_the_error(self):
+        fake = Fake(self, {330: [clean()]})
+        gh = fake.gh
+
+        def refuse(*args, data=None):
+            if args[:2] == ("pr", "merge"):
+                fake.calls.append(args)
+                raise RuntimeError("gh pr merge: Pull request is not mergeable: the base branch policy prohibits it")
+            return gh(*args, data=data)
+        cr.gh = refuse
+        code, out = self.run_wait(fake, 330)
+        self.assertEqual(code, 1)
+        self.assertEqual(len(fake.merges()), 1)
+        self.assertIn("#330 needs action: auto-merge stalled", out)
+        self.assertIn("base branch policy prohibits it", out)
+
+    def test_a_merge_that_github_beat_us_to_is_merged(self):
+        views = [clean()] * (pr_wait.STALL_MINUTES + 1) + [pr("MERGED", PASSED)]
+        fake = Fake(self, {331: views})
+        gh = fake.gh
+
+        def late(*args, data=None):
+            if args[:2] == ("pr", "merge"):
+                fake.calls.append(args)
+                raise RuntimeError("Pull request #331 was already merged")
+            return gh(*args, data=data)
+        cr.gh = late
+        code, out = self.run_wait(fake, 331)
+        self.assertEqual(code, 0)
+        self.assertEqual(out.strip(), "#331 merged")
+
+    def test_from_the_waiting_list_after_a_clean_codex_review(self):
+        tmp = tempfile.mkdtemp(prefix="pr_wait_stall-")
+        self.addCleanup(shutil.rmtree, tmp, True)
+        set_env(self, "SDP_SHARED", tmp)
+        set_env(self, "SDP_LOCAL_CONFIG", os.path.join(tmp, "no-local.json"))
+        views = [pr(rollup=PASSED, auto=None)] + [clean()]
+        fake = Fake(self, {332: views}, comments={332: [codex_summary("completed", False)]})
+        pr_wait.add(332, codex=True)
+        with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()):
+            self.assertEqual(pr_wait.watch_list(60, 1800), 0)
+        self.assertEqual(fake.merges(), [("pr", "merge", "332", "--auto", "--squash"), ("pr", "merge", "332", "--squash")])
+        self.assertIn("merged by pr_wait", out.getvalue())
+        self.assertEqual(pr_wait.read_list(), {})
+
+
 def set_env(test, name, value):
     old = os.environ.get(name)
     test.addCleanup(lambda: os.environ.__setitem__(name, old) if old is not None else os.environ.pop(name, None))
