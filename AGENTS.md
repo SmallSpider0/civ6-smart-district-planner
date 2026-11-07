@@ -83,7 +83,7 @@ civ6mod/
 - 写纯 Lua 5.1；游戏里为 nil 的全局见第 6 节“游戏 Lua 运行时”（`validate.py` 会报）。
 - 结果不能依赖 `pairs()` 的顺序，同分要有固定的次级键，不用 `math.random` 和与时间有关的逻辑（第 4 节“确定性”）。
 - 界面逻辑的测试要经过控件自己的回调（离线替身的 `Control:Click()`、`Toggle()`，取 `State()` 里带出的控件），不要只调内部函数（2026-10-21：一处永远得 nil 的 `a and false or nil` 让勾选无效，直接调内部函数的测试没发现）。
-- 测试用例不写死某个文明的规则（如“学院每个相邻区域 +0.5”），按 `ExcludedAdjacencies` 与玩家特性判断；默认测试对局是罗马，换文明（`game.py newgame --leader LEADER_HOJO` 等）能发现这类问题。
+- 测试用例不写死某个文明的规则（如“学院每个相邻区域 +0.5”），按 `ExcludedAdjacencies` 与玩家特性判断；默认测试对局是罗马，换文明（`game.py newgame --leader LEADER_HOJO`、典藏版的 `LEADER_WU_ZETIAN` 等）能发现这类问题。
 
 ## 4. 核心技术方案要点（硬约束，详见需求文档第三节）
 

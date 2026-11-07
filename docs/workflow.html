@@ -306,6 +306,7 @@ footer { margin-top: 64px; border-top: 1px solid var(--line); padding-top: 16px;
         <tr><td class="step">Sonnet、medium</td><td>要求写清楚的机械活</td><td>变基、合并已知的改动、重跑测试、跑测量脚本、翻译或同步文档、维护状态页和队列</td></tr>
         <tr><td class="step">Opus、medium</td><td>默认</td><td>开发已定方案的 Issue、原因已知的 bug、写测试、写调研结论</td></tr>
         <tr><td class="step">Opus、high</td><td>要想得深的</td><td>求解和计分的设计、合法性规则、原因不明的 bug、给维护者权衡方案的调研，以及 medium 做错过一次的任务</td></tr>
+        <tr><td class="step">Opus、xhigh</td><td>最高一档</td><td>high 做错过一次的任务，以及 high 查过一轮仍找不到原因的 bug</td></tr>
         <tr><td class="step">主会话</td><td>自己始终用 high</td><td>分派、转达决定、汇报</td></tr>
       </tbody>
     </table>
@@ -351,7 +352,7 @@ footer { margin-top: 64px; border-top: 1px solid var(--line); padding-top: 16px;
 
   <h3>什么时候交接</h3>
   <div class="cards">
-    <div class="card"><h4>约 20 万 token 是信号</h4><p>上下文过了约 20 万 token，不是马上停：做完手上这一步，到下一个检查点再交接。Opus、high 那一档的活信号是约 40 万，那里积累的推理很难写下来。调试的假设、方案比较做到一半时不交接。新的子 agent 重建上下文本身也要花不少，剩下的调用不多时不必交接。</p></div>
+    <div class="card"><h4>约 20 万 token 是信号</h4><p>上下文过了约 20 万 token，不是马上停：做完手上这一步，到下一个检查点再交接。Opus 的 high、xhigh 两档信号是约 40 万，那里积累的推理很难写下来。调试的假设、方案比较做到一半时不交接。新的子 agent 重建上下文本身也要花不少，剩下的调用不多时不必交接。</p></div>
     <div class="card"><h4>后续的活换新的</h4><p>变基、夜间游戏内测试失败、审阅意见，都派一个新的子 agent，附交接说明。白天写代码的子 agent 停在 PR 开了；夜里的测试结果交给新的子 agent 改问题。</p></div>
     <div class="card"><h4>交接说明写什么</h4><p>做完了什么；定了什么、为什么；试过但不行的和原因；还没验证的假设；文件和日志在哪。写进 <code>docs/notes/issue-&lt;编号&gt;-&lt;主题&gt;.md</code> 或自己的临时目录，接手的先读它再做别的。</p></div>
   </div>
@@ -370,7 +371,7 @@ footer { margin-top: 64px; border-top: 1px solid var(--line); padding-top: 16px;
     <div class="card"><h4>上下文保持小</h4><p>主会话只分派、转达和收尾，目标在约 20 万 token 以内。超过了，到一个检查点（一批 PR 合并、发版的一步做完）请维护者清空或压缩上下文，代理自己做不了。</p></div>
     <div class="card"><h4>随时可清空</h4><p>监听和 PR 等待都挂在值守子会话上，主会话不挂长时间运行的东西，维护者随时能清空它，清空后直接接着用，不用交接；文件夹、模型、权限设置和桌面控制的授权都保留。要长期记住的写在状态页、Issue、<code>docs/notes/</code> 和本机记忆里。会话里有在跑的后台命令、子 agent 或没到点的会话定时任务时清空不了（桌面版的定时任务不挡），所以等派出的子 agent 回报后再清。</p></div>
     <div class="card"><h4>值守子会话</h4><p>主会话开的一个子会话（Sonnet、medium），只挂监听和一个读等待名单的 <code>pr_wait.py --list</code>，并常开防锁屏。监听在后台直接跑、不把输出重定向进文件：后台任务自己的输出就是报告；退出了却没有输出时不当成无新事，先看监听记下的报过的条目（<code>--reported</code>），因为报过的已记成看过、不会再报。后台命令结束时（PR 合并或要人处理、监听报了新事、夜间队列到点），它先把命令重新挂上，再用一段能单独看懂的话结束这一轮，第一句写发生了什么、要主会话做什么；这段话自动转给主会话。主会话或子 agent 要等新的 PR 时用 <code>pr_wait.py add</code> 放进名单，不发消息：常驻的等待自己接上，值守回一句“已挂上”也算一次叫醒，而连续的自动叫醒有上限。它没了（被归档、应用重启后后台命令断了）时，主会话照同样的要求重开一个。</p></div>
-    <div class="card"><h4>少被叫醒</h4><p>所有 PR 只挂值守的一个 <code>pr_wait.py</code>，中间步骤（一项检查跑完、Codex 审完没意见）不叫醒；只是两边各加了几行的冲突（如 CHANGELOG）它自己并入 main、推上去接着等；CI 失败、别的冲突、Codex 有意见时马上退出。子 agent 交几行报告，主会话只读报告，不读它的原始输出。</p></div>
+    <div class="card"><h4>少被叫醒</h4><p>所有 PR 只挂值守的一个 <code>pr_wait.py</code>，中间步骤（一项检查跑完、Codex 审完没意见）不叫醒；只是两边各加了几行的冲突（如 CHANGELOG）它自己并入 main、推上去接着等；CI 失败、别的冲突、Codex 有意见时马上退出。开了自动合并的 PR 检查全过却 10 分钟还没被 GitHub 合并时，它自己做一次普通的 squash 合并（不跳过检查）。子 agent 交几行报告，主会话只读报告，不读它的原始输出。</p></div>
     <div class="card"><h4>不用的工具关掉</h4><p>只分派的会话用不到的连接器（浏览器、文档、桌面控制之类）关掉：它们的工具定义每次调用都要重读。</p></div>
   </div>
   <h3>做完就收尾，子 agent 的也算</h3>
@@ -431,7 +432,7 @@ footer { margin-top: 64px; border-top: 1px solid var(--line); padding-top: 16px;
       <tbody>
         <tr><td class="step">离线逻辑</td><td>在模拟的游戏接口里跑 Lua，证明搜索与记账正确；每次求解后查方案不变量（#242）；另按固定种子生成几十张带多城、奇观和地图钉的小地图混着请求（#243）</td><td>CI、本机或第二台机器</td><td>每个 PR</td><td><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/tools/offline_tests.mjs"><code>offline_tests.mjs</code></a></td></tr>
         <tr><td class="step">校验</td><td>XML、modinfo、双语文本键、Lua 语法、禁用随机数、界面控件在游戏里有先例</td><td>CI</td><td>每个 PR</td><td><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/tools/validate.py"><code>validate.py</code></a></td></tr>
-        <tr><td class="step">游戏内</td><td>经调试连接在真实游戏里跑断言；发版前三种规则集，界面或文字改了再跑英文界面</td><td>有游戏的机器（游戏在后台）</td><td>改了模组代码（相关的文件）；发版前整套</td><td><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/tools/run_tests.py"><code>run_tests.py</code></a></td></tr>
+        <tr><td class="step">游戏内</td><td>经调试连接在真实游戏里跑断言；发版前三种规则集，界面或文字改了再跑英文界面。测试账号是典藏版，DLC 齐全：外交区、保护区的用例在原版和迭起兴衰里也跑，在那里跳过算问题。默认对局是罗马，换文明（如北条时宗、武则天）能查出写死某个文明规则的测试</td><td>有游戏的机器（游戏在后台）</td><td>改了模组代码（相关的文件）；发版前整套</td><td><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/tools/run_tests.py"><code>run_tests.py</code></a></td></tr>
         <tr><td class="step">离线对比</td><td>用真实规则库和固定场景集，对照已存的结果和可证明的真最优，检查质量和零违规</td><td>第二台机器（没有就本机）</td><td>改了求解器或合法性</td><td><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/tools/compare.mjs"><code>compare.mjs</code></a></td></tr>
         <tr><td class="step">真实点击</td><td>系统级鼠标事件点面板上的每个控件</td><td>macOS，占屏幕（夜间队列）</td><td>改了界面时；发版前</td><td><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/tools/realclick.py"><code>realclick.py</code></a></td></tr>
         <tr><td class="step">压力测试</td><td>三张 AI 打出来的后期存档，逐步计时，并在游戏里实际建出来核对</td><td>有游戏的机器，占屏幕（夜间队列）</td><td>发版前（只改界面的版本不跑）</td><td><a href="https://github.com/SmallSpider0/civ6-smart-district-planner/blob/main/tools/stress.py"><code>stress.py</code></a></td></tr>
@@ -449,6 +450,7 @@ footer { margin-top: 64px; border-top: 1px solid var(--line); padding-top: 16px;
       <h4>谁来定</h4>
       <p><b>每一版都由维护者决定什么时候发</b>，只修 bug 的也一样：测试和准备都做完，报告“可以发了”（里面有什么、测出什么、还剩什么），等维护者说一句“发 vX.Y.Z”。</p>
       <p>修好一个严重 bug（线上版本崩溃、面板不能用，或者方案在普通设置下违反游戏规则）时马上告诉维护者。</p>
+      <p><b>发版测试测出的 bug 当场修，不等确认</b>：每个 bug 开一个 Issue（挂这一版的里程碑）、先复现、各一个 PR，带在旧代码上会失败的测试，照常请 Codex；只有修法里的主观取舍写在 Issue 下等人定。这些修复合并、受影响的测试重跑通过，才算准备做完。</p>
     </div>
     <div class="card">
       <h4>版本号</h4>
@@ -466,7 +468,7 @@ footer { margin-top: 64px; border-top: 1px solid var(--line); padding-top: 16px;
     <li>里程碑里的 Issue 都合并后开始，开着的 <code>workflow</code> Issue 列给维护者一起定。发版前测试：三种规则集的游戏内测试；界面或文字改了加英文界面，界面改了加真实点击和中英截图；压力测试（只改界面的版本不跑）。占屏幕的进夜间队列；离线对比的开发集复核放第二台机器，上次核对后求解相关的文件没变时由工具跳过。</li>
     <li><code>release.py prep</code> 改版本号，把各 PR 的 <code>changelog.d/</code> 片段按编号收进 CHANGELOG 并删掉片段，起草更新说明，再改成英文在前、中文在后、写给玩家的话。</li>
     <li>每一版都按 CHANGELOG 逐条查对外文档：README、安装说明、测试者说明、创意工坊简介和示意图、介绍页、同类模组对照表、悬停提示里还在说旧做法、旧数字的地方都改掉，PR 里逐条写改了哪些；自测报告写这一轮。</li>
-    <li>开一个发版准备的 PR，CI 过了自动合并。</li>
+    <li>开一个发版准备的 PR，发版测试测出的 bug 都修好合并后才开自动合并，CI 过了合并。</li>
     <li><code>release.py publish</code> 发 GitHub Release。CI 打出模组压缩包和创意工坊提交包，把介绍页和本页发布到 GitHub Pages。</li>
     <li><code>release.py workshop</code> 用 SteamCMD 上传，再下载回来逐字节比对（也可由合作者在 Windows 上传）。简体中文的标题、简介和图片在物品页上改。</li>
     <li>没做完的 Issue 移到下一个里程碑，关掉这个里程碑，告诉维护者发了什么、查过什么、没查什么，并列出这一版修好的创意工坊评论、各附一句回复草稿，维护者确认后由主会话在物品页发。发版后不换会话。</li>
@@ -581,9 +583,9 @@ footer { margin-top: 64px; border-top: 1px solid var(--line); padding-top: 16px;
     ["压力测试", 1, "读三张后期存档，逐步计时，在游戏里实际建出来核对", "—", "tools/stress.py"],
     ["夜间队列", 2, "开跑前先碰一遍夜里要用的文件夹，让隐私弹窗趁人还在时出现；夜间时段开始时值守子会话常驻的 PR 等待报到点、转告主会话，主会话派子 agent 按顺序跑队列，有 PR 在等的项测过后开它的自动合并；结果交给新的子 agent 改问题、开 PR", "macOS 上事先给夜里要跑的程序授予文件夹访问权限", "tools/preflight_night.py"],
     ["代码审查", 2, "改了代码的 PR 由开 PR 的代理点名请 Codex 审，开 PR 的人用 pr_wait.py add --codex 把它放进值守常驻等待的名单，审完没意见或没审成时它自己开自动合并（等夜间测试的同时带 --night、先不合并的带 --hold，不替它开），有意见才叫醒；每条意见先核实，属实的先写会失败的测试再改，不属实的写明原因，回复后标为已解决，都处理完再开自动合并；只改文档的不审。试两周，每次审查的意见数、属实、误报、等了多久由工具自动记进共用文件夹，按这些记录决定留不留", "—（只有要改需求、默认值或权衡做法的意见才进“要你决定的事”）", "tools/pr_wait.py"],
-    ["PR、CI、合并", 1, "一个 Issue 一个 PR；Ubuntu、Windows 两项检查通过后自动 squash 合并；CI 失败时自动叫醒代理修，通过和合并不叫醒，PR 放进值守常驻的一个等待（pr_wait.py add），有合并或要处理的才退出，只是两边各加了行的冲突它自己并入 main；合并后清理工作树、本地分支和 GitHub 上多出来的分支", "—", ".github/workflows/checks.yml"],
+    ["PR、CI、合并", 1, "一个 Issue 一个 PR；Ubuntu、Windows 两项检查通过后自动 squash 合并；CI 失败时自动叫醒代理修，通过和合并不叫醒，PR 放进值守常驻的一个等待（pr_wait.py add），有合并或要处理的才退出，只是两边各加了行的冲突它自己并入 main，GitHub 漏掉的自动合并（检查全过 10 分钟仍没合并）它补一次普通合并；合并后清理工作树、本地分支和 GitHub 上多出来的分支", "—", ".github/workflows/checks.yml"],
     ["对外文字审阅", 3, "README、创意工坊简介、介绍页由代理改，PR 里附渲染好的页面和图", "合并前另一人看一下", null],
-    ["要不要发版", 4, "每一版（含只修 bug 的）做完准备、报告可以发了，等维护者一句话；严重 bug 修好时马上告诉维护者", "说“发 vX.Y.Z”", ".claude/skills/sdp-release/SKILL.md"],
+    ["要不要发版", 4, "每一版（含只修 bug 的）做完准备、报告可以发了，等维护者一句话；发版测试测出的 bug 代理当场修完才算准备好；严重 bug 修好时马上告诉维护者", "说“发 vX.Y.Z”", ".claude/skills/sdp-release/SKILL.md"],
     ["发版准备", 2, "版本号、更新说明草稿、截图、自测报告里的表格", "—", "tools/release.py"],
     ["清理规则文档", 3, "每个第二位版本之后、只发第三位版本时最多隔 3 版，派子 agent 删掉记忆和规则文档里重复、过时的内容，开一个只改文档的 PR", "看它列出的拿不准的几条", ".claude/skills/sdp-release/SKILL.md"],
     ["Release 与介绍页", 1, "打模组包和创意工坊包，生成中英介绍页，连同本页发布到 GitHub Pages", "—", ".github/workflows/release.yml"],
