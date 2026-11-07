@@ -217,5 +217,115 @@ class MineRace(unittest.TestCase):
         self.assertEqual(sorted(wi.load()["mine"]), ["1", "99"])
 
 
+class LabelAdded(unittest.TestCase):
+    """#338: the maintainer labelled #336 and #329 `auto` and nobody commented; the watch never woke."""
+
+    def setUp(self):
+        self.dir = tempfile.mkdtemp()
+        self.saved = (wi.HELD, wi.OTHERS, wi.REPORTED, wi.gh)
+        wi.HELD, wi.OTHERS = os.path.join(self.dir, "held.log"), os.path.join(self.dir, "others.log")
+        wi.REPORTED = os.path.join(self.dir, "reported.log")
+        self.labelled = [{"number": 7, "title": "t7", "html_url": URL + "7"}]
+        self.events = {7: [labeled("someone")]}
+        self.event_reads = []
+        self.env = os.environ.pop("SDP_WATCH_SELF", None)
+
+        def fake(path):
+            if path == "user":
+                return {"login": "SmallSpider"}
+            if "/events" in path:
+                number = int(path.split("/issues/")[1].split("/")[0])
+                self.event_reads.append(number)
+                return [dict(e, id=i + 1) for i, e in enumerate(self.events.get(number, []))]
+            if "labels=" in path:
+                return self.labelled if "&page=1" in path else []
+            return []
+        wi.gh = fake
+
+    def tearDown(self):
+        wi.HELD, wi.OTHERS, wi.REPORTED, wi.gh = self.saved
+        if self.env is not None:
+            os.environ["SDP_WATCH_SELF"] = self.env
+
+    def read(self, path):
+        if not os.path.exists(path):
+            return ""
+        with open(path, encoding="utf-8") as f:
+            return f.read()
+
+    def add(self, number, login):
+        self.labelled.append({"number": number, "title": "t%d" % number, "html_url": URL + str(number)})
+        self.events.setdefault(number, []).append(labeled(login))
+
+    def state(self):
+        return {"since": SINCE, "seen": [], "mine": [], "users": ["DracoYus", "SmallSpider"]}
+
+    def test_first_run_takes_the_labels_already_there_as_seen(self):
+        state = self.state()
+        self.assertEqual(wi.poll(state), [])
+        self.assertEqual(self.event_reads, [])  # no events read for labels that were already there
+        self.assertIn("7", state["labels"])
+
+    def test_the_shared_account_adding_the_label_wakes_the_agent(self):
+        state = self.state()
+        wi.poll(state)
+        self.add(336, "SmallSpider")
+        out = wi.poll(state)
+        self.assertEqual(out, ["LABELLED #336 auto by SmallSpider: t336 " + URL + "336"])
+        self.assertIn(out[0], self.read(wi.REPORTED))
+        self.assertEqual(wi.poll(state), [])  # once per labelling
+        self.assertEqual(self.event_reads, [336])  # events read only for the new one
+
+    def test_a_collaborator_adding_the_label_wakes_the_agent(self):
+        state = self.state()
+        wi.poll(state)
+        self.add(329, "DracoYus")
+        self.assertEqual(wi.poll(state), ["LABELLED #329 auto by DracoYus: t329 " + URL + "329"])
+
+    def test_anyone_else_adding_the_label_goes_to_others(self):
+        state = self.state()
+        wi.poll(state)
+        self.add(40, "someone")
+        self.assertEqual(wi.poll(state), [])
+        self.assertIn("LABELLED #40 auto by someone", self.read(wi.OTHERS))
+        self.assertEqual(wi.poll(state), [])
+        self.assertEqual(self.read(wi.OTHERS).count("#40"), 1)
+
+    def test_removed_then_added_again_counts_again(self):
+        state = self.state()
+        wi.poll(state)
+        self.add(336, "SmallSpider")
+        self.assertEqual(len(wi.poll(state)), 1)
+        self.labelled = [i for i in self.labelled if i["number"] != 336]
+        self.assertEqual(wi.poll(state), [])
+        self.assertNotIn("336", state["labels"])
+        self.add(336, "DracoYus")
+        self.assertEqual(wi.poll(state), ["LABELLED #336 auto by DracoYus: t336 " + URL + "336"])
+
+    def test_a_new_issue_opened_with_the_label_is_reported_once(self):
+        state = {"since": SINCE, "seen": [], "mine": [], "users": ["DracoYus"]}
+        wi.poll(state)
+        state["since"] = SINCE  # the issue below was opened after it
+        self.add(50, "DracoYus")
+        issues = [issue(50, "DracoYus")]
+        fake = wi.gh
+        wi.gh = lambda path: issues if path.startswith("repos/{owner}/{repo}/issues?state=all&sort") else fake(path)
+        out = wi.poll(state)
+        self.assertEqual(len(out), 1)
+        self.assertTrue(out[0].startswith("NEW ISSUE #50 "))
+        self.assertIn("50", state["labels"])
+
+    def test_an_issue_the_shared_account_opens_with_the_label_is_its_own(self):
+        state = self.state()
+        wi.poll(state)
+        state["since"] = SINCE
+        self.add(51, "SmallSpider")
+        issues = [issue(51, "SmallSpider")]
+        fake = wi.gh
+        wi.gh = lambda path: issues if path.startswith("repos/{owner}/{repo}/issues?state=all&sort") else fake(path)
+        self.assertEqual(wi.poll(state), [])  # an agent filed it and is already on it
+        self.assertIn("51", state["labels"])
+
+
 if __name__ == "__main__":
     unittest.main()

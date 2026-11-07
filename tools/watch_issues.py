@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""watch_issues - new issues and comments on the repository, for the agent to pick up.
+"""watch_issues - new issues, comments and `auto` labels on the repository, for the agent to pick up.
 
     python3 -I tools/watch_issues.py                 # wait until something new, print it, exit 0
     python3 -I tools/watch_issues.py --once          # print what is new now (exit 0 even if nothing)
@@ -20,6 +20,14 @@ GitHub account ($SDP_WATCH_SELF, default the account `gh api user` returns,
 read once): its issues and comments are never reported nor held, only marked
 seen, since the maintainer decides in Claude Code, not on the issue. --mine
 still works for other URLs but is not needed for that account.
+Adding the label is an item of its own (#338): when the shared account or one
+of those accounts puts $SDP_WATCH_LABEL on an issue or pull request, the watch
+reports "LABELLED #N auto by LOGIN: TITLE URL" and exits, like a new comment;
+once per labelling (taken off and put on again counts again, unless both
+happen between two polls). A label from anyone else goes to others.log. An
+issue the shared account opens with the label is its own work: no line. The
+labels seen are kept in the state; the first run without them (after an
+upgrade or --reset) takes the labels there now as seen.
 Without --once it polls every --every seconds (default 120) and exits with
 the first new items: run it in the background; its end is the signal. A
 failed poll (network) is retried after --retry seconds (default 30). It
@@ -122,43 +130,54 @@ def where(login, watched, who, own=None):
     return "report" if watched else "held"
 
 
-def labeller(number):
-    """Who last added LABEL to issue number (None when nobody did)."""
-    last, page = None, 1
+def label_event(number):
+    """(event id, login) of the last time LABEL was added to issue number; (None, None) when never."""
+    last, page = (None, None), 1
     while True:
         batch = gh("repos/{owner}/{repo}/issues/%d/events?per_page=100&page=%d" % (number, page))
         for e in batch:
             if e.get("event") == "labeled" and (e.get("label") or {}).get("name") == LABEL:
-                last = (e.get("actor") or {}).get("login")
+                last = (e.get("id"), (e.get("actor") or {}).get("login"))
         if len(batch) < 100:
             return last
         page += 1
 
 
+def labeller(number):
+    """Who last added LABEL to issue number (None when nobody did)."""
+    return label_event(number)[1]
+
+
 def labelled():
-    """Numbers of the issues and pull requests that carry LABEL, open or closed."""
-    numbers, page = set(), 1
+    """The issues and pull requests that carry LABEL, open or closed: {number: issue}."""
+    found, page = {}, 1
     while True:
         batch = gh("repos/{owner}/{repo}/issues?state=all&per_page=100&labels=%s&page=%d" % (LABEL, page))
-        numbers.update(i["number"] for i in batch)
+        found.update((i["number"], i) for i in batch)
         if len(batch) < 100:
-            return numbers
+            return found
         page += 1
 
 
 def poll(state):
     """New items from the watched accounts since the last poll: list of lines to report."""
     who, own, since, stamp = users(state), me(state), state["since"], now()
-    seen, mine, out, labels, checked = set(state["seen"]), set(state["mine"]), [], labelled(), {}
-    files = {"others": OTHERS, "held": HELD, "report": REPORTED}
+    seen, mine, out, labels, events = set(state["seen"]), set(state["mine"]), [], labelled(), {}
+    files, opened = {"others": OTHERS, "held": HELD, "report": REPORTED}, set()
+    first = "labels" not in state  # first run with #338, or after --reset: the labels there now are old
+    known = state.setdefault("labels", {})  # str(number): id of the labelling already handled
+    if first:
+        known.update((str(n), None) for n in labels)
+
+    def event(number):  # who put the label on: read once per poll, only for issues with new items
+        if number not in events:
+            events[number] = label_event(number)
+        return events[number]
 
     def watched(number):
-        if number not in checked:  # who put the label on: read once per poll, only for issues with new items
-            checked[number] = number in labels and labeller(number) in who
-        return checked[number]
+        return number in labels and event(number)[1] in who
 
-    def put(login, number, line):
-        place = where(login, login != own and login in who and watched(number), who, own)
+    def write(place, line):
         if place == "report":
             out.append(line)
         if place != "seen":  # reported lines too, before the state marks them seen
@@ -166,13 +185,19 @@ def poll(state):
             with open(files[place], "a", encoding="utf-8") as f:
                 f.write(stamp + " " + line + "\n")
 
+    def put(login, number, line):
+        place = where(login, login != own and login in who and watched(number), who, own)
+        write(place, line)
+        return place
+
     for issue in gh("repos/{owner}/{repo}/issues?state=all&sort=created&direction=asc&per_page=50&since=" + since):
         key = "issue-%d" % issue["number"]
         if "pull_request" in issue or issue["created_at"] < since or key in seen or key in mine:
             continue
         seen.add(key)
         line = "NEW ISSUE #%d by %s: %s %s" % (issue["number"], issue["user"]["login"], issue["title"], issue["html_url"])
-        put(issue["user"]["login"], issue["number"], line)
+        if put(issue["user"]["login"], issue["number"], line) in ("report", "seen"):
+            opened.add(issue["number"])
     for c in gh("repos/{owner}/{repo}/issues/comments?per_page=100&since=" + since):
         key = "comment-%d" % c["id"]
         if key in seen or str(c["id"]) in mine or c["created_at"] < since:
@@ -182,6 +207,18 @@ def poll(state):
         body = re.sub(r"\s+", " ", c["body"])[:160]
         line = "NEW COMMENT on #%d by %s: %s %s" % (num, c["user"]["login"], body, c["html_url"])
         put(c["user"]["login"], num, line)
+    for key in [k for k in known if int(k) not in labels]:  # taken off: putting it on again is new
+        del known[key]
+    for number in sorted(labels):  # the label just put on: an item of its own (#338)
+        if str(number) in known:
+            continue
+        eid, login = event(number)
+        known[str(number)] = eid
+        if number in opened:  # opened with the label: reported as NEW ISSUE, or the shared account's own
+            continue
+        item = labels[number]
+        line = "LABELLED #%d %s by %s: %s %s" % (number, LABEL, login, item.get("title", ""), item.get("html_url", ""))
+        write("report" if login == own or login in who else "others", line)
     state["since"], state["seen"] = stamp, sorted(seen)
     return out
 
