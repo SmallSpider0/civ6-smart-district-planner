@@ -30,6 +30,8 @@
 
 （不设上限时改前 108 帧、最长 1.40 亿条，见 issue-327-test-infra.md。）
 
+整套离线测试（第二台机器，`node tools/offline_tests.mjs -t`）：379 项全过、没有跳过。`spec_citychips` 的 “all cities (issue 142)”（`RunTask(5000)`）最长一帧从 1.10 亿条降到 3350 万条，不放大上限也在 6000 万以内；全部测试里最长的一帧就是它。
+
 **游戏内**（2026-11-07 周六，本机，压力测试存档 `pangaea-gs`，`tests/bench/wonders_frames.py`，用例 `6:all:all`：离首都最近的城（这个存档只有 5 座）、能建的 15 座奇观、16 种区域全部必建；结果在 `tests/bench/results/wonders_frames-pangaea-gs-i331-*.json`）：
 
 | | 档位 | 帧数 | 最长一帧 | 超过 0.5 秒的帧 | 超过 2 秒 | 总时长 |
