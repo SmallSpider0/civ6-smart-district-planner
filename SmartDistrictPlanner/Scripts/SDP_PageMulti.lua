@@ -1134,6 +1134,7 @@ m_kit = SDP_PageKit.New({
     UpdateEstimate()
   end,
 })
+P.Kit = m_kit -- tests: the tab's settings table (issue 327)
 P.SetWeight = m_kit.SetWeight
 P.SetLand = m_kit.SetLand
 P.SetTier = m_kit.SetTier

@@ -201,7 +201,8 @@ end
 -- before the save was read never overwrites it); Match(name) the preset the
 -- values equal, nil for none (SDP_Settings.Match).
 function SDP_Settings.Keeper(spec)
-  local keeper = { For = nil }
+  -- Fields, Values and Apply as given (tests: SDP_PageKit's settings table, issue 327).
+  local keeper = { For = nil, Fields = spec.Fields, Values = spec.Values, Apply = spec.Apply }
   function keeper.Restore()
     local playerID = Game.GetLocalPlayer()
     if keeper.For == playerID then return nil end
