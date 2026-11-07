@@ -115,6 +115,46 @@ test("plot values: the best improvement the rules allow (issue 52)", function()
   T.eq((SDP_Land.PlotValues(masonry:Plot(0, 0), ctx2)), 5, "the mine's bonus of a technology the player has")
 end)
 
+test("issue 336: no Industry or Corporation of the Monopolies and Corporations mode on every luxury", function()
+  -- The mode's two improvements (Improvements_MODE) go on luxuries, but only
+  -- one per kind and after improving several copies, or with a monopoly and a
+  -- Great Merchant: a plot cannot count on them. Wine: those and a plantation.
+  local w = World.New({ rows = { ".." }, resources = { { 0, 0, "RESOURCE_WINE" } }, improvementRules = true })
+  local gi = w.GameInfo
+  local function Add(name, key, rows)
+    local list = {}
+    if gi[name] ~= nil then for row in gi[name]() do list[#list + 1] = row end end
+    for _, row in ipairs(rows) do list[#list + 1] = row end
+    gi[name] = World.Table(list, key)
+  end
+  Add("Improvements", "ImprovementType", {
+    { ImprovementType = "IMPROVEMENT_TEST_PLANTATION", Buildable = true, Domain = "DOMAIN_LAND" },
+    { ImprovementType = "IMPROVEMENT_TEST_INDUSTRY", Buildable = true, Domain = "DOMAIN_LAND" },
+    { ImprovementType = "IMPROVEMENT_TEST_CORPORATION", Buildable = true, Domain = "DOMAIN_LAND" },
+  })
+  Add("Improvement_YieldChanges", nil, {
+    { ImprovementType = "IMPROVEMENT_TEST_PLANTATION", YieldType = "YIELD_PRODUCTION", YieldChange = 1 },
+    { ImprovementType = "IMPROVEMENT_TEST_INDUSTRY", YieldType = "YIELD_PRODUCTION", YieldChange = 2 },
+    { ImprovementType = "IMPROVEMENT_TEST_CORPORATION", YieldType = "YIELD_PRODUCTION", YieldChange = 10 },
+  })
+  Add("Improvement_ValidResources", nil, {
+    { ImprovementType = "IMPROVEMENT_TEST_PLANTATION", ResourceType = "RESOURCE_WINE" },
+    { ImprovementType = "IMPROVEMENT_TEST_INDUSTRY", ResourceType = "RESOURCE_WINE" },
+    { ImprovementType = "IMPROVEMENT_TEST_CORPORATION", ResourceType = "RESOURCE_WINE" },
+  })
+  Add("Improvements_MODE", "ImprovementType", {
+    { ImprovementType = "IMPROVEMENT_TEST_INDUSTRY", Industry = true, Corporation = false },
+    { ImprovementType = "IMPROVEMENT_TEST_CORPORATION", Industry = false, Corporation = 1 },
+  })
+  local ctx = SDP_Land.Context(0, {}, true)
+  local now = 0
+  for _, y in ipairs(SDP_Land.TILE_YIELDS) do now = now + ctx.W[y] * w:Plot(0, 0):GetYield(gi.Yields[y].Index) end
+  T.eq((SDP_Land.PlotValues(w:Plot(0, 0), ctx)), now + 1, "wine: the plantation, neither the industry nor the corporation")
+  local options = SDP_Land.ImprovementOptions(w:Plot(0, 0), ctx)
+  T.eq(#options, 1, "only the plantation is offered for an improvement tack")
+  T.eq(options[1].Entry.Type, "IMPROVEMENT_TEST_PLANTATION", "the plantation")
+end)
+
 test("a city's workable plots: kept features count, built and pinned districts do not", function()
   World.New({
     rows = {
