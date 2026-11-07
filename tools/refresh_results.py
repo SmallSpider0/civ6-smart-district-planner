@@ -5,11 +5,14 @@
     python3 -I tools/refresh_results.py --check [-j N] [FILE ...]   # rerun and compare, change nothing
 
 --check is the check before a release after solver changes: it reruns the
-same rows (default the development set, full_rejudged.jsonl: 84 scenes in
-three tiers plus a few multi-city variants, about 270 runs; no oracle, no
-weight profiles) and reports, against the stored rows, plans that changed,
-gains that went down and violations other than "no legal tile" that are new.
-Exit 1 when a gain went down or a violation is new.
+same rows (default the development set, DEV_SETS: full_rejudged.jsonl, 84
+scenes in three tiers plus a few multi-city variants, about 270 runs, and
+panel_default.jsonl, the 72 single-city scenes with the single-city tab's
+default settings, variant PANEL, issue 327; no oracle, no weight profiles)
+and reports, against the stored rows, plans that changed, gains that went
+down, violations other than "no legal tile" that are new, and rows where
+the gain this mod reports (stats.sdpGain) is not the judge's. Exit 1 when a
+gain went down, a violation is new or a reported gain is not the judge's.
 
 A --check of the development set that ran to the end writes CHECK_STAMP
 (tests/compare/results/check_stamp.json): a digest of the files the plans
@@ -41,13 +44,22 @@ import time
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 WORK = os.path.join(ROOT, "logs", "refresh")
-DEV_SET = os.path.join(ROOT, "tests", "compare", "results", "full_rejudged.jsonl")
+RESULTS = os.path.join(ROOT, "tests", "compare", "results")
+DEV_SET = os.path.join(RESULTS, "full_rejudged.jsonl")
+# The development set's files: the three tiers (and a few multi-city variants), and the single-city tab's
+# default settings (issue 327; kept apart so the report's tables, which read full_rejudged, stay the same).
+DEV_SETS = [DEV_SET, os.path.join(RESULTS, "panel_default.jsonl")]
 CHECK_STAMP = os.path.join(ROOT, "tests", "compare", "results", "check_stamp.json")
 # The files the development set's plans and their judging depend on (repository paths, fnmatch patterns;
 # `*` also crosses `/`). The interface-only scripts are left out, as for the stress test (sdp-release §1).
 SOLVED_BY = ["SmartDistrictPlanner/Scripts/*.lua", "tools/compare.mjs", "tests/compare/cmp_*.lua",
-             "tests/compare/scenes/*", "tests/compare/results/full_rejudged.jsonl"]
-NOT_SOLVED_BY = ["SmartDistrictPlanner/Scripts/SDP_Page*.lua", "SmartDistrictPlanner/Scripts/SDP_Preview.lua"]
+             "tests/compare/scenes/*", "tests/compare/results/full_rejudged.jsonl",
+             "tests/compare/results/panel_default.jsonl", "SmartDistrictPlanner/UI/SDP_Panel.lua",
+             "SmartDistrictPlanner/Scripts/SDP_PageSingle.lua", "SmartDistrictPlanner/Scripts/SDP_PageKit.lua"]
+# The panel's defaults (variant PANEL) come from SDP_Panel.lua, SDP_PageSingle.lua and SDP_PageKit.lua: those
+# three are in SOLVED_BY although the other pages are not.
+NOT_SOLVED_BY = ["SmartDistrictPlanner/Scripts/SDP_PageMulti.lua", "SmartDistrictPlanner/Scripts/SDP_PageSites.lua",
+                 "SmartDistrictPlanner/Scripts/SDP_Preview.lua"]
 
 
 def solved_by(paths):
@@ -61,7 +73,7 @@ def present(root=None):
     """Repository paths of the files under SOLVED_BY's folders, read from the disk: the second machine's
     copy of the worktree has no git (tools/remote.py sync copies the tracked and new files)."""
     root, out = root or ROOT, []
-    for top in ("SmartDistrictPlanner/Scripts", "tests/compare", "tools"):  # SOLVED_BY's folders
+    for top in ("SmartDistrictPlanner/Scripts", "SmartDistrictPlanner/UI", "tests/compare", "tools"):  # SOLVED_BY's folders
         for here, dirs, names in os.walk(os.path.join(root, *top.split("/"))):
             dirs[:] = sorted(d for d in dirs if not d.startswith(".") and d != "node_modules")
             out += [os.path.relpath(os.path.join(here, n), root).replace(os.sep, "/") for n in names]
@@ -101,10 +113,15 @@ def write_stamp(found, root=None, path=None):
     return stamp
 
 
+def failed(found):
+    """A check found a fault: a lower gain, a new violation or a reported gain that is not the judge's."""
+    return bool(found.get("lower") or found.get("new_violations") or found.get("mismatched"))
+
+
 def stamp_exit(stamp):
-    """The exit code a skipped check keeps: that of the stamped check (1 when it found lower gains or new
-    violations), so a retried release check does not pass a regression it skipped."""
-    return 1 if stamp.get("lower") or stamp.get("new_violations") else 0
+    """The exit code a skipped check keeps: that of the stamped check (1 when it found a fault), so a retried
+    release check does not pass a regression it skipped."""
+    return 1 if failed(stamp) else 0
 
 
 def unchanged_since_check(root=None, path=None):
@@ -138,6 +155,11 @@ def gain(row):
     return (row.get("score") or {}).get("gain")
 
 
+def reported(row):
+    """The adjacency gain this mod reports for its plan (stats.sdpGain), or None (CITY_BY_CITY has none)."""
+    return ((row.get("plan") or {}).get("stats") or {}).get("sdpGain")
+
+
 def check(path, new):
     old = {}
     for l in open(path, encoding="utf-8"):
@@ -146,7 +168,7 @@ def check(path, new):
             if r["planner"] == "sdp":
                 old[(r["scenario"], "sdp", r.get("variant") or "")] = r
     same = changed = up = 0
-    down, fresh = [], []
+    down, fresh, mismatched = [], [], []
     for k, r in sorted(new.items()):
         o = old.get(k)
         if o is None:
@@ -166,13 +188,21 @@ def check(path, new):
         added = violations(r) - violations(o)
         if added:
             fresh.append((k, sorted(added)))
-    print("%s: %d rows rerun; plan the same %d, changed %d; gain higher %d, lower %d; new violations %d"
-          % (os.path.basename(path), len(new), same, changed, up, len(down), len(fresh)))
+        # AGENTS.md section 6, the offline comparison: the gain this mod reports is the judge's.
+        own = reported(r)
+        if own is not None and g1 is not None and abs(own - g1) > 1e-6:
+            mismatched.append((k, own, g1))
+    print("%s: %d rows rerun; plan the same %d, changed %d; gain higher %d, lower %d; new violations %d; "
+          "reported gain not the judge's %d"
+          % (os.path.basename(path), len(new), same, changed, up, len(down), len(fresh), len(mismatched)))
     for k, g0, g1 in down:
         print("  LOWER %s %s: %s -> %s" % (k[0], k[2], g0, g1))
     for k, v in fresh:
         print("  NEW VIOLATION %s %s: %s" % (k[0], k[2], "; ".join(v)))
-    return {"rows": len(new), "changed": changed, "higher": up, "lower": len(down), "new_violations": len(fresh)}
+    for k, own, judged in mismatched:
+        print("  REPORTED %s %s: this mod %s, the judge %s" % (k[0], k[2], own, judged))
+    return {"rows": len(new), "changed": changed, "higher": up, "lower": len(down), "new_violations": len(fresh),
+            "mismatched": len(mismatched)}
 
 
 def rerun(path, jobs):
@@ -250,16 +280,18 @@ def main():
                 return stamp_exit(stamp)
             print("refresh_results: files the plans depend on changed since the last stamped check: running it",
                   flush=True)
-        files = args.files or [DEV_SET]
-        worst = 0
+        files = args.files or DEV_SETS
+        total = {}
         for path in files:
             _, new = rerun(os.path.abspath(path), args.jobs)
             found = check(os.path.abspath(path), new)
-            worst = max(worst, 1 if found["lower"] or found["new_violations"] else 0)
-            if not args.files and found["rows"]:
-                write_stamp(found)
-                print("refresh_results: wrote %s (commit it with the PR)" % os.path.relpath(CHECK_STAMP, ROOT))
-        return worst
+            for key, value in found.items():
+                total[key] = total.get(key, 0) + value
+        # The stamp covers the whole development set: written only when every file of it was checked.
+        if not args.files and total.get("rows"):
+            write_stamp(total)
+            print("refresh_results: wrote %s (commit it with the PR)" % os.path.relpath(CHECK_STAMP, ROOT))
+        return 1 if failed(total) else 0
     if not args.files:
         ap.error("give the result files to refresh")
     for path in args.files:

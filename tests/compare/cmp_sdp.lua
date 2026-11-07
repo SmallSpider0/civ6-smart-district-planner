@@ -78,6 +78,18 @@
 --                                    SDP_Multi's GroupSize, GroupPasses)
 --   variant <TIER>_ALL               multi: all cities in one search, no
 --                                    groups however many (issue 142)
+--   variant PANEL                    single: the single-city tab as a new game
+--                                    shows it (issue 327): the panel itself
+--                                    (UI/SDP_Panel.lua) is loaded as in a new
+--                                    game and its settings read back
+--                                    (SDP_PageSingle.State): the tier, the
+--                                    weights (land, distance, housing,
+--                                    coverage columns too), the switches
+--                                    (feature removal, swap, improvements,
+--                                    worked plots' improvements, reminders),
+--                                    sent the way its Request() sends them.
+--                                    The districts are the scenario's, all
+--                                    required, as for every other variant
 --   variant ..._ASMULTI (anywhere)   single: solved as SDP_Multi with only
 --                                    this city, the request the single-city
 --                                    tab sends when wonders are ticked
@@ -95,6 +107,25 @@ local function LoadSDP()
     "SDP_Improve", "SDP_Coverage", "SDP_Search", "SDP_Solver", "SDP_Wonders", "SDP_Multi", "SDP_Sites", "SDP_SiteSolver" }) do
     include(name)
   end
+end
+
+-- Load the panel (variant PANEL, issue 327) in its own include order, as a
+-- new game loads it (no settings kept in the save: every tab at its
+-- defaults), and return the single-city tab's settings as its Request()
+-- sends them. The UI globals the world does not stand in for are stubs.
+-- (SDP_Panel.Defaults is not called: the stub controls cannot rebuild the
+-- preset pulldown, and a new game's panel is at the defaults already.)
+local function LoadPanel()
+  for _, name in ipairs({ "Mouse", "Keys", "KeyEvents" }) do
+    if _G[name] == nil then _G[name] = CmpGame.Stub end
+  end
+  include("SDP_Panel")
+  local s = SDP_PageSingle.State()
+  local weights = {}
+  for key, value in pairs(s.Weights) do weights[key] = value end
+  return { Tier = s.Tier, Weights = weights, Land = s.Land, Distance = weights.DISTANCE, Coverage = weights.COVERAGE,
+    Swap = s.Swap, AllowFeatureRemoval = s.AllowFeatureRemoval, Improvements = s.Improve, WorkedImprovements = s.Worked,
+    Remind = s.Remind, Replace = s.Replace, Preset = s.Preset, Wonders = #(s.Wonders or {}) }
 end
 
 -- Put a plan on the map as pins, the way DMT's context records them.
@@ -231,6 +262,11 @@ function CmpAdapters.sdp(request, variant, w)
     variant = "FINE"
   end
   -- "_ASMULTI" (issue 250): the single-city request through SDP_Multi.
+  -- "PANEL" (issue 327): the single-city tab's defaults, read from the panel.
+  local panel = variant == "PANEL"
+  if panel and (request.scenario.kind ~= "single" or #(request.wonders or {}) > 0) then
+    error("variant PANEL is for single-city scenarios without wonders")
+  end
   local asMulti = variant:match("_ASMULTI") ~= nil
   variant = variant:gsub("_ASMULTI", "")
   local oracle = variant:match("^ORACLE") ~= nil
@@ -295,7 +331,12 @@ function CmpAdapters.sdp(request, variant, w)
   local group = tonumber(variant:match("_GROUP(%d+)S?$") or "")
   local sharedList = variant:match("_GROUP%d+S$") ~= nil
   variant = variant:gsub("_GROUP%d+S?$", "")
-  LoadSDP()
+  if panel then
+    panel = LoadPanel()
+    variant = panel.Tier
+  else
+    LoadSDP()
+  end
   if knew ~= nil then SDP_Sites.KIND_NEW = knew end
   if hbuild ~= nil then
     -- Every building's housing times hbuild / 100.
@@ -336,6 +377,7 @@ function CmpAdapters.sdp(request, variant, w)
   w.Events.LoadGameViewStateDone()
   local stats = {}
   if land then stats.sdpLambda = lambda end
+  if panel then stats.sdpPanel = panel end
   CmpRun.CountDMT(stats)
   -- The work units the solver ticks (one is about one DMT call), outside a
   -- task too, for the time estimate (issue 250).
@@ -348,7 +390,8 @@ function CmpAdapters.sdp(request, variant, w)
   local out = CmpAdapters.sdpSolve(request, variant, stats, {
     asMulti = asMulti, oracle = oracle, check = check, longrun = longrun, land = land, lambda = lambda,
     swap = swap, coverage = coverage, distance = distance, dense = dense, count = count, grid = grid,
-    growth = growth, hweight = hweight, group = group, sharedList = sharedList, groupParams = groupParams, improve = improve, worked = worked })
+    growth = growth, hweight = hweight, group = group, sharedList = sharedList, groupParams = groupParams, improve = improve, worked = worked,
+    panel = panel or nil })
   SDP_Task.Tick = tick
   stats.sdpUnits = units
   return out
@@ -481,14 +524,34 @@ function CmpAdapters.sdpSolve(request, variant, stats, o)
     stats.sdpQuality = r.Quality -- design 7.4: Exhaustive, Bound, Gap, Converged, Truncated
     for _, u in ipairs(r.Unplaced or {}) do out.notes[#out.notes + 1] = "unplaced " .. tostring(u.Type) .. " " .. tostring(u.Reason) end
   elseif scn.kind == "single" then
-    local r = SDP_Solver.Solve({ PlayerID = 0, CityID = request.target:GetID(), Districts = request.districts,
+    local solve = { PlayerID = 0, CityID = request.target:GetID(), Districts = request.districts,
       Pool = request.pool, Count = request.count,
       Land = land, Tier = variant, Weights = request.weights, Swap = swap, Coverage = coverage, Distance = distance,
-      Improvements = improve, WorkedImprovements = worked })
+      Improvements = improve, WorkedImprovements = worked }
+    local p = o.panel
+    if p ~= nil then
+      -- The panel's settings, sent as SDP_PageSingle's Request() sends them.
+      solve.Tier, solve.Weights, solve.Land, solve.Distance, solve.Coverage = p.Tier, p.Weights, p.Land, p.Distance, p.Coverage
+      solve.Swap, solve.AllowFeatureRemoval, solve.Remind, solve.Apart = p.Swap, p.AllowFeatureRemoval, p.Remind, true
+      solve.Improvements, solve.WorkedImprovements = p.Improvements, p.WorkedImprovements
+      land = p.Land
+      -- The judge scores with the scenario's yield weights: say so when the
+      -- panel's differ (not on the plain development scenes, all 1).
+      local keys = {}
+      for key in pairs(request.weights) do keys[#keys + 1] = key end
+      table.sort(keys)
+      for _, key in ipairs(keys) do
+        if (p.Weights[key] or 1) ~= request.weights[key] then
+          out.notes[#out.notes + 1] = "panel weight " .. key .. " " .. tostring(p.Weights[key]) .. ", the judge's "
+            .. request.weights[key]
+        end
+      end
+    end
+    local r = SDP_Solver.Solve(solve)
     if not r.Ok then out.notes[#out.notes + 1] = tostring(r.Error) end
     if r.Ok and r.Session and r.Session.Scan and request.pool == nil then
       stats.sdpEstimate = SDP_Solver.EstimateUnits(#r.Session.Scan.Candidates, #request.districts,
-        SDP_Tiers.Params(SDP_Tiers.Single, variant), 0, 0)
+        SDP_Tiers.Params(SDP_Tiers.Single, solve.Tier), 0, 0)
     end
     Take(r.Plan, request.target:GetID())
     TakeImprovements(r.Worked, request.target:GetID())
