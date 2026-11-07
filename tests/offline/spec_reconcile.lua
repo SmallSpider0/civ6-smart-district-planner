@@ -117,6 +117,16 @@ World.New({
   },
 })
 UI_Mock.Install()
+-- The wonder tags, to take a wonder off through its tag (as spec_wonder_memory).
+local chipIMs = {}
+do
+  local new = InstanceManager.new
+  InstanceManager.new = function(self, name, root, parent)
+    local im = new(self, name, root, parent)
+    if name == "WonderChip" or name == "MultiWonderChip" then chipIMs[name] = im end
+    return im
+  end
+end
 include("SDP_Panel")
 local c = UI_Mock.Controls
 -- One of this mod's pins for city 1, placed as the panel places them: the
@@ -325,6 +335,26 @@ local PATHS = {
     end },
 }
 
+-- The controls of the kept settings that are neither a weight column, a
+-- switch of SDP_PageKit nor the tier pulldown. DD is the distance the same
+-- buttons step while dense packing is on (CONTEXT turns it on first).
+local CONTROLS = {
+  [single] = { FOLD = { Click = "FoldButton" }, WONDERS = { Pull = "WonderPull", Chips = "WonderChip" } },
+  [multi] = { FOLD = { Click = "MultiFoldButton" }, WONDERS = { Pull = "MultiWonderPull", Chips = "MultiWonderChip" } },
+  [sites] = {
+    FOLD = { Click = "SitesFoldButton" },
+    K = { More = "SitesCountMore", Less = "SitesCountLess" },
+    D = { More = "SitesDistanceMore", Less = "SitesDistanceLess" },
+    DD = { More = "SitesDistanceMore", Less = "SitesDistanceLess" },
+    COUNT = { More = "SitesPlanMore", Less = "SitesPlanLess" },
+    DENSE = { Check = "SitesDenseCheck" },
+    DISTRICTS = { Cells = true },
+  },
+}
+-- Kept settings with no control (only read back from the save), with why.
+-- None at present; a setting the player can change goes into CONTROLS.
+local SAVE_ONLY = {}
+
 -- A setting changed through its own control where it has one.
 local function Cell(page, key)
   for _, cell in ipairs(page.Kit.Cells) do
@@ -376,9 +406,17 @@ local function Change(path, field)
       if entry.Button:GetText() == "LOC_SDP_TIER_" .. tier then entry.Button:Click() end
     end
   end
+  local control = CONTROLS[page] and CONTROLS[page][field.Key]
+  local function Back(click) -- click until the setting is back (a cycle)
+    for _ = 1, 4 do
+      if page.Kit.Keeper.Values()[field.Key] == value then return end
+      click()
+    end
+  end
   local undo
-  if cell ~= nil and field.Kind == "number" then
-    local there, back = cell.More, cell.Less
+  if field.Kind == "number" and (cell ~= nil or (control ~= nil and control.More ~= nil)) then
+    local there, back
+    if cell ~= nil then there, back = cell.More, cell.Less else there, back = c[control.More], c[control.Less] end
     if other < value then there, back = back, there end
     there:Click()
     undo = function() back:Click() end
@@ -388,7 +426,39 @@ local function Change(path, field)
   elseif field.Key == "TIER" then
     Tier(other)
     undo = function() Tier(value) end
+  elseif control ~= nil and control.Check ~= nil then
+    c[control.Check]:Toggle()
+    undo = function() c[control.Check]:Toggle() end
+  elseif control ~= nil and control.Click ~= nil then
+    c[control.Click]:Click()
+    undo = function() c[control.Click]:Click() end
+  elseif control ~= nil and control.Pull ~= nil then
+    -- Add the wonder Other names from the pulldown; take it off by its tag.
+    local wonderType = "BUILDING_PYRAMIDS"
+    for _, entry in ipairs(c[control.Pull]._entries) do
+      if entry.Button:GetText() == "LOC_" .. wonderType .. "_NAME" then entry.Button:Click() end
+    end
+    undo = function()
+      for _, inst in ipairs(chipIMs[control.Chips].Instances) do
+        if inst.Name:GetText() == "LOC_SDP_WONDER_CHIP(LOC_" .. wonderType .. "_NAME)" then
+          -- On the several cities tab the tag is the Chip beside the city pulldown (issue 234).
+          if control.Chips == "MultiWonderChip" then inst.Chip:Click() else inst.Root:Click() end
+        end
+      end
+    end
+  elseif control ~= nil and control.Cells then
+    -- Click the cell of the district Other names: its state steps to the next one.
+    local districtType = other:match("^([%w_]+):")
+    local function Click()
+      for _, d in ipairs(page.State().View.Districts) do
+        if d.Type == districtType then d.Cell:Click() end
+      end
+    end
+    Click()
+    undo = function() Back(Click) end
   else
+    T.ok(SAVE_ONLY[path.Name] and SAVE_ONLY[path.Name][field.Key],
+      path.Name .. " " .. field.Key .. ": no control in CONTROLS, and SAVE_ONLY does not say why")
     values[field.Key] = other -- as a save restores it (SDP_Settings.Keeper)
     page.Kit.Keeper.Apply(values)
     undo = function()
@@ -447,6 +517,7 @@ local function Classify(path)
       local undo = Change(path, field)
       local after = Capture(path)
       undo()
+      T.eq(page.Kit.Keeper.Values()[field.Key], base[field.Key], path.Name .. " " .. field.Key .. ": put back")
       page.Kit.Keeper.Apply(base) -- the context, and the fold a solve sets
       local searched, common = before.Read ~= after.Read, 0
       for key, text in pairs(before.Searches) do
