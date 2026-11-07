@@ -25,8 +25,9 @@ of those accounts puts $SDP_WATCH_LABEL on an issue or pull request, the watch
 reports "LABELLED #N auto by LOGIN: TITLE URL" and exits, like a new comment;
 once per labelling (taken off and put on again counts again, unless both
 happen between two polls). A label from anyone else goes to others.log. An
-issue the shared account opens with the label is its own work: no line. The
-labels seen are kept in the state; the first run without them (after an
+issue opened with the label is reported once: NEW ISSUE, or LABELLED when the
+shared account opened it (the maintainer and the agents cannot be told apart,
+so it wakes the agent even when an agent opened it). The labels seen are kept in the state; the first run without them (after an
 upgrade or --reset) takes the labels there now as seen.
 Without --once it polls every --every seconds (default 120) and exits with
 the first new items: run it in the background; its end is the signal. A
@@ -196,7 +197,7 @@ def poll(state):
             continue
         seen.add(key)
         line = "NEW ISSUE #%d by %s: %s %s" % (issue["number"], issue["user"]["login"], issue["title"], issue["html_url"])
-        if put(issue["user"]["login"], issue["number"], line) in ("report", "seen"):
+        if put(issue["user"]["login"], issue["number"], line) == "report":
             opened.add(issue["number"])
     for c in gh("repos/{owner}/{repo}/issues/comments?per_page=100&since=" + since):
         key = "comment-%d" % c["id"]
@@ -214,7 +215,7 @@ def poll(state):
             continue
         eid, login = event(number)
         known[str(number)] = eid
-        if number in opened:  # opened with the label: reported as NEW ISSUE, or the shared account's own
+        if number in opened:  # opened with the label and reported as NEW ISSUE: once is enough
             continue
         item = labels[number]
         line = "LABELLED #%d %s by %s: %s %s" % (number, LABEL, login, item.get("title", ""), item.get("html_url", ""))

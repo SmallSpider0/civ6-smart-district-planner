@@ -615,7 +615,7 @@ python3 -I tools/watch_issues.py --mine URL          # 这条评论或 Issue 不
 python3 -I tools/watch_issues.py --workshop-every 1800  # 创意工坊多久读一次（秒，默认 2700）
 ```
 
-- 打标签本身也算一件新事（#338）：共用账号或 `$SDP_WATCH_USERS` 里的账号给 Issue 或 PR 打上 `auto` 时，打出 `LABELLED #编号 auto by 账号: 标题 链接` 并退出，和新评论一样。每次打标签只报一次；去掉后再打算新的一次（两次轮询之间又去又打的看不到）。别人打的记进 `others.log`。共用账号新开、开时就带 `auto` 的 Issue 是代理自己的活，不报。看过的标签记在 `state.json` 的 `labels`：没有这一项时（升级后第一次、`--reset` 后）把当时已有的标签都记作看过。只对新出现的标签读一次它的事件，每轮不多读。
+- 打标签本身也算一件新事（#338）：共用账号或 `$SDP_WATCH_USERS` 里的账号给 Issue 或 PR 打上 `auto` 时，打出 `LABELLED #编号 auto by 账号: 标题 链接` 并退出，和新评论一样。每次打标签只报一次；去掉后再打算新的一次（两次轮询之间又去又打的看不到）。别人打的记进 `others.log`。开时就带 `auto` 的新 Issue 只报一次：合作者开的报 `NEW ISSUE`，共用账号开的报 `LABELLED`（分不出是维护者还是代理开的，代理开的也会叫醒一次）。看过的标签记在 `state.json` 的 `labels`：没有这一项时（升级后第一次、`--reset` 后）把当时已有的标签都记作看过。只对新出现的标签读一次它的事件，每轮不多读。
 - 维护者和代理共用的 GitHub 账号（`gh api user` 读一次存进状态，可用 `$SDP_WATCH_SELF` 指定）发的 Issue 和评论只记为已看，不打出来、不进待看列表：决定在 Claude Code 里做，不在 Issue 上。所以代理发评论后不用再 `--mine`。`--mine` 在监听轮询的同时写入也不会丢：监听保存前把磁盘上的记录并进来。
 - 怎么处理打出来的和待看的，见 [sdp-watch](../.claude/skills/sdp-watch/SKILL.md)。状态在主检出的 `logs/watch/`（`state.json`、`held.log`、`others.log`），所有工作树共用。报出的每一条也追加进那里的 `reported.log`（在记成已看之前写），监听的输出被重定向或丢了也能用 `--reported` 找回（#261）。
 - 创意工坊（`watch_workshop.py`，由 `watch_issues.py` 调用）：读物品 `$SDP_WORKSHOP_ITEM`（默认 3824473635，设成空就不读）的公开页面，不登录：物品页（取物品主人和“创建者”里的贡献者）、评论区（`comment/PublishedFile_Public/render/<主人>/<物品>/`，JSON）、讨论区列表和各帖子页（`?ctp=N`，每页 15 条回复）。只读最后一次发帖晚于上次的帖子，每次最多读 20 个帖子页，两次请求隔 1 秒（连着请求时 Steam 回 429）。

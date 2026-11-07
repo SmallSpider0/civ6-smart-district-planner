@@ -315,7 +315,8 @@ class LabelAdded(unittest.TestCase):
         self.assertTrue(out[0].startswith("NEW ISSUE #50 "))
         self.assertIn("50", state["labels"])
 
-    def test_an_issue_the_shared_account_opens_with_the_label_is_its_own(self):
+    def test_an_issue_the_shared_account_opens_with_the_label_is_reported_once(self):
+        """The maintainer may open it on GitHub with the label: the shared account cannot tell who."""
         state = self.state()
         wi.poll(state)
         state["since"] = SINCE
@@ -323,8 +324,9 @@ class LabelAdded(unittest.TestCase):
         issues = [issue(51, "SmallSpider")]
         fake = wi.gh
         wi.gh = lambda path: issues if path.startswith("repos/{owner}/{repo}/issues?state=all&sort") else fake(path)
-        self.assertEqual(wi.poll(state), [])  # an agent filed it and is already on it
+        self.assertEqual(wi.poll(state), ["LABELLED #51 auto by SmallSpider: t51 " + URL + "51"])
         self.assertIn("51", state["labels"])
+        self.assertEqual(wi.poll(state), [])
 
 
 if __name__ == "__main__":
