@@ -520,6 +520,7 @@ FitPage = function()
     shown = shown - 1
     height = Apply()
   end
+  SDP_UI.CheckFit("MULTI", Controls.MultiPage, Controls.MultiBody)
 end
 P.FitPage = FitPage
 
@@ -1145,6 +1146,20 @@ P.SetReplace = function(on) m_kit.SetSwitch("REPLACE", on) end
 P.SetRemind = function(on) m_kit.SetSwitch("REMIND", on) end
 P.SetImprove = function(on) m_kit.SetSwitch("IMPROVE", on) end
 P.SetWorked = function(on) m_kit.SetSwitch("WORKED", on) end
+
+-- The tab as a new game shows it (tests: SDP_Panel.Defaults, issue 327):
+-- the default group around the capital, one shared list at its defaults,
+-- no city's own list, the kept settings at their defaults (wonders none),
+-- no result.
+function P.Defaults()
+  m_shared = { States = {}, Count = nil }
+  m_plans, m_planFor = {}, "ALL"
+  m_wonderCities = {}
+  m_center, m_existing, m_sites = nil, {}, {}
+  m_kit.Defaults()
+  m_result, m_solution, m_lookNext = nil, 1, false
+  P.Refresh()
+end
 
 -- Tests drive the tab through these.
 function P.State()

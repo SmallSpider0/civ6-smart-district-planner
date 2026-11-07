@@ -211,6 +211,13 @@ function SDP_Settings.Keeper(spec)
     spec.Apply(kept.Values)
     return kept
   end
+  -- Every field as a game that kept nothing reads it (Decode of no text:
+  -- the default preset); returns that decode, as Restore does.
+  function keeper.Defaults()
+    local kept = SDP_Settings.Decode(nil, spec.Fields, spec.Presets, spec.Order)
+    spec.Apply(kept.Values)
+    return kept
+  end
   function keeper.Match(name)
     return SDP_Settings.Match(name, spec.Values(), spec.Fields, spec.Presets, spec.Order)
   end

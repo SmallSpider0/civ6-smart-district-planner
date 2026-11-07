@@ -59,6 +59,7 @@ local m_kit                   -- SDP_PageKit: weights, tier, preset, fold, switc
 local function FitPage()
   SDP_UI.FitResults(Controls.Body, Controls.SinglePage, Controls.ResultScroll, Controls.SettingsScroll, Controls.SettingsStack,
     Controls.DistrictScroll, Controls.DistrictArea)
+  SDP_UI.CheckFit("SINGLE", Controls.SinglePage, Controls.Body)
 end
 P.FitPage = FitPage
 function P.Restore() m_kit.Restore() end
@@ -705,6 +706,18 @@ end
 P.SetWonder = function(wonderType, on) SetWonder(wonderType, on) end
 P.ShowHeat = function(districtType) ShowHeat(districtType) end
 P.Heat = function() return m_heatSpots end
+-- The tab as a new game shows it (tests: SDP_Panel.Defaults, issue 327): the
+-- selected or capital city, every district at its default state and count,
+-- the kept settings at their defaults (wonders none), the good places off,
+-- no result. This mod's tacks stay (undo takes them off).
+function P.Defaults()
+  if m_heat ~= nil then ShowHeat(nil) end
+  m_cityID = nil
+  m_states, m_counts = {}, {}
+  m_kit.Defaults()
+  m_result, m_solution, m_lookNext = nil, 1, false
+  Refresh()
+end
 
 function P.State()
   local list = List()

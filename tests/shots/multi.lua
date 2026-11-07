@@ -5,15 +5,15 @@
 -- Commercial Hub and Industrial Zone, 3 per city, Fast, and the Temple of
 -- Artemis (Rise and Fall, Gathering Storm), whose Camp the result shows. The
 -- result list is scrolled so the temple's row and the Camp's row are in view.
+-- shots.py put the panel back to its defaults first: the sites are solved here.
 local sites = SDP_Panel.Sites
-if sites.State().Result == nil then
-  SDP_Panel.Open()
-  SDP_Panel.SelectTab("SITES")
-  sites.SetCount(3)
-  sites.SetTier("STANDARD")
-  sites.Solve()
-  SDP_Panel.RunTask(5000)
-end
+SDP_Panel.Open()
+SDP_Panel.SelectTab("SITES")
+sites.SetCount(3)
+sites.SetDistrictCount(3)
+sites.SetTier("STANDARD")
+sites.Solve()
+SDP_Panel.RunTask(5000)
 print("placed", sites.Place())
 SDP_Panel.Open()
 SDP_Panel.SelectTab("MULTI")
