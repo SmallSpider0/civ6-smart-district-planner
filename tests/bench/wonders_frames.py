@@ -1,8 +1,9 @@
 """Many wonders on the Several cities tab: does the game keep drawing (issue 307)?
 
 On the loaded game (a save with several cities, e.g. tools/stress.py load
-pangaea-gs): for each case CITIES:WONDERS (WONDERS "all" for every wonder the
-player can build) the tab is set as a player would (the CITIES cities
+pangaea-gs): for each case CITIES:WONDERS[:all] (WONDERS "all" for every wonder
+the player can build; a third part "all" makes every district required,
+issue 331) the tab is set as a player would (the CITIES cities
 nearest the capital, the first WONDERS wonders ticked, the tier) and solved
 with the Solve button's own function, over frames as in play
 (tests/bench/wonders_frames.lua times every frame). Prints per case the
@@ -11,7 +12,7 @@ whether the plan came; writes tests/bench/results/wonders_frames-NAME.json.
 Fails (exit 1) when a frame took over --max-frame seconds or a case did not
 end within --timeout. Changes nothing in the game (no pins).
 
-    python3 -I tests/bench/wonders_frames.py NAME [--cases 6:19,6:all] [--tier STANDARD]
+    python3 -I tests/bench/wonders_frames.py NAME [--cases 6:19,6:all,6:all:all] [--tier STANDARD]
 """
 import argparse
 import json
@@ -45,9 +46,11 @@ def main():
         run(fh.read())
     rows, failed = [], False
     for case in args.cases.split(","):
-        cities, wonders = case.split(":")
+        parts = case.split(":")
+        cities, wonders = parts[0], parts[1]
+        every = len(parts) > 2 and parts[2] == "all"
         n = -1 if wonders == "all" else int(wonders)
-        out = run('SDP_WonderFrames.Start(%d, %d, "%s")' % (int(cities), n, args.tier))
+        out = run('SDP_WonderFrames.Start(%d, %d, "%s", %s)' % (int(cities), n, args.tier, "true" if every else "false"))
         print(case, " ".join(out), flush=True)
         started = time.monotonic()
         timed_out = False

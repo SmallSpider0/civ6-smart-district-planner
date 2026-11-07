@@ -91,6 +91,7 @@
 | [issue-307-wonders-hang.md](issue-307-wonders-hang.md) | 勾很多奇观时求解卡死：数摆法先做匹配、回溯有上限并分帧，自动奇观最多再整体求解 2 次；改前改后的帧和总时长 | 现行 |
 | [issue-245-split-session.md](issue-245-split-session.md) | `SDP_Multi.NewSession` 拆成有名字的步骤（纯重构） | 现行 |
 | [issue-327-test-infra.md](issue-327-test-infra.md) | 测试基础设施：面板放回默认（每个游戏内测试文件和截图前）、页面装不下写日志并让测试失败、最矮窗口选项；离线的一帧工作量看门狗（上限的来由、最大规模用例的最长一帧）；面板设置和求解输入的对账表、三个页签的“继续优化”逐帧走完；开发集加面板默认设置一档（`PANEL`） | 现行 |
+| [issue-331-frame-report.md](issue-331-frame-report.md) | 多城页全部奇观、全部区域必建时有几帧偏长：领土可达检查和集束搜索按实际循环步数向分帧报工作量；离线最长一帧和游戏内逐帧计时 | 现行 |
 
 ## 持续更新的记录
 

@@ -1,0 +1,24 @@
+[
+ {
+  "Cities": 5,
+  "Districts": 16,
+  "Frames": 2863,
+  "MaxFrame": 0.757701,
+  "MaxUnits": 1577,
+  "MeanFrame": 0.0556023,
+  "Ok": true,
+  "Over": [
+   278,
+   1,
+   0
+  ],
+  "Seconds": 159.189,
+  "Unplaced": 21,
+  "Wonders": 15,
+  "WondersPlaced": 10,
+  "Case": "6:all:all",
+  "Tier": "STANDARD",
+  "Wall": 158.6,
+  "TimedOut": false
+ }
+]

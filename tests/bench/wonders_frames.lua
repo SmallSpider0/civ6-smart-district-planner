@@ -2,16 +2,19 @@
 -- the game. Run in the SDP_Panel state by tests/bench/wonders_frames.py on a
 -- loaded game with several cities (a stress save). Loading this file defines
 -- SDP_WonderFrames; the driver calls one function per Tuner request:
---   Start(cities, wonders, tier)  the tab set as a player would: the
---                    `cities` cities nearest the capital take part (the
---                    capital first), the first `wonders` wonders the player
---                    can build ticked (-1: all of them), the tier; then the
---                    Solve button's own callback. Every frame is timed while
+--   Start(cities, wonders, tier, everyDistrict)  the tab set as a player
+--                    would: the `cities` cities nearest the capital take
+--                    part (the capital first), the first `wonders` wonders
+--                    the player can build ticked (-1: all of them), the
+--                    tier, with `everyDistrict` every district required in
+--                    the shared list (issue 331); then the Solve button's
+--                    own callback. Every frame is timed while
 --                    the task runs (the panel's own per-frame step).
 --   Running()        "RUNNING 1" while the task runs, else "RUNNING 0"
 --   Report()         one line "SDP_WFRAMES {json}": frames, the longest
 --                    frame and the slices' units, the result
---   Clear()          leaves the tab as it was set before (no wonders ticked)
+--   Clear()          leaves the tab as it was set before (no wonders ticked;
+--                    the districts made required back to their default)
 -- Changes nothing in the game (no pins are placed).
 SDP_WonderFrames = {}
 local M = SDP_WonderFrames
@@ -36,7 +39,7 @@ local function Json(v)
   return "{" .. table.concat(parts, ",") .. "}"
 end
 
-function M.Start(cities, wonders, tier)
+function M.Start(cities, wonders, tier, everyDistrict)
   local pid = Game.GetLocalPlayer()
   local player = Players[pid]
   local capital = player:GetCities():GetCapitalCity()
@@ -65,6 +68,13 @@ function M.Start(cities, wonders, tier)
       P.SetWonder(w.Type, true)
     end
   end
+  M.districts = {}
+  if everyDistrict then
+    for _, d in ipairs(SDP_Rules.PlannableDistricts(pid)) do
+      M.districts[#M.districts + 1] = d
+      P.SetState(d.Type, "MUST")
+    end
+  end
   P.SetTier(tier or "STANDARD")
   M.rows, M.started = {}, UI.GetElapsedTime()
   P.Solve() -- what the Solve button calls
@@ -82,7 +92,8 @@ function M.Start(cities, wonders, tier)
       if not SDP_Task.IsRunning() then M.ended = UI.GetElapsedTime() end
     end)
   end
-  print("STARTED " .. tostring(running) .. " cities=" .. #M.cities .. " wonders=" .. #M.wonders)
+  print("STARTED " .. tostring(running) .. " cities=" .. #M.cities .. " wonders=" .. #M.wonders
+    .. " districts=" .. #M.districts)
 end
 
 function M.Running()
@@ -105,7 +116,7 @@ function M.Report()
   for _, p in ipairs(result and result.Plan or {}) do
     if p.Kind == "WONDER" then placed = placed + 1 end
   end
-  print("SDP_WFRAMES " .. Json({ Cities = #M.cities, Wonders = #M.wonders, Frames = frames, MaxFrame = max,
+  print("SDP_WFRAMES " .. Json({ Cities = #M.cities, Wonders = #M.wonders, Districts = #(M.districts or {}), Frames = frames, MaxFrame = max,
     MeanFrame = frames > 0 and sum / frames or 0, Over = over, MaxUnits = maxUnits,
     Seconds = (M.ended or UI.GetElapsedTime()) - M.started, Ok = result and result.Ok or false,
     Error = result and result.Error or nil, WondersPlaced = placed,
@@ -115,5 +126,6 @@ end
 function M.Clear()
   if SDP_Task.IsRunning() then SDP_Task.Cancel() end
   for _, w in ipairs(M.wonders or {}) do P.SetWonder(w, false) end
+  for _, d in ipairs(M.districts or {}) do P.SetState(d.Type, SDP_UI.DefaultState(d)) end
   print("CLEARED")
 end

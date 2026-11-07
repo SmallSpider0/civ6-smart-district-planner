@@ -135,6 +135,10 @@ SDP_Tiers.SINGLE_CONTINUE_STARTS = 5
 -- around them, about 20000 units per second when run at once.
 SDP_Tiers.UNITS_PER_TRY = 0.25   -- one layout evaluation
 SDP_Tiers.NODES_PER_UNIT = 20    -- model search nodes per unit
+-- Loop steps per unit for the searches' work around those (a reach walk's
+-- plots, the beam's look at the placed slots; issue 331): about one table
+-- lookup and test each. Reported with SDP_Task.Extra (not in the estimate).
+SDP_Tiers.STEPS_PER_UNIT = 1000
 SDP_Tiers.MULTI_GROWTH = 0.35    -- multi-city work per slot grows with the cities
 
 -- Parameters of `tier` ("FAST" | "STANDARD" | "FINE", default STANDARD) for
