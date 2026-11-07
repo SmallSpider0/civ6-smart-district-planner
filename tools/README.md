@@ -23,7 +23,7 @@
 | `shots.py` | 仅 macOS：摆好页签（`tests/shots/`）、截面板存进 `docs/images/`、切换英文界面 | 0 成功 |
 | `release.py` | 发版：改版本号、把 `changelog.d/` 的片段收进 CHANGELOG、起草更新说明和发布说明、发 Release、上传创意工坊并核对 | 0 成功；1 下载回来与提交包不同 |
 | `changelog.py` | 更新记录片段 `changelog.d/`：列出下一版要收的条目、查格式（`validate.py`、`release.py prep` 调用它） | 0 格式没问题；1 有问题 |
-| `refresh_results.py` | 用当前代码重跑结果文件里本模组的行（`--check` 只比对、不改文件） | 0 成功；1 有变差的行或新违规 |
+| `refresh_results.py` | 用当前代码重跑结果文件里本模组的行（`--check` 只比对、不改文件） | 0 成功；1 有变差的行、新违规或自报≠裁判 |
 | `remote.py` | 离线重活自动选机器（第二台机器马上能跑就放那边，不能而本机重活空着就在本机快照里跑，否则在那边排队）、等待并取回结果；也替手动运行的 `offline_tests.mjs`、`compare.mjs` 登记和选机器（`tools/place.mjs` 调它） | 任务的退出码 |
 | `sdplock.py` | 并行会话共用资源：游戏锁、本机重活（一次一个、限 worker、开游戏时暂停）、夜间队列、一条命令看本机和第二台机器 | 0 成功；4 被别人占着 |
 | `sdpsched.py` | 第二台机器上所有会话共用的任务队列（`remote.py` 拷过去调用，本机不直接用） | 任务的退出码 |
@@ -503,13 +503,14 @@ python3 -I tools/release.py workshop 1.4.1   # SteamCMD 上传、下载回来比
 ## refresh_results.py — 重跑与核对对比结果
 
 ```bash
-python3 -I tools/refresh_results.py --check            # 开发集（full_rejudged.jsonl，约 270 次运行）重跑后逐行比对，不改结果，写核对戳 check_stamp.json
+python3 -I tools/refresh_results.py --check            # 开发集（full_rejudged.jsonl 约 270 次、panel_default.jsonl 72 次运行）重跑后逐行比对，不改结果，写核对戳 check_stamp.json
 python3 -I tools/refresh_results.py --check --if-changed   # 发版时：上次核对戳之后求解相关的文件都没变就跳过，否则照跑
 python3 -I tools/refresh_results.py tests/compare/results/land.jsonl   # 重跑本模组的行、换回原处、重新裁判和交叉评分
 ```
 
-- `--check` 报告方案变了几行、提升变高和变低各几行、新出现的违规（“范围内没有合法位置”不算）；有变低或新违规时退出码 1。改了求解器后、发版前跑它，不要整组重跑开发集的权重组合和真最优。
-- 核对戳（#302）：开发集的 `--check` 跑完后写 `tests/compare/results/check_stamp.json`：求解相关文件的摘要（`SOLVED_BY`：`SmartDistrictPlanner/Scripts/` 里除 `SDP_Page*.lua`、`SDP_Preview.lua` 以外的脚本，`tools/compare.mjs`，`tests/compare/cmp_*.lua` 和 `scenes/`，`full_rejudged.jsonl`；换行统一后算，Windows 上相同）和这次的结果。随跑核对的 PR 一起提交；在第二台机器上跑时用 `remote.py wait NAME --fetch tests/compare/results/check_stamp.json` 取回。`--if-changed` 比对摘要，相同就跳过并报上次核对的提交、日期和结果：改求解器的 PR 已经核对过、之后又没再改。几个改求解器的 PR 各自核对过时，合起来的文件和哪一次都不同，照跑，就测到它们的相互影响。
+- `--check` 报告方案变了几行、提升变高和变低各几行、新出现的违规（“范围内没有合法位置”不算）、本模组自报的相邻加成（`stats.sdpGain`）不等于裁判的有几行；有变低、新违规或自报≠裁判时退出码 1。改了求解器后、发版前跑它，不要整组重跑开发集的权重组合和真最优。
+- 开发集两个文件：`full_rejudged.jsonl`（三档，加多城的几种跑法）和 `panel_default.jsonl`（#327）：72 个单城场景用单城页签的默认设置，变体 `PANEL`。`cmp_sdp.lua` 在本模组的状态里加载面板本身（`UI/SDP_Panel.lua`，新对局、存档里没有设置），从 `SDP_PageSingle.State()` 读回档位、各列权重（地块 1、距离 0.5、住房 1、覆盖 0）和开关（换格、规划改良、可砍伐、提醒钉；耕作格改良关），照面板 `Request()` 的写法交给 `SDP_Solver`，不另写一份默认值；区域照场景的清单，都必建；只用于单城、无奇观的场景。裁判照常只比相邻加成（`gain`）、潜力产出和合法性（含改良设施，同 `WA`），不比距离代价和地块部分本身。单独一个文件，免得介绍页从 `full_rejudged.jsonl` 读的表变了。生成：`node tools/compare.mjs -s '^S\d\d-[^~]*$' -p sdp --only sdp:PANEL --add sdp:PANEL -j 6 --out tests/compare/results/panel_default.jsonl`。
+- 核对戳（#302）：开发集的 `--check` 跑完后写 `tests/compare/results/check_stamp.json`：求解相关文件的摘要（`SOLVED_BY`：`SmartDistrictPlanner/Scripts/` 里除 `SDP_PageMulti.lua`、`SDP_PageSites.lua`、`SDP_Preview.lua` 以外的脚本，面板默认设置所在的 `UI/SDP_Panel.lua`，`tools/compare.mjs`，`tests/compare/cmp_*.lua` 和 `scenes/`，开发集的两个结果文件；换行统一后算，Windows 上相同）和这次的结果。随跑核对的 PR 一起提交；在第二台机器上跑时用 `remote.py wait NAME --fetch tests/compare/results/check_stamp.json` 取回。`--if-changed` 比对摘要，相同就跳过并报上次核对的提交、日期和结果：改求解器的 PR 已经核对过、之后又没再改。几个改求解器的 PR 各自核对过时，合起来的文件和哪一次都不同，照跑，就测到它们的相互影响。
 - 重跑整份结果很慢，有第二台机器时用 `remote.py` 放到那边跑。
 
 ## remote.py — 离线重活放哪台机器跑

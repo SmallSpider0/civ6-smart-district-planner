@@ -10,7 +10,7 @@ description: Run the Smart District Planner's (civ6mod) offline checks and heavy
 | Question | Run | Size |
 |---|---|---|
 | Did the logic break? | `node tools/offline_tests.mjs` (or one `spec_*.lua`; `-t` lists the slowest tests) | ~8–10 min (the tool places it) |
-| Did the solver change plans for the worse? (solver or legality changed; before a release with `--if-changed`) | `python3 -I tools/refresh_results.py --check`; commit the `tests/compare/results/check_stamp.json` it writes with the PR (the release skips the check while it matches) | ~270 runs |
+| Did the solver change plans for the worse? (solver or legality changed; before a release with `--if-changed`) | `python3 -I tools/refresh_results.py --check`; commit the `tests/compare/results/check_stamp.json` it writes with the PR (the release skips the check while it matches) | ~340 runs |
 | A measured number in the report after an algorithm change | the commands recorded in docs/notes/ for it | as recorded |
 | Refresh a stored result file for the report | `python3 -I tools/refresh_results.py tests/compare/results/F.jsonl` | the file's sdp rows |
 | True optimum, weight profiles, reference scenes | `compare.mjs ... sdp:ORACLE...` | hours |
