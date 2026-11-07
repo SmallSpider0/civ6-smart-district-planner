@@ -8,7 +8,8 @@
     python3 -I tools/sdplock.py heavy [--no-wait] NAME -- CMD ...  # one heavy local job at a time, queued first come first served
     python3 -I tools/sdplock.py queue add --what TEXT --why TEXT [--cmd CMD ...]
     python3 -I tools/sdplock.py queue list [--all]
-    python3 -I tools/sdplock.py queue done ID [--failed] [--result TEXT]
+    python3 -I tools/sdplock.py queue done ID [--failed] [--result TEXT] [--last]
+    python3 -I tools/sdplock.py queue weekly [--ruleset RULESET_...] [--night YYYY-MM-DD]
 
 Several sessions work at once, each in its own worktree, but there is one
 game, one Tuner connection and one Mods folder. The game lock says which
@@ -37,7 +38,13 @@ paused reports it at the end: its timing fields are not usable.
 
 The night queue lists the steps that take the screen (real clicks,
 screenshots, the stress test, all rulesets) for a time when nobody uses the
-machine; one session runs it.
+machine; one session runs it. `queue weekly` adds the weekly in-game test
+(#329): the whole in-game set in one ruleset on the main checkout's latest
+main, from a given night on. Closing it (`queue done`, passed or failed)
+queues the next one for the next week with the next ruleset in turn
+(standard, Rise and Fall, Gathering Storm); `--last` ends the chain. An item
+with a night is not listed, nor reported due, before that night's window
+opens.
 
 Machine-specific settings come from a JSON file outside the repository,
 $SDP_LOCAL_CONFIG, else ~/.config/sdp/local.json; all keys are optional:
@@ -46,6 +53,8 @@ $SDP_LOCAL_CONFIG, else ~/.config/sdp/local.json; all keys are optional:
      "workers_night": 6,          # in the night window (default: workers_day)
      "night": "00:00-08:00",      # the night window (default: none)
      "weekend_is_night": true,    # Saturday and Sunday count as night (default false)
+     "weekly_night": "sat",       # the weekly in-game test's night: the weekday its window opens on
+                                  # (default: a week after the last one)
      "remote": "build-box",       # tools/remote.py's host when $SDP_REMOTE is not set
      "remote_slots": 8,           # the second machine's slots (default: its cores - 2)
      "remote_path": "/opt/homebrew/bin:/usr/local/bin"}   # PATH there for node and python3
@@ -57,6 +66,7 @@ $SDP_OWNER, else the worktree's branch.
 """
 import argparse
 import contextlib
+import datetime
 import json
 import os
 import signal
@@ -636,38 +646,162 @@ def light_jobs():
 
 
 # -- the night queue ----------------------------------------------------------
+RULESETS = ["RULESET_STANDARD", "RULESET_EXPANSION_1", "RULESET_EXPANSION_2"]  # as run_tests.py
+RULESET_NAMES = {"RULESET_STANDARD": "原版", "RULESET_EXPANSION_1": "迭起兴衰", "RULESET_EXPANSION_2": "风云变幻"}
+WEEKDAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
+
+
 def queue_path():
     return _path("night-queue.json")
+
+
+def _night_start(cfg):
+    """Minutes after midnight the night window opens (0 without a window)."""
+    window = cfg.get("night")
+    try:
+        return _minutes(window.split("-", 1)[0]) if isinstance(window, str) and "-" in window else 0
+    except ValueError:
+        return 0
+
+
+def _today(t):
+    lt = localtime(t)
+    return datetime.date(lt.tm_year, lt.tm_mon, lt.tm_mday)
+
+
+def night_opened(night, t=None, cfg=None):
+    """Whether the night window of local date `night` (YYYY-MM-DD, the day it opens on) has opened."""
+    if not night:
+        return True
+    cfg = local_config() if cfg is None else cfg
+    t = now() if t is None else t
+    lt = localtime(t)
+    return (_today(t).isoformat(), lt.tm_hour * 60 + lt.tm_min) >= (night, _night_start(cfg))
+
+
+def weekly_day(cfg):
+    day = str(cfg.get("weekly_night") or "").strip().lower()[:3]
+    return WEEKDAYS.index(day) if day in WEEKDAYS else None
+
+
+def first_weekly_night(t=None, cfg=None):
+    """The first night from now whose window has not opened yet, on the configured weekday if any."""
+    cfg = local_config() if cfg is None else cfg
+    t = now() if t is None else t
+    day = _today(t)
+    if night_opened(day.isoformat(), t, cfg):
+        day += datetime.timedelta(days=1)
+    want = weekly_day(cfg)
+    while want is not None and day.weekday() != want:
+        day += datetime.timedelta(days=1)
+    return day.isoformat()
+
+
+def next_weekly_night(night, t=None, cfg=None):
+    """The night after the weekly test of `night` closed at t: the configured weekday's first
+    night after both today and `night`, else a week after `night` (and after today, when it ran late)."""
+    cfg = local_config() if cfg is None else cfg
+    today = _today(now() if t is None else t)
+    want = weekly_day(cfg)
+    last = datetime.date(*(int(x) for x in night.split("-"))) if night else today
+    if want is None:
+        return max(last + datetime.timedelta(days=7), today + datetime.timedelta(days=1)).isoformat()
+    day = max(today, last) + datetime.timedelta(days=1)
+    while day.weekday() != want:
+        day += datetime.timedelta(days=1)
+    return day.isoformat()
+
+
+def main_checkout(root):
+    """The repository's main checkout (the weekly test runs main there), else root."""
+    common = _git(root, "rev-parse", "--path-format=absolute", "--git-common-dir")
+    return os.path.dirname(common) if common else root
+
+
+def weekly_fields(ruleset, tree):
+    name = RULESET_NAMES[ruleset]
+    return {"what": "每周整套游戏内测试（%s）" % name,
+            "why": "#329 平时定期跑整套游戏内测试，三种规则集轮流；有失败按 bug 开 Issue（bug + auto，挂下一个第三位版本）",
+            "cmds": ["git -C \"%s\" pull --ff-only origin main" % tree, "python3 -I tools/deploy.py",
+                     "python3 -I tools/run_tests.py --rulesets %s" % ruleset],
+            "tree": tree_of(tree), "branch": "main", "weekly": ruleset}
+
+
+def _append(items, root, what, why, cmds, extra=None):
+    me = identity(root)
+    item = {"id": max([i["id"] for i in items] or [0]) + 1, "added": now(), "owner": me["owner"],
+            "tree": me["tree"], "branch": me["branch"], "what": what, "why": why, "cmds": list(cmds),
+            "state": "queued", "result": None}
+    item.update(extra or {})
+    items.append(item)
+    return item
 
 
 def queue_add(root, what, why, cmds=()):
     with _mutex("queue"):
         items = _read(queue_path(), [])
-        me = identity(root)
-        item = {"id": max([i["id"] for i in items] or [0]) + 1, "added": now(), "owner": me["owner"],
-                "tree": me["tree"], "branch": me["branch"], "what": what, "why": why, "cmds": list(cmds),
-                "state": "queued", "result": None}
-        items.append(item)
+        item = _append(items, root, what, why, cmds)
         _write(queue_path(), items)
     return item
 
 
-def queue_done(item_id, failed=False, result=None):
+def queue_weekly(root, ruleset=None, night=None):
+    """Queue the weekly in-game test (#329); refused while one is queued."""
+    ruleset = ruleset or RULESETS[-1]
+    if ruleset not in RULESETS:
+        raise Busy("unknown ruleset %s (one of %s)" % (ruleset, ", ".join(RULESETS)))
+    if night:
+        try:
+            night = datetime.date(*(int(x) for x in night.split("-"))).isoformat()
+        except (TypeError, ValueError):
+            raise Busy("--night wants YYYY-MM-DD, not %s" % night)
+    with _mutex("queue"):
+        items = _read(queue_path(), [])
+        for i in items:
+            if i.get("weekly") and i["state"] == "queued":
+                raise Busy("the weekly test is queued already: #%d, night %s" % (i["id"], i.get("night")))
+        fields = weekly_fields(ruleset, main_checkout(root))
+        fields["night"] = night or first_weekly_night()
+        item = _append(items, root, fields.pop("what"), fields.pop("why"), fields.pop("cmds"), fields)
+        _write(queue_path(), items)
+    return item
+
+
+def queue_done(item_id, failed=False, result=None, last=False):
+    """Close an item; closing the weekly test queues the next week's, with the next ruleset."""
     with _mutex("queue"):
         items = _read(queue_path(), [])
         for item in items:
             if item["id"] == item_id:
+                was = item["state"]
                 item["state"] = "failed" if failed else "done"
                 item["result"] = result
                 item["finished"] = now()
+                ruleset = item.get("weekly")
+                if ruleset in RULESETS and was == "queued" and not last:
+                    nxt = RULESETS[(RULESETS.index(ruleset) + 1) % len(RULESETS)]
+                    fields = weekly_fields(nxt, item["tree"])
+                    fields["night"] = next_weekly_night(item.get("night"))
+                    item["next"] = _append(items, item["tree"], fields.pop("what"), fields.pop("why"),
+                                           fields.pop("cmds"), fields)["id"]
                 _write(queue_path(), items)
                 return item
     raise Busy("no queue item %d" % item_id)
 
 
-def queue_items(everything=False):
+def queue_items(everything=False, t=None):
+    """The queued items due at t (their night, if any, has opened); everything: all of them."""
     items = _read(queue_path(), [])
-    return items if everything else [i for i in items if i["state"] == "queued"]
+    if everything:
+        return items
+    cfg = local_config()
+    return [i for i in items if i["state"] == "queued" and night_opened(i.get("night"), t, cfg)]
+
+
+def queue_later(t=None):
+    """Queued items whose night has not come yet."""
+    cfg = local_config()
+    return [i for i in _read(queue_path(), []) if i["state"] == "queued" and not night_opened(i.get("night"), t, cfg)]
 
 
 # -- command line ---------------------------------------------------------------
@@ -707,6 +841,8 @@ def print_status(local_only):
     print("night queue: %d item(s)" % len(items))
     for item in items:
         print("  #%d %s (%s, %s): %s" % (item["id"], item["what"], item["owner"], item["branch"], item["why"]))
+    for item in queue_later():
+        print("  later: #%d %s, from the night of %s" % (item["id"], item["what"], item["night"]))
     if not local_only and remote_host():
         print("second machine (%s):" % remote_host())
         try:
@@ -768,6 +904,10 @@ def main(argv=None):
     qd.add_argument("id", type=int)
     qd.add_argument("--failed", action="store_true")
     qd.add_argument("--result")
+    qd.add_argument("--last", action="store_true", help="the weekly test: do not queue the next week's")
+    qw = qs.add_parser("weekly")
+    qw.add_argument("--ruleset", choices=RULESETS, help="the first ruleset (default %s)" % RULESETS[-1])
+    qw.add_argument("--night", help="YYYY-MM-DD, the day its night window opens on (default: the next weekly night)")
     args = ap.parse_args(argv)
     try:
         if args.cmd == "status":
@@ -793,9 +933,17 @@ def main(argv=None):
                     "\n    ".join(item["cmds"]) or "(no commands)"))
                 if item.get("result"):
                     print("    result: %s" % item["result"])
+            if not args.all:
+                for item in queue_later():
+                    print("later: #%d %s, from the night of %s" % (item["id"], item["what"], item["night"]))
         elif args.qcmd == "done":
-            queue_done(args.id, args.failed, args.result)
+            item = queue_done(args.id, args.failed, args.result, args.last)
             print("#%d marked %s" % (args.id, "failed" if args.failed else "done"))
+            if item.get("next"):
+                print("queued the next weekly test #%d" % item["next"])
+        elif args.qcmd == "weekly":
+            item = queue_weekly(ROOT, args.ruleset, args.night)
+            print("queued #%d %s, from the night of %s" % (item["id"], item["what"], item["night"]))
     except Busy as problem:
         print("sdplock: %s" % problem, file=sys.stderr)
         return BUSY_EXIT

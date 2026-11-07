@@ -79,6 +79,8 @@ and one line in Chinese naming them. The night it fired is kept in
 night-queue-due.json in the shared folder, so a restarted wait does not fire
 again that night; an empty queue does not fire (items added later that
 night still do, once). Nobody has to remember to set a reminder (2026-11-06).
+An item queued for a later night (the weekly in-game test, #329) counts only
+from that night on.
 """
 import argparse
 import datetime
@@ -549,7 +551,7 @@ def night_due(t, cfg=None):
         return None
     if (sdplock._read(due_path(), {}) or {}).get("fired") == key:
         return None
-    items = sdplock.queue_items()
+    items = sdplock.queue_items(t=t)
     if not items:
         return None
     with sdplock._mutex("night-due"):
