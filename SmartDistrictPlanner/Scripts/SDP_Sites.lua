@@ -454,7 +454,17 @@ function SDP_Sites.Coarse(ctx, candidate, centers)
 
   -- Worked plots and one-time yields.
   local plots, featureCount, disaster = {}, {}, false
+  -- A pinned district or wonder (another city's plan) takes its plot, as
+  -- in SDP_Land.ForScan (issue 336).
+  local taken = {}
+  for _, entry in ipairs(SDP_Overlay.PinSubjects(scan)) do
+    if entry.Subject.Type == "DISTRICT" or entry.Subject.Type == "WONDER" then taken[entry.Index] = true end
+  end
+  local workable = {}
   for _, index in ipairs(SDP_Land.Workable(scan)) do
+    if not taken[index] then workable[#workable + 1] = index end
+  end
+  for _, index in ipairs(workable) do
     local plot = Map.GetPlotByIndex(index)
     local tile, once, bare, forgone = SDP_Land.PlotValues(plot, ctx.Land)
     plots[#plots + 1] = { Index = index, Tile = tile, Once = once, Forgone = forgone }

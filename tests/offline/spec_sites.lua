@@ -380,6 +380,36 @@ test("a site's land: worked plots and one-time yields, on one scale (issue 88)",
   T.ok(two.Parts.Farm >= 2 * one.Parts.Farm - 1e-9, "land weight 2: the plots' yields at least twice (fewer cleared)")
 end)
 
+test("issue 336: a pin does not give a site plots it cannot work", function()
+  -- Our capital at (2, 3) owns the plots within 2; the site at (6, 3).
+  -- (4, 3): the capital's, with wine and a reminder pin; (8, 3): no one's,
+  -- with another city's planned campus pin.
+  World.New({
+    rows = {
+      "............",
+      "............",
+      "............",
+      "............",
+      "............",
+      "............",
+      "............",
+    },
+    cities = { { id = 1, x = 2, y = 3, population = 3, capital = true, radius = 2 } },
+    resources = { { 4, 3, "RESOURCE_WINE", 1 } },
+    pins = { { 4, 3, "ICON_UNITOPERATION_REMOVE_FEATURE", "keep" }, { 8, 3, "ICON_DISTRICT_CAMPUS", "2" } },
+  })
+  local owned, planned = Map.GetPlotIndex(4, 3), Map.GetPlotIndex(8, 3)
+  T.eq(Map.GetPlot(4, 3):GetOwner(), 0, "the test needs (4, 3) owned by the capital")
+  local scan = SDP_City.ScanSite(0, 6, 3)
+  T.eq(scan.Excluded[owned], SDP_City.EXCLUDED.OTHER_CITY, "another city's plot, pin or not")
+  for _, index in ipairs(SDP_Land.Workable(scan)) do T.ok(index ~= owned, "the capital's plot is workable") end
+  local ctx = SDP_Sites.Context(0, { Districts = PLAN, K = 1, Raw = true })
+  local site = SDP_Sites.Coarse(ctx, { X = 6, Y = 3, Index = Map.GetPlotIndex(6, 3), Unrevealed = 0 }, SDP_Sites.Centers(0))
+  T.eq(site.Luxury.RESOURCE_WINE, nil, "the capital's wine counted for the site")
+  T.eq(site.Land.ByIndex[owned], nil, "the capital's plot in the site's land")
+  T.eq(site.Land.ByIndex[planned], nil, "a planned district's plot in the site's land")
+end)
+
 test("one site: no distance to other sites", function()
   NewWorld()
   local result = SDP_SiteSolver.Solve({ PlayerID = 0, K = 1, D = 6, Districts = PLAN, Tier = "FAST" })

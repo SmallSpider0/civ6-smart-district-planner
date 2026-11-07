@@ -336,6 +336,20 @@ function SDP_Overlay.Evaluate(placements, fixed, weights, extra)
   return result
 end
 
+-- The subjects of a scan's pins (scan.Pins) as DMT reads them, without the
+-- ones DMT does not know: { { Index, Subject } } in scan.Pins order.
+function SDP_Overlay.PinSubjects(scan)
+  local list = {}
+  for _, pin in ipairs(scan.Pins) do
+    local subject = GetMapPinSubject(scan.PlayerID, pin.X, pin.Y)
+    if subject == nil then
+      subject = CreateMapPinSubject(PlayerConfigurations[scan.PlayerID]:GetMapPinID(pin.ID))
+    end
+    if subject ~= nil and subject.Type ~= "UNKNOWN" then list[#list + 1] = { Index = pin.Index, Subject = subject } end
+  end
+  return list
+end
+
 -- Subjects already on the map near a city whose yields a plan can change:
 -- the player's districts within RADIUS + 1 rings (city center included,
 -- wonders excluded) and the player's non-plain pins there (from DMT's data,
@@ -365,13 +379,7 @@ function SDP_Overlay.FixedSubjects(scan)
       end
     end
   end
-  for _, pin in ipairs(scan.Pins) do
-    local subject = GetMapPinSubject(scan.PlayerID, pin.X, pin.Y)
-    if subject == nil then
-      subject = CreateMapPinSubject(PlayerConfigurations[scan.PlayerID]:GetMapPinID(pin.ID))
-    end
-    if subject ~= nil and subject.Type ~= "UNKNOWN" then Add(pin.Index, subject) end
-  end
+  for _, entry in ipairs(SDP_Overlay.PinSubjects(scan)) do Add(entry.Index, entry.Subject) end
   table.sort(indices)
   local subjects = {}
   for i, index in ipairs(indices) do subjects[i] = byIndex[index] end

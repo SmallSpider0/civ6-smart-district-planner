@@ -350,7 +350,8 @@ local function ExclusionReason(plot, playerID, cityID, pinned, siteRings, allowF
   if plot:GetWonderType() ~= -1 then return E.WONDER end
   if plot:IsNaturalWonder() then return E.NATURAL_WONDER end
   if Flooded(plot) then return E.FLOODED end
-  if pinned[plot:GetIndex()] then return E.PIN end
+  -- Whose plot it is before its pin (issue 336): a pin on a plot the city
+  -- cannot have does not make it one the city can work (PIN is workable).
   local owner = plot:GetOwner()
   if owner ~= -1 and owner ~= playerID then return E.FOREIGN end
   if owner == playerID then
@@ -359,6 +360,7 @@ local function ExclusionReason(plot, playerID, cityID, pinned, siteRings, allowF
   end
   if owner == -1 and siteRings[plot:GetIndex()] then return E.SITE_RING end
   if owner == -1 and not reach.Reached[plot:GetIndex()] then return E.UNREACHABLE end
+  if pinned[plot:GetIndex()] then return E.PIN end
   local feature = plot:GetFeatureType()
   if allowFeatureRemoval ~= true and feature ~= -1 and GameInfo.Features[feature].Removable
       and not allowFeatureRemoval[feature] then
