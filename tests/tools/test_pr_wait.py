@@ -750,6 +750,14 @@ class NightQueue(unittest.TestCase):
         self.queue()
         self.assertIsNotNone(pr_wait.night_due(self.at(7, "02:00")))  # added later that night: still once
 
+    def test_not_for_the_weekly_test_before_its_night(self):
+        # #329: the weekly in-game test is queued a week ahead; it is due only from its own night
+        pr_wait.sdplock.queue_weekly(ROOT, night="2026-11-14")
+        self.assertIsNone(pr_wait.night_due(self.at(7, "00:06")))
+        self.assertIsNone(pr_wait.night_due(self.at(13, "00:06")))
+        line = pr_wait.night_due(self.at(14, "00:06"))
+        self.assertIn("每周整套游戏内测试", line)
+
     def test_the_window_comes_from_the_config_and_may_cross_midnight(self):
         with open(os.environ["SDP_LOCAL_CONFIG"], "w", encoding="utf-8") as fh:
             json.dump({"night": "22:30-06:00"}, fh)

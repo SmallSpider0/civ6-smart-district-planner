@@ -548,14 +548,17 @@ python3 -I tools/sdplock.py release                     # 不退游戏也放锁�
 python3 -I tools/sdplock.py heavy NAME -- node tools/compare.mjs ...   # 本机重活（有别的在跑就排队等）
 python3 -I tools/sdplock.py queue add --what "realclick suite" --why "#71 界面" --cmd "python3 -I tools/realclick.py suite"
 python3 -I tools/sdplock.py queue list                  # 由一个会话在机器空闲时按顺序跑，跑完 queue done ID --result ...
+python3 -I tools/sdplock.py queue weekly                # 排每周的整套游戏内测试（#329）；--ruleset、--night YYYY-MM-DD 改第一次
+python3 -I tools/sdplock.py queue done ID --last        # 关掉每周那一项且不再排下一周
 ```
 
 - **游戏锁**：`deploy.py`、`game.py`、`run_tests.py`、`realclick.py`、`shots.py`、`stress.py` 和 `civ6tuner.py serve`/`exec` 自己拿锁、续约；别的工作树拿着时以退出码 4 停下，写明谁、做什么、从几点开始。`civ6tuner.py states` 谁都能用。`game.py quit` 放锁并停掉本工作树的 Tuner 后台进程。
 - **过期**：30 分钟没续约，并且游戏已经关了或持有者的 Tuner 后台进程不在了，才算过期，`take --stale` 接手（接手后先 `game.py quit`，从新对局开始）。`--force` 不看状态直接拿，只在确定持有者已经不在时用。
 - **插队**：`take --next` 预订下一个；持有者放锁后 15 分钟内只有预订的工作树能拿。
 - **本机重活**：一次一个。有任务在跑时，后来的 `heavy` 按开始等待的先后排队（记在共用目录的 `heavy-queue.json`），槽空出来时只有排头能拿，后来的不会抢在前面（#219）；`status` 按顺序列出排队的任务。排队的进程退出或被杀时按进程是否还在自己出队，不挡后面的；Ctrl-C 也出队。`--no-wait`（写在 NAME 前）不排队，有任务在跑就以退出码 4 停下。worker 上限按本机配置（没有配置时 4 个），`-j` 超了就改小，`compare.mjs`、`refresh_results.py` 没写 `-j` 就补上；游戏锁被拿走时发 `SIGSTOP` 暂停（整个进程组），放锁时 `SIGCONT` 继续。暂停过的任务结束时会说，它的耗时字段不能用。Windows 上不能暂停。
+- **每周的整套游戏内测试**（#329）：`queue weekly` 往夜间队列加一项，在仓库主检出上 `git pull --ff-only origin main`、`deploy.py`、`run_tests.py --rulesets <规则集>`，从某一夜起才算排着。这一项用 `queue done` 关掉时（通过或失败都一样）自动排下一周的一项，规则集按原版、迭起兴衰、风云变幻轮流，第一次默认风云变幻；`--last` 关掉且不再排。同时只能有一项排着（再 `queue weekly` 以退出码 4 拒绝）。哪一夜：本机配置 `weekly_night`（星期几的英文缩写，如 `"sat"`，指夜间窗口开始的那天），下一项排在今天和本项那一夜之后第一个这样的日子；没配时排在本项那一夜一周后（晚跑了就排到明天以后）。没到那一夜的项 `queue list` 和 `status` 列在 `later:` 下，`pr_wait.py --list` 也不为它报夜间队列到点。理由：发版前才跑整套游戏内测试，#314、#319、#320 都到发版测试才露出来，靠人记得每周排一次会漏。
 - **共用目录**：`$SDP_SHARED`，否则 macOS `~/Library/Application Support/SDP`，Windows `%LOCALAPPDATA%\SDP`。显示的会话名是 `$SDP_OWNER`，没设就是分支名。
-- **本机配置**：和机器有关的数值不进仓库，写在 `~/.config/sdp/local.json`（`SDP_LOCAL_CONFIG` 可改路径），每项都可省：`workers_day`（默认 4）、`workers_night`（默认同白天）、`night`（如 `"00:00-08:00"`，默认没有夜间；夜间队列和夜里的 worker 上限都按它）、`weekend_is_night`（默认 false）、`remote`（第二台机器的 ssh 主机名，`SDP_REMOTE` 优先）、`remote_slots`（默认那台机器的核数减 2）、`remote_path`（那边 node 和 python3 所在目录）、`preflight_folders`（`preflight_night.py` 另外要碰的文件夹）。
+- **本机配置**：和机器有关的数值不进仓库，写在 `~/.config/sdp/local.json`（`SDP_LOCAL_CONFIG` 可改路径），每项都可省：`workers_day`（默认 4）、`workers_night`（默认同白天）、`night`（如 `"00:00-08:00"`，默认没有夜间；夜间队列和夜里的 worker 上限都按它）、`weekend_is_night`（默认 false）、`weekly_night`（每周整套游戏内测试在星期几的夜里，如 `"sat"`，默认上一次一周后）、`remote`（第二台机器的 ssh 主机名，`SDP_REMOTE` 优先）、`remote_slots`（默认那台机器的核数减 2）、`remote_path`（那边 node 和 python3 所在目录）、`preflight_folders`（`preflight_night.py` 另外要碰的文件夹）。
 - 离线测试：`python3 -I -m unittest discover -s tests/tools`（假时钟、假进程、假游戏；CI 上也跑）。
 
 ## preflight_night.py — 夜间运行前检查文件夹权限（macOS）
@@ -593,7 +596,7 @@ python3 -I tools/pr_wait.py --list                       # 值守子会话常驻
 ```
 
 - 等待名单（#275）是共用文件夹里的 `pr-wait-list.json`（和 `codex-reviews.json` 同一处）。`add` 只写名单、马上返回；`--list` 每轮检查前读名单，`add` 进来的 PR 不用重挂就接着等，名单空着也一直等。它在有一个 PR 合并或要人处理时退出（退出码 0、1；GitHub 说没有这个 PR 时 2），打印的行和上面一样，并把这几个 PR 从名单里去掉；要处理的改好后再 `add` 一次。`--codex` 的审查期限从 PR 加进名单时算，重挂不重新计时。读改写名单时拿共用文件夹的互斥锁，写临时文件再整体替换，两个进程不会互相覆盖。直接在命令行列编号的用法照旧，不读也不改名单。
-- `--list` 也管夜间队列开跑（2026-11-06）：本机配置 `night` 的开始时间过 5 分钟后、夜间结束前，`sdplock.py queue` 里有排着的项时退出一次（退出码 3；同一轮有 PR 合并或要处理时用 PR 的退出码），打一行中文“夜间队列到点……”列出各项；值守子会话重挂后转告主会话派人跑。哪一夜报过记在共用文件夹的 `night-queue-due.json`，重挂不重报；那时队列空着不报（当夜后来加进的项仍报一次）。`weekend_is_night` 不算，只看夜间窗口。理由：靠人记得设提醒，没人告诉值守就会漏掉。
+- `--list` 也管夜间队列开跑（2026-11-06）：本机配置 `night` 的开始时间过 5 分钟后、夜间结束前，`sdplock.py queue` 里有排着的项时退出一次（退出码 3；同一轮有 PR 合并或要处理时用 PR 的退出码），打一行中文“夜间队列到点……”列出各项；值守子会话重挂后转告主会话派人跑。哪一夜报过记在共用文件夹的 `night-queue-due.json`，重挂不重报；那时队列空着不报（当夜后来加进的项仍报一次）。`weekend_is_night` 不算，只看夜间窗口；还没到自己那一夜的项（每周的整套游戏内测试）不算。理由：靠人记得设提醒，没人告诉值守就会漏掉。
 
 - 只在两种时候退出：列出的 PR 全部合并（退出码 0），或有一个要人处理（退出码 1）。用 `--list` 时还有两种：名单里有 GitHub 不认的 PR 编号（退出码 2），和夜间队列到点（退出码 3，见上一条）。要处理的是：最新提交上有检查失败（失败、取消、超时等，同一项检查重跑过的按最后一次）、自己合并不了的冲突（见下一条）、Codex 有没解决的意见（`codex_review.py findings 编号` 列出）、PR 被关掉没合并、PR 开着却没开自动合并也没有在跑的 CI 或在等的审查（没人会合并它）。中间步骤（一项检查跑完、Codex 审完没意见、开了自动合并）都不退出，所以一批 PR 只挂这一个等待（挂在值守子会话上），它退出时才转告主会话（docs/maintaining.md“子 agent 怎么派”第 5 条）。
 - 冲突时先试一次自己合并：每一处冲突都只是两边在同一个地方各加了行（没删改共同的原有行，如 `CHANGELOG.md`、文本 XML）时，在临时的游离工作树里 `git merge origin/main`（diff3 冲突格式），每处留下两边新加的行（`main` 的在前、分支的在后），提交合并、普通推送（不强推），接着等，不退出。以下照旧作为冲突退出：有一处冲突改了或删了原有的行；不是两边都改了同一个文件的冲突（一边删、两边都新建、二进制）；PR 来自 fork；分支在本机有工作树，而那个工作树有未提交的改动或不在 PR 的最新提交上（可能有会话正在改）。本机工作树干净且在 PR 最新提交上时，推送后把它快进到合并提交。同一个提交只试一次；不用 `git stash`（docs/maintaining.md“共用资源”）。

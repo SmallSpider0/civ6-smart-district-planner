@@ -5,6 +5,7 @@
 import calendar
 import contextlib
 import io
+import json
 import os
 import signal
 import sys
@@ -334,6 +335,108 @@ class NightQueue(LockCase):
         self.assertEqual(sdplock.queue_items(True)[0]["result"], "12 passed")
         with self.assertRaises(sdplock.Busy):
             sdplock.queue_done(9)
+
+
+class WeeklyTest(LockCase):
+    """#329: #314, #319 and #320 only showed in the release tests, since the PRs run their own test
+    files and the whole in-game set ran only before a release. The night queue now keeps a weekly
+    whole-set run, one ruleset a week in turn, that queues the next one when it is closed."""
+
+    def config(self, **cfg):
+        with open(os.environ["SDP_LOCAL_CONFIG"], "w", encoding="utf-8") as fh:
+            json.dump(cfg, fh)
+
+    def at(self, day, hhmm):
+        h, m = hhmm.split(":")
+        return calendar.timegm((2026, 11, day, int(h), int(m), 0))
+
+    def test_queued_from_the_configured_night_and_hidden_before_it(self):
+        self.config(night="00:00-08:00", weekly_night="sat")
+        self.w.t = self.at(7, "15:00")  # Saturday afternoon: tonight's window (Sunday's) is not the one
+        item = sdplock.queue_weekly(self.a)
+        self.assertEqual(item["night"], "2026-11-14")
+        self.assertEqual(item["weekly"], "RULESET_EXPANSION_2")
+        self.assertIn("RULESET_EXPANSION_2", item["cmds"][-1])
+        self.assertIn("run_tests.py --rulesets", item["cmds"][-1])
+        self.assertIn("风云变幻", item["what"])
+        self.assertEqual(sdplock.queue_items(), [])
+        self.assertEqual([i["id"] for i in sdplock.queue_later()], [item["id"]])
+        self.w.t = self.at(13, "23:59")
+        self.assertEqual(sdplock.queue_items(), [])
+        self.w.t = self.at(14, "00:00")
+        self.assertEqual([i["id"] for i in sdplock.queue_items()], [item["id"]])
+        self.assertEqual(sdplock.queue_later(), [])
+
+    def test_closing_it_queues_next_week_with_the_next_ruleset(self):
+        self.config(night="00:00-08:00", weekly_night="sat")
+        self.w.t = self.at(7, "15:00")
+        first = sdplock.queue_weekly(self.a)
+        names = []
+        for day, failed in ((14, False), (21, True), (28, False)):
+            self.w.t = self.at(day, "03:00")
+            due = sdplock.queue_items()
+            self.assertEqual(len(due), 1)
+            names.append(due[0]["weekly"])
+            done = sdplock.queue_done(due[0]["id"], failed=failed, result="x")
+            self.assertTrue(done["next"])  # a failure still keeps the weekly run going
+            self.assertEqual(sdplock.queue_items(), [])
+        self.assertEqual(names, ["RULESET_EXPANSION_2", "RULESET_STANDARD", "RULESET_EXPANSION_1"])
+        later = sdplock.queue_later()
+        self.assertEqual([(i["night"], i["weekly"]) for i in later], [("2026-12-05", "RULESET_EXPANSION_2")])
+        self.assertEqual(first["tree"], later[0]["tree"])
+        self.assertEqual(later[0]["branch"], "main")
+
+    def test_a_night_run_late_or_past_midnight_lands_on_the_next_weekday(self):
+        self.config(night="22:30-06:00", weekly_night="sat")
+        self.w.t = self.at(7, "22:40")  # Saturday's window is open already
+        item = sdplock.queue_weekly(self.a)
+        self.assertEqual(item["night"], "2026-11-14")
+        self.w.t = self.at(14, "22:00")
+        self.assertEqual(sdplock.queue_items(), [])
+        self.w.t = self.at(15, "01:00")  # Saturday's night, after midnight
+        self.assertEqual(len(sdplock.queue_items()), 1)
+        sdplock.queue_done(item["id"])
+        self.assertEqual(sdplock.queue_later()[0]["night"], "2026-11-21")
+        self.w.t = self.at(25, "02:00")  # missed a week: still once, then on the weekday after
+        due = sdplock.queue_items()
+        sdplock.queue_done(due[0]["id"])
+        self.assertEqual(sdplock.queue_later()[0]["night"], "2026-11-28")
+
+    def test_closed_before_its_night_the_next_is_a_week_later(self):
+        self.config(night="00:00-08:00", weekly_night="sat")
+        self.w.t = self.at(7, "15:00")
+        item = sdplock.queue_weekly(self.a)  # the 14th
+        sdplock.queue_done(item["id"])  # run by day ahead of its night
+        self.assertEqual(sdplock.queue_later()[0]["night"], "2026-11-21")
+
+    def test_without_a_weekday_a_week_after_the_last(self):
+        self.config(night="00:00-08:00")
+        self.w.t = self.at(9, "10:00")  # Monday
+        item = sdplock.queue_weekly(self.a, "RULESET_STANDARD", night="2026-11-10")
+        self.assertEqual(item["night"], "2026-11-10")
+        self.w.t = self.at(10, "05:00")
+        sdplock.queue_done(item["id"])
+        self.assertEqual(sdplock.queue_later()[0]["night"], "2026-11-17")
+        self.assertEqual(sdplock.queue_later()[0]["weekly"], "RULESET_EXPANSION_1")
+
+    def test_one_chain_only_and_last_ends_it(self):
+        self.config(night="00:00-08:00", weekly_night="sat")
+        item = sdplock.queue_weekly(self.a, night="2026-10-26")
+        with self.assertRaises(sdplock.Busy):
+            sdplock.queue_weekly(self.b)
+        with self.assertRaises(sdplock.Busy):
+            sdplock.queue_weekly(self.b, night="next friday")
+        done = sdplock.queue_done(item["id"], last=True)
+        self.assertNotIn("next", done)
+        self.assertEqual(sdplock.queue_items(), [])
+        self.assertEqual(sdplock.queue_later(), [])
+        sdplock.queue_done(item["id"])  # closing it again does not start a chain
+        self.assertEqual(sdplock.queue_later(), [])
+
+    def test_plain_items_are_unchanged(self):
+        sdplock.queue_add(self.a, "shots", "README")
+        self.assertEqual(len(sdplock.queue_items()), 1)
+        self.assertNotIn("next", sdplock.queue_done(1))
 
 
 if __name__ == "__main__":
