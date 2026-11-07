@@ -204,10 +204,8 @@ end)
 -- the rules give, the grid scrolls: on the shortest page, and on pages up to
 -- three grid rows shorter still (a ruleset or mod with more districts), the
 -- solve and the tacks' buttons end on the page on every tab.
-test("issue 314: the buttons stay on the shortest page however many district rows", function()
-  Reset()
-  SDP_Panel.Open()
-  local tabs = {
+local function Tabs314()
+  return {
     { Tab = "SINGLE", Page = Controls.SinglePage, Body = Controls.Body, Grid = Controls.DistrictScroll,
       Area = Controls.DistrictArea, Fold = SDP_Panel.SetFold,
       Buttons = { Controls.SolveButton, Controls.PlaceButton, Controls.UndoButton } },
@@ -218,28 +216,79 @@ test("issue 314: the buttons stay on the shortest page however many district row
       Area = Controls.MultiDistrictArea, Fold = SDP_Panel.Multi.SetFold,
       Buttons = { Controls.MultiSolveButton, Controls.MultiPlaceButton, Controls.MultiUndoButton } },
   }
+end
+
+-- The page of tab `t` made `extra` shorter than the shortest window gives:
+-- the body and the buttons end on it, the grid keeps two rows.
+local function Fits314(t, extra)
+  t.Page:SetSizeY(SDP_UI.WINDOW_MIN - SDP_UI.PAGE_INSET - extra)
+  -- The page fits itself again, as when the player folds and unfolds the settings.
+  t.Fold(true)
+  t.Fold(false)
+  local page, body = t.Page:GetSizeY(), t.Body:GetSizeY()
+  local _, pageTop = t.Page:GetScreenOffset()
+  local label = string.format("%s, page %d", t.Tab, page)
+  print(string.format("issue 314 %s: body %d, grid %d of %d", label, body, t.Grid:GetSizeY(), t.Area:GetSizeY()))
+  T.ok(body <= page, label .. ": the body " .. body .. " fits the page")
+  for _, button in ipairs(t.Buttons) do
+    local _, top = button:GetScreenOffset()
+    T.ok(top + button:GetSizeY() <= pageTop + page, label .. ": a button ends at " .. (top + button:GetSizeY())
+      .. ", the page at " .. (pageTop + page))
+  end
+  T.ok(t.Grid:GetSizeY() >= math.min(t.Area:GetSizeY(), SDP_UI.DISTRICT_MIN), label .. ": the grid keeps two rows")
+end
+
+-- An earlier test's plan on the Several cities tab takes room (issue 320):
+-- changing a switch clears it, as it does for the player.
+local function ClearMulti()
+  local remind = SDP_Panel.Multi.State().Remind
+  SDP_Panel.Multi.SetRemind(not remind)
+  SDP_Panel.Multi.SetRemind(remind)
+  T.eq(SDP_Panel.Multi.State().Result, nil, "no plan on the Several cities tab")
+end
+
+test("issue 314: the buttons stay on the shortest page however many district rows", function()
+  Reset()
+  SDP_Panel.Open()
   local ok, err = pcall(function()
-    for _, t in ipairs(tabs) do
+    ClearMulti()
+    for _, t in ipairs(Tabs314()) do
       SDP_Panel.SelectTab(t.Tab)
-      for _, extra in ipairs({ 0, 30, 60, 90 }) do
-        t.Page:SetSizeY(SDP_UI.WINDOW_MIN - SDP_UI.PAGE_INSET - extra)
-        -- The page fits itself again, as when the player folds and unfolds the settings.
-        t.Fold(true)
-        t.Fold(false)
-        local page, body = t.Page:GetSizeY(), t.Body:GetSizeY()
-        local _, pageTop = t.Page:GetScreenOffset()
-        local label = string.format("%s, page %d", t.Tab, page)
-        print(string.format("issue 314 %s: body %d, grid %d of %d", label, body, t.Grid:GetSizeY(), t.Area:GetSizeY()))
-        T.ok(body <= page, label .. ": the body " .. body .. " fits the page")
-        for _, button in ipairs(t.Buttons) do
-          local _, top = button:GetScreenOffset()
-          T.ok(top + button:GetSizeY() <= pageTop + page, label .. ": a button ends at " .. (top + button:GetSizeY())
-            .. ", the page at " .. (pageTop + page))
-        end
-        T.ok(t.Grid:GetSizeY() >= math.min(t.Area:GetSizeY(), SDP_UI.DISTRICT_MIN), label .. ": the grid keeps two rows")
-      end
+      for _, extra in ipairs({ 0, 30, 60, 90 }) do Fits314(t, extra) end
     end
   end)
+  SDP_Panel.SelectTab("SINGLE")
+  SDP_Panel.FitWindow()
+  SDP_Panel.Close()
+  if not ok then error(err, 0) end
+end)
+
+-- With a plan shown the summary and the solutions' buttons above the list
+-- take room too (issue 320): the shortest page still has the buttons.
+test("issue 320: with a plan on the Several cities tab the buttons stay on the shortest page", function()
+  local city = Reset()
+  local multi = SDP_Panel.Multi
+  SDP_Panel.Open()
+  SDP_Panel.SelectTab("MULTI")
+  local tier = multi.State().Tier
+  local ok, err = pcall(function()
+    multi.Refresh()
+    multi.SetExisting(city:GetID(), true)
+    multi.SetPlanFor("ALL")
+    multi.ApplyPlan({ Resolve("DISTRICT_CAMPUS"), Resolve("DISTRICT_HOLY_SITE") })
+    multi.SetTier("FAST")
+    T.ok(multi.Solve(), "started")
+    SDP_Panel.RunTask(5000)
+    local result = multi.State().Result
+    T.ok(result and result.Ok, "result: " .. tostring(result and result.Error))
+    local t = Tabs314()[3]
+    Fits314(t, 0)
+    T.ok(multi.State().Result ~= nil, "the plan is still shown")
+    T.ok(multi.State().ResultHeight >= SDP_UI.RESULT_MIN, "the list keeps a row")
+  end)
+  multi.ApplyPlan({})
+  multi.SetExisting(city:GetID(), nil)
+  multi.SetTier(tier)
   SDP_Panel.SelectTab("SINGLE")
   SDP_Panel.FitWindow()
   SDP_Panel.Close()
