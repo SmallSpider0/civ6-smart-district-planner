@@ -1,5 +1,6 @@
 -- Screenshot stage: the One city tab on the capital (tools/shots.py stage single).
--- Campus a Must, 3 districts, Standard; the other settings stay at their defaults.
+-- Campus a Must, 3 districts, Standard; everything else at its defaults (shots.py
+-- puts the panel back first, issue 325).
 local pid = Game.GetLocalPlayer()
 local city = Players[pid]:GetCities():GetCapitalCity()
 SDP_Panel.Open()

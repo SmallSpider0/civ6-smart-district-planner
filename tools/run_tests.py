@@ -30,7 +30,16 @@ T.near(actual, expected, eps, msg), T.same(actual, expected, msg) (deep
 equality via T.dump, a sorted-key serialization), T.skip(reason). A test fails on any error;
 messages carry the file and line (the chunk is named after the file).
 
-Usage: run_tests.py [-k SUBSTRING] [-v] [--rulesets all|LIST] [FILE...]
+Before each file the panel goes back to how a new game shows it
+(SDP_Panel.Defaults in the SDP_Panel state, before its @setup: issue 327),
+so no file runs on settings, lists or a plan an earlier one left; this
+mod's tacks stay (a file undoes its own). A line the panel writes when a
+page cannot hold its body (SDP_LAYOUT_OVERFLOW, SDP_UI.CheckFit) fails the
+test it shows up in. --shortest-window fits the panel's window at its
+minimum height (SDP_UI.WINDOW_MIN, the lowest screens) for the whole run,
+then back to the screen's.
+
+Usage: run_tests.py [-k SUBSTRING] [-v] [--shortest-window] [--rulesets all|LIST] [FILE...]
 --rulesets starts a new game for each ruleset in turn (tools/game.py newgame
 --state SDP_Panel --capital --reveal --ruleset R) and runs the files in each:
 `all` is the base game, Rise and Fall and Gathering Storm, as before a release.
@@ -66,6 +75,26 @@ end
 """ % MOD_ID
 # Frames of the harness itself in HavokScript's automatic tracebacks.
 HARNESS_FRAME = re.compile(r"^\s*(tuner:\d+:|\[C\]: in function 'pcall'|\[string \"local __src)")
+
+# Before each file (issue 327): the panel as a new game shows it.
+DEFAULTS = """
+if SDP_Panel == nil or SDP_Panel.Defaults == nil then error("SDP_Panel.Defaults is missing: deploy this worktree's mod") end
+SDP_Panel.Defaults()
+"""
+# --shortest-window: the window at its minimum whatever the screen (the
+# panel's own FitWindow, with SDP_UI.WindowHeight giving the minimum).
+SHORTEST = """
+if SDP_TestWindowHeight == nil then SDP_TestWindowHeight = SDP_UI.WindowHeight end
+SDP_UI.WindowHeight = function() return SDP_UI.WINDOW_MIN end
+SDP_Panel.FitWindow()
+"""
+SCREEN_WINDOW = """
+if SDP_TestWindowHeight ~= nil then SDP_UI.WindowHeight = SDP_TestWindowHeight end
+SDP_TestWindowHeight = nil
+SDP_Panel.FitWindow()
+"""
+# The panel's line for a page that cannot hold its body (SDP_UI.OVERFLOW).
+OVERFLOW = "SDP_LAYOUT_OVERFLOW"
 
 HARNESS = r"""
 local __src = [{eq}[
@@ -212,6 +241,33 @@ def run_fixtures(specs, label):
     return problem
 
 
+def panel_defaults(shortest):
+    """The panel back to its defaults (and the window at its minimum with
+    `shortest`) before a file. Returns (counts to add, exit kind or None)."""
+    counts = {"FAIL": 0, "ERROR": 0}
+    resp = civ6tuner.request({"op": "exec", "state": "SDP_Panel", "code": (SHORTEST if shortest else "") + DEFAULTS,
+                              "timeout": 30})
+    if resp.get("kind") in ("connection", "timeout"):
+        if "Lua state" in (resp.get("error") or ""):
+            return counts, None  # no game in progress: the file reports that itself
+        print("  ERROR  panel defaults: %s: %s" % (resp["kind"], resp.get("error")))
+        counts["ERROR"] += 1
+        return counts, resp["kind"]
+    if not resp.get("ok"):
+        print("  ERROR  panel defaults: %s" % resp.get("error"))
+        counts["ERROR"] += 1
+    overflow = [l for l in resp.get("output") or [] if l.startswith(OVERFLOW)]
+    if overflow:
+        print("  FAIL   (layout) panel defaults\n         " + "\n         ".join(overflow))
+        counts["FAIL"] += 1
+    return counts, None
+
+
+def screen_window():
+    """Back to the window the screen gives (after --shortest-window)."""
+    civ6tuner.request({"op": "exec", "state": "SDP_Panel", "code": SCREEN_WINDOW, "timeout": 30})
+
+
 def run_fixture(spec, label):
     """Run `STATE FILE` from a @setup/@teardown header; returns an error or None."""
     parts = spec.split(None, 1)
@@ -220,9 +276,14 @@ def run_fixture(spec, label):
     state, rel = parts
     with open(os.path.join(ROOT, rel), encoding="utf-8-sig") as fh:
         resp = civ6tuner.request({"op": "exec", "state": state, "code": fh.read(), "timeout": 10})
+    overflow = []
     for line in resp.get("output") or []:
         print("    %s | %s" % (label, line))
-    return None if resp.get("ok") else "%s %s: %s" % (label, rel, resp.get("error"))
+        if line.startswith(OVERFLOW):
+            overflow.append(line)
+    if not resp.get("ok"):
+        return "%s %s: %s" % (label, rel, resp.get("error"))
+    return "%s %s: %s" % (label, rel, overflow[0]) if overflow else None
 
 
 def workshop_copy():
@@ -247,7 +308,7 @@ def deployed_differences():
     return added + updated + removed
 
 
-def run_file(path, name_filter, verbose):
+def run_file(path, name_filter, verbose, shortest=False):
     """Returns (counts dict, exit kind or None)."""
     counts = {"PASS": 0, "FAIL": 0, "SKIP": 0, "ERROR": 0}
     rel = display_path(path)
@@ -255,6 +316,12 @@ def run_file(path, name_filter, verbose):
         body = fh.read()
     opts = headers(body)
     state = opts.get("state", "InGame")
+    added, problem = panel_defaults(shortest)
+    for k, v in added.items():
+        counts[k] += v
+    if problem:
+        print("%s  [%s]" % (rel, state))
+        return counts, problem
     if "setup" in opts:
         problem = run_fixtures(opts["setup"], "setup")
         if problem:
@@ -308,17 +375,28 @@ def run_chunk(path, body, state, opts, name_filter, verbose, counts, label, limi
         counts["ERROR"] += 1
         state_missing = "Lua state" in (resp.get("error") or "")
         return None if state_missing else resp["kind"]
-    logs = []
+    logs, overflow = [], []
     for item in resp.get("output") or []:
         if not item.startswith(PREFIX):
             logs.append(item)
+            if item.startswith(OVERFLOW):  # a page could not hold its body during this test
+                overflow.append(item)
             continue
         status, name, detail = (item[len(PREFIX):].split(SEP, 2) + ["", ""])[:3]
+        if overflow:
+            if status in ("PASS", "SKIP"):
+                status, detail = "FAIL", "(layout) " + "\n".join(overflow)
+            else:
+                detail = detail + "\n(layout) " + "\n".join(overflow)
+            overflow = []
         counts[status] = counts.get(status, 0) + 1
         if status == "PASS":
             print("  PASS   %s" % name)
         else:
             print("  %-6s %s\n         %s" % (status, name, clean_detail(detail).replace("\n", "\n         ")))
+    if overflow:  # after the last test's line: the file's own code at load
+        counts["FAIL"] += 1
+        print("  FAIL   (layout) outside a test\n         " + "\n         ".join(overflow))
     if resp.get("error"):  # an error escaped the harness itself
         counts["ERROR"] += 1
         print("  ERROR  harness: %s" % resp["error"])
@@ -338,6 +416,7 @@ def run_rulesets(args):
     names = RULESETS if args.rulesets == "all" else [r.strip() for r in args.rulesets.split(",") if r.strip()]
     tools = os.path.dirname(os.path.abspath(__file__))
     rest = list(args.files) + (["-k", args.name_filter] if args.name_filter else []) + (["-v"] if args.verbose else [])
+    rest += ["--shortest-window"] if args.shortest_window else []
     results, worst = [], 0
     for ruleset in names:
         started = subprocess.run([sys.executable, "-I", os.path.join(tools, "game.py"), "newgame", "--state",
@@ -362,6 +441,8 @@ def main(argv=None):
     ap.add_argument("-k", dest="name_filter", help="only tests whose name contains this text")
     ap.add_argument("-v", "--verbose", action="store_true", help="show print() output of passing files")
     ap.add_argument("--rulesets", help="all, or RULESET_... names separated by commas: a new game for each")
+    ap.add_argument("--shortest-window", action="store_true",
+                    help="fit the panel's window at its minimum height for the run (the lowest screens)")
     args = ap.parse_args(argv)
     what = args.rulesets or (" ".join(os.path.basename(f) for f in args.files[:3]) or "all files")
     sdplock.claim_or_exit(ROOT, "run_tests " + what)
@@ -383,13 +464,17 @@ def main(argv=None):
               "in Mods. Unsubscribe it and remove its folder (AGENTS.md section 6), then start a new game." % item)
         return 1
     total = {"PASS": 0, "FAIL": 0, "SKIP": 0, "ERROR": 0}
-    for path in files:
-        counts, problem = run_file(os.path.abspath(path), args.name_filter, args.verbose)
-        for k, v in counts.items():
-            total[k] = total.get(k, 0) + v
-        if problem:  # the game is gone or stuck; later files would fail the same way
-            print("run_tests: stopped (%s)" % problem)
-            return civ6tuner.EXIT_CODES[problem]
+    try:
+        for path in files:
+            counts, problem = run_file(os.path.abspath(path), args.name_filter, args.verbose, args.shortest_window)
+            for k, v in counts.items():
+                total[k] = total.get(k, 0) + v
+            if problem:  # the game is gone or stuck; later files would fail the same way
+                print("run_tests: stopped (%s)" % problem)
+                return civ6tuner.EXIT_CODES[problem]
+    finally:
+        if args.shortest_window:
+            screen_window()
     print("run_tests: %d passed, %d failed, %d skipped, %d errors"
           % (total["PASS"], total["FAIL"], total["SKIP"], total["ERROR"]))
     return 1 if total["FAIL"] or total["ERROR"] else 0

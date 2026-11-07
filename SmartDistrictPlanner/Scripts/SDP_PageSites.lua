@@ -116,6 +116,7 @@ for _, column in ipairs(COLUMNS_B) do ALL_COLUMNS[#ALL_COLUMNS + 1] = column end
 function P.FitPage()
   SDP_UI.FitResults(Controls.SitesBody, Controls.SitesPage, Controls.SitesResultScroll,
     Controls.SitesSettingsScroll, Controls.SitesSettingsStack, Controls.SitesDistrictScroll, Controls.SitesDistrictArea)
+  SDP_UI.CheckFit("SITES", Controls.SitesPage, Controls.SitesBody)
 end
 
 local function Remember() m_kit.Remember() end
@@ -657,6 +658,16 @@ function P.Undo()
   local removed = SDP_PageKit.Undo(m_result, nil)
   SDP_UI.UpdateAllButtons()
   return removed
+end
+
+-- The tab as a new game shows it (tests: SDP_Panel.Defaults, issue 327):
+-- the kept settings at their defaults (the district states, the counts and
+-- distances among them), every site ticked as usual, no result.
+function P.Defaults()
+  m_flipped = {}
+  m_kit.Defaults()
+  m_result, m_solution, m_site, m_lookNext = nil, 1, 1, false
+  P.Refresh()
 end
 
 function P.State()

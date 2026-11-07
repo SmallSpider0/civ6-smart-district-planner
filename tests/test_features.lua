@@ -46,18 +46,16 @@ local function Resolve(base)
   T.skip(base .. " not available to this civ")
 end
 
--- Single-city tab: the capital, only `districts`, standard tier.
+-- The panel at its defaults (issue 327), then the single-city tab on the
+-- capital with only `districts` and no reminders.
 local function Reset(districts)
   local city = Capital()
-  SDP_Panel.SelectTab("SINGLE")
+  SDP_Panel.Defaults()
   SDP_Panel.SelectCity(city:GetID())
   for _, d in ipairs(SDP_Rules.PlannableDistricts(pid)) do SDP_Panel.SetState(d.Type, "OFF") end
   SDP_Panel.SetCount(0)
   SDP_Panel.SetRemind(false)
-  for _, w in ipairs(SDP_Wonders.List(pid)) do SDP_Panel.SetWonder(w.Type, false) end
   for _, d in ipairs(districts) do SDP_Panel.SetSelected(d, true) end
-  SDP_Panel.SetReplace(false)
-  SDP_Panel.SetTier("STANDARD")
   return city
 end
 
@@ -68,9 +66,7 @@ end
 local function Finally(fn)
   local ok, err = pcall(fn)
   UndoAll()
-  SDP_Panel.ShowHeat(nil)
-  SDP_Panel.SetReplace(false)
-  for _, w in ipairs(SDP_Wonders.List(pid)) do SDP_Panel.SetWonder(w.Type, false) end
+  SDP_Panel.Defaults()
   if not ok then error(err, 0) end
 end
 
@@ -527,15 +523,12 @@ test("single-city tab: on a save with several cities, the neighbours the zone ca
   end
   if chosen == nil then T.skip("no city that can plan an industrial zone with an uncovered city in reach") end
   local function Solve(weight)
-    SDP_Panel.SelectTab("SINGLE")
+    SDP_Panel.Defaults()
     SDP_Panel.SelectCity(chosen:GetID())
     for _, d in ipairs(SDP_Rules.PlannableDistricts(pid)) do SDP_Panel.SetState(d.Type, "OFF") end
     SDP_Panel.SetCount(0)
     SDP_Panel.SetRemind(false)
-    for _, w in ipairs(SDP_Wonders.List(pid)) do SDP_Panel.SetWonder(w.Type, false) end
     SDP_Panel.SetSelected(zone, true)
-    SDP_Panel.SetReplace(false)
-    SDP_Panel.SetTier("STANDARD")
     SDP_Panel.SetLand(false)
     SDP_Panel.SetWeight("COVERAGE", weight)
     local result = SDP_Panel.Solve()
