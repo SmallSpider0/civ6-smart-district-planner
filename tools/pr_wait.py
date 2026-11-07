@@ -43,6 +43,14 @@ PR's head (a session may be working there), or when any conflict is of another
 kind. A clean local worktree of the branch is fast-forwarded to the pushed
 merge. `git stash` is never used (docs/maintaining.md, "共用资源").
 
+A PR whose auto-merge is on (not --hold), whose checks have all passed and whose
+merge state is CLEAN, and that stays so for STALL_MINUTES minutes (counted from
+the first check that saw it so, for the same head commit) without GitHub merging
+it, is merged here with a plain `gh pr merge N --squash` (never --admin, no check
+skipped) and reported as merged, noting that pr_wait merged it. GitHub now and
+then misses its own trigger: on 2026-11-06 #323 sat CLEAN with auto-merge on for
+50 minutes (#323). If that merge fails, the PR needs action, with gh's error.
+
 Network and gh errors are retried, never an exit. At the end it prints one
 line per PR. Exit 0: all merged; 1: something needs action; 2: a PR number
 GitHub does not know; 3 (--list only): the night queue is due. Run it in the background: its end is the signal.
@@ -93,6 +101,7 @@ NOT_REVIEWED = ("Codex 没审成（%s），按 docs/maintaining.md“Codex 审�
                 "\n\nCodex was not able to review this PR (%s); auto-merge is on.")
 NOT_REVIEWED_NIGHT = ("Codex 没审成（%s）。这个 PR 等夜间游戏内测试，测完再开自动合并。"
                       "\n\nCodex was not able to review this PR (%s). Auto-merge waits for the night in-game test.")
+STALL_MINUTES = 10  # auto-merge on, checks passed, CLEAN this long without a merge: merge it here
 NOT_REVIEWED_HOLD = ("Codex 没审成（%s）。这个 PR 先不合并，自动合并留给决定合并的人开。"
                      "\n\nCodex was not able to review this PR (%s). It is held: auto-merge is left off.")
 
@@ -328,10 +337,48 @@ def conflict(number, pr, tried):
     return "action", "merge conflict (%s)" % text
 
 
-def assess(number, pr, codex, now, timeout, tried=None, night=False, hold=False):
+def stalled(number, pr, stalls, now, hold, running):
+    """A ('merged' | 'action', text) when auto-merge has sat on a mergeable PR for STALL_MINUTES and
+    the plain squash merge was run, else None (stalls: PR -> (head, first time seen so))."""
+    if stalls is None:
+        return None
+    if (hold or running or not pr.get("autoMergeRequest") or pr.get("mergeStateStatus") != "CLEAN"
+            or pr.get("state") != "OPEN"):
+        stalls.pop(number, None)
+        return None
+    head = pr.get("headRefOid")
+    if number not in stalls or stalls[number][0] != head:
+        stalls[number] = (head, now)
+        return None
+    waited = now - stalls[number][1]
+    if waited < STALL_MINUTES * 60:
+        return None
+    stalls.pop(number, None)
+    minutes = int(waited // 60)
+    stamp = datetime.datetime.now().strftime("%H:%M")
+    print("%s #%d: auto-merge on, checks passed, CLEAN for %d min without a merge: gh pr merge %d --squash"
+          % (stamp, number, minutes, number), file=sys.stderr, flush=True)
+    try:
+        cr.gh("pr", "merge", str(number), "--squash")
+    except RuntimeError as problem:
+        try:  # GitHub may have merged it in the meantime
+            if (cr.ghjson("pr", "view", str(number), "--json", "state") or {}).get("state") == "MERGED":
+                return "merged", "merged"
+        except (RuntimeError, ValueError):
+            pass
+        text = (str(problem).strip().splitlines() or ["gh failed"])[0][:300]
+        print("#%d: the merge failed: %s" % (number, text), file=sys.stderr, flush=True)
+        return "action", "auto-merge stalled %d min, and pr_wait's gh pr merge --squash failed: %s" % (minutes, text)
+    print("#%d: merged by pr_wait" % number, file=sys.stderr, flush=True)
+    return "merged", "merged by pr_wait: auto-merge stalled %d min with checks passed and CLEAN" % minutes
+
+
+def assess(number, pr, codex, now, timeout, tried=None, night=False, hold=False, stalls=None):
     """('merged' | 'action' | 'waiting', short text) for one PR; may turn on auto-merge for --codex PRs
     (not for night ones: they wait for the night test), and may merge main into the branch when a
-    conflict only adds lines (tried: PR -> head tried). hold: kept open on purpose, as night."""
+    conflict only adds lines (tried: PR -> head tried). hold: kept open on purpose, as night.
+    stalls: PR -> (head, time) for the auto-merge that GitHub did not carry out (see stalled())."""
+    held_on_purpose = hold
     held = "waiting for the night test" if night else "held, auto-merge left off"
     night = night or hold
     state = pr.get("state")
@@ -355,6 +402,9 @@ def assess(number, pr, codex, now, timeout, tried=None, night=False, hold=False)
         else:
             note = "Codex clean"
         merge = held if night and not pr.get("autoMergeRequest") else "auto-merge on"
+        done = stalled(number, pr, stalls, now, held_on_purpose, running) if codex.merge_on else None
+        if done:
+            return done
         return "waiting", "%s, %s%s" % (note, merge, ", CI running" if running else "")
     if night and not pr.get("autoMergeRequest"):
         return "waiting", ("CI running, " if running else "CI passed, ") + held
@@ -362,18 +412,18 @@ def assess(number, pr, codex, now, timeout, tried=None, night=False, hold=False)
         return "waiting", "CI running" + ("" if pr.get("autoMergeRequest") else ", auto-merge off")
     if not pr.get("autoMergeRequest"):
         return "action", "open, CI passed, auto-merge off"
-    return "waiting", "auto-merge on, merging"
+    return stalled(number, pr, stalls, now, held_on_purpose, running) or ("waiting", "auto-merge on, merging")
 
 
 class Unknown(Exception):
     """GitHub does not know this PR number."""
 
 
-def poll(n, codex, now, timeout, tried, night, hold=False):
+def poll(n, codex, now, timeout, tried, night, hold=False, stalls=None):
     """Read PR n and assess it; None when gh failed (retried next round). Raises Unknown."""
     try:
         pr = cr.ghjson("pr", "view", str(n), "--json", FIELDS)
-        return assess(n, pr, codex, now, timeout, tried, night, hold)
+        return assess(n, pr, codex, now, timeout, tried, night, hold, stalls)
     except (RuntimeError, ValueError, KeyError, TypeError) as problem:
         text = str(problem)
         if "Could not resolve to a PullRequest" in text or "no pull requests found" in text:
@@ -395,7 +445,8 @@ def say(text):
 def report(order, last):
     for n in order:
         say("#%d %s: %s" % (n, "needs action" if last[n][0] == "action" else last[n][0], last[n][1])
-              if last[n][0] != "merged" else "#%d merged" % n)
+              if last[n][0] != "merged" else "#%d merged" % n if last[n][1] == "merged"
+              else "#%d merged (%s)" % (n, last[n][1]))
 
 
 def watch(numbers, codex_numbers, every, timeout, night=(), hold=()):
@@ -403,13 +454,14 @@ def watch(numbers, codex_numbers, every, timeout, night=(), hold=()):
     codex = {n: Codex() for n in codex_numbers}
     last = {n: ("waiting", "not read yet") for n in order}
     tried = {}  # PR -> head commit a merge of main was tried on
+    stalls = {}  # PR -> (head, first time seen CLEAN with auto-merge on)
     while True:
         now = time.time()
         for n in order:
             if last[n][0] == "merged":
                 continue
             try:
-                seen = poll(n, codex.get(n), now, timeout, tried, n in night, n in hold)
+                seen = poll(n, codex.get(n), now, timeout, tried, n in night, n in hold, stalls)
             except Unknown as problem:
                 say("#%d: %s" % (n, problem))
                 return 2
@@ -512,7 +564,7 @@ def night_due(t, cfg=None):
 def watch_list(every, timeout):
     """The standing wait: read the list each round; end when a PR is merged or needs action,
     or when the night queue is due (exit 3)."""
-    codex, last, tried = {}, {}, {}
+    codex, last, tried, stalls = {}, {}, {}, {}
     while True:
         now = time.time()
         items = read_list()
@@ -520,6 +572,7 @@ def watch_list(every, timeout):
             if n not in items:  # taken off the list by hand
                 last.pop(n)
                 codex.pop(n, None)
+                stalls.pop(n, None)
         ended = []
         for n in sorted(items):
             entry = items[n]
@@ -532,7 +585,7 @@ def watch_list(every, timeout):
             elif not entry["codex"]:
                 codex.pop(n, None)
             try:
-                seen = poll(n, codex.get(n), now, timeout, tried, entry["night"], entry.get("hold", False))
+                seen = poll(n, codex.get(n), now, timeout, tried, entry["night"], entry.get("hold", False), stalls)
             except Unknown as problem:
                 seen = ("unknown", str(problem))
             if seen:
