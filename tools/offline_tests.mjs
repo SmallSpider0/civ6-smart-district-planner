@@ -14,7 +14,9 @@
 //   - test(name, fn) and T, the same assertions as tools/run_tests.py.
 //
 // After every solve the plan invariants (tests/offline/invariants.lua) are
-// checked; a test whose solves break one fails.
+// checked; a test whose solves break one fails. Every frame of a sliced
+// computation (SDP_Task.Step) is measured in VM instructions; a test with a
+// frame over the frame watchdog's limit (tests/offline/watchdog.lua) fails.
 //
 // Tests: tests/offline/spec_*.lua (not test_*.lua, which run_tests.py runs in
 // the game). Benchmarks: tests/offline/bench_*.lua, run only when named.
@@ -24,7 +26,7 @@
 // counts do not depend on this VM's speed.
 //
 // Each test's seconds follow its line when it takes 1 s or more; -t also lists
-// the slowest tests of the run at the end.
+// the slowest tests and the longest frames of the run at the end.
 //
 // Usage: node tools/offline_tests.mjs [-k SUBSTRING] [-v] [-t] [FILE...]
 // Exit codes: 0 all passed, 1 failures, 2 bad usage.
@@ -50,6 +52,9 @@ const SEARCH = [
 // Game files the scripts include; World provides their globals.
 const GAME_FILES = new Set(["MapTacks", "dmt_yieldcalculator", "dmt_mappinsubjectmanager", "InstanceManager"]);
 const SEP = "\x1f";
+// The frame watchdog counts VM instructions in steps of this many (a count
+// hook; a finer step costs more time and changes nothing at its limit).
+const WATCH_STEP = 1000;
 
 const PRELUDE = String.raw`
 unpack = table.unpack
@@ -104,6 +109,7 @@ function sdp_run_tests(filter)
     if filter == nil or string.find(t.name, filter, 1, true) then
       sdp_emit("SDP_BEGIN")
       if SDP_Invariants then SDP_Invariants.BeginTest() end
+      if SDP_Watchdog then SDP_Watchdog.BeginTest() end
       local ok, err = xpcall(t.fn, function(e)
         if type(e) == "table" then return e end
         return debug.traceback(tostring(e), 2)
@@ -113,6 +119,13 @@ function sdp_run_tests(filter)
       if found ~= nil and (ok or type(err) ~= "table") then
         ok, err = false, (ok and "" or tostring(err) .. "\n") .. found
       end
+      -- Frame watchdog (tests/offline/watchdog.lua): every frame of a task.
+      local long = SDP_Watchdog and SDP_Watchdog.Longest
+      local slow = SDP_Watchdog and SDP_Watchdog.EndTest() or nil
+      if slow ~= nil and (ok or type(err) ~= "table") then
+        ok, err = false, (ok and "" or tostring(err) .. "\n") .. slow
+      end
+      if long then sdp_emit("SDP_FRAME" .. S .. long.Work .. S .. long.Task .. S .. long.Frame) end
       if ok then
         sdp_emit("SDP_TEST" .. S .. "PASS" .. S .. t.name)
       elseif type(err) == "table" and err.sdp_skip then
@@ -192,9 +205,52 @@ function newState(output) {
       return lauxlib.luaL_error(L, to_luastring(String(e.message)));
     }
     lua.lua_call(L, 0, lua.LUA_MULTRET);
+    if (name === "SDP_Task") {
+      // the frame watchdog wraps SDP_Task.Step (tests/offline/watchdog.lua)
+      lua.lua_getglobal(L, to_luastring("SDP_Watchdog"));
+      lua.lua_getfield(L, -1, to_luastring("Install"));
+      lua.lua_call(L, 0, 0);
+      lua.lua_pop(L, 1);
+    }
     return lua.lua_gettop(L) - top;
   });
   lua.lua_setglobal(L, to_luastring("include"));
+
+  // Frame watchdog: count instructions; while a frame has a limit, an
+  // instruction past it raises an error inside the task's coroutine (not in
+  // SDP_Task.Step's own bookkeeping, which runs on the main thread and puts
+  // the overlay back).
+  let work = 0, frameEnd = 0, frameWhat = "", stopped = null;
+  lua.lua_sethook(L, (T) => {
+    work += WATCH_STEP;
+    if (frameEnd && work > frameEnd && T !== L) {
+      if (!stopped) {
+        // where the frame was when it went over, for the test's failure
+        lauxlib.luaL_traceback(T, T, null, 0);
+        stopped = to_jsstring(lua.lua_tostring(T, -1)).split("\n").slice(1, 7).join("\n");
+        lua.lua_pop(T, 1);
+      }
+      lauxlib.luaL_error(T, to_luastring(frameWhat + ": over the watchdog's limit, stopped"));
+    }
+  }, lua.LUA_MASKCOUNT, WATCH_STEP);
+  lua.lua_pushjsfunction(L, (T) => { lua.lua_pushnumber(T, work); return 1; });
+  lua.lua_setglobal(L, to_luastring("sdp_work"));
+  // sdp_frame_limit(at, what) arms the limit; sdp_frame_limit(nil) clears it
+  // and returns where it stopped the frame (a traceback), or nil.
+  lua.lua_pushjsfunction(L, (T) => {
+    if (lua.lua_isnoneornil(T, 1)) {
+      if (stopped === null) lua.lua_pushnil(T);
+      else lua.lua_pushstring(T, to_luastring(stopped));
+      frameEnd = 0;
+      stopped = null;
+      return 1;
+    }
+    frameEnd = lua.lua_tonumber(T, 1);
+    frameWhat = to_jsstring(lauxlib.luaL_checkstring(T, 2));
+    stopped = null;
+    return 0;
+  });
+  lua.lua_setglobal(L, to_luastring("sdp_frame_limit"));
 
   if (lauxlib.luaL_dostring(L, to_luastring(PRELUDE)) !== lua.LUA_OK) {
     throw new Error("prelude: " + lua.lua_tojsstring(L, -1));
@@ -206,6 +262,10 @@ function newState(output) {
   loadFile(L, join(OFFLINE, "invariants.lua"));
   lua.lua_call(L, 0, 1);
   lua.lua_setglobal(L, to_luastring("SDP_Invariants"));
+  // Frame watchdog, checked on every frame of a task (issue 327).
+  loadFile(L, join(OFFLINE, "watchdog.lua"));
+  lua.lua_call(L, 0, 1);
+  lua.lua_setglobal(L, to_luastring("SDP_Watchdog"));
   // A tiny default world, so scripts can be included before a test builds its own.
   if (lauxlib.luaL_dostring(L, to_luastring('World.New({ rows = { "...", "..." } })')) !== lua.LUA_OK) {
     throw new Error("default world: " + lua.lua_tojsstring(L, -1));
@@ -218,7 +278,7 @@ function took(seconds) {
   return seconds >= 1 ? `  (${seconds.toFixed(1)}s)` : "";
 }
 
-function runFile(path, filter, verbose, timed) {
+function runFile(path, filter, verbose, timed, frames) {
   const counts = { PASS: 0, FAIL: 0, SKIP: 0, ERROR: 0 };
   const output = [];
   const started = performance.now();
@@ -238,7 +298,13 @@ function runFile(path, filter, verbose, timed) {
     lines.push("  ERROR  " + String(e.message || e).replace(/\n/g, "\n         "));
   }
   const logs = [];
+  let frame = null;
   for (const item of output) {
+    if (item.startsWith("SDP_FRAME" + SEP)) {
+      const [, work, task, n] = item.split(SEP);
+      frame = { work: Number(work), task, frame: Number(n) };
+      continue;
+    }
     if (!item.startsWith("SDP_TEST" + SEP)) {
       logs.push(item);
       continue;
@@ -249,6 +315,8 @@ function runFile(path, filter, verbose, timed) {
     const detail = parts.length > 4 ? parts.slice(3, -1).join(SEP) : "";
     counts[status] = (counts[status] || 0) + 1;
     timed.push({ seconds: secs, name: `${display(path)}: ${name}` });
+    if (frame) frames.push({ ...frame, name: `${display(path)}: ${name}` });
+    frame = null;
     if (status === "PASS") lines.push("  PASS   " + name + took(secs));
     else lines.push(`  ${status.padEnd(6)} ${name}${took(secs)}\n         ${detail.replace(/\n/g, "\n         ")}`);
   }
@@ -287,14 +355,20 @@ function main({ filter, verbose, slowest, files }) {
   }
   const total = { PASS: 0, FAIL: 0, SKIP: 0, ERROR: 0 };
   const timed = [];
+  const frames = [];
   for (const f of files) {
-    const c = runFile(f, filter, verbose, timed);
+    const c = runFile(f, filter, verbose, timed, frames);
     for (const k of Object.keys(total)) total[k] += c[k] || 0;
   }
   if (slowest) {
     timed.sort((a, b) => b.seconds - a.seconds || (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
     console.log("\nslowest tests:");
     for (const t of timed.slice(0, 20)) console.log(`  ${t.seconds.toFixed(2).padStart(8)}s  ${t.name}`);
+    frames.sort((a, b) => b.work - a.work || (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
+    console.log("\nlongest frames (VM instructions; tests/offline/watchdog.lua):");
+    for (const f of frames.slice(0, 20)) {
+      console.log(`  ${(f.work / 1e6).toFixed(1).padStart(8)}M  ${f.name}  (${f.task}, frame ${f.frame})`);
+    }
   }
   console.log(`\n${total.PASS} passed, ${total.FAIL} failed, ${total.SKIP} skipped, ${total.ERROR} errors`);
   return total.FAIL || total.ERROR ? 1 : 0;
