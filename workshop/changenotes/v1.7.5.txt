@@ -1,0 +1,11 @@
+Changes since v1.7.4:
+- City sites with ‘Dense packing: new cities close together’ on: when two plans fit the same number of new cities, the more tightly packed one now wins (the total distance from each new city to its nearest city or site is smaller), and only then the higher score; fine-tuning no longer moves cities outward. With few new cities and plenty of room, new cities now try to sit 4 tiles from the nearest city, so each city gets fewer tiles and a lower score, and the same settings give different sites. Turn dense packing off if you want high scores per city; with it off, plans do not change.
+- Several cities with many wonders ticked (for example 19 wonders for 6 cities, or all of them): Solve no longer freezes the game. When several wonders compete for the same tiles, the planner sees sooner whether they fit, and the count of layouts it tries is capped and spread over frames, so the screen keeps updating and the progress bar keeps moving.
+- A wonder with its city set to automatic that does not fit in the city with the highest production is now tried in at most one more city; if it still does not fit, it is placed by the whole plan in any city, instead of trying the cities one by one. Solving with many wonders is much faster. With the same settings, such a wonder may go to a different city than before.
+- With the Diplomatic Quarter and the Preserve (Ethiopia Pack, Vietnam & Kublai Khan Pack) the district list has one more row, and on short screens the ‘Place tacks’ and ‘Undo tacks’ buttons at the bottom of the One city tab were cut in half. Now, when the page does not fit, the district list scrolls like the settings, and the buttons of all three tabs stay on the page; on tall screens nothing changes.
+
+自 v1.7.4 以来的变化：
+- 选城址页开了“密铺：新城挨着放”时，放得下的城数一样就先比挤不挤，再比总分；调整位置时不再把城往外挪。新城少、地方宽时，新城会尽量离最近的城 4 格，每座城的格子和分数都少一些，同样的设置给出的城址会变。想要每座城分高就关掉密铺；不开密铺时方案不变。
+- 多城页勾了很多奇观（比如 6 座城 19 座奇观，或全部奇观）时，点“求解”游戏不再卡死，画面和进度条照常走。
+- 自动选城的奇观在产能最高的城放不下时，最多再换一座城；还放不下就按整体方案放在任意城，不再一座一座城往下试，奇观多时快很多。同样的设置，这类奇观放在哪座城可能和以前不同。
+- 有外交区、保护区（埃塞俄比亚包、越南和忽必烈包）时，矮屏幕上单城页最下面的“打钉”“撤销”按钮不再被切掉一半：页面放不下时区域勾选区也可以上下滚动，三个页签的按钮都留在页面里；屏幕够高时外观不变。
