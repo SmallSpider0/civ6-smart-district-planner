@@ -79,7 +79,7 @@ PLANNERS = {
     "sdp:FAST": {"label": "本模组 快速档", "color": "--s1"},
     "sdp:STANDARD": {"label": "本模组 标准档", "color": "--sdp"},
     "sdp:FINE": {"label": "本模组 精细档", "color": "--s3"},
-    "sdp:STANDARD_LAND": {"label": "本模组 标准档·计入地块（面板默认）", "color": "--s3"},
+    "sdp:STANDARD_LAND": {"label": "本模组 标准档·计入地块", "color": "--s3"},
     "sdp:CITY_BY_CITY": {"label": "本模组 逐城依次", "color": "--opt"},
 }
 STAGES = [("early", "前期 · 2 个区域"), ("mid", "中期 · 4–5 个"), ("late", "后期 · 7–8 个")]
@@ -89,7 +89,7 @@ PAGES_URL = "https://smallspider0.github.io/civ6-smart-district-planner/"
 # Names and labels it uses; the numbers come from the same data.
 PLANNERS_EN = {
     "sdp:FAST": "This mod, Fast", "sdp:STANDARD": "This mod, Standard", "sdp:FINE": "This mod, Thorough",
-    "sdp:STANDARD_LAND": "This mod, Standard + Land loss (panel default)", "sdp:CITY_BY_CITY": "This mod, city by city",
+    "sdp:STANDARD_LAND": "This mod, Standard + Land loss", "sdp:CITY_BY_CITY": "This mod, city by city",
 }
 STAGES_EN = [("early", "Early · 2 districts"), ("mid", "Middle · 4–5"), ("late", "Late · 7–8")]
 MULTIPOOLS_ROW_EN = ["Several cities", "3", "Standard and Thorough reach the reference in all 3, better than picking "
