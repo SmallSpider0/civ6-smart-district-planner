@@ -40,6 +40,7 @@ function SDP_PageKit.New(spec)
     Extra = extra, Tiers = spec.Tiers, Presets = spec.Presets, Order = spec.Order,
     GetTier = function() return K.Tier end, PutTier = function(tier) K.Tier = tier end })
   K.Keeper = keeper
+  K.Switches = switches -- tests: the switches with their check boxes (issue 327)
 
   -- The fold line (issue 71) and the preset pulldown: the preset the values
   -- equal, "Custom" when none (issue 89), then what is not as usual.

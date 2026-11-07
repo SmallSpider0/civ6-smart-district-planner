@@ -170,15 +170,21 @@ test("a wonder that must touch a district is not lost when the districts cluster
 end)
 
 test("the good-places map: legal plots best first, the best not beaten by any one placement", function()
-  -- The map ranks by adjacency alone; the solver also charges the distance
-  -- weight for far plots it has to buy (issue 319), so compare with it at 0.
-  local distance = SDP_Panel.State().Weights.DISTANCE
+  -- The map ranks by adjacency alone (issue 324); the solver also charges
+  -- the distance for far plots it has to buy (issue 319), land, housing,
+  -- coverage and improvements. Those are set so that they change nothing:
+  -- the list is HEAT_NEUTRAL in tests/offline/spec_reconcile.lua, which
+  -- checks it against what each setting reaches (issue 327).
+  local NEUTRAL = { LAND = 0, DISTANCE = 0, HOUSING = 0, COVERAGE = 0 }
+  local before, improve, worked = {}, SDP_Panel.State().Improve, SDP_Panel.State().Worked
+  for key in pairs(NEUTRAL) do before[key] = SDP_Panel.State().Weights[key] end
   Finally(function()
     local ok, err = pcall(function()
       local campus = Resolve("DISTRICT_CAMPUS")
       Reset({ campus })
-      SDP_Panel.SetLand(false)
-      SDP_Panel.SetWeight("DISTANCE", 0)
+      for key, value in pairs(NEUTRAL) do SDP_Panel.SetWeight(key, value) end
+      SDP_Panel.SetImprove(false)
+      SDP_Panel.SetWorked(false)
       SDP_Panel.ShowHeat(campus)
       local spots = SDP_Panel.Heat()
       T.ok(spots ~= nil and #spots > 0, "spots")
@@ -189,8 +195,9 @@ test("the good-places map: legal plots best first, the best not beaten by any on
       T.near(solo.Adjacency, spots[1].Gain, 1e-9, "the solver's single campus is the best spot")
       T.ok(not SDP_Preview.IsShown() or SDP_Panel.State().HeatDistrict == nil, "solving takes the map down")
     end)
-    SDP_Panel.SetWeight("DISTANCE", distance)
-    SDP_Panel.SetLand(true)
+    for key, value in pairs(before) do SDP_Panel.SetWeight(key, value) end
+    SDP_Panel.SetImprove(improve)
+    SDP_Panel.SetWorked(worked)
     if not ok then error(err, 0) end
   end)
 end)

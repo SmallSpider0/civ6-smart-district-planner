@@ -723,6 +723,7 @@ m_kit = SDP_PageKit.New({
 -- A preset sets every weight, the distance cost too (issue 89), as on the
 -- other tabs; the number of new cities, the distance between them and the
 -- tier stay.
+P.Kit = m_kit -- tests: the tab's settings table (issue 327)
 P.SetWeight = m_kit.SetWeight
 P.SetTier = m_kit.SetTier
 P.SetPreset = m_kit.SetPreset
