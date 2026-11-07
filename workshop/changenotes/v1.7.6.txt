@@ -1,0 +1,9 @@
+Changes since v1.7.5:
+- Several cities with many cities and wonders ticked and every district set to required: the screen now stays smooth while solving instead of stuttering.
+- City sites no longer count for a new city the tiles of your other cities that carry a map tack (such as a ‘Don't chop’ reminder), nor the tiles where another city's planned districts or wonders are tacked, as tiles the new city can work. Before, the Luxury resources and yields on such tiles made sites next to your cities score too high. One city and Several cities no longer count such tiles of another city for this city either.
+- In the Monopolies and Corporations Mode, tile values no longer treat every Luxury resource as if it could get an Industry or a Corporation (a Corporation gives +10 Production a turn and more): each Luxury resource can have only one of each, an Industry needs several improved copies first, and a Corporation needs a monopoly and a Great Merchant. Before, this made sites and district places with Luxury resources score much higher. All three tabs now count such tiles, and plan their improvement tacks, with ordinary improvements such as Plantations.
+
+自 v1.7.5 以来的变化：
+- 多城页勾很多城和奇观、又把全部区域设成必建时，求解中画面更顺，不再一顿一顿。
+- 选城址不再把本方别的城插着地图钉的格（如“勿砍”提醒钉）、别的城计划的区域钉和奇观钉所在的格算成新城能耕作的格；以前这些格上的奢侈资源和产出会让挨着已有城市的城址分偏高。单城、多城页算地块时也不再把别的城带钉的格算给这座城。
+- 开了“垄断与公司模式”时，地块分不再把每块奢侈资源都当作能建行业、公司来算（每种奢侈资源各只能有一个，行业要先改良几份，公司要垄断和大商人）；以前有奢侈资源的城址、区域位置的地块分会高出很多。三个页签算地块和打改良钉都按种植园等普通改良算。
