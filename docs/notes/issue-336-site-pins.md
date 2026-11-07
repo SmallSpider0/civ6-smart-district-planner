@@ -65,3 +65,27 @@ Issue：合作者 DracoYus 报选城址页有些他认为高收益的城址没�
 - 离线：`spec_sites.lua`、`spec_site_housing.lua`、`spec_site_order.lua` 本机；整套离线测试第二台机器（`remote.py run i336-offline2`）。
 - 开发集核对：`python3 -I tools/remote.py run i336-check --slots 6 -- python3 -I tools/refresh_results.py --check`，结果见 PR。
 - 游戏内（2026-11-07 周六晚，新对局 `--capital --reveal`）：`run_tests.py tests/test_sites.lua tests/test_city.lua tests/test_overlay.lua tests/test_multi.lua`：35 过、1 跳过（“DMT 出错时标记而不中止”要求有未揭示格）、0 失败。
+
+## 5. 合作者问地块分为什么低：行业、公司算进了奢侈资源格（2026-11-07 晚）
+
+[合作者追问](https://github.com/SmallSpider0/civ6-smart-district-planner/issues/336#issuecomment-6709188869)：框的城址附近丘陵、树林、雨林不少，地块分怎么这么低，树林也能建伐木场。读档逐格核对（`logs/i336/probe7.lua`：每格的现有产出、每种改良的值、保留还是砍掉）：
+
+- **丘陵算了矿山**：草原丘陵 2 食 1 产，矿山或农场都 +1，1.18 分；火山土丘陵 1.43 分。
+- **树林、雨林按砍掉再建农场算**，砍下来的一次性产出记在“砍树、收获”那一项（框里 27.6 就是十多块树林、雨林）。留着建伐木场（+2 生产力）要放弃这次砍伐：存档进度下砍一片树林给约 52 生产力（20 × 成长倍数 2.62），按 20 回合摊开每回合约 2.6，比伐木场多出的 2 生产力多，所以伐木场的值是 −0.92，农场 0.89。这是按现有规则算的取舍，不是漏算。伐木场要建造学，存档里还没研究；改良设施本身不查科技（第 27 节的做法，按以后能建算），只有改良的加成产出查科技。
+- **分数是点数不是产出**：一块草原农场（3 食物）记 0.89 分，10 分相当于一座好城最好的 7 块地（`SDP_Sites.REFERENCE.Farm`）。之前在 Issue 里写成“每回合 7.1”，容易被读成 7 点产出。
+- **错误**：存档开了“垄断与公司模式”，它的“行业”（+2 食 +2 产 +1 金）和“公司”（+4 食 +10 产 +3 金）在规则里是能建在奢侈资源上的普通改良（`Improvements.Buildable`、`Improvement_ValidResources`），`SDP_Land` 的改良规则把它们当作每块奢侈资源都能建。游戏里每种奢侈资源只能有一个行业，要先改良几份；公司要垄断，由大商人建（`Improvement_ValidBuildUnits`）。所以方案 1 那座城的火山土咖啡记了 5.80、树林丝绸 5.21（公司），种植园只有 1.58、0.99。
+  - 修正（新分支 `mac/i336-mode-improvements`，#341 已合并）：`ImprovementRules` 读 `Improvements_MODE`，`Industry` 或 `Corporation` 为真的改良不算。三个页签的地块和改良钉都用这份规则。
+  - 测试：`spec_land` “issue 336: no Industry or Corporation of the Monopolies and Corporations mode on every luxury”（假世界加一个种植园、一个行业、一个公司，都能建在酒上），旧代码上失败 `expected 5, got 14`。假世界导出了 `World.Table` 供测试加规则行。
+
+改后同一存档：
+
+| 城址 | 改前 | 改后 | 其中地块 |
+|---|---|---|---|
+| (59,40) | 60.6 | 56.9 | 12.0 → 8.3 |
+| 方案 1 的 (73,34) 玛穴东边 | 62.2 | 54.0 | 17.2 → 8.9 |
+| (71,43) | 56.2 | 52.6 | 10.5 → 6.8 |
+| 框里 (70,31) | 40.9 | 40.9 | 7.1（没有奢侈资源，不变） |
+
+选出的三座城不变（排序变成 (59,40)、(73,34)、(71,43)）。框里那一格和玛穴东边那一座的地块分只差 1.9，差距主要在淡水（10）、奢侈资源（7.5）和区域（2.1）；砍树一项框里多 8.4。密铺 4 座、6 座时改后会选上 (70,31)。
+
+游戏内（新对局）：`run_tests.py tests/test_land.lua tests/test_improve.lua tests/test_sites.lua tests/test_features.lua tests/test_pins.lua` 31 过、1 跳过（要多城存档的那一项）、0 失败。

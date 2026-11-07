@@ -104,7 +104,8 @@ end
 --   Yields = { [yield] = n }, Bonus = { { Yield, Change, Tech, Civic } } } },
 --   FeatureYields, ResourceYields = { [type] = { [yield] = n } } }.
 -- Only improvements every player can build (Buildable, no TraitType, not
--- needing a river or adjacent resources) that give yields. OwnImprovement =
+-- needing a river or adjacent resources, not the mode's Industry or
+-- Corporation) that give yields. OwnImprovement =
 -- { [resource type] = true } for every resource with an improvement of its
 -- own, any improvement (the oil well is not Buildable in the database).
 local m_rules, m_rulesFor = nil, nil
@@ -115,9 +116,16 @@ local function ImprovementRules()
   if m_rules ~= nil and m_rulesFor == GameInfo then return m_rules end
   local rules = { Improvements = {}, FeatureYields = {}, ResourceYields = {}, OwnImprovement = {} }
   local function Rows(name) return GameInfo[name] ~= nil and GameInfo[name]() or function() return nil end end
+  -- The Industry and the Corporation of the Monopolies and Corporations mode
+  -- (its table Improvements_MODE): one per luxury kind, after improving
+  -- several copies, or with a monopoly and a Great Merchant (issue 336).
+  local limited = {}
+  for row in Rows("Improvements_MODE") do
+    if Flag(row.Industry) or Flag(row.Corporation) then limited[row.ImprovementType] = true end
+  end
   local byType = {}
   for row in Rows("Improvements") do
-    if Flag(row.Buildable) and row.TraitType == nil and not Flag(row.RequiresRiver) and not Flag(row.RequiresAdjacentBonusOrLuxury)
+    if Flag(row.Buildable) and row.TraitType == nil and not limited[row.ImprovementType] and not Flag(row.RequiresRiver) and not Flag(row.RequiresAdjacentBonusOrLuxury)
         and not Flag(row.RequiresAdjacentLuxury) and (row.ValidAdjacentTerrainAmount or 0) == 0
         and (row.Workable == nil or Flag(row.Workable)) then
       local entry = { Type = row.ImprovementType, Index = row.Index, Sea = row.Domain == "DOMAIN_SEA", Terrains = {}, Features = {}, Resources = {},

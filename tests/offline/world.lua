@@ -44,6 +44,9 @@ local function Table(rows, key)
   })
 end
 
+-- For specs that add rule rows of their own (issue 336).
+World.Table = Table
+
 local YIELDS = { "YIELD_FOOD", "YIELD_PRODUCTION", "YIELD_GOLD", "YIELD_SCIENCE", "YIELD_CULTURE", "YIELD_FAITH" }
 
 local function Yields(f, p, g, s, c, r)
