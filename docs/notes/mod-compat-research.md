@@ -2,10 +2,12 @@
 
 2026-11-05 调研（维护者要求；起因是创意工坊 LotusEater 11-04 的评论：武则天“圣母神皇”的“区域挨奇观 +2”和“所有区域之间加标准相邻”的模组算不进方案）。只读源码和网页，没开游戏，没改 mod 代码。结论和待定问题在 Issue #295；这里是数字出处和交接。“和而不同”本体的兼容已在 #277 查过（[issue-277-hebutong.md](issue-277-hebutong.md)），这里不重复。
 
+**定下的**（维护者 2026-11-05，见 #295）：只修本模组自己的问题（#293、#294），README 和安装说明写清和其他模组一起用时的局限（#296）；本模组自己算武则天这类 Detailed Map Tacks 不认的加成（#298）、适配“模块化相邻加成”（#299）、第 4 环都不做。下面是当时的调研记录，第 6 节的做法因此都没有采用。
+
 ## 1. 对象和方法
 
 - 热门榜：创意工坊浏览页按“不重复订阅者总计”取前 7 页（213 个物品），再用 Steam Web API `ISteamRemoteStorage/GetPublishedFileDetails` 取当前订阅数（2026-11-05）。本模组当日 2,544。
-- 代码：本机已订阅的约 130 个在 Steam 的创意工坊目录；另用 SteamCMD（缓存登录，`+@NoPromptForPassword 1`，没输密码、没订阅）下载 37 个到 `~/steamcmd-home/.../workshop/content/289070/`。macOS 上一条命令带多个 `+workshop_download_item` 只下第一个，要一个一个下。只读、grep，没运行其中任何脚本，文件不进仓库。
+- 代码：本机已订阅的约 130 个在 Steam 的创意工坊目录；另用 SteamCMD（`+@NoPromptForPassword 1`，没输密码、没订阅）下载 37 个到本机 SteamCMD 的创意工坊目录。macOS 上一条命令带多个 `+workshop_download_item` 只下第一个，要一个一个下。只读、grep，没运行其中任何脚本，文件不进仓库。
 - 分工：界面模组、规划类模组、规则类模组各派一个子 agent 读代码（Opus，medium），玩家需求派一个子 agent 读网页；武则天那条和“模块化相邻加成”由本会话自己查。子 agent 的结论里关于本模组的说法逐条回到代码核对过（第 4 节标“已核对”的）。
 
 ### 订阅数（节选，2026-11-05）
@@ -147,4 +149,4 @@
 ## 7. 文件位置
 
 - 订阅数原始数据：会话临时目录 `scratchpad/ws/{rank.txt,details.json}`（会话结束失效）。
-- 下载的模组：`~/steamcmd-home/Library/Application Support/Steam/steamapps/workshop/content/289070/`（只读，不进仓库）。
+- 下载的模组：本机 SteamCMD 的创意工坊目录（只读，不进仓库）。
