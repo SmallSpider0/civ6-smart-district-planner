@@ -306,9 +306,14 @@ python3 -I report/build.py --version v1.0.0 --site _site   # 另输出 GitHub Pa
 python3 -I tools/run_tests.py                     # 跑 tests/**/test_*.lua
 python3 -I tools/run_tests.py -k campus -v tests/test_dmt.lua
 python3 -I tools/run_tests.py --rulesets all       # 原版、迭起兴衰、风云变幻各开一局再跑（发版前）
+python3 -I tools/run_tests.py --shortest-window tests/test_ui.lua   # 面板窗口固定最矮（最小屏幕）跑
 ```
 
 开测前先查对局加载的是本模组的哪一份：是创意工坊那份（订阅了创意工坊版，见 AGENTS.md 坑 38）就不跑，返回 1。
+
+- **每个文件开头面板放回默认**（#327）：执行文件的 `@setup` 之前，先在 `SDP_Panel` 状态调 `SDP_Panel.Defaults()`：停掉计算、退出窥视，三个页签的设置、区域状态和数量、奇观、多城的参与城和各城清单、各页的方案、好位置图都回到新开一局的样子（设置走存档读回的同一条路：没存东西时的默认，并写回存档），切回单城页；面板开着还是关着照旧，本模组的钉不动（文件自己撤销）。所以一个文件不会跑在前面文件留下的状态上；同一文件里测试之间仍要自己还原，文件内要从默认开始时直接调 `SDP_Panel.Defaults()`。
+- **页面装不下就失败**（#327）：面板每次排版后自查页面装不装得下（`SDP_UI.CheckFit`：主体连同底下的求解、打钉按钮要在页面里），装不下往日志写一行 `SDP_LAYOUT_OVERFLOW <页签>: ...`，面板本身不变。`run_tests.py` 把这一行算作它出现时那项测试的失败（放回默认时出现的算这个文件的失败）。
+- **`--shortest-window`**：整个运行期间面板窗口按最矮（`SDP_UI.WINDOW_MIN`，最小的屏幕）排版，跑完恢复按屏幕排。改了界面时用它跑一遍界面相关的测试，和上一条一起查最矮屏幕上按钮会不会被挤出去；`--rulesets` 也可带。
 
 测试文件格式：
 
@@ -465,6 +470,7 @@ python3 -I tools/civ6tuner.py exec -s MainMenu 'print(_VERSION)'
 
 ```bash
 python3 -I tools/shots.py stage single           # 在 SDP_Panel 状态执行 tests/shots/single.lua（single、sites、multi、settings）
+python3 -I tools/shots.py stage single --as-is   # 不先放回默认
 python3 -I tools/shots.py capture v10-panel-single   # 截面板 -> docs/images/v10-panel-single.jpg
 python3 -I tools/shots.py region                 # 没有录屏权限时：打印面板的屏幕区域，用 computer-use 缩放截图后
 python3 -I tools/shots.py save 截图文件 v10-panel-single
@@ -476,6 +482,7 @@ python3 -I tools/shots.py lang restore           # 恢复备份，核对逐字�
 - 真实点击必须让游戏在前台：直接发给游戏进程的鼠标事件（不切前台）游戏不理（2026-10-25 试过）。
 - SDPClick 只在 `tools/click/sdp-click.swift` 改了时才重新编译（`realclick.py build`，`--force` 强制）。临时签名每次编译都会变，macOS 随之收回辅助功能和录屏两项授权，要重新允许。登录钥匙串里有名为 `SDPClick Local Signing` 的自签名代码签名证书时（或 `SDP_CODESIGN_ID` 指定的证书），编译脚本用它签名，签名身份不变，授权就会保留。
 - 截图左右各裁掉 5 像素，存成质量 90 的 JPEG，命名见 docs/maintaining.md 的写作规则。
+- `stage` 先撤掉本局里本模组打的钉（撤销到底），再 `SDP_Panel.Defaults()` 把面板放回默认（#325），然后脚本只设这张图要的几项，所以截图不受前面测试或别的截图留下的设置影响。
 - `multi` 会先把选城址页的方案打成城址钉，奇观选阿耳忒弥斯神庙（原版选大图书馆），并把结果列表滚到奇观那一行。
 
 ## release.py — 发版

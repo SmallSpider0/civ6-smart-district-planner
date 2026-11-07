@@ -372,6 +372,21 @@ function SDP_UI.FitResults(body, page, scroll, settings, settingsStack, district
   return height
 end
 
+-- A self-check after a tab fitted its page (issue 327): the body (the
+-- solve and the tacks' buttons at its foot) must end on the page. When it
+-- does not, one line starting with SDP_UI.OVERFLOW goes to the log; the
+-- in-game tests (tools/run_tests.py) fail the test it shows up in. Nothing
+-- on the panel changes. A hidden page is fitted again when its tab opens.
+SDP_UI.OVERFLOW = "SDP_LAYOUT_OVERFLOW"
+function SDP_UI.Log(text) print(text) end -- the offline tests read it
+function SDP_UI.CheckFit(name, page, body)
+  if page:IsHidden() then return true end
+  local pageHeight, bodyHeight = page:GetSizeY(), body:GetSizeY()
+  if bodyHeight <= pageHeight then return true end
+  SDP_UI.Log(string.format("%s %s: the body %d does not fit the page %d", SDP_UI.OVERFLOW, name, bodyHeight, pageHeight))
+  return false
+end
+
 -- How a coverage target (SDP_Coverage key) is called: one of the player's
 -- cities ("C<id>") by its number and name, a city-center pin ("S<plot
 -- index>") as "Site n" with the number SDP_City.SiteNumbers gives it.
@@ -1710,6 +1725,22 @@ SDP_Panel = {
   Solve = S.Solve,
   Continue = S.Continue,
   Cancel = function() return SDP_Task.Cancel() end,
+  -- The panel as a new game shows it (issue 327): no computation, no peek,
+  -- no result waiting, every tab at its defaults (SDP_PageSingle.Defaults
+  -- and the others), the single-city tab. Open or closed as it was; this
+  -- mod's tacks stay. tools/run_tests.py calls it before each test file,
+  -- tools/shots.py before each stage.
+  Defaults = function()
+    if SDP_Task.IsRunning() then SDP_Task.Cancel() end
+    SetPeek(false)
+    if m_launchDone then SetLaunchMark(false) end
+    SDP_Preview.Clear()
+    SDP_PageSingle.Defaults()
+    SDP_PageSites.Defaults()
+    SDP_PageMulti.Defaults()
+    SelectTab("SINGLE")
+    FitWindow()
+  end,
   -- Drive a sliced computation to its end now (tests cannot wait for frames).
   RunTask = function(quota)
     while SDP_Task.IsRunning() do SDP_Task.Step(quota) end

@@ -141,6 +141,17 @@ function SDP_PageKit.New(spec)
     if spec.AfterPreset then spec.AfterPreset() end
   end
 
+  -- Every kept setting back to what a game that kept nothing has (the
+  -- tests' SDP_Panel.Defaults, issue 327): the save is read first, so it
+  -- cannot overwrite these later, then they are kept. The tab draws them
+  -- again with its Refresh.
+  function K.Defaults()
+    K.Restore()
+    K.Preset = keeper.Defaults().Preset
+    spec.ClearResult()
+    K.Remember()
+  end
+
   -- Fold or unfold the settings (issue 71): after a solve, or a click on the line.
   function K.SetFold(on)
     if K.Fold ~= on then

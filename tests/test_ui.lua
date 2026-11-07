@@ -16,19 +16,16 @@ local function Resolve(base)
   T.skip(base .. " not available to this civ")
 end
 
--- Fresh panel inputs: capital, nothing selected, weights 1, clearing allowed.
+-- The panel at its defaults (issue 327: every tab, the Several cities
+-- tab's plan too), then the capital with nothing selected and no reminders.
 local function Reset()
   local city = Players[pid]:GetCities():GetCapitalCity()
   if city == nil then T.skip("no capital: run tests/fixtures/found_capital.lua") end
+  SDP_Panel.Defaults()
   SDP_Panel.SelectCity(city:GetID())
   for _, d in ipairs(SDP_Rules.PlannableDistricts(pid)) do SDP_Panel.SetState(d.Type, "OFF") end
   SDP_Panel.SetCount(0)
   SDP_Panel.SetRemind(false)
-  for _, y in ipairs(SDP_Rules.YIELDS) do SDP_Panel.SetWeight(y, 1) end
-  SDP_Panel.SetAllowFeatureRemoval(true)
-  SDP_Panel.SetLand(true)
-  SDP_Panel.SetTier("STANDARD")
-  SDP_Panel.Refresh()
   return city
 end
 
@@ -238,20 +235,12 @@ local function Fits314(t, extra)
   T.ok(t.Grid:GetSizeY() >= math.min(t.Area:GetSizeY(), SDP_UI.DISTRICT_MIN), label .. ": the grid keeps two rows")
 end
 
--- An earlier test's plan on the Several cities tab takes room (issue 320):
--- changing a switch clears it, as it does for the player.
-local function ClearMulti()
-  local remind = SDP_Panel.Multi.State().Remind
-  SDP_Panel.Multi.SetRemind(not remind)
-  SDP_Panel.Multi.SetRemind(remind)
-  T.eq(SDP_Panel.Multi.State().Result, nil, "no plan on the Several cities tab")
-end
-
 test("issue 314: the buttons stay on the shortest page however many district rows", function()
   Reset()
   SDP_Panel.Open()
   local ok, err = pcall(function()
-    ClearMulti()
+    -- An earlier test's plan on the Several cities tab takes room (issue 320): Reset cleared it.
+    T.eq(SDP_Panel.Multi.State().Result, nil, "no plan on the Several cities tab")
     for _, t in ipairs(Tabs314()) do
       SDP_Panel.SelectTab(t.Tab)
       for _, extra in ipairs({ 0, 30, 60, 90 }) do Fits314(t, extra) end
@@ -270,7 +259,6 @@ test("issue 320: with a plan on the Several cities tab the buttons stay on the s
   local multi = SDP_Panel.Multi
   SDP_Panel.Open()
   SDP_Panel.SelectTab("MULTI")
-  local tier = multi.State().Tier
   local ok, err = pcall(function()
     multi.Refresh()
     multi.SetExisting(city:GetID(), true)
@@ -286,11 +274,7 @@ test("issue 320: with a plan on the Several cities tab the buttons stay on the s
     T.ok(multi.State().Result ~= nil, "the plan is still shown")
     T.ok(multi.State().ResultHeight >= SDP_UI.RESULT_MIN, "the list keeps a row")
   end)
-  multi.ApplyPlan({})
-  multi.SetExisting(city:GetID(), nil)
-  multi.SetTier(tier)
-  SDP_Panel.SelectTab("SINGLE")
-  SDP_Panel.FitWindow()
+  SDP_Panel.Defaults()
   SDP_Panel.Close()
   if not ok then error(err, 0) end
 end)

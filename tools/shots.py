@@ -2,6 +2,7 @@
 """shots - panel screenshots for docs/images/ (macOS).
 
     python3 -I tools/shots.py stage NAME     # tests/shots/NAME.lua in the SDP_Panel state (single, sites, multi, settings)
+    python3 -I tools/shots.py stage NAME --as-is   # the same without putting the panel back first
     python3 -I tools/shots.py capture NAME   # the panel as it is now -> docs/images/NAME.jpg
     python3 -I tools/shots.py region         # where the panel is on screen (for computer-use instead)
     python3 -I tools/shots.py save SRC NAME  # crop SRC and write docs/images/NAME.jpg
@@ -18,6 +19,11 @@ prints (screen points; multiply by the screenshot frame's width / the
 screen's width) and pass the file to `save`, which cuts 5 px off the sides
 (the zoom catches the map beside the frame). Both write a JPEG of quality 90. Names follow docs/maintaining.md: v<round>-panel-
 single.jpg, v<round>-en-panel-multi.jpg.
+
+`stage` first takes off the tacks this mod placed in this game session
+(its undo) and puts the panel back as a new game shows it (SDP_Panel.Defaults,
+issue 325), so a shot never shows what earlier tests or stages left; the
+stage then sets only what its shot needs.
 
 English shots: quit the game, `lang en`, launch, new game, stage, capture,
 quit, `lang restore` (prints whether the file is identical to the backup,
@@ -51,10 +57,23 @@ def run(code, timeout=300):
     return resp.get("output") or []
 
 
+# Before a stage (issue 325): this mod's tacks of this game session undone,
+# the panel at its defaults.
+FRESH = """
+local undone = 0
+while SDP_Pins.CanUndo() do undone = undone + SDP_Pins.UndoLast() end
+SDP_Panel.Defaults()
+print("FRESH undone", undone)
+"""
+
+
 def stage(args):
     path = os.path.join(STAGES, args.name + ".lua")
     if not os.path.exists(path):
         raise SystemExit("no stage %s (have: %s)" % (path, ", ".join(sorted(f[:-4] for f in os.listdir(STAGES)))))
+    if not args.as_is:
+        for line in run(FRESH):
+            print(line)
     with open(path, encoding="utf-8") as fh:
         for line in run(fh.read()):
             print(line)
@@ -228,6 +247,7 @@ def main():
     sub = ap.add_subparsers(dest="cmd", required=True)
     s = sub.add_parser("stage")
     s.add_argument("name")
+    s.add_argument("--as-is", action="store_true", help="keep the panel and the tacks as they are")
     c = sub.add_parser("capture")
     c.add_argument("name")
     sub.add_parser("region")
