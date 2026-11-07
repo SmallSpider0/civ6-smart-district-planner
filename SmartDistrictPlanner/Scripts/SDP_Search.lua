@@ -52,6 +52,12 @@ local function Tick(units)
   if SDP_Task ~= nil then SDP_Task.Tick(units) end
 end
 
+-- Work the estimate leaves out, in loop steps (SDP_Tiers.STEPS_PER_UNIT):
+-- it paces the frames like Tick (issue 331: a frame did more than its quota).
+local function Steps(steps)
+  if SDP_Task ~= nil and steps > 0 then SDP_Task.Extra(steps / SDP_Tiers.STEPS_PER_UNIT) end
+end
+
 -- a before b: higher score first, then smaller positions (lexicographic).
 -- Candidates are sorted by plot index, so this compares plot indices.
 local function Better(scoreA, layoutA, scoreB, layoutB)
@@ -603,7 +609,9 @@ function Search:Reachable(layout)
   if reach == nil then return true end
   local candidates, groups, k = self.Candidates, self.Groups, self.K
   local blocked, mark, queue = reach.Blocked, reach.Mark, reach.Queue
+  local steps = 0
   for _, g in ipairs(reach.Groups) do
+    steps = steps + k
     local inside, any, placed = reach.Inside[g], false, false
     for m = 1, k do
       local i = layout[m]
@@ -627,7 +635,9 @@ function Search:Reachable(layout)
       while head <= n do
         local index = queue[head]
         head = head + 1
-        for _, next in ipairs(reach.Neighbours[index]) do
+        local neighbours = reach.Neighbours[index]
+        steps = steps + #neighbours
+        for _, next in ipairs(neighbours) do
           if through[next] and mark[next] ~= stamp and not blocked[next] then
             mark[next], n = stamp, n + 1
             queue[n] = next
@@ -643,13 +653,18 @@ function Search:Reachable(layout)
       end
     end
     if any then
+      steps = steps + 2 * k
       for m = 1, k do
         local i = layout[m]
         if i ~= 0 then blocked[candidates[i].Index] = nil end
       end
     end
-    if not ok then return false end
+    if not ok then
+      Steps(steps)
+      return false
+    end
   end
+  Steps(steps)
   return true
 end
 
@@ -1535,12 +1550,16 @@ function Search:Beam(order, base, plots, fixedSlots)
   for d = 1, #order do
     local m = order[d]
     local heap, seq = {}, 0
+    -- Each node looks at the slots placed so far and the fixed ones; each
+    -- entry first marks its plots.
+    local perNode, steps, chunk = d - 1 + #fixedSlots, 0, SDP_Tiers.STEPS_PER_UNIT
     for _, entry in ipairs(beam) do
       local layout = entry.Layout
       local used = {}
       for mm = 1, #layout do
         if layout[mm] ~= 0 then used[layout[mm]] = true end
       end
+      steps = steps + #layout
       for _, i in ipairs(plots[m]) do
         if not used[i] then
           local score = entry.Score + single[m][i]
@@ -1554,6 +1573,11 @@ function Search:Beam(order, base, plots, fixedSlots)
           seq = seq + 1
           stats.Nodes = stats.Nodes + 1
           if stats.Nodes % SDP_Tiers.NODES_PER_UNIT == 0 then Tick(1) end
+          steps = steps + perNode
+          if steps >= chunk then
+            Steps(steps)
+            steps = 0
+          end
           HeapPush(heap, width, { Score = score + (optimistic[d + 1] or 0), Partial = score, Seq = seq, Parent = layout, Slot = m, Plot = i })
         end
       end
@@ -1565,7 +1589,9 @@ function Search:Beam(order, base, plots, fixedSlots)
       local layout = Copy(child.Parent)
       layout[child.Slot] = child.Plot
       beam[r] = { Score = child.Partial, Layout = layout }
+      steps = steps + #layout
     end
+    Steps(steps)
   end
   -- The best complete layouts by model score.
   table.sort(beam, function(a, b) return Better(a.Score, a.Layout, b.Score, b.Layout) end)

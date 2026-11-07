@@ -160,10 +160,10 @@ test("every city and every wonder on the Several cities tab", function()
   SeveralCities(false)
 end)
 
+-- Before issue 331's fix this failed in its 45th frame: local search's
+-- reach checks (SDP_Search Reachable) and the beam's inner loops did more
+-- work than they reported to the task.
 test("every city, every wonder and every district on the Several cities tab", function()
-  -- Issue 331: frames over the watchdog's limit (local search's reach
-  -- checks, the beam's nodes report less work than they do); on when fixed.
-  T.skip("issue 331: frames over the watchdog's limit")
   SeveralCities(true)
 end)
 
