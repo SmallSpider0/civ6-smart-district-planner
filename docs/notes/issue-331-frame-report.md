@@ -43,4 +43,4 @@
 - 帧多了、总时长略长（标准档 +7%，快速档第 2、3 次 +15%；第 1 次 35 秒是读档后第一次求解，游戏本身还忙）：报得准了，配额按目标帧长收紧，每帧做得少；换来的是标准档超过 0.5 秒的帧从 26 个降到 1 个。
 - 改前在这个存档上没有超过 2 秒的帧（城少、DMT 调用本身慢，报了的那部分占大头）；离线的假 DMT 很便宜，没报的部分就显得大得多，所以离线看门狗先发现。
 
-**开发集**：`python3 -I tools/refresh_results.py --check -j 6`，见 PR。
+**开发集**：`python3 -I tools/refresh_results.py --check -j 6`（本机）：268 行重跑，方案全部相同（changed 0），提升没有变高或变低，没有新违规；`tests/compare/results/check_stamp.json` 随 PR 提交。离线对比里求解不经 `SDP_Task`（`Tick`、`Extra` 什么都不做），本来就该完全相同。
