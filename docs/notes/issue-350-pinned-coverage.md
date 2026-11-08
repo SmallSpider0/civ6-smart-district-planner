@@ -22,10 +22,12 @@ Issue：[#350](https://github.com/SmallSpider0/civ6-smart-district-planner/issue
 
 ## 3. 重跑与核对
 
-- 裁判改动只影响场景里有带覆盖半径的区域钉（工业区、娱乐中心、水上乐园）的：入库覆盖结果里只有 `RP16`、`RP17`（`RP18`–`RP20` 有娱乐中心钉，但清单里没有娱乐中心、工业区，覆盖前后都是 0），生成的 `V`、真实的 `RC` 场景没有这类钉。
-- `coverage_player.jsonl` 用新裁判重新打分（`node tools/compare.mjs --rejudge tests/compare/results/coverage_player.jsonl --out …`，方案不变）：`RP16` 覆盖前 7、后 7、新增 0，`RP17` 覆盖前 6、后 7、新增 1，与本模组自报的相同；作者布局也是 0 和 1。其余行逐个不变。
-- `refresh_results.py --check` 的结果见第 4 节。
+- 裁判改动只影响场景里有带覆盖半径的区域钉（工业区、娱乐中心、水上乐园）的：入库覆盖结果里是 `RP16`–`RP20`。生成的 `V`、真实的 `RC` 场景没有这类钉。
+- `coverage_player.jsonl` 用新裁判重新打分（`node tools/compare.mjs --rejudge tests/compare/results/coverage_player.jsonl --out …`，再按原来的行序写回；方案不变）：`RP16` 覆盖前 7、后 7、新增 0，`RP17` 覆盖前 6、后 7、新增 1，与本模组自报的相同，作者布局也是 0 和 1；`RP18`–`RP20` 的娱乐中心钉让覆盖前后都从 0 变成 4，清单里没有工业区、娱乐中心，新增仍是 0。其余行的加成、合法性、覆盖逐个不变；这份文件上次打分早于裁判加上潜力产出等字段，重新打分后每行多了这些字段。
 
-## 4. 测试
+## 4. 测试（2026-11-08，变基到 #349 合并后的 `main`）
 
-见 PR 描述。
+- `python3 -I -m unittest discover -s tests/tools`：通过；`test_refresh_results.py` 的新用例在旧的 `refresh_results.py` 上失败（自报 0、裁判 6 时退出码 0）。
+- `refresh_results.py --check tests/compare/results/coverage_player.jsonl coverage_single.jsonl coverage_sdp.jsonl`（198 次）：方案全部不变，自报的加成、新覆盖与裁判全部一致。在 #349 合并前的代码上跑同一检查，`RP16`、`RP17` 已经一致，另报出 60 行自报的新覆盖比裁判少 1–2：#347 让规划了同类区域的城不计覆盖，裁判照常计入；#349 改回算本城后这些行都一致了。这说明新检查能抓到这类不一致。
+- `refresh_results.py --check`（开发集 268 + 72 次）：方案全部不变，写入 `check_stamp.json`。
+- 只改测试工具，没有游戏内测试。
