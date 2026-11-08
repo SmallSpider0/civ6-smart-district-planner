@@ -502,6 +502,8 @@ node tools/compare.mjs -s '^RS' -p sdp --only sdp:STANDARD,sdp:STANDARD_LAND -j 
 
 ### 9.4 覆盖不算本城（第 4 题）
 
+> **已被 #346 推翻（2026-11-08）**：合作者在 #346 回复“计算覆盖时，包括本城”，区域、奇观所属的城重新算作被覆盖，下面的 owner 参数和 `CoverOwner` 已删掉，见 [issue-346-own-zone-coverage.md](issue-346-own-zone-coverage.md) 第 6 节。
+
 区域或奇观不再把它所属的那座城算作被覆盖（`SDP_Coverage` 的 `InReach`、`List`、`Reach` 多一个 owner；`SDP_Search` 的 `CoverOwner`：单城页是这座城，多城页是该槽位所属的参与城，奇观按它所在格属于哪座参与城）。别的城，包括别的参与规划的城，照算。覆盖结果文件全部重跑核对：`coverage_single`（42 行）、`coverage_sdp`（72 行）、`coverage_player`（84 行）方案都没变，因为这些场景的区域是必建的，本城那 1 分本来就对所有摆法一样；变化只在从候选里挑时出现。覆盖列悬停提示里的实测数字因此不用改。
 
 ### 9.5 住房的分（第 6 题，方案 B）
