@@ -52,7 +52,7 @@
 | [issue-89-custom-preset.md](issue-89-custom-preset.md) | 改过预设后显示“自定义” | 调研（结论已实现） |
 | [issue-90-sites-districts.md](issue-90-sites-districts.md) | 选城址页的区域：必建 / 候选 / 不建和区域数量 | 现行 |
 | [issue-91-housing-value.md](issue-91-housing-value.md) | 1 点住房值几分 | 调研（结论已实现） |
-| [issue-91-objective.md](issue-91-objective.md) | 三个页签的目标公式与权重（按 v1.5.0 的代码写） | 调研；之后 #91 的 PR（#114、#122）按它改了几处 |
+| [issue-91-objective.md](issue-91-objective.md) | 三个页签的目标公式与权重（按 v1.5.0 的代码写） | 调研；之后 #91 的 PR（#114、#122）按它改了几处；第 4 题“覆盖不算本城”（9.4 节）已被 #346 推翻 |
 | [issue-106-harbor-commercial-hub.md](issue-106-harbor-commercial-hub.md) | 港口与商业中心：玩家怎么选 | 调研（决定见 issue-106-harbor-choice.md） |
 | [issue-106-harbor-choice.md](issue-106-harbor-choice.md) | 港口还是商业中心：按城市挑 | 部分已取代：分城开关去掉（#152），按城挑的规则仍是现行 |
 | [issue-107-base-game-apart.md](issue-107-base-game-apart.md) | 原版规则集里的港口、商业中心分城 | 现行（面板开关后来由 #152 去掉） |
@@ -87,7 +87,7 @@
 | [issue-297-sites.md](issue-297-sites.md) | 选城址的实际步骤、共用地格和住房怎么算；住房只算水源、建筑折半的离线实验，海边城址的分项 | 已定：保持按科技解锁计港口住房（#188 的做法），计分不改 |
 | [issue-297-dense-spread.md](issue-297-dense-spread.md) | 密铺：城数一样时先比挤不挤（最小生成树的连线长度），挪位不许变松 | 现行 |
 | [issue-336-site-pins.md](issue-336-site-pins.md) | 选城址读档复现：带钉的格先看归属（别的城、他国的格不因插了钉就算给新城），粗评去掉区域钉、奇观钉占的格；合作者框的城址为什么分低 | 现行 |
-| [issue-346-own-zone-coverage.md](issue-346-own-zone-coverage.md) | 覆盖：给自己也规划了同类区域的城，不再算作被别城的同类区域覆盖（合作者存档复现：两个工业区互相覆盖对方的城，多算 2 城） | 现行 |
+| [issue-346-own-zone-coverage.md](issue-346-own-zone-coverage.md) | 覆盖：两个工业区互相覆盖对方的城时多算（合作者存档复现）；改为本城也算被覆盖，同类按城只算一次（推翻 #91 第 4 题） | 现行（第 3 节的“规划了同类区域的城不计”已被第 6 节取代） |
 | [mod-compat-research.md](mod-compat-research.md) | 和热门模组的兼容（#295）：热门榜、别的模组怎么做兼容、对本模组的影响、武则天 +2 为什么没算、玩家需求 | 已定：只修本模组自己的问题（#293、#294）、写清局限（#296）；不做别的模组的适配，第 4 环也不做（#298、#299） |
 | [release-1.7.2.md](release-1.7.2.md) | v1.7.2 发版准备的交接：测试结果、夜间队列、对外文档逐条核对 | 现行（发版后不再更新） |
 | [issue-294-wonder-built.md](issue-294-wonder-built.md) | 奇观“已建成”按全世界数量上限和本方城市判断，不看地图上见没见过 | 现行 |
