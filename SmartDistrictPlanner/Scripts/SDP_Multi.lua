@@ -1158,15 +1158,10 @@ local function BuildSearch(self, request, params, candidates, slots, lands, pool
   for p, part in ipairs(participants) do reach[p] = part.Scan.Reach end
   local owners = SearchOwners(participants, fixed)
   local housingCities, HousingGroup = HousingCities(participants, playerID)
-  -- The city a slot's placement is planned for is not counted as covered by
-  -- it (issue 91): SlotCity, as Session:OwnerOf; with `layout` counting its
-  -- planned districts too.
+  -- The city a slot's placement is planned for: SlotCity, as
+  -- Session:OwnerOf; with `layout` counting its planned districts too.
   local function SlotOwner(search, m, i, layout)
     return participants[SlotCity(participants, playerID, search, m, i, layout)]
-  end
-  local function CoverOwner(search, m, i)
-    local part = SlotOwner(search, m, i)
-    return part ~= nil and part.Key or nil
   end
   -- Slot m on candidate i takes the plot from another of the player's
   -- cities (as Session:PlanFor's Swap); ties take the plots that need no
@@ -1187,7 +1182,7 @@ local function BuildSearch(self, request, params, candidates, slots, lands, pool
   end
   self.Search = SDP_Search.New({
     PlayerID = playerID, Board = self.Board, Weights = self.Weights, Params = params,
-    Candidates = candidates, Slots = slots, Lands = lands, Coverage = self.Coverage, CoverOwner = CoverOwner,
+    Candidates = candidates, Slots = slots, Lands = lands, Coverage = self.Coverage,
     Swapped = request.Swap == true and Swapped or nil,
     Pools = pools, Costs = SDP_City.DistanceCosts(playerID, candidates, request.Distance, centers), Apart = apart,
     Exclusive = SDP_Rules.Exclusive(), Reach = reach, Owners = owners,
@@ -1864,9 +1859,6 @@ function Session:PlanFor(layout)
   end
   local appeal = {}
   if search.AppealModel ~= nil then out.AppealDelta = search:AppealDelta(layout, appeal) end
-  -- Rows leave out the cities planning their own district of the group too
-  -- (issue 346), as the count does.
-  local coverOwn = self.Coverage and search:CoverageOwn(layout) or nil
   for n, m in ipairs(slotsPlaced) do
     local i = layout[m]
     local item, c = final.Placements[n], search.Candidates[i]
@@ -1884,7 +1876,7 @@ function Session:PlanFor(layout)
       Unowned = c.Unowned, RemoveTech = c.RemoveTech, Swap = swap, ClearFirst = c.ClearFirst,
       Appeal = a.Appeal, Housing = a.Housing, Tiles = a.Tiles, TilesCounted = a.TilesCounted,
       TilesReason = a.TilesReason,
-      Reach = self.Coverage and self.Coverage:Reach(search.Types[m], c.X, c.Y, self.Participants[p].Key, coverOwn) or nil,
+      Reach = self.Coverage and self.Coverage:Reach(search.Types[m], c.X, c.Y) or nil,
       Picked = search.Optional[m], Auto = (not spec.Wonder) and self.Participants[p].Auto[search.Types[m]] or nil,
       ForWonder = spec.ForWonder,
       Improvements = byPlaced[n],

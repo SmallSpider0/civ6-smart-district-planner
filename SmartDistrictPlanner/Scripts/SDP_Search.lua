@@ -84,9 +84,6 @@ SDP_Search.Better = Better
 --                   that group's districts serve its Requires }
 --   Lands       SDP_Land models whose part counts (each only sees its own plots)
 --   Coverage    SDP_Coverage model or nil (off)
---   CoverOwner  function(search, m, i) -> the coverage target key of the city
---               slot m on candidate i is planned for (not counted as covered
---               by it, issue 91); nil: every city counts
 --   Pools       { [group] = count }: of the group's slots marked Optional,
 --               exactly `count` are placed (fewer when they do not fit:
 --               the count is capped by PoolRoom, issue 133)
@@ -136,7 +133,6 @@ function SDP_Search.New(spec)
   self.Candidates, self.N = spec.Candidates, #spec.Candidates
   self.Lands = spec.Lands or {}
   self.Coverage = spec.Coverage
-  self.CoverOwner = spec.CoverOwner
   self.PoolSpec, self.Costs = spec.Pools, spec.Costs
   self.Apart, self.ApartRelaxed = spec.Apart, {}
   self.Exclusive = spec.Exclusive or {}
@@ -149,7 +145,6 @@ function SDP_Search.New(spec)
   self.Improve = spec.Improve
   self.ImproveOn = {} -- plots of the board's improvement slots, sorted
   self.CoverLists = {} -- scratch for CoverageCount
-  self.CoverOwn = {} -- scratch for CoverageCount
   self.SlotSpecs = spec.Slots
   self.Moving, self.Taken, self.Mark = {}, {}, {} -- scratch tables for Evaluate
   self.Stats = {
@@ -781,53 +776,28 @@ end
 -- (nil: the slot has no reach).
 function Search:CoverList(m, i)
   local c = self.Candidates[i]
-  return self.Coverage:List(self.Types[m], c.Index, c.X, c.Y, self.CoverOwner and self.CoverOwner(self, m, i) or nil)
+  return self.Coverage:List(self.Types[m], c.Index, c.X, c.Y)
 end
 
--- The pair of slot m's group and the city it is planned for (on candidate
--- i), or nil (issue 346: no other district of the group counts that city).
-function Search:CoverOwnPair(m, i)
-  if self.CoverOwner == nil then return nil end
-  return self.Coverage:OwnPair(self.Types[m], self.CoverOwner(self, m, i))
-end
-
--- How many (city, group) pairs a layout newly covers. A city planning its
--- own district of a group is not counted for that group (issue 346).
+-- How many (city, group) pairs a layout newly covers (the city a district
+-- is planned for counts too, issue 346).
 function Search:CoverageCount(layout)
-  local lists, n, own, s = self.CoverLists, 0, self.CoverOwn, 0
+  local lists, n = self.CoverLists, 0
   for m = 1, self.K do
     if layout[m] ~= 0 then
       local list = self:CoverList(m, layout[m])
       if list ~= nil then
         n = n + 1
         lists[n] = list
-        local pair = self:CoverOwnPair(m, layout[m])
-        if pair ~= nil then
-          s = s + 1
-          own[s] = pair
-        end
       end
     end
   end
-  return self.Coverage:Count(lists, n, own, s)
-end
-
--- { [pair] = true }: the cities a layout plans a district of a group for,
--- with that group (issue 346).
-function Search:CoverageOwn(layout)
-  local own = {}
-  for m = 1, self.K do
-    if layout[m] ~= 0 then
-      local pair = self:CoverOwnPair(m, layout[m])
-      if pair ~= nil then own[pair] = true end
-    end
-  end
-  return own
+  return self.Coverage:Count(lists, n)
 end
 
 -- The (city, group) pairs a layout newly covers, sorted (for reports).
 function Search:CoveragePairs(layout)
-  local seen, ids = self:CoverageOwn(layout), {}
+  local seen, ids = {}, {}
   for m = 1, self.K do
     if layout[m] ~= 0 then
       for _, id in ipairs(self:CoverList(m, layout[m]) or {}) do
