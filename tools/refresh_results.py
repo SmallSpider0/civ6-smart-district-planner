@@ -11,8 +11,10 @@ panel_default.jsonl, the 72 single-city scenes with the single-city tab's
 default settings, variant PANEL, issue 327; no oracle, no weight profiles)
 and reports, against the stored rows, plans that changed, gains that went
 down, violations other than "no legal tile" that are new, and rows where
-the gain this mod reports (stats.sdpGain) is not the judge's. Exit 1 when a
-gain went down, a violation is new or a reported gain is not the judge's.
+the gain this mod reports (stats.sdpGain) is not the judge's, or the new
+coverage it reports (stats.sdpCovered, coverage weight above 0) is not the
+judge's coverageGain (#350). Exit 1 when a gain went down, a violation is new
+or a reported gain or coverage is not the judge's.
 
 A --check of the development set that ran to the end writes CHECK_STAMP
 (tests/compare/results/check_stamp.json): a digest of the files the plans
@@ -114,7 +116,7 @@ def write_stamp(found, root=None, path=None):
 
 
 def failed(found):
-    """A check found a fault: a lower gain, a new violation or a reported gain that is not the judge's."""
+    """A check found a fault: a lower gain, a new violation or a reported gain or coverage not the judge's."""
     return bool(found.get("lower") or found.get("new_violations") or found.get("mismatched"))
 
 
@@ -160,6 +162,11 @@ def reported(row):
     return ((row.get("plan") or {}).get("stats") or {}).get("sdpGain")
 
 
+def reported_coverage(row):
+    """The new coverage this mod reports for its plan (stats.sdpCovered, only with a coverage weight), or None."""
+    return ((row.get("plan") or {}).get("stats") or {}).get("sdpCovered")
+
+
 def check(path, new):
     old = {}
     for l in open(path, encoding="utf-8"):
@@ -192,15 +199,20 @@ def check(path, new):
         own = reported(r)
         if own is not None and g1 is not None and abs(own - g1) > 1e-6:
             mismatched.append((k, own, g1))
+        # The same for coverage (#350): the judge counts it on its own (design 19.5).
+        cov, judged = reported_coverage(r), (r.get("score") or {}).get("coverageGain")
+        if cov is not None and judged is not None and cov != judged:
+            mismatched.append((k + ("coverage",), cov, judged))
     print("%s: %d rows rerun; plan the same %d, changed %d; gain higher %d, lower %d; new violations %d; "
-          "reported gain not the judge's %d"
+          "reported gain or coverage not the judge's %d"
           % (os.path.basename(path), len(new), same, changed, up, len(down), len(fresh), len(mismatched)))
     for k, g0, g1 in down:
         print("  LOWER %s %s: %s -> %s" % (k[0], k[2], g0, g1))
     for k, v in fresh:
         print("  NEW VIOLATION %s %s: %s" % (k[0], k[2], "; ".join(v)))
     for k, own, judged in mismatched:
-        print("  REPORTED %s %s: this mod %s, the judge %s" % (k[0], k[2], own, judged))
+        what = " coverage" if k[3:] else ""
+        print("  REPORTED%s %s %s: this mod %s, the judge %s" % (what, k[0], k[2], own, judged))
     return {"rows": len(new), "changed": changed, "higher": up, "lower": len(down), "new_violations": len(fresh),
             "mismatched": len(mismatched)}
 
