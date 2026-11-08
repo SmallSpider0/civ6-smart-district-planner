@@ -37,3 +37,5 @@ Issue：合作者 DracoYus 报多城页选了三座城、工业区都是候选�
 
 - 离线 `spec_coverage.lua`：新用例“issue 346”（两座城各必建工业区、覆盖权重 3：覆盖数等于独立计数的“范围内、自己没有工业区的城”，摘要只列这些，结果行不列有自己工业区的城，分项加剩余等于覆盖分），旧代码上失败（期望 1、得到 3）；#91 用例最后两条断言改成“两座有自己工业区的城都不算”。
 - 游戏内（风云变幻罗马新局）`test_features.lua`、`test_multi.lua` 全部通过（覆盖的两项都过；多城存档那一项照例在新局里跳过）。
+- 离线测试全套（第二台机器）：393 项通过。
+- 离线对比：开发集 `refresh_results.py --check`（`full_rejudged.jsonl` 268 次、`panel_default.jsonl` 72 次）方案全部不变，`check_stamp.json` 随 PR 提交；覆盖场景集 `V`（`refresh_results.py --check tests/compare/results/coverage_sdp.jsonl`，72 次，含覆盖权重 1、3）方案也全部不变：这 12 个场景里只有一两座城要工业区或娱乐中心，没有两座城各规划同类区域、又互相够得着的情况，所以入库的结果不用重跑。
