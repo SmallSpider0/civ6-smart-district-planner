@@ -59,3 +59,7 @@ Issue：合作者 DracoYus 报多城页选了三座城、工业区都是候选�
 
 **测试**：`spec_coverage.lua` 的 #91、#346 用例换成三个“issue 346”用例：只够得着本城的工业区计 1、两个互相够得着的工业区计 2（模型）；单城页结果行、摘要、计数都含本城；多城页两座城各必建工业区时，计数等于独立数出的“任一工业区范围内的城”、每城一次，两行都列本城，分项加其余等于覆盖分。后两个在 PR #347 的代码上失败（行里缺 C1；期望 3 得 1）。另外两条旧断言（“行里列出别的城”）按新规则改为含本城。游戏内 `test_features.lua` 的单城覆盖检查不再去掉本城，并断言工业区够得着本城。
 
+
+**离线对比**：覆盖的三份结果文件用新代码重跑（`python3 -I tools/refresh_results.py -j 4 tests/compare/results/coverage_single.jsonl tests/compare/results/coverage_sdp.jsonl tests/compare/results/coverage_player.jsonl`，第二台机器）：本模组的 198 行（42 + 72 + 84）方案、裁判算的覆盖和相邻加成逐行不变，自报的覆盖数（`sdpCovered`）也不变，所以没入库。这些场景的区域都是必建的，本城那一份对所有摆法一样；入库的行是 #91 之前的代码跑的，那时本城本来就算，和现在同一个口径。自报和裁判不一致的只有 RP16、RP17（波兰，权重 1、3，自报 0、1，裁判 6、7），改前改后一样，与本改动无关，没查。
+
+**其余测试**（第 6 节的代码）：离线全套 394 项通过；开发集 `refresh_results.py --check`（268 + 72 次）方案全部不变，`check_stamp.json` 随 PR 提交；游戏内（风云变幻罗马新局）`test_features.lua`、`test_multi.lua` 20 过、1 跳过（要多城存档的那一项）。
