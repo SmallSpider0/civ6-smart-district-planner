@@ -267,7 +267,7 @@ test("issue 91: the panel's summary leads with the adjacency, distance 0.5 by de
   for _, d in ipairs(SDP_Rules.PlannableDistricts(pid)) do SDP_Panel.SetState(d.Type, SDP_UI.DefaultState(d)) end
 end)
 
-test("issue 91: an industrial zone does not count its own city as covered; housing counts 1 up to max(target + 1, population + 2)", function()
+test("issue 346: an industrial zone counts its own city as covered; housing counts 1 up to max(target + 1, population + 2)", function()
   local city = Capital()
   local zone = Resolve("DISTRICT_INDUSTRIAL_ZONE")
   local r = SDP_Solver.Solve({ PlayerID = pid, CityID = city:GetID(), Districts = { zone }, Weights = ONES, Coverage = 1,
@@ -276,8 +276,12 @@ test("issue 91: an industrial zone does not count its own city as covered; housi
   local p = Has(r.Plan, zone)
   if p == nil then T.skip("no plot for an industrial zone") end
   local own = "C" .. city:GetID()
-  for _, key in ipairs(p.Reach or {}) do T.ok(key ~= own, "the capital is not on its own zone's row") end
-  T.eq(r.Covered or 0, #(p.Reach or {}), "only other cities count")
+  -- A new game has no built or pinned industrial zone, so the zone's own
+  -- city is newly covered and on its row (issue 346; issue 91 left it out).
+  local listed = false
+  for _, key in ipairs(p.Reach or {}) do if key == own then listed = true end end
+  T.ok(listed, "the capital is on its own zone's row")
+  T.eq(r.Covered or 0, #(p.Reach or {}), "the row lists every city counted")
   T.eq(SDP_Land.HousingValue(8, 7, 5), 8, "housing one past the target counts 1")
   T.eq(SDP_Land.HousingValue(9, 7, 5), 8.5, "the next one half")
 end)
