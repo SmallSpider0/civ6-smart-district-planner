@@ -1864,6 +1864,9 @@ function Session:PlanFor(layout)
   end
   local appeal = {}
   if search.AppealModel ~= nil then out.AppealDelta = search:AppealDelta(layout, appeal) end
+  -- Rows leave out the cities planning their own district of the group too
+  -- (issue 346), as the count does.
+  local coverOwn = self.Coverage and search:CoverageOwn(layout) or nil
   for n, m in ipairs(slotsPlaced) do
     local i = layout[m]
     local item, c = final.Placements[n], search.Candidates[i]
@@ -1881,7 +1884,7 @@ function Session:PlanFor(layout)
       Unowned = c.Unowned, RemoveTech = c.RemoveTech, Swap = swap, ClearFirst = c.ClearFirst,
       Appeal = a.Appeal, Housing = a.Housing, Tiles = a.Tiles, TilesCounted = a.TilesCounted,
       TilesReason = a.TilesReason,
-      Reach = self.Coverage and self.Coverage:Reach(search.Types[m], c.X, c.Y, self.Participants[p].Key) or nil,
+      Reach = self.Coverage and self.Coverage:Reach(search.Types[m], c.X, c.Y, self.Participants[p].Key, coverOwn) or nil,
       Picked = search.Optional[m], Auto = (not spec.Wonder) and self.Participants[p].Auto[search.Types[m]] or nil,
       ForWonder = spec.ForWonder,
       Improvements = byPlaced[n],
