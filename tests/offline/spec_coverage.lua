@@ -372,7 +372,8 @@ test("issue 91: the city being planned is not counted as covered by its own dist
   end
   T.eq(r.Covered, #zone.Reach, "only the other cities count")
   -- Several cities: cities 1 and 2 each plan a zone. Neither counts its own
-  -- city; each may count the other.
+  -- city, nor the other's: a city with its own zone gets nothing more from
+  -- another (the effect does not stack; issue 346).
   NewWorld()
   local m = SDP_Multi.Solve(Request(1, { Existing = { [1] = true, [2] = true }, Plans = { C1 = { IZ }, C2 = { IZ } } }))
   T.ok(m.Ok, tostring(m.Error))
@@ -393,8 +394,57 @@ test("issue 91: the city being planned is not counted as covered by its own dist
     if p.Type == IZ and p.City == "C1" then z1 = p end
     if p.Type == IZ and p.City == "C2" then z2 = p end
   end
-  T.eq(covered.C2 == true, Map.GetPlotDistance(z1.X, z1.Y, 11, 5) <= 6, "city 2 counts when city 1's zone reaches it")
-  T.eq(covered.C1 == true, Map.GetPlotDistance(z2.X, z2.Y, 4, 5) <= 6, "city 1 counts when city 2's zone reaches it")
+  T.ok(z1 ~= nil and z2 ~= nil, "both zones placed")
+  T.ok(not covered.C1 and not covered.C2, "neither city with its own zone counts")
+end)
+
+-- Issue 346: two planned industrial zones. A city that plans its own zone is
+-- covered by it whatever the other zone does, and the effect applies once
+-- to a city (the game's rule), so the other zone covering it adds nothing:
+-- the coverage counts only the cities without a zone of their own, once,
+-- and the rows list only those.
+test("issue 346: a zone reaching a city that plans its own zone covers nothing new", function()
+  NewWorld()
+  local r = SDP_Multi.Solve(Request(3, { Existing = { [1] = true, [2] = true }, Plans = { C1 = { IZ }, C2 = { IZ } } }))
+  T.ok(r.Ok, tostring(r.Error))
+  local zones, own = {}, {}
+  for _, p in ipairs(r.Plan) do
+    if p.Type == IZ then
+      zones[#zones + 1] = p
+      own[p.City] = true
+    end
+  end
+  T.eq(#zones, 2, "both zones placed")
+  -- Independent count: cities 1 to 3, those without a zone of their own and
+  -- within 6 tiles of a planned zone.
+  local expected, keys = 0, {}
+  for _, city in ipairs({ { "C1", 4, 5 }, { "C2", 11, 5 }, { "C3", 4, 11 } }) do
+    local reached = false
+    for _, z in ipairs(zones) do
+      if Map.GetPlotDistance(z.X, z.Y, city[2], city[3]) <= 6 then reached = true end
+    end
+    if reached and not own[city[1]] then
+      expected = expected + 1
+      keys[#keys + 1] = city[1]
+    end
+  end
+  T.eq(r.Covered, expected, "covered: the cities without their own zone, once")
+  T.eq(r.CoverageDelta, 3 * expected, "the coverage part")
+  local listed = {}
+  for _, g in ipairs(r.CoveredBy or {}) do
+    for _, key in ipairs(g.Keys) do listed[#listed + 1] = key end
+  end
+  table.sort(listed)
+  T.same(listed, keys, "the summary lists them")
+  for _, z in ipairs(zones) do
+    for _, key in ipairs(z.Reach or {}) do
+      T.ok(not own[key], z.City .. "'s row does not list " .. key .. ", which has its own zone")
+    end
+  end
+  -- The shares of the two zones and the rest add up to the part.
+  local sum = r.Rest and r.Rest.Coverage or 0
+  for _, z in ipairs(zones) do sum = sum + ((z.Parts or {}).Coverage or 0) end
+  T.near(sum, r.CoverageDelta, 1e-9, "shares and rest add up")
 end)
 
 -- Issue 197: a city-state's suzerain bonus (Toronto: +3 to the industrial

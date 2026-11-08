@@ -149,6 +149,7 @@ function SDP_Search.New(spec)
   self.Improve = spec.Improve
   self.ImproveOn = {} -- plots of the board's improvement slots, sorted
   self.CoverLists = {} -- scratch for CoverageCount
+  self.CoverOwn = {} -- scratch for CoverageCount
   self.SlotSpecs = spec.Slots
   self.Moving, self.Taken, self.Mark = {}, {}, {} -- scratch tables for Evaluate
   self.Stats = {
@@ -783,24 +784,50 @@ function Search:CoverList(m, i)
   return self.Coverage:List(self.Types[m], c.Index, c.X, c.Y, self.CoverOwner and self.CoverOwner(self, m, i) or nil)
 end
 
--- How many (city, group) pairs a layout newly covers.
+-- The pair of slot m's group and the city it is planned for (on candidate
+-- i), or nil (issue 346: no other district of the group counts that city).
+function Search:CoverOwnPair(m, i)
+  if self.CoverOwner == nil then return nil end
+  return self.Coverage:OwnPair(self.Types[m], self.CoverOwner(self, m, i))
+end
+
+-- How many (city, group) pairs a layout newly covers. A city planning its
+-- own district of a group is not counted for that group (issue 346).
 function Search:CoverageCount(layout)
-  local lists, n = self.CoverLists, 0
+  local lists, n, own, s = self.CoverLists, 0, self.CoverOwn, 0
   for m = 1, self.K do
     if layout[m] ~= 0 then
       local list = self:CoverList(m, layout[m])
       if list ~= nil then
         n = n + 1
         lists[n] = list
+        local pair = self:CoverOwnPair(m, layout[m])
+        if pair ~= nil then
+          s = s + 1
+          own[s] = pair
+        end
       end
     end
   end
-  return self.Coverage:Count(lists, n)
+  return self.Coverage:Count(lists, n, own, s)
+end
+
+-- { [pair] = true }: the cities a layout plans a district of a group for,
+-- with that group (issue 346).
+function Search:CoverageOwn(layout)
+  local own = {}
+  for m = 1, self.K do
+    if layout[m] ~= 0 then
+      local pair = self:CoverOwnPair(m, layout[m])
+      if pair ~= nil then own[pair] = true end
+    end
+  end
+  return own
 end
 
 -- The (city, group) pairs a layout newly covers, sorted (for reports).
 function Search:CoveragePairs(layout)
-  local seen, ids = {}, {}
+  local seen, ids = self:CoverageOwn(layout), {}
   for m = 1, self.K do
     if layout[m] ~= 0 then
       for _, id in ipairs(self:CoverList(m, layout[m]) or {}) do
