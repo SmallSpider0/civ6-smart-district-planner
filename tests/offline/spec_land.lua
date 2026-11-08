@@ -155,6 +155,40 @@ test("issue 336: no Industry or Corporation of the Monopolies and Corporations m
   T.eq(options[1].Entry.Type, "IMPROVEMENT_TEST_PLANTATION", "the plantation")
 end)
 
+test("issue 345: a pillaged improvement is worth what it gives once repaired", function()
+  -- Plains: (0,0) bare, (1,0) a pillaged farm, (2,0) a pillaged unique
+  -- improvement of a civilization's trait. The game gives a pillaged
+  -- improvement's plot only its terrain's yields until a builder repairs it
+  -- (no charge used).
+  local w = World.New({ rows = { "ppp" }, improvementRules = true,
+    improvements = { { 1, 0, "IMPROVEMENT_FARM" }, { 2, 0, "IMPROVEMENT_TEST_UNIQUE" } }, pillaged = { { 1, 0 }, { 2, 0 } } })
+  local gi = w.GameInfo
+  local function Add(name, key, rows)
+    local list = {}
+    if gi[name] ~= nil then for row in gi[name]() do list[#list + 1] = row end end
+    for _, row in ipairs(rows) do list[#list + 1] = row end
+    gi[name] = World.Table(list, key)
+  end
+  Add("Improvements", "ImprovementType", {
+    { ImprovementType = "IMPROVEMENT_TEST_UNIQUE", Buildable = true, Domain = "DOMAIN_LAND", TraitType = "TRAIT_TEST" },
+  })
+  Add("Improvement_YieldChanges", nil, {
+    { ImprovementType = "IMPROVEMENT_TEST_UNIQUE", YieldType = "YIELD_PRODUCTION", YieldChange = 2 },
+  })
+  w:Plot(2, 0).improvement = gi.Improvements.IMPROVEMENT_TEST_UNIQUE
+  local ctx = SDP_Land.Context(0, {}, true)
+  local function Tile(x) return (SDP_Land.PlotValues(w:Plot(x, 0), ctx)) end
+  T.eq(Tile(0), 3, "bare plains: a farm, 1 + 1 + 1")
+  T.eq(Tile(1), Tile(0), "a pillaged farm on plains: the same, repaired")
+  T.eq(Tile(2), 2 + 2, "a pillaged unique improvement: plains 2 + its 2 production")
+  -- Taking either plains plot costs the same (the report: -0.8 against -1.8).
+  local model = SDP_Land.Model({ { Index = 0, Tile = Tile(0), Once = 0 }, { Index = 1, Tile = Tile(1), Once = 0 },
+    { Index = 9, Tile = 1, Once = 0 } }, 2)
+  T.eq(model.Loss[0], model.Loss[1], "a district on either plot costs the same")
+  w:Plot(1, 0).pillaged = false
+  T.eq(Tile(1), 2, "a farm not pillaged keeps the game's yields as they are")
+end)
+
 test("a city's workable plots: kept features count, built and pinned districts do not", function()
   World.New({
     rows = {

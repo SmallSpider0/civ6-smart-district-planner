@@ -98,6 +98,7 @@
 | [issue-329-weekly-game-tests.md](issue-329-weekly-game-tests.md) | 每周一个规则集的整套游戏内测试：夜间队列里自己续排的一项，排哪一夜、规则集怎么轮、失败谁处理 | 现行 |
 | [issue-331-frame-report.md](issue-331-frame-report.md) | 多城页全部奇观、全部区域必建时有几帧偏长：领土可达检查和集束搜索按实际循环步数向分帧报工作量；离线最长一帧和游戏内逐帧计时 | 现行 |
 | [issue-338-watch-label.md](issue-338-watch-label.md) | 监听把维护者或合作者新打的 `auto` 标签当作一件新事报出（之前只看评论）；状态里记看过的标签，升级后第一次把已有的记作看过 | 现行 |
+| [issue-345-pillaged-plots.md](issue-345-pillaged-plots.md) | 被掠夺的改良设施按修好后的产出算地块分（之前按掠夺后的产出，比能修农场的空地还低）；合作者存档里的复现和数字 | 现行 |
 
 ## 持续更新的记录
 

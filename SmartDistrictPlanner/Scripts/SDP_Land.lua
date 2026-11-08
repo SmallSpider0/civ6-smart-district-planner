@@ -108,13 +108,15 @@ end
 -- Corporation) that give yields. OwnImprovement =
 -- { [resource type] = true } for every resource with an improvement of its
 -- own, any improvement (the oil well is not Buildable in the database).
+-- Repair = { [improvement type] = { Yields, Bonus } } for every improvement
+-- with yields, unique ones too: what a pillaged one gives once repaired.
 local m_rules, m_rulesFor = nil, nil
 -- Rule columns that are yes/no: some are numbers in the game's database
 -- (Improvements.RequiresRiver is 0 or 1, and `not 0` is false in Lua).
 local function Flag(v) return v == true or (type(v) == "number" and v ~= 0) end
 local function ImprovementRules()
   if m_rules ~= nil and m_rulesFor == GameInfo then return m_rules end
-  local rules = { Improvements = {}, FeatureYields = {}, ResourceYields = {}, OwnImprovement = {} }
+  local rules = { Improvements = {}, FeatureYields = {}, ResourceYields = {}, OwnImprovement = {}, Repair = {} }
   local function Rows(name) return GameInfo[name] ~= nil and GameInfo[name]() or function() return nil end end
   -- The Industry and the Corporation of the Monopolies and Corporations mode
   -- (its table Improvements_MODE): one per luxury kind, after improving
@@ -133,7 +135,19 @@ local function ImprovementRules()
       byType[row.ImprovementType] = entry
     end
   end
+  local function Repair(t)
+    local r = rules.Repair[t]
+    if r == nil then
+      r = { Yields = {}, Bonus = {} }
+      rules.Repair[t] = r
+    end
+    return r
+  end
   for row in Rows("Improvement_YieldChanges") do
+    if (row.YieldChange or 0) ~= 0 then
+      local r = Repair(row.ImprovementType)
+      r.Yields[row.YieldType] = (r.Yields[row.YieldType] or 0) + row.YieldChange
+    end
     local entry = byType[row.ImprovementType]
     if entry ~= nil and (row.YieldChange or 0) ~= 0 then
       entry.Yields[row.YieldType] = (entry.Yields[row.YieldType] or 0) + row.YieldChange
@@ -141,11 +155,11 @@ local function ImprovementRules()
     end
   end
   for row in Rows("Improvement_BonusYieldChanges") do
+    local bonus = { Yield = row.YieldType, Change = row.BonusYieldChange or 0, Tech = row.PrereqTech, Civic = row.PrereqCivic }
+    local r = Repair(row.ImprovementType)
+    r.Bonus[#r.Bonus + 1] = bonus
     local entry = byType[row.ImprovementType]
-    if entry ~= nil then
-      entry.Bonus[#entry.Bonus + 1] = { Yield = row.YieldType, Change = row.BonusYieldChange or 0, Tech = row.PrereqTech,
-        Civic = row.PrereqCivic }
-    end
+    if entry ~= nil then entry.Bonus[#entry.Bonus + 1] = bonus end
   end
   for row in Rows("Improvement_ValidTerrains") do
     local entry = byType[row.ImprovementType]
@@ -252,8 +266,7 @@ function SDP_Land.Context(playerID, weights, allowRemoval, options)
   end
   -- Weighted gain of each improvement, bonuses of what the player has.
   -- Yields: the same unweighted (issue 227, shown with an improvement tack).
-  ctx.Gain, ctx.Yields = {}, {}
-  for _, entry in ipairs(ctx.Rules.Improvements) do
+  local function GainOf(entry)
     local gain = Weighted(entry.Yields, ctx.W)
     local yields = {}
     for yieldType, n in pairs(entry.Yields) do yields[yieldType] = n end
@@ -267,8 +280,22 @@ function SDP_Land.Context(playerID, weights, allowRemoval, options)
         yields[b.Yield] = (yields[b.Yield] or 0) + b.Change
       end
     end
-    ctx.Gain[entry] = gain
-    ctx.Yields[entry] = yields
+    return gain, yields
+  end
+  ctx.Gain, ctx.Yields = {}, {}
+  for _, entry in ipairs(ctx.Rules.Improvements) do
+    ctx.Gain[entry], ctx.Yields[entry] = GainOf(entry)
+  end
+  -- Weighted yields a pillaged improvement gives back once repaired (issue
+  -- 345), by improvement index; 0 for one without yields.
+  local repaired = {}
+  ctx.RepairGain = function(index)
+    if repaired[index] == nil then
+      local row = GameInfo.Improvements[index]
+      local r = row ~= nil and ctx.Rules.Repair[row.ImprovementType] or nil
+      repaired[index] = r ~= nil and (GainOf(r)) or 0
+    end
+    return repaired[index]
   end
   return ctx
 end
@@ -373,7 +400,13 @@ function SDP_Land.PlotValues(plot, ctx)
   local improved = plot:GetImprovementType() ~= -1
   if improved or Unimprovable(plot, resourceRow) then
     -- The game's yields include the improvement (removing or harvesting
-    -- would undo it), or none can go there.
+    -- would undo it), or none can go there. A pillaged improvement gives
+    -- nothing until a builder repairs it, which uses no charge: the plot is
+    -- worth it repaired (issue 345: a pillaged farm counted as less than a
+    -- bare plot that could take one).
+    if improved and plot.IsImprovementPillaged ~= nil and plot:IsImprovementPillaged() then
+      now = now + ctx.RepairGain(plot:GetImprovementType())
+    end
     return now, featureOnce + resourceOnce, now, 0
   end
   local sea = plot:IsWater()
