@@ -1,6 +1,6 @@
 """Offline tests of tools/refresh_results.py's check stamp (#302): the release's development-set check is
 skipped when nothing the plans depend on changed since a PR ran it; and of the check itself (#327: both
-files of the development set, the gain this mod reports against the judge's).
+files of the development set, the gain this mod reports against the judge's; #350: the new coverage too).
 
     python3 -I -m unittest discover -s tests/tools -p test_refresh_results.py
 """
@@ -93,7 +93,7 @@ class Stamp(unittest.TestCase):
         self.put("SmartDistrictPlanner/Scripts/SDP_Solver.lua", "solver changed")
         self.assertIsNone(rr.unchanged_since_check())
 
-    def run_main(self, argv, reported=None):
+    def run_main(self, argv, reported=None, covered=None):
         calls = []
         old_argv, old_rerun = sys.argv, rr.rerun
         sys.argv = ["refresh_results.py"] + argv
@@ -104,6 +104,9 @@ class Stamp(unittest.TestCase):
             row = {"scenario": "S01", "planner": "sdp", "variant": variant, "score": {"gain": 3}}
             if reported is not None:
                 row["plan"] = {"stats": {"sdpGain": reported}}
+            if covered is not None:
+                row["plan"] = {"stats": {"sdpGain": 3, "sdpCovered": covered[0]}}
+                row["score"]["coverageGain"] = covered[1]
             return [], {("S01", "sdp", variant): row}
         rr.rerun = rerun
         self.addCleanup(setattr, rr, "WORK", rr.WORK)
@@ -143,6 +146,17 @@ class Stamp(unittest.TestCase):
         self.assertEqual(rr.read_stamp()["mismatched"], 2)
         code, calls, _ = self.run_main(["--check", "--if-changed"])
         self.assertEqual((code, calls), (1, []), "a skipped check keeps the stamped mismatch")
+
+    def test_a_reported_coverage_not_the_judges_fails(self):
+        """The new coverage this mod reports is the judge's coverageGain too (#350: RP16 reported 0, judged 6)."""
+        self.patch_dev(os.path.join(self.root, "tests", "compare", "results", "full_rejudged.jsonl"))
+        code, _, out = self.run_main(["--check"], covered=(6, 6))
+        self.assertEqual(code, 0, out)
+        self.assertEqual(rr.read_stamp()["mismatched"], 0)
+        code, _, out = self.run_main(["--check"], covered=(0, 6))
+        self.assertEqual(code, 1, out)
+        self.assertIn("REPORTED coverage S01 PANEL: this mod 0, the judge 6", out)
+        self.assertEqual(rr.read_stamp()["mismatched"], 2)
 
     def test_a_skipped_check_keeps_the_stamped_failure(self):
         """A check that found lower gains stamps them; skipping it on a retry exits 1 too (Codex, PR 303)."""

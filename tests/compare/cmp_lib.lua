@@ -1058,8 +1058,11 @@ function CmpRun.Judge(id, planJson)
 
   local cities = {}
   for _, c in ipairs(request.cities) do cities[c:GetID()] = c end
-  local manualPins = {}
-  for _, pin in ipairs(cfg:GetMapPins()) do manualPins[pin:GetHexX() .. "_" .. pin:GetHexY()] = pin:GetIconName() end
+  local manualPins, manualPinList = {}, {}
+  for _, pin in ipairs(cfg:GetMapPins()) do
+    manualPins[pin:GetHexX() .. "_" .. pin:GetHexY()] = pin:GetIconName()
+    manualPinList[#manualPinList + 1] = { icon = pin:GetIconName(), x = pin:GetHexX(), y = pin:GetHexY() }
+  end
 
   -- A plot another of the player's cities owns can be swapped to the city
   -- (issue 54; CityCommandTypes.SWAP_TILE_OWNER, measured 2026-10-23 on every
@@ -1534,7 +1537,11 @@ function CmpRun.Judge(id, planJson)
   -- districts reach, before and with the plan. Worked out here from the
   -- rules, not with any planner's code: a kind is a base district, its
   -- range the largest Buildings.RegionalRange of the generic buildings that
-  -- need it; a city counts once per kind.
+  -- need it; a city counts once per kind. The coverage there already is
+  -- that of the built districts and of the scene's district pins (the
+  -- player's planned districts, design 19.2; issue 350: a neighbour's pinned
+  -- Industrial Zone covers the cities already). The plan's own pins, added
+  -- above, are not among them: manualPinList was taken before.
   local reach = {}
   for row in gi.Buildings() do
     if (row.RegionalRange or 0) > 0 and row.PrereqDistrict ~= nil and row.TraitType == nil then
@@ -1557,6 +1564,11 @@ function CmpRun.Judge(id, planJson)
       end
     end
     for _, d in Players[0]:GetDistricts():Members() do Add(gi.Districts[d:GetType()].DistrictType, d:GetX(), d:GetY()) end
+    for _, pin in ipairs(manualPinList) do
+      local icon = pin.icon or ""
+      local t = icon:sub(1, 5) == "ICON_" and icon:sub(6) or icon
+      if gi.Districts[t] ~= nil then Add(t, pin.x, pin.y) end
+    end
     for _, p in ipairs(extra) do
       if gi.Districts[p.type] ~= nil then Add(p.type, p.x, p.y) end
     end
