@@ -556,7 +556,7 @@ python3 -I tools/sdplock.py queue done ID --last        # 关掉每周那一项�
 - **过期**：30 分钟没续约，并且游戏已经关了或持有者的 Tuner 后台进程不在了，才算过期，`take --stale` 接手（接手后先 `game.py quit`，从新对局开始）。`--force` 不看状态直接拿，只在确定持有者已经不在时用。
 - **插队**：`take --next` 预订下一个；持有者放锁后 15 分钟内只有预订的工作树能拿。
 - **本机重活**：一次一个。有任务在跑时，后来的 `heavy` 按开始等待的先后排队（记在共用目录的 `heavy-queue.json`），槽空出来时只有排头能拿，后来的不会抢在前面（#219）；`status` 按顺序列出排队的任务。排队的进程退出或被杀时按进程是否还在自己出队，不挡后面的；Ctrl-C 也出队。`--no-wait`（写在 NAME 前）不排队，有任务在跑就以退出码 4 停下。worker 上限按本机配置（没有配置时 4 个），`-j` 超了就改小，`compare.mjs`、`refresh_results.py` 没写 `-j` 就补上；游戏锁被拿走时发 `SIGSTOP` 暂停（整个进程组），放锁时 `SIGCONT` 继续。暂停过的任务结束时会说，它的耗时字段不能用。Windows 上不能暂停。
-- **每周的整套游戏内测试**（#329）：`queue weekly` 往夜间队列加一项，在仓库主检出上 `git pull --ff-only origin main`、`deploy.py`、`run_tests.py --rulesets <规则集>`，从某一夜起才算排着。这一项用 `queue done` 关掉时（通过或失败都一样）自动排下一周的一项，规则集按原版、迭起兴衰、风云变幻轮流，第一次默认风云变幻；`--last` 关掉且不再排。同时只能有一项排着（再 `queue weekly` 以退出码 4 拒绝）。哪一夜：本机配置 `weekly_night`（星期几的英文缩写，如 `"sat"`，指夜间窗口开始的那天），下一项排在今天和本项那一夜之后第一个这样的日子；没配时排在本项那一夜一周后（晚跑了就排到明天以后）。没到那一夜的项 `queue list` 和 `status` 列在 `later:` 下，`pr_wait.py --list` 也不为它报夜间队列到点。理由：发版前才跑整套游戏内测试，#314、#319、#320 都到发版测试才露出来，靠人记得每周排一次会漏。
+- **每周的整套游戏内测试**（#329）：`queue weekly` 往夜间队列加一项，在仓库主检出上 `git pull --ff-only origin main`、`deploy.py`、`run_tests.py --rulesets <规则集>`，从某一夜起才算排着。这一项用 `queue done` 关掉时（通过或失败都一样）自动排下一周的一项，规则集按原版、迭起兴衰、风云变幻轮流，第一次默认风云变幻；`--last` 关掉且不再排。同时只能有一项排着（再 `queue weekly` 以退出码 4 拒绝）。哪一夜：本机配置 `weekly_night`（星期几的英文缩写，如 `"sat"`，指夜间窗口开始的那天），下一项排在今天和本项那一夜之后第一个这样的日子；没配时排在本项那一夜一周后（晚跑了就排到明天以后）。没到那一夜的项 `queue list` 和 `status` 列在 `later:` 下，`pr_wait.py --list` 也不为它报夜间队列到点。理由：靠人记得每周排一次会漏（为什么每周跑见 docs/maintaining.md 第 8 节）。
 - **共用目录**：`$SDP_SHARED`，否则 macOS `~/Library/Application Support/SDP`，Windows `%LOCALAPPDATA%\SDP`。显示的会话名是 `$SDP_OWNER`，没设就是分支名。
 - **本机配置**：和机器有关的数值不进仓库，写在 `~/.config/sdp/local.json`（`SDP_LOCAL_CONFIG` 可改路径），每项都可省：`workers_day`（默认 4）、`workers_night`（默认同白天）、`night`（如 `"00:00-08:00"`，默认没有夜间；夜间队列和夜里的 worker 上限都按它）、`weekend_is_night`（默认 false）、`weekly_night`（每周整套游戏内测试在星期几的夜里，如 `"sat"`，默认上一次一周后）、`remote`（第二台机器的 ssh 主机名，`SDP_REMOTE` 优先）、`remote_slots`（默认那台机器的核数减 2）、`remote_path`（那边 node 和 python3 所在目录）、`preflight_folders`（`preflight_night.py` 另外要碰的文件夹）。
 - 离线测试：`python3 -I -m unittest discover -s tests/tools`（假时钟、假进程、假游戏；CI 上也跑）。
@@ -603,8 +603,8 @@ python3 -I tools/pr_wait.py --list                       # 值守子会话常驻
 - `--codex` 后面的 PR 是请 Codex 审过、没开自动合并的。判断审完和 `codex_review.py wait` 一样；审完没意见（或意见都已解决）就 `gh pr merge 编号 --auto --squash`；30 分钟没审完或 Codex 报审查失败也开自动合并，并在 PR 下写一句“没审成”（记进 watch_issues 的 `--mine`）。开自动合并之前又推了新提交的，等新提交的审查。
 - `--night` 后面的 PR 等夜间游戏内测试（#255）：从不替它开自动合并，“开着却没开自动合并”也不算要处理；照样等 CI（同在 `--codex` 里的也等审查），检查失败、冲突、有意见、被关掉时照常退出。没审成时 PR 下那句写明等夜间测试。跑夜间测试的人测完开自动合并，等待接着等到合并。
 - `--hold` 后面的 PR 故意先不合并（如等发版完），只等 Codex 和别的事（#275）：和 `--night` 一样不替它开自动合并，“开着却没开自动合并”、审完没意见都不退出；检查失败、冲突、有意见、被关掉时照常退出。没审成时 PR 下那句写明先不合并。决定合并的人开自动合并。
-- 补自动合并（#323）：开了自动合并、不是 `--hold`、检查全部通过、`mergeStateStatus` 为 CLEAN 的 PR，从等待第一次看到它这样（同一个最新提交）算起过了 `STALL_MINUTES`（10 分钟）还没合并，就执行一次普通的 `gh pr merge 编号 --squash`（不加 `--admin`，不跳过检查），在标准错误记一行，当作已合并报告并注明“merged by pr_wait”；合并命令失败时当作要处理报告，带上错误（GitHub 恰好已经合并的仍算已合并）。中途推了新提交或离开 CLEAN 就重新计时，重挂等待也重新计时；没开自动合并的（等夜间测试、等 Codex 的）不动。理由：GitHub 偶尔漏掉自动合并，2026-11-06 #323 检查通过、CLEAN 后 50 分钟没合并。不从最后一项检查完成的时间算，是因为夜间测试后才开自动合并的 PR 检查早已跑完，会和 GitHub 自己的合并抢。
-- 退出时每个 PR 打一行：已合并、要处理什么，或还在等什么。`gh` 和网络出错（如 `unexpected EOF`）只在标准错误打一行，下一轮重试，不退出；GitHub 说没有这个 PR 时退出码 2。
+- 补自动合并（#323）：开了自动合并、不是 `--hold`、检查全部通过、`mergeStateStatus` 为 CLEAN 的 PR，从等待第一次看到它这样（同一个最新提交）算起过了 `STALL_MINUTES`（10 分钟）还没合并，就执行一次普通的 `gh pr merge 编号 --squash`（不加 `--admin`，不跳过检查），在标准错误记一行，当作已合并报告并注明“merged by pr_wait”；合并命令失败时当作要处理报告，带上错误（GitHub 恰好已经合并的仍算已合并）。中途推了新提交或离开 CLEAN 就重新计时，重挂等待也重新计时；没开自动合并的（等夜间测试、等 Codex 的）不动。理由：GitHub 偶尔漏掉自动合并（#323）。不从最后一项检查完成的时间算，是因为夜间测试后才开自动合并的 PR 检查早已跑完，会和 GitHub 自己的合并抢。
+- 退出时每个 PR 打一行：已合并、要处理什么，或还在等什么。`gh` 和网络出错（如 `unexpected EOF`）只在标准错误打一行，下一轮重试，不退出。
 
 ## watch_issues.py — Issue 与创意工坊监听
 
