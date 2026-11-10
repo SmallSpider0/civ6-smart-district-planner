@@ -97,4 +97,10 @@ python3 -I tests/compare/hazard360.py logs/remote/haz360.jsonl
 
 ## 5. 方案（写在 Issue 评论里，等决定）
 
-见 Issue 评论。开关名按建议定为“避开灾害地块”（Avoid Disaster Tiles）。
+调研评论：https://github.com/SmallSpider0/civ6-smart-district-planner/issues/360#issuecomment-6781830281
+
+- A（推荐）：结果明细和悬停标出风险（贴着火山、无堤坝的泛滥平原、无拦洪坝的海岸低地），已受保护的不提示；选城址页的提示换成同一套判断。方案不变。
+- B（推荐，和 A 一起）：开关“避开灾害地块”（Avoid Disaster Tiles，名字已定）：能避就避，没有安全格时仍放下并提示；方案里规划的堤坝让同一条河的泛滥平原变安全。
+- C（不推荐）：按风险打折，折扣无据。
+- 待定：做哪些；开关默认值（建议关）；开关管哪几种格（建议三种）；休眠火山算不算（建议算）。
+- 版本：只做 A 第三位，加 B 第二位。
