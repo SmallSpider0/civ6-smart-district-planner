@@ -36,6 +36,7 @@ Also:
 - Districts stay off tiles that would make good farms or mines unless the bonus is worth it.
 - Improvements that give districts adjacency (such as Mines and Quarries next to an Industrial Zone, and those your civilization's abilities count) are planned with the districts and tacked with them; districts go where those can be built (on by default). With "Worked tiles" on, the tiles the city will work also get improvement tacks.
 - Neighborhoods go where Appeal gives the most Housing. An Aqueduct is added when a city lacks fresh water, a Dam when it has enough Floodplains.
+- Districts at risk from natural disasters (next to a volcano, Floodplains without a Dam, Coastal Lowland without a Flood Barrier) are marked in the result; with "Avoid Disaster Tiles" on, districts go on safe tiles first (Gathering Storm only, off by default).
 - When a plan relies on nearby Woods or Rainforest, a "Don't chop" tack on those tiles says what chopping would cost.
 - **Good places**: pick a district and the map colors every tile it can go on by its bonus.
 - To plan again, turn on "Replace this mod's earlier tacks": the old tacks are replaced, and Undo tacks puts them back.
@@ -163,6 +164,7 @@ The development documents are in Chinese; issues and pull requests in English ar
 - 不乱占好地：区域尽量不压能修出好改良的格。
 - 能给区域相邻加成的改良设施（如工业区旁的矿山、采石场，以及文明特性认的改良）和区域一起规划、一起打钉，区域会挑能建这些改良的位置（默认打开）；打开“耕作格改良”时，城市要耕作的地块也打改良钉。
 - 社区放在魅力高的地方，多给住房；缺淡水时自动加水渠，泛滥平原多时自动加堤坝。
+- 结果里标出会受自然灾害的区域（挨着火山、没有堤坝的泛滥平原、没有拦洪坝的海岸低地）；打开“避开灾害地块”时区域先放在安全的格上（只在风云变幻里有，默认关）。
 - 方案靠旁边的森林、雨林拿加成时，在那些格上打“勿砍”提醒钉，写明砍掉会少多少。
 - “好位置”：选一个区域，地图上给它能放的格按加成高低上色。
 - 想重新规划：打开“替换本模组之前打的钉”，旧钉换成新的，撤销时放回。
