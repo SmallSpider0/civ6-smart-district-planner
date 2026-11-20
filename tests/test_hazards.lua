@@ -61,6 +61,28 @@ test("each plot's risk agrees with the game's managers", function()
     city:GetX(), city:GetY(), #scan.Candidates, counts.Volcano, counts.Flood, counts.Lowland))
 end)
 
+-- Whether one of the player's tacks is a flood guard on `river`.
+local function TackGuarded(river)
+  local rules = SDP_City.HazardRules()
+  for _, pin in pairs(PlayerConfigurations[pid]:GetMapPins()) do
+    local subject = CreateMapPinSubject ~= nil and CreateMapPinSubject(pin) or nil
+    if subject ~= nil and rules.Guards[subject.Key] and SDP_City.FloodRiver(pin:GetHexX(), pin:GetHexY()) == river then
+      return true
+    end
+  end
+  return false
+end
+
+-- The first district type that guards floodplains in this ruleset (sorted).
+local function GuardDistrict()
+  local list = {}
+  for key in pairs(SDP_City.HazardRules().Guards) do
+    if GameInfo.Districts[key] ~= nil then list[#list + 1] = key end
+  end
+  table.sort(list)
+  return list[1]
+end
+
 -- A floodplain the game can flood counts unless something guards its river:
 -- a built dam or Great Bath on that river, or a dam tack the plan keeps.
 test("a floodable floodplain counts exactly when nothing guards its river", function()

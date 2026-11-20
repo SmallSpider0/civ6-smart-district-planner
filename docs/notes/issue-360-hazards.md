@@ -104,3 +104,19 @@ python3 -I tests/compare/hazard360.py logs/remote/haz360.jsonl
 - C（不推荐）：按风险打折，折扣无据。
 - 待定：做哪些；开关默认值（建议关）；开关管哪几种格（建议三种）；休眠火山算不算（建议算）。
 - 版本：只做 A 第三位，加 B 第二位。
+
+## 6. 实现（2026-11-20，分支 `vm/hazards-360`）
+
+决定（维护者 2026-11-11）：A 和 B 都做；开关默认关；管三种格；休眠火山算。版本 v1.8.0。
+
+- 判断在 `SDP_City`：`HazardRules()` 从 GameInfo 读（`RandomEvents` 里的火山、洪水事件，`CoastalLowlands`，`Districts_XP2`/`Buildings_XP2.PreventsFloods` 的防洪区域和建筑，总督晋升里 `EFFECT_ADJUST_PREVENT_STRUCTURAL_DAMAGE` 的修正，特性里避开全部洪水事件的 `EFFECT_ADJUST_PLAYER_RANDOM_EVENT_AVOID`），没有这些表或接口（原版、迭起兴衰）时全关。`HazardAt(ctx, plot)` 用游戏自己的 `MapFeatureManager.CanSufferEruption`、`RiverManager.CanBeFlooded`、`TerrainManager.GetCoastalLowlandType`/`IsProtected`；泛滥平原另查这条河有没有建好的或钉上的堤坝、大浴场（`CanBeFlooded` 不看堤坝）。`Scan`、`ScanSite` 末尾给每个候选格记 `Hazard`。
+- 结果：`PlanHazards` 给方案里的区域记风险（奇观不记），方案自己规划的堤坝或大浴场让同一条河的洪水风险去掉。结果行明细加“（灾害：……）”，悬停加逐项说明（`SDP_UI.HazardNote`、`HazardLines`）。地图钉不变。
+- 开关：单城、多城页各一个 `AVOID_HAZARDS`（存档里保存），只在有灾害规则时显示；关着时请求里没有 `AvoidHazards`。
+- 搜索：`SDP_Search` 的目标里每个放在危险格上的区域减 `HAZARD_COST = 10000`（比放下一个区域的优先级低、比任何加成高），所以先比放下几个区域，再比危险格上的区域数，再比加成；只有洪水风险的格在问题里有堤坝类槽位时，模型按 0 计（保持乐观上界）。报告的加成、`Mismatch` 检查和 `Quality` 的上界都把这部分减回去（`HazardDelta`）。候选格不排除，所以没有安全格的区域照样放下。
+- 选城址页：`SDP_Sites.Disaster(scan)` 按同一套判断数三类格，替换原来看地貌的判断。
+
+### 测试
+
+- 离线：`tests/offline/spec_hazards.lua` 11 项（假世界 `world.lua` 的 `spec.disasters`），面板经 `HazardCheck:Toggle()`、`MultiHazardCheck`；相关的 10 个 spec 共 154 项在第二台机器上通过。
+- 游戏内：`tests/test_hazards.lua` 5 项。风云变幻固定测试图（首都 18,38）：35 个候选格，火山旁 0、泛滥平原 6、海岸低地 3，每格与游戏接口一致；开关打开后放下的区域数不变，危险格上的区域 1→0，加成 5→3。同局 test_panel、test_sites、test_solver、test_multi、test_settings、test_rules 都通过。
+- 没在游戏里验证的：梁的“加固材料”、大浴场、活跃火山（测试图首都旁没有火山）、建好的堤坝（都只有离线测试）。
