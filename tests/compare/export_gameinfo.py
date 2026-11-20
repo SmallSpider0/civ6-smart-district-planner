@@ -51,6 +51,7 @@ RequirementSets Requirements Resource_Consumption Resource_Harvests Resource_Val
 Resource_ValidTerrains Resource_YieldChanges Resources Route_ValidBuildUnits Routes
 Technologies TerrainClass_Terrains TerrainClasses Terrain_YieldChanges Terrains TraitModifiers
 Traits TypeTags UnitCommands UnitOperations Units Yields
+RandomEvents CoastalLowlands Buildings_XP2 GovernorPromotions GovernorPromotionModifiers
 """.split()
 
 

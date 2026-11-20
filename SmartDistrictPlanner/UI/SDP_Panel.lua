@@ -1094,8 +1094,48 @@ function SDP_UI.PlanNote(p)
     notes[#notes + 1] = Locale.Lookup("LOC_SDP_RESULT_NEEDS_TECH", tech and Locale.Lookup(tech.Name) or p.RemoveTech)
   end
   if p.ClearFirst then notes[#notes + 1] = Locale.Lookup("LOC_SDP_RESULT_CLEAR_FIRST") end
+  local hazard = SDP_UI.HazardNote(p.Hazard)
+  if hazard ~= nil then notes[#notes + 1] = hazard end
   if #notes == 0 then return "" end
   return "  " .. table.concat(notes, " ")
+end
+
+-- A district's disaster risk (issue 360, SDP_City.HazardAt): the short note
+-- in its row's detail (nil when safe) and the lines for its tooltip.
+local function LowlandName(index)
+  local row = GameInfo.CoastalLowlands ~= nil and GameInfo.CoastalLowlands[index] or nil
+  return row and Locale.Lookup(row.Name) or ""
+end
+
+function SDP_UI.HazardNote(h)
+  if h == nil then return nil end
+  local kinds = {}
+  if h.Volcano ~= nil then kinds[#kinds + 1] = Locale.Lookup("LOC_SDP_RESULT_HAZARD_VOLCANO_" .. h.Volcano) end
+  if h.Flood ~= nil then kinds[#kinds + 1] = Locale.Lookup("LOC_SDP_RESULT_HAZARD_FLOOD") end
+  if h.Lowland ~= nil then kinds[#kinds + 1] = LowlandName(h.Lowland) end
+  if #kinds == 0 then return nil end
+  return Locale.Lookup("LOC_SDP_RESULT_HAZARD", Join(kinds))
+end
+
+function SDP_UI.HazardLines(h)
+  local lines = {}
+  if h == nil then return lines end
+  if h.Volcano ~= nil then lines[#lines + 1] = Locale.Lookup("LOC_SDP_HAZARD_LINE_VOLCANO_" .. h.Volcano) end
+  if h.Flood ~= nil then lines[#lines + 1] = Locale.Lookup("LOC_SDP_HAZARD_LINE_FLOOD") end
+  if h.Lowland ~= nil then
+    local row = GameInfo.CoastalLowlands ~= nil and GameInfo.CoastalLowlands[h.Lowland] or nil
+    local event = row and GameInfo.RandomEvents ~= nil and GameInfo.RandomEvents[row.FloodedEvent] or nil
+    lines[#lines + 1] = Locale.Lookup("LOC_SDP_HAZARD_LINE_LOWLAND", LowlandName(h.Lowland),
+      event and Locale.Lookup(event.Name) or "")
+  end
+  return lines
+end
+
+-- `toolTip` with the entry's risk lines after it.
+function SDP_UI.HazardTip(p, toolTip)
+  local lines = SDP_UI.HazardLines(p.Hazard)
+  if #lines == 0 then return toolTip end
+  return toolTip .. "[NEWLINE][NEWLINE]" .. table.concat(lines, "[NEWLINE]")
 end
 
 -- The improvement a planned wonder needs next to it (issue 51, a Camp for
@@ -1334,7 +1374,7 @@ function SDP_UI.CityRows(s, parts, add, cityID)
     local toolTip = (p.ToolTip ~= nil and p.ToolTip ~= "") and p.ToolTip or Locale.Lookup("LOC_SDP_NO_ADJACENCY")
     local detail
     detail, toolTip = SDP_UI.CoverageRow(p, SDP_UI.PlanDetail(p), toolTip)
-    toolTip = SDP_UI.PartsTip(p, parts, toolTip)
+    toolTip = SDP_UI.HazardTip(p, SDP_UI.PartsTip(p, parts, toolTip))
     add("ICON_" .. p.Type, TypeName(p.Type) .. "  " .. Where(p.X, p.Y), detail, toolTip, p.X, p.Y)
     SDP_UI.SupportRow(p, add, "  ")
     SDP_UI.ImprovementRow(p, add, "  ")
@@ -1708,6 +1748,7 @@ SDP_Panel = {
   SetRemind = S.SetRemind,
   SetImprove = S.SetImprove,
   SetWorked = S.SetWorked,
+  SetAvoidHazards = S.SetAvoidHazards,
   SelectSolution = S.SelectSolution,
   SetWeight = S.SetWeight,
   SetAllowFeatureRemoval = S.SetAllowFeatureRemoval,

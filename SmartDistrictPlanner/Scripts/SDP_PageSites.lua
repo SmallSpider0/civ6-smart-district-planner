@@ -411,7 +411,14 @@ local function SiteToolTip(site, result)
   end
   if info.Unrevealed > 0 then lines[#lines + 1] = Locale.Lookup("LOC_SDP_SITES_UNREVEALED", info.Unrevealed) end
   if info.Loyalty ~= nil and info.Loyalty ~= "LOW" then lines[#lines + 1] = Locale.Lookup("LOC_SDP_SITES_LOYALTY_" .. info.Loyalty) end
-  if info.Disaster then lines[#lines + 1] = Locale.Lookup("LOC_SDP_SITES_DISASTER") end
+  if info.Disaster ~= nil then
+    local kinds = {}
+    for _, kind in ipairs({ "Volcano", "Flood", "Lowland" }) do
+      local count = info.Disaster[kind]
+      if count > 0 then kinds[#kinds + 1] = Locale.Lookup("LOC_SDP_SITES_DISASTER_" .. kind:upper(), count) end
+    end
+    lines[#lines + 1] = Locale.Lookup("LOC_SDP_SITES_DISASTER", SDP_UI.Join(kinds))
+  end
   if info.UnknownStrategic then lines[#lines + 1] = Locale.Lookup("LOC_SDP_SITES_UNKNOWN_STRATEGIC") end
   local features = {}
   for featureType, count in pairs(info.Features or {}) do

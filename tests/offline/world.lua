@@ -896,6 +896,8 @@ function World.New(spec)
   function City:GetName() return self.name end
   function City:GetPopulation() return self.population end
   function City:IsCapital() return self.capital == true end
+  -- The governor (issue 360): w:SetGovernor(cityID, { promotion types }, established).
+  function City:GetAssignedGovernor() return self.governor end
   -- Yield per turn (the city panel's number): the spec's `production` for
   -- production; else 1 for the centre plus the best `population` plots
   -- within 3 (issue 234). Other yields: 0.
@@ -994,6 +996,14 @@ function World.New(spec)
     GetPlot(b[1], b[2]).wonder = gi.Buildings[b[3]].Index
   end
   function w:City(id, owner) return cities[(owner or 0) .. ":" .. id] end
+  function w:SetGovernor(cityID, promotions, established)
+    local has = {}
+    for _, t in ipairs(promotions or {}) do has[gi.GovernorPromotions[t].Hash] = true end
+    cities["0:" .. cityID].governor = {
+      HasPromotion = function(_, hash) return has[hash] == true end,
+      IsEstablished = function() return established ~= false end,
+    }
+  end
   function w:AddBuilding(cityID, buildingType, owner)
     cities[(owner or 0) .. ":" .. cityID].buildings[gi.Buildings[buildingType].Index] = true
   end
@@ -1376,6 +1386,76 @@ function World.New(spec)
   local traits = {}
   for _, t in ipairs(spec.traits or {}) do traits[t] = true end
 
+  -- Disasters (Gathering Storm, issue 360), on request with spec.disasters =
+  -- { volcanoes = { { x, y, active } } (a volcano on a mountain plot),
+  --   lowlands = { { x, y, type } } (coastal lowland, 0 = 1 m ... 2 = 3 m) }:
+  -- the rule rows (RandomEvents, CoastalLowlands, the dam's PreventsFloods
+  -- is there anyway), Egypt's flood trait TRAIT_TEST_ITERU (the player has
+  -- it when spec.traits lists it) and a governor promotion that prevents
+  -- environmental damage (w:SetGovernor). Without it the rules have no
+  -- disasters, as in the base game.
+  local disasters = spec.disasters
+  if disasters ~= nil then
+    local function Rows(tbl)
+      local rows = {}
+      if tbl ~= nil then for row in tbl() do rows[#rows + 1] = row end end
+      return rows
+    end
+    local function Add(name, key, extra)
+      local rows = Rows(gi[name])
+      for _, row in ipairs(extra) do rows[#rows + 1] = row end
+      gi[name] = Table(rows, key)
+    end
+    Add("Features", "FeatureType", { { FeatureType = "FEATURE_VOLCANO", Name = "LOC_FEATURE_VOLCANO_NAME", Yields = Yields() } })
+    gi.Features_XP2 = Table({ { FeatureType = "FEATURE_VOLCANO", Volcano = true } }, "FeatureType")
+    gi.RandomEvents = Table({
+      { RandomEventType = "RANDOM_EVENT_VOLCANO_GENTLE", EffectOperatorType = "VOLCANO", Name = "LOC_RANDOM_EVENT_VOLCANO_GENTLE_NAME" },
+      { RandomEventType = "RANDOM_EVENT_FLOOD_MODERATE", EffectOperatorType = "FLOODPLAIN", Name = "LOC_RANDOM_EVENT_FLOOD_MODERATE_NAME" },
+      { RandomEventType = "RANDOM_EVENT_FLOOD_MAJOR", EffectOperatorType = "FLOODPLAIN", Name = "LOC_RANDOM_EVENT_FLOOD_MAJOR_NAME" },
+      { RandomEventType = "RANDOM_EVENT_SEA_LEVEL_RISE2", EffectOperatorType = "SEA_LEVEL", Name = "LOC_RANDOM_EVENT_SEA_LEVEL_RISE2_NAME" },
+      { RandomEventType = "RANDOM_EVENT_SEA_LEVEL_RISE3", EffectOperatorType = "SEA_LEVEL", Name = "LOC_RANDOM_EVENT_SEA_LEVEL_RISE3_NAME" },
+      { RandomEventType = "RANDOM_EVENT_SEA_LEVEL_RISE5", EffectOperatorType = "SEA_LEVEL", Name = "LOC_RANDOM_EVENT_SEA_LEVEL_RISE5_NAME" },
+    }, "RandomEventType")
+    gi.CoastalLowlands = Table({
+      { CoastalLowlandType = "COASTAL_LOWLAND_1M", Name = "LOC_COASTAL_LOWLAND_1M_NAME", FloodedEvent = "RANDOM_EVENT_SEA_LEVEL_RISE2" },
+      { CoastalLowlandType = "COASTAL_LOWLAND_2M", Name = "LOC_COASTAL_LOWLAND_2M_NAME", FloodedEvent = "RANDOM_EVENT_SEA_LEVEL_RISE3" },
+      { CoastalLowlandType = "COASTAL_LOWLAND_3M", Name = "LOC_COASTAL_LOWLAND_3M_NAME", FloodedEvent = "RANDOM_EVENT_SEA_LEVEL_RISE5" },
+    }, "CoastalLowlandType")
+    Add("Modifiers", "ModifierId", {
+      { ModifierId = "TRAIT_TEST_AVOID_MODERATE_FLOOD", ModifierType = "MODIFIER_PLAYER_ADJUST_AVOID_RANDOM_EVENT" },
+      { ModifierId = "TRAIT_TEST_AVOID_MAJOR_FLOOD", ModifierType = "MODIFIER_PLAYER_ADJUST_AVOID_RANDOM_EVENT" },
+      { ModifierId = "TEST_PREVENT_STRUCTURAL_DAMAGE", ModifierType = "MODIFIER_GOVERNOR_ADJUST_PREVENET_STRUCTURAL_DAMAGE" },
+    })
+    Add("DynamicModifiers", "ModifierType", {
+      { ModifierType = "MODIFIER_PLAYER_ADJUST_AVOID_RANDOM_EVENT", CollectionType = "COLLECTION_OWNER",
+        EffectType = "EFFECT_ADJUST_PLAYER_RANDOM_EVENT_AVOID" },
+      { ModifierType = "MODIFIER_GOVERNOR_ADJUST_PREVENET_STRUCTURAL_DAMAGE", CollectionType = "COLLECTION_OWNER",
+        EffectType = "EFFECT_ADJUST_PREVENT_STRUCTURAL_DAMAGE" },
+    })
+    Add("ModifierArguments", nil, {
+      { ModifierId = "TRAIT_TEST_AVOID_MODERATE_FLOOD", Name = "RandomEventType", Value = "RANDOM_EVENT_FLOOD_MODERATE" },
+      { ModifierId = "TRAIT_TEST_AVOID_MAJOR_FLOOD", Name = "RandomEventType", Value = "RANDOM_EVENT_FLOOD_MAJOR" },
+    })
+    Add("TraitModifiers", nil, {
+      { TraitType = "TRAIT_TEST_ITERU", ModifierId = "TRAIT_TEST_AVOID_MODERATE_FLOOD" },
+      { TraitType = "TRAIT_TEST_ITERU", ModifierId = "TRAIT_TEST_AVOID_MAJOR_FLOOD" },
+    })
+    gi.GovernorPromotions = Table({
+      { GovernorPromotionType = "GOVERNOR_PROMOTION_TEST_REINFORCED", Name = "LOC_GOVERNOR_PROMOTION_TEST_REINFORCED_NAME" },
+    }, "GovernorPromotionType")
+    gi.GovernorPromotionModifiers = Table({
+      { GovernorPromotionType = "GOVERNOR_PROMOTION_TEST_REINFORCED", ModifierId = "TEST_PREVENT_STRUCTURAL_DAMAGE" },
+    })
+    for _, v in ipairs(disasters.volcanoes or {}) do
+      local plot = GetPlot(v[1], v[2])
+      plot.feature, plot.volcanoActive = gi.Features.FEATURE_VOLCANO, v[3] == true
+    end
+    for _, l in ipairs(disasters.lowlands or {}) do GetPlot(l[1], l[2]).lowland = l[3] end
+  end
+  local protectedLowland = {}
+  -- A flood barrier in a city (TerrainManager.IsProtected): its lowland is safe.
+  function w:SetProtected(x, y, on) protectedLowland[GetPlot(x, y).index] = on or nil end
+
   -- The game's modifiers in play (GameEffects), issue 197: spec.effects =
   -- { { Id = ModifierId, Player = owner, Active = false?, OwnerMet = false? } }.
   -- The rules' rows of Toronto's suzerain bonus (Base Modifiers.xml) and a
@@ -1458,7 +1538,37 @@ function World.New(spec)
 
   sdp_install_globals({
     Map = Map,
-    RiverManager = { GetRiverForFloodplain = function(x, y) return RiverOf(GetPlot(x, y)) end },
+    RiverManager = {
+      GetRiverForFloodplain = function(x, y) return RiverOf(GetPlot(x, y)) end,
+      -- Floods only with spec.disasters (Gathering Storm).
+      CanBeFlooded = disasters ~= nil and function(plot) return RiverOf(plot) ~= -1 end or nil,
+      GetFloodplainPlots = function(river)
+        local list = {}
+        for index = 0, width * height - 1 do
+          if byIndex[index] ~= nil and RiverOf(byIndex[index]) == river then list[#list + 1] = index end
+        end
+        return list
+      end,
+    },
+    -- Volcanoes and coastal lowland (spec.disasters); empty otherwise.
+    MapFeatureManager = disasters == nil and {} or {
+      IsVolcano = function(plot) return plot.feature ~= nil and plot.feature.FeatureType == "FEATURE_VOLCANO" end,
+      IsActiveVolcano = function(plot) return plot.volcanoActive == true end,
+      -- Land next to a volcano, as the game's warning (no mountains).
+      CanSufferEruption = function(plot)
+        if plot.terrain.Water or plot.terrain.Mountain then return false end
+        for _, n in ipairs(Neighbours(plot.x, plot.y)) do
+          if n.feature ~= nil and n.feature.FeatureType == "FEATURE_VOLCANO" then return true end
+        end
+        return false
+      end,
+    },
+    TerrainManager = disasters == nil and {} or {
+      GetCoastalLowlandType = function(plot) return plot.lowland or -1 end,
+      IsFlooded = function() return false end,
+      IsSubmerged = function() return false end,
+      IsProtected = function(plot) return protectedLowland[plot.index] == true end,
+    },
     GameInfo = gi,
     GameEffects = GameEffects,
     GlobalParameters = { CITY_MIN_RANGE = spec.cityMinRange or 3, CITY_POPULATION_RIVER_LAKE = 5,

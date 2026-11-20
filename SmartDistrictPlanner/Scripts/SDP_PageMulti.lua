@@ -66,6 +66,7 @@ local m_replace = false -- plan over this mod's earlier pins for the cities and 
 local m_remind = true
 local m_improve = true -- plan the improvements the districts take adjacency from (issue 227)
 local m_worked = false -- tack the improvements of the worked plots too (issue 227)
+local m_avoidHazards = false -- prefer plots no disaster can harm (issue 360; Gathering Storm only)
 local m_result = nil
 local m_solution = 1
 local m_view = { Cities = {}, Districts = {}, Wonders = {}, Solutions = {}, Results = {}, Plans = {}, Templates = {} } -- for tests
@@ -268,6 +269,7 @@ function P.Request()
     Existing = existing, Weights = weights, Land = m_weights.LAND > 0, Coverage = m_weights.COVERAGE, Distance = m_weights.DISTANCE,
     Remind = m_remind, Apart = true, IgnorePins = m_replace and P.OwnPins() or nil, Swap = m_swap,
     Improvements = m_improve, WorkedImprovements = m_worked,
+    AvoidHazards = m_avoidHazards and SDP_City.HazardsOn() or nil,
   }
 end
 
@@ -579,6 +581,7 @@ local function FoldParts()
   if m_weights.LAND == 0 then parts[#parts + 1] = Locale.Lookup("LOC_SDP_FOLD_LAND_OFF") end
   if not m_swap then parts[#parts + 1] = Locale.Lookup("LOC_SDP_FOLD_NO_SWAP") end
   if m_replace then parts[#parts + 1] = Locale.Lookup("LOC_SDP_FOLD_REPLACE") end
+  if m_avoidHazards and SDP_City.HazardsOn() then parts[#parts + 1] = Locale.Lookup("LOC_SDP_FOLD_HAZARD") end
   local wonders = #WonderTypes()
   if wonders > 0 then parts[#parts + 1] = Locale.Lookup("LOC_SDP_FOLD_WONDERS", wonders) end
   return parts
@@ -1000,7 +1003,7 @@ function P.Render()
           local tip = (p.ToolTip ~= nil and p.ToolTip ~= "") and p.ToolTip or Locale.Lookup("LOC_SDP_NO_ADJACENCY")
           local detail
           detail, tip = SDP_UI.CoverageRow(p, SDP_UI.PlanDetail(p), tip, label)
-          tip = SDP_UI.PartsTip(p, summaryParts, tip)
+          tip = SDP_UI.HazardTip(p, SDP_UI.PartsTip(p, summaryParts, tip))
           AddRow("ICON_" .. p.Type, "  " .. SDP_UI.TypeName(p.Type) .. "  " .. SDP_UI.Where(p.X, p.Y), detail, tip, p.X, p.Y)
           SDP_UI.SupportRow(p, AddRow, "    ")
           SDP_UI.ImprovementRow(p, AddRow, "    ")
@@ -1118,7 +1121,12 @@ local SWITCHES = {
     Put = function(v) m_improve = v end, OnChange = function() UpdateEstimate() end },
   { Key = "WORKED", Default = false, Check = Controls.MultiWorkedCheck, Get = function() return m_worked end,
     Put = function(v) m_worked = v end },
+  -- Avoid disaster tiles (issue 360): the plan changes.
+  { Key = "AVOID_HAZARDS", Default = false, Check = Controls.MultiHazardCheck, Get = function() return m_avoidHazards end,
+    Put = function(v) m_avoidHazards = v end, OnChange = function() UpdateEstimate() end },
 }
+-- Only Gathering Storm has disasters: elsewhere the switch is not shown.
+Controls.MultiHazardRow:SetHide(not SDP_City.HazardsOn())
 m_kit = SDP_PageKit.New({
   Page = P, Tab = "MULTI", Columns = COLUMNS, Weights = m_weights, Switches = SWITCHES,
   Extra = { SDP_UI.WonderSetting(m_wonders) }, Tiers = SDP_Tiers.Multi,
@@ -1146,6 +1154,7 @@ P.SetReplace = function(on) m_kit.SetSwitch("REPLACE", on) end
 P.SetRemind = function(on) m_kit.SetSwitch("REMIND", on) end
 P.SetImprove = function(on) m_kit.SetSwitch("IMPROVE", on) end
 P.SetWorked = function(on) m_kit.SetSwitch("WORKED", on) end
+P.SetAvoidHazards = function(on) m_kit.SetSwitch("AVOID_HAZARDS", on) end
 
 -- The tab as a new game shows it (tests: SDP_Panel.Defaults, issue 327):
 -- the default group around the capital, one shared list at its defaults,
@@ -1166,7 +1175,8 @@ function P.State()
   return {
     Result = m_result, Solution = m_solution, Tier = m_kit.Tier, Land = m_weights.LAND > 0, Replace = m_replace,
     Remind = m_remind, Swap = m_swap, Weights = m_weights, Preset = m_kit.Preset, Fold = m_kit.Fold, Improve = m_improve,
-    Worked = m_worked, WeightCells = m_kit.Cells,
+    Worked = m_worked, WeightCells = m_kit.Cells, AvoidHazards = m_avoidHazards,
+    HazardShown = not Controls.MultiHazardRow:IsHidden(),
     FoldText = Controls.MultiFoldText:GetText(), ResultHeight = Controls.MultiResultScroll:GetSizeY(),
     View = m_view, EstimateText = Controls.MultiEstimate:GetText(), QualityText = Controls.MultiQuality:GetText(),
     PlaceDisabled = Controls.MultiPlaceButton:IsDisabled(), ContinueDisabled = Controls.MultiContinueButton:IsDisabled(),

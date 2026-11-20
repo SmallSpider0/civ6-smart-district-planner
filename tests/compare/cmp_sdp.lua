@@ -90,6 +90,8 @@
 --                                    sent the way its Request() sends them.
 --                                    The districts are the scenario's, all
 --                                    required, as for every other variant
+--   variant ..._SAFE (anywhere)      the switch "avoid disaster tiles" on
+--                                    (issue 360)
 --   variant ..._ASMULTI (anywhere)   single: solved as SDP_Multi with only
 --                                    this city, the request the single-city
 --                                    tab sends when wonders are ticked
@@ -317,6 +319,9 @@ function CmpAdapters.sdp(request, variant, w)
   -- "_HAZ<letters>" (issue 360 experiment): hazard plots are kept free.
   local hazard = variant:match("_HAZ([VFLA]+)")
   variant = variant:gsub("_HAZ[VFLA]+", "")
+  -- "_SAFE" (issue 360): the switch "avoid disaster tiles" on.
+  local safe = variant:match("_SAFE") ~= nil
+  variant = variant:gsub("_SAFE", "")
   local oracle = variant:match("^ORACLE") ~= nil
   local check = oracle and variant:match("_CHECK$") ~= nil
   if oracle then variant = "FINE" .. variant:gsub("_CHECK$", ""):gsub("^ORACLE", "") end
@@ -386,6 +391,16 @@ function CmpAdapters.sdp(request, variant, w)
     LoadSDP()
   end
   if hazard ~= nil then KeepHazardsFree(hazard) end
+  if safe then
+    -- Every request either solver gets, as the panel sends it with the switch on.
+    for _, solver in ipairs({ SDP_Solver, SDP_Multi }) do
+      local new = solver.NewSession
+      solver.NewSession = function(r, ...)
+        r.AvoidHazards = true
+        return new(r, ...)
+      end
+    end
+  end
   if knew ~= nil then SDP_Sites.KIND_NEW = knew end
   if hbuild ~= nil then
     -- Every building's housing times hbuild / 100.

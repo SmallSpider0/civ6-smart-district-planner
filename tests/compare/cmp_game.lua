@@ -82,6 +82,30 @@ function CmpGame.LoadGameInfo()
   local source = cmp_read_file(CMP_GAMEINFO)
   if source == nil then error("no " .. tostring(CMP_GAMEINFO) .. ": run tests/compare/export_gameinfo.py") end
   local data = assert(load(source, "@gameinfo"))()
+  -- Disasters (issue 360): an export made before it lacks the tables the
+  -- mod reads to know Gathering Storm's disasters; their rows as the game's
+  -- database has them (2026-11-20, Gathering Storm), for the kinds and the
+  -- texts only. A newer export (export_gameinfo.py) brings its own.
+  local function Missing(name, pk, rows)
+    if data[name] == nil then data[name] = { pk = pk, rows = rows } end
+  end
+  Missing("RandomEvents", "RandomEventType", {
+    { RandomEventType = "RANDOM_EVENT_VOLCANO_GENTLE", EffectOperatorType = "VOLCANO", Name = "LOC_RANDOM_EVENT_VOLCANO_GENTLE_NAME" },
+    { RandomEventType = "RANDOM_EVENT_VOLCANO_CATASTROPHIC", EffectOperatorType = "VOLCANO", Name = "LOC_RANDOM_EVENT_VOLCANO_CATASTROPHIC_NAME" },
+    { RandomEventType = "RANDOM_EVENT_VOLCANO_MEGACOLOSSAL", EffectOperatorType = "VOLCANO", Name = "LOC_RANDOM_EVENT_VOLCANO_MEGACOLOSSAL_NAME" },
+    { RandomEventType = "RANDOM_EVENT_FLOOD_MODERATE", EffectOperatorType = "FLOODPLAIN", Name = "LOC_RANDOM_EVENT_FLOOD_MODERATE_NAME" },
+    { RandomEventType = "RANDOM_EVENT_FLOOD_MAJOR", EffectOperatorType = "FLOODPLAIN", Name = "LOC_RANDOM_EVENT_FLOOD_MAJOR_NAME" },
+    { RandomEventType = "RANDOM_EVENT_FLOOD_1000_YEAR", EffectOperatorType = "FLOODPLAIN", Name = "LOC_RANDOM_EVENT_FLOOD_1000_YEAR_NAME" },
+  })
+  Missing("CoastalLowlands", "CoastalLowlandType", {
+    { CoastalLowlandType = "COASTAL_LOWLAND_1M", Name = "LOC_COASTAL_LOWLAND_1M_NAME", FloodedEvent = "RANDOM_EVENT_SEA_LEVEL_RISE2" },
+    { CoastalLowlandType = "COASTAL_LOWLAND_2M", Name = "LOC_COASTAL_LOWLAND_2M_NAME", FloodedEvent = "RANDOM_EVENT_SEA_LEVEL_RISE3" },
+    { CoastalLowlandType = "COASTAL_LOWLAND_3M", Name = "LOC_COASTAL_LOWLAND_3M_NAME", FloodedEvent = "RANDOM_EVENT_SEA_LEVEL_RISE5" },
+  })
+  Missing("Buildings_XP2", "BuildingType", {
+    { BuildingType = "BUILDING_GREAT_BATH", PreventsFloods = true },
+    { BuildingType = "BUILDING_FLOOD_BARRIER", BlocksCoastalFlooding = true },
+  })
   local gi = {}
   local byChild = {} -- [table][column][value] = { rows }
   local function ChildIndex(tableName, column)
@@ -261,6 +285,11 @@ function CmpGame.New(spec)
     local d = DIRECTIONS[(direction % 6) + 1]
     local nx, ny = FromCube(q + d[1], r + d[2])
     return GetPlot(nx, ny)
+  end
+  local function VolcanoAt(plot)
+    if plot == nil or plot.feature == nil then return false end
+    local xp2 = gi.Features_XP2 and gi.Features_XP2[plot.feature.FeatureType]
+    return xp2 ~= nil and (xp2.Volcano == true or xp2.Volcano == 1)
   end
   local function Neighbours(plot)
     local list = {}
@@ -1029,7 +1058,22 @@ function CmpGame.New(spec)
     GameEffects = GameEffects,
     RiverManager = RiverManager,
     -- Coastal lowland and the sea level (scenes from Gathering Storm games).
+    -- Volcanoes (issue 360): land next to a volcano (Features_XP2.Volcano)
+    -- can suffer an eruption, as the game's warning; no scene records which
+    -- volcanoes are active, so all count as dormant.
+    MapFeatureManager = {
+      IsVolcano = function(plot) return VolcanoAt(plot) end,
+      IsActiveVolcano = function() return false end,
+      CanSufferEruption = function(plot)
+        if plot == nil or plot.terrain.Water or plot:IsMountain() then return false end
+        for dir = 0, 5 do
+          if VolcanoAt(Adjacent(plot.x, plot.y, dir)) then return true end
+        end
+        return false
+      end,
+    },
     TerrainManager = {
+      IsProtected = function() return false end,
       GetCoastalLowlandType = function(plot) return plot.lowland end,
       IsFlooded = function(plot) return plot.flooded end,
       IsSubmerged = function(plot) return plot.submerged end,

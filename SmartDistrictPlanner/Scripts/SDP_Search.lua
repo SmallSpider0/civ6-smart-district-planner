@@ -32,6 +32,11 @@
 --               picked together, nor with a required one.
 --   Costs       an optional cost per candidate plot (the distance cost)
 --               taken off for every placed slot.
+--   Hazards     optional (issue 360, "avoid disaster tiles"): a district on
+--               a plot where a disaster can harm it costs HAZARD_COST, more
+--               than any value, so the plan takes as few such plots as it
+--               can and, among those layouts, the best value; it never
+--               leaves a district out for it (more placed slots win first).
 -- Budgets are counts (SDP_Tiers); loops run over sorted arrays; ties go to
 -- the smaller candidate positions (= plot indices). Same input, same result
 -- (requirement constraint 6). The overlay must be installed while it runs.
@@ -88,6 +93,11 @@ SDP_Search.Better = Better
 --               exactly `count` are placed (fewer when they do not fit:
 --               the count is capped by PoolRoom, issue 133)
 --   Costs       { [position] = cost } or nil: taken off per placed slot
+--   Hazards     { [group] = { [position] = hazard } } or nil (off): the
+--               candidates' SDP_City hazards for each group's city. A
+--               flood alone does not count while a slot that prevents
+--               floods (a dam, the Great Bath) stands on that river's
+--               floodplains in the layout
 --   Appeal      { Fixed (SDP_Overlay.FixedSubjects), Weights (the request's),
 --                 Workable = { [plot index] = true } } or nil: the appeal part
 --               (SDP_Appeal; nothing when no district depends on appeal)
@@ -134,6 +144,7 @@ function SDP_Search.New(spec)
   self.Lands = spec.Lands or {}
   self.Coverage = spec.Coverage
   self.PoolSpec, self.Costs = spec.Pools, spec.Costs
+  self.HazardSpec = spec.Hazards
   self.Apart, self.ApartRelaxed = spec.Apart, {}
   self.Exclusive = spec.Exclusive or {}
   self.AppealSpec = spec.Appeal
@@ -483,6 +494,7 @@ function Search:Singles()
   self.AltNeed = math.max(2, math.ceil(0.2 * selected))
   self:PrepareReach()
   self:PrepareRivers()
+  self:PrepareHazards()
   return dropped
 end
 
@@ -522,6 +534,72 @@ function Search:SharesRiver(layout)
     end
   end
   return false
+end
+
+-- Disaster tiles (issue 360, spec.Hazards). HazardOf[m]: the hazards of
+-- district slot m's group by position (nil: none counts); GuardSlots: the
+-- slots that prevent floods on their river (SDP_City.HazardRules Guards),
+-- GuardRiver[i]: candidate i's river (-1: none).
+SDP_Search.HAZARD_COST = 10000
+
+function Search:PrepareHazards()
+  self.HazardOf, self.GuardSlots, self.GuardRiver = nil, {}, {}
+  local spec = self.HazardSpec
+  if spec == nil then return end
+  local of, any = {}, false
+  for m = 1, self.K do
+    local byPosition = self.Kinds[m] == "DISTRICT" and spec[self.Groups[m]] or nil
+    if byPosition ~= nil and next(byPosition) ~= nil then
+      of[m] = byPosition
+      any = true
+    end
+  end
+  if not any then return end
+  self.HazardOf = of
+  local guards = SDP_City.HazardRules().Guards
+  for m = 1, self.K do
+    if guards[self.Types[m]] then self.GuardSlots[#self.GuardSlots + 1] = m end
+  end
+  if #self.GuardSlots > 0 then
+    for i, c in ipairs(self.Candidates) do self.GuardRiver[i] = SDP_City.FloodRiver(c.X, c.Y) end
+  end
+end
+
+-- How many placed district slots of `layout` stand on a disaster tile (0
+-- when off).
+function Search:HazardCount(layout)
+  local of = self.HazardOf
+  if of == nil then return 0 end
+  local guarded = nil
+  for _, m in ipairs(self.GuardSlots) do
+    local i = layout[m]
+    if i ~= 0 and self.GuardRiver[i] ~= -1 then
+      guarded = guarded or {}
+      guarded[self.GuardRiver[i]] = true
+    end
+  end
+  local count = 0
+  for m = 1, self.K do
+    local i, byPosition = layout[m], of[m]
+    local hazard = (i ~= 0 and byPosition ~= nil) and byPosition[i] or nil
+    if hazard ~= nil and not (guarded ~= nil and SDP_City.HazardWaived(hazard, guarded)) then count = count + 1 end
+  end
+  return count
+end
+
+-- The hazard part of a layout (0 or negative), part of its value.
+function Search:HazardDelta(layout)
+  return -SDP_Search.HAZARD_COST * self:HazardCount(layout)
+end
+
+-- The model's hazard cost of slot m on candidate i: optimistic, so a flood
+-- alone costs nothing when the problem has a slot that could guard a river.
+function Search:HazardModel(m, i)
+  local byPosition = self.HazardOf and self.HazardOf[m]
+  local hazard = byPosition and byPosition[i]
+  if hazard == nil then return 0 end
+  if #self.GuardSlots > 0 and hazard.Volcano == nil and hazard.Lowland == nil then return 0 end
+  return SDP_Search.HAZARD_COST
 end
 
 -- How many slots of `slots` can stand at once, each on its own legal plot:
@@ -759,6 +837,7 @@ function Search:Evaluate(layout)
       if i ~= 0 then gain = gain - costs[i] end
     end
   end
+  if self.HazardOf ~= nil then gain = gain + self:HazardDelta(layout) end
   return gain, legal
 end
 
@@ -1319,7 +1398,7 @@ function Search:Model()
     single[m] = {}
     local rows = (adjacency[self.Types[m]] or {}).Rows or {}
     for i = 1, n do
-      local value = self.Single[m][i] - loss[i] - (self.Costs and self.Costs[i] or 0)
+      local value = self.Single[m][i] - loss[i] - (self.Costs and self.Costs[i] or 0) - self:HazardModel(m, i)
       if appealSingle ~= nil then value = value + (appealSingle[m][i] or 0) end
       -- Coverage alone; two slots of one group over the same city both
       -- count it here, so the model stays optimistic.
@@ -2622,16 +2701,20 @@ function Search:Solutions(count)
   return self:Pick(pool, count)
 end
 
--- Quality indicators (design 7.4) for `gain`, the value reported.
+-- Quality indicators (design 7.4) for `gain`, the value reported (without
+-- the hazard part): the bound is compared at the best layout's count of
+-- disaster tiles.
 function Search:Quality(gain)
   local exhaustive = self.Stats.Method == "exhaustive" and self.Exact == true
   if self.Stats.Method == "pools" then exhaustive, self.Bound = self:PoolsExact(), self:PoolsBound() end
   local gap = nil
-  if not exhaustive and self.Bound ~= nil and self.Bound > 0 and gain ~= nil then
-    gap = math.max(0, (self.Bound - gain) / self.Bound)
+  local bound = self.Bound
+  if bound ~= nil and self.HazardOf ~= nil and self.BestLayout ~= nil then bound = bound - self:HazardDelta(self.BestLayout) end
+  if not exhaustive and bound ~= nil and bound > 0 and gain ~= nil then
+    gap = math.max(0, (bound - gain) / bound)
   end
   return {
-    Exhaustive = exhaustive, Bound = (not exhaustive) and self.Bound or nil, Gap = gap,
+    Exhaustive = exhaustive, Bound = (not exhaustive) and bound or nil, Gap = gap,
     Converged = self.Converged, CanContinue = self:CanContinue(), Truncated = self.Stats.Truncated,
   }
 end

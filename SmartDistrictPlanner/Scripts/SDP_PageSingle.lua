@@ -41,6 +41,7 @@ local m_replace = false       -- plan over this mod's earlier pins for the city 
 local m_remind = true         -- reminder pins on the woods and rainforest the plan relies on (feedback item 5)
 local m_improve = true        -- plan the improvements the districts take adjacency from (issue 227)
 local m_worked = false        -- tack the improvements of the worked plots too (issue 227)
+local m_avoidHazards = false  -- prefer plots no disaster can harm (issue 360; Gathering Storm only)
 local m_wonders = {}          -- [BuildingType] = true: wonders to place too (then solved by SDP_Multi, one city)
 local m_heat = nil            -- the district whose good places the map shows
 local m_heatSpots = nil       -- SDP_Solver.Heat of m_heat (tests)
@@ -440,6 +441,7 @@ local function FoldParts()
   if not m_allowFeatureRemoval then parts[#parts + 1] = Locale.Lookup("LOC_SDP_FOLD_NO_REMOVAL") end
   if not m_swap then parts[#parts + 1] = Locale.Lookup("LOC_SDP_FOLD_NO_SWAP") end
   if m_replace then parts[#parts + 1] = Locale.Lookup("LOC_SDP_FOLD_REPLACE") end
+  if m_avoidHazards and SDP_City.HazardsOn() then parts[#parts + 1] = Locale.Lookup("LOC_SDP_FOLD_HAZARD") end
   local wonders = #SelectedWonders()
   if wonders > 0 then parts[#parts + 1] = Locale.Lookup("LOC_SDP_FOLD_WONDERS", wonders) end
   if m_heat ~= nil then parts[#parts + 1] = Locale.Lookup("LOC_SDP_FOLD_HEAT", SDP_UI.TypeName(m_heat)) end
@@ -573,6 +575,7 @@ Request = function()
     AllowFeatureRemoval = m_allowFeatureRemoval, Land = m_weights.LAND > 0, Tier = m_kit.Tier, Swap = m_swap,
     IgnorePins = m_replace and OwnPins() or nil, Wonders = wonders, Off = SDP_UI.OffSet(m_states),
     Improvements = m_improve, WorkedImprovements = m_worked,
+    AvoidHazards = m_avoidHazards and SDP_City.HazardsOn() or nil,
   }
 end
 
@@ -588,6 +591,7 @@ local function WonderRequest(request)
     AllowFeatureRemoval = request.AllowFeatureRemoval, IgnorePins = request.IgnorePins, Swap = request.Swap,
     Plans = { [key] = request.Districts }, Off = request.Off,
     Improvements = request.Improvements, WorkedImprovements = request.WorkedImprovements,
+    AvoidHazards = request.AvoidHazards,
   }
 end
 
@@ -726,7 +730,8 @@ function P.State()
     SolutionCells = m_solutionCells, WeightCells = m_kit.Cells,
     Count = list.Count, Target = list.Target, Have = list.Have, Solution = m_solution, Remind = m_remind,
     Weights = m_weights, AllowFeatureRemoval = m_allowFeatureRemoval, Land = m_weights.LAND > 0, Tier = m_kit.Tier,
-    Replace = m_replace, Swap = m_swap, Improve = m_improve, Worked = m_worked,
+    Replace = m_replace, Swap = m_swap, Improve = m_improve, Worked = m_worked, AvoidHazards = m_avoidHazards,
+    HazardShown = not Controls.HazardRow:IsHidden(),
     Wonders = SelectedWonders(), HeatDistrict = m_heat,
     Running = SDP_Task.IsRunning(), QualityText = Controls.Quality:GetText(), EstimateText = Controls.Estimate:GetText(),
     PlaceDisabled = Controls.PlaceButton:IsDisabled(), UndoDisabled = Controls.UndoButton:IsDisabled(),
@@ -763,7 +768,12 @@ local SWITCHES = {
     Put = function(v) m_improve = v end, OnChange = function() UpdateEstimate() end },
   { Key = "WORKED", Default = false, Check = Controls.WorkedCheck, Get = function() return m_worked end,
     Put = function(v) m_worked = v end },
+  -- Avoid disaster tiles (issue 360): the plan changes.
+  { Key = "AVOID_HAZARDS", Default = false, Check = Controls.HazardCheck, Get = function() return m_avoidHazards end,
+    Put = function(v) m_avoidHazards = v end, OnChange = function() UpdateEstimate() end },
 }
+-- Only Gathering Storm has disasters: elsewhere the switch is not shown.
+Controls.HazardRow:SetHide(not SDP_City.HazardsOn())
 m_kit = SDP_PageKit.New({
   Page = P, Tab = "SINGLE", Columns = COLUMNS, Weights = m_weights, Switches = SWITCHES,
   Extra = { SDP_UI.WonderSetting(m_wonders) }, Tiers = SDP_Tiers.Single,
@@ -792,6 +802,7 @@ P.SetReplace = function(on) m_kit.SetSwitch("REPLACE", on) end
 P.SetRemind = function(on) m_kit.SetSwitch("REMIND", on) end
 P.SetImprove = function(on) m_kit.SetSwitch("IMPROVE", on) end
 P.SetWorked = function(on) m_kit.SetSwitch("WORKED", on) end
+P.SetAvoidHazards = function(on) m_kit.SetSwitch("AVOID_HAZARDS", on) end
 
 Controls.CountLess:RegisterCallback(Mouse.eLClick, function() SetCount(List().Target - 1) end)
 Controls.CountMore:RegisterCallback(Mouse.eLClick, function() SetCount(List().Target + 1) end)

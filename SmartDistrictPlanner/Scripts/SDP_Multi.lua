@@ -360,6 +360,7 @@ Session.__index = Session
 --   Coverage             weight 0..3 of the coverage part (default 0: off); with
 --                        Only, every city-center pin is a target too
 --   AllowFeatureRemoval  default true
+--   AvoidHazards         prefer plots no disaster can harm (see SDP_Solver)
 --   IgnorePins           this mod's earlier pins being replaced (see SDP_Solver)
 --   Apart                false: no keeping partner districts apart (see SDP_Solver)
 -- }
@@ -1187,9 +1188,27 @@ local function BuildSearch(self, request, params, candidates, slots, lands, pool
     local part = SlotOwner(search, m, i, layout)
     return part ~= nil and part.CityID ~= nil and part.CityID ~= owner
   end
+  -- Disaster tiles (issue 360): each city's own judgement of every plot
+  -- (a governor may shield one city and not the next).
+  self.HazardAt = {}
+  for p, part in ipairs(participants) do
+    local at = {}
+    for _, c in ipairs(part.Scan.Candidates) do at[c.Index] = c.Hazard end
+    self.HazardAt[p] = at
+  end
+  local hazards = nil
+  if request.AvoidHazards then
+    local byGroup = {}
+    for p = 1, #participants do
+      local list = {}
+      for i, c in ipairs(candidates) do list[i] = { Hazard = self.HazardAt[p][c.Index] } end
+      byGroup[p] = list
+    end
+    hazards = SDP_Solver.HazardSpec(byGroup)
+  end
   self.Search = SDP_Search.New({
     PlayerID = playerID, Board = self.Board, Weights = self.Weights, Params = params,
-    Candidates = candidates, Slots = slots, Lands = lands, Coverage = self.Coverage,
+    Candidates = candidates, Slots = slots, Lands = lands, Coverage = self.Coverage, Hazards = hazards,
     Swapped = request.Swap == true and Swapped or nil,
     Pools = pools, Costs = SDP_City.DistanceCosts(playerID, candidates, request.Distance, centers), Apart = apart,
     Exclusive = SDP_Rules.Exclusive(), Reach = reach, Owners = owners,
@@ -1881,6 +1900,7 @@ function Session:PlanFor(layout)
       City = self.Participants[p].Key, Type = search.Types[m], Kind = search.Kinds[m], X = c.X, Y = c.Y, Index = c.Index,
       Yields = item.Yields, ToolTip = item.ToolTip, Score = item.Score,
       Unowned = c.Unowned, RemoveTech = c.RemoveTech, Swap = swap, ClearFirst = c.ClearFirst,
+      Hazard = (not spec.Wonder) and self.HazardAt[p][c.Index] or nil,
       Appeal = a.Appeal, Housing = a.Housing, Tiles = a.Tiles, TilesCounted = a.TilesCounted,
       TilesReason = a.TilesReason,
       Reach = self.Coverage and self.Coverage:Reach(search.Types[m], c.X, c.Y) or nil,
@@ -1900,6 +1920,8 @@ function Session:PlanFor(layout)
       picked[#picked + 1] = search.Types[m]
     end
   end
+  SDP_City.PlanHazards(out.Plan, function(e) return e.Hazard end)
+  out.HazardDelta = search:HazardDelta(layout)
   for f, item in ipairs(final.Fixed) do
     if item.Score ~= base.Fixed[f].Score then
       out.Neighbours[#out.Neighbours + 1] = {
@@ -2022,7 +2044,7 @@ function Session:Result()
       "YieldAdjacency", "YieldWeighted" }) do
       result[key] = best[key]
     end
-    stats.Mismatch = (not best.Legal) or math.abs(best.Gain - entries[1].Gain) > 1e-6 or nil
+    stats.Mismatch = (not best.Legal) or math.abs(best.Gain + best.HazardDelta - entries[1].Gain) > 1e-6 or nil
   else
     for _, u in ipairs(self.Unplaced) do result.Unplaced[#result.Unplaced + 1] = u end
   end
