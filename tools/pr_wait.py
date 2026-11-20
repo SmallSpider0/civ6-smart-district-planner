@@ -81,9 +81,17 @@ again that night; an empty queue does not fire (items added later that
 night still do, once). Nobody has to remember to set a reminder (2026-11-06).
 An item queued for a later night (the weekly in-game test, #329) counts only
 from that night on.
+
+When "game_host" is set in the local config (the game, and so the night
+queue, is on another machine, #362), each check asks that machine
+(`sdplock.py queue due --json` over ssh) for the night as its own window and
+clock count it and for the items due there; the night it fired is still kept
+here. A game machine that does not answer counts as not due, with one line
+on stderr until it answers again.
 """
 import argparse
 import datetime
+import json
 import os
 import shutil
 import subprocess
@@ -513,7 +521,7 @@ def add(number, codex=False, night=False, hold=False):
 
 
 # -- the night queue's start (2026-11-06) -------------------------------------
-NIGHT_DELAY = 5  # minutes after the night window opens
+NIGHT_DELAY = sdplock.NIGHT_DELAY  # minutes after the night window opens
 
 
 def due_path():
@@ -521,37 +529,53 @@ def due_path():
 
 
 def night_key(t, cfg=None):
-    """The local date the current night window started on, once NIGHT_DELAY minutes have passed
-    since it opened and while it lasts; else None. Only the window's start and end count."""
-    cfg = sdplock.local_config() if cfg is None else cfg
-    window = cfg.get("night")
-    if not isinstance(window, str) or "-" not in window:
-        return None
+    """The local date the current night window started on (sdplock.night_key)."""
+    return sdplock.night_key(t, cfg)
+
+
+GAME_HOST_TIMEOUT = 60  # seconds for the game machine's answer
+_unreachable = []  # the game machine's last problem, logged once until it answers again
+
+
+def game_host_due():
+    """(night key, due items) from the game machine (#362): its queue, night window and clock.
+    (None, []) when it cannot be asked; one line goes to stderr until it answers again."""
+    host = sdplock.game_host()
     try:
-        start, end = (sdplock._minutes(x) for x in window.split("-", 1))
-    except ValueError:
-        return None
-    length = (end - start) % 1440
-    lt = sdplock.localtime(t)
-    m = lt.tm_hour * 60 + lt.tm_min
-    since = (m - start) % 1440
-    if not length or not NIGHT_DELAY <= since < length:
-        return None
-    day = datetime.date(lt.tm_year, lt.tm_mon, lt.tm_mday)
-    if m < start:  # the window opened before midnight
-        day -= datetime.timedelta(days=1)
-    return day.isoformat()
+        done = sdplock.run_on_game_host(["queue", "due", "--json"], capture=True, timeout=GAME_HOST_TIMEOUT)
+        if done.returncode != 0:
+            tail = (done.stderr or "").strip().splitlines()[-1:]
+            raise ValueError("exit %d%s" % (done.returncode, ": " + tail[0] if tail else ""))
+        data = json.loads(done.stdout)
+        key, items = data.get("night"), data.get("items") or []
+        if not isinstance(items, list):
+            raise ValueError("no item list in %r" % done.stdout[:200])
+    except (OSError, subprocess.SubprocessError, ValueError, AttributeError) as problem:
+        line = str(problem)
+        if _unreachable != [line]:
+            _unreachable[:] = [line]
+            print("%s night queue on %s: no answer, counted as not due (%s)" % (
+                datetime.datetime.now().strftime("%H:%M"), host, line), file=sys.stderr, flush=True)
+        return None, []
+    del _unreachable[:]
+    return key, items
 
 
 def night_due(t, cfg=None):
     """The line to print when the night queue is due now and has not fired this night (it is then
-    recorded as fired), else None."""
-    key = night_key(t, cfg)
+    recorded as fired), else None. With game_host set the game machine says which night it is and
+    what is due; the fired night is still kept here."""
+    items = None
+    if sdplock.game_host():
+        key, items = game_host_due()
+    else:
+        key = night_key(t, cfg)
     if key is None:
         return None
     if (sdplock._read(due_path(), {}) or {}).get("fired") == key:
         return None
-    items = sdplock.queue_items(t=t)
+    if items is None:
+        items = sdplock.queue_items(t=t)
     if not items:
         return None
     with sdplock._mutex("night-due"):

@@ -779,3 +779,79 @@ class NightQueue(unittest.TestCase):
         # 16:06 UTC on 11-06 is 00:06 on 11-07 in Shanghai
         self.assertEqual(pr_wait.night_key(self.at(6, "16:06")), "2026-11-07")
         self.assertIsNone(pr_wait.night_key(self.at(7, "00:06")))  # 08:06 there: closed
+
+
+class NightQueueOnTheGameHost(NightQueue):
+    """#362: from 2026-11-20 the standing wait runs on a machine without the game (US Central time) while
+    the night queue and its window are on the game's machine (China time); the wait read only its own
+    empty queue and never fired. With "game_host" set it asks that machine; the fired night stays here."""
+
+    def setUp(self):
+        super().setUp()
+        with open(os.environ["SDP_LOCAL_CONFIG"], "w", encoding="utf-8") as fh:
+            json.dump({"game_host": "game-mac"}, fh)  # no night window here
+        os.environ.pop(pr_wait.sdplock.ON_GAME_HOST, None)
+        self.asked = []
+        self.answer = (0, json.dumps({"night": None, "items": []}))
+        self.addCleanup(setattr, pr_wait.sdplock, "run_on_game_host", pr_wait.sdplock.run_on_game_host)
+        pr_wait.sdplock.run_on_game_host = self.fake
+        del pr_wait._unreachable[:]
+
+    def fake(self, args, capture=False, timeout=None):
+        self.asked.append((args, capture, timeout))
+        if isinstance(self.answer, Exception):
+            raise self.answer
+        code, out = self.answer
+        return subprocess.CompletedProcess(args, code, out, "ssh: connect to host game-mac: timed out\n")
+
+    def there(self, night, *whats):
+        self.answer = (0, json.dumps({"night": night, "items": [
+            {"id": n, "what": w} for n, w in enumerate(whats, 1)]}, ensure_ascii=False))
+
+    # the tests of the queue on this machine do not apply here
+    test_fires_once_when_items_are_queued_and_the_window_has_opened = None
+    test_fires_when_the_window_opened_a_few_minutes_into_the_wait = None
+    test_fires_on_a_stdout_that_cannot_show_chinese = None
+    test_not_before_the_window = None
+    test_not_twice_the_same_night = None
+    test_not_with_an_empty_queue = None
+    test_not_for_the_weekly_test_before_its_night = None
+    test_the_window_comes_from_the_config_and_may_cross_midnight = None
+    test_the_window_is_in_local_time = None
+
+    def test_the_game_host_says_when_and_what(self):
+        self.queue("这台机器上的项")  # ignored: the queue is on the game host
+        self.there("2026-11-21", "每周整套游戏内测试（风云变幻）")
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            self.assertEqual(self.run_list(self.at(20, "10:00")), 3)  # day here, night there
+        line = out.getvalue()
+        self.assertIn("2026-11-21 夜，1 项", line)
+        self.assertIn("#1 每周整套游戏内测试（风云变幻）", line)
+        self.assertNotIn("这台机器上的项", line)
+        self.assertEqual(self.asked[0][:2], (["queue", "due", "--json"], True))
+        self.assertIsNone(pr_wait.night_due(self.at(20, "10:05")))  # fired: recorded here
+        self.assertEqual(pr_wait.sdplock._read(pr_wait.due_path(), {}), {"fired": "2026-11-21"})
+        self.there("2026-11-22", "x")
+        self.assertIsNotNone(pr_wait.night_due(self.at(21, "10:00")))
+
+    def test_not_due_there(self):
+        self.there(None, "shots")
+        self.assertIsNone(self.run_list(self.at(20, "00:06")))  # night here, day there
+        self.there("2026-11-21")
+        self.assertIsNone(pr_wait.night_due(self.at(20, "16:06")))  # night there, nothing due
+
+    def test_an_unreachable_game_host_counts_as_not_due_and_is_logged_once(self):
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err):
+            for answer in ((255, ""), (255, ""), OSError("no ssh"), (0, "not json"), (1, "")):
+                self.answer = answer
+                self.assertIsNone(pr_wait.night_due(self.at(20, "10:00")))
+            self.assertIsNone(self.run_list(self.at(20, "10:00")))  # the standing wait goes on
+        lines = [l for l in err.getvalue().splitlines() if "game-mac" in l]
+        self.assertEqual(len([l for l in lines if "exit 255" in l]), 1, lines)  # the same problem: once
+        self.assertTrue(any("no ssh" in l for l in lines), lines)
+        self.there("2026-11-21", "shots")
+        with contextlib.redirect_stderr(io.StringIO()):
+            self.assertIsNotNone(pr_wait.night_due(self.at(20, "10:00")))  # back: due again
+        self.assertEqual(pr_wait._unreachable, [])

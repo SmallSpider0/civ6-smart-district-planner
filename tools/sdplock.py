@@ -10,6 +10,7 @@
     python3 -I tools/sdplock.py queue list [--all]
     python3 -I tools/sdplock.py queue done ID [--failed] [--result TEXT] [--last]
     python3 -I tools/sdplock.py queue weekly [--ruleset RULESET_...] [--night YYYY-MM-DD]
+    python3 -I tools/sdplock.py queue due --json      # the night now (as pr_wait.py counts it) and the due items
 
 Several sessions work at once, each in its own worktree, but there is one
 game, one Tuner connection and one Mods folder. The game lock says which
@@ -46,6 +47,18 @@ queues the next one for the next week with the next ruleset in turn
 with a night is not listed, nor reported due, before that night's window
 opens.
 
+The night queue belongs to the machine with the game (2026-11-20, #362).
+When the sessions run on another machine, "game_host" in the local config
+names the game's machine (an ssh host) and "game_tree" its checkout there
+(default ~/sdp-game): every `queue` command then runs there over ssh, in
+that checkout with "remote_path" in front of PATH, with that machine's
+queue, night window and clock, and its output and exit code come back here.
+`queue add` records this worktree's branch and owner in the item; the item
+runs in the game machine's checkout, so whoever runs it there checks out
+that branch first (push it before the night). `queue due --json` prints
+{"night": the night key, or null, "items": [the due items]}; pr_wait.py
+asks it that way. Without "game_host" everything stays on this machine.
+
 Machine-specific settings come from a JSON file outside the repository,
 $SDP_LOCAL_CONFIG, else ~/.config/sdp/local.json; all keys are optional:
 
@@ -57,7 +70,9 @@ $SDP_LOCAL_CONFIG, else ~/.config/sdp/local.json; all keys are optional:
                                   # (default: a week after the last one)
      "remote": "build-box",       # tools/remote.py's host when $SDP_REMOTE is not set
      "remote_slots": 8,           # the second machine's slots (default: its cores - 2)
-     "remote_path": "/opt/homebrew/bin:/usr/local/bin"}   # PATH there for node and python3
+     "remote_path": "/opt/homebrew/bin:/usr/local/bin",   # PATH there for node and python3
+     "game_host": "game-mac",     # the machine with the game, when it is not this one: the night queue is there
+     "game_tree": "~/sdp-game"}   # the repository checkout on game_host (default ~/sdp-game)
 
 Everything lives in a folder shared by the worktrees and outside iCloud:
 $SDP_SHARED, else ~/Library/Application Support/SDP (macOS),
@@ -69,6 +84,7 @@ import contextlib
 import datetime
 import json
 import os
+import shlex
 import signal
 import subprocess
 import sys
@@ -102,6 +118,48 @@ def local_config():
 
 def remote_host():
     return os.environ.get("SDP_REMOTE") or local_config().get("remote") or None
+
+
+ON_GAME_HOST = "SDP_ON_GAME_HOST"  # set for the commands sent to game_host: they never send them on
+
+
+def game_host():
+    """The ssh host of the machine with the game and the night queue, when it is not this one (#362)."""
+    if os.environ.get(ON_GAME_HOST):
+        return None
+    return local_config().get("game_host") or None
+
+
+def game_tree():
+    return local_config().get("game_tree") or "~/sdp-game"
+
+
+def remote_path():
+    """PATH entries for node and python3 on the other machines (as remote.py)."""
+    return (os.environ.get("SDP_REMOTE_PATH") or local_config().get("remote_path")
+            or "/opt/homebrew/bin:/usr/local/bin")
+
+
+def _shell_path(path):
+    """path quoted for the remote shell, with a leading ~ still expanded there."""
+    if path == "~":
+        return '"$HOME"'
+    if path.startswith("~/"):
+        return '"$HOME"/' + shlex.quote(path[2:])
+    return shlex.quote(path)
+
+
+def game_host_command(args):
+    """The shell line that runs `sdplock.py ARGS` in game_tree on game_host."""
+    return "cd %s && export PATH=%s:\"$PATH\" %s=1 && python3 -I tools/sdplock.py %s" % (
+        _shell_path(game_tree()), shlex.quote(remote_path()), ON_GAME_HOST, " ".join(shlex.quote(a) for a in args))
+
+
+def run_on_game_host(args, capture=False, timeout=None):
+    """Run `sdplock.py ARGS` on game_host; the CompletedProcess (stdout and stderr captured when asked).
+    Raises OSError or subprocess.TimeoutExpired when ssh cannot be run or takes too long."""
+    return subprocess.run(["ssh", "-o", "ConnectTimeout=15", "-o", "BatchMode=yes", game_host(),
+                           game_host_command(args)], capture_output=capture, text=True, timeout=timeout)
 
 
 # -- probes (replaced in tests) --------------------------------------------
@@ -655,6 +713,39 @@ def queue_path():
     return _path("night-queue.json")
 
 
+NIGHT_DELAY = 5  # minutes after the night window opens before the queue counts as due (pr_wait.py)
+
+
+def night_key(t=None, cfg=None):
+    """The local date the current night window started on, once NIGHT_DELAY minutes have passed
+    since it opened and while it lasts; else None. Only the window's start and end count."""
+    cfg = local_config() if cfg is None else cfg
+    t = now() if t is None else t
+    window = cfg.get("night")
+    if not isinstance(window, str) or "-" not in window:
+        return None
+    try:
+        start, end = (_minutes(x) for x in window.split("-", 1))
+    except ValueError:
+        return None
+    length = (end - start) % 1440
+    lt = localtime(t)
+    m = lt.tm_hour * 60 + lt.tm_min
+    since = (m - start) % 1440
+    if not length or not NIGHT_DELAY <= since < length:
+        return None
+    day = datetime.date(lt.tm_year, lt.tm_mon, lt.tm_mday)
+    if m < start:  # the window opened before midnight
+        day -= datetime.timedelta(days=1)
+    return day.isoformat()
+
+
+def queue_due(t=None):
+    """What `queue due --json` prints: the night key now and the items due now."""
+    t = now() if t is None else t
+    return {"night": night_key(t), "items": queue_items(t=t)}
+
+
 def _night_start(cfg):
     """Minutes after midnight the night window opens (0 without a window)."""
     window = cfg.get("night")
@@ -737,10 +828,12 @@ def _append(items, root, what, why, cmds, extra=None):
     return item
 
 
-def queue_add(root, what, why, cmds=()):
+def queue_add(root, what, why, cmds=(), branch=None, owner=None):
+    """Queue an item; branch and owner, when given, are the queuing worktree's on another machine (#362)."""
+    extra = {k: v for k, v in (("branch", branch), ("owner", owner)) if v}
     with _mutex("queue"):
         items = _read(queue_path(), [])
-        item = _append(items, root, what, why, cmds)
+        item = _append(items, root, what, why, cmds, extra)
         _write(queue_path(), items)
     return item
 
@@ -837,12 +930,21 @@ def print_status(local_only):
             print("  short run %-14s %s, started %s, %s" % (job["name"], job.get("owner"),
                                                           time.strftime("%H:%M", localtime(job["started"])),
                                                           " ".join(job["cmd"])[:100]))
-    items = queue_items()
-    print("night queue: %d item(s)" % len(items))
-    for item in items:
-        print("  #%d %s (%s, %s): %s" % (item["id"], item["what"], item["owner"], item["branch"], item["why"]))
-    for item in queue_later():
-        print("  later: #%d %s, from the night of %s" % (item["id"], item["what"], item["night"]))
+    if game_host():
+        print("night queue (on %s, %s):" % (game_host(), game_tree()))
+        try:
+            done = run_on_game_host(["queue", "list"], capture=True, timeout=60)
+            text = (done.stdout or "") + (done.stderr or "") if done.returncode else done.stdout or ""
+            sys.stdout.write("".join("  " + line for line in text.splitlines(True)) or "  (empty)\n")
+        except (OSError, subprocess.SubprocessError) as problem:
+            print("  no answer: %s" % problem)
+    else:
+        items = queue_items()
+        print("night queue: %d item(s)" % len(items))
+        for item in items:
+            print("  #%d %s (%s, %s): %s" % (item["id"], item["what"], item["owner"], item["branch"], item["why"]))
+        for item in queue_later():
+            print("  later: #%d %s, from the night of %s" % (item["id"], item["what"], item["night"]))
     if not local_only and remote_host():
         print("second machine (%s):" % remote_host())
         try:
@@ -871,7 +973,23 @@ def wait_free(root, every, take_it, purpose):
         time.sleep(every)
 
 
+def forward_queue(argv, root):
+    """Run a `queue` command on game_host; its exit code. `queue add` takes this worktree's branch and owner."""
+    args = list(argv)
+    if args[1:2] == ["add"]:
+        me = identity(root)
+        args += ["--branch", me["branch"], "--owner", me["owner"]]
+    try:
+        return run_on_game_host(args).returncode
+    except (OSError, subprocess.SubprocessError) as problem:
+        print("sdplock: ssh %s: %s" % (game_host(), problem), file=sys.stderr)
+        return 255
+
+
 def main(argv=None):
+    argv = sys.argv[1:] if argv is None else list(argv)
+    if argv[:1] == ["queue"] and game_host() and not any(a in ("-h", "--help") for a in argv):
+        return forward_queue(argv, ROOT)
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
     s = sub.add_parser("status")
@@ -898,6 +1016,8 @@ def main(argv=None):
     qa.add_argument("--what", required=True)
     qa.add_argument("--why", required=True)
     qa.add_argument("--cmd", action="append", default=[])
+    qa.add_argument("--branch", help=argparse.SUPPRESS)  # the queuing worktree's, on another machine (#362)
+    qa.add_argument("--owner", help=argparse.SUPPRESS)
     ql = qs.add_parser("list")
     ql.add_argument("--all", action="store_true")
     qd = qs.add_parser("done")
@@ -908,6 +1028,8 @@ def main(argv=None):
     qw = qs.add_parser("weekly")
     qw.add_argument("--ruleset", choices=RULESETS, help="the first ruleset (default %s)" % RULESETS[-1])
     qw.add_argument("--night", help="YYYY-MM-DD, the day its night window opens on (default: the next weekly night)")
+    qn = qs.add_parser("due")
+    qn.add_argument("--json", action="store_true", required=True, help="print it as JSON (for pr_wait.py)")
     args = ap.parse_args(argv)
     try:
         if args.cmd == "status":
@@ -924,8 +1046,10 @@ def main(argv=None):
                 raise SystemExit("give the command after --")
             return run_heavy(ROOT, args.name, command, wait=not args.no_wait)
         elif args.qcmd == "add":
-            item = queue_add(ROOT, args.what, args.why, args.cmd)
+            item = queue_add(ROOT, args.what, args.why, args.cmd, args.branch, args.owner)
             print("queued #%d" % item["id"])
+            if args.branch and os.environ.get(ON_GAME_HOST):
+                print("it runs in %s on branch %s: push the branch before the night" % (ROOT, args.branch))
         elif args.qcmd == "list":
             for item in queue_items(args.all):
                 print("#%d %-7s %s | %s | %s | %s\n    %s" % (
@@ -944,6 +1068,8 @@ def main(argv=None):
         elif args.qcmd == "weekly":
             item = queue_weekly(ROOT, args.ruleset, args.night)
             print("queued #%d %s, from the night of %s" % (item["id"], item["what"], item["night"]))
+        elif args.qcmd == "due":
+            print(json.dumps(queue_due()))
     except Busy as problem:
         print("sdplock: %s" % problem, file=sys.stderr)
         return BUSY_EXIT
