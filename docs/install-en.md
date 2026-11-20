@@ -99,6 +99,7 @@ Only revealed tiles are considered; a tile whose 3 rings are mostly unrevealed i
 ## Rules worth knowing
 
 - The rules follow your civilization: adjacency bonuses and placement limits from your civilization, leader, pantheon and religion's beliefs are counted with no setup. The weights are your own choice of yields and do not change with the leader.
+- Tile yields follow your civilization too: tile yields from your civilization's and leader's abilities (such as Russia's +1 Production and +1 Faith on Tundra, or Mali's +4 Gold on Mines) count on tiles your city does not own yet and on a new city's tiles, and those that need an improvement count with the improvement the plan assumes; rules such as Canada's Farms on Tundra count too. Tile yields from your pantheon and beliefs count only on tiles you own (the yields the game shows).
 - Map tacks already on the map are fixed: the planner never uses their tiles, and their bonuses count.
 - To plan a city again, undo its tacks or tick **Replace**.
 - On tiles a city owns, the game's own list of valid tiles is checked as well, so tiles the game refuses (such as a Canal that does not connect water) never enter a plan.

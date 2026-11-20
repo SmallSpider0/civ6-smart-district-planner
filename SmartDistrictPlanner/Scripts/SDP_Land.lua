@@ -211,6 +211,323 @@ local function HarvestPrevented(playerID)
   return false
 end
 
+-- ===========================================================================
+-- Plot yields of the player's traits (issue 361)
+-- ===========================================================================
+-- Civilization and leader traits that change plot yields are modifiers of
+-- EFFECT_ADJUST_PLOT_YIELD on the player's plots (COLLECTION_PLAYER_PLOT_YIELDS:
+-- tundra +1 production, mines +4 gold, unimproved woods +1 production...).
+-- The game applies them only to the plots the player owns, so plot:GetYield
+-- has them for the city's own plots and not for the plots it still has to
+-- grow into (a new city's plots, issue 361), and only for the plot as it is
+-- now (not with the improvement the land part assumes). The land part
+-- counts them itself: each modifier's requirements are tested against the
+-- plot as it would be (feature kept or removed, resource kept or harvested,
+-- which improvement), and what plot:GetYield already holds of them is taken
+-- off first, so nothing counts twice. A modifier with a requirement this
+-- does not know is left out (never counts more than the game gives); "next
+-- to district X" is one of those: SDP_Improve counts those with the
+-- districts it plans next to them. EFFECT_ADJUST_IMPROVEMENT_VALID_TERRAIN
+-- traits (farms on tundra) add terrains to an improvement's valid ones.
+-- Everything from GameInfo; modifiers in ModifierId order.
+
+-- Modifier arguments, requirement sets and requirement arguments, indexed
+-- once per GameInfo.
+local m_index, m_indexFor = nil, nil
+local function Index()
+  if m_index ~= nil and m_indexFor == GameInfo then return m_index end
+  local function Rows(name) return GameInfo[name] ~= nil and GameInfo[name]() or function() return nil end end
+  local index = { Args = {}, SetRequirements = {}, RequirementArgs = {} }
+  for row in Rows("ModifierArguments") do
+    index.Args[row.ModifierId] = index.Args[row.ModifierId] or {}
+    index.Args[row.ModifierId][row.Name] = row.Value
+  end
+  for row in Rows("RequirementSetRequirements") do
+    local list = index.SetRequirements[row.RequirementSetId] or {}
+    list[#list + 1] = row.RequirementId
+    index.SetRequirements[row.RequirementSetId] = list
+  end
+  for _, list in pairs(index.SetRequirements) do table.sort(list) end
+  for row in Rows("RequirementArguments") do
+    index.RequirementArgs[row.RequirementId] = index.RequirementArgs[row.RequirementId] or {}
+    index.RequirementArgs[row.RequirementId][row.Name] = row.Value
+  end
+  m_index, m_indexFor = index, GameInfo
+  return index
+end
+
+-- Not gsub with "^": the game's Lua replaces more than once (pitfall 39).
+local function Trim(s) return tostring(s):match("^%s*(.-)%s*$") end
+local function SplitList(text)
+  local list = {}
+  for part in tostring(text or ""):gmatch("[^,]+") do list[#list + 1] = Trim(part) end
+  return list
+end
+
+-- Requirements tested on the plot as it would be: the requirement type and
+-- the argument it reads (nil: none).
+local PLOT_TESTS = {
+  REQUIREMENT_PLOT_TERRAIN_TYPE_MATCHES = "TerrainType",
+  REQUIREMENT_PLOT_FEATURE_TYPE_MATCHES = "FeatureType",
+  REQUIREMENT_PLOT_IMPROVEMENT_TYPE_MATCHES = "ImprovementType",
+  REQUIREMENT_PLOT_RESOURCE_CLASS_TYPE_MATCHES = "ResourceClassType",
+  REQUIREMENT_PLOT_HAS_ANY_IMPROVEMENT = false,
+  REQUIREMENT_PLOT_RESOURCE_VISIBLE = false,
+  REQUIREMENT_PLOT_IS_MOUNTAIN = false,
+}
+
+-- The player's state the requirements of its own modifiers read: has
+-- technology, has civic, the game's era (Rise and Fall and later).
+local function PlayerFacts(playerID)
+  local player = playerID ~= nil and Players ~= nil and Players[playerID] or nil
+  local techs = player ~= nil and player.GetTechs ~= nil and player:GetTechs() or nil
+  local culture = player ~= nil and player.GetCulture ~= nil and player:GetCulture() or nil
+  local era = nil
+  if Game ~= nil and Game.GetEras ~= nil then
+    local eras = Game.GetEras()
+    if eras ~= nil and eras.GetCurrentEra ~= nil then era = eras:GetCurrentEra() end
+  end
+  return {
+    Tech = function(t)
+      local row = t and GameInfo.Technologies[t] or nil
+      return row ~= nil and techs ~= nil and techs:HasTech(row.Index) == true
+    end,
+    Civic = function(c)
+      local row = c and GameInfo.Civics[c] or nil
+      return row ~= nil and culture ~= nil and culture:HasCivic(row.Index) == true
+    end,
+    EraAtLeast = function(e)
+      local row = e and GameInfo.Eras ~= nil and GameInfo.Eras[e] or nil
+      return row ~= nil and era ~= nil and era >= row.Index
+    end,
+  }
+end
+
+-- Requirement set `setId` as a test of the plot: { Any (TEST_ANY), Items =
+-- { { Kind = requirement type, Value, Inverse } | { Set = nested test, Inverse } } },
+-- with the player's requirements already decided (true / false). nil when
+-- some requirement is of a type not known here. depth guards nested sets.
+local function ParseSet(index, setId, facts, depth)
+  if setId == nil then return true end
+  if depth > 4 or GameInfo.RequirementSets == nil or GameInfo.Requirements == nil then return nil end
+  local set = GameInfo.RequirementSets[setId]
+  if set == nil then return nil end
+  local kind = set.RequirementSetType or "REQUIREMENTSET_TEST_ALL"
+  if kind ~= "REQUIREMENTSET_TEST_ALL" and kind ~= "REQUIREMENTSET_TEST_ANY" then return nil end
+  local out = { Any = kind == "REQUIREMENTSET_TEST_ANY", Items = {} }
+  for _, id in ipairs(index.SetRequirements[setId] or {}) do
+    local req = GameInfo.Requirements[id]
+    if req == nil then return nil end
+    local args = index.RequirementArgs[id] or {}
+    local t, inverse = req.RequirementType, Flag(req.Inverse)
+    local item
+    if PLOT_TESTS[t] ~= nil then
+      local arg = PLOT_TESTS[t]
+      if arg and args[arg] == nil then return nil end
+      item = { Kind = t, Value = arg and args[arg] or nil, Inverse = inverse }
+    elseif t == "REQUIREMENT_PLAYER_HAS_TECHNOLOGY" and args.TechnologyType ~= nil then
+      item = facts.Tech(args.TechnologyType) ~= inverse
+    elseif t == "REQUIREMENT_PLAYER_HAS_CIVIC" and args.CivicType ~= nil then
+      item = facts.Civic(args.CivicType) ~= inverse
+    elseif t == "REQUIREMENT_GAME_ERA_ATLEAST_EXPANSION" and args.EraType ~= nil then
+      item = facts.EraAtLeast(args.EraType) ~= inverse
+    elseif t == "REQUIREMENT_REQUIREMENTSET_IS_MET" and args.RequirementSetId ~= nil then
+      local nested = ParseSet(index, args.RequirementSetId, facts, depth + 1)
+      if nested == nil then return nil end
+      item = { Set = nested, Inverse = inverse }
+    else
+      return nil
+    end
+    out.Items[#out.Items + 1] = item
+  end
+  return out
+end
+
+-- Whether test `set` (ParseSet) holds for `state` = { Terrain (type), Mountain,
+-- Feature, Improvement, Resource, ResourceClass (types or nil) }.
+local function Holds(set, state)
+  if set == true or set == false then return set end
+  if #set.Items == 0 then return true end
+  for _, item in ipairs(set.Items) do
+    local ok
+    if item == true or item == false then
+      ok = item
+    else
+      if item.Set ~= nil then
+        ok = Holds(item.Set, state)
+      elseif item.Kind == "REQUIREMENT_PLOT_TERRAIN_TYPE_MATCHES" then
+        ok = state.Terrain == item.Value
+      elseif item.Kind == "REQUIREMENT_PLOT_FEATURE_TYPE_MATCHES" then
+        ok = state.Feature == item.Value
+      elseif item.Kind == "REQUIREMENT_PLOT_IMPROVEMENT_TYPE_MATCHES" then
+        ok = state.Improvement == item.Value
+      elseif item.Kind == "REQUIREMENT_PLOT_RESOURCE_CLASS_TYPE_MATCHES" then
+        ok = state.ResourceClass == item.Value
+      elseif item.Kind == "REQUIREMENT_PLOT_HAS_ANY_IMPROVEMENT" then
+        ok = state.Improvement ~= nil
+      elseif item.Kind == "REQUIREMENT_PLOT_RESOURCE_VISIBLE" then
+        ok = state.Resource ~= nil
+      elseif item.Kind == "REQUIREMENT_PLOT_IS_MOUNTAIN" then
+        ok = state.Mountain == true
+      end
+      if item.Inverse then ok = not ok end
+    end
+    if set.Any and ok then return true end
+    if not set.Any and not ok then return false end
+  end
+  return not set.Any
+end
+
+-- A test (ParseSet) of the player's requirements alone, decided: true or
+-- false; nil when unknown or when it reads the plot.
+local function PlayerOnly(test)
+  if test == nil or test == true or test == false then return test end
+  local function PlotFree(set)
+    for _, item in ipairs(set.Items) do
+      if type(item) == "table" and (item.Set == nil or not PlotFree(item.Set)) then return false end
+    end
+    return true
+  end
+  if not PlotFree(test) then return nil end
+  return Holds(test, {})
+end
+
+-- The player's trait modifiers on plot yields and on improvements' valid
+-- terrains: { Yields = { { Id, Test, Yields = { { Yield, Amount } } } },
+-- ValidTerrains = { [improvement type] = { [terrain type] = true } } }.
+function SDP_Land.TraitRules(playerID)
+  local out = { Yields = {}, ValidTerrains = {} }
+  if playerID == nil or MapTacks == nil or MapTacks.PlayerTraits == nil or GameInfo.TraitModifiers == nil
+      or GameInfo.Modifiers == nil or GameInfo.DynamicModifiers == nil then
+    return out
+  end
+  local traits = MapTacks.PlayerTraits(playerID) or {}
+  local index = Index()
+  local facts = PlayerFacts(playerID)
+  local ids, seen = {}, {}
+  for row in GameInfo.TraitModifiers() do
+    if traits[row.TraitType] and not seen[row.ModifierId] then
+      seen[row.ModifierId] = true
+      ids[#ids + 1] = row.ModifierId
+    end
+  end
+  table.sort(ids)
+  for _, id in ipairs(ids) do
+    local modifier = GameInfo.Modifiers[id]
+    local dynamic = modifier ~= nil and GameInfo.DynamicModifiers[modifier.ModifierType] or nil
+    local args = index.Args[id] or {}
+    -- The owner (the player) must meet its requirements now.
+    local owner = false
+    if modifier ~= nil then owner = PlayerOnly(ParseSet(index, modifier.OwnerRequirementSetId, facts, 0)) end
+    if dynamic ~= nil and owner == true then
+      if dynamic.EffectType == "EFFECT_ADJUST_PLOT_YIELD" and dynamic.CollectionType == "COLLECTION_PLAYER_PLOT_YIELDS" then
+        local test = ParseSet(index, modifier.SubjectRequirementSetId, facts, 0)
+        local yields, types, amounts = {}, SplitList(args.YieldType), SplitList(args.Amount)
+        for k, yieldType in ipairs(types) do
+          local amount = tonumber(amounts[k] or amounts[1])
+          if amount ~= nil and amount ~= 0 and GameInfo.Yields[yieldType] ~= nil then
+            yields[#yields + 1] = { Yield = yieldType, Amount = amount }
+          end
+        end
+        if test ~= nil and test ~= false and #yields > 0 then
+          out.Yields[#out.Yields + 1] = { Id = id, Test = test, Yields = yields }
+        end
+      elseif dynamic.EffectType == "EFFECT_ADJUST_IMPROVEMENT_VALID_TERRAIN" and args.ImprovementType ~= nil
+          and args.TerrainType ~= nil then
+        -- The subject is each of the player's cities: only requirements the
+        -- player decides (Canada's hills farms after a civic).
+        if PlayerOnly(ParseSet(index, modifier.SubjectRequirementSetId, facts, 0)) == true then
+          out.ValidTerrains[args.ImprovementType] = out.ValidTerrains[args.ImprovementType] or {}
+          out.ValidTerrains[args.ImprovementType][args.TerrainType] = true
+        end
+      end
+    end
+  end
+  return out
+end
+
+-- The trait yields a plot in `state` gets: { [yield] = n } (nil when none).
+local function TraitYieldsOf(traitRules, state)
+  local out = nil
+  for _, m in ipairs(traitRules.Yields) do
+    if Holds(m.Test, state) then
+      out = out or {}
+      for _, y in ipairs(m.Yields) do out[y.Yield] = (out[y.Yield] or 0) + y.Amount end
+    end
+  end
+  return out
+end
+
+local function VisibleFn(playerID)
+  local player = playerID ~= nil and Players ~= nil and Players[playerID] or nil
+  local resources = player ~= nil and player.GetResources ~= nil and player:GetResources() or nil
+  return function(row)
+    if resources == nil or resources.IsResourceVisible == nil then return true end
+    return resources:IsResourceVisible(row.Hash)
+  end
+end
+
+-- What the trait helpers below need, for code without a whole Context:
+-- { PlayerID, Traits (TraitRules), TraitOn (some plot-yield modifier),
+-- Visible (resource row -> whether the player sees it) }.
+function SDP_Land.TraitContext(playerID)
+  local traits = SDP_Land.TraitRules(playerID)
+  return { PlayerID = playerID, Traits = traits, TraitOn = #traits.Yields > 0, Visible = VisibleFn(playerID) }
+end
+
+-- The plot as it is, as the traits' requirements read it (a resource the
+-- player cannot see is left out, as in the land part).
+local function TraitState(plot, ctx)
+  local terrain = GameInfo.Terrains[plot:GetTerrainType()]
+  local state = { Terrain = terrain ~= nil and terrain.TerrainType or nil, Mountain = terrain ~= nil and Flag(terrain.Mountain) }
+  if plot:GetFeatureType() ~= -1 then state.Feature = GameInfo.Features[plot:GetFeatureType()].FeatureType end
+  local resource = plot:GetResourceType() ~= -1 and GameInfo.Resources[plot:GetResourceType()] or nil
+  if resource ~= nil and ctx.Visible(resource) then
+    state.Resource, state.ResourceClass = resource.ResourceType, resource.ResourceClassType
+  end
+  local improvement = plot:GetImprovementType() ~= -1 and GameInfo.Improvements[plot:GetImprovementType()] or nil
+  if improvement ~= nil then state.Improvement = improvement.ImprovementType end
+  return state
+end
+
+-- `state` with feature `feature` and resource `resource` (its own, or nil:
+-- removed, harvested) and improvement `improvement` (type or nil).
+local function Changed(state, feature, resource, improvement)
+  local out = { Terrain = state.Terrain, Mountain = state.Mountain, Feature = feature, Improvement = improvement }
+  if resource ~= nil then out.Resource, out.ResourceClass = resource, state.ResourceClass end
+  return out
+end
+
+-- The trait yields of `plot` as it is, { [yield] = n }, and the part of
+-- them plot:GetYield does not hold: all of them on a plot the player does
+-- not own, none on its own. `ctx`: SDP_Land.Context or TraitContext.
+function SDP_Land.TraitYields(plot, ctx)
+  if not ctx.TraitOn then return {}, {} end
+  local now = TraitYieldsOf(ctx.Traits, TraitState(plot, ctx)) or {}
+  if plot:GetOwner() == ctx.PlayerID then return now, {} end
+  return now, now
+end
+
+-- What the trait yields add to plot:GetYield once the plot is the player's
+-- with its feature removed (`clear`), its resource harvested (`harvest`)
+-- and improvement `improvementType` (or nil) built: { [yield] = n }, the
+-- trait yields then less those plot:GetYield holds now.
+function SDP_Land.TraitChange(plot, ctx, clear, harvest, improvementType)
+  local out = {}
+  if not ctx.TraitOn then return out end
+  local state = TraitState(plot, ctx)
+  local feature, resource = state.Feature, state.Resource
+  if clear then feature = nil end
+  if harvest then resource = nil end
+  for yieldType, n in pairs(TraitYieldsOf(ctx.Traits, Changed(state, feature, resource, improvementType)) or {}) do
+    out[yieldType] = (out[yieldType] or 0) + n
+  end
+  if plot:GetOwner() == ctx.PlayerID then
+    for yieldType, n in pairs(TraitYieldsOf(ctx.Traits, state) or {}) do out[yieldType] = (out[yieldType] or 0) - n end
+  end
+  return out
+end
+
 -- How far the player is through the technology and civic trees, 0..1 (the
 -- larger): one-time yields of removing a feature or harvesting grow with it.
 local function Progress(playerID)
@@ -246,7 +563,8 @@ end
 --   AllowRemoval   whether districts may clear features (constraint 5; when
 --                  not, a featured plot keeps its feature)
 -- plus the rules, the player's technologies and civics for improvement
--- bonuses, which resources the player sees and whether it may harvest.
+-- bonuses, which resources the player sees, whether it may harvest and its
+-- traits on plot yields (TraitRules, issue 361).
 -- One-time yields grow with progress: x (1 + ONE_TIME_GROWTH x progress).
 SDP_Land.ONE_TIME_GROWTH = 9
 function SDP_Land.Context(playerID, weights, allowRemoval, options)
@@ -259,11 +577,10 @@ function SDP_Land.Context(playerID, weights, allowRemoval, options)
   local player = playerID ~= nil and Players[playerID] or nil
   local techs = player ~= nil and player.GetTechs ~= nil and player:GetTechs() or nil
   local culture = player ~= nil and player.GetCulture ~= nil and player:GetCulture() or nil
-  local resources = player ~= nil and player.GetResources ~= nil and player:GetResources() or nil
-  ctx.Visible = function(row)
-    if resources == nil or resources.IsResourceVisible == nil then return true end
-    return resources:IsResourceVisible(row.Hash)
-  end
+  ctx.Visible = VisibleFn(playerID)
+  -- The player's traits on plot yields and valid terrains (issue 361).
+  ctx.Traits = SDP_Land.TraitRules(playerID)
+  ctx.TraitOn = #ctx.Traits.Yields > 0
   -- Weighted gain of each improvement, bonuses of what the player has.
   -- Yields: the same unweighted (issue 227, shown with an improvement tack).
   local function GainOf(entry)
@@ -303,9 +620,11 @@ end
 -- The improvements that can go on a plot of terrain `terrain` (type),
 -- feature `feature` and resource `resource` (types or nil) in the sea or on
 -- land (entries of the rules). A resource with improvements of its own
--- takes only those (Improvement_ValidResources).
+-- takes only those (Improvement_ValidResources). The player's traits add
+-- valid terrains (Canada's farms on tundra, issue 361).
 function SDP_Land.ValidImprovements(ctx, sea, terrain, feature, resource)
   local list, own = {}, false
+  local extra = ctx.Traits ~= nil and ctx.Traits.ValidTerrains or {}
   if resource ~= nil then
     for _, entry in ipairs(ctx.Rules.Improvements) do
       local must = entry.Resources[resource]
@@ -319,7 +638,11 @@ function SDP_Land.ValidImprovements(ctx, sea, terrain, feature, resource)
   for _, entry in ipairs(ctx.Rules.Improvements) do
     if entry.Sea == sea then
       local valid
-      if feature ~= nil then valid = entry.Features[feature] == true else valid = entry.Terrains[terrain] == true end
+      if feature ~= nil then
+        valid = entry.Features[feature] == true
+      else
+        valid = entry.Terrains[terrain] == true or (extra[entry.Type] ~= nil and extra[entry.Type][terrain] == true)
+      end
       if valid then list[#list + 1] = entry end
     end
   end
@@ -338,17 +661,28 @@ local function Unimprovable(plot, resourceRow)
   return false
 end
 
--- Best weighted gain of those; 0 when none applies.
-local function BestImprovement(ctx, sea, terrain, feature, resource)
-  local best = 0
+-- What the player's trait yields change (weighted) on the plot of Parts `q`
+-- with feature `f`, resource `r` and improvement `improvement` (types or
+-- nil) against the plot as it is (issue 361); 0 without such traits.
+local function TraitDelta(ctx, q, f, r, improvement)
+  if q.TraitState == nil then return 0 end
+  return Weighted(TraitYieldsOf(ctx.Traits, Changed(q.TraitState, f, r, improvement)) or {}, q.W) - q.TraitNow
+end
+
+-- Best weighted gain of those, the trait yields each changes counted; that
+-- of none (0 without traits) when none is better.
+local function BestImprovement(ctx, q, sea, terrain, feature, resource)
+  local best = TraitDelta(ctx, q, feature, resource, nil)
   for _, entry in ipairs(SDP_Land.ValidImprovements(ctx, sea, terrain, feature, resource)) do
-    best = math.max(best, ctx.Gain[entry])
+    best = math.max(best, ctx.Gain[entry] + TraitDelta(ctx, q, feature, resource, entry.Type))
   end
   return best
 end
 
 -- What PlotValues and ImprovementOptions start from: the plot's yields now,
 -- its feature and resource and what removing or harvesting them gives.
+-- The yields now are the player's: with the trait yields the game gives the
+-- plot once the player owns it (issue 361).
 local function Parts(plot, ctx)
   local w, rules = ctx.W, ctx.Rules
   local now = 0
@@ -381,8 +715,15 @@ local function Parts(plot, ctx)
       resourceOnce = Weighted(ctx.OneTime.Resources[resource], ctx.OnceW) * scale
     end
   end
+  local traitState, traitNow = nil, 0
+  if ctx.TraitOn then
+    traitState = TraitState(plot, ctx)
+    traitNow = Weighted(TraitYieldsOf(ctx.Traits, traitState) or {}, w)
+    if plot:GetOwner() ~= ctx.PlayerID then now = now + traitNow end
+  end
   return { W = w, Rules = rules, Now = now, Feature = feature, FeatureOnce = featureOnce, Removable = removable,
-    Resource = resource, ResourceOnce = resourceOnce, Harvestable = harvestable, ResourceRow = resourceRow }
+    Resource = resource, ResourceOnce = resourceOnce, Harvestable = harvestable, ResourceRow = resourceRow,
+    TraitState = traitState, TraitNow = traitNow }
 end
 
 -- A plot's value, its one-time value (what removing its feature and
@@ -421,8 +762,9 @@ function SDP_Land.PlotValues(plot, ctx)
       if removeFeature then value, f = value - featureYield, nil else kept = kept + featureOnce end
       if harvest then value, r = value - resourceYield, nil else kept = kept + resourceOnce end
       value = value - kept
-      if not removeFeature and (bare == nil or value > bare) then bare = value end
-      value = value + BestImprovement(ctx, sea, terrain, f, r)
+      local plain = value + TraitDelta(ctx, q, f, r, nil)
+      if not removeFeature and (bare == nil or plain > bare) then bare = plain end
+      value = value + BestImprovement(ctx, q, sea, terrain, f, r)
       if best == nil or value > best then best, forgone = value, kept end
     end
   end
@@ -431,7 +773,9 @@ end
 
 -- Every way to improve a plot (issue 227), as PlotValues weighs them:
 -- { Entry (of the rules), Clear (its feature removed first), Harvest (its
--- resource harvested first), Value (the plot's value with it) }, in the
+-- resource harvested first), Value (the plot's value with it), Gain (what
+-- building it adds to the plot left unimproved the same way: its own gain
+-- and the trait yields it changes, issue 361) }, in the
 -- order PlotValues tries them (feature kept before removed, resource kept
 -- before harvested, then the rules' order). Empty for an improved plot and
 -- one no improvement can go on.
@@ -451,9 +795,11 @@ function SDP_Land.ImprovementOptions(plot, ctx)
       if removeFeature then value, f = value - featureYield, nil else kept = kept + q.FeatureOnce end
       if harvest then value, r = value - resourceYield, nil else kept = kept + q.ResourceOnce end
       value = value - kept
+      local plain = TraitDelta(ctx, q, f, r, nil)
       for _, entry in ipairs(SDP_Land.ValidImprovements(ctx, sea, terrain, f, r)) do
+        local gain = ctx.Gain[entry] + TraitDelta(ctx, q, f, r, entry.Type)
         out[#out + 1] = { Entry = entry, Clear = removeFeature and q.Feature ~= nil, Harvest = harvest and q.Resource ~= nil,
-          Value = value + ctx.Gain[entry] }
+          Value = value + gain, Gain = gain - plain }
       end
     end
   end
@@ -501,7 +847,7 @@ function SDP_Land.AssumedImprovement(plot, ctx, keepResource)
     end
     if better then best = o end
   end
-  if best ~= nil and ctx.Gain[best.Entry] <= 0 then return nil end
+  if best ~= nil and best.Gain <= 0 then return nil end
   return best
 end
 

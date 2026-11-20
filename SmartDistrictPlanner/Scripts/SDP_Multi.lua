@@ -74,12 +74,19 @@ function SDP_Multi.Production(playerID, part)
     local city = CityManager.GetCity(playerID, part.CityID)
     return city ~= nil and (city:GetYield(index) or 0) or 0
   end
+  -- Plots the player does not own yet: with the trait yields the game
+  -- gives them once owned (issue 361).
+  local traits = SDP_Land.TraitContext(playerID)
   local values = {}
   for _, plotIndex in ipairs(SDP_Land.Workable(part.Scan)) do
-    values[#values + 1] = Map.GetPlotByIndex(plotIndex):GetYield(index)
+    local plot = Map.GetPlotByIndex(plotIndex)
+    local _, unheld = SDP_Land.TraitYields(plot, traits)
+    values[#values + 1] = plot:GetYield(index) + (unheld.YIELD_PRODUCTION or 0)
   end
   table.sort(values, function(a, b) return a > b end)
-  local total = Map.GetPlot(part.X, part.Y):GetYield(index)
+  local center = Map.GetPlot(part.X, part.Y)
+  local _, unheld = SDP_Land.TraitYields(center, traits)
+  local total = center:GetYield(index) + (unheld.YIELD_PRODUCTION or 0)
   for k = 1, math.min(#values, part.PlanPopulation or 1) do total = total + values[k] end
   return total
 end
