@@ -24,7 +24,9 @@ The host is $SDP_REMOTE, else "remote" in the local config (tools/sdplock.py:
 there: `sync` copies the worktree's files (tracked and new, not ignored), tools/node_modules and
 tests/compare/.cache (following links) and the Lua sources under reference/
 (only *.lua of base-ui; dmt, amt, ep, dwp whole) to ~/sdp-runs/<worktree
-name>/ and ~/sdp-runs/ref/. Results there match this machine's except for
+name>/ and ~/sdp-runs/ref/ (the rules export also to ~/sdp-runs/ref/compare-cache/). What this machine
+lacks (a reference link that is broken without the game, no rules export) is linked in the copy there to
+those copies from earlier syncs, so a run started from a machine without the game works. Results there match this machine's except for
 timing fields, so keep runs whose seconds get reported on one machine.
 
 `run` syncs first, then clones the copy (APFS clone: instant, no extra space) to
@@ -70,6 +72,8 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 NAME = os.path.basename(ROOT)
 BASE = "sdp-runs"
 TREE = BASE + "/" + NAME
+REFERENCES = ("base-ui", "dmt", "amt", "ep", "dwp")  # what sync copies to ~/sdp-runs/ref/
+SHARED_CACHE = {"tests/compare/.cache": "compare-cache"}  # the rules export, also kept in ~/sdp-runs/ref/
 
 
 def host():
@@ -131,19 +135,29 @@ def sync(_args):
     rsync(["--from0", "--files-from=-", "./", "%s:%s/" % (h, TREE)], cwd=ROOT, input=b"\0".join(present))
     if deleted:  # gone here: remove the earlier copy there too
         ssh("cd %s && xargs -0 rm -f --" % TREE, input_text="\0".join(f.decode("utf-8") for f in deleted))
+    links = []  # (shared copy there, path in the copy of the worktree): made in one ssh call below
     for rel in ("tools/node_modules", "tests/compare/.cache"):
         src = os.path.join(ROOT, rel)
-        if os.path.exists(src):
+        if os.path.isdir(src):
             ssh("rm -f %s/%s" % (TREE, rel), check=False)  # an old link would be followed
             rsync(["-L", src.rstrip("/"), "%s:%s/%s/" % (h, TREE, os.path.dirname(rel))])
+            if rel in SHARED_CACHE:  # keep a copy there for worktrees that have none
+                rsync(["-L", src + "/", "%s:%s/ref/%s/" % (h, BASE, SHARED_CACHE[rel])])
+        elif rel in SHARED_CACHE:
+            links.append((SHARED_CACHE[rel], rel))
     ref = os.path.join(ROOT, "reference")
-    for name in ("base-ui", "dmt", "amt", "ep", "dwp"):
+    for name in REFERENCES:
         src = os.path.join(ref, name)
-        if not os.path.isdir(src):
-            continue
-        only_lua = ["--include=*/", "--include=*.lua", "--exclude=*", "--prune-empty-dirs"] if name == "base-ui" else []
-        rsync(["-L"] + only_lua + [src + "/", "%s:%s/ref/%s/" % (h, BASE, name)])
-        ssh("ln -sfn ~/%s/ref/%s %s/reference/%s" % (BASE, name, TREE, name))
+        if os.path.isdir(src):  # a broken link (no game on this machine) is not a directory
+            only_lua = ["--include=*/", "--include=*.lua", "--exclude=*", "--prune-empty-dirs"] if name == "base-ui" else []
+            rsync(["-L"] + only_lua + [src + "/", "%s:%s/ref/%s/" % (h, BASE, name)])
+        links.append((name, "reference/" + name))
+    # Link what is missing here to the copies there (#364: a machine without the game has no DMT source
+    # or rules export, but the second machine keeps them in ~/sdp-runs/ref/); a real folder already in the
+    # copy of the worktree stays.
+    ssh(" ; ".join("if [ -d ~/{b}/ref/{s} ] && ! {{ [ -d {t} ] && [ ! -L {t} ]; }}; then mkdir -p {d} && ln -sfn ~/{b}/ref/{s} {t}; fi"
+                   .format(b=BASE, s=shared, t="%s/%s" % (TREE, rel), d=os.path.dirname("%s/%s" % (TREE, rel)))
+                   for shared, rel in links) + " ; true")
     ssh("touch %s/%s" % (TREE, sdpsched.SYNCED))  # tells sdpsched.py prune the copy is in use
     install_sched()
     print("synced %s to %s:~/%s" % (ROOT, h, TREE))

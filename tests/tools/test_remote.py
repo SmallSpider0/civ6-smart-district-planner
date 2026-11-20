@@ -364,6 +364,36 @@ class Sync(unittest.TestCase):
         self.assertFalse(self.there("changelog.d/1.md"))
         self.assertTrue(self.there("keep.txt"))
 
+    def test_missing_references_link_to_the_copies_there(self):
+        """#364: on a machine without the game reference/dmt is a broken link and there is no rules export;
+        the copy there used to get neither, so compare.mjs failed there."""
+        ref = os.path.join(self.root, "reference")
+        os.makedirs(os.path.join(ref, "amt"))
+        with open(os.path.join(ref, "amt", "a.lua"), "w") as fh:
+            fh.write("-- amt here")
+        os.symlink(os.path.join(self.root, "no-game", "dmt"), os.path.join(ref, "dmt"))
+        shared = os.path.join(self.home, remote.BASE, "ref")
+        for rel in ("dmt/d.lua", "compare-cache/gameinfo.lua"):
+            os.makedirs(os.path.dirname(os.path.join(shared, rel)), exist_ok=True)
+            with open(os.path.join(shared, rel), "w") as fh:
+                fh.write("-- there")
+        self.assertEqual(remote.sync(None), 0)
+        self.assertTrue(self.there("reference/dmt/d.lua"))
+        self.assertTrue(self.there("reference/amt/a.lua"))
+        self.assertTrue(self.there("tests/compare/.cache/gameinfo.lua"))
+        self.assertFalse(self.there("reference/ep"))  # neither here nor there
+
+    def test_a_rules_export_here_is_copied_and_kept_there(self):
+        cache = os.path.join(self.root, "tests", "compare", ".cache")
+        os.makedirs(cache)
+        with open(os.path.join(cache, "gameinfo.lua"), "w") as fh:
+            fh.write("-- rules here")
+        self.assertEqual(remote.sync(None), 0)
+        tree_cache = os.path.join(self.home, remote.TREE, "tests", "compare", ".cache")
+        self.assertFalse(os.path.islink(tree_cache))
+        with open(os.path.join(self.home, remote.BASE, "ref", "compare-cache", "gameinfo.lua")) as fh:
+            self.assertEqual(fh.read(), "-- rules here")
+
 
 class Direct(unittest.TestCase):
     """#249: offline_tests.mjs and compare.mjs started by hand register themselves; long ones are placed
