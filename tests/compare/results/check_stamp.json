@@ -1,12 +1,14 @@
 {
- "changed": 0,
+ "changed": 2,
  "commit": "",
- "date": "2026-11-21 01:20",
- "digest": "d3673865f2b85ccf24b46e9234ea9ecac99f0bd7ba10791682c766155ff20e71",
+ "date": "2026-11-21 03:10",
+ "digest": "700d6d1d381af5d2489a2ea94d73e4649b7d77e257bb027e89e4987a443c09a8",
+ "errored": 0,
  "files": 126,
- "higher": 0,
+ "higher": 1,
  "lower": 0,
  "mismatched": 0,
+ "missing": 0,
  "new_violations": 0,
  "rows": 340
 }
