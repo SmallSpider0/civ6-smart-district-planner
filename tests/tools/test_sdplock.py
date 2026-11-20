@@ -439,5 +439,91 @@ class WeeklyTest(LockCase):
         self.assertNotIn("next", sdplock.queue_done(1))
 
 
+
+class GameHost(LockCase):
+    """#362: from 2026-11-20 the sessions run on a machine without the game; the night queue stayed on the
+    game's machine, but `queue add` wrote to this machine's queue and nothing here could read the other one.
+    With "game_host" set, every `queue` command runs there over ssh."""
+
+    def setUp(self):
+        super().setUp()
+        for key in (sdplock.ON_GAME_HOST, "SDP_REMOTE_PATH"):
+            old = os.environ.pop(key, None)
+            if old is not None:
+                self.addCleanup(os.environ.__setitem__, key, old)
+        self.sent = []
+        self.answer = (0, "")
+        real = sdplock.subprocess.run
+
+        def fake_run(argv, *a, **kw):
+            if argv[0] != "ssh":
+                return real(argv, *a, **kw)
+            self.sent.append((argv, kw))
+            code, out = self.answer
+            return sdplock.subprocess.CompletedProcess(argv, code, out if kw.get("capture_output") else None, "")
+        sdplock.subprocess.run = fake_run
+        self.addCleanup(setattr, sdplock.subprocess, "run", real)
+        self.identity = sdplock.identity
+        self.addCleanup(setattr, sdplock, "identity", sdplock.identity)
+        sdplock.identity = lambda root: {"tree": root, "branch": "vm/fix-x", "commit": "0", "owner": "vm/fix-x"}
+
+    def config(self, **keys):
+        with open(os.environ["SDP_LOCAL_CONFIG"], "w", encoding="utf-8") as fh:
+            json.dump(keys, fh)
+
+    def main(self, *argv):
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            code = sdplock.main(list(argv))
+        return code, out.getvalue()
+
+    def test_queue_commands_run_on_the_game_host(self):
+        self.config(game_host="game-mac", remote_path="/opt/homebrew/bin")
+        self.answer = (4, "")
+        self.assertEqual(self.main("queue", "done", "3", "--result", "12 passed; 1 failed")[0], 4)  # its exit code
+        ((argv, kw),) = self.sent
+        self.assertEqual(argv[:1] + argv[-2:-1], ["ssh", "game-mac"])
+        self.assertFalse(kw.get("capture_output"))  # its output goes straight through
+        self.assertEqual(argv[-1], 'cd "$HOME"/sdp-game && export PATH=/opt/homebrew/bin:"$PATH" SDP_ON_GAME_HOST=1'
+                                   " && python3 -I tools/sdplock.py queue done 3 --result '12 passed; 1 failed'")
+        self.assertEqual(sdplock._read(sdplock.queue_path(), []), [])  # nothing here
+
+    def test_queue_add_records_this_worktree_s_branch(self):
+        self.config(game_host="game-mac", game_tree="/Users/x/my game")
+        self.assertEqual(self.main("queue", "add", "--what", "shots", "--why", "README", "--cmd", "a && b")[0], 0)
+        cmd = self.sent[0][0][-1]
+        self.assertTrue(cmd.startswith("cd '/Users/x/my game' && export PATH=/opt/homebrew/bin:/usr/local/bin:"), cmd)
+        self.assertTrue(cmd.endswith("queue add --what shots --why README --cmd 'a && b'"
+                                     " --branch vm/fix-x --owner vm/fix-x"), cmd)
+
+    def test_there_the_branch_and_owner_go_into_the_item(self):
+        self.config(game_host="game-mac")  # the same config file on the game host: the marker stops a loop
+        os.environ[sdplock.ON_GAME_HOST] = "1"
+        code, out = self.main("queue", "add", "--what", "shots", "--why", "README", "--branch", "vm/fix-x",
+                              "--owner", "vm/fix-x")
+        self.assertEqual((code, self.sent), (0, []))
+        self.assertIn("vm/fix-x", out)
+        (item,) = sdplock.queue_items()
+        self.assertEqual((item["branch"], item["owner"]), ("vm/fix-x", "vm/fix-x"))
+
+    def test_without_game_host_the_queue_stays_here(self):
+        self.config(remote="build-box")
+        self.assertEqual(self.main("queue", "add", "--what", "shots", "--why", "README")[0], 0)
+        self.assertEqual(self.sent, [])
+        self.assertEqual(len(sdplock.queue_items()), 1)
+
+    def test_due_gives_the_night_and_the_due_items(self):
+        self.config(night="00:00-08:00")
+        sdplock.queue_add(self.a, "shots", "README")
+        sdplock.queue_weekly(self.a, night="2026-11-21")
+        self.w.t = calendar.timegm((2026, 10, 27, 0, 3, 0))  # opened 3 minutes ago: not yet
+        self.assertEqual(json.loads(self.main("queue", "due", "--json")[1])["night"], None)
+        self.w.t = calendar.timegm((2026, 10, 27, 0, 6, 0))
+        due = json.loads(self.main("queue", "due", "--json")[1])
+        self.assertEqual(due["night"], "2026-10-27")
+        self.assertEqual([i["what"] for i in due["items"]], ["shots"])  # the weekly test is for a later night
+        self.assertEqual(self.sent, [])
+
+
 if __name__ == "__main__":
     unittest.main()
