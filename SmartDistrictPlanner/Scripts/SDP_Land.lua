@@ -256,7 +256,8 @@ local function Index()
   return index
 end
 
-local function Trim(s) return (tostring(s):gsub("^%s+", ""):gsub("%s+$", "")) end
+-- Not gsub with "^": the game's Lua replaces more than once (pitfall 39).
+local function Trim(s) return tostring(s):match("^%s*(.-)%s*$") end
 local function SplitList(text)
   local list = {}
   for part in tostring(text or ""):gmatch("[^,]+") do list[#list + 1] = Trim(part) end
