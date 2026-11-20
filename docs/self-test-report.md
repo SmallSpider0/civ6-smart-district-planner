@@ -134,11 +134,11 @@ AI 自动打出 3 张后期存档，每张跑同一组求解步骤（`tools/stre
 
 | 画面 | 文件 |
 |------|------|
-| 单城页签：学院必建、区域数量 3，区域格里有外交区、保护区，设置展开（规划改良、耕作格改良开关），三套方案排成一行按钮 | ![single](images/v20-panel-single.jpg) |
-| 单城页签勾上全部奇观：设置区在自己的框里滚动，“求解”留在面板里 | ![settings](images/v20-panel-settings.jpg) |
-| 多城页签：首都和三个城址钉排成格子，“全部城市”按钮，罗马用自己的清单、旁边是返回按钮，奇观选阿耳忒弥斯神庙，设置展开，每座城一行小计 | ![multi](images/v20-panel-multi.jpg) |
-| 选城址页签：区域格、区域数量 3、密铺开关，城址按建城的先后排列，每个城址列出各项得分、前面有勾选框，三套方案排成一行 | ![sites](images/v20-panel-sites.jpg) |
-| 英文界面：单城、设置区滚动、多城、选城址（区域名按状态留出的宽度缩小、换行）、城址悬停提示 | `v20-en-panel-single.jpg`、`v20-en-panel-settings.jpg`、`v20-en-panel-multi.jpg`、`v20-en-panel-sites.jpg`、`v7-en-sites-tooltip.jpg` |
+| 单城页签：学院必建、区域数量 3，区域格里有外交区、保护区，设置收起，三套方案排成一行按钮，商业中心标出海岸低地的灾害 | ![single](images/v21-panel-single.jpg) |
+| 单城页签勾上全部奇观：设置区在自己的框里滚动，“求解”留在面板里 | ![settings](images/v21-panel-settings.jpg) |
+| 多城页签：首都和三个城址钉排成格子，“全部城市”按钮，罗马用自己的清单、旁边是返回按钮，奇观选阿耳忒弥斯神庙，每座城一行小计 | ![multi](images/v21-panel-multi.jpg) |
+| 选城址页签：区域格、区域数量 3、密铺开关，城址按建城的先后排列，每个城址列出各项得分、前面有勾选框，三套方案排成一行 | ![sites](images/v21-panel-sites.jpg) |
+| 英文界面：单城、设置区滚动、多城、选城址（区域名按状态留出的宽度缩小、换行）、城址悬停提示 | `v21-en-panel-single.jpg`、`v21-en-panel-settings.jpg`、`v21-en-panel-multi.jpg`、`v21-en-panel-sites.jpg`、`v7-en-sites-tooltip.jpg` |
 | 悬停工业区一行：DMT 的加成来源和覆盖范围内的城市 | ![coverage](images/v3-coverage-tooltip.jpg) |
 | 提醒钉：城址 3 的圣地旁两片树林上的“3 勿砍：圣地 信-1” | ![reminders](images/v4-map-reminders.jpg) |
 | 单城方案的地图预览 | ![single preview](images/v4-map-single-preview.jpg) |
