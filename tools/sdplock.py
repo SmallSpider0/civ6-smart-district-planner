@@ -35,7 +35,9 @@ drops out by itself (its pid is gone). `--no-wait` refuses instead (exit
 code 4). Each job runs with at most the configured workers (`-j` is
 lowered, or added, to fit), paused (SIGSTOP to the job's process group)
 while the game lock is held and resumed when it is released. A job that was
-paused reports it at the end: its timing fields are not usable.
+paused reports it at the end: its timing fields are not usable. With the
+workers set to 0 for now (see below) `heavy` refuses at once and points to
+tools/remote.py.
 
 The night queue lists the steps that take the screen (real clicks,
 screenshots, the stress test, all rulesets) for a time when nobody uses the
@@ -62,8 +64,9 @@ asks it that way. Without "game_host" everything stays on this machine.
 Machine-specific settings come from a JSON file outside the repository,
 $SDP_LOCAL_CONFIG, else ~/.config/sdp/local.json; all keys are optional:
 
-    {"workers_day": 4,            # heavy local job workers (default 4)
-     "workers_night": 6,          # in the night window (default: workers_day)
+    {"workers_day": 4,            # heavy local job workers (default 4); 0: no heavy job and no test here,
+                                  # every offline run goes to the second machine (tools/remote.py)
+     "workers_night": 6,          # in the night window (default: workers_day; 0 as above)
      "night": "00:00-08:00",      # the night window (default: none)
      "weekend_is_night": true,    # Saturday and Sunday count as night (default false)
      "weekly_night": "sat",       # the weekly in-game test's night: the weekday its window opens on
@@ -497,10 +500,18 @@ def is_night(t=None, cfg=None):
 
 
 def local_cap(t=None):
-    """Workers a heavy local job may use now (local config; 4 without one)."""
+    """Workers a heavy local job may use now (local config; 4 without one). An explicit 0 means this
+    machine runs no heavy job and no test at all (#364): tools/remote.py sends every run to the second machine."""
     cfg = local_config()
-    day = int(cfg.get("workers_day") or 4)
-    return int(cfg.get("workers_night") or day) if is_night(t, cfg) else day
+    day = cfg.get("workers_day")
+    day = 4 if day is None else int(day)
+    night = cfg.get("workers_night")
+    night = day if night is None else int(night)
+    return night if is_night(t, cfg) else day
+
+
+NO_LOCAL = ("this machine runs no tests (workers_day/workers_night 0 in %s): start it with tools/remote.py run, "
+            "or by hand (node tools/offline_tests.mjs, node tools/compare.mjs) to have it sent to the second machine")
 
 
 def heavy_jobs():
@@ -620,6 +631,8 @@ def run_heavy(root, name, cmd, wait=True, every=5.0, sleep=time.sleep, me=None):
     wait=False refuse (Busy). me: the worktree to show (identity), when root is a snapshot."""
     me = me or identity(root)
     cap = local_cap()
+    if cap <= 0:
+        raise SystemExit("sdplock: %s not started: " % name + NO_LOCAL % config_path())
     fitted = fit_workers(cmd, cap)
     if fitted != list(cmd):
         print("sdplock: workers capped at %d: %s" % (cap, " ".join(fitted)), flush=True)
@@ -913,7 +926,10 @@ def print_status(local_only):
     if nxt:
         print("      next turn booked by %s (%s)" % (nxt.get("owner"), nxt.get("purpose") or ""))
     jobs = heavy_jobs()
-    print("heavy local jobs (cap now %d workers, one job): %s" % (local_cap(t), "none" if not jobs else ""))
+    cap = local_cap(t)
+    print("heavy local jobs (%s, one job): %s" % ("cap now %d workers" % cap if cap > 0 else
+                                                 "none allowed now: workers 0, tests go to the second machine",
+                                                 "none" if not jobs else ""))
     for job in jobs:
         print("  %-24s %-8s %s, started %s, %s" % (job["name"], "PAUSED" if job.get("paused") else "running",
                                                  job.get("owner"), time.strftime("%H:%M", localtime(job["started"])),
