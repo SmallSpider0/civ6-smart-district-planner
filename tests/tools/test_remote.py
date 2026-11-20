@@ -177,6 +177,13 @@ class Placement(unittest.TestCase):
             remote.run(job("a"))
         self.assertFalse(self.queued_there())
 
+    def test_zero_workers_here_never_runs_here(self):
+        """#364: with workers 0 here a job goes there even when this machine's slot is free."""
+        sdplock._write(os.environ["SDP_LOCAL_CONFIG"], {"workers_day": 0})
+        remote.run(job("a"))
+        self.assertTrue(self.queued_there())
+        self.assertFalse([c for c in self.calls if c[0] == "here"])
+
     def test_ssh_trouble_counts_as_cannot_start_there(self):
         def down(cmd, **_kw):
             raise SystemExit("ssh second: exit 255")
@@ -435,6 +442,42 @@ class Direct(unittest.TestCase):
         remote.direct(argparse.Namespace(command=["node", "tools/offline_tests.mjs", spec, "--out", out]))
         self.assertEqual(sent, [["node", "tools/offline_tests.mjs", os.path.join("tests", "offline", "spec_multi.lua"),
                                  "--out", os.path.join("logs", "remote", "a.jsonl")]])
+
+    def test_zero_workers_send_every_run_there(self):
+        """#364: workers 0 here: short runs go there too, and nothing falls back to this machine."""
+        sdplock._write(os.environ["SDP_LOCAL_CONFIG"], {"workers_day": 0})
+        calls = []
+        patch(self, remote, can_go_remote=lambda cmd, cwd: True, local_free=lambda: True,
+              remote_fits=lambda name, slots: "no", run_short=lambda *a: calls.append("short") or 0,
+              run_remote_and_wait=lambda name, cmd: calls.append("there") or 0)
+        patch(self, sdplock, run_heavy=lambda root, name, cmd, **kw: calls.append("here") or 0)
+        for spec in ("spec_tiny", "spec_multi"):
+            calls.clear()
+            cmd = ["node", "tools/offline_tests.mjs", "tests/offline/%s.lua" % spec]
+            self.assertEqual(remote.direct(argparse.Namespace(command=cmd)), 0)
+            self.assertEqual(calls, ["there"], spec)
+
+    def test_zero_workers_and_trouble_there_fail_instead_of_running_here(self):
+        sdplock._write(os.environ["SDP_LOCAL_CONFIG"], {"workers_day": 0})
+        calls = []
+
+        def down(name, cmd):
+            raise SystemExit("ssh second: exit 255")
+        patch(self, sdplock, run_heavy=lambda root, name, cmd, **kw: calls.append("here") or 0)
+        patch(self, remote, run_short=lambda *a: calls.append("short") or 0)
+        cmd = ["node", "tools/offline_tests.mjs", "tests/offline/spec_tiny.lua"]
+        cases = (("ssh", {"can_go_remote": lambda c, w: True, "run_remote_and_wait": down}),
+                 ("cannot", {"can_go_remote": lambda c, w: False}),
+                 ("no host", {}))
+        for what, fakes in cases:
+            if what == "no host":
+                del os.environ["SDP_REMOTE"]
+            patch(self, remote, **fakes)
+            with self.assertRaises(SystemExit, msg=what) as caught:
+                remote.direct(argparse.Namespace(command=cmd))
+            if what != "ssh":
+                self.assertIn("runs no tests", str(caught.exception), what)
+        self.assertEqual(calls, [])
 
     def test_long_run_that_cannot_go_there_runs_heavy_here(self):
         calls = []

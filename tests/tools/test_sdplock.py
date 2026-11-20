@@ -308,6 +308,26 @@ class HeavyJobs(LockCase):
         self.assertEqual(sdplock.local_cap(MON_10 - 7 * 3600), 2)             # 03:00: night, same count
         self.assertEqual(sdplock.local_cap(MON_10 - 2 * 86400), 2)            # weekends not special
 
+    def test_an_explicit_zero_means_no_local_work(self):
+        """#364: workers_day 0 used to read as unset and became 4, so tests still ran on this machine."""
+        cfg = os.environ["SDP_LOCAL_CONFIG"]
+        sdplock._write(cfg, {"workers_day": 0, "night": "22:30-06:00"})
+        self.assertEqual(sdplock.local_cap(MON_10), 0)
+        self.assertEqual(sdplock.local_cap(MON_10 - 5 * 3600), 0)             # night falls back to the day's 0
+        sdplock._write(cfg, {"workers_day": 3, "workers_night": 0, "night": "22:30-06:00"})
+        self.assertEqual(sdplock.local_cap(MON_10), 3)
+        self.assertEqual(sdplock.local_cap(MON_10 - 5 * 3600), 0)
+
+    def test_heavy_refuses_at_once_with_zero_workers(self):
+        sdplock._write(os.environ["SDP_LOCAL_CONFIG"], {"workers_day": 0})
+        waited = []
+        with self.assertRaises(SystemExit) as caught:
+            sdplock.run_heavy(self.a, "quick", [sys.executable, "-c", "pass"], every=0, sleep=waited.append)
+        self.assertIn("remote.py", str(caught.exception))
+        self.assertEqual(waited, [])
+        self.assertEqual(os.listdir(sdplock.jobs_dir()) if os.path.isdir(sdplock.jobs_dir()) else [], [])
+        self.assertEqual(sdplock.heavy_waiting(), [])
+
     def test_remote_host_from_the_environment_or_the_config(self):
         self.assertIsNone(sdplock.remote_host())
         sdplock._write(os.environ["SDP_LOCAL_CONFIG"], {"remote": "build-box"})

@@ -10,6 +10,9 @@ slot is free and the game lock is not held, here in a snapshot of the worktree (
 runs/snap/NAME/) through sdplock.py heavy; else it queues there. --exclusive and --remote-only jobs always
 go there. status, wait and fetch --job work the same for a job placed here. `direct` runs short
 offline_tests.mjs / compare.mjs runs here, registered, and places long ones the same way, waiting for them.
+With "workers_day" (or "workers_night", in the night window) 0 in the local config this machine runs
+nothing (#364): `run` never places a job here, `direct` sends short runs there too (queued there when it
+cannot start them now) and waits, and without a second machine both refuse.
     python3 -I tools/remote.py status [NAME]              # every session's jobs, free slots / one job
     python3 -I tools/remote.py wait NAME [--fetch PATH ...] [--every 60]
     python3 -I tools/remote.py fetch [--job NAME] PATH ...  # copy files back (paths relative to the worktree)
@@ -192,8 +195,10 @@ def local_live(name):
 
 
 def local_free():
-    """This machine's heavy slot is free: no heavy job, nobody waiting for it, and the game lock not held."""
-    return not sdplock.heavy_jobs() and not sdplock.heavy_waiting() and not sdplock.load_game().get("holder")
+    """This machine's heavy slot is free: heavy jobs allowed here (workers not 0), no heavy job, nobody waiting
+    for it, and the game lock not held."""
+    return (sdplock.local_cap() > 0 and not sdplock.heavy_jobs() and not sdplock.heavy_waiting()
+            and not sdplock.load_game().get("holder"))
 
 
 def remote_fits(name, slots):
@@ -580,6 +585,8 @@ def direct(args):
     # this process and the node process that called it wait for the run: registered, not shown
     sdplock.light_register(name + "-caller", [os.getpid(), os.getppid()], ROOT, cmd, show=False, me=me)
     try:
+        if sdplock.local_cap() <= 0:
+            return direct_there(name, cmd, cwd)
         key, seconds = estimate(cmd)
         if seconds < LONG:
             return run_short(name, cmd, cwd, env, key, me)
@@ -593,6 +600,21 @@ def direct(args):
         return sdplock.run_heavy(cwd, name, cmd, me=me)
     finally:
         sdplock.light_forget(name + "-caller")
+
+
+def direct_there(name, cmd, cwd):
+    """Workers 0 here (#364): every run, short ones too, goes to the second machine (queued there when it
+    cannot start now) and this process waits for it; nothing falls back to this machine."""
+    no_local = "this machine runs no tests (workers_day/workers_night 0 in %s)" % sdplock.config_path()
+    if not sdplock.remote_host():
+        raise SystemExit("remote.py: %s not started: %s and no second machine is set (SDP_REMOTE or \"remote\" "
+                         "in the local config)" % (name, no_local))
+    if not can_go_remote(cmd, cwd):
+        raise SystemExit("remote.py: %s not started: %s and the second machine cannot run it as given: start it "
+                         "from the worktree's root, with files inside the worktree that are not git-ignored; a "
+                         "benchmark goes through tools/remote.py run" % (name, no_local))
+    print("remote.py: %s (sent to the second machine: workers 0 here)" % no_local, file=sys.stderr, flush=True)
+    return run_remote_and_wait(name, relative_args(cmd))
 
 
 def slots_of(cmd):
