@@ -90,6 +90,8 @@
 --                                    sent the way its Request() sends them.
 --                                    The districts are the scenario's, all
 --                                    required, as for every other variant
+--   variant ..._SAFE (anywhere)      the switch "avoid disaster tiles" on
+--                                    (issue 360)
 --   variant ..._ASMULTI (anywhere)   single: solved as SDP_Multi with only
 --                                    this city, the request the single-city
 --                                    tab sends when wonders are ticked
@@ -242,6 +244,51 @@ local function LongRun(result, out, cityOf, request, again)
   return o
 end
 
+-- Issue 360 experiment: how much adjacency a plan loses when it keeps the
+-- plots a Gathering Storm disaster can pillage free. The letters pick them:
+-- V next to a volcano (a plain one or a volcano natural wonder), F on
+-- floodplains, L coastal lowland of any height, A coastal lowland of 1 m
+-- only. Such a plot reads as flooded lowland, which SDP_City excludes
+-- (pitfall 41). Districts only: the land part also reads the flooded state,
+-- so the _LAND variants would mix two effects.
+local VOLCANOES = { FEATURE_VOLCANO = true, FEATURE_VESUVIUS = true, FEATURE_KILIMANJARO = true,
+  FEATURE_EYJAFJALLAJOKULL = true }
+local function KeepHazardsFree(letters)
+  local lowland, flooded = TerrainManager.GetCoastalLowlandType, TerrainManager.IsFlooded
+  local function Feature(plot)
+    local f = plot:GetFeatureType()
+    local row = f ~= -1 and GameInfo.Features[f] or nil
+    return row and row.FeatureType or ""
+  end
+  local function Hazard(plot)
+    if letters:find("F", 1, true) and Feature(plot):find("FLOODPLAINS", 1, true) then return true end
+    local low = lowland(plot)
+    if letters:find("L", 1, true) and low ~= nil and low ~= -1 then return true end
+    if letters:find("A", 1, true) and low == 0 then return true end
+    if letters:find("V", 1, true) then
+      for dir = 0, 5 do
+        local adj = Map.GetAdjacentPlot(plot:GetX(), plot:GetY(), dir)
+        if adj ~= nil and VOLCANOES[Feature(adj)] then return true end
+      end
+    end
+    return false
+  end
+  local cache = {}
+  local function Is(plot)
+    local i = plot:GetIndex()
+    if cache[i] == nil then cache[i] = Hazard(plot) end
+    return cache[i]
+  end
+  TerrainManager.GetCoastalLowlandType = function(plot)
+    if Is(plot) then return 0 end
+    return lowland(plot)
+  end
+  TerrainManager.IsFlooded = function(plot)
+    if Is(plot) then return true end
+    return flooded(plot)
+  end
+end
+
 function CmpAdapters.sdp(request, variant, w)
   -- "ORACLE", "ORACLE_CHECK", "ORACLE_LAND[nnn]", "ORACLE_LAND[nnn]_CHECK",
   -- optionally "@<millions>" for the node limit.
@@ -269,6 +316,12 @@ function CmpAdapters.sdp(request, variant, w)
   end
   local asMulti = variant:match("_ASMULTI") ~= nil
   variant = variant:gsub("_ASMULTI", "")
+  -- "_HAZ<letters>" (issue 360 experiment): hazard plots are kept free.
+  local hazard = variant:match("_HAZ([VFLA]+)")
+  variant = variant:gsub("_HAZ[VFLA]+", "")
+  -- "_SAFE" (issue 360): the switch "avoid disaster tiles" on.
+  local safe = variant:match("_SAFE") ~= nil
+  variant = variant:gsub("_SAFE", "")
   local oracle = variant:match("^ORACLE") ~= nil
   local check = oracle and variant:match("_CHECK$") ~= nil
   if oracle then variant = "FINE" .. variant:gsub("_CHECK$", ""):gsub("^ORACLE", "") end
@@ -336,6 +389,17 @@ function CmpAdapters.sdp(request, variant, w)
     variant = panel.Tier
   else
     LoadSDP()
+  end
+  if hazard ~= nil then KeepHazardsFree(hazard) end
+  if safe then
+    -- Every request either solver gets, as the panel sends it with the switch on.
+    for _, solver in ipairs({ SDP_Solver, SDP_Multi }) do
+      local new = solver.NewSession
+      solver.NewSession = function(r, ...)
+        r.AvoidHazards = true
+        return new(r, ...)
+      end
+    end
   end
   if knew ~= nil then SDP_Sites.KIND_NEW = knew end
   if hbuild ~= nil then

@@ -539,7 +539,16 @@
       <Text>忠诚度风险：高（附近有外国城市）</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SITES_DISASTER" Language="zh_Hans_CN">
-      <Text>附近有泛滥平原或火山土：有灾害风险</Text>
+      <Text>可放区域的格里有灾害风险：{1_Kinds}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_DISASTER_VOLCANO" Language="zh_Hans_CN">
+      <Text>火山旁 {1_Num} 格</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_DISASTER_FLOOD" Language="zh_Hans_CN">
+      <Text>无堤坝的泛滥平原 {1_Num} 格</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_DISASTER_LOWLAND" Language="zh_Hans_CN">
+      <Text>海岸低地 {1_Num} 格</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SITES_UNKNOWN_STRATEGIC" Language="zh_Hans_CN">
       <Text>部分战略资源尚未可见</Text>
@@ -704,6 +713,12 @@
     <Replace Tag="LOC_SDP_WORKED_TOOLTIP" Language="zh_Hans_CN">
       <Text>打开后，城市要耕作的地块里还没有改良的，也打上改良钉（按地块价值选的那种）。区域的位置不变，只是地图上多一些钉；“地块”权重为 0 时不打。</Text>
     </Replace>
+    <Replace Tag="LOC_SDP_HAZARD_SHORT" Language="zh_Hans_CN">
+      <Text>避开灾害地块</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_HAZARD_TOOLTIP" Language="zh_Hans_CN">
+      <Text>打开后，区域尽量不放在火山旁、没有堤坝的泛滥平原和没有拦洪坝的海岸低地上；城里没有别的格可放时仍会放下，并在结果里标出。喷发和洪水只会掠夺区域，修好后加成照旧，所以避开通常要少拿一些加成。</Text>
+    </Replace>
     <Replace Tag="LOC_SDP_REMIND_PIN" Language="zh_Hans_CN">
       <Text>勿砍：{1_Losses}</Text>
     </Replace>
@@ -730,6 +745,30 @@
     </Replace>
     <Replace Tag="LOC_SDP_RESULT_CLEAR_FIRST" Language="zh_Hans_CN">
       <Text>（先砍伐或收获）</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_HAZARD" Language="zh_Hans_CN">
+      <Text>（灾害：{1_Kinds}）</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_HAZARD_VOLCANO_ACTIVE" Language="zh_Hans_CN">
+      <Text>活跃火山旁</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_HAZARD_VOLCANO_DORMANT" Language="zh_Hans_CN">
+      <Text>休眠火山旁</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_HAZARD_FLOOD" Language="zh_Hans_CN">
+      <Text>无堤坝的泛滥平原</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_HAZARD_LINE_VOLCANO_ACTIVE" Language="zh_Hans_CN">
+      <Text>贴着活跃火山：喷发可能掠夺这个区域和其中的建筑，修好后加成照旧。</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_HAZARD_LINE_VOLCANO_DORMANT" Language="zh_Hans_CN">
+      <Text>贴着休眠火山：休眠火山也可能变活跃，之后的喷发可能掠夺这个区域和其中的建筑。</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_HAZARD_LINE_FLOOD" Language="zh_Hans_CN">
+      <Text>在泛滥平原上，这条河还没有堤坝：洪水可能掠夺这个区域和其中的建筑。</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_HAZARD_LINE_LOWLAND" Language="zh_Hans_CN">
+      <Text>{1_Lowland}，本城还没有拦洪坝：到{2_Stage}会被海水淹没，之后还会沉入海中，区域随之消失。</Text>
     </Replace>
     <Replace Tag="LOC_SDP_RESULT_NEEDS_TECH" Language="zh_Hans_CN">
       <Text>（需先研究{1_Tech}）</Text>
@@ -930,6 +969,9 @@
     </Replace>
     <Replace Tag="LOC_SDP_FOLD_REPLACE" Language="zh_Hans_CN">
       <Text>替换旧钉</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_FOLD_HAZARD" Language="zh_Hans_CN">
+      <Text>避开灾害地块</Text>
     </Replace>
     <Replace Tag="LOC_SDP_FOLD_WONDERS" Language="zh_Hans_CN">
       <Text>奇观 {1_N}</Text>

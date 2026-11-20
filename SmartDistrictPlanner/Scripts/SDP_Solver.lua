@@ -39,6 +39,9 @@ Session.__index = Session
 --                        weigh 1. The land part weighs plots with
 --                        SDP_Land.PLOT_WEIGHTS times LAND (issue 53)
 --   AllowFeatureRemoval  default true (requirement constraint 5)
+--   AvoidHazards         prefer plots no disaster can harm (issue 360,
+--                        SDP_Search Hazards; default off). The plan's entries
+--                        carry their Hazard either way (SDP_City.PlanHazards)
 --   Land                 count the land part (default false)
 --   Tier                 "FAST" | "STANDARD" | "FINE" (default STANDARD)
 --   Params               overrides of the tier's parameters (tests)
@@ -55,6 +58,19 @@ Session.__index = Session
 --                        harbor and the commercial hub) into one city like any
 --                        others; default: not, unless the count needs it
 -- }
+-- The search's Hazards (issue 360) from each group's candidates (their
+-- SDP_City Hazard): { [group] = { [position] = hazard } }. `byGroup`:
+-- { [group] = candidates } in the search's candidate order.
+function SDP_Solver.HazardSpec(byGroup)
+  local spec = {}
+  for group, candidates in pairs(byGroup) do
+    local of = {}
+    for i, c in ipairs(candidates) do of[i] = c.Hazard end
+    spec[group] = of
+  end
+  return spec
+end
+
 -- The improvement model of a request (issue 227, SDP_Improve) or nil: with
 -- Improvements on, or WorkedImprovements with the land part on. `scans`:
 -- the cities taking part (their pins, the unowned plots they can come to
@@ -258,6 +274,7 @@ function SDP_Solver.NewSession(request, scan)
     Candidates = scan.Candidates, Slots = slots, Lands = lands,
     Pools = pick > 0 and { [1] = pick } or nil,
     Costs = SDP_City.DistanceCosts(playerID, scan.Candidates, request.Distance), Coverage = self.Coverage,
+    Hazards = request.AvoidHazards and SDP_Solver.HazardSpec({ [1] = scan.Candidates }) or nil,
     Alternatives = params.Solutions or 3, Apart = apart, Exclusive = SDP_Rules.Exclusive(),
     Improve = request.Improvements and self.Improve ~= nil and self.Improve:Active() and self.Improve or nil,
     -- A candidate swapped from another of the player's cities (issue 54);
@@ -343,7 +360,7 @@ function Session:PlanFor(layout)
     out.Plan[n] = {
       Type = search.Types[m], X = c.X, Y = c.Y, Index = c.Index,
       Yields = item.Yields, ToolTip = item.ToolTip, Score = item.Score,
-      Unowned = c.Unowned, RemoveTech = c.RemoveTech, Swap = c.Swap, ClearFirst = c.ClearFirst,
+      Unowned = c.Unowned, RemoveTech = c.RemoveTech, Swap = c.Swap, ClearFirst = c.ClearFirst, Hazard = c.Hazard,
       Auto = self.Auto[search.Types[m]], Picked = search.Optional[m],
       Appeal = a.Appeal, Housing = a.Housing, Tiles = a.Tiles, TilesCounted = a.TilesCounted,
       TilesReason = a.TilesReason,
@@ -353,6 +370,8 @@ function Session:PlanFor(layout)
     }
     if search.Optional[m] then out.Picked[#out.Picked + 1] = search.Types[m] end
   end
+  SDP_City.PlanHazards(out.Plan, function(p) return p.Hazard end)
+  out.HazardDelta = search:HazardDelta(layout)
   for f, item in ipairs(final.Fixed) do
     if item.Score ~= base.Fixed[f].Score then
       out.Neighbours[#out.Neighbours + 1] = {
@@ -554,7 +573,7 @@ function Session:Result()
       result[key] = best[key]
     end
     -- The board's incremental value must match the full evaluation.
-    stats.Mismatch = (not best.Legal) or math.abs(best.Gain - entries[1].Gain) > 1e-6 or nil
+    stats.Mismatch = (not best.Legal) or math.abs(best.Gain + best.HazardDelta - entries[1].Gain) > 1e-6 or nil
   end
   stats.Calls = board.Calls + self.ExtraCalls
   stats.Hits = board.Hits

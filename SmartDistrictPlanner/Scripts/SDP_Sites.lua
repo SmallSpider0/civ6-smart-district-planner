@@ -444,7 +444,26 @@ end
 --   Resources = { { Index, Type, Luxury (bool), Count (copies), Amount } }: the
 --     visible luxury and strategic resources on its workable plots
 --   Info = { WaterKind, Usable, Unrevealed, Disaster, OwnDistance, Loyalty, Features = { [type] = plots } }
+--     Disaster: nil, or how many plots a district could take have each risk
+--     (SDP_City.HazardAt, issue 360): { Volcano, Flood, Lowland }
 --     OwnDistance: to the nearest of the player's cities and city-center pins
+-- How many of a scan's candidates (plots a district could take) have each
+-- disaster risk (SDP_City.HazardAt; ScanSite marks them): { Volcano, Flood,
+-- Lowland }, or nil when none has.
+function SDP_Sites.Disaster(scan)
+  local counts, any = { Volcano = 0, Flood = 0, Lowland = 0 }, false
+  for _, c in ipairs(scan.Candidates) do
+    local h = c.Hazard
+    if h ~= nil then
+      any = true
+      if h.Volcano ~= nil then counts.Volcano = counts.Volcano + 1 end
+      if h.Flood ~= nil then counts.Flood = counts.Flood + 1 end
+      if h.Lowland ~= nil then counts.Lowland = counts.Lowland + 1 end
+    end
+  end
+  return any and counts or nil
+end
+
 function SDP_Sites.Coarse(ctx, candidate, centers)
   local playerID, w = ctx.PlayerID, ctx.Weights
   local x, y = candidate.X, candidate.Y
@@ -453,7 +472,7 @@ function SDP_Sites.Coarse(ctx, candidate, centers)
     Resources = {} }
 
   -- Worked plots and one-time yields.
-  local plots, featureCount, disaster = {}, {}, false
+  local plots, featureCount = {}, {}
   -- A pinned district or wonder (another city's plan) takes its plot, as
   -- in SDP_Land.ForScan (issue 336).
   local taken = {}
@@ -472,7 +491,6 @@ function SDP_Sites.Coarse(ctx, candidate, centers)
     if feature ~= -1 then
       local row = GameInfo.Features[feature]
       featureCount[row.FeatureType] = (featureCount[row.FeatureType] or 0) + 1
-      if row.FeatureType:find("FLOODPLAINS") or row.FeatureType:find("VOLCANIC") then disaster = true end
     end
     -- Resources the player can see.
     local resource = plot:GetResourceType()
@@ -516,7 +534,7 @@ function SDP_Sites.Coarse(ctx, candidate, centers)
   site.Parts.Penalty = math.max(0, planned - usable) * SDP_Sites.MISSING_PLOT
   site.Info.Usable = usable
   site.Info.Unrevealed = candidate.Unrevealed
-  site.Info.Disaster = disaster
+  site.Info.Disaster = SDP_Sites.Disaster(scan)
   site.Info.Features = featureCount
   site.Info.OwnDistance = Nearest(centers, x, y, true)
   site.Info.Loyalty = ctx.Loyalty and SDP_Sites.LoyaltyRisk(playerID, x, y, centers) or nil

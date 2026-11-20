@@ -155,6 +155,14 @@
             </Stack>
           </Stack>
         </Container>
+        <!-- Avoid disaster tiles (issue 360): Gathering Storm only, hidden in
+             the other rule sets. -->
+        <Container ID="HazardRow" Size="480,26">
+          <Stack Anchor="L,C" StackGrowth="Right" StackPadding="9">
+            <CheckBox ID="HazardCheck" Anchor="L,C" Style="MainCheckBox" ToolTip="LOC_SDP_HAZARD_TOOLTIP"/>
+            <Label Anchor="L,C" Style="BodyTextDark14" String="LOC_SDP_HAZARD_SHORT" ToolTip="LOC_SDP_HAZARD_TOOLTIP"/>
+          </Stack>
+        </Container>
         </Stack>
         </ScrollPanel>
 
@@ -399,6 +407,14 @@
               <CheckBox ID="MultiWorkedCheck" Anchor="L,C" Style="MainCheckBox" ToolTip="LOC_SDP_WORKED_TOOLTIP"/>
               <Label Anchor="L,C" Style="BodyTextDark14" String="LOC_SDP_WORKED_SHORT" ToolTip="LOC_SDP_WORKED_TOOLTIP"/>
             </Stack>
+          </Stack>
+        </Container>
+        <!-- Avoid disaster tiles (issue 360): Gathering Storm only, hidden in
+             the other rule sets. -->
+        <Container ID="MultiHazardRow" Size="480,26">
+          <Stack Anchor="L,C" StackGrowth="Right" StackPadding="9">
+            <CheckBox ID="MultiHazardCheck" Anchor="L,C" Style="MainCheckBox" ToolTip="LOC_SDP_HAZARD_TOOLTIP"/>
+            <Label Anchor="L,C" Style="BodyTextDark14" String="LOC_SDP_HAZARD_SHORT" ToolTip="LOC_SDP_HAZARD_TOOLTIP"/>
           </Stack>
         </Container>
         </Stack>

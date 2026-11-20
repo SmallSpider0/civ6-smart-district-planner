@@ -539,7 +539,16 @@
       <Text>Loyalty risk: high (foreign cities nearby)</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SITES_DISASTER" Language="en_US">
-      <Text>Floodplains or Volcanic Soil nearby: natural disaster risk</Text>
+      <Text>Tiles for districts with disaster risk: {1_Kinds}</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_DISASTER_VOLCANO" Language="en_US">
+      <Text>{1_Num} next to a volcano</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_DISASTER_FLOOD" Language="en_US">
+      <Text>{1_Num} on Floodplains without a Dam</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_SITES_DISASTER_LOWLAND" Language="en_US">
+      <Text>{1_Num} on Coastal Lowland</Text>
     </Replace>
     <Replace Tag="LOC_SDP_SITES_UNKNOWN_STRATEGIC" Language="en_US">
       <Text>Some strategic resources are not visible yet</Text>
@@ -704,6 +713,12 @@
     <Replace Tag="LOC_SDP_WORKED_TOOLTIP" Language="en_US">
       <Text>When on, the tiles the city will work that have no improvement also get an improvement tack (the one the tile value assumes). The districts stay where they are; there are just more tacks on the map. Not used when the Tiles weight is 0.</Text>
     </Replace>
+    <Replace Tag="LOC_SDP_HAZARD_SHORT" Language="en_US">
+      <Text>Avoid Disaster Tiles</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_HAZARD_TOOLTIP" Language="en_US">
+      <Text>When on, districts keep off tiles next to a volcano, Floodplains on a river without a Dam and Coastal Lowland without a Flood Barrier; when a city has no other tile, the district still goes there and the result marks it. Eruptions and floods only pillage districts, and their adjacency is back once repaired, so avoiding these tiles usually costs some adjacency.</Text>
+    </Replace>
     <Replace Tag="LOC_SDP_REMIND_PIN" Language="en_US">
       <Text>Don't chop: {1_Losses}</Text>
     </Replace>
@@ -730,6 +745,30 @@
     </Replace>
     <Replace Tag="LOC_SDP_RESULT_CLEAR_FIRST" Language="en_US">
       <Text>(clear or harvest the tile first)</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_HAZARD" Language="en_US">
+      <Text>(disaster: {1_Kinds})</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_HAZARD_VOLCANO_ACTIVE" Language="en_US">
+      <Text>next to an active volcano</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_HAZARD_VOLCANO_DORMANT" Language="en_US">
+      <Text>next to a dormant volcano</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_RESULT_HAZARD_FLOOD" Language="en_US">
+      <Text>Floodplains without a Dam</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_HAZARD_LINE_VOLCANO_ACTIVE" Language="en_US">
+      <Text>Next to an active volcano: an eruption may pillage this district and its buildings; once repaired, its adjacency is as before.</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_HAZARD_LINE_VOLCANO_DORMANT" Language="en_US">
+      <Text>Next to a dormant volcano: a dormant volcano can become active, and an eruption may then pillage this district and its buildings.</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_HAZARD_LINE_FLOOD" Language="en_US">
+      <Text>On Floodplains of a river without a Dam: a flood may pillage this district and its buildings.</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_HAZARD_LINE_LOWLAND" Language="en_US">
+      <Text>{1_Lowland}, and this city has no Flood Barrier yet: the sea floods the tile at {2_Stage} and later submerges it, and the district is lost with it.</Text>
     </Replace>
     <Replace Tag="LOC_SDP_RESULT_NEEDS_TECH" Language="en_US">
       <Text>(needs {1_Tech} first)</Text>
@@ -930,6 +969,9 @@
     </Replace>
     <Replace Tag="LOC_SDP_FOLD_REPLACE" Language="en_US">
       <Text>replace old tacks</Text>
+    </Replace>
+    <Replace Tag="LOC_SDP_FOLD_HAZARD" Language="en_US">
+      <Text>avoid disaster tiles</Text>
     </Replace>
     <Replace Tag="LOC_SDP_FOLD_WONDERS" Language="en_US">
       <Text>{1_N} {1_N: plural 1?wonder; other?wonders;}</Text>

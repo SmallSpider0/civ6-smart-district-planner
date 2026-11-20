@@ -72,6 +72,7 @@ REPO = os.path.dirname(TOOLS)
 sys.path.insert(0, TOOLS)
 import sdplock  # noqa: E402
 from remote import BASE as RUNS  # noqa: E402  the second machine's run folder, under its home
+from remote import env_path  # noqa: E402  the PATH remote.py gives its jobs there
 
 SHARED = sdplock.shared_dir()
 OUT = os.path.join(SHARED, "status", "out")
@@ -283,8 +284,10 @@ def macmini(now):
     host = sdplock.remote_host()
     if not host:
         raise RuntimeError("no second machine in the local config")
-    py = "/opt/homebrew/bin/python3" if "/opt/homebrew/bin" in (cfg.get("remote_path") or "") else "python3"
-    r = subprocess.run(["ssh", host, py, "-"], input=REMOTE_SCRIPT, capture_output=True, text=True, timeout=60)
+    # The same PATH as remote.py's jobs: a bare `python3` on a Mac without an
+    # accepted Xcode license is the Xcode stub, which prints a warning, not JSON.
+    r = subprocess.run(["ssh", host, "env PATH=%s:$PATH python3 -" % env_path()], input=REMOTE_SCRIPT,
+                       capture_output=True, text=True, timeout=60)
     data = json.loads(r.stdout)
     jobs, running, queued, recent, known = data["jobs"], [], [], [], set()
     for j in jobs:

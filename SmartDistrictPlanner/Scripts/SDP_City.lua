@@ -405,7 +405,9 @@ end
 --               before building, issue 52), KeepFeature (feature removal
 --               off: the FeatureType only a district or wonder that keeps
 --               it may go on, issue 293), RemoveTech
---               (the technology still needed to clear its feature, or nil) }
+--               (the technology still needed to clear its feature, or nil),
+--               Hazard (SDP_City.HazardAt for this city: an eruption, a flood
+--               or the sea can harm a district there; nil when safe, issue 360) }
 --   Excluded    { [plot index] = SDP_City.EXCLUDED reason } for the other plots in range
 --   Reach       { Start, Through, Reached, Swap } (see ReachSets)
 --   Built       districts placed in this city (complete or not): { Type, X, Y, Index, Complete }
@@ -462,6 +464,7 @@ function SDP_City.Scan(playerID, cityID, options)
     end
   end
   table.sort(scan.Built, ByIndex)
+  SDP_City.MarkHazards(scan)
   return scan
 end
 
@@ -502,6 +505,7 @@ function SDP_City.ScanSite(playerID, x, y, options)
       scan.Candidates[#scan.Candidates + 1] = entry
     end
   end
+  SDP_City.MarkHazards(scan)
   return scan
 end
 
@@ -855,4 +859,272 @@ function SDP_City.EmpireBuilt(playerID, districts)
     end
   end
   return status
+end
+
+-- ===========================================================================
+-- Disaster risk (issue 360, Gathering Storm): plots where an eruption, a
+-- river flood or the rising sea can pillage or drown a district. The
+-- judgement is the game's own (the warning icons of the placement lens,
+-- SettlerWarningIconManager: MapFeatureManager.CanSufferEruption,
+-- RiverManager.CanBeFlooded, TerrainManager.GetCoastalLowlandType and
+-- IsProtected), plus the protections the game applies and its icons leave
+-- out: a district or wonder that prevents floods on the river (the dam, the
+-- Great Bath; Districts_XP2 / Buildings_XP2.PreventsFloods), built or tacked,
+-- or planned with the plan (SDP_City.PlanHazards); a player trait that
+-- avoids every flood event (EFFECT_ADJUST_PLAYER_RANDOM_EVENT_AVOID); a
+-- governor promotion that prevents environmental damage in its city
+-- (EFFECT_ADJUST_PREVENT_STRUCTURAL_DAMAGE). Each kind counts only when the
+-- rules have its events (RandomEvents.EffectOperatorType VOLCANO /
+-- FLOODPLAIN, CoastalLowlands) and the game has the manager: other rule
+-- sets have no disasters. Wonders are never harmed (only districts are).
+-- ===========================================================================
+local function Flag(v) return v == true or v == 1 end
+
+local function Rows(name)
+  local t = GameInfo[name]
+  if t == nil then return function() return nil end end
+  return t()
+end
+
+local function EffectOf(modifierId)
+  local modifier = GameInfo.Modifiers ~= nil and GameInfo.Modifiers[modifierId] or nil
+  if modifier == nil or GameInfo.DynamicModifiers == nil then return nil end
+  local dynamic = GameInfo.DynamicModifiers[modifier.ModifierType]
+  return dynamic and dynamic.EffectType or nil
+end
+
+local m_hazardRules, m_hazardRulesFor = nil, nil
+-- What the rules say (read once per GameInfo):
+--   Volcano, Flood, Lowland  whether the kind exists in this rule set
+--   FloodEvents   { [RandomEventType] = true } the flood events
+--   Guards        { [district or building type] = true } preventing floods
+--   ShieldPromotions  governor promotions (types) preventing environmental damage
+--   AvoidTraits   { [trait] = { [RandomEventType] = true } }
+function SDP_City.HazardRules()
+  if m_hazardRulesFor == GameInfo and m_hazardRules ~= nil then return m_hazardRules end
+  local rules = { FloodEvents = {}, Guards = {}, ShieldPromotions = {}, AvoidTraits = {} }
+  local volcano, flood = false, false
+  for row in Rows("RandomEvents") do
+    if row.EffectOperatorType == "VOLCANO" then volcano = true end
+    if row.EffectOperatorType == "FLOODPLAIN" then
+      flood = true
+      rules.FloodEvents[row.RandomEventType] = true
+    end
+  end
+  rules.Volcano = volcano and MapFeatureManager ~= nil and MapFeatureManager.CanSufferEruption ~= nil
+  rules.Flood = flood and RiverManager ~= nil and RiverManager.CanBeFlooded ~= nil
+    and RiverManager.GetRiverForFloodplain ~= nil
+  local lowland = false
+  for _ in Rows("CoastalLowlands") do lowland = true end
+  rules.Lowland = lowland and TerrainManager ~= nil and TerrainManager.GetCoastalLowlandType ~= nil
+  for row in Rows("Districts_XP2") do
+    if Flag(row.PreventsFloods) then rules.Guards[row.DistrictType] = true end
+  end
+  for row in Rows("Buildings_XP2") do
+    if Flag(row.PreventsFloods) then rules.Guards[row.BuildingType] = true end
+  end
+  for row in Rows("GovernorPromotionModifiers") do
+    if EffectOf(row.ModifierId) == "EFFECT_ADJUST_PREVENT_STRUCTURAL_DAMAGE" then
+      rules.ShieldPromotions[#rules.ShieldPromotions + 1] = row.GovernorPromotionType
+    end
+  end
+  table.sort(rules.ShieldPromotions)
+  local avoided = {}
+  for row in Rows("ModifierArguments") do
+    if row.Name == "RandomEventType" and EffectOf(row.ModifierId) == "EFFECT_ADJUST_PLAYER_RANDOM_EVENT_AVOID" then
+      avoided[row.ModifierId] = row.Value
+    end
+  end
+  for row in Rows("TraitModifiers") do
+    local event = avoided[row.ModifierId]
+    if event ~= nil then
+      rules.AvoidTraits[row.TraitType] = rules.AvoidTraits[row.TraitType] or {}
+      rules.AvoidTraits[row.TraitType][event] = true
+    end
+  end
+  rules.On = rules.Volcano or rules.Flood or rules.Lowland
+  m_hazardRules, m_hazardRulesFor = rules, GameInfo
+  return rules
+end
+
+function SDP_City.HazardsOn()
+  return SDP_City.HazardRules().On == true
+end
+
+-- Whether a city's governor has a promotion that keeps its districts from
+-- environmental damage (Liang's Reinforced Materials).
+local function Shielded(rules, playerID, cityID)
+  if cityID == nil or #rules.ShieldPromotions == 0 then return false end
+  local city = CityManager.GetCity(playerID, cityID)
+  if city == nil or city.GetAssignedGovernor == nil then return false end
+  local ok, governor = pcall(function() return city:GetAssignedGovernor() end)
+  if not ok or governor == nil or governor.HasPromotion == nil then return false end
+  if governor.IsEstablished ~= nil and not governor:IsEstablished() then return false end
+  for _, promotionType in ipairs(rules.ShieldPromotions) do
+    local row = GameInfo.GovernorPromotions ~= nil and GameInfo.GovernorPromotions[promotionType] or nil
+    if row ~= nil and governor:HasPromotion(row.Hash) then return true end
+  end
+  return false
+end
+
+-- Whether the player's traits avoid every flood event (Egypt).
+local function FloodImmune(rules, playerID)
+  if MapTacks == nil or MapTacks.PlayerTraits == nil or next(rules.FloodEvents) == nil then return false end
+  local avoided = {}
+  for trait in pairs(MapTacks.PlayerTraits(playerID) or {}) do
+    for event in pairs(rules.AvoidTraits[trait] or {}) do avoided[event] = true end
+  end
+  for event in pairs(rules.FloodEvents) do
+    if not avoided[event] then return false end
+  end
+  return true
+end
+
+-- The river of a floodplain plot (-1: none, or not one that floods).
+function SDP_City.FloodRiver(x, y)
+  if RiverManager == nil or RiverManager.GetRiverForFloodplain == nil then return -1 end
+  return RiverManager.GetRiverForFloodplain(x, y) or -1
+end
+
+-- The guard (district or building type preventing floods) a plot holds,
+-- built: its district or its wonder.
+local function GuardOn(rules, plot)
+  local d = plot:GetDistrictType()
+  local row = d ~= -1 and GameInfo.Districts[d] or nil
+  if row ~= nil and rules.Guards[row.DistrictType] then return true end
+  local w = plot.GetWonderType ~= nil and plot:GetWonderType() or -1
+  row = (w ~= nil and w ~= -1) and GameInfo.Buildings[w] or nil
+  return row ~= nil and rules.Guards[row.BuildingType] == true
+end
+
+-- What decides a plot's risk for one city: the rules, the city's shield,
+-- the player's flood immunity, and the rivers guarded already (built or
+-- tacked; pins in `ignorePins`, { [pin ID] = true }, do not count).
+-- `cityID` nil: a planned city (no governor).
+function SDP_City.HazardContext(playerID, cityID, ignorePins)
+  local rules = SDP_City.HazardRules()
+  local ctx = { Rules = rules, On = rules.On, Rivers = {}, GuardedRivers = nil, PlayerID = playerID, Ignore = ignorePins }
+  if not rules.On then return ctx end
+  ctx.Shielded = Shielded(rules, playerID, cityID)
+  ctx.FloodImmune = rules.Flood and FloodImmune(rules, playerID)
+  return ctx
+end
+
+-- Rivers guarded by the player's tacks: { [river] = true } (read once per context).
+local function TackGuards(ctx)
+  if ctx.GuardedRivers ~= nil then return ctx.GuardedRivers end
+  local guarded = {}
+  if CreateMapPinSubject ~= nil and next(ctx.Rules.Guards) ~= nil then
+    local list = {}
+    for _, pin in pairs(PlayerConfigurations[ctx.PlayerID]:GetMapPins()) do list[#list + 1] = pin end
+    for _, pin in ipairs(list) do
+      if not (ctx.Ignore and ctx.Ignore[pin:GetID()]) then
+        local subject = CreateMapPinSubject(pin)
+        if subject ~= nil and ctx.Rules.Guards[subject.Key] then
+          local river = SDP_City.FloodRiver(pin:GetHexX(), pin:GetHexY())
+          if river ~= -1 then guarded[river] = true end
+        end
+      end
+    end
+  end
+  ctx.GuardedRivers = guarded
+  return guarded
+end
+
+-- Whether a river is guarded already: a built guard on its floodplains or a
+-- tacked one (cached per context).
+local function RiverGuarded(ctx, river)
+  local known = ctx.Rivers[river]
+  if known ~= nil then return known end
+  local guarded = TackGuards(ctx)[river] == true
+  if not guarded and RiverManager.GetFloodplainPlots ~= nil then
+    for _, index in ipairs(RiverManager.GetFloodplainPlots(river) or {}) do
+      local plot = Map.GetPlotByIndex(index)
+      if plot ~= nil and GuardOn(ctx.Rules, plot) then
+        guarded = true
+        break
+      end
+    end
+  end
+  ctx.Rivers[river] = guarded
+  return guarded
+end
+
+-- The risk of a district on `plot` for the context's city, or nil (safe):
+--   { Volcano = "ACTIVE" | "DORMANT" (next to a volcano: an eruption can
+--     pillage it), Flood = river (an unguarded floodplain), Lowland = the
+--     CoastalLowlands index (coastal lowland without a flood barrier) }
+-- with at least one field set.
+function SDP_City.HazardAt(ctx, plot)
+  if not ctx.On or ctx.Shielded or plot == nil then return nil end
+  local rules, hazard = ctx.Rules, nil
+  if rules.Volcano and MapFeatureManager.CanSufferEruption(plot) then
+    local active = false
+    if MapFeatureManager.IsActiveVolcano ~= nil then
+      for _, adjacent in ipairs(Map.GetAdjacentPlots(plot:GetX(), plot:GetY())) do
+        if adjacent ~= nil and MapFeatureManager.IsActiveVolcano(adjacent) then active = true end
+      end
+    end
+    hazard = { Volcano = active and "ACTIVE" or "DORMANT" }
+  end
+  if rules.Flood and not ctx.FloodImmune and RiverManager.CanBeFlooded(plot) then
+    local river = SDP_City.FloodRiver(plot:GetX(), plot:GetY())
+    if river ~= -1 and not RiverGuarded(ctx, river) then
+      hazard = hazard or {}
+      hazard.Flood = river
+    end
+  end
+  if rules.Lowland then
+    local lowland = TerrainManager.GetCoastalLowlandType(plot)
+    if lowland ~= nil and lowland ~= -1
+        and not (TerrainManager.IsProtected ~= nil and TerrainManager.IsProtected(plot) == true) then
+      hazard = hazard or {}
+      hazard.Lowland = lowland
+    end
+  end
+  return hazard
+end
+
+-- Set entry.Hazard on each candidate of a scan (nil when safe), for the
+-- scan's city. Returns the context.
+function SDP_City.MarkHazards(scan)
+  local ctx = SDP_City.HazardContext(scan.PlayerID, scan.CityID, scan.Ignored)
+  if not ctx.On then return ctx end
+  for _, c in ipairs(scan.Candidates) do c.Hazard = SDP_City.HazardAt(ctx, Map.GetPlotByIndex(c.Index)) end
+  return ctx
+end
+
+-- Whether a hazard is only a flood on a river the plan guards itself.
+function SDP_City.HazardWaived(hazard, guardedRivers)
+  return hazard ~= nil and hazard.Volcano == nil and hazard.Lowland == nil and hazard.Flood ~= nil
+    and guardedRivers[hazard.Flood] == true
+end
+
+-- The rivers the plan's own entries guard: { [river] = true }. `plan`:
+-- { { Type, X, Y } } (districts and wonders).
+function SDP_City.PlanGuards(plan)
+  local rules, guarded = SDP_City.HazardRules(), {}
+  for _, p in ipairs(plan) do
+    if rules.Guards[p.Type] then
+      local river = SDP_City.FloodRiver(p.X, p.Y)
+      if river ~= -1 then guarded[river] = true end
+    end
+  end
+  return guarded
+end
+
+-- Each district entry of a plan keeps the hazard of its plot (`hazardOf(p)`
+-- gives the candidate's), less a flood the plan's own dam or Great Bath on
+-- that river prevents. Wonders get none. Sets p.Hazard.
+function SDP_City.PlanHazards(plan, hazardOf)
+  local guarded = SDP_City.PlanGuards(plan)
+  for _, p in ipairs(plan) do
+    local hazard = nil
+    if (p.Kind or "DISTRICT") == "DISTRICT" then hazard = hazardOf(p) end
+    if SDP_City.HazardWaived(hazard, guarded) then hazard = nil end
+    if hazard ~= nil and hazard.Flood ~= nil and guarded[hazard.Flood] then
+      hazard = { Volcano = hazard.Volcano, Lowland = hazard.Lowland }
+    end
+    p.Hazard = hazard
+  end
 end
