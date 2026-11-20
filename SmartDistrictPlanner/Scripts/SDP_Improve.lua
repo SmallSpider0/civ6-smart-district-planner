@@ -721,8 +721,8 @@ end
 -- A plan entry of Assign for a result: { Type, X, Y, Index, Clear, Harvest,
 -- Unowned, Yields (the tile's once built: what it gives now, less its
 -- feature when cleared and its resource when harvested, plus the
--- improvement's own with the bonuses the player has and what the districts
--- around give it) }. `placedAt` as for Around.
+-- improvement's own with the bonuses the player has, what the districts
+-- around give it and the player's trait yields then, issue 361) }. `placedAt` as for Around.
 function Model:Entry(item, placedAt)
   local plot = Map.GetPlotByIndex(item.Index)
   local yields = {}
@@ -744,6 +744,10 @@ function Model:Entry(item, placedAt)
     end
   end
   for yieldType, n in pairs(SDP_Improve.TakeYields(self.Rules, item.Type, self:Around(item.Index, placedAt))) do
+    yields[yieldType] = (yields[yieldType] or 0) + n
+  end
+  -- The player's trait yields on the plot once built (issue 361).
+  for yieldType, n in pairs(SDP_Land.TraitChange(plot, self.Ctx, item.Clear, item.Harvest, item.Type)) do
     yields[yieldType] = (yields[yieldType] or 0) + n
   end
   for yieldType, n in pairs(yields) do

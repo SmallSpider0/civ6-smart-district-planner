@@ -18,6 +18,7 @@
 --   f  grassland woods  j  plains rainforest  s  grassland marsh
 --   O  desert oasis     N  natural wonder (impassable)
 --   F  desert floodplains
+--   t  tundra (only with spec.traitPlotYields)
 
 local World = {}
 
@@ -378,7 +379,7 @@ local TERRAIN_CHARS = {
   d = { "TERRAIN_DESERT" }, M = { "TERRAIN_GRASS_MOUNTAIN" }, ["~"] = { "TERRAIN_COAST" }, o = { "TERRAIN_OCEAN" },
   f = { "TERRAIN_GRASS", "FEATURE_FOREST" }, j = { "TERRAIN_PLAINS", "FEATURE_JUNGLE" }, s = { "TERRAIN_GRASS", "FEATURE_MARSH" },
   O = { "TERRAIN_DESERT", "FEATURE_OASIS" }, N = { "TERRAIN_GRASS", "FEATURE_NW_TEST" },
-  F = { "TERRAIN_DESERT", "FEATURE_FLOODPLAINS" },
+  F = { "TERRAIN_DESERT", "FEATURE_FLOODPLAINS" }, t = { "TERRAIN_TUNDRA" },
 }
 
 local function XY(spec)
@@ -662,6 +663,111 @@ function World.New(spec)
       { RequirementId = "TEST_REQUIRES_NEXT_TO_HOLY_SITE", Name = "DistrictType", Value = "DISTRICT_HOLY_SITE" },
     })
   end
+  -- Plot-yield traits (issue 361), on request with spec.traitPlotYields:
+  -- tundra (1 food) and test traits written as the game's are, modifiers
+  -- of EFFECT_ADJUST_PLOT_YIELD on the player's plots and
+  -- EFFECT_ADJUST_IMPROVEMENT_VALID_TERRAIN (players have them when
+  -- spec.traits lists them):
+  --   TRAIT_TEST_TUNDRA       tundra +1 production, +1 faith
+  --   TRAIT_TEST_MINE         mines +4 gold -1 production (one modifier)
+  --   TRAIT_TEST_WOODS        woods without an improvement +1 production
+  --   TRAIT_TEST_TUNDRA_FARM  farms on tundra, which give +2 food there,
+  --                           +1 more with Conservation (a civic)
+  --   TRAIT_TEST_UNKNOWN      tundra +5 science when its appeal is high (a
+  --                           requirement the planner does not read; never
+  --                           met here)
+  -- The engine part: Plot:GetYield adds them on the plots player 0 owns
+  -- only, as the game does (COLLECTION_PLAYER_PLOT_YIELDS).
+  local traitPlotYields = {}
+  if spec.traitPlotYields then
+    local function Rows(tbl)
+      local list = {}
+      if tbl ~= nil then for row in tbl() do list[#list + 1] = row end end
+      return list
+    end
+    local function Add(name, key, extra)
+      local list = Rows(gi[name])
+      for _, row in ipairs(extra) do list[#list + 1] = row end
+      gi[name] = Table(list, key)
+    end
+    Add("Terrains", "TerrainType", {
+      { TerrainType = "TERRAIN_TUNDRA", Name = "LOC_TERRAIN_TUNDRA", Yields = Yields(1) },
+    })
+    local defs = {
+      { Id = "TEST_TUNDRA_PRODUCTION", Trait = "TRAIT_TEST_TUNDRA", Yield = "YIELD_PRODUCTION", Amount = "1",
+        Reqs = { { "REQUIREMENT_PLOT_TERRAIN_TYPE_MATCHES", "TerrainType", "TERRAIN_TUNDRA" } } },
+      { Id = "TEST_TUNDRA_FAITH", Trait = "TRAIT_TEST_TUNDRA", Yield = "YIELD_FAITH", Amount = "1",
+        Reqs = { { "REQUIREMENT_PLOT_TERRAIN_TYPE_MATCHES", "TerrainType", "TERRAIN_TUNDRA" } } },
+      { Id = "TEST_MINE_GOLD", Trait = "TRAIT_TEST_MINE", Yield = "YIELD_GOLD, YIELD_PRODUCTION", Amount = "4, -1",
+        Reqs = { { "REQUIREMENT_PLOT_IMPROVEMENT_TYPE_MATCHES", "ImprovementType", "IMPROVEMENT_MINE" } } },
+      { Id = "TEST_WOODS_PRODUCTION", Trait = "TRAIT_TEST_WOODS", Yield = "YIELD_PRODUCTION", Amount = "1",
+        Reqs = { { "REQUIREMENT_PLOT_FEATURE_TYPE_MATCHES", "FeatureType", "FEATURE_FOREST" },
+          { "REQUIREMENT_PLOT_HAS_ANY_IMPROVEMENT", nil, nil, true } } },
+      { Id = "TEST_TUNDRA_FARM_FOOD", Trait = "TRAIT_TEST_TUNDRA_FARM", Yield = "YIELD_FOOD", Amount = "2",
+        Reqs = { { "REQUIREMENT_PLOT_IMPROVEMENT_TYPE_MATCHES", "ImprovementType", "IMPROVEMENT_FARM" },
+          { "REQUIREMENT_PLOT_TERRAIN_TYPE_MATCHES", "TerrainType", "TERRAIN_TUNDRA" } } },
+      { Id = "TEST_TUNDRA_FARM_LATE", Trait = "TRAIT_TEST_TUNDRA_FARM", Yield = "YIELD_FOOD", Amount = "1",
+        Reqs = { { "REQUIREMENT_PLOT_IMPROVEMENT_TYPE_MATCHES", "ImprovementType", "IMPROVEMENT_FARM" },
+          { "REQUIREMENT_PLAYER_HAS_CIVIC", "CivicType", "CIVIC_CONSERVATION" } } },
+      { Id = "TEST_TUNDRA_APPEAL", Trait = "TRAIT_TEST_UNKNOWN", Yield = "YIELD_SCIENCE", Amount = "5",
+        Reqs = { { "REQUIREMENT_PLOT_TERRAIN_TYPE_MATCHES", "TerrainType", "TERRAIN_TUNDRA" },
+          { "REQUIREMENT_PLOT_IS_APPEAL_BETWEEN", "MinimumAppeal", "4" } } },
+    }
+    local traitRows, modifiers, arguments, sets, setRows, reqs, reqArgs = {}, {}, {}, {}, {}, {}, {}
+    for _, d in ipairs(defs) do
+      traitRows[#traitRows + 1] = { TraitType = d.Trait, ModifierId = d.Id }
+      modifiers[#modifiers + 1] = { ModifierId = d.Id, ModifierType = "MODIFIER_PLAYER_ADJUST_PLOT_YIELD_TEST361",
+        SubjectRequirementSetId = d.Id .. "_REQUIREMENTS" }
+      arguments[#arguments + 1] = { ModifierId = d.Id, Name = "YieldType", Value = d.Yield }
+      arguments[#arguments + 1] = { ModifierId = d.Id, Name = "Amount", Value = d.Amount }
+      sets[#sets + 1] = { RequirementSetId = d.Id .. "_REQUIREMENTS", RequirementSetType = "REQUIREMENTSET_TEST_ALL" }
+      for k, r in ipairs(d.Reqs) do
+        local id = d.Id .. "_REQ" .. k
+        setRows[#setRows + 1] = { RequirementSetId = d.Id .. "_REQUIREMENTS", RequirementId = id }
+        reqs[#reqs + 1] = { RequirementId = id, RequirementType = r[1], Inverse = r[4] == true }
+        if r[2] ~= nil then reqArgs[#reqArgs + 1] = { RequirementId = id, Name = r[2], Value = r[3] } end
+      end
+    end
+    traitRows[#traitRows + 1] = { TraitType = "TRAIT_TEST_TUNDRA_FARM", ModifierId = "TEST_TUNDRA_FARMS" }
+    modifiers[#modifiers + 1] = { ModifierId = "TEST_TUNDRA_FARMS", ModifierType = "MODIFIER_PLAYER_CITIES_ADJUST_IMPROVEMENT_VALID_TERRAIN_TEST361" }
+    arguments[#arguments + 1] = { ModifierId = "TEST_TUNDRA_FARMS", Name = "ImprovementType", Value = "IMPROVEMENT_FARM" }
+    arguments[#arguments + 1] = { ModifierId = "TEST_TUNDRA_FARMS", Name = "TerrainType", Value = "TERRAIN_TUNDRA" }
+    Add("TraitModifiers", nil, traitRows)
+    Add("Modifiers", "ModifierId", modifiers)
+    Add("ModifierArguments", nil, arguments)
+    Add("DynamicModifiers", "ModifierType", {
+      { ModifierType = "MODIFIER_PLAYER_ADJUST_PLOT_YIELD_TEST361", CollectionType = "COLLECTION_PLAYER_PLOT_YIELDS",
+        EffectType = "EFFECT_ADJUST_PLOT_YIELD" },
+      { ModifierType = "MODIFIER_PLAYER_CITIES_ADJUST_IMPROVEMENT_VALID_TERRAIN_TEST361", CollectionType = "COLLECTION_PLAYER_CITIES",
+        EffectType = "EFFECT_ADJUST_IMPROVEMENT_VALID_TERRAIN" },
+    })
+    Add("RequirementSets", "RequirementSetId", sets)
+    Add("RequirementSetRequirements", nil, setRows)
+    Add("Requirements", "RequirementId", reqs)
+    Add("RequirementArguments", nil, reqArgs)
+    -- The engine's side, written apart from the rows above.
+    local function Has(t)
+      for _, have in ipairs(spec.traits or {}) do
+        if have == t then return true end
+      end
+      return false
+    end
+    local function Is(plot, terrain) return plot.terrain.TerrainType == terrain end
+    local function Improved(plot, t) return plot.improvement ~= nil and plot.improvement.ImprovementType == t end
+    local function HasCivic(c) for _, have in ipairs(spec.civics or {}) do if have == c then return true end end return false end
+    local engine = {
+      { "TRAIT_TEST_TUNDRA", function(p) return Is(p, "TERRAIN_TUNDRA") end, { YIELD_PRODUCTION = 1, YIELD_FAITH = 1 } },
+      { "TRAIT_TEST_MINE", function(p) return Improved(p, "IMPROVEMENT_MINE") end, { YIELD_GOLD = 4, YIELD_PRODUCTION = -1 } },
+      { "TRAIT_TEST_WOODS", function(p) return p.feature ~= nil and p.feature.FeatureType == "FEATURE_FOREST" and p.improvement == nil end,
+        { YIELD_PRODUCTION = 1 } },
+      { "TRAIT_TEST_TUNDRA_FARM", function(p) return Improved(p, "IMPROVEMENT_FARM") and Is(p, "TERRAIN_TUNDRA") end, { YIELD_FOOD = 2 } },
+      { "TRAIT_TEST_TUNDRA_FARM", function(p) return Improved(p, "IMPROVEMENT_FARM") and HasCivic("CIVIC_CONSERVATION") end, { YIELD_FOOD = 1 } },
+    }
+    for _, e in ipairs(engine) do
+      if Has(e[1]) then traitPlotYields[#traitPlotYields + 1] = { Test = e[2], Yields = e[3] } end
+    end
+  end
+
   local rows = spec.rows
   local height, width = #rows, #rows[1]
   w.Width, w.Height = width, height
@@ -746,6 +852,11 @@ function World.New(spec)
     local total = self.terrain.Yields[yieldType]
     if self.feature ~= nil then total = total + self.feature.Yields[yieldType] end
     if self.resource ~= nil then total = total + self.resource.Yields[yieldType] end
+    if self.owner == 0 then
+      for _, t in ipairs(traitPlotYields) do
+        if t.Test(self) then total = total + (t.Yields[yieldType] or 0) end
+      end
+    end
     return total
   end
 
