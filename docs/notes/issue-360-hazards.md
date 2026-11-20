@@ -119,4 +119,23 @@ python3 -I tests/compare/hazard360.py logs/remote/haz360.jsonl
 
 - 离线：`tests/offline/spec_hazards.lua` 11 项（假世界 `world.lua` 的 `spec.disasters`），面板经 `HazardCheck:Toggle()`、`MultiHazardCheck`；相关的 10 个 spec 共 154 项在第二台机器上通过。
 - 游戏内：`tests/test_hazards.lua` 5 项。风云变幻固定测试图（首都 18,38）：35 个候选格，火山旁 0、泛滥平原 6、海岸低地 3，每格与游戏接口一致；开关打开后放下的区域数不变，危险格上的区域 1→0，加成 5→3。同局 test_panel、test_sites、test_solver、test_multi、test_settings、test_rules 都通过。
+- 原版规则集（同一张固定图，首都 49,31）：test_hazards 第一项通过（没有灾害规则、开关那一行隐藏，开关打开也不给任何格记风险），其余 4 项按设计跳过；test_panel、test_settings、test_sites、test_solver 通过（test_sites 要先揭示地图，`game.py newgame` 那次在建城后被顾问弹窗卡住、没有揭示，补跑 `reveal_area.lua` 后 11 项全过）。
 - 没在游戏里验证的：梁的“加固材料”、大浴场、活跃火山（测试图首都旁没有火山）、建好的堤坝（都只有离线测试）。
+
+### 离线对比：开关打开（变体 `STANDARD_SAFE`）
+
+`tests/compare/cmp_sdp.lua` 的 `_SAFE` 后缀让请求带 `AvoidHazards`。真实场景（R 组 61 个，风云变幻，第二台机器）：
+
+```
+python3 -I tools/remote.py run h360-safe-real2 --remote-only --slots 2 -- node tools/compare.mjs -s '^R[SMCP][0-9]' -p sdp \
+  --only sdp:STANDARD,sdp:STANDARD_SAFE --add sdp:STANDARD_SAFE -j 2 --out logs/remote/h360-safe-real.jsonl
+```
+
+| 变体 | 裁判总加成 | 放下的区域 | 放不下的 | 落在危险格上的区域（不算已由堤坝保护的） |
+|---|---|---|---|---|
+| STANDARD | 1030 | 254 | 4 | 17（10 个场景：火山旁 1、泛滥平原 6、海岸低地 10） |
+| STANDARD_SAFE | 1012 | 254 | 4 | 9（3 个场景：泛滥平原 6、海岸低地 3） |
+
+- 8 个场景的方案变了，这些场景的加成合计 184 → 166（−18，−9.8%）；放下的区域数一个不少，放不下的仍是那 4 个港口（`no_plot`），没有别的违规；本模组自报的加成都等于裁判的。
+- 剩下的 9 个在 RC14、RS14（乌得勒支）、RM05：城里能放这些区域的格几乎都是泛滥平原或低地（第 4 节 HAZF 在这里少放 2 个），开关照样放下并标出。
+- 第 4 节说“泛滥平原 21 个”是按地貌数的，没看堤坝：这些场景里多数泛滥平原所在的河已经建了堤坝（荷兰几座城），按游戏的规则不会被淹。所以第 4 节高估了避开泛滥平原的代价；这里的判断与游戏一致（看建好的堤坝、堤坝钉和方案里的堤坝）。
