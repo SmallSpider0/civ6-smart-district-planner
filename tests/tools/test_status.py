@@ -245,6 +245,36 @@ class Workshop(unittest.TestCase):
         self.assertEqual((s["values"]["subscribers"], s["at"], s["failed"]), (None, "", sync.hm(1793803000)))
 
 
+class MacMini(unittest.TestCase):
+    """The second machine's card runs python3 with remote.py's PATH, not a bare
+    `python3` (on a Mac without an accepted Xcode license that is the stub)."""
+
+    def run_card(self, cfg):
+        seen = []
+
+        def fake_run(cmd, **kw):
+            seen.append(cmd)
+            return types.SimpleNamespace(stdout=json.dumps({"jobs": [], "ps": "", "now": 0}), returncode=0, stderr="")
+
+        with mock.patch.object(sync, "config", return_value=cfg), \
+                mock.patch.object(sync.sdplock, "remote_host", return_value="mini"), \
+                mock.patch.object(sync.sdplock, "local_config", return_value=cfg), \
+                mock.patch.dict(os.environ, {"SDP_REMOTE_PATH": ""}), \
+                mock.patch.object(sync.subprocess, "run", side_effect=fake_run):
+            card = sync.macmini(0)
+        self.assertEqual(card["running"], [])
+        return " ".join(seen[0][2:])
+
+    def test_default_path_without_remote_path(self):
+        cmd = self.run_card({})
+        self.assertIn("PATH=/opt/homebrew/bin:/usr/local/bin:$PATH", cmd)
+        self.assertTrue(cmd.endswith("python3 -"))
+
+    def test_configured_path(self):
+        cmd = self.run_card({"remote_path": "/usr/local/bin"})
+        self.assertIn("PATH=/usr/local/bin:$PATH", cmd)
+
+
 class Private(unittest.TestCase):
     def test_generic_patterns(self):
         for s in ("/Users/someone/x", "/home/someone", "/private/tmp/x", "/var/lib/x", "/etc/hosts",
