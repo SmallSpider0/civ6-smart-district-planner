@@ -27,3 +27,7 @@
 
 - 离线 `tests/offline/spec_traits.lua`：假世界的测试特性（`spec.traitPlotYields`，世界的 `GetYield` 只给本方的格加，模仿游戏）：冻土、矿山（一条修正两项产出带空格）、未改良森林、冻土农场 + 市政条件、未知需求类型；城址分、改良钉产出、城市中心钉生产力。7 项在旧代码上都失败。
 - 游戏内 `tests/test_traits.lua`：见上，按玩家自己的修正判断，不写死文明。俄罗斯（风云变幻）：24 格，本方 1 格、领土外 2 格有特性产出，通过；同时跑 test_land、test_sites、test_improve、test_pillaged、test_multi，28 项全过。印加（`LEADER_PACHACUTI`，风云变幻）：30 格，本方 1 格、领土外 6 格有特性产出（山脉），test_traits、test_land、test_sites 15 项全过。马里（`LEADER_MANSA_MUSA`）：特性只在矿山上，地图上没有矿山，test_traits、test_land、test_sites、test_improve 18 项全过（矿山那部分只有离线测试）。罗马、原版规则集：42 格都等于规则库的产出，test_traits、test_land 4 项全过。
+
+## 离线对比（开发集）
+
+`node tools/compare.mjs -s '^[SM]\d\d-[^~]*$' -p sdp -j 6`（Mac mini，352 次，72c3744）：自报加成 = 裁判的，违规只有 `missing` 且都没有可放的格。和 `main`（6d2bceb，同样跑 `--only sdp:STANDARD_LAND`，84 次）比：81 个方案不变，变的 3 个都是有地块特性的文明：M11 俄罗斯（加成 40 → 40）、S15 俄罗斯中期（11 → 12）、S21 玛雅后期（19 → 19）；没有变低的。离线对比的模拟游戏不给本方格特性产出，裁判的地块也不算，所以这几个场景的地块一侧和游戏不一样（已知差异，没改模拟）。
