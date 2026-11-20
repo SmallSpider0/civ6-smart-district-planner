@@ -1,9 +1,10 @@
-"""Offline tests of tools/game.py's check that the mod is ticked (pitfall 45).
+"""Offline tests of tools/game.py: the check that the mod is ticked (pitfall 45), new games.
 
     python3 -I -m unittest discover -s tests/tools -v
 """
 import os
 import sys
+import types
 import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "tools"))
@@ -42,3 +43,32 @@ class ModEnabledTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class NewGameTest(unittest.TestCase):
+    def test_capital_closes_queued_popups_before_founding(self):
+        # The base game's advisor popup holds the event queue: the found-city
+        # request waits behind it until the capital times out (#373).
+        events = []
+        saved = {name: getattr(game, name) for name in
+                 ("has_state", "wait_for", "check_mod_enabled", "exec_lua", "close_popups")}
+
+        def exec_lua(state, code, **kw):
+            if "FOUND_CITY" in code:
+                events.append("found")
+            return {"ok": True, "output": ["true"]}
+
+        game.has_state = lambda name: name == "MainMenu"
+        game.wait_for = lambda label, check, timeout, interval=3.0: check() or True
+        game.check_mod_enabled = lambda: True
+        game.exec_lua = exec_lua
+        game.close_popups = lambda rounds=20: events.append("close") or True
+        args = types.SimpleNamespace(timeout=5, ruleset="RULESET_STANDARD", random=False, leader="LEADER_TRAJAN",
+                                     seed=1, state="SDP_Panel", capital=True, reveal=False)
+        try:
+            self.assertEqual(game.start_game(args), 0)
+        finally:
+            for name, value in saved.items():
+                setattr(game, name, value)
+        self.assertIn("found", events)
+        self.assertIn("close", events[:events.index("found")])

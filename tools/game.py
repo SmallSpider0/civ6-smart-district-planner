@@ -383,6 +383,9 @@ def start_game(args):
         return 2
     exec_lua("InGame", MUTE)  # again: loading a game may reapply the saved volume
     if args.capital:
+        # A queued popup (the base game's turn-1 advisor) holds the event
+        # queue, and the settler's found-city request waits behind it (#373).
+        close_popups()
         with open(FOUND_CAPITAL, encoding="utf-8") as fh:
             resp = exec_lua("InGame", fh.read())
         print("\n".join(resp.get("output") or []) or resp.get("error"))
