@@ -47,6 +47,7 @@ local NOT_USED = {
     WORKED = "the map places no improvements",
     TIER = "the map evaluates every plot; there is no search to tune",
     WONDERS = "the map shows one district; wonders are for Solve",
+    AVOID_HAZARDS = "the map ranks plots by adjacency alone; disaster risk is for Solve",
   },
 }
 
@@ -108,9 +109,11 @@ local MAP = {
 }
 -- City 2 owns plots two rings out that city 1 can swap over (the swap
 -- switch), and improvements give an Industrial Zone adjacency (the
--- improvement switches).
+-- improvement switches), and an active volcano between the cities gives the
+-- avoid-disaster-tiles switch plots at risk (issue 360).
 World.New({
   rows = MAP, rivers = { "6,4", "7,4", "7,5", "12,7", "13,7" }, improvementRules = true, improveAdjacency = true,
+  disasters = { volcanoes = { { 6, 6, true } } },
   cities = {
     { id = 1, x = 4, y = 5, population = 6, capital = true, radius = 1 },
     { id = 2, x = 8, y = 5, population = 4, radius = 2 },
@@ -617,7 +620,7 @@ end)
 -- against the single-city tab's search); each is here with its neutral
 -- value, or in HEAT_ANY with why its value does not matter. The in-game test
 -- (tests/test_features.lua, "the good-places map") sets the same ones.
-local HEAT_NEUTRAL = { LAND = 0, DISTANCE = 0, HOUSING = 0, COVERAGE = 0, IMPROVE = false, WORKED = false }
+local HEAT_NEUTRAL = { LAND = 0, DISTANCE = 0, HOUSING = 0, COVERAGE = 0, IMPROVE = false, WORKED = false, AVOID_HAZARDS = false }
 local HEAT_ANY = {
   TIER = "one district alone: every tier finds its best plot",
   WONDERS = "none chosen: the comparison is one district",
