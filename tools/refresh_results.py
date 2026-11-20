@@ -14,9 +14,11 @@ down, violations other than "no legal tile" that are new, and rows where
 the gain this mod reports (stats.sdpGain) is not the judge's, or the new
 coverage it reports (stats.sdpCovered, coverage weight above 0) is not the
 judge's coverageGain (#350). Exit 1 when a gain went down, a violation is new
-or a reported gain or coverage is not the judge's.
+or a reported gain or coverage is not the judge's; also when a run errored (no
+plan or no judge's score) or a stored row got no new one (#369).
 
-A --check of the development set that ran to the end writes CHECK_STAMP
+A --check of the development set that ran to the end, with no errored or
+missing run, writes CHECK_STAMP
 (tests/compare/results/check_stamp.json): a digest of the files the plans
 depend on (SOLVED_BY: the solver and legality scripts, the comparison harness,
 its scenes and the stored rows) and what the check found. Commit it with the
@@ -29,7 +31,8 @@ tools/compare.mjs on exactly their scenarios; the new rows replace the old
 ones in place (other planners' rows stay as they are); then every row is
 rejudged with the current judge (--rejudge), and cross-scored again when the
 file has cross scores (--crossscore with the same scorers). The file is
-replaced only when all of that worked and no row was lost. Work files go to
+replaced only when all of that worked and no row was lost; a rerun with an
+errored or missing run stops before it. Work files go to
 logs/refresh/. Heavy: run it on the second machine when there is one
 (tools/remote.py), and say in the PR which files and this command.
 """
@@ -116,8 +119,15 @@ def write_stamp(found, root=None, path=None):
 
 
 def failed(found):
-    """A check found a fault: a lower gain, a new violation or a reported gain or coverage not the judge's."""
-    return bool(found.get("lower") or found.get("new_violations") or found.get("mismatched"))
+    """A check found a fault: a lower gain, a new violation, a reported gain or coverage not the judge's, or a
+    run that errored or is missing (#369)."""
+    return bool(found.get("lower") or found.get("new_violations") or found.get("mismatched")
+                or found.get("errored") or found.get("missing"))
+
+
+def incomplete(found):
+    """Some runs errored or are missing: the check did not check them, so it is no check to stamp (#369)."""
+    return bool(found.get("errored") or found.get("missing"))
 
 
 def stamp_exit(stamp):
@@ -167,18 +177,57 @@ def reported_coverage(row):
     return ((row.get("plan") or {}).get("stats") or {}).get("sdpCovered")
 
 
-def check(path, new):
+def run_error(row):
+    """Why a rerun row has no judged plan (compare.mjs writes a row with `error` and exits 0), or None."""
+    if row.get("error"):
+        return str(row["error"])
+    if row.get("judgeError"):
+        return "judge: " + str(row["judgeError"])
+    if not row.get("score"):
+        return "no judge's score"
+    return None
+
+
+def stored(path):
+    """This mod's stored rows of `path`: {(scenario, planner, variant): row}."""
     old = {}
     for l in open(path, encoding="utf-8"):
         if l.strip():
             r = json.loads(l)
             if r["planner"] == "sdp":
                 old[(r["scenario"], "sdp", r.get("variant") or "")] = r
+    return old
+
+
+def faults(old, new):
+    """(errored, missing): rerun rows that have no judged plan, as [(key, why)], and keys of the stored rows
+    that got no rerun row (a worker that crashed writes none), sorted (#369)."""
+    errored = [(k, run_error(r)) for k, r in sorted(new.items()) if k in old and run_error(r)]
+    return errored, sorted(k for k in old if k not in new)
+
+
+def print_faults(name, errored, missing):
+    if not errored and not missing:
+        return
+    print("%s: %d runs errored, %d missing (not checked)" % (name, len(errored), len(missing)))
+    for k, why in errored[:10]:
+        print("  ERROR %s %s: %s" % (k[0], k[2], why.split("\n")[0][:160]))
+    if len(errored) > 10:
+        print("  ... and %d more errored" % (len(errored) - 10))
+    for k in missing[:10]:
+        print("  MISSING %s %s" % (k[0], k[2]))
+    if len(missing) > 10:
+        print("  ... and %d more missing" % (len(missing) - 10))
+
+
+def check(path, new):
+    old = stored(path)
+    errored, missing = faults(old, new)
     same = changed = up = 0
     down, fresh, mismatched = [], [], []
     for k, r in sorted(new.items()):
         o = old.get(k)
-        if o is None:
+        if o is None or run_error(r):
             continue
         g0, g1 = gain(o), gain(r)
         # The plan also carries timing stats: compare where things go only.
@@ -213,8 +262,9 @@ def check(path, new):
     for k, own, judged in mismatched:
         what = " coverage" if k[3:] else ""
         print("  REPORTED%s %s %s: this mod %s, the judge %s" % (what, k[0], k[2], own, judged))
+    print_faults(os.path.basename(path), errored, missing)
     return {"rows": len(new), "changed": changed, "higher": up, "lower": len(down), "new_violations": len(fresh),
-            "mismatched": len(mismatched)}
+            "mismatched": len(mismatched), "errored": len(errored), "missing": len(missing)}
 
 
 def rerun(path, jobs):
@@ -240,6 +290,10 @@ def rerun(path, jobs):
 
 def refresh(path, jobs):
     rows, new = rerun(path, jobs)
+    errored, missing = faults(stored(path), new)
+    if errored or missing:
+        print_faults(os.path.basename(path), errored, missing)
+        raise SystemExit("%s: %d runs errored, %d missing: the file is left as it was" % (path, len(errored), len(missing)))
     merged, replaced = [], 0
     for r in rows:
         k = (r["scenario"], r["planner"], r.get("variant") or "")
@@ -299,8 +353,12 @@ def main():
             found = check(os.path.abspath(path), new)
             for key, value in found.items():
                 total[key] = total.get(key, 0) + value
-        # The stamp covers the whole development set: written only when every file of it was checked.
-        if not args.files and total.get("rows"):
+        # The stamp covers the whole development set: written only when every file of it was checked, and
+        # every run of it gave a judged plan (#369: 340 errored runs passed and were stamped).
+        if incomplete(total):
+            print("refresh_results: FAILED: %d runs errored, %d missing; no check stamp written"
+                  % (total.get("errored", 0), total.get("missing", 0)))
+        elif not args.files and total.get("rows"):
             write_stamp(total)
             print("refresh_results: wrote %s (commit it with the PR)" % os.path.relpath(CHECK_STAMP, ROOT))
         return 1 if failed(total) else 0

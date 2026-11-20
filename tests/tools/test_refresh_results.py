@@ -1,6 +1,7 @@
 """Offline tests of tools/refresh_results.py's check stamp (#302): the release's development-set check is
 skipped when nothing the plans depend on changed since a PR ran it; and of the check itself (#327: both
-files of the development set, the gain this mod reports against the judge's; #350: the new coverage too).
+files of the development set, the gain this mod reports against the judge's; #350: the new coverage too;
+#369: errored and missing runs fail it).
 
     python3 -I -m unittest discover -s tests/tools -p test_refresh_results.py
 """
@@ -93,7 +94,7 @@ class Stamp(unittest.TestCase):
         self.put("SmartDistrictPlanner/Scripts/SDP_Solver.lua", "solver changed")
         self.assertIsNone(rr.unchanged_since_check())
 
-    def run_main(self, argv, reported=None, covered=None):
+    def run_main(self, argv, reported=None, covered=None, broken=None):
         calls = []
         old_argv, old_rerun = sys.argv, rr.rerun
         sys.argv = ["refresh_results.py"] + argv
@@ -107,6 +108,13 @@ class Stamp(unittest.TestCase):
             if covered is not None:
                 row["plan"] = {"stats": {"sdpGain": 3, "sdpCovered": covered[0]}}
                 row["score"]["coverageGain"] = covered[1]
+            if broken == "error":  # what compare.mjs writes for a Lua error, exiting 0
+                row = {"scenario": "S01", "planner": "sdp", "variant": variant,
+                       "error": "cmp_lib.lua:12: attempt to call global 'serialize' (a nil value)"}
+            elif broken == "judge":
+                row = {"scenario": "S01", "planner": "sdp", "variant": variant, "plan": {}, "judgeError": "boom"}
+            elif broken == "missing":
+                return [], {}
             return [], {("S01", "sdp", variant): row}
         rr.rerun = rerun
         self.addCleanup(setattr, rr, "WORK", rr.WORK)
@@ -167,6 +175,44 @@ class Stamp(unittest.TestCase):
         self.assertIn("skipped", out)
         rr.write_stamp({"rows": 270, "lower": 0, "new_violations": 2})
         self.assertEqual(self.run_main(["--check", "--if-changed"])[0], 1)
+
+    def test_errored_or_missing_runs_fail_and_stamp_nothing(self):
+        """#369: all 340 runs failed with a Lua error, yet the check reported nothing lower, exited 0 and stamped."""
+        self.patch_dev(os.path.join(self.root, "tests", "compare", "results", "full_rejudged.jsonl"))
+        for broken, word in (("error", "ERROR S01 PANEL: cmp_lib.lua:12"), ("judge", "ERROR S01 PANEL: judge: boom"),
+                             ("missing", "MISSING S01 PANEL")):
+            code, calls, out = self.run_main(["--check"], broken=broken)
+            self.assertEqual((code, len(calls)), (1, 2), out)
+            self.assertIn(word, out)
+            self.assertIn("2 runs errored, 0 missing" if broken != "missing" else "0 runs errored, 2 missing", out)
+            self.assertIsNone(rr.read_stamp(), "an incomplete check writes no stamp")
+            code, calls, _ = self.run_main(["--check", "--if-changed"], broken=broken)
+            self.assertEqual((code, len(calls)), (1, 2), "nothing stamped: the release check runs and fails")
+        # A good check stamps; a later broken one leaves that stamp alone and still exits 1.
+        self.assertEqual(self.run_main(["--check"])[0], 0)
+        before = rr.read_stamp()
+        self.assertEqual(self.run_main(["--check"], broken="error")[0], 1)
+        self.assertEqual(rr.read_stamp(), before)
+        self.assertEqual(rr.stamp_exit({"rows": 2, "errored": 1}), 1)
+
+    def test_a_refresh_with_errored_runs_keeps_the_file(self):
+        """Rerunning a result file does not write errored rows into it (#369)."""
+        dev = os.path.join(self.root, "tests", "compare", "results", "full_rejudged.jsonl")
+        with open(dev, encoding="utf-8") as fh:
+            text = fh.read()
+        old_rerun, old_compare = rr.rerun, rr.compare
+        self.addCleanup(setattr, rr, "rerun", old_rerun)
+        self.addCleanup(setattr, rr, "compare", old_compare)
+        rr.compare = lambda args, jobs: self.fail("no rejudge after an errored rerun")
+        rr.rerun = lambda path, jobs: ([], {("S01", "sdp", ""): {"scenario": "S01", "planner": "sdp", "error": "x"}})
+        with contextlib.redirect_stdout(io.StringIO()), self.assertRaises(SystemExit) as stop:
+            rr.refresh(dev, 1)
+        self.assertIn("1 runs errored, 0 missing", str(stop.exception.code))
+        rr.rerun = lambda path, jobs: ([], {})
+        with contextlib.redirect_stdout(io.StringIO()), self.assertRaises(SystemExit):
+            rr.refresh(dev, 1)
+        with open(dev, encoding="utf-8") as fh:
+            self.assertEqual(fh.read(), text)
 
     def patch_dev(self, dev):
         self.addCleanup(setattr, rr, "DEV_SET", rr.DEV_SET)
