@@ -193,6 +193,16 @@ def branch_worktree(repo, branch):
     return None
 
 
+FALLBACK_IDENT = ("pr_wait.py", "pr_wait@users.noreply.github.com")
+
+
+def ident_args(repo):
+    """-c options naming a committer when git has none (a machine with no git identity), else []."""
+    if git(repo, "var", "GIT_COMMITTER_IDENT", check=False).returncode == 0:
+        return []
+    return ["-c", "user.name=%s" % FALLBACK_IDENT[0], "-c", "user.email=%s" % FALLBACK_IDENT[1]]
+
+
 def merge_main(repo, branch, head, remote="origin", base="main"):
     """Merge remote/base into branch when every conflict only adds lines; push. (done, text)."""
     own = branch_worktree(repo, branch)
@@ -208,8 +218,9 @@ def merge_main(repo, branch, head, remote="origin", base="main"):
     work = os.path.join(tmp, "wt")
     try:
         git(repo, "worktree", "add", "-q", "--detach", work, head)
-        merged = git(work, "-c", "merge.conflictStyle=diff3", "merge", "--no-ff", "--no-edit",
-                     "%s/%s" % (remote, base), check=False)
+        who = ident_args(work)
+        merged = git(work, *(who + ["-c", "merge.conflictStyle=diff3", "merge", "--no-ff", "--no-edit",
+                     "%s/%s" % (remote, base)]), check=False)
         if merged.returncode == 0:
             return False, "no conflict with %s/%s here" % (remote, base)
         stages = {}
@@ -234,9 +245,9 @@ def merge_main(repo, branch, head, remote="origin", base="main"):
             with open(path, "w", encoding="utf-8", newline="") as f:
                 f.write(fixed)
             git(work, "add", "--", name)
-        git(work, "commit", "-q", "--no-edit", "-m",
+        git(work, *(who + ["commit", "-q", "--no-edit", "-m",
             "Merge %s/%s into %s\n\nBoth sides only added lines in %s; pr_wait.py kept both, %s's first."
-            % (remote, base, branch, ", ".join(sorted(stages)), base))
+            % (remote, base, branch, ", ".join(sorted(stages)), base)]))
         new = git(work, "rev-parse", "HEAD").stdout.strip()
         git(work, "push", "-q", remote, "HEAD:refs/heads/" + branch)
     finally:

@@ -12,6 +12,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "tools"))
 import codex_review as cr  # noqa: E402
@@ -608,6 +609,21 @@ class MergeMain(unittest.TestCase):
         parents = run(self.repo, "log", "-1", "--format=%P", "origin/mac/x").split()
         self.assertEqual(parents, [head, run(self.repo, "rev-parse", "origin/main")])
         self.assertEqual(len(run(self.repo, "worktree", "list").splitlines()), 1)  # temporary worktree gone
+
+    def test_a_machine_without_a_git_identity_still_merges(self):
+        head = self.diverge(self.BASE.replace("- one\n", "- one\n- from main\n"),
+                            self.BASE.replace("- one\n", "- one\n- from branch\n"))
+        run(self.repo, "config", "--unset", "user.name")
+        run(self.repo, "config", "--unset", "user.email")
+        run(self.repo, "config", "user.useConfigOnly", "true")  # no guessing from the host name
+        home = os.path.join(self.tmp, "home")
+        os.mkdir(home)
+        env = {k: v for k, v in os.environ.items() if not k.startswith(("GIT_AUTHOR_", "GIT_COMMITTER_", "EMAIL"))}
+        env.update(HOME=home, XDG_CONFIG_HOME=home, GIT_CONFIG_NOSYSTEM="1")
+        with mock.patch.dict(os.environ, env, clear=True):
+            done, text = pr_wait.merge_main(self.repo, "mac/x", head)
+        self.assertTrue(done, text)
+        self.assertEqual(run(self.repo, "log", "-1", "--format=%cn", "origin/mac/x"), pr_wait.FALLBACK_IDENT[0])
 
     def test_a_changed_line_is_left_for_a_person(self):
         head = self.diverge(self.BASE.replace("- one\n", "- one, from main\n"),
