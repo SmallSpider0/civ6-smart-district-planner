@@ -668,7 +668,7 @@ python3 -I tools/status/watch.py --service            # 交给服务管理常驻
 - 不认识的词和选项一律打印用法、以退出码 2 退出，什么都不建（以前第一个词被当成输出目录，`sync.py list` 在仓库里建出了 `list/`）。输出目录只能用 `--out DIR` 指定。
 - 手写的部分在事情发生的同一步写：要决定的事提出或定了、调研这类任务开始或结束。回答进度问题前先看一遍页面。
 
-- **推送**：`ssh <push_host> status.json` 或 `ssh <push_host> index.html`，文件从标准输入传过去；服务器上那把钥匙只该能写这两个文件。内容（不算时间戳）变了或满 10 分钟才推 `status.json`，`page.html` 变了才推 `index.html`。没配 `push_host` 时只打包、检查，不推送，CI 和合作者也能跑。
+- **推送**：`ssh <push_host> status.json` 或 `ssh <push_host> index.html`，文件从标准输入传过去；服务器上那把钥匙只该能写这两个文件。内容（不算时间戳）变了或满 10 分钟才推 `status.json`，`page.html` 变了才推 `index.html`。没配 `push_host` 时只打包、检查，不推送，CI 和合作者也能跑。会话所在的机器连不上服务器时，`push_host` 可以是经第二台机器转发的 ssh 别名（`~/.ssh/config` 里写 `ProxyCommand ssh <第二台机器> nc %h %p`）。
 - **私人信息检查**：推送前在 `status.json` 里找本机和服务器路径（`/Users/`、`/home/`、`/private/`、`/var/`、`/etc/`）、`.ssh`、IP、邮箱，以及本机配置里的 `private_words`、`push_host`、`page_host`。找到任何一个就不推，退出码 4。仓库是公开的，账号名、主机名、地址、页面路径都只写在本机配置里。
 - **后台循环**：`watch.py` 只在出问题时退出（每种问题报一次）：连续 3 次推送失败、有私人信息、某台机器用的格子超过上限、游戏锁被占超过 2 小时、页面证书验证不过或不到 2 天到期（配了 `page_host` 时每小时查一次）。启动它的会话收到后转告主会话，再把循环开起来。新的自动内容加进 `sync.py`，不另开后台脚本。
 - **本机配置**：`~/.config/sdp/local.json`（见上文 sdplock.py）里的 `status` 一项，每项都可省：
