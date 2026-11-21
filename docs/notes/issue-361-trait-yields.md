@@ -5,7 +5,7 @@
 ## 游戏怎么给
 
 - 特性里改地块产出的是 `EFFECT_ADJUST_PLOT_YIELD`，作用对象 `COLLECTION_PLAYER_PLOT_YIELDS`：只给本方拥有的格。
-- **游戏内实测**（2026-11-20，XZC，风云变幻，`game.py newgame --leader LEADER_PETER_GREAT`，首都 (18, 38)）：首都 4 环内 24 个没有资源、改良、区域的陆地格，每格 6 项产出都等于规则库的地形、地貌产出（`Terrain_YieldChanges`、`Feature_YieldChanges`）加上本方的格的特性产出：本方的冻土（如 (19, 38)、(17, 39) 冻土森林）多 +1 生产力 +1 信仰值，领土外的冻土丘陵 (15, 39) 没有。即领土外格子的 `GetYield` 不含特性产出，Issue 里待确认的一点成立。
+- **游戏内实测**（2026-11-20，第二台机器，风云变幻，`game.py newgame --leader LEADER_PETER_GREAT`，首都 (18, 38)）：首都 4 环内 24 个没有资源、改良、区域的陆地格，每格 6 项产出都等于规则库的地形、地貌产出（`Terrain_YieldChanges`、`Feature_YieldChanges`）加上本方的格的特性产出：本方的冻土（如 (19, 38)、(17, 39) 冻土森林）多 +1 生产力 +1 信仰值，领土外的冻土丘陵 (15, 39) 没有。即领土外格子的 `GetYield` 不含特性产出，Issue 里待确认的一点成立。
 - 用 `WorldBuilder.CityManager():SetPlotOwner` 把格子给首都后，当回合 `GetYield` 不加特性产出（核心和界面状态都不加，等几秒也不加）；在这格上用 `ImprovementBuilder` 建矿山，界面状态等一帧后有矿山的 +1，仍没有特性的 +1 信仰。所以游戏内测试不改归属，按地图现状对照规则库（`tests/test_traits.lua`）。
 
 ## 做法

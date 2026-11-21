@@ -64,12 +64,19 @@
 - 游戏窗口（Metal，标题 `Civilization VI (1920x1080 @ 174%)`）不向辅助功能暴露窗口。computer-use 截图可用（先 `app_release` 释放后台锁），**点击被工具的安全校验拒绝**（"Could not verify which document this window is editing"）。需要操作游戏时优先用 civ6tuner 在对应 Lua 状态里直接调用（如 `Mods` 状态的 `Modding.*`）。
 - 真实点击用 `tools/realclick.py`：`tools/click/sdp-click.swift` 编译成 `~/Applications/SDPClick.app`，发系统鼠标事件（CGEvent），要用户在"系统设置 → 隐私与安全性 → 辅助功能"里授权一次。用法见 [tools/README.md](../tools/README.md)。
 - 截图：先用 `open -W -n -g ~/Applications/SDPClick.app --args window --out 文件` 取游戏窗口位置，再用 computer-use 的 `zoom` 只截窗口内部（文档里的截图不带 macOS 菜单栏、标题栏和 Dock）。
-- 长时间无人值守跑测试时，用 `caffeinate -dims -t 秒数` 防止锁屏，跑完停掉。
+- 防锁屏见 sdp-game-test“Before”第 1 步；经 ssh 时见下一节。
+
+## 经 ssh 用这台 Mac
+
+会话在别的机器上、这台 Mac 当第二台机器或游戏所在的机器时（AGENTS.md 第 6 节“会话在没有游戏的机器上”），经 ssh 用它有这些坑（2026-11-20 搭好时遇到）：
+
+- **隐私保护的文件夹**：ssh 里读不了 `~/Documents`、`~/Desktop`、`~/Downloads` 这类受 macOS 隐私保护（TCC）的文件夹。游戏这边的检出（本机配置的 `game_tree`，默认 `~/sdp-game`）和 `~/sdp-runs/` 都放在它们之外。
+- **python3**：没同意 Xcode 许可时 `/usr/bin/python3` 是一个只会报错的占位程序。工具在这台机器上用 Homebrew 的 python3 和 node：会话那边本机配置的 `remote_path` 放到 PATH 前面（tools/README.md“remote.py”）；手动经 ssh 运行时也先把它放进 PATH。
+- **gh**：`gh` 默认把令牌存在钥匙串里，ssh 里读不到。在这台机器上用 `gh auth login --insecure-storage` 登录一次，`release.py workshop` 里的 `gh release download` 才能用。
+- **辅助功能**：经 ssh 按启动器的“开始”、用 SDPClick 点击，要在“系统设置 → 隐私与安全性 → 辅助功能”里授权给 `sshd-keygen-wrapper`（SDPClick 自己也要授权）。ssh 里没有 computer-use，`game.py launch` 之后这样按启动器：`osascript -e 'tell application "System Events" to tell (first process whose bundle identifier is "com.aspyr.civ6.steam") to click (first button of window 1 whose name is "开始")'`。
+- **防锁屏**：`caffeinate` 在这台机器上用 `nohup` 起（如 `nohup caffeinate -dimsu >/dev/null 2>&1 &`），不靠 ssh 连接活着。
+- **连接会断**：超过两分钟的命令用 `nohup … > 日志 2>&1 &` 放后台，再用短的 ssh 看日志和退出码，断了重连接着查（原因见 AGENTS.md 第 6 节）；`remote.py run`、`wait` 自己就是这样做的。
 
 ## 本机的测试 mod 组
 
 本机共启用 165/166 个 mod。2026-10-19 在 `Mods.sqlite` 新建并选中 **"SDP 测试"** 组（`ModGroupRowId=2`）：官方内容沿用默认组状态（39 启用、Tutorial 禁用），创意工坊仅启用 DMT。账号新得到的 DLC 算官方内容，在这个组里自动是启用的（2026-11-07 查过，没有改 `Mods.sqlite`）。默认组（`ModGroupRowId=1`）同时启用了 AMT，切回默认组就会两个规划器同开（坑 20）。
-
-（2026-10-22 起换了 Steam 账号，创意工坊只订阅 DMT，下面这段 TopPanel Extension 的情况已不存在。）
-
-2026-10-20 下午本机订阅了 TopPanel Extension（创意工坊 2997927787），它在"SDP 测试"组里是启用的。它只改顶栏，不碰地图钉；自动回合以观察者观察时它的 `RefreshFood` 会反复报运行错误（它自己的问题）。要停用它需在游戏关闭时改 `Mods.sqlite`，先问用户。

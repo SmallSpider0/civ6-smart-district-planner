@@ -24,6 +24,7 @@ First `python3 -I tools/sdplock.py status`: the game lock, the heavy job on this
 The tools choose the machine; do not choose it yourself (how they choose: tools/README.md "remote.py" and "sdplock.py"):
 
 - `node tools/offline_tests.mjs [FILE...]` and `node tools/compare.mjs ...` started by hand register and place themselves (short ones run here, long ones wait for their place and print the output). Run them from the worktree's root so a long one can go to the second machine.
+- A machine whose local config sets the workers to 0 (`workers_day`, `workers_night`) runs no tests or jobs at all, short ones included: everything goes to the second machine (#365). A machine without the game has broken `reference/` links; `remote.py sync` links the second machine's own copies instead (#367), so a compare started from such a machine runs on the second machine with those copies.
 - A job you start in the background, or anything else heavy (refreshes, `--check`, oracle runs, experiments): `remote.py run`. Never start jobs on the second machine by hand.
 - Only both machines on one job (splitting the scenes, rerunning only missing rows; only when the maintainer says so, docs/maintaining.md §5) or a job that needs this machine's files outside the worktree uses `python3 -I tools/sdplock.py heavy NAME -- CMD` directly. A job that was paused while the game lock was held says so at the end: its timing fields are not usable.
 

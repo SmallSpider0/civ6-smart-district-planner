@@ -167,7 +167,7 @@ include("dmt_yieldcalculator");       -- 尾部会执行 DMT_Initialize()，见�
 
 ## 6. 开发环境与工作流
 
-开发在 macOS 和 Windows 两台机器上进行。**开工前读当前平台的环境说明**：macOS 见 [docs/dev-macos.md](docs/dev-macos.md)，Windows 见 [docs/dev-windows.md](docs/dev-windows.md)。其他规则在哪见第 8 节。
+开发在 macOS 和 Windows 两台机器上进行；会话也可以在没有游戏的机器上（见下文“并行会话”）。**开工前读当前平台的环境说明**：macOS 见 [docs/dev-macos.md](docs/dev-macos.md)，Windows 见 [docs/dev-windows.md](docs/dev-windows.md)。其他规则在哪见第 8 节。
 
 **两个平台共用**
 - 工具：`node`（`cd tools && npm ci` 装 luaparse、fengari）、Python 3.8 以上、`git`；`xmllint` 可选。文档里的命令写作 `python3 -I`，Windows 上换成 `py -3 -I`。
@@ -175,7 +175,8 @@ include("dmt_yieldcalculator");       -- 尾部会执行 DMT_Initialize()，见�
 - **参考源码**：`python3 -I tools/setup_reference.py` 在 `reference/` 下建链接（`dmt`、`amt`、`ep`、`base-ui`、`dlc`；macOS 是符号链接，Windows 是目录联接），已 gitignore。**写任何 UI/引擎调用前先在这些源码中找先例**。`include("MapTacks")` 来自**游戏本体** `Base/Assets/UI/MapTacks.lua`，不是 DMT。
 - **FireTuner**：`AppOptions.txt` 里设 `EnableTuner 1` 后，游戏在 127.0.0.1:4318 监听，同一时间只接受一个客户端（开着官方 FireTuner 时本项目的工具连不上）。[tools/civ6tuner.py](tools/civ6tuner.py) `serve` 常驻收集全部 Lua 输出到 `logs/tuner-lua.log`，`exec -s <状态> <代码>` 在游戏内执行 Lua 并返回输出与错误。`AppOptions.txt` 为 CRLF 换行，编辑时保留 `\r`。**副作用：Tuner 开启时游戏不解锁 Steam 成就。**
 - **改 `AppOptions.txt`、`Mods.sqlite` 时游戏必须关闭，并先问用户。**
-- **并行会话**：每个会话在自己的工作树里（`tools/worktree.py add`）。游戏、Tuner、Mods 文件夹由 `tools/sdplock.py` 的游戏锁管：碰游戏的工具自己拿锁，别的工作树拿着时以退出码 4 停下。吃 CPU 的活由工具选机器（第二台机器、本机重活或排队），代理不自己判断。开始碰游戏或吃 CPU 的事之前先 `python3 -I tools/sdplock.py status`。占屏幕的步骤进共用的夜间队列。和机器有关的数值（worker 数、夜间时段、第二台机器）写在本机配置 `~/.config/sdp/local.json`，不进仓库。命令见 [tools/README.md](tools/README.md)“sdplock.py”“remote.py”，步骤见 sdp-game-test、sdp-offline-runs。
+- **并行会话**：每个会话在自己的工作树里（`tools/worktree.py add`）。游戏、Tuner、Mods 文件夹由 `tools/sdplock.py` 的游戏锁管：碰游戏的工具自己拿锁，别的工作树拿着时以退出码 4 停下。吃 CPU 的活由工具选机器（第二台机器、本机重活或排队），代理不自己判断。开始碰游戏或吃 CPU 的事之前先 `python3 -I tools/sdplock.py status`。占屏幕的步骤进共用的夜间队列。和机器有关的数值（worker 数、夜间时段、第二台机器、游戏所在的机器）写在本机配置 `~/.config/sdp/local.json`，不进仓库；worker 数写 0 的机器不跑任何测试和重活（#365）。命令见 [tools/README.md](tools/README.md)“sdplock.py”“remote.py”，步骤见 sdp-game-test、sdp-offline-runs。
+  - **会话在没有游戏的机器上**（2026-11-20，#362）：本机配置写了 `game_host`、`game_tree` 时，游戏、游戏锁和夜间队列都在那台机器上，`sdplock.py queue` 自己经 ssh 去那边。游戏内测试照常排进夜间队列，由跑队列的子 agent 在那台机器的 `game_tree` 检出里用同样的工具跑；别的会话和子 agent 只调工具，不自己 ssh 过去跑测试。经隧道的 ssh 连接会被定时切断（2026-11-20 实测约 147 秒，空闲、保活、持续输出都一样）：在那台机器上超过两分钟的命令用 `nohup` 放后台写日志，再用短的 ssh 查。经 ssh 用 Mac 的坑见 [docs/dev-macos.md](docs/dev-macos.md)“经 ssh 用这台 Mac”。
 - **游戏 Lua 运行时（2026-10-19 在主菜单与对局内各状态实测，[tests/test_environment.lua](tests/test_environment.lua) 持续检查）**：
   - 以下为 nil，[tools/luacheck.mjs](tools/luacheck.mjs) 会报错：`_G`、`load`、`require`、`dofile`、`module`、`setfenv`、`getfenv`、`debug`、`utf8`、`bit`、`bit32`、`table.unpack`、`table.getn`。可用 `loadstring`、`unpack`、`include`。
   - 游戏 Lua 为 HavokScript（`_VERSION` = `2013.2.0 r13768`）。游戏本体和 DMT 源码里有它的扩展语法（类型标注 `function f(x:number)`、`hstructure`），我们的代码**不用**，保持纯 Lua 5.1。
