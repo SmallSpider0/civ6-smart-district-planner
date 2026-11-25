@@ -509,6 +509,91 @@ function SDP_City.ScanSite(playerID, x, y, options)
   return scan
 end
 
+-- The sides a canal on `plot` can join, by direction: water (coast, ocean or
+-- lake), a city center, or a canal already built. `extra` adds what a plan
+-- puts next to it (a city center pin). A river is not a side: the game does
+-- not count one (measured 2026-11-25, tests/bench/probe_canal.lua).
+function SDP_City.CanalSides(plot, extra)
+  local sides = {}
+  if plot == nil then return sides end
+  for direction = 0, DirectionTypes.NUM_DIRECTION_TYPES - 1 do
+    local n = Map.GetAdjacentPlot(plot:GetX(), plot:GetY(), direction)
+    if n ~= nil then
+      local joins = n:IsWater() or n:IsCity()
+      if not joins then
+        local index = n:GetDistrictType()
+        if index ~= nil and index ~= -1 then
+          local row = GameInfo.Districts[index]
+          joins = row ~= nil and SDP_Rules.IsCanal(row.DistrictType)
+        end
+      end
+      if joins then sides[direction] = true end
+    end
+  end
+  for direction in pairs(extra or {}) do sides[direction] = true end
+  return sides
+end
+
+-- Whether two of those sides make the passage the game accepts: straight
+-- through (the sides three apart, the four others land) or a 60 degree bend
+-- (two apart, the side between them land, and at least one land side outside
+-- the bend: a corner cut in open water joins nothing). This is the engine's
+-- rule, fitted against CityManager.GetOperationTargets on 208 plots
+-- (docs/notes/issue-378-canal.md).
+function SDP_City.CanalSidesJoin(sides)
+  local count = DirectionTypes.NUM_DIRECTION_TYPES
+  for direction = 0, count - 1 do
+    if sides[direction] then
+      local opposite = (direction + 3) % count
+      if sides[opposite] then
+        local land = not (sides[(direction + 1) % count] or sides[(direction + 2) % count]
+          or sides[(direction + 4) % count] or sides[(direction + 5) % count])
+        if land then return true end
+      end
+      local bend = (direction + 2) % count
+      if sides[bend] and not sides[(direction + 1) % count]
+          and not (sides[(direction + 3) % count] and sides[(direction + 4) % count]
+            and sides[(direction + 5) % count]) then
+        return true
+      end
+      bend = (direction + count - 2) % count
+      if sides[bend] and not sides[(direction + count - 1) % count]
+          and not (sides[(direction + 1) % count] and sides[(direction + 2) % count]
+            and sides[(direction + 3) % count]) then
+        return true
+      end
+    end
+  end
+  return false
+end
+
+-- Whether the rules prove a canal on `plot` cannot join water: a canal type,
+-- on a terrain the rules list for it, on land, next to no built canal (two
+-- canals may not touch), with no two sides that make the passage the game
+-- accepts. What the rules leave open (no terrain rows, a water plot) is left
+-- to DMT, so the planner never refuses more than it can show. `sides` may
+-- carry a cached SDP_City.CanalSides(plot, ...).
+function SDP_City.CanalCannotLink(districtType, plot, sides)
+  if plot == nil or not SDP_Rules.IsCanal(districtType) then return false end
+  local terrains = SDP_Rules.ValidTerrains(districtType)
+  if terrains == nil then return false end
+  local terrain = GameInfo.Terrains[plot:GetTerrainType()]
+  if terrain == nil or not terrains[terrain.TerrainType] then return false end
+  if plot:IsWater() then return false end
+  for direction = 0, DirectionTypes.NUM_DIRECTION_TYPES - 1 do
+    local n = Map.GetAdjacentPlot(plot:GetX(), plot:GetY(), direction)
+    if n ~= nil then
+      local index = n:GetDistrictType()
+      if index ~= nil and index ~= -1 then
+        local row = GameInfo.Districts[index]
+        if row ~= nil and SDP_Rules.IsCanal(row.DistrictType) then return true end
+      end
+    end
+  end
+  if sides == nil then sides = SDP_City.CanalSides(plot) end
+  return not SDP_City.CanalSidesJoin(sides)
+end
+
 -- Plots the game itself refuses for a district in a city, on top of DMT's
 -- rules (docs/multicity-design.md section 18, item 3; AGENTS pitfall 27:
 -- DMT does not check that a canal connects water): the city's own plots

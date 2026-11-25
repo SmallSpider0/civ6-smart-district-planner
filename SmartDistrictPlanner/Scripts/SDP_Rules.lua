@@ -215,6 +215,38 @@ function SDP_Rules.AutoKind(districtType)
   return nil
 end
 
+-- Whether the rules call `districtType` a canal: Districts_XP2.Canal, the way
+-- PreventsFloods marks the dam (Gathering Storm only). The rule that a canal
+-- joins water is in the engine, not the database (pitfall 27): this only says
+-- which district to check, never where it may go.
+function SDP_Rules.IsCanal(districtType)
+  local xp2 = GameInfo.Districts_XP2 and GameInfo.Districts_XP2[districtType]
+  if xp2 == nil then return false end
+  return xp2.Canal == true or xp2.Canal == 1
+end
+
+-- Terrains a district may stand on (District_ValidTerrains): a set, or nil
+-- when the rules say nothing about this district (then the caller decides
+-- nothing on its own).
+local m_terrains, m_terrainsFor = nil, nil
+
+function SDP_Rules.ValidTerrains(districtType)
+  if m_terrains == nil or m_terrainsFor ~= GameInfo then
+    m_terrains, m_terrainsFor = {}, GameInfo
+    if GameInfo.District_ValidTerrains ~= nil then
+      for row in GameInfo.District_ValidTerrains() do
+        local set = m_terrains[row.DistrictType]
+        if set == nil then
+          set = {}
+          m_terrains[row.DistrictType] = set
+        end
+        set[row.TerrainType] = true
+      end
+    end
+  end
+  return m_terrains[districtType]
+end
+
 -- Features a district must stand on (District_RequiredFeatures): a set.
 function SDP_Rules.RequiredFeatures(districtType)
   local set = {}

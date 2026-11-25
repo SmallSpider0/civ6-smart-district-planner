@@ -55,7 +55,7 @@ local function Yields(f, p, g, s, c, r)
     YIELD_SCIENCE = s or 0, YIELD_CULTURE = c or 0, YIELD_FAITH = r or 0 }
 end
 
-local function BuildGameInfo()
+local function BuildGameInfo(spec)
   local gi = {}
   local yields = {}
   for _, y in ipairs(YIELDS) do yields[#yields + 1] = { YieldType = y, Name = "LOC_" .. y .. "_NAME" } end
@@ -123,6 +123,7 @@ local function BuildGameInfo()
     { TechnologyType = "TECH_IRRIGATION", Name = "LOC_TECH_IRRIGATION", EraType = "ERA_ANCIENT" },
     { TechnologyType = "TECH_MASONRY", Name = "LOC_TECH_MASONRY", EraType = "ERA_ANCIENT" },
     { TechnologyType = "TECH_ASTROLOGY", Name = "LOC_TECH_ASTROLOGY", EraType = "ERA_ANCIENT" },
+    { TechnologyType = "TECH_STEAM_POWER", Name = "LOC_TECH_STEAM_POWER", EraType = "ERA_INDUSTRIAL" },
   }, "TechnologyType")
   gi.Improvements = Table({
     { ImprovementType = "IMPROVEMENT_FARM", Name = "LOC_IMPROVEMENT_FARM_NAME", Housing = 1, TilesRequired = 2 },
@@ -145,7 +146,7 @@ local function BuildGameInfo()
     for k, v in pairs(extra or {}) do row[k] = v end
     return row
   end
-  gi.Districts = Table({
+  local districtRows = {
     District("DISTRICT_CITY_CENTER", { CityCenter = true }),
     District("DISTRICT_CAMPUS", { RequiresPopulation = true }),
     District("DISTRICT_HOLY_SITE", { RequiresPopulation = true, Appeal = 1 }),
@@ -171,7 +172,14 @@ local function BuildGameInfo()
       PrereqCivic = "CIVIC_MYSTICISM" }),
     District("DISTRICT_WATER_ENTERTAINMENT_COMPLEX", { RequiresPopulation = true, Coast = true, AdjacentToLand = true,
       Appeal = 1, Entertainment = 1 }),
-  }, "DistrictType")
+  }
+  -- Gathering Storm's canal, only for specs that ask (issue 378): it stands on
+  -- flat land and must join water, a rule the engine keeps in its DLL and DMT
+  -- does not check. Other specs keep the same rule rows as before.
+  if spec.canal then
+    districtRows[#districtRows + 1] = District("DISTRICT_CANAL", { PrereqTech = "TECH_STEAM_POWER" })
+  end
+  gi.Districts = Table(districtRows, "DistrictType")
   -- One city cannot have both (the game's MutuallyExclusiveDistricts).
   gi.MutuallyExclusiveDistricts = Table({
     { District = "DISTRICT_ENTERTAINMENT_COMPLEX", MutuallyExclusiveDistrict = "DISTRICT_WATER_ENTERTAINMENT_COMPLEX" },
@@ -200,8 +208,23 @@ local function BuildGameInfo()
   end
   gi.Adjacent_AppealYieldChanges = Table(tiles)
   -- Gathering Storm's extra district columns and required features (the dam).
-  gi.Districts_XP2 = Table({ { DistrictType = "DISTRICT_DAM", PreventsFloods = true, OnePerRiver = true } }, "DistrictType")
+  local xp2 = { { DistrictType = "DISTRICT_DAM", PreventsFloods = true, OnePerRiver = true } }
+  if spec.canal then
+    -- Districts_XP2.Canal marks the canal (the rule the planner reads instead
+    -- of its name, as PreventsFloods marks the dam).
+    xp2[#xp2 + 1] = { DistrictType = "DISTRICT_CANAL", Canal = 1 }
+  end
+  gi.Districts_XP2 = Table(xp2, "DistrictType")
   gi.District_RequiredFeatures = Table({ { DistrictType = "DISTRICT_DAM", FeatureType = "FEATURE_FLOODPLAINS" } })
+  if spec.canal then
+    -- The flat land a canal may stand on (District_ValidTerrains), hills
+    -- excluded; the water link is not in the rules (pitfall 27).
+    local terrains = {}
+    for _, t in ipairs({ "TERRAIN_GRASS", "TERRAIN_PLAINS", "TERRAIN_DESERT", "TERRAIN_TUNDRA" }) do
+      terrains[#terrains + 1] = { DistrictType = "DISTRICT_CANAL", TerrainType = t }
+    end
+    gi.District_ValidTerrains = Table(terrains)
+  end
   gi.DistrictReplaces = Table({
     { CivUniqueDistrictType = "DISTRICT_ACROPOLIS", ReplacesDistrictType = "DISTRICT_THEATER" },
     { CivUniqueDistrictType = "DISTRICT_COTHON", ReplacesDistrictType = "DISTRICT_HARBOR" },
@@ -392,7 +415,7 @@ end
 
 function World.New(spec)
   local w = { Calls = { GetBonusYields = 0, CanPlacePin = 0, ClearCache = 0 }, Turn = spec.turn or 1, Time = 0 }
-  local gi = BuildGameInfo()
+  local gi = BuildGameInfo(spec)
   w.GameInfo = gi
   -- Improvement rules (issue 52), on request: farms on grassland, plains and
   -- floodplains (+1 food), mines on hills (+1 production, +1 more with
