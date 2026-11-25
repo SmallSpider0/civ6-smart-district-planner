@@ -1,0 +1,9 @@
+Changes since v1.8.0:
+- Canals no longer go on tiles that cannot join water, also where the city has not bought the tile yet or Steam Power is not researched: a tile with no water, city center or built Canal beside it is left out of the plan.
+- Canal placement now follows the game’s own rule: one side has to be water (sea, ocean or lake) or a city center, and the other has to be on the opposite side or two edges around, with no water in between; a tile next to the city center alone, next to a river only, or with water on two adjoining sides no longer counts.
+- Two canals cannot touch: a plan will not put two canals side by side, and will not put one right next to a canal you already built. A city may build several canals, just not next to each other.
+
+自 v1.8.0 以来的变化：
+- 运河不再被放到接不上水的地方：城市还没买下、蒸汽动力还没研究的格也一样；周围没有水域、城中心或已有运河的格不再进方案。
+- 运河改按游戏的规则判：一边要有水（海、洋、湖）或城中心，另一边在正对面或斜对面，中间不能隔水；只挨着城中心、只挨着河、或水在两条相邻边上的，都不再算能建。
+- 两条运河不能挨着：方案里不会出现相邻的两条运河，也不会贴着你已经建好的运河。一城可以建多条，只是不能相邻。
