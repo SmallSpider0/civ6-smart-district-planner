@@ -419,7 +419,7 @@ details.appx[open] > summary { margin-bottom: 8px; }
     <li>Picking from the pool compares only the score (adjacency and Housing, plus land, coverage and distance when on); the yields of a district's buildings are not counted, so districts without adjacency, such as the Encampment and Aerodrome, are never picked from the pool; set them to Must when you want them.</li>
     <li>Reminder tacks are only for Woods and Rainforest next to the planned districts; features next to existing districts have nothing to do with this plan.</li>
     <li>City site scores are estimates: tiles, resources and district potential are judged from what is revealed now; the districts are planned exactly in the Several cities step.</li>
-    <li><b>Canals</b>: DMT does not check that a Canal connects water. On tiles the city owns, the engine check catches it; on tiles it does not own yet, the game gives no answer, so DMT decides there and a Canal that does not connect water is possible.</li>
+    <li><b>Canals</b>: tiles the city owns follow the engine's own list; where the game gives no answer (the tile is not bought yet, Steam Power is not researched) the game's rule is applied instead — two sides two or three edges apart, joining water (sea, ocean or lake), a city center or a built Canal, with land on the other sides of the passage; a river is not a side, and two canals may not touch.</li>
     <li><b>Shipwrecks</b>: DMT counts a shipwreck on water as a sea resource, so a Harbor next to one shows 1 Gold more than the game gives; this mod's bonus comes from DMT and counts it too. Shipwrecks become visible late, so the effect is small.</li>
     <li>Multiplayer has not been tested.</li>
   </ul>
