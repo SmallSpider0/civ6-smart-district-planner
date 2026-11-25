@@ -102,7 +102,7 @@ Only revealed tiles are considered; a tile whose 3 rings are mostly unrevealed i
 - Tile yields follow your civilization too: tile yields from your civilization's and leader's abilities (such as Russia's +1 Production and +1 Faith on Tundra, or Mali's +4 Gold on Mines) count on tiles your city does not own yet and on a new city's tiles, and those that need an improvement count with the improvement the plan assumes; rules such as Canada's Farms on Tundra count too. Tile yields from your pantheon and beliefs count only on tiles you own (the yields the game shows).
 - Map tacks already on the map are fixed: the planner never uses their tiles, and their bonuses count.
 - To plan a city again, undo its tacks or tick **Replace**.
-- On tiles a city owns, the game's own list of valid tiles is checked as well, so tiles the game refuses (such as a Canal that does not connect water) never enter a plan.
+- On tiles a city owns, the game's own list of valid tiles is checked as well, so tiles the game refuses (such as a Canal that does not connect water) never enter a plan. Tiles no city owns yet and districts not researched yet get no list from the game; a Canal on such a tile is left out when nothing next to it could join water (no water, city center or built Canal), while a river or unusual terrain still goes to DMT.
 - Tiles next to a City Center tack that is not a city yet, and that nobody owns, are left to that planned city: it takes them when it is founded, so no other city plans a district there.
 - The same game state and the same settings always give the same plan.
 

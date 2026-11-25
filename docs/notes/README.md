@@ -98,6 +98,7 @@
 | [issue-245-split-session.md](issue-245-split-session.md) | `SDP_Multi.NewSession` 拆成有名字的步骤（纯重构） | 现行 |
 | [issue-327-test-infra.md](issue-327-test-infra.md) | 测试基础设施：面板放回默认（每个游戏内测试文件和截图前）、页面装不下写日志并让测试失败、最矮窗口选项；离线的一帧工作量看门狗（上限的来由、最大规模用例的最长一帧）；面板设置和求解输入的对账表、三个页签的“继续优化”逐帧走完；开发集加面板默认设置一档（`PANEL`） | 现行 |
 | [issue-329-weekly-game-tests.md](issue-329-weekly-game-tests.md) | 每周一个规则集的整套游戏内测试：夜间队列里自己续排的一项，排哪一夜、规则集怎么轮、失败谁处理 | 现行 |
+| [issue-378-canal.md](issue-378-canal.md) | 运河被放到游戏不允许的格上：引擎只答"已解锁 + 已拥有"的格，规划期两类缺口；按 `Districts_XP2.Canal` + `District_ValidTerrains` 的保守判定（只排六邻无水域/城中心/运河的格），规划中的城中心钉算连通端；真实规则待游戏内探针标定 | 现行（第一步） |
 | [issue-331-frame-report.md](issue-331-frame-report.md) | 多城页全部奇观、全部区域必建时有几帧偏长：领土可达检查和集束搜索按实际循环步数向分帧报工作量；离线最长一帧和游戏内逐帧计时 | 现行 |
 | [issue-338-watch-label.md](issue-338-watch-label.md) | 监听把维护者或合作者新打的 `auto` 标签当作一件新事报出（之前只看评论）；状态里记看过的标签，升级后第一次把已有的记作看过 | 现行 |
 | [issue-345-pillaged-plots.md](issue-345-pillaged-plots.md) | 被掠夺的改良设施按修好后的产出算地块分（之前按掠夺后的产出，比能修农场的空地还低）；合作者存档里的复现和数字 | 现行 |

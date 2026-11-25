@@ -145,7 +145,7 @@ include("dmt_yieldcalculator");       -- 尾部会执行 DMT_Initialize()，见�
 | 24 | 自然奇观等弹窗占住事件队列，要调弹窗自己的 Close（`game.py popups --close`） |
 | 25 | DMT 的修正缓存（文明、领袖、信仰的相邻与放置规则）要自己建（`SDP_Overlay.RefreshModifiers`） |
 | 26 | DMT 的 `CanPlacePin` 不拦奢侈、战略资源：候选格自己排除不可采收的资源 |
-| 27 | DMT 不查运河是否连通水域：已拥有的格以引擎可建格为准（`SDP_City.EngineRefused`） |
+| 27 | DMT 不查运河是否连通水域：已拥有的格以引擎可建格为准（`SDP_City.EngineRefused`）；引擎没答案的格（未买下、未解锁）用本地保守规则（`SDP_City.CanalCannotLink`，只排六邻无水域/城中心/运河的格） |
 | 28 | DMT 把沉船等任何水面资源算作海洋资源，引擎不算（已知差异，不改） |
 | 29 | 放置图层不管传什么颜色都画绿：分色借政体透镜图层，`LensLayerOn` 时重画 |
 | 30 | 写错的 `Controls.<ID>` 运行到那一行才报错：validate.py 检查每个 ID 都在 XML 里 |

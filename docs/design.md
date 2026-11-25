@@ -156,7 +156,7 @@ SDP_Panel (UI/SDP_Panel.lua，InGame 上下文，Lua 状态名 SDP_Panel)
 ## 第 18 节吸收的功能（2026-10-20，离线与游戏内已验证）
 
 - **多城逐城清单与模板**（第 1、2 项，`SDP_PageMulti`）：请求的 `Plans[参与者 Key]` 覆盖共用清单。全帝国限量的区域（市政广场）放在要它的城里参与者顺序最靠前的那座（城址在前，按城市列表从上到下），其余的城记“已达帝国上限”，候选名额加一（第 28 号问题）；所以只写进一座城的清单就等于锁定在这座城。模板 `SDP_Rules.Templates`：对五种产出，列出本玩家有相邻规则产出它的可规划区域（`District_Adjacencies` + `Adjacency_YieldChanges`，按特性排除的行不算），不硬编码。
-- **引擎可建格复核**（第 3 项，`SDP_City.EngineRefused`、`SDP_Overlay.EngineRefuses`）：对城市已拥有的格，若游戏引擎为该区域给出了非空的可建格列表（`CityManager.GetOperationTargets`，游戏的放置透镜用的就是它），列表外的格判为不可放（DMT 判可放也一样，结果行原因为"游戏不允许"）。按（城市, 区域）每回合查一次；列表为空（区域未解锁、没有空槽位等）或格子不属于该城时，仍以 DMT 为准。所有合法性判断都经过 `SDP_Overlay.CanPlace` / `Evaluate`，所以求解、热力图、多城、奇观都一致。
+- **引擎可建格复核**（第 3 项，`SDP_City.EngineRefused`、`SDP_Overlay.EngineRefuses`）：对城市已拥有的格，若游戏引擎为该区域给出了非空的可建格列表（`CityManager.GetOperationTargets`，游戏的放置透镜用的就是它），列表外的格判为不可放（DMT 判可放也一样，结果行原因为"游戏不允许"）。按（城市, 区域）每回合查一次；列表为空（区域未解锁、没有空槽位等）或格子不属于该城时，仍以 DMT 为准。**2026-11-25（#378）**：这两种情况正是规划器的常态（地还没买下、运河的蒸汽动力还没研究），所以引擎没答案时运河另走一条保守规则——`SDP_Rules.IsCanal`（`Districts_XP2.Canal`）+ `District_ValidTerrains` 定地形，`SDP_City.CanalCannotLink` 只拒绝"六邻无水域、城中心、已建运河"的陆地格；临河、邻格越界、地形不在表里都放行，规划中的城中心钉算连通端。连通判定的真实条件（两侧相对临水等）在引擎里，待游戏内探针标定后收紧。所有合法性判断都经过 `SDP_Overlay.CanPlace` / `Evaluate`，所以求解、热力图、多城、奇观都一致。
 - **单城奇观**（第 5 项）：选了奇观时，单城请求转成只有这一座城的 `SDP_Multi` 请求（`Only = { 城市 }`，不含城址钉），沿用多城的奇观逻辑。
 - **好位置热力图**（第 6 项，`SDP_Solver.Heat`）：对候选格逐个评估该区域单独放下的加权增益（含它给邻居带来的变化），合法的按最高到最低分四档用预览层着色并标数值。
 - **快捷键**（第 8 项，`Config/SDP_Input.xml`）：前端数据库里加输入动作 `SDP_OpenPlanner`，默认 Shift+L，面板监听 `Events.InputActionTriggered`。

@@ -221,28 +221,73 @@ end
 -- engine allows changes with techs, civics and population, which change
 -- between turns. A plot bought later in the turn is not in the remembered
 -- set, so DMT decides it alone.
-local m_engine = { Turn = nil, Refused = {} }
+--
+-- The engine answers only for plots the city already owns and a district it
+-- has unlocked, so a plan (a plot not bought yet, a canal before Steam Power)
+-- often gets no answer at all (issue 378). Then the rules alone decide, for
+-- canals only: SDP_City.CanalCannotLink shows a plot that cannot join water.
+-- A planned city center next to it counts as one end of the canal, because
+-- the center of a solve does not move.
+local m_engine = { Turn = nil, Refused = {}, Link = {} }
 
 function SDP_Overlay.ResetEngine()
-  m_engine = { Turn = nil, Refused = {} }
+  m_engine = { Turn = nil, Refused = {}, Link = {} }
+end
+
+-- The pin subject at (x, y) in the overlay's layer, or a real one.
+local function PinAt(playerID, x, y)
+  local state = m_state
+  if state == nil or state.PlayerID ~= playerID then return nil end
+  local value = state.Layer[Key(x, y)]
+  if value ~= nil then return value or nil end
+  return state.Snapshot[Key(x, y)]
+end
+
+-- Whether a planned city center stands next to `plot`: the city will be there
+-- when the plan is built, so a canal may join it.
+local function AdjacentCityCenterPin(playerID, plot)
+  if m_state == nil or m_state.PlayerID ~= playerID then return false end
+  for direction = 0, DirectionTypes.NUM_DIRECTION_TYPES - 1 do
+    local n = Map.GetAdjacentPlot(plot:GetX(), plot:GetY(), direction)
+    if n ~= nil then
+      local subject = PinAt(playerID, n:GetX(), n:GetY())
+      if subject ~= nil and subject.Type == "DISTRICT" and subject.Key == "DISTRICT_CITY_CENTER" then return true end
+    end
+  end
+  return false
 end
 
 -- Whether the game refuses `subject` (a district) where it stands.
 function SDP_Overlay.EngineRefuses(playerID, subject)
   if subject.Type ~= "DISTRICT" or subject.Key == "DISTRICT_CITY_CENTER" then return false end
   local plot = Map.GetPlot(subject.X, subject.Y)
-  if plot == nil or plot:GetOwner() ~= playerID then return false end
-  local city = Cities.GetPlotPurchaseCity(plot)
-  if city == nil then return false end
+  if plot == nil then return false end
   local turn = Game.GetCurrentGameTurn()
-  if m_engine.Turn ~= turn then m_engine = { Turn = turn, Refused = {} } end
-  local key = playerID .. ":" .. city:GetID() .. ":" .. subject.Key
-  local refused = m_engine.Refused[key]
-  if refused == nil then
-    refused = SDP_City.EngineRefused(playerID, city:GetID(), subject.Key) or false
-    m_engine.Refused[key] = refused
+  if m_engine.Turn ~= turn then m_engine = { Turn = turn, Refused = {}, Link = {} } end
+  -- A plot this city owns: the engine's build targets decide, when it has any.
+  if plot:GetOwner() == playerID then
+    local city = Cities.GetPlotPurchaseCity(plot)
+    if city ~= nil then
+      local key = playerID .. ":" .. city:GetID() .. ":" .. subject.Key
+      local refused = m_engine.Refused[key]
+      if refused == nil then
+        refused = SDP_City.EngineRefused(playerID, city:GetID(), subject.Key) or false
+        m_engine.Refused[key] = refused
+      end
+      if refused ~= false then return refused[plot:GetIndex()] == true end
+    end
   end
-  return refused ~= false and refused[plot:GetIndex()] == true
+  -- No answer from the engine (a plot not bought yet, a district not unlocked,
+  -- an API that is missing): the rules alone, and only for canals.
+  if not SDP_Rules.IsCanal(subject.Key) then return false end
+  local index = plot:GetIndex()
+  local link = m_engine.Link[index]
+  if link == nil then
+    link = SDP_City.WaterLinkPossible(plot)
+    m_engine.Link[index] = link
+  end
+  if not SDP_City.CanalCannotLink(subject.Key, plot, link) then return false end
+  return not AdjacentCityCenterPin(playerID, plot)
 end
 
 -- DMT's CanPlacePin with the layer as it is, and the game agrees; a DMT

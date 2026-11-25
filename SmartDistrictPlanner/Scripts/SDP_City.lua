@@ -509,6 +509,44 @@ function SDP_City.ScanSite(playerID, x, y, options)
   return scan
 end
 
+-- Whether a canal on `plot` could join water at all: water or a city next to
+-- it, another canal next to it, a river through it, or a neighbour off the
+-- map. This is only what the map shows; the engine's own rule (two opposite
+-- water sides, a city center, ...) is not readable from Lua (pitfall 27), so
+-- anything doubtful counts as possible.
+function SDP_City.WaterLinkPossible(plot)
+  if plot == nil then return true end
+  if plot:IsRiver() then return true end
+  for direction = 0, DirectionTypes.NUM_DIRECTION_TYPES - 1 do
+    local n = Map.GetAdjacentPlot(plot:GetX(), plot:GetY(), direction)
+    if n == nil then return true end
+    if n:IsWater() or n:IsCity() then return true end
+    local index = n:GetDistrictType()
+    if index ~= nil and index ~= -1 then
+      local row = GameInfo.Districts[index]
+      if row ~= nil and SDP_Rules.IsCanal(row.DistrictType) then return true end
+    end
+  end
+  return false
+end
+
+-- Whether the rules prove a canal on `plot` cannot join water: a canal type,
+-- on a terrain the rules list for it, on land, with no possible link. What
+-- the rules leave open (no terrain rows, a water plot) is left to DMT, and
+-- the caller still counts a planned city center next to it as a link, so the
+-- planner refuses no more than it can show. `link` may carry a cached
+-- SDP_City.WaterLinkPossible(plot).
+function SDP_City.CanalCannotLink(districtType, plot, link)
+  if plot == nil or not SDP_Rules.IsCanal(districtType) then return false end
+  local terrains = SDP_Rules.ValidTerrains(districtType)
+  if terrains == nil then return false end
+  local terrain = GameInfo.Terrains[plot:GetTerrainType()]
+  if terrain == nil or not terrains[terrain.TerrainType] then return false end
+  if plot:IsWater() then return false end
+  if link == nil then link = SDP_City.WaterLinkPossible(plot) end
+  return not link
+end
+
 -- Plots the game itself refuses for a district in a city, on top of DMT's
 -- rules (docs/multicity-design.md section 18, item 3; AGENTS pitfall 27:
 -- DMT does not check that a canal connects water): the city's own plots
