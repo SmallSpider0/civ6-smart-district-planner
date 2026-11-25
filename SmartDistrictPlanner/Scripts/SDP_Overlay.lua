@@ -243,18 +243,23 @@ local function PinAt(playerID, x, y)
   return state.Snapshot[Key(x, y)]
 end
 
--- Whether a planned city center stands next to `plot`: the city will be there
--- when the plan is built, so a canal may join it.
-local function AdjacentCityCenterPin(playerID, plot)
-  if m_state == nil or m_state.PlayerID ~= playerID then return false end
+-- The directions a plan puts a city center on next to `plot`: the city will be
+-- there when the plan is built, so a canal may run to it. nil when none, so
+-- the common case allocates nothing.
+local function PlannedCityCenters(playerID, plot)
+  if m_state == nil or m_state.PlayerID ~= playerID then return nil end
+  local directions = nil
   for direction = 0, DirectionTypes.NUM_DIRECTION_TYPES - 1 do
     local n = Map.GetAdjacentPlot(plot:GetX(), plot:GetY(), direction)
     if n ~= nil then
       local subject = PinAt(playerID, n:GetX(), n:GetY())
-      if subject ~= nil and subject.Type == "DISTRICT" and subject.Key == "DISTRICT_CITY_CENTER" then return true end
+      if subject ~= nil and subject.Type == "DISTRICT" and subject.Key == "DISTRICT_CITY_CENTER" then
+        directions = directions or {}
+        directions[direction] = true
+      end
     end
   end
-  return false
+  return directions
 end
 
 -- Whether the game refuses `subject` (a district) where it stands.
@@ -280,14 +285,32 @@ function SDP_Overlay.EngineRefuses(playerID, subject)
   -- No answer from the engine (a plot not bought yet, a district not unlocked,
   -- an API that is missing): the rules alone, and only for canals.
   if not SDP_Rules.IsCanal(subject.Key) then return false end
-  local index = plot:GetIndex()
-  local link = m_engine.Link[index]
-  if link == nil then
-    link = SDP_City.WaterLinkPossible(plot)
-    m_engine.Link[index] = link
+  -- Two canals may not touch (measured 2026-11-25: after one canal the engine
+  -- keeps a target two plots away and drops the neighbour). A canal the plan
+  -- puts next to this one is refused the same way.
+  for direction = 0, DirectionTypes.NUM_DIRECTION_TYPES - 1 do
+    local n = Map.GetAdjacentPlot(subject.X, subject.Y, direction)
+    if n ~= nil then
+      local other = PinAt(playerID, n:GetX(), n:GetY())
+      if other ~= nil and other.Type == "DISTRICT" and SDP_Rules.IsCanal(other.Key) then return true end
+    end
   end
-  if not SDP_City.CanalCannotLink(subject.Key, plot, link) then return false end
-  return not AdjacentCityCenterPin(playerID, plot)
+  local index = plot:GetIndex()
+  -- Only the map's own sides are cached: the plan's city centers differ from
+  -- one plan to the next, so they are added per call.
+  local sides = m_engine.Link[index]
+  if sides == nil then
+    sides = SDP_City.CanalSides(plot)
+    m_engine.Link[index] = sides
+  end
+  local planned = PlannedCityCenters(playerID, plot)
+  if planned ~= nil then
+    local merged = {}
+    for direction in pairs(sides) do merged[direction] = true end
+    for direction in pairs(planned) do merged[direction] = true end
+    sides = merged
+  end
+  return SDP_City.CanalCannotLink(subject.Key, plot, sides)
 end
 
 -- DMT's CanPlacePin with the layer as it is, and the game agrees; a DMT

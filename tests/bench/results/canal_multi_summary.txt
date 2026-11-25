@@ -1,0 +1,66 @@
+# Canal probe results (2026-11-25)
+
+Produced by tests/bench/probe_canal.lua and tests/bench/probe_radius.lua on the
+game's own engine (CityManager.GetOperationTargets), then compared with what
+SmartDistrictPlanner decides. The raw per-plot dumps stay on the machine that
+produced them (one CSV per game, tests/bench/results/multi/); the seeds below
+regenerate them.
+
+## Rule fitted to the engine
+
+A canal joins two sides. Sides are water (coast, ocean or lake), a city center,
+or a canal already built; a river is not a side. The two sides must be two or
+three edges apart (a 60 degree bend, or straight through). A straight passage
+needs the four other edges to be land; a bend needs the edge between its ends
+to be land and at least one land edge on its outer side. Two canals may not
+touch, and the map is drawn for the city that owns the plot (three rings).
+
+## First round: four cities on one map
+
+| | plots with an engine answer | rule agrees | rule allows, engine refuses | rule refuses, engine allows |
+|---|---|---|---|---|
+| conservative rule (v1.8.0) | 80 | 54 | 26 | 0 |
+| this rule | 80 | 80 | 0 | 0 |
+
+## Second round: 45 games
+
+10 random maps and 35 games with `--leader LEADER_DIDO --seed 1025..1036` and
+`--seed 1002..1024`, one capital each, all technologies, population 25.
+
+| | count |
+|---|---|
+| land plots scanned | 1267 |
+| plots the engine answered (the rest are inland cities, no canal target at all) | 465 |
+| of those, DMT allows a canal too, so the rule is what decides | 337 |
+| rule agrees with the engine | 333 (98.81%) |
+| rule refuses a plot the engine allows | 0 |
+| rule allows a plot the engine refuses | 4 |
+
+The four:
+
+| plot | water sides | note |
+|---|---|---|
+| seed1020 (48,25) | 0,1,3,4 | tip of a spit; the two ends are two different seas |
+| seed1026 (10,26) | 3 | city center plus a two-tile lake |
+| seed1026 (10,28) | 5 | city center plus the bay the city already touches |
+| seed1032 (9,35) | 1,4,5 | two-tile lake on one side, sea on the other |
+
+Proxies tried and rejected because each one refuses plots the engine allows:
+"two ends in the same water body" (refuses 62,32 and 49,24), "straight wins,
+no fallback to a bend" (refuses 62,32), "the whole outer side must be land"
+(refuses 61,31 and 62,32). The real discriminator is the water body, which
+Plot does not expose.
+
+## Two canals may not touch
+
+At seed1032 the capital had three canal targets: (8,33), (9,34) and (10,34),
+with (8,33) one plot from (9,34) and two from (10,34). After building a canal
+at (8,33) the engine kept (10,34) and dropped (9,34): the limit is adjacency,
+not one canal per city.
+
+## Fourth workable ring (probe_radius.lua)
+
+With Workable 4th Ring (Steam 3220078106) installed, the same map gives
+`GlobalParameters.CITY_MAX_BUY_PLOT_RANGE` = 4 (3 without the mod), and the
+engine offers 27 campus plots of which 10 are on ring 4, the farthest ring
+being 4. Details in docs/notes/issue-379-work-radius.md.

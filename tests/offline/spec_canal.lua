@@ -3,8 +3,12 @@
 -- targets answer only for plots the city owns and a district it has unlocked,
 -- so the planner asks them first and, when they say nothing, falls back to the
 -- rules alone: SDP_Rules.IsCanal, District_ValidTerrains and
--- SDP_City.CanalCannotLink. These tests pin that fallback: it refuses only
--- plots that cannot join water, and never refuses one the engine allows.
+-- SDP_City.CanalCannotLink. These tests pin that fallback against the rule the
+-- engine itself follows (measured in game, tests/bench/probe_canal.lua,
+-- 2026-11-25): two sides two apart (a 60 degree bend, the side between them
+-- land) or three apart (straight through, the other four land), where a side
+-- is water — coast, ocean or lake —, a city center or a built canal. A river
+-- is not a side.
 local test, T = ...
 
 include("SDP_Rules")
@@ -29,6 +33,21 @@ local MAP = {
   "~....h.....~",
   "~.~.~......~",
   "~..........~",
+  "~..........~",
+  "~..........~",
+  "~..........~",
+  "~~~~~~~~~~~~",
+}
+
+-- The same with a lake at (6, 5): (5, 5) then has water on one side and the
+-- city on the other, 60 degrees apart — the bend the game accepts.
+local BEND = {
+  "~~~~~~~~~~~~",
+  "~..........~",
+  "~..........~",
+  "~....h.....~",
+  "~.~.~......~",
+  "~.....~....~",
   "~..........~",
   "~..........~",
   "~..........~",
@@ -68,30 +87,107 @@ test("a canal that joins no water is refused on a plot the city does not own", f
   T.eq(item.EngineRefused, true, "and the planner says why")
 end)
 
-test("water, a built canal or the city itself is a link", function()
+test("two sides at the right angle: across water, or between water and the city", function()
+  NewWorld()
+  local across = Item("DISTRICT_CANAL", 3, 4)
+  T.eq(across.CanPlace, true, "water on opposite sides, straight through")
+  T.eq(across.EngineRefused, nil, "not refused")
+  local toCity = Item("DISTRICT_CANAL", 4, 5)
+  T.eq(toCity.CanPlace, true, "water on one side, the city on the other")
+  T.eq(toCity.EngineRefused, nil, "not refused")
+end)
+
+test("one side is not enough: the city alone, or water alone", function()
+  NewWorld()
+  local cityOnly = Item("DISTRICT_CANAL", 5, 5)
+  T.eq(cityOnly.CanPlace, false, "next to the city but not to water")
+  T.eq(cityOnly.EngineRefused, true, "refused by the rules")
+  local waterOnly = Item("DISTRICT_CANAL", 10, 6)
+  T.eq(waterOnly.CanPlace, false, "water on one side and nothing on the other")
+end)
+
+test("a 60 degree bend counts when the side between its ends is land", function()
+  NewWorld({ rows = BEND })
+  local item = Item("DISTRICT_CANAL", 5, 5)
+  T.eq(item.CanPlace, true, "water 60 degrees from the city")
+  T.eq(item.EngineRefused, nil, "not refused")
+end)
+
+test("water on three sides is not a passage unless two of them line up", function()
+  NewWorld()
+  -- (1, 6): water at directions 3, 4 and 5 — neighbours 4 and 5 are one apart,
+  -- 3 and 5 are two apart with direction 4 (water) between them.
+  local item = Item("DISTRICT_CANAL", 1, 6)
+  T.eq(item.CanPlace, false, "no straight run and no bend with land between")
+  T.eq(item.EngineRefused, true, "refused by the rules")
+end)
+
+test("a bend needs land outside it: a corner cut in open water joins nothing", function()
+  -- Five water sides and one land corner (measured against the engine on a
+  -- one-tile spit, 2026-11-25): the engine refuses it.
+  T.eq(SDP_City.CanalSidesJoin({ [1] = true, [2] = true, [3] = true, [4] = true, [5] = true }), false,
+    "only a corner of land left")
+  -- Four water sides: the bend still has a land side outside it.
+  T.eq(SDP_City.CanalSidesJoin({ [0] = true, [1] = true, [3] = true, [4] = true }), true,
+    "a bend with land outside")
+end)
+
+test("a canal may not touch a built canal", function()
   local w = NewWorld()
   w:AddDistrict(1, "DISTRICT_CANAL", 6, 4)
   SDP_Overlay.ResetEngine()
-  for _, case in ipairs({ { 3, 4, "between two water plots" }, { 7, 4, "next to a built canal" },
-    { 5, 5, "next to the city" } }) do
-    local item = Item("DISTRICT_CANAL", case[1], case[2])
-    T.eq(item.CanPlace, true, case[3])
-    T.eq(item.EngineRefused, nil, case[3] .. ": not refused")
-  end
+  -- (5, 4) has water on one side and the built canal on the other; the game
+  -- still refuses it (a city can build many canals, but two may not touch).
+  local pair = Item("DISTRICT_CANAL", 5, 4)
+  T.eq(pair.CanPlace, false, "next to a built canal")
+  T.eq(pair.EngineRefused, true, "refused by the rules")
+  local alone = Item("DISTRICT_CANAL", 7, 4)
+  T.eq(alone.CanPlace, false, "the canal next to it is the only side")
+  T.eq(alone.EngineRefused, true, "refused by the rules")
 end)
 
-test("a planned city center next to a canal counts as a link", function()
+test("a planned city center counts as a side", function()
+  NewWorld({ rows = BEND,
+    cities = { { id = 1, x = 2, y = 2, population = 4, capital = true, radius = 1 } },
+    pins = { { 5, 6, "ICON_DISTRICT_CITY_CENTER", "new city" } } })
+  local item = Item("DISTRICT_CANAL", 5, 5)
+  T.eq(item.CanPlace, true, "the plan puts a city on the other side of the water")
+end)
+
+test("a planned city center alone is not a passage", function()
   NewWorld({ cities = { { id = 1, x = 2, y = 2, population = 4, capital = true, radius = 1 } },
     pins = { { 5, 6, "ICON_DISTRICT_CITY_CENTER", "new city" } } })
   local item = Item("DISTRICT_CANAL", 5, 5)
-  T.eq(item.CanPlace, true, "the plan puts a city next to it")
+  T.eq(item.CanPlace, false, "a city next to it and no water")
 end)
 
-test("hills, rivers and no plot at all are left to DMT", function()
+test("a pin added after a plot was judged still counts (the cache holds the map only)", function()
+  local w = NewWorld({ rows = BEND,
+    cities = { { id = 1, x = 2, y = 2, population = 4, capital = true, radius = 1 } } })
+  T.eq(Item("DISTRICT_CANAL", 5, 5).CanPlace, false, "no city next to the water yet")
+  w:AddPin(5, 6, "ICON_DISTRICT_CITY_CENTER", "new city")
+  local item = Item("DISTRICT_CANAL", 5, 5)
+  T.eq(item.CanPlace, true, "the pin appears in the same turn and is seen")
+end)
+
+test("a canal planned next to another canal is refused", function()
+  -- (3, 4) is a legal canal; a canal pin at (3, 5) sits next to it. Two canals
+  -- may not touch, so the plan cannot keep both (measured 2026-11-25: after
+  -- one canal the engine keeps a target two plots away and drops the neighbour).
+  NewWorld({ pins = { { 3, 5, "ICON_DISTRICT_CANAL", "canal" } } })
+  local item = Item("DISTRICT_CANAL", 3, 4)
+  T.eq(item.CanPlace, false, "a planned canal next to it")
+  T.eq(item.EngineRefused, true, "refused by the rule, not by DMT")
+end)
+
+test("hills and rivers: the rules leave hills to DMT, a river is not a side", function()
   NewWorld()
   T.eq(Item("DISTRICT_CANAL", 5, 3).CanPlace, true, "hills: the rules list no canal there")
-  T.eq(Item("DISTRICT_CANAL", 3, 6).CanPlace, true, "on a river: unknown, so allowed")
-  T.eq(SDP_City.WaterLinkPossible(nil), true, "no plot: unknown, so allowed")
+  local river = Item("DISTRICT_CANAL", 3, 6)
+  T.eq(river.CanPlace, false, "a river through the plot joins nothing")
+  T.eq(river.EngineRefused, true, "refused by the rules")
+  T.eq(next(SDP_City.CanalSides(nil)), nil, "no plot: no sides")
+  T.eq(SDP_City.CanalCannotLink("DISTRICT_CANAL", nil, nil), false, "no plot: nothing to decide")
 end)
 
 test("other districts keep the rules they had", function()

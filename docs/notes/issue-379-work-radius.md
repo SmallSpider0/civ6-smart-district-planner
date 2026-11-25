@@ -46,7 +46,7 @@
 
 ## 4. 将来若要做，先解决
 
-1. **探针**：`tests/bench/probe_radius.lua`（游戏内，装 Workable 4th Ring）——给全部科技、城市拥有 4 环地，读 `CityManager.GetOperationTargets` 看返回里有没有 4 环格，同时 dump `CITY_MAX_BUY_PLOT_RANGE`。本机没有游戏。
+1. **探针**（2026-11-25 已测，`tests/bench/probe_radius.lua`，装 Workable 4th Ring、首都拥有 1–4 环、全部科技）：`GlobalParameters.CITY_MAX_BUY_PLOT_RANGE` = **4**（不装该模组时 = 3，同一台机器实测）；引擎给该校区的可建格 27 个里 **10 个在第 4 环**，最大环 = **4**（样本 `20,34 19,34 18,34 17,34 16,34 15,35 15,36 14,37 14,38 14,39`）。即：**该模组下区域确实能建到第 4 环**，"只扩地块、区域仍三环"是半个功能这一判断成立。注意第 4 环地块是 `WorldBuilder.CityManager():SetPlotOwner` 给的，未验证"金币买第 4 环"这条路；`CITY_MAX_DISTRICT_RANGE` 这个参数不存在。
 2. **预算与束宽**：`SDP_Tiers` 的 `TryLimit`/`CallLimit` 现按三环标定；4 环下 4 城 FAST 已截断，要先按实测调预算或缩束宽，并复量质量。
 3. **ETA**：`SDP_Multi.lua` 的 `n = 30`（"每城可用格"）硬编码，4 环会低估 1.65 倍，进度与"预计 X 秒"失准；`SDP_SiteSolver.EstimateUnits` 不含 n。
 4. **记轻的记账**：`SDP_Sites.Coarse` 只记 `Extra(5)` 单位，实测随格数增长，4 环下更容易打穿单帧配额。
