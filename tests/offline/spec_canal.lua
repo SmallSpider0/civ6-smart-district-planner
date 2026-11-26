@@ -215,6 +215,40 @@ test("the engine's own list wins when it has one", function()
   T.eq(refused.EngineRefused, true, "refused by the engine")
 end)
 
+test("the engine cannot see the plan: a planned canal beside an allowed plot refuses it", function()
+  -- The plot is owned and the district unlocked, so the engine answers and
+  -- allows it; a canal the plan puts next to it still refuses it (two canals
+  -- may not touch, and the engine reads the map only).
+  local OWNS = { { id = 1, x = 5, y = 6, population = 4, capital = true, radius = 3 } }
+  local all = {}
+  for _, p in ipairs(SDP_City.PlotsInRange(5, 6, 3)) do all[#all + 1] = p.X .. "," .. p.Y end
+  NewWorld({ cities = OWNS, engine = { DISTRICT_CANAL = all },
+    pins = { { 3, 5, "ICON_DISTRICT_CANAL", "canal" } } })
+  local item = Item("DISTRICT_CANAL", 3, 4)
+  T.eq(item.CanPlace, false, "the plan puts a canal on the plot next to it")
+  T.eq(item.EngineRefused, true, "refused by the rule, not by the engine")
+end)
+
+test("the board re-judges a canal when the plan puts another beside it", function()
+  -- Legality is memoized per plot; a canal's depends on its neighbours, so the
+  -- second canal must not reuse the answer from when it stood alone.
+  local OWNS = { { id = 1, x = 5, y = 6, population = 4, capital = true, radius = 3 } }
+  local all = {}
+  for _, p in ipairs(SDP_City.PlotsInRange(5, 6, 3)) do all[#all + 1] = p.X .. "," .. p.Y end
+  NewWorld({ cities = OWNS, engine = { DISTRICT_CANAL = all } })
+  local scan = SDP_City.Scan(0, 1)
+  SDP_Overlay.With(0, function()
+    local board = SDP_Board.New(0, SDP_Overlay.FixedSubjects(scan), ONES)
+    board:Put(1, SDP_Overlay.Subject("DISTRICT_CANAL", 3, 4))
+    local _, alone = board:Total()
+    T.eq(alone, true, "one canal on its own")
+    board:Put(2, SDP_Overlay.Subject("DISTRICT_CANAL", 3, 5))
+    local _, pair = board:Total()
+    T.eq(pair, false, "a second canal beside it")
+    board:Clear()
+  end)
+end)
+
 test("a canal before Steam Power is still checked", function()
   -- The engine answers nothing for a locked district: the rules decide.
   local OWNS = { { id = 1, x = 5, y = 6, population = 4, capital = true, radius = 3 } }

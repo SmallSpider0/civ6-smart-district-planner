@@ -15,11 +15,12 @@
 --   - remembers every (key, plot, neighbourhood) score it asked DMT for, so a
 --     neighbourhood seen before costs no DMT call at all.
 -- Legality (CanPlacePin) of a district depends on its own plot and on city
--- centers next to it or within three plots, never on other planned
--- districts (CanPlaceDistrictCheckHelper), so it is asked once per
--- (district, plot). A wonder can require an adjacent district
--- (IsAdjacentToDistrict reads the overlay), so its legality is remembered per
--- neighbourhood like a score. Planned city centers are not supported.
+-- centers next to it or within three plots (CanPlaceDistrictCheckHelper), so
+-- it is asked once per (district, plot). Two kinds also read the plan and are
+-- remembered per neighbourhood like a score: a wonder, which can require an
+-- adjacent district (IsAdjacentToDistrict), and a canal, which may not touch
+-- another canal, planned or built (issue 378, measured in game 2026-11-25).
+-- Planned city centers are not supported.
 -- The one exception to locality, one dam per river, the search keeps apart
 -- itself (SDP_Search: SharesRiver); the final full evaluation the solvers do
 -- would catch others. tests/test_incremental.lua checks the assumptions
@@ -174,7 +175,9 @@ end
 
 -- DMT legality of a planned subject in its current neighbourhood.
 function Board:Legal(plot, id, subject, code)
-  if subject.Type ~= "WONDER" then code = 0 end
+  -- A wonder and a canal depend on their neighbours; everything else is one
+  -- entry per (type, plot), which keeps the memo small.
+  if subject.Type ~= "WONDER" and not SDP_Rules.IsCanal(subject.Key) then code = 0 end
   local memo = Memo(self.legalMemo, plot, id)
   local hit = memo[code]
   if hit ~= nil then return hit end

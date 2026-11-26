@@ -262,6 +262,27 @@ local function PlannedCityCenters(playerID, plot)
   return directions
 end
 
+-- Whether a canal on `plot` would touch another canal: one the plan puts
+-- there, or one already built. Two canals may not touch (measured 2026-11-25:
+-- after a canal at (8,33) the engine drops its neighbour from the build list
+-- and keeps a target two plots away), and the engine reads the map only, so
+-- it cannot see the plan's own canals.
+local function CanalTouch(playerID, plot)
+  for direction = 0, DirectionTypes.NUM_DIRECTION_TYPES - 1 do
+    local n = Map.GetAdjacentPlot(plot:GetX(), plot:GetY(), direction)
+    if n ~= nil then
+      local other = PinAt(playerID, n:GetX(), n:GetY())
+      if other ~= nil and other.Type == "DISTRICT" and SDP_Rules.IsCanal(other.Key) then return true end
+      local index = n:GetDistrictType()
+      if index ~= nil and index ~= -1 then
+        local row = GameInfo.Districts[index]
+        if row ~= nil and SDP_Rules.IsCanal(row.DistrictType) then return true end
+      end
+    end
+  end
+  return false
+end
+
 -- Whether the game refuses `subject` (a district) where it stands.
 function SDP_Overlay.EngineRefuses(playerID, subject)
   if subject.Type ~= "DISTRICT" or subject.Key == "DISTRICT_CITY_CENTER" then return false end
@@ -279,22 +300,18 @@ function SDP_Overlay.EngineRefuses(playerID, subject)
         refused = SDP_City.EngineRefused(playerID, city:GetID(), subject.Key) or false
         m_engine.Refused[key] = refused
       end
-      if refused ~= false then return refused[plot:GetIndex()] == true end
+      if refused ~= false then
+        if refused[plot:GetIndex()] == true then return true end
+        -- The engine allows this plot, but it cannot see the plan: a canal
+        -- the plan puts next to it is still refused.
+        return SDP_Rules.IsCanal(subject.Key) and CanalTouch(playerID, plot)
+      end
     end
   end
   -- No answer from the engine (a plot not bought yet, a district not unlocked,
   -- an API that is missing): the rules alone, and only for canals.
   if not SDP_Rules.IsCanal(subject.Key) then return false end
-  -- Two canals may not touch (measured 2026-11-25: after one canal the engine
-  -- keeps a target two plots away and drops the neighbour). A canal the plan
-  -- puts next to this one is refused the same way.
-  for direction = 0, DirectionTypes.NUM_DIRECTION_TYPES - 1 do
-    local n = Map.GetAdjacentPlot(subject.X, subject.Y, direction)
-    if n ~= nil then
-      local other = PinAt(playerID, n:GetX(), n:GetY())
-      if other ~= nil and other.Type == "DISTRICT" and SDP_Rules.IsCanal(other.Key) then return true end
-    end
-  end
+  if CanalTouch(playerID, plot) then return true end
   local index = plot:GetIndex()
   -- Only the map's own sides are cached: the plan's city centers differ from
   -- one plan to the next, so they are added per call.
