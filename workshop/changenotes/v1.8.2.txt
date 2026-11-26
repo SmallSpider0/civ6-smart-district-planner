@@ -1,0 +1,5 @@
+Changes since v1.8.1:
+- Fixed: a tile that touches a canal — one already built, or one the plan puts there — is no longer treated as a canal tile, also on the tiles the game’s own build list covers.
+
+自 v1.8.1 以来的变化：
+- 修好：紧挨着运河的格子不再被当成能建运河——挨着的是已经建好的运河，还是方案里刚排上的那条，都一样；游戏自己能判断可建格的格子上也一样。
